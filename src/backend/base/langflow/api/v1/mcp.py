@@ -1,5 +1,4 @@
 import asyncio
-from contextlib import AsyncExitStack
 
 import pydantic
 from anyio import BrokenResourceError
@@ -20,7 +19,6 @@ from langflow.api.v1.mcp_utils import (
     handle_mcp_errors,
     handle_read_resource,
 )
-from langflow.services.deps import get_settings_service
 
 router = APIRouter(prefix="/mcp", tags=["mcp"])
 
@@ -58,26 +56,8 @@ async def handle_global_call_tool(name: str, arguments: dict) -> list[types.Text
 
 
 sse = SseServerTransport("/api/v1/mcp/")
-streamable_http_manager = StreamableHTTPSessionManager(server)
-_streamable_http_manager_lock = asyncio.Lock()
-_streamable_http_manager_stack: AsyncExitStack | None = None
-_streamable_http_manager_started = False
-
-async def ensure_session_manager_running() -> None:
-    """Start the project's Streamable HTTP manager if needed."""
-    global _streamable_http_manager_stack, _streamable_http_manager_started # noqa: PLW0603
-
-    if _streamable_http_manager_started:
-        return
-
-    async with _streamable_http_manager_lock:
-        if _streamable_http_manager_started:
-            return
-
-        _streamable_http_manager_stack = AsyncExitStack()
-        await _streamable_http_manager_stack.enter_async_context(streamable_http_manager.run())
-        _streamable_http_manager_started = True
-        await logger.adebug("Streamable HTTP manager started")
+# TODO: create environment variable for stateless flag
+streamable_http_manager = StreamableHTTPSessionManager(server, stateless=True)
 
 def find_validation_error(exc):
     """Searches for a pydantic.ValidationError in the exception chain."""
@@ -161,8 +141,6 @@ async def _dispatch_streamable_http(
     current_user: CurrentActiveMCPUser,
 ) -> Response:
     """Common handler for Streamable HTTP requests with user context propagation."""
-    await ensure_session_manager_running()
-
     await logger.adebug(
         "Handling %s %s via Streamable HTTP for user %s",
         request.method,
@@ -182,6 +160,7 @@ async def _dispatch_streamable_http(
         current_user_ctx.reset(context_token)
 
     return Response()
+
 
 streamable_http_methods = ["GET", "POST", "DELETE"]
 @router.api_route("/streamable", methods=streamable_http_methods)

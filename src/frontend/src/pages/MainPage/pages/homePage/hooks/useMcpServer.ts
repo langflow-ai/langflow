@@ -43,7 +43,7 @@ export const useMcpServer = ({
   projectId,
   folderName,
   selectedPlatform,
-  selectedTransport = "sse",
+  selectedTransport = "streamablehttp",
 }: {
   projectId: string;
   folderName?: string;

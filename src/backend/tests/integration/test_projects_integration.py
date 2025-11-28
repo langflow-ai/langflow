@@ -12,7 +12,10 @@ from httpx import AsyncClient
 
 
 @pytest.mark.asyncio
-async def test_project_authentication_settings(client: AsyncClient, logged_in_headers):
+async def test_project_authentication_settings(
+    client: AsyncClient,
+    logged_in_headers
+):
     """Integration test: Project authentication settings configuration."""
     # Scenario 1: AUTO_LOGIN disabled -> API key auth
     with patch("langflow.api.v1.projects.get_settings_service") as mock_get_settings:
