@@ -602,6 +602,7 @@ def _prepare_install_test_env(monkeypatch, tmp_path, filename="cursor.json"):
     config_path.parent.mkdir(parents=True, exist_ok=True)
 
     monkeypatch.setattr("langflow.api.v1.mcp_projects.get_client_ip", lambda request: "127.0.0.1")
+
     async def fake_get_config_path(client_name):
         return config_path
 
