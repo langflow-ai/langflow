@@ -1,10 +1,9 @@
 import asyncio
-from contextlib import AsyncExitStack
 
 import pydantic
 from anyio import BrokenResourceError
 from fastapi import APIRouter, HTTPException, Request, Response
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.responses import HTMLResponse
 from lfx.log.logger import logger
 from mcp import types
 from mcp.server import NotificationOptions, Server
@@ -57,50 +56,37 @@ async def handle_global_call_tool(name: str, arguments: dict) -> list[types.Text
 
 
 sse = SseServerTransport("/api/v1/mcp/")
-
-streamable_http_manager = StreamableHTTPSessionManager(server, stateless=True)
-_streamable_http_manager_stack: AsyncExitStack | None = None
-_streamable_http_manager_started: bool = False
-_streamable_http_manager_lock: asyncio.Lock = asyncio.Lock()
-
-async def ensure_session_manager_running() -> None:
-    """Start the global Streamable HTTP manager if needed."""
-    global _streamable_http_manager_started # noqa: PLW0603
-    global _streamable_http_manager_stack # noqa: PLW0603
-    global _streamable_http_manager_lock # noqa: PLW0602
-    if _streamable_http_manager_started:
+########################################################
+# SseServerTransport.connect_sse handles the full ASGI response internally
+# but FastAPI still expects the endpoint to return a Response,
+# this results in ungraceful termination of the SSE connection
+# We use this class to return a Response that FastAPI can handle gracefully
+########################################################
+class SSECompletedNoOp(Response):
+    async def __call__(self, scope, receive, send) -> None: # noqa: ARG002
+        # connect_sse already produced the ASGI response; nothing left to send.
         return
 
-    async with _streamable_http_manager_lock:
-        if _streamable_http_manager_started:
-            return
-
-        _streamable_http_manager_stack = AsyncExitStack()
-        await _streamable_http_manager_stack.enter_async_context(streamable_http_manager.run())
-        _streamable_http_manager_started = True
-        await logger.adebug("Streamable HTTP manager started for global MCP server")
-
 # Manage state of the Streamable HTTP session manager
-# class _StreamableHTTPManagerState:
-#     def __init__(self):
-#         self.manager: StreamableHTTPSessionManager | None = None
+streamable_http_session_manager: StreamableHTTPSessionManager | None = None
 
-# _streamable_http_state = _StreamableHTTPManagerState()
+def init_streamable_http_manager(*, stateless: bool = True) -> StreamableHTTPSessionManager:
+    """Create and register a Streamable HTTP session manager for the global MCP server."""
+    global streamable_http_session_manager # noqa: PLW0603
+    streamable_http_session_manager = StreamableHTTPSessionManager(server, stateless=stateless)
+    return streamable_http_session_manager
 
-# def init_streamable_http_manager(*, stateless: bool = True) -> StreamableHTTPSessionManager:
-#     """Create and register a Streamable HTTP session manager for the global MCP server."""
-#     _streamable_http_state.manager = StreamableHTTPSessionManager(server, stateless=stateless)
-#     return _streamable_http_state.manager
+def get_streamable_http_manager() -> StreamableHTTPSessionManager:
+    """Fetch the active Streamable HTTP session manager or raise if it is unavailable."""
+    global streamable_http_session_manager # noqa: PLW0602
+    if streamable_http_session_manager is None:
+        raise HTTPException(status_code=503, detail="MCP Streamable HTTP transport is not initialized")
+    return streamable_http_session_manager
 
-# def get_streamable_http_manager() -> StreamableHTTPSessionManager:
-#     """Fetch the active Streamable HTTP session manager or raise if it is unavailable."""
-#     if _streamable_http_state.manager is None:
-#         raise HTTPException(status_code=503, detail="MCP Streamable HTTP transport is not initialized")
-#     return _streamable_http_state.manager
-
-# def clear_streamable_http_manager() -> None:
-#     """Clear the currently active Streamable HTTP session manager reference."""
-#     _streamable_http_state.manager = None
+def clear_streamable_http_manager() -> None:
+    """Clear the currently active Streamable HTTP session manager reference."""
+    global streamable_http_session_manager # noqa: PLW0603
+    streamable_http_session_manager = None
 
 
 def find_validation_error(exc):
@@ -117,7 +103,7 @@ async def im_alive():
     return Response()
 
 
-@router.get("/sse", response_class=StreamingResponse)
+@router.get("/sse", response_class=SSECompletedNoOp)
 async def handle_sse(request: Request, current_user: CurrentActiveMCPUser):
     msg = f"Starting SSE connection, server name: {server.name}"
     await logger.ainfo(msg)
@@ -188,8 +174,7 @@ async def _dispatch_streamable_http(
 
     context_token = current_user_ctx.set(current_user)
     try:
-        await ensure_session_manager_running()
-        await streamable_http_manager.handle_request(request.scope, request.receive, request._send)  # noqa: SLF001
+        await streamable_http_session_manager.handle_request(request.scope, request.receive, request._send)  # noqa: SLF001
     except HTTPException:
         raise
     except Exception as exc:
