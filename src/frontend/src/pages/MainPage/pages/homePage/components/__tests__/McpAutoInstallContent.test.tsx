@@ -99,7 +99,7 @@ describe("McpAutoInstallContent", () => {
 
     const buttons = screen.getAllByRole("button");
     fireEvent.click(buttons[0]);
-    expect(mockInstall).toHaveBeenCalledWith("cursor", "Cursor");
+    expect(mockInstall).toHaveBeenCalledWith("cursor", "Cursor", "streamablehttp");
   });
 
   it("disables button when not local connection", () => {
