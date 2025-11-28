@@ -1,6 +1,6 @@
 import { BUILD_POLLING_INTERVAL } from "@/constants/constants";
-import { BuildStatus, EventDeliveryType } from "@/constants/enums";
-import { VertexLayerElementType } from "@/types/zustand/flow";
+import { type BuildStatus, EventDeliveryType } from "@/constants/enums";
+import type { VertexLayerElementType } from "@/types/zustand/flow";
 
 export async function customPollBuildEvents(
   url: string,
@@ -20,6 +20,8 @@ export async function customPollBuildEvents(
   },
   abortController: AbortController,
   onEvent,
+  flowId,
+  session,
 ): Promise<void> {
   let isDone = false;
   while (!isDone) {
@@ -68,6 +70,8 @@ export async function customPollBuildEvents(
       const result = await onEvent(
         event.event,
         event.data,
+        flowId,
+        session,
         buildResults,
         verticesStartTimeMs,
         callbacks,

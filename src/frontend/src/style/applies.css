@@ -1234,10 +1234,6 @@
     @apply flex h-10 items-center gap-1 rounded-xl border border-border bg-background p-1 shadow-sm;
   }
 
-  .playground-btn-flow-toolbar {
-    @apply relative inline-flex h-8 w-full items-center justify-center gap-1.5 rounded px-3 py-1.5 text-sm font-normal transition-all duration-500 ease-in-out;
-  }
-
   .input-slider-text {
     @apply absolute right-3 w-14 -translate-y-3.5 cursor-text rounded-sm px-2 py-[1px] text-center hover:ring-[1px] hover:ring-slider-input-border;
   }
