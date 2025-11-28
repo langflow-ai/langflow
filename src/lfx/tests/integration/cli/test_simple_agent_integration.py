@@ -73,6 +73,31 @@ def has_openai_api_key() -> bool:
     return bool(key) and key != "dummy" and len(key) > 10
 
 
+def parse_json_from_output(output: str, context: str = "output") -> dict:
+    """Parse JSON from command output, searching in reverse if direct parsing fails.
+
+    Args:
+        output: The command output string to parse.
+        context: Description of the output source for error messages.
+
+    Returns:
+        The parsed JSON as a dictionary.
+
+    Raises:
+        pytest.fail: If no valid JSON is found in the output.
+    """
+    try:
+        return json.loads(output)
+    except json.JSONDecodeError:
+        lines = output.split("\n")
+        for line in reversed(lines):
+            try:
+                return json.loads(line)
+            except json.JSONDecodeError:
+                continue
+        pytest.fail(f"No valid JSON in {context}: {output}")
+
+
 class TestSimpleAgentFlowLoading:
     """Test that Simple Agent flow can be loaded without errors."""
 
@@ -138,23 +163,8 @@ class TestSimpleAgentFlowLoading:
         )
 
         # Output should contain valid JSON
-        try:
-            output_json = json.loads(result.output.strip())
-            assert isinstance(output_json, dict), "Output should be a JSON object"
-        except json.JSONDecodeError:
-            # Try to find JSON in output
-            lines = result.output.strip().split("\n")
-            found_json = False
-            for line in reversed(lines):
-                try:
-                    json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-                else:
-                    found_json = True
-                    break
-            if not found_json:
-                pytest.fail(f"No valid JSON in output: {result.output}")
+        output_json = parse_json_from_output(result.output.strip())
+        assert isinstance(output_json, dict), "Output should be a JSON object"
 
 
 class TestSimpleAgentExecution:
@@ -195,19 +205,7 @@ class TestSimpleAgentExecution:
 
         # Parse output
         output = result.stdout.strip() or result.stderr.strip()
-
-        try:
-            output_json = json.loads(output)
-        except json.JSONDecodeError:
-            lines = output.split("\n")
-            for line in reversed(lines):
-                try:
-                    output_json = json.loads(line)
-                    break
-                except json.JSONDecodeError:
-                    continue
-            else:
-                pytest.fail(f"No valid JSON:\nstdout: {result.stdout}\nstderr: {result.stderr}")
+        output_json = parse_json_from_output(output, context=f"stdout: {result.stdout}\nstderr: {result.stderr}")
 
         # Assert successful execution
         assert output_json.get("success") is True, f"Execution failed: {output_json}"
@@ -238,19 +236,7 @@ class TestSimpleAgentExecution:
         )
 
         output = result.stdout.strip() or result.stderr.strip()
-
-        try:
-            output_json = json.loads(output)
-        except json.JSONDecodeError:
-            lines = output.split("\n")
-            for line in reversed(lines):
-                try:
-                    output_json = json.loads(line)
-                    break
-                except json.JSONDecodeError:
-                    continue
-            else:
-                pytest.fail("No valid JSON in output")
+        output_json = parse_json_from_output(output)
 
         if output_json.get("success"):
             result_text = str(output_json.get("result", ""))
