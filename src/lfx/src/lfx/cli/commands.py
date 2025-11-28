@@ -303,6 +303,9 @@ async def serve_command(
         console.print()
 
         # Start the server
+        # Use uvicorn.Server to properly handle async context
+        # uvicorn.run() uses asyncio.run() internally which fails when
+        # an event loop is already running (due to syncify decorator)
         try:
             config = uvicorn.Config(
                 serve_app,
