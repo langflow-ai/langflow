@@ -7,6 +7,9 @@ from pydantic import AliasChoices, BaseModel, Field, create_model
 from lfx.log.logger import logger
 
 NULLABLE_TYPE_LENGTH = 2  # Number of types in a nullable union (the type itself + null)
+MAX_ANYOF_ITEMS = 2
+MAX_OBJECT_PROPERTIES_IN_ANYOF = 3
+MAX_OBJECT_PROPERTIES = 5
 
 
 def _snake_to_camel(name: str) -> str:
@@ -71,11 +74,11 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
             if isinstance(additional_props, dict) and "anyOf" in additional_props:
                 anyof_items = additional_props["anyOf"]
                 # If anyOf has many items or contains complex objects
-                if len(anyof_items) > 2:
+                if len(anyof_items) > MAX_ANYOF_ITEMS:
                     return True
                 for item in anyof_items:
                     if isinstance(item, dict) and item.get("type") == "object":
-                        if "properties" in item and len(item["properties"]) > 3:
+                        if "properties" in item and len(item["properties"]) > MAX_OBJECT_PROPERTIES_IN_ANYOF:
                             return True
                         if "additionalProperties" in item:
                             return True
@@ -85,7 +88,7 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
         # Check for complex object with many properties
         if schema.get("type") == "object" and "properties" in schema:
             properties_count = len(schema["properties"])
-            if properties_count > 5:  # Threshold for complexity
+            if properties_count > MAX_OBJECT_PROPERTIES:  # Threshold for complexity
                 return True
 
         return False
@@ -97,9 +100,8 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
         s = resolve_ref(s)
 
         # Handle boolean values in additionalProperties
-        if "additionalProperties" in s and isinstance(s["additionalProperties"], bool):
-            if s["additionalProperties"]:
-                return dict[str, Any]
+        if "additionalProperties" in s and isinstance(s["additionalProperties"], bool) and s["additionalProperties"]:
+            return dict[str, Any]
             # If false, it means no additional properties are allowed.
             # We can represent this by returning a type that won't be iterable.
             # However, for the purpose of building a model, we can perhaps return an empty dict
@@ -158,8 +160,8 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
                 # Safe Union creation for dynamic types
                 # Using __getitem__ with a tuple is the standard way to create Union[A, B] dynamically
                 # But we wrap in try-except to fallback to Any if type construction fails
-                return Union[tuple(unique_types)]
-            except Exception as e:
+                return Union[tuple(unique_types)]  # noqa: UP007
+            except Exception as e:  # noqa: BLE001
                 logger.warning(f"Failed to create Union type from anyOf: {e}")
                 return Any
 
@@ -182,7 +184,7 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
                     if isinstance(additional_props, dict) and "anyOf" in additional_props:
                         anyof_items = additional_props.get("anyOf", [])
                         # If anyOf has more than 2 items or contains complex nested structures
-                        if len(anyof_items) > 2:
+                        if len(anyof_items) > MAX_ANYOF_ITEMS:
                             is_complex = True
                         else:
                             # Check if anyOf items are complex objects themselves
@@ -194,7 +196,7 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
                 if not is_complex and item_schema.get("type") == "object" and "properties" in item_schema:
                     # Complex object with many properties
                     properties_count = len(item_schema.get("properties", {}))
-                    if properties_count > 5:  # Threshold for complexity
+                    if properties_count > MAX_OBJECT_PROPERTIES:  # Threshold for complexity
                         is_complex = True
 
                 # For complex array items, fall back to list[dict[str, Any]] instead of str
@@ -282,7 +284,8 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
                 if is_complex_schema(additional_props_schema) or "anyOf" in additional_props_schema:
                     # Complex additional properties - use str (JSON input)
                     logger.debug(
-                        f"Object '{name}' has complex additional properties, using str (JSON input) for UI compatibility"
+                        f"Object '{name}' has complex additional properties, "
+                        "using str (JSON input) for UI compatibility"
                     )
                     # Will be handled by falling back to str in caller
                 else:
