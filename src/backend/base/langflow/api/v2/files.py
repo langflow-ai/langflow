@@ -46,20 +46,25 @@ def is_permanent_storage_failure(error: Exception) -> bool:
 
     # Check for S3 error codes (boto3/aioboto3)
     # S3 errors have a 'response' attribute with Error.Code
-    if hasattr(error, "response"):
-        response = error.response
-        if isinstance(response, dict):
-            error_code = response.get("Error", {}).get("Code")
+    resp = getattr(error, "response", None)
+    if resp is not None and isinstance(resp, dict):
+        err = resp.get("Error")
+        if err:
+            code = err.get("Code")
             # Permanent failures: file/bucket doesn't exist
-            if error_code in ("NoSuchBucket", "NoSuchKey", "404"):
+            if code in {"NoSuchBucket", "NoSuchKey", "404"}:
                 return True
 
     # Fallback: Check error message for known permanent failure patterns
     # This is less ideal but provides a safety net for edge cases
     error_str = str(error)
-    permanent_patterns = ("NoSuchBucket", "NoSuchKey", "not found", "FileNotFoundError")
-
-    return any(pattern in error_str for pattern in permanent_patterns)
+    # Tuple is fastest for small, static checks in 'in', so leave as tuple
+    return (
+        "NoSuchBucket" in error_str
+        or "NoSuchKey" in error_str
+        or "not found" in error_str
+        or "FileNotFoundError" in error_str
+    )
 
 
 async def get_mcp_file(current_user: CurrentActiveUser, *, extension: bool = False) -> str:
