@@ -67,6 +67,7 @@ interface ChatAreaProps {
   sampleFileNames: string[];
   sampleFilePaths: string[];
   onSelectSampleFile: (filePathOrName: string) => void;
+  onViewTrace?: (traceId: string) => void;
 }
 
 export function ChatArea({
@@ -102,6 +103,7 @@ export function ChatArea({
   sampleFileNames,
   sampleFilePaths,
   onSelectSampleFile,
+  onViewTrace,
 }: ChatAreaProps) {
   return (
     <div className="flex flex-col h-full border rounded-lg p-2 bg-background-surface">
@@ -182,6 +184,7 @@ export function ChatArea({
               targetTexts={targetTexts}
               loadingDots={loadingDots}
               onPreviewAttachment={(f) => onPreviewAttachment(f)}
+              onViewTrace={onViewTrace}
             />
           ))}
         </div>
@@ -277,11 +280,10 @@ export function ChatArea({
                       : false) ||
                       isLoading)
                   }
-                  className={`w-8 h-8 rounded-md transition-colors ${
-                    streamingMessageId
-                      ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      : "bg-primary text-primary-foreground hover:bg-primary/90"
-                  } disabled:opacity-50 disabled:cursor-not-allowed`}
+                  className={`w-8 h-8 rounded-md transition-colors ${streamingMessageId
+                    ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    : "bg-primary text-primary-foreground hover:bg-primary/90"
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
                   aria-label={
                     streamingMessageId ? "Stop generation" : "Submit message"
                   }
@@ -316,11 +318,10 @@ export function ChatArea({
                 <button
                   onClick={streamingMessageId ? onStop : onSend}
                   disabled={!streamingMessageId && isLoading}
-                  className={`px-6 py-2.5 rounded-md transition-colors ${
-                    streamingMessageId
-                      ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      : "bg-primary text-primary-foreground hover:bg-primary/90"
-                  } disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2`}
+                  className={`px-6 py-2.5 rounded-md transition-colors ${streamingMessageId
+                    ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    : "bg-primary text-primary-foreground hover:bg-primary/90"
+                    } disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2`}
                   aria-label={
                     streamingMessageId ? "Stop generation" : "Process file"
                   }

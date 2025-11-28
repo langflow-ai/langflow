@@ -51,7 +51,7 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
       setError(null);
       setImageScale(1);
       setImageRotation(0);
-      
+
       if (isJSON) {
         fetchJsonData();
       } else {
@@ -154,7 +154,7 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
               {Math.round(imageScale * 100)}%
             </div>
           </div>
-          
+
           <div className="flex items-center justify-center min-h-full p-8">
             <img
               src={fileUrl}
@@ -203,6 +203,16 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
           <pre className="h-full overflow-auto bg-gray-50 dark:bg-gray-900 p-4 pr-24 rounded-md text-xs font-mono border border-gray-200 dark:border-gray-700">
             <code className="text-gray-800 dark:text-gray-200">{jsonData}</code>
           </pre>
+        </div>
+      );
+    }
+
+    if (fileType.startsWith("audio/")) {
+      return (
+        <div className="flex h-[60vh] items-center justify-center bg-gray-50 dark:bg-gray-900 rounded-md">
+          <audio controls className="w-full max-w-md" src={fileUrl}>
+            Your browser does not support the audio element.
+          </audio>
         </div>
       );
     }
