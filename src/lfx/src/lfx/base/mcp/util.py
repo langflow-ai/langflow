@@ -8,7 +8,7 @@ import re
 import shutil
 import unicodedata
 from collections.abc import Awaitable, Callable
-from typing import Any
+from typing import Any, Dict, Union
 from urllib.parse import urlparse
 from uuid import UUID
 
@@ -303,6 +303,115 @@ def _handle_tool_validation_error(
     raise ValueError(msg) from e
 
 
+def _fill_defaults(arg_schema: type[BaseModel], provided_args: dict) -> None:
+    """Fill default values for missing fields in the provided arguments."""
+    for field, field_info in arg_schema.model_fields.items():
+        if field not in provided_args:
+            field_type = field_info.annotation
+            field_type_str = str(field_type).lower()
+
+            if "list" in field_type_str or str(field_type) == "list":
+                provided_args[field] = []
+            elif "dict" in field_type_str or str(field_type) == "dict" or "object" in field_type_str:
+                provided_args[field] = {}
+            elif "str" in field_type_str or str(field_type) == "str":
+                provided_args[field] = ""
+            elif "int" in field_type_str or str(field_type) == "int":
+                provided_args[field] = 0
+            elif "float" in field_type_str or str(field_type) == "float":
+                provided_args[field] = 0.0
+            elif "bool" in field_type_str or str(field_type) == "bool":
+                provided_args[field] = False
+            else:
+                provided_args[field] = None
+
+def _post_process_arguments(arg_schema: type[BaseModel], arguments: dict) -> None:
+    """Post-process arguments to handle JSON parsing and type normalization."""
+    import json
+    from typing import get_origin, get_args, Union
+
+    # 1. Normalize types (Union handling and basic string conversion)
+    for field_name, value in arguments.items():
+        field_info = arg_schema.model_fields.get(field_name)
+        if field_info:
+            expected_type = field_info.annotation
+            if get_origin(expected_type) is Union:
+                union_args = get_args(expected_type)
+                if str in union_args and isinstance(value, (int, float, bool)):
+                    arguments[field_name] = str(value)
+                elif int in union_args and isinstance(value, str):
+                    try:
+                        arguments[field_name] = int(value)
+                    except ValueError:
+                        pass
+                elif float in union_args and isinstance(value, str):
+                    try:
+                        arguments[field_name] = float(value)
+                    except ValueError:
+                        pass
+                elif bool in union_args and isinstance(value, str):
+                    arguments[field_name] = value.lower() in ('true', '1', 'yes', 'on')
+            else:
+                if expected_type == str and isinstance(value, (int, float)):
+                    arguments[field_name] = str(value)
+
+    # 2. Handle JSON string inputs
+    for field_name, value in arguments.items():
+        if isinstance(value, str):
+            try:
+                parsed_value = json.loads(value)
+                # logger.debug(f"Parsed {field_name} from JSON string: {parsed_value}")
+
+                # specific array transformation
+                if (isinstance(parsed_value, list) and
+                    len(parsed_value) > 0 and
+                    isinstance(parsed_value[0], dict) and
+                    all(isinstance(v, (str, int, float, bool)) or v is None
+                        for record in parsed_value
+                        for v in record.values())):
+
+                    transformed_records = []
+                    for record in parsed_value:
+                        transformed_record = {}
+                        for k, v in record.items():
+                            if isinstance(v, (int, float)) and not isinstance(v, bool):
+                                v = str(v)
+                            transformed_record[k] = {"value": v}
+                        transformed_records.append(transformed_record)
+                    parsed_value = transformed_records
+                    # logger.debug(f"Transformed array records to API format: {parsed_value}")
+
+                arguments[field_name] = parsed_value
+            except json.JSONDecodeError as jde:
+                # Try ast.literal_eval
+                try:
+                    import ast
+                    parsed_value = ast.literal_eval(value)
+                    if isinstance(parsed_value, (list, dict)):
+                        arguments[field_name] = parsed_value
+                        # logger.debug(f"Parsed {field_name} using ast.literal_eval")
+                        continue
+                except Exception:
+                    pass
+                logger.warning(f"Failed to parse {field_name} as JSON: {jde}, keeping as string")
+
+                # If the field is expected to be a list or dict but parsing failed, raise an error
+                # to prevent "Expected array, received string" errors downstream.
+                field_info = arg_schema.model_fields.get(field_name)
+                if field_info:
+                    expected_type = field_info.annotation
+                    expected_type_str = str(expected_type).lower()
+                    if "list" in expected_type_str or "dict" in expected_type_str:
+                         msg = f"Invalid JSON format for argument '{field_name}'. Please check for missing brackets or quotes. Error: {jde}"
+                         raise ValueError(msg)
+
+    # 3. Force string conversion for numbers (final safety net)
+    for arg_name, arg_value in list(arguments.items()):
+        if isinstance(arg_value, (int, float)) and not isinstance(arg_value, bool):
+            arguments[arg_name] = str(arg_value)
+            # logger.debug(f"Force converting {arg_name} = {arg_value} ({type(arg_value).__name__}) to string")
+
+
 def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], client) -> Callable[..., Awaitable]:
     async def tool_coroutine(*args, **kwargs):
         # Get field names from the model (preserving order)
@@ -319,12 +428,15 @@ def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], client) -
         provided_args = _convert_camel_case_to_snake_case(provided_args, arg_schema)
         # Validate input and fill defaults for missing optional fields
         try:
+            _fill_defaults(arg_schema, provided_args)
             validated = arg_schema.model_validate(provided_args)
         except Exception as e:  # noqa: BLE001
             _handle_tool_validation_error(e, tool_name, provided_args, arg_schema)
 
         try:
-            return await client.run_tool(tool_name, arguments=validated.model_dump())
+            arguments = validated.model_dump()
+            _post_process_arguments(arg_schema, arguments)
+            return await client.run_tool(tool_name, arguments=arguments)
         except Exception as e:
             await logger.aerror(f"Tool '{tool_name}' execution failed: {e}")
             # Re-raise with more context
@@ -346,13 +458,16 @@ def create_tool_func(tool_name: str, arg_schema: type[BaseModel], client) -> Cal
         provided_args.update(kwargs)
         provided_args = _convert_camel_case_to_snake_case(provided_args, arg_schema)
         try:
+            _fill_defaults(arg_schema, provided_args)
             validated = arg_schema.model_validate(provided_args)
         except Exception as e:  # noqa: BLE001
             _handle_tool_validation_error(e, tool_name, provided_args, arg_schema)
 
         try:
+            arguments = validated.model_dump()
+            _post_process_arguments(arg_schema, arguments)
             loop = asyncio.get_event_loop()
-            return loop.run_until_complete(client.run_tool(tool_name, arguments=validated.model_dump()))
+            return loop.run_until_complete(client.run_tool(tool_name, arguments=arguments))
         except Exception as e:
             logger.error(f"Tool '{tool_name}' execution failed: {e}")
             # Re-raise with more context
