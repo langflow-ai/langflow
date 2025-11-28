@@ -80,7 +80,7 @@ export default function GlobalVariableModal({
     const data: {
       name: string;
       value: string;
-      type?: string;
+      type?: TAB_TYPES;
       default_fields?: string[];
     } = {
       name: key,
@@ -133,7 +133,7 @@ export default function GlobalVariableModal({
     }
   }
 
-  const assignTab = (tab: string) => {
+  const assignTab = (tab: string): TAB_TYPES => {
     switch (tab.toLowerCase()) {
       case "credential":
         return "Credential";
