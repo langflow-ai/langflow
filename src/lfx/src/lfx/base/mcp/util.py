@@ -405,10 +405,10 @@ def _post_process_arguments(arg_schema: type[BaseModel], arguments: dict) -> Non
                         # Continue to next step (although loop continues anyway)
                 except Exception:  # noqa: S110, BLE001
                     pass
-                
+
                 # If parsing failed, check if we should have parsed it
-                if isinstance(value, str): # Only warn if it's still a string
-                     logger.warning(f"Failed to parse {field_name} as JSON: {jde}, keeping as string")
+                if isinstance(value, str):  # Only warn if it's still a string
+                    logger.warning(f"Failed to parse {field_name} as JSON: {jde}, keeping as string")
 
                 # If the field is expected to be a list or dict but parsing failed, raise an error
                 # to prevent "Expected array, received string" errors downstream.
