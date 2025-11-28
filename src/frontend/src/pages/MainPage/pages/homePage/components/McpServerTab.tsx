@@ -33,7 +33,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
     isLocalConnection ? "Auto install" : "JSON",
   );
   const [selectedTransport, setSelectedTransport] =
-    useState<MCPTransport>("sse");
+    useState<MCPTransport>("streamablehttp");
   const {
     flowsMCPData,
     currentAuthSettings,
