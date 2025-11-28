@@ -34,7 +34,7 @@ def mock_mcp_server():
 @pytest.fixture
 def mock_streamable_http_manager():
     """Mock the StreamableHTTPSessionManager."""
-    with patch("langflow.api.v1.mcp.streamable_http_manager") as mock:
+    with patch("langflow.api.v1.mcp.streamable_http_session_manager") as mock:
         mock.handle_request = AsyncMock()
         yield mock
 
