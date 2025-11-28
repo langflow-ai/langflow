@@ -49,8 +49,8 @@ def get_starter_projects_path() -> Path:
         starter_path = current / "src" / "backend" / "base" / "langflow" / "initial_setup" / "starter_projects"
         if starter_path.exists():
             return starter_path
-        current = current.parent
-    # Return None if not found
+    current = current.parent
+    # Return an empty Path() if not found
     return Path()
 
 
