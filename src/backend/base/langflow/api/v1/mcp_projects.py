@@ -39,6 +39,7 @@ from langflow.api.utils.mcp import (
     get_url_by_os,
 )
 from langflow.api.v1.auth_helpers import handle_auth_settings_update
+from langflow.api.v1.mcp import SSECompletedNoOp
 from langflow.api.v1.mcp_utils import (
     current_request_variables_ctx,
     current_user_ctx,
@@ -407,7 +408,7 @@ async def handle_project_sse(
         current_project_ctx.reset(project_token)
         current_request_variables_ctx.reset(req_vars_token)
 
-    return Response(status_code=200)
+    return SSECompletedNoOp(status_code=200)
 
 
 async def _handle_project_sse_messages(
@@ -1198,8 +1199,7 @@ class ProjectMCPServer:
     def __init__(self, project_id: UUID):
         self.project_id = project_id
         self.server = Server(f"langflow-mcp-project-{project_id}")
-        # _configure_server_notification_defaults(self.server)
-
+        # TODO: implement an environment variable to enable/disable stateless mode
         self.session_manager = StreamableHTTPSessionManager(self.server, stateless=True)
         self._manager_lock = asyncio.Lock()
         self._manager_stack: AsyncExitStack | None = None
