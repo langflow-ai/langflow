@@ -6,6 +6,9 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { generateRandomFilename } from "../../utils/generate-filename";
 
+// Run tests in this file serially to avoid database conflicts with shared file state
+test.describe.configure({ mode: "serial" });
+
 test(
   "should be able to upload a file",
   {
