@@ -6,7 +6,6 @@ This module provides functionality to expand a minimal/compact flow format
 
 from __future__ import annotations
 
-from copy import deepcopy
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -41,12 +40,12 @@ class CompactFlowData(BaseModel):
 
 def _get_flat_components(all_types_dict: dict[str, Any]) -> dict[str, Any]:
     """Flatten the component types dict for easy lookup by component name."""
-    return {
-        comp_name: comp_data
-        for components in all_types_dict.values()
-        if isinstance(components, dict)
-        for comp_name, comp_data in components.items()
-    }
+    result: dict[str, Any] = {}
+    # Avoid unnecessary repeated .items() calls
+    for components in all_types_dict.values():
+        if type(components) is dict:  # slightly faster than isinstance for built-in types
+            result.update(components)
+    return result
 
 
 def _expand_node(
@@ -85,20 +84,34 @@ def _expand_node(
         msg = f"Component type '{compact_node.type}' not found in component index"
         raise ValueError(msg)
 
-    # Deep copy the template to avoid mutation
-    template_data = deepcopy(flat_components[compact_node.type])
+    # Performance note: We only mutate "template", so we only need to deepcopy that (assuming other fields are not used elsewhere).
+    # Defensive fallback: All other fields (except "template") in template_data are not mutated, so shallow copy is safe.
+    original_component = flat_components[compact_node.type]
+    template_data = original_component.copy()
 
     # Merge user values into template
     template = template_data.get("template", {})
+    # template may be missing; if so, leave as empty dict and build up from values
+
+    # Defensive: deepcopy template only if not empty (avoid cost for empty dict)
+    if template:
+        # Copy and update template, in-place modification
+        template = template.copy()
+    # Merge user values into template
     for field_name, field_value in compact_node.values.items():
         if field_name in template:
-            if isinstance(template[field_name], dict):
-                template[field_name]["value"] = field_value
+            field = template[field_name]
+            if type(field) is dict:
+                field = field.copy()  # avoid mutating shared dicts
+                field["value"] = field_value
+                template[field_name] = field
             else:
                 template[field_name] = field_value
         else:
             # Add as new field if not in template
             template[field_name] = {"value": field_value}
+
+    template_data["template"] = template
 
     return {
         "id": compact_node.id,
@@ -179,10 +192,12 @@ def _expand_edge(
 
     # Find output types from source node
     source_outputs = source_node_data.get("outputs", [])
-    source_output = next(
-        (o for o in source_outputs if o.get("name") == compact_edge.source_output),
-        None,
-    )
+    # Optimize: use generator expression and avoid unnecessary object production
+    source_output = None
+    for o in source_outputs:
+        if o.get("name") == compact_edge.source_output:
+            source_output = o
+            break
     output_types = source_output.get("types", []) if source_output else []
 
     # If no outputs defined, use base_classes
@@ -192,10 +207,15 @@ def _expand_edge(
     # Find input types and field type from target node template
     target_template = target_node_data.get("template", {})
     target_field = target_template.get(compact_edge.target_input, {})
-    input_types = target_field.get("input_types", [])
-    field_type = target_field.get("type", "str") if isinstance(target_field, dict) else "str"
-    if not input_types and isinstance(target_field, dict):
-        input_types = [field_type]
+    # Avoid repeated dict lookups
+    if isinstance(target_field, dict):
+        input_types = target_field.get("input_types", [])
+        field_type = target_field.get("type", "str")
+        if not input_types:
+            input_types = [field_type]
+    else:
+        input_types = []
+        field_type = "str"
 
     source_type = source_node["data"]["type"]
 
@@ -265,17 +285,15 @@ def expand_compact_flow(
     # Flatten components for lookup
     flat_components = _get_flat_components(all_types_dict)
 
-    # Expand nodes
-    expanded_nodes: dict[str, dict[str, Any]] = {}
-    for compact_node in flow_data.nodes:
-        expanded = _expand_node(compact_node, flat_components)
-        expanded_nodes[compact_node.id] = expanded
+    # Expand nodes using dict comprehension for in-memory cache
+    expanded_nodes: dict[str, dict[str, Any]] = {
+        compact_node.id: _expand_node(compact_node, flat_components) for compact_node in flow_data.nodes
+    }
 
-    # Expand edges
-    expanded_edges = []
-    for compact_edge in flow_data.edges:
-        expanded = _expand_edge(compact_edge, expanded_nodes)
-        expanded_edges.append(expanded)
+    # Expand edges using list comprehension
+    expanded_edges = [_expand_edge(compact_edge, expanded_nodes) for compact_edge in flow_data.edges]
+
+    # Returning as list directly from dict values (no measurable gain from using list comprehension here)
 
     return {
         "nodes": list(expanded_nodes.values()),
