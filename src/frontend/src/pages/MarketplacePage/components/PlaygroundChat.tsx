@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { v4 as uuid } from "uuid";
 import { getURL } from "@/controllers/API/helpers/constants";
+import { getSessionSummary } from "@/controllers/API/queries/observability";
 import { Message, FileInputComponent } from "./Playground.types";
 
 export function usePlaygroundChat(publishedFlowData: any) {
@@ -13,7 +14,7 @@ export function usePlaygroundChat(publishedFlowData: any) {
   const [loadingDots, setLoadingDots] = useState(1);
   const [targetTexts, setTargetTexts] = useState<Map<string, string>>(new Map());
   const [displayedTexts, setDisplayedTexts] = useState<Map<string, string>>(new Map());
-  
+
   const targetTextsRef = useRef<Map<string, string>>(new Map());
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -85,161 +86,161 @@ export function usePlaygroundChat(publishedFlowData: any) {
     return tweaks;
   };
 
-const handleStreamEvent = (eventData: any, localAgentMessageId: string) => {
-  const data = eventData?.data;
-  if (!data) return;
+  const handleStreamEvent = (eventData: any, localAgentMessageId: string) => {
+    const data = eventData?.data;
+    if (!data) return;
 
-  if (eventData.event === "add_message") {
-    if (data.sender === "User") return;
+    if (eventData.event === "add_message") {
+      if (data.sender === "User") return;
 
-    if (data.sender === "Machine") {
-      const backendId = data.id;
-      const text = data.text || "";
-      const state = data.properties?.state || "partial";
-      const isComplete = state === "complete";
+      if (data.sender === "Machine") {
+        const backendId = data.id;
+        const text = data.text || "";
+        const state = data.properties?.state || "partial";
+        const isComplete = state === "complete";
 
-      // Switch the tracked streaming id to the backend-provided id as soon as we have it
-      if (backendId) {
-        setStreamingMessageId(backendId);
-      }
-
-      setTargetTexts((prev) => {
-        const next = new Map(prev);
-        next.set(backendId, text);
-        return next;
-      });
-
-      setDisplayedTexts((prev) => {
-        if (!prev.has(backendId)) {
-          const next = new Map(prev);
-          const currentDisplayed = prev.get(localAgentMessageId) || "";
-          next.set(backendId, currentDisplayed);
-          next.delete(localAgentMessageId);
-          return next;
+        // Switch the tracked streaming id to the backend-provided id as soon as we have it
+        if (backendId) {
+          setStreamingMessageId(backendId);
         }
-        return prev;
-      });
 
-      setMessages((prev) => {
-        const existingIndex = prev.findIndex((msg) => msg.id === backendId);
+        setTargetTexts((prev) => {
+          const next = new Map(prev);
+          next.set(backendId, text);
+          return next;
+        });
 
-        if (existingIndex !== -1) {
-          return prev.map((msg) =>
-            msg.id === backendId
-              ? {
+        setDisplayedTexts((prev) => {
+          if (!prev.has(backendId)) {
+            const next = new Map(prev);
+            const currentDisplayed = prev.get(localAgentMessageId) || "";
+            next.set(backendId, currentDisplayed);
+            next.delete(localAgentMessageId);
+            return next;
+          }
+          return prev;
+        });
+
+        setMessages((prev) => {
+          const existingIndex = prev.findIndex((msg) => msg.id === backendId);
+
+          if (existingIndex !== -1) {
+            return prev.map((msg) =>
+              msg.id === backendId
+                ? {
                   ...msg,
                   text: isComplete ? text : "",
                   isStreaming: !isComplete,
                 }
-              : msg
-          );
-        } else {
-          const placeholderIndex = prev.findIndex(
-            (msg) => msg.id === localAgentMessageId
-          );
+                : msg
+            );
+          } else {
+            const placeholderIndex = prev.findIndex(
+              (msg) => msg.id === localAgentMessageId
+            );
 
-          if (placeholderIndex !== -1) {
-            return prev.map((msg) =>
-              msg.id === localAgentMessageId
-                ? {
+            if (placeholderIndex !== -1) {
+              return prev.map((msg) =>
+                msg.id === localAgentMessageId
+                  ? {
                     ...msg,
                     id: backendId,
                     text: isComplete ? text : "",
                     isStreaming: !isComplete,
                   }
-                : msg
-            );
-          } else {
-            return [
-              ...prev,
-              {
-                id: backendId,
-                type: "agent" as const,
-                text: isComplete ? text : "",
-                timestamp: new Date(),
-                isStreaming: !isComplete,
-              },
-            ];
+                  : msg
+              );
+            } else {
+              return [
+                ...prev,
+                {
+                  id: backendId,
+                  type: "agent" as const,
+                  text: isComplete ? text : "",
+                  timestamp: new Date(),
+                  isStreaming: !isComplete,
+                },
+              ];
+            }
           }
-        }
-      });
+        });
 
-      if (isComplete) {
-        setTimeout(() => {
-          setTargetTexts((prev) => {
-            const next = new Map(prev);
-            next.delete(backendId);
-            return next;
-          });
-          setDisplayedTexts((prev) => {
-            const next = new Map(prev);
-            next.delete(backendId);
-            return next;
-          });
-        }, 2000);
+        if (isComplete) {
+          setTimeout(() => {
+            setTargetTexts((prev) => {
+              const next = new Map(prev);
+              next.delete(backendId);
+              return next;
+            });
+            setDisplayedTexts((prev) => {
+              const next = new Map(prev);
+              next.delete(backendId);
+              return next;
+            });
+          }, 2000);
+        }
       }
-    }
-  } else if (eventData.event === "end") {
+    } else if (eventData.event === "end") {
 
-    try {
-      const outputs = data?.result?.outputs;
-      if (outputs && outputs.length > 0) {
-        const firstOutput = outputs[0];
-        const outputResults = firstOutput?.outputs?.[0];
-        
-        let finalText = "";
+      try {
+        const outputs = data?.result?.outputs;
+        if (outputs && outputs.length > 0) {
+          const firstOutput = outputs[0];
+          const outputResults = firstOutput?.outputs?.[0];
 
-        if (outputResults?.results?.text?.data?.text) {
-          finalText = outputResults.results.text.data.text;
-        }
+          let finalText = "";
 
-        else if (outputResults?.results?.text?.text) {
-          finalText = outputResults.results.text.text;
-        }
+          if (outputResults?.results?.text?.data?.text) {
+            finalText = outputResults.results.text.data.text;
+          }
 
-        else if (outputResults?.outputs?.text?.message) {
-          finalText = outputResults.outputs.text.message;
-        }
+          else if (outputResults?.results?.text?.text) {
+            finalText = outputResults.results.text.text;
+          }
 
-        else if (outputResults?.messages && outputResults.messages.length > 0) {
-          finalText = outputResults.messages[0].message || "";
-        }
+          else if (outputResults?.outputs?.text?.message) {
+            finalText = outputResults.outputs.text.message;
+          }
 
-        if (finalText) {
-          const finalId = streamingIdRef.current || localAgentMessageId;
+          else if (outputResults?.messages && outputResults.messages.length > 0) {
+            finalText = outputResults.messages[0].message || "";
+          }
 
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === finalId
-                ? { ...msg, text: finalText, isStreaming: false }
-                : msg
-            )
-          );
+          if (finalText) {
+            const finalId = streamingIdRef.current || localAgentMessageId;
 
-          // Clear typewriter state now that we have the final text
-          setTargetTexts(new Map());
-          setDisplayedTexts(new Map());
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === finalId
+                  ? { ...msg, text: finalText, isStreaming: false }
+                  : msg
+              )
+            );
+
+            // Clear typewriter state now that we have the final text
+            setTargetTexts(new Map());
+            setDisplayedTexts(new Map());
+          } else {
+            setMessages((prev) =>
+              prev.map((msg) => ({ ...msg, isStreaming: false }))
+            );
+          }
         } else {
           setMessages((prev) =>
             prev.map((msg) => ({ ...msg, isStreaming: false }))
           );
         }
-      } else {
+      } catch (error) {
+        console.error("[Playground] Error parsing end event:", error);
         setMessages((prev) =>
           prev.map((msg) => ({ ...msg, isStreaming: false }))
         );
       }
-    } catch (error) {
-      console.error("[Playground] Error parsing end event:", error);
-      setMessages((prev) =>
-        prev.map((msg) => ({ ...msg, isStreaming: false }))
-      );
+    } else if (eventData.event === "error") {
+      const errorMsg = data?.error || "Stream error";
+      throw new Error(errorMsg);
     }
-  } else if (eventData.event === "error") {
-    const errorMsg = data?.error || "Stream error";
-    throw new Error(errorMsg);
-  }
-};
+  };
 
   const sendMessage = async (
     userInputText: string,
@@ -350,9 +351,58 @@ const handleStreamEvent = (eventData: any, localAgentMessageId: string) => {
         }
       }
 
-      setMessages((prev) =>
-        prev.map((msg) => ({ ...msg, isStreaming: false }))
-      );
+      // Fetch session summary to get trace info
+      try {
+        let attempts = 0;
+        const maxAttempts = 5;
+        let sessionSummary;
+
+        while (attempts < maxAttempts) {
+          // Add a delay between attempts (1s)
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+
+          sessionSummary = await getSessionSummary(sessionId);
+
+          if (sessionSummary && (sessionSummary.trace_count > 0 || sessionSummary.traces?.length > 0)) {
+            break;
+          }
+          attempts++;
+        }
+
+        if (sessionSummary) {
+          const {
+            latest_trace_id,
+            total_duration_ms,
+            total_tokens,
+          } = sessionSummary;
+
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === localAgentMessageId || msg.id === streamingIdRef.current
+                ? {
+                  ...msg,
+                  isStreaming: false,
+                  traceId: latest_trace_id,
+                  latency: total_duration_ms
+                    ? `${(total_duration_ms / 1000).toFixed(2)}s`
+                    : undefined,
+                  tokenCount: total_tokens,
+                }
+                : msg
+            )
+          );
+        } else {
+          setMessages((prev) =>
+            prev.map((msg) => ({ ...msg, isStreaming: false }))
+          );
+        }
+      } catch (error) {
+        console.error("Error fetching session summary:", error);
+        setMessages((prev) =>
+          prev.map((msg) => ({ ...msg, isStreaming: false }))
+        );
+      }
+
     } catch (err: any) {
       console.error("Streaming error:", err);
 
