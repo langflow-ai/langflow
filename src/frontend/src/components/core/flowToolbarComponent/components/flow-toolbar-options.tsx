@@ -30,6 +30,8 @@ import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { USER_ROLES } from "@/types/auth";
 import SubmitForApprovalModal from "@/modals/submitForApprovalModal";
 import PublishFlowModal from "@/modals/publishFlowModal";
+import { CheckCircle } from "lucide-react";
+import { CrossCircledIcon } from "@radix-ui/react-icons";
 
 export default function FlowToolbarOptions() {
   const navigate = useNavigate();
@@ -77,12 +79,15 @@ export default function FlowToolbarOptions() {
   const { mutate: approveVersion, isPending: isApproving } =
     useApproveVersion();
   const { mutate: rejectVersion, isPending: isRejecting } = useRejectVersion();
-  const { mutate: cancelSubmission, isPending: isCancelling } = useCancelSubmission();
+  const { mutate: cancelSubmission, isPending: isCancelling } =
+    useCancelSubmission();
   const { mutateAsync: getFlowMutation } = useGetFlow();
 
   // For updating flow after cancel submission
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
-  const setCurrentFlowInFlowStore = useFlowStore((state) => state.setCurrentFlow);
+  const setCurrentFlowInFlowStore = useFlowStore(
+    (state) => state.setCurrentFlow
+  );
 
   // Button visibility logic based on status and ownership
   // Submit for Review: Show for Draft, Rejected, Published, Submitted, or no status - ONLY if user is flow owner
@@ -158,14 +163,16 @@ export default function FlowToolbarOptions() {
 
     cancelSubmission(latestVersionId, {
       onSuccess: async () => {
-        setSuccessData({ title: `Submission cancelled for "${currentFlowName}"` });
+        setSuccessData({
+          title: `Submission cancelled for "${currentFlowName}"`,
+        });
 
         // Refetch the updated flow to get the unlocked state
         try {
           const updatedFlow = await getFlowMutation({ id: currentFlowId });
           if (updatedFlow) {
-            setCurrentFlow(updatedFlow);  // Update flowsManagerStore
-            setCurrentFlowInFlowStore(updatedFlow);  // Update flowStore
+            setCurrentFlow(updatedFlow); // Update flowsManagerStore
+            setCurrentFlowInFlowStore(updatedFlow); // Update flowStore
           }
         } catch (error) {
           console.error("Failed to refetch flow after cancel:", error);
@@ -198,25 +205,27 @@ export default function FlowToolbarOptions() {
         {showApproveRejectButtons && (
           <>
             <Button
-              variant="ghost"
-              size="xs"
-              className="!px-2.5 font-normal text-green-600 hover:text-green-700 hover:bg-green-50"
+              variant="link"
+              className="!px-1 font-normal text-success !font-medium"
               onClick={handleApprove}
               disabled={isApproving}
               data-testid="approve-button"
             >
-              <IconComponent name="Check" className="mr-1.5 h-4 w-4" />
+              <IconComponent name="CheckCircle" className="h-4 w-4" />
               Approve
             </Button>
             <Button
-              variant="ghost"
-              size="xs"
-              className="!px-2.5 font-normal text-red-600 hover:text-red-700 hover:bg-red-50"
+              variant="link"
+              className="!px-1 font-normal !text-error !font-medium"
               onClick={handleRejectClick}
               disabled={isRejecting}
               data-testid="reject-button"
             >
-              <IconComponent name="X" className="mr-1.5 h-4 w-4" />
+              <CrossCircledIcon className="h-4 w-4" />
+              {/* <IconComponent
+                name="CrossCircledIcon"
+                className="mr-1.5 h-4 w-4"
+              /> */}
               Reject
             </Button>
           </>
@@ -225,9 +234,8 @@ export default function FlowToolbarOptions() {
         {/* Submit for Review Button - show for Agent Developer (not Marketplace Admin), disabled when under review */}
         {showSubmitButton && !isUnderReview && (
           <Button
-            variant="ghost"
-            size="xs"
-            className="!px-2.5 font-normal"
+            variant="link"
+            className="!px-1 font-medium text-menu hover:text-secondary"
             onClick={() => setOpenSubmitModal(true)}
             data-testid="submit-for-review-button"
           >
@@ -238,9 +246,8 @@ export default function FlowToolbarOptions() {
         {/* Cancel Submission Button - show when status is Submitted and user is flow owner */}
         {isFlowOwner && isUnderReview && (
           <Button
-            variant="ghost"
-            size="xs"
-            className="!px-2.5 font-normal text-red-600 hover:text-red-700 hover:bg-red-50"
+            variant="link"
+            className="!px-1 font-medium text-menu hover:text-secondary"
             onClick={handleCancelSubmission}
             disabled={isCancelling}
             data-testid="cancel-submission-button"
@@ -253,9 +260,8 @@ export default function FlowToolbarOptions() {
         {/* Publish to Marketplace Button - show when status is Approved */}
         {showPublishButton && (
           <Button
-            variant="default"
-            size="md"
-            className="!px-2.5 font-normal"
+            variant="link"
+            className="!px-1 font-medium text-menu hover:text-secondary"
             onClick={() => setOpenPublishModal(true)}
             data-testid="publish-to-marketplace-button"
           >
@@ -317,9 +323,10 @@ export default function FlowToolbarOptions() {
               Cancel
             </Button>
             <Button
-              variant="destructive"
+              variant="default"
               onClick={handleRejectConfirm}
               disabled={isRejecting}
+              className="bg-error hover:bg-error"
             >
               {isRejecting ? "Rejecting..." : "Reject"}
             </Button>

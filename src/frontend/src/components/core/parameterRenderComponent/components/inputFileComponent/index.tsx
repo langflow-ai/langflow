@@ -300,7 +300,7 @@ export default function InputFileComponent({
                       "bg-accent-emerald-foreground ring-accent-emerald-foreground hover:bg-accent-emerald-foreground",
                     isDisabled &&
                       "relative top-[1px] h-9 ring-1 ring-border ring-offset-0 hover:ring-border",
-                    editNode && "h-6"
+                    editNode && "h-9"
                   )}
                   onClick={handleButtonClick}
                   disabled={isDisabled}

@@ -94,7 +94,7 @@ export default function VersionDropdown({
         <DropdownMenuTrigger asChild>
           <Button
             variant="outline"
-            size="sm"
+            size="md"
             className="gap-2"
             data-testid="version-dropdown-trigger"
           >
@@ -107,37 +107,38 @@ export default function VersionDropdown({
         <DropdownMenuContent align="end" className="w-64">
           <DropdownMenuLabel>Select Version</DropdownMenuLabel>
           <DropdownMenuSeparator />
-
-          {versions.map((version) => (
-            <DropdownMenuItem
-              key={version.id}
-              onClick={() => handleVersionSelect(version)}
-              disabled={isPending}
-              className="flex cursor-pointer items-center justify-between"
-              data-testid={`version-item-${version.version}`}
-            >
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">{version.version}</span>
-                  {version.status_name === "Published" && (
-                    <Badge variant="default" className="text-xs">
-                      Published
-                    </Badge>
-                  )}
+          <div className="max-h-[400px] overflow-auto">
+            {versions.map((version) => (
+              <DropdownMenuItem
+                key={version.id}
+                onClick={() => handleVersionSelect(version)}
+                disabled={isPending}
+                className="flex cursor-pointer items-center justify-between"
+                data-testid={`version-item-${version.version}`}
+              >
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{version.version}</span>
+                    {version.status_name === "Published" && (
+                      <Badge variant="default" className="text-xs">
+                        Published
+                      </Badge>
+                    )}
+                  </div>
+                  <span className="text-xs text-secondary-font">
+                    {moment(version.published_at).fromNow()}
+                  </span>
                 </div>
-                <span className="text-xs text-secondary-font">
-                  {moment(version.published_at).fromNow()}
-                </span>
-              </div>
 
-              {version.drafted && (
-                <ForwardedIconComponent
-                  name="Check"
-                  className="h-4 w-4 text-menu"
-                />
-              )}
-            </DropdownMenuItem>
-          ))}
+                {version.drafted && (
+                  <ForwardedIconComponent
+                    name="Check"
+                    className="h-4 w-4 text-menu"
+                  />
+                )}
+              </DropdownMenuItem>
+            ))}
+          </div>
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -146,9 +147,16 @@ export default function VersionDropdown({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              Do you want to switch to Version {selectedVersion?.version}?
+              Switch to Version {selectedVersion?.version}?
             </DialogTitle>
           </DialogHeader>
+          <p className="my-6 text-secondary-font text-sm">
+            Are you sure you want to switch to Version{" "}
+            <span className="font-semibold text-primary-font">
+              {selectedVersion?.version}
+            </span>
+            ? Any unsaved changes may be lost.
+          </p>
           <DialogFooter>
             <Button
               variant="outline"

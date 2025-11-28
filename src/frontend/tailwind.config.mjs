@@ -254,6 +254,14 @@ const config = {
           bg: "var(--error-bg)",
           notificationBg: "var(--error-notification-bg)",
         },
+        success: {
+          DEFAULT: "var(--success)",
+          bg: "var(--success-bg)",
+        },
+        process: {
+          DEFAULT: "var(--process)",
+          bg: "var(--process-bg)",
+        },
         // status: {
         //   error: "var(--error)",
         //   "error-bg": "var(--error-bg)",

@@ -199,18 +199,18 @@ export function ChatArea({
             {selectedFiles.map((file) => (
               <div
                 key={file.componentId}
-                className="flex items-center gap-2 bg-[#FBFAFF] border border-[#EFEFEF] rounded-lg px-2 py-3 text-sm group hover:border-primary/50 transition-colors"
+                className="flex items-center gap-2 bg-background-mainBg border border-primary-border rounded-lg px-2 py-3 text-sm group hover:border-primary/50 transition-colors"
               >
-                <File className="h-4 w-4 text-[#64616A] flex-shrink-0" />
+                <File className="h-4 w-4 text-secondary-font flex-shrink-0" />
                 <div className="flex flex-col min-w-0">
                   <span
-                    className="font-medium truncate max-w-[200px] text-[#444444]"
+                    className="font-medium truncate max-w-[200px] text-primary-font"
                     title={file.filename}
                   >
                     {file.filename}
                   </span>
                   <span
-                    className="text-xs text-[#64616A] truncate"
+                    className="text-xs text-secondary-font truncate"
                     title={file.componentName}
                   >
                     for {file.componentName}
@@ -264,7 +264,7 @@ export function ChatArea({
                 onChange={(e) => setInput(e.target.value)}
                 onInput={autoResizeTextarea}
                 placeholder="Type your message..."
-                className={`w-full p-3 pr-12 rounded-lg border border-input bg-background text-[#444] text-sm resize-none min-h-[40px] max-h-[200px] overflow-y-auto focus:outline-none focus:ring-1 focus:ring-primary
+                className={`w-full p-3 pr-12 rounded-lg border border-input bg-background text-primary-font text-sm resize-none min-h-[40px] max-h-[200px] overflow-y-auto focus:outline-none focus:ring-1 focus:ring-primary
                   ${fileInputComponents.length > 0 && "pl-12"}`}
                 onKeyDown={onKeyPress}
                 disabled={isLoading || !!streamingMessageId}
