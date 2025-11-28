@@ -48,6 +48,8 @@ class AuthService(AuthServiceBase):
 
     def __init__(self, settings_service: SettingsService):
         self.settings_service = settings_service
+        # Cache the references to avoid attribute lookups on every call
+        self._verify = settings_service.auth_settings.pwd_context.verify
         self.set_ready()
 
     @property
@@ -329,7 +331,8 @@ class AuthService(AuthServiceBase):
         return authenticated_user
 
     def verify_password(self, plain_password, hashed_password):
-        return self.settings.auth_settings.pwd_context.verify(plain_password, hashed_password)
+        # Use cached bound method for less attribute traversal
+        return self._verify(plain_password, hashed_password)
 
     def get_password_hash(self, password):
         return self.settings.auth_settings.pwd_context.hash(password)
