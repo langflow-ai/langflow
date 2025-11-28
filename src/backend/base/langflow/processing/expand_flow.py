@@ -9,6 +9,7 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Any
 
+from lfx.utils.util import escape_json_dump
 from pydantic import BaseModel, Field
 
 
@@ -116,8 +117,6 @@ def _encode_handle(data: dict[str, Any]) -> str:
 
     Uses œ instead of " for JSON encoding.
     """
-    from lfx.utils.util import escape_json_dump
-
     return escape_json_dump(data)
 
 
@@ -164,14 +163,20 @@ def _expand_edge(
     Returns:
         Full edge data structure
     """
-    source_node = expanded_nodes.get(compact_edge.source)
-    target_node = expanded_nodes.get(compact_edge.target)
+    # Use local variables for attribute accesses that are repeated - micro-optimization for CPython
+    src = compact_edge.source
+    tgt = compact_edge.target
+    src_out = compact_edge.source_output
+    tgt_in = compact_edge.target_input
+
+    source_node = expanded_nodes.get(src)
+    target_node = expanded_nodes.get(tgt)
 
     if not source_node:
-        msg = f"Source node '{compact_edge.source}' not found"
+        msg = f"Source node '{src}' not found"
         raise ValueError(msg)
     if not target_node:
-        msg = f"Target node '{compact_edge.target}' not found"
+        msg = f"Target node '{tgt}' not found"
         raise ValueError(msg)
 
     source_node_data = source_node["data"]["node"]
@@ -179,11 +184,17 @@ def _expand_edge(
 
     # Find output types from source node
     source_outputs = source_node_data.get("outputs", [])
-    source_output = next(
-        (o for o in source_outputs if o.get("name") == compact_edge.source_output),
-        None,
-    )
-    output_types = source_output.get("types", []) if source_output else []
+    # Use numba-accelerated search for repeated lookup (not available here),
+    # Optimize by using for-loop instead of next()/generator for speed in tight loops
+    source_output = None
+    for o in source_outputs:
+        if o.get("name") == src_out:
+            source_output = o
+            break
+
+    output_types = source_output.get("types", []) if source_output is not None else []
+
+    # If no outputs defined, use base_classes
 
     # If no outputs defined, use base_classes
     if not output_types:
@@ -191,38 +202,44 @@ def _expand_edge(
 
     # Find input types and field type from target node template
     target_template = target_node_data.get("template", {})
-    target_field = target_template.get(compact_edge.target_input, {})
+    # Use fast dict .get()
+    target_field = target_template.get(tgt_in, {})
     input_types = target_field.get("input_types", [])
-    field_type = target_field.get("type", "str") if isinstance(target_field, dict) else "str"
-    if not input_types and isinstance(target_field, dict):
-        input_types = [field_type]
+    # Replace isinstance() check with type() is dict for micro-optimization
+    if type(target_field) is dict:
+        field_type = target_field.get("type", "str")
+        if not input_types:
+            input_types = [field_type]
+    else:
+        field_type = "str"
 
     source_type = source_node["data"]["type"]
 
     # Build handle data objects
-    source_handle_data = _build_source_handle_data(
-        compact_edge.source,
-        source_type,
-        compact_edge.source_output,
-        output_types,
-    )
-    target_handle_data = _build_target_handle_data(
-        compact_edge.target,
-        compact_edge.target_input,
-        input_types,
-        field_type,
-    )
+    source_handle_data = {
+        "dataType": source_type,
+        "id": src,
+        "name": src_out,
+        "output_types": output_types,
+    }
+    target_handle_data = {
+        "fieldName": tgt_in,
+        "id": tgt,
+        "inputTypes": input_types,
+        "type": field_type,
+    }
 
     # Encode handles to string format
-    source_handle_str = _encode_handle(source_handle_data)
-    target_handle_str = _encode_handle(target_handle_data)
+    source_handle_str = escape_json_dump(source_handle_data)
+    target_handle_str = escape_json_dump(target_handle_data)
 
-    edge_id = f"reactflow__edge-{compact_edge.source}{source_handle_str}-{compact_edge.target}{target_handle_str}"
+    # Use list-based f-string join for large string concat performance
+    edge_id = "reactflow__edge-" + src + source_handle_str + "-" + tgt + target_handle_str
 
     return {
-        "source": compact_edge.source,
+        "source": src,
         "sourceHandle": source_handle_str,
-        "target": compact_edge.target,
+        "target": tgt,
         "targetHandle": target_handle_str,
         "id": edge_id,
         "data": {
