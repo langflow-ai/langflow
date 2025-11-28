@@ -7,7 +7,12 @@ import { EMPTY_OUTPUT_SEND_MESSAGE } from "@/constants/constants";
 import CodeTabsComponent from "@/components/core/codeTabsComponent";
 import { Message } from "./Playground.types";
 import { Button } from "@/components/ui/button";
-import { File, Eye } from "lucide-react";
+import {
+  SendHorizonal,
+  ClockFading,
+  File,
+  Eye,
+} from "lucide-react";
 
 interface MessageRendererProps {
   message: Message;
@@ -19,6 +24,7 @@ interface MessageRendererProps {
     name: string;
     type: string;
   }) => void;
+  onViewTrace?: (traceId: string) => void;
 }
 
 // Helper function to strip markdown code fences
@@ -71,6 +77,7 @@ export function MessageRenderer({
   targetTexts,
   loadingDots,
   onPreviewAttachment,
+  onViewTrace,
 }: MessageRendererProps) {
   const renderMessageContent = () => {
     if (message.type === "agent") {
@@ -244,16 +251,14 @@ export function MessageRenderer({
   return (
     <div className="space-y-2">
       <div
-        className={`flex ${
-          message.type === "user" ? "justify-end" : "justify-start"
-        }`}
+        className={`flex ${message.type === "user" ? "justify-end" : "justify-start"
+          }`}
       >
         <div
-          className={`max-w-[85%] rounded-lg ${
-            message.type === "user"
-              ? "bg-[#F5F2FF] text-[#64616A] p-2"
-              : "text-[#444] ml-2"
-          }`}
+          className={`max-w-[85%] rounded-lg ${message.type === "user"
+            ? "bg-[#F5F2FF] text-[#64616A] p-2"
+            : "text-[#444] ml-2"
+            }`}
         >
           <div className="break-words">
             {renderMessageContent()}
@@ -265,20 +270,17 @@ export function MessageRenderer({
           {/* Attachments preview chips */}
           {message.files && message.files.length > 0 && (
             <div
-              className={`mt-3 flex flex-wrap gap-2 ${
-                message.type === "user" ? "text-white" : "text-[#444]"
-              }`}
+              className={`mt-3 flex flex-wrap gap-2 ${message.type === "user" ? "text-white" : "text-[#444]"
+                }`}
             >
               {message.files.map((f, idx) => (
                 <div
                   key={`${f.url}-${idx}`}
-                  className={`flex items-center gap-2 ${
-                    message.type === "user" ? "bg-[#4C23A6]" : "bg-white"
-                  } border rounded-lg px-3 py-2 text-sm group ${
-                    message.type === "user"
+                  className={`flex items-center gap-2 ${message.type === "user" ? "bg-[#4C23A6]" : "bg-white"
+                    } border rounded-lg px-3 py-2 text-sm group ${message.type === "user"
                       ? "border-white/20"
                       : "border-gray-200"
-                  }`}
+                    }`}
                 >
                   <File className="h-4 w-4 flex-shrink-0" />
                   <span className="truncate max-w-[200px]" title={f.name}>
@@ -295,11 +297,10 @@ export function MessageRenderer({
                           type: f.type,
                         })
                       }
-                      className={`h-6 w-6 p-0 ml-1 ${
-                        message.type === "user"
-                          ? "text-white hover:text-white/90"
-                          : "text-muted-foreground hover:text-primary"
-                      }`}
+                      className={`h-6 w-6 p-0 ml-1 ${message.type === "user"
+                        ? "text-white hover:text-white/90"
+                        : "text-muted-foreground hover:text-primary"
+                        }`}
                       title="Preview file"
                     >
                       <Eye className="h-3 w-3" />
@@ -314,11 +315,33 @@ export function MessageRenderer({
 
       {shouldShowTimestamp() && (
         <div
-          className={`flex text-xs text-muted-foreground ${
-            message.type === "user" ? "justify-end" : "justify-start"
-          }`}
+          className={`flex text-xs text-muted-foreground items-center gap-4 ${message.type === "user" ? "justify-end" : "justify-start"
+            }`}
         >
-          <span className="px-4">{message.timestamp.toLocaleTimeString()}</span>
+          {message.type === "agent" && (
+            <div className="flex items-center gap-4 ml-2">
+              {message.latency && (
+                <span className="flex items-center gap-1">
+                  <ClockFading className="h-3 w-3" />
+                  {message.latency} Latency
+                </span>
+              )}
+              {!!message.tokenCount && (
+                <span>{message.tokenCount} tokens</span>
+              )}
+              {message.traceId && onViewTrace && (
+                <button
+                  onClick={() => onViewTrace(message.traceId!)}
+                  className="text-primary hover:underline font-medium"
+                >
+                  View Trace Info
+                </button>
+              )}
+            </div>
+          )}
+          <span className={message.type === "user" ? "px-4" : ""}>
+            {message.timestamp.toLocaleTimeString()}
+          </span>
         </div>
       )}
     </div>

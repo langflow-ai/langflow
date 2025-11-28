@@ -23,6 +23,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import TraceDetailsModal from "./TraceDetailsModal";
 // Removed ThreadLogsModal in favor of the new ThreadLogsDrawer
 
 export default function PlaygroundTab({
@@ -89,6 +90,7 @@ export default function PlaygroundTab({
   const { currentThreadId, newThread } = useThreadManager();
   const [isThreadLogsOpen, setIsThreadLogsOpen] = useState(false);
   const [isConfirmNewThreadOpen, setIsConfirmNewThreadOpen] = useState(false);
+  const [selectedTraceId, setSelectedTraceId] = useState<string | null>(null);
 
   const agentDetails = {
     createdOn: publishedFlowData?.created_at
@@ -108,8 +110,8 @@ export default function PlaygroundTab({
     publishedFlowData?.input_samples
   )
     ? publishedFlowData!.input_samples.flatMap((s: any) =>
-        Array.isArray(s?.file_names) ? s.file_names : []
-      )
+      Array.isArray(s?.file_names) ? s.file_names : []
+    )
     : [];
 
   const sampleFileNames: string[] = sampleFilePaths.map((path: string) => {
@@ -124,8 +126,8 @@ export default function PlaygroundTab({
   // Aggregate sample input texts from input_samples
   const sampleTexts: string[] = Array.isArray(publishedFlowData?.input_samples)
     ? publishedFlowData!.input_samples.flatMap((s: any) =>
-        Array.isArray(s?.sample_text) ? s.sample_text : []
-      )
+      Array.isArray(s?.sample_text) ? s.sample_text : []
+    )
     : [];
 
   // Helper to safely stringify JSON-like values
@@ -144,11 +146,11 @@ export default function PlaygroundTab({
     publishedFlowData?.input_samples
   )
     ? (() => {
-        const found = publishedFlowData!.input_samples.find(
-          (s: any) => s && s.sample_output
-        );
-        return stringifyIfObject(found?.sample_output);
-      })()
+      const found = publishedFlowData!.input_samples.find(
+        (s: any) => s && s.sample_output
+      );
+      return stringifyIfObject(found?.sample_output);
+    })()
     : undefined;
 
   // Helper to open sample text modal
@@ -230,6 +232,8 @@ export default function PlaygroundTab({
         if (extension === "json") fileType = "application/json";
         else if (extension === "png") fileType = "image/png";
         else if (extension === "pdf") fileType = "application/pdf";
+        else if (["mp3", "wav", "ogg", "m4a"].includes(extension))
+          fileType = `audio/${extension}`;
 
         return {
           componentId,
@@ -383,6 +387,7 @@ export default function PlaygroundTab({
     if (ext === "png") return "image/png";
     if (ext === "jpg" || ext === "jpeg") return "image/jpeg";
     if (ext === "pdf") return "application/pdf";
+    if (["mp3", "wav", "ogg", "m4a"].includes(ext)) return `audio/${ext}`;
     return "application/octet-stream";
   };
 
@@ -413,7 +418,7 @@ export default function PlaygroundTab({
         : filePathOrName;
       const type = getFileTypeFromName(name);
       setPreviewFile({ url: signedUrl, name, type });
-    } catch (e) {}
+    } catch (e) { }
   };
 
   const selectSampleFile = async (filePathOrName: string) => {
@@ -429,7 +434,7 @@ export default function PlaygroundTab({
       const targetComponentId = fileInputComponents[0].id;
       setShowSampleSection(false);
       setFileUrls({ [targetComponentId]: signedUrl });
-    } catch (e) {}
+    } catch (e) { }
   };
 
   useEffect(() => {
@@ -449,9 +454,8 @@ export default function PlaygroundTab({
   return (
     <div className="flex h-full w-full flex-col ">
       <div
-        className={`flex flex-1 overflow-hidden h-full items-center ${
-          isThreadLogsOpen ? "mr-[312px]" : ""
-        }`}
+        className={`flex flex-1 overflow-hidden h-full items-center ${isThreadLogsOpen ? "mr-[312px]" : ""
+          }`}
       >
         {/* Agent Details Panel */}
         <div
@@ -521,6 +525,7 @@ export default function PlaygroundTab({
             sampleFileNames={sampleFileNames}
             sampleFilePaths={sampleFilePaths}
             onSelectSampleFile={selectSampleFile}
+            onViewTrace={(traceId) => setSelectedTraceId(traceId)}
           />
         </div>
       </div>
@@ -539,6 +544,14 @@ export default function PlaygroundTab({
           />
         </div>
       )}
+
+      <TraceDetailsModal
+        open={!!selectedTraceId}
+        onOpenChange={(open) => {
+          if (!open) setSelectedTraceId(null);
+        }}
+        traceId={selectedTraceId}
+      />
 
       <FileUploadManager
         isOpen={isFileModalOpen}

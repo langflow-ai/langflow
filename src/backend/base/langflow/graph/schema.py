@@ -51,6 +51,7 @@ class InterfaceComponentTypes(str, Enum, metaclass=ContainsEnumMeta):
     ChatInput = "ChatInput"
     ChatOutput = "ChatOutput"
     TextInput = "TextInput"
+    FileInput = "FilePathInput"
     TextOutput = "TextOutput"
     DataOutput = "DataOutput"
     WebhookInput = "Webhook"
@@ -62,6 +63,7 @@ INPUT_COMPONENTS = [
     InterfaceComponentTypes.ChatInput,
     InterfaceComponentTypes.WebhookInput,
     InterfaceComponentTypes.TextInput,
+    InterfaceComponentTypes.FileInput
 ]
 OUTPUT_COMPONENTS = [
     InterfaceComponentTypes.ChatOutput,

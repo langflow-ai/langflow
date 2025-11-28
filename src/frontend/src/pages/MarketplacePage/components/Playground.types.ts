@@ -15,6 +15,9 @@ export interface Message {
     url: string;
     type: string;
   }[];
+  traceId?: string;
+  latency?: string;
+  tokenCount?: number;
 }
 
 export interface FileInputComponent {
