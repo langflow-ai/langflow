@@ -424,7 +424,7 @@ class TestProcessFilesEdgeCases:
     def test_process_files_docling_only_extension_without_advanced_mode(
         self,
         mock_subprocess,
-        tmp_path,  # noqa: ARG002
+        tmp_path,
     ):
         """Test that Docling-only extensions require advanced mode."""
         test_image = tmp_path / "test.png"
