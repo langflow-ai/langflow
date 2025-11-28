@@ -1,15 +1,17 @@
-import pytest
-from pydantic import BaseModel
-from typing import List, Dict, Any, Union
+from typing import Any
+
 from lfx.base.mcp.util import _fill_defaults, _post_process_arguments
 from lfx.schema.json_schema import create_input_schema_from_json_schema
+from pydantic import BaseModel
+
 
 class MockSchema(BaseModel):
     name: str
     age: int
-    tags: List[str]
-    meta: Dict[str, Any]
+    tags: list[str]
+    meta: dict[str, Any]
     is_active: bool
+
 
 def test_fill_defaults():
     provided_args = {}
@@ -20,27 +22,26 @@ def test_fill_defaults():
     assert provided_args["meta"] == {}
     assert provided_args["is_active"] is False
 
+
 def test_post_process_arguments_json_parsing():
     class JsonSchema(BaseModel):
-        data: List[Dict[str, Any]]
-        config: Dict[str, Any]
+        data: list[dict[str, Any]]
+        config: dict[str, Any]
 
-    arguments = {
-        "data": '[{"id": 1, "val": "a"}, {"id": 2, "val": "b"}]',
-        "config": '{"timeout": 10}'
-    }
+    arguments = {"data": '[{"id": 1, "val": "a"}, {"id": 2, "val": "b"}]', "config": '{"timeout": 10}'}
     _post_process_arguments(JsonSchema, arguments)
-    
+
     assert isinstance(arguments["data"], list)
     assert len(arguments["data"]) == 2
     # Check the transformation logic (it wraps values in {"value": ...})
     # transformed_record[k] = {"value": v}
     # Note: The logic in _post_process_arguments converts ints to strings for values
-    assert arguments["data"][0]["id"] == {"value": "1"} 
+    assert arguments["data"][0]["id"] == {"value": "1"}
     assert arguments["data"][0]["val"] == {"value": "a"}
-    
+
     assert isinstance(arguments["config"], dict)
     assert arguments["config"]["timeout"] == 10
+
 
 def test_create_input_schema_complex():
     # Test a field with complex schema (> 5 properties)
@@ -55,23 +56,24 @@ def test_create_input_schema_complex():
                     "c": {"type": "string"},
                     "d": {"type": "string"},
                     "e": {"type": "string"},
-                    "f": {"type": "string"} # > 5 properties
-                }
+                    "f": {"type": "string"},  # > 5 properties
+                },
             }
-        }
+        },
     }
-    
+
     model = create_input_schema_from_json_schema(schema)
     # complex_field should be str because it has > 5 properties
     field_info = model.model_fields["complex_field"]
     # Pydantic v2 might wrap it in Optional if not required
     # But create_input_schema_from_json_schema handles required/optional
     # Here it is not required, so it should be Optional[str] or str | None
-    
+
     # Check if str is in the type annotation
     annotation = field_info.annotation
     # It might be Union[str, NoneType]
     assert str in getattr(annotation, "__args__", [annotation])
+
 
 def test_create_input_schema_complex_array():
     # Test an array with complex items
@@ -88,13 +90,13 @@ def test_create_input_schema_complex_array():
                         "c": {"type": "string"},
                         "d": {"type": "string"},
                         "e": {"type": "string"},
-                        "f": {"type": "string"} # > 5 properties
-                    }
-                }
+                        "f": {"type": "string"},  # > 5 properties
+                    },
+                },
             }
-        }
+        },
     }
-    
+
     model = create_input_schema_from_json_schema(schema)
     field_info = model.model_fields["complex_array"]
     # Should be str (JSON input) because items are complex

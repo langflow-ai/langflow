@@ -8,7 +8,7 @@ import re
 import shutil
 import unicodedata
 from collections.abc import Awaitable, Callable
-from typing import Any, Dict, Union
+from typing import Any, Union
 from urllib.parse import urlparse
 from uuid import UUID
 
@@ -325,10 +325,11 @@ def _fill_defaults(arg_schema: type[BaseModel], provided_args: dict) -> None:
             else:
                 provided_args[field] = None
 
+
 def _post_process_arguments(arg_schema: type[BaseModel], arguments: dict) -> None:
     """Post-process arguments to handle JSON parsing and type normalization."""
     import json
-    from typing import get_origin, get_args, Union
+    from typing import get_args, get_origin
 
     # 1. Normalize types (Union handling and basic string conversion)
     for field_name, value in arguments.items():
@@ -350,10 +351,9 @@ def _post_process_arguments(arg_schema: type[BaseModel], arguments: dict) -> Non
                     except ValueError:
                         pass
                 elif bool in union_args and isinstance(value, str):
-                    arguments[field_name] = value.lower() in ('true', '1', 'yes', 'on')
-            else:
-                if expected_type == str and isinstance(value, (int, float)):
-                    arguments[field_name] = str(value)
+                    arguments[field_name] = value.lower() in ("true", "1", "yes", "on")
+            elif expected_type == str and isinstance(value, (int, float)):
+                arguments[field_name] = str(value)
 
     # 2. Handle JSON string inputs
     for field_name, value in arguments.items():
@@ -363,13 +363,16 @@ def _post_process_arguments(arg_schema: type[BaseModel], arguments: dict) -> Non
                 # logger.debug(f"Parsed {field_name} from JSON string: {parsed_value}")
 
                 # specific array transformation
-                if (isinstance(parsed_value, list) and
-                    len(parsed_value) > 0 and
-                    isinstance(parsed_value[0], dict) and
-                    all(isinstance(v, (str, int, float, bool)) or v is None
+                if (
+                    isinstance(parsed_value, list)
+                    and len(parsed_value) > 0
+                    and isinstance(parsed_value[0], dict)
+                    and all(
+                        isinstance(v, (str, int, float, bool)) or v is None
                         for record in parsed_value
-                        for v in record.values())):
-
+                        for v in record.values()
+                    )
+                ):
                     transformed_records = []
                     for record in parsed_value:
                         transformed_record = {}
@@ -386,6 +389,7 @@ def _post_process_arguments(arg_schema: type[BaseModel], arguments: dict) -> Non
                 # Try ast.literal_eval
                 try:
                     import ast
+
                     parsed_value = ast.literal_eval(value)
                     if isinstance(parsed_value, (list, dict)):
                         arguments[field_name] = parsed_value
@@ -402,8 +406,8 @@ def _post_process_arguments(arg_schema: type[BaseModel], arguments: dict) -> Non
                     expected_type = field_info.annotation
                     expected_type_str = str(expected_type).lower()
                     if "list" in expected_type_str or "dict" in expected_type_str:
-                         msg = f"Invalid JSON format for argument '{field_name}'. Please check for missing brackets or quotes. Error: {jde}"
-                         raise ValueError(msg)
+                        msg = f"Invalid JSON format for argument '{field_name}'. Please check for missing brackets or quotes. Error: {jde}"
+                        raise ValueError(msg)
 
     # 3. Force string conversion for numbers (final safety net)
     for arg_name, arg_value in list(arguments.items()):
