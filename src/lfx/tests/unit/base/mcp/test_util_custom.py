@@ -9,7 +9,7 @@ class MockSchema(BaseModel):
     # Required fields - should NOT be filled
     req_name: str
     req_age: int
-    
+
     # Optional fields - SHOULD be filled by _fill_defaults
     opt_name: str | None = None
     opt_tags: list[str] | None = None
@@ -20,11 +20,11 @@ class MockSchema(BaseModel):
 def test_fill_defaults():
     provided_args = {}
     _fill_defaults(MockSchema, provided_args)
-    
+
     # Required fields should NOT be filled (let Pydantic raise validation error)
     assert "req_name" not in provided_args
     assert "req_age" not in provided_args
-    
+
     # Optional fields SHOULD be filled with type-based defaults
     assert provided_args["opt_name"] == ""
     assert provided_args["opt_tags"] == []
