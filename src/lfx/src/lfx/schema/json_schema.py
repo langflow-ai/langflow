@@ -319,6 +319,4 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
         top_fields[fname] = (py_type, Field(default, **field_kwargs))
 
     final_model = create_model("InputSchema", **top_fields)
-    # Patch deprecated schema method for Pydantic v2 compatibility
-    final_model.schema = final_model.model_json_schema
     return final_model
