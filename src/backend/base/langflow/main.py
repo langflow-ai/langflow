@@ -313,9 +313,14 @@ def get_lifespan(*, fix_migration=False, version=None):
             # Allows the server to start first to avoid race conditions with MCP Server startup
             mcp_init_task = asyncio.create_task(delayed_init_mcp_servers())
 
-            # v1 and project MCP server context managers
-            from langflow.api.v1.mcp import start_streamable_http_manager
-            from langflow.api.v1.mcp_projects import start_project_task_group
+            # Start streamable-http transport session manager for MCP server
+            from contextlib import AsyncExitStack # noqa: I001
+            from langflow.api.v1.mcp import streamable_http_manager
+            await logger.adebug("Starting MCP Server Streamable HTTP session manager")
+            async with AsyncExitStack() as stack:
+                await stack.enter_async_context(streamable_http_manager.run())
+
+            yield
 
             await start_streamable_http_manager()
             await start_project_task_group()
