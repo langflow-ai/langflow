@@ -257,7 +257,7 @@ export default function FlowPage({
 
   return (
     <>
-      <div className="flow-page-positioning bg-white">
+      <div className="flow-page-positioning">
         {currentFlow && (
           <div className="flex h-full overflow-hidden">
             <SidebarProvider

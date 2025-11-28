@@ -129,9 +129,9 @@ export default function PublishDropdown() {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
-            variant="ghost"
+            variant="outline"
             size="md"
-            className="!px-2.5 font-normal"
+            className="!px-2.5"
             data-testid="publish-button"
           >
             Share

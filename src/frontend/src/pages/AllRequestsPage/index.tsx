@@ -77,19 +77,19 @@ export default function AllRequestsPage() {
     switch (statusName) {
       case "Submitted":
         return (
-          <span className="inline-flex items-center rounded-full bg-[#FDFDD2] px-2.5 py-0.5 text-xs font-medium text-[#826D29] min-h-6">
+          <span className="inline-flex items-center rounded-full bg-process-bg px-2.5 py-0.5 text-xs font-medium text-process min-h-6">
             Under Review
           </span>
         );
       case "Approved":
         return (
-          <span className="inline-flex items-center rounded-full bg-[#f2fff0] px-2.5 py-0.5 text-xs font-medium text-[#3fa33c] min-h-6">
+          <span className="inline-flex items-center rounded-full bg-success-bg px-2.5 py-0.5 text-xs font-medium text-success min-h-6">
             Approved
           </span>
         );
       case "Rejected":
         return (
-          <span className="inline-flex items-center rounded-full bg-[#fdf4f3] px-2.5 py-0.5 text-xs font-medium text-[#d7503e] min-h-6">
+          <span className="inline-flex items-center rounded-full bg-error-bg px-2.5 py-0.5 text-xs font-medium text-error min-h-6">
             Rejected
           </span>
         );
@@ -101,7 +101,7 @@ export default function AllRequestsPage() {
   const renderTable = () => {
     if (isLoading) {
       return (
-        <div className="flex justify-center py-8">
+        <div className="flex justify-center py-8 h-full">
           <CustomLoader />
         </div>
       );
@@ -109,7 +109,7 @@ export default function AllRequestsPage() {
 
     if (!allVersions || allVersions.length === 0) {
       return (
-        <div className="flex flex-col items-center justify-center py-12 text-muted-foreground h-full">
+        <div className="flex flex-col items-center justify-center py-12 text-secondary-font h-full">
           <IconComponent name="Inbox" className="h-12 w-12 mb-4" />
           <p>No requests found</p>
         </div>
@@ -125,7 +125,7 @@ export default function AllRequestsPage() {
             <TableHead>Submitted by</TableHead>
             <TableHead>Submission Date</TableHead>
             <TableHead className="text-center">Versions</TableHead>
-            <TableHead className="text-center">Status</TableHead>
+            <TableHead className="text-center">Statuss</TableHead>
             <TableHead>Remark</TableHead>
             <TableHead>Reviewed By</TableHead>
             <TableHead>Action</TableHead>
@@ -135,9 +135,9 @@ export default function AllRequestsPage() {
           {allVersions.map((version) => (
             <TableRow key={version.id}>
               <TableCell className="font-medium">{version.title}</TableCell>
-              <TableCell className="max-w-xs truncate text-muted-foreground">
+              <TableCell className="max-w-xs truncate text-secondary-font">
                 {version.description || (
-                  <span className="text-muted-foreground">-</span>
+                  <span className="text-secondary-font">-</span>
                 )}
               </TableCell>
               <TableCell>
@@ -148,7 +148,7 @@ export default function AllRequestsPage() {
                       "Unknown"}
                   </div>
                   {(version.submitted_by_email || version.submitter_email) && (
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-xs text-secondary-font">
                       {version.submitted_by_email || version.submitter_email}
                     </div>
                   )}
@@ -160,22 +160,31 @@ export default function AllRequestsPage() {
                 {getStatusBadge(version.status_name || "")}
               </TableCell>
               <TableCell>
-                {version.status_name === "Rejected" && version.rejection_reason ? (
+                {version.status_name === "Rejected" &&
+                version.rejection_reason ? (
                   <ShadTooltip
                     content={version.rejection_reason}
                     side="bottom"
                     open={openTooltipId === version.id}
-                    setOpen={(isOpen) => setOpenTooltipId(isOpen ? version.id : null)}
+                    setOpen={(isOpen) =>
+                      setOpenTooltipId(isOpen ? version.id : null)
+                    }
                     delayDuration={0}
                   >
                     <span
                       onClick={(e) => {
                         e.stopPropagation();
-                        setOpenTooltipId(openTooltipId === version.id ? null : version.id);
+                        setOpenTooltipId(
+                          openTooltipId === version.id ? null : version.id
+                        );
                       }}
-                      className="inline-flex items-center gap-1 text-muted-foreground cursor-pointer"
+                      className="inline-flex items-center gap-1 text-secondary-font cursor-pointer"
                     >
-                      {version.rejection_reason.split(' ').slice(0, 2).join(' ')}...
+                      {version.rejection_reason
+                        .split(" ")
+                        .slice(0, 2)
+                        .join(" ")}
+                      ...
                     </span>
                   </ShadTooltip>
                 ) : (
@@ -183,7 +192,8 @@ export default function AllRequestsPage() {
                 )}
               </TableCell>
               <TableCell>
-                {version.status_name === "Approved" || version.status_name === "Rejected" ? (
+                {version.status_name === "Approved" ||
+                version.status_name === "Rejected" ? (
                   <div>
                     {version.reviewed_by_name || version.reviewer_name || "-"}
                   </div>
@@ -196,7 +206,6 @@ export default function AllRequestsPage() {
                   size="sm"
                   variant="link"
                   onClick={() => handleReview(version.original_flow_id)}
-                  className="!text-[#7421e3] hover:!text-[#350e84] !p-0 !font-normal"
                 >
                   Review
                 </Button>
@@ -209,12 +218,11 @@ export default function AllRequestsPage() {
   };
 
   return (
-    <div className="flex h-full w-full flex-col bg-main-bg p-4 overflow-y-auto">
-      <div className="flex items-center justify-between mb-2">
-        <h1 className="text-[#350E84] dark:text-white text-[21px] font-medium leading-normal">
-          All Requests{" "}
-          {totalCount > 0 && <span>({totalCount})</span>}
-        </h1>
+    <div className="flex h-full w-full flex-col bg-background-mainBg p-4 overflow-y-auto">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-menu text-xl font-medium leading-normal">
+          All Requests {totalCount > 0 && <span>({totalCount})</span>}
+        </h2>
 
         {/* Status Filter */}
         <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
@@ -223,25 +231,24 @@ export default function AllRequestsPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="Submitted">Submitted</SelectItem>
+            <SelectItem value="Submitted">Under Review</SelectItem>
             <SelectItem value="Approved">Approved</SelectItem>
             <SelectItem value="Rejected">Rejected</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 h-full">
         {/* Table */}
-        <div className="max-h-[calc(100vh-280px)] overflow-y-auto">
+        <div className="max-h-[calc(100vh-168px)] h-full overflow-y-auto">
           {renderTable()}
         </div>
 
         {/* Bottom pagination */}
         {data && data.total > 0 && (
-          <div className="flex items-center justify-between px-1 pb-4">
-            <div className="text-sm text-muted-foreground">
-              Showing{" "}
-              {Math.min((pageIndex - 1) * pageSize + 1, data.total)} -{" "}
+          <div className="flex items-center justify-between mt-auto">
+            <div className="text-sm font-medium text-primary-font">
+              Showing {Math.min((pageIndex - 1) * pageSize + 1, data.total)} -{" "}
               {Math.min(pageIndex * pageSize, data.total)} of {data.total}{" "}
               results
             </div>

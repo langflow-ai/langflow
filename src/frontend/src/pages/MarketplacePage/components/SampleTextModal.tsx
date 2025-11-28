@@ -70,8 +70,8 @@ export const SampleTextModal: React.FC<SampleTextModalProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
-        <DialogHeader className="flex-shrink-0 w-full">
-          <div className="flex items-center justify-between w-full pr-4">
+        <DialogHeader className="flex-shrink-0">
+          <div className="flex items-center justify-between">
             <DialogTitle className="text-lg font-semibold">
               {title ?? `Sample Input Text ${index + 1}`}
             </DialogTitle>
@@ -79,7 +79,7 @@ export const SampleTextModal: React.FC<SampleTextModalProps> = ({
               onClick={handleCopy}
               size="sm"
               variant="outline"
-              className="gap-2"
+              className="gap-2 mr-6"
             >
               {copied ? (
                 <>
@@ -105,14 +105,12 @@ export const SampleTextModal: React.FC<SampleTextModalProps> = ({
 
         <div className="flex-1 overflow-auto mt-4">
           {isJson ? (
-            <pre className="bg-gray-50 dark:bg-gray-900 p-4 rounded-md text-xs font-mono border border-gray-200 dark:border-gray-700 overflow-x-auto">
-              <code className="text-gray-800 dark:text-gray-200">
-                {displayText}
-              </code>
+            <pre className="bg-background-mainBg p-4 rounded-md text-xs font-mono border border-primary-border overflow-x-auto">
+              <code className="text-primary-font">{displayText}</code>
             </pre>
           ) : (
-            <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-md border border-gray-200 dark:border-gray-700 overflow-auto">
-              <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words">
+            <div className="bg-background-mainBg p-4 rounded-md border border-primary-border overflow-auto">
+              <p className="text-sm text-primary-font whitespace-pre-wrap break-words">
                 {displayText}
               </p>
             </div>

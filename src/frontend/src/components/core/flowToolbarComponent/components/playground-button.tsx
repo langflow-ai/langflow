@@ -26,7 +26,7 @@ const ButtonLabel = () => (
 const ActiveButton = () => (
   <div
     data-testid="playground-btn-flow-io"
-    className="playground-btn-flow-toolbar hover:bg-accent text-primary-font"
+    className="playground-btn-flow-toolbar text-menu font-medium h-auto"
   >
     <PlayIcon />
     <ButtonLabel />

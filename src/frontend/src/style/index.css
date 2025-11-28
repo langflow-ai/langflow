@@ -79,9 +79,13 @@
     --border-secondary-rgb: 192, 177, 255;
     --boxshadow: 0, 0, 0;
     --boxshadow-30: rgba(237, 229, 250, 0.3);
-    --error: #f75260;
-    --error-bg: rgba(247, 82, 96, 0.08);
+    --error: #d7503e;
+    --error-bg: #fdf4f3;
     --error-notification-bg: #fdf4f3;
+    --success: #3fa33c;
+    --success-bg: #f2fff0;
+    --process: #826d29;
+    --process-bg: #fdfdd2;
 
     --foreground: 0 0% 0%; /* hsl(0, 0%, 0%) */
     --background: 0 0% 100%; /*hsl(0, 0%, 100%) */

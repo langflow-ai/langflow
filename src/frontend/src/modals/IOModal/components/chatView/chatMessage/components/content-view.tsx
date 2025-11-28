@@ -52,15 +52,15 @@ export const ErrorView = ({
               {blocks.map((block, blockIndex) => (
                 <div
                   key={blockIndex}
-                  className="w-full rounded-xl border border-error-red-border bg-error-red p-4 text-sm text-foreground"
+                  className="w-full rounded-xl border border-error bg-error-bg p-4 text-sm text-secondary-font"
                 >
                   {block.contents.map((content, contentIndex) => {
                     if (content.type === "error") {
                       return (
                         <div className="" key={contentIndex}>
-                          <div className="mb-2 flex items-center">
+                          <div className="mb-2 flex items-center text-error">
                             <ForwardedIconComponent
-                              className="mr-2 h-[18px] w-[18px] text-destructive"
+                              className="mr-2 h-[18px] w-[18px] text-error"
                               name="OctagonAlert"
                             />
                             {content.component && (
@@ -69,11 +69,11 @@ export const ErrorView = ({
                                   An error occured in the{" "}
                                   <span
                                     className={cn(
-                                      closeChat ?? "cursor-pointer underline",
+                                      closeChat ?? "cursor-pointer underline"
                                     )}
                                     onClick={() => {
                                       fitViewNode(
-                                        chat.properties?.source?.id ?? "",
+                                        chat.properties?.source?.id ?? ""
                                       );
                                       closeChat?.();
                                     }}
@@ -87,14 +87,14 @@ export const ErrorView = ({
                             )}
                           </div>
                           <div>
-                            <h3 className="pb-3 font-semibold">
+                            <h3 className="pb-3 font-semibold text-[#444444]">
                               Error details:
                             </h3>
                             {content.field && (
                               <p className="pb-1">Field: {content.field}</p>
                             )}
                             {content.reason && (
-                              <span className="">
+                              <span className="text-[#64616A]">
                                 <Markdown
                                   linkTarget="_blank"
                                   remarkPlugins={[remarkGfm]}
@@ -141,7 +141,7 @@ export const ErrorView = ({
                                         }
 
                                         const match = /language-(\w+)/.exec(
-                                          className || "",
+                                          className || ""
                                         );
 
                                         return !inline ? (
@@ -149,7 +149,7 @@ export const ErrorView = ({
                                             language={(match && match[1]) || ""}
                                             code={String(content).replace(
                                               /\n$/,
-                                              "",
+                                              ""
                                             )}
                                           />
                                         ) : (

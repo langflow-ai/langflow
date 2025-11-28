@@ -46,7 +46,7 @@ export function ContentBlockDisplay({
     state === "partial" ? lastContent?.header?.icon || "Bot" : "Check";
 
   const headerTitle =
-    state === "partial" ? (lastContent?.header?.title ?? "Steps") : "Finished";
+    state === "partial" ? lastContent?.header?.title ?? "Steps" : "Finished";
   // show the block title only if state === "partial"
   const showBlockTitle = state === "partial";
 
@@ -61,7 +61,7 @@ export function ContentBlockDisplay({
         }}
         className={cn(
           "relative rounded-lg border border-border bg-background",
-          "overflow-hidden",
+          "overflow-hidden"
         )}
       >
         {isLoading && (
@@ -85,7 +85,7 @@ export function ContentBlockDisplay({
                   name={headerIcon}
                   className={cn(
                     "h-4 w-4",
-                    state !== "partial" && "text-accent-emerald-foreground",
+                    state !== "partial" && "text-accent-emerald-foreground"
                   )}
                   strokeWidth={1.5}
                 />
@@ -101,7 +101,7 @@ export function ContentBlockDisplay({
                 <Markdown
                   remarkPlugins={[remarkGfm]}
                   rehypePlugins={[rehypeMathjax]}
-                  className="inline-block w-fit max-w-full text-sm font-semibold text-primary"
+                  className="inline-block w-fit max-w-full text-sm font-semibold text-secondary"
                 >
                   {headerTitle}
                 </Markdown>
@@ -152,7 +152,7 @@ export function ContentBlockDisplay({
                   className={cn(
                     "relative",
                     index !== contentBlocks.length - 1 &&
-                      "border-b border-border",
+                      "border-b border-border"
                   )}
                 >
                   <AnimatePresence>

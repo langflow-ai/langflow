@@ -226,8 +226,8 @@ export default function ChatMessage({
         >
           <div
             className={cn(
-              "relative flex h-[32px] w-[32px] items-center justify-center overflow-hidden rounded-md text-2xl",
-              !chat.isSend ? "bg-muted" : "border border-primary-border"
+              "relative flex h-[32px] w-[32px] items-center justify-center overflow-hidden rounded-md text-2xl bg-primary",
+              !chat.isSend ? "bg-secondary text-white" : ""
             )}
             style={
               chat.properties?.background_color
@@ -236,7 +236,7 @@ export default function ChatMessage({
             }
           >
             {!chat.isSend ? (
-              <div className="flex h-6 w-6 items-center justify-center bg-primary">
+              <div className="flex h-6 w-6 items-center justify-center">
                 {chat.properties?.icon ? (
                   chat.properties.icon.match(
                     /[\u2600-\u27BF\uD83C-\uDBFF\uDC00-\uDFFF]/

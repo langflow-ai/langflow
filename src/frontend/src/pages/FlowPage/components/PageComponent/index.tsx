@@ -718,12 +718,12 @@ export default function Page({
   };
 
   return (
-    <div className="h-full w-full bg-canvas" ref={reactFlowWrapper}>
+    <div className="h-full w-full" ref={reactFlowWrapper}>
       {showCanvas ? (
         <>
           <div
             id="react-flow-id"
-            className="h-full w-full bg-background-surface relative"
+            className="h-full w-full bg-background-mainBg relative"
           >
             {!view && !readOnly && !viewOnly && (
               <>
