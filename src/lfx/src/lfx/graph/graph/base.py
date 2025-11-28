@@ -2132,6 +2132,17 @@ class Graph:
         """Get all vertex IDs in the graph."""
         return [vertex.id for vertex in self.vertices]
 
+    def get_terminal_nodes(self) -> list[str]:
+        """Returns vertex IDs that are terminal nodes (not source of any edge).
+
+        Terminal nodes are vertices that have no outgoing edges - they are not
+        listed as source_id in any of the graph's edges.
+
+        Returns:
+            list[str]: List of vertex IDs that are terminal nodes.
+        """
+        return [vertex.id for vertex in self.vertices if not self.successor_map.get(vertex.id, [])]
+
     def sort_vertices(
         self,
         stop_component_id: str | None = None,
