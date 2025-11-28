@@ -24,6 +24,7 @@ INPUT_TYPE_MAP = {
     "ChatInput": {"type_hint": "Optional[str]", "default": '""'},
     "TextInput": {"type_hint": "Optional[str]", "default": '""'},
     "JSONInput": {"type_hint": "Optional[dict]", "default": "{}"},
+    "FilePathInput": {"type_hint": "Optional[str]", "default": '""'},
 }
 
 
