@@ -91,6 +91,8 @@ const HeaderComponent = ({
     );
   };
 
+  const hasSelection = selectedFlows.length > 0;
+
   return (
     <>
       <div
@@ -197,7 +199,7 @@ const HeaderComponent = ({
                     data-testid="download-bulk-btn"
                     onClick={handleDownload}
                     loading={isDownloading}
-                    tabIndex={selectedFlows.length === 0 ? -1 : 0}
+                    tabIndex={hasSelection ? 0 : -1}
                   >
                     <ForwardedIconComponent name="Download" />
                   </Button>
@@ -217,7 +219,7 @@ const HeaderComponent = ({
                       className="px-2.5 !text-mmd"
                       data-testid="delete-bulk-btn"
                       loading={isDeleting}
-                      tabIndex={selectedFlows.length === 0 ? -1 : 0}
+                      tabIndex={hasSelection ? 0 : -1}
                     >
                       <ForwardedIconComponent name="Trash2" />
                       Delete
