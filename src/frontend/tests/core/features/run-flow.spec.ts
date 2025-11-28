@@ -120,7 +120,12 @@ test(
       timeout: 30000,
     });
 
-    await page.getByTestId("icon-TextSearchIcon").click();
+    // Wait for and click the output inspection button using partial match
+    await page.waitForSelector('[data-testid^="output-inspection-"]', {
+      timeout: 30000,
+    });
+
+    await page.locator('[data-testid^="output-inspection-"]').first().click();
 
     const value = await page.getByPlaceholder("Empty").inputValue();
 

@@ -194,7 +194,11 @@ test(
       await page
         .getByTestId(`rename-input-${jsonFileName}`)
         .fill(renamedJsonFile);
-      await page.getByTestId(`rename-input-${jsonFileName}`).blur();
+      await page.waitForTimeout(500);
+
+      await page.getByTestId(`rename-input-${jsonFileName}`).press("Enter");
+      await page.waitForTimeout(500);
+
       await expect(
         page.getByText(`${renamedJsonFile}.json`).first(),
       ).toBeVisible({
@@ -206,10 +210,14 @@ test(
 
       await page.getByTestId(`context-menu-button-${sourceFileName}`).click();
       await page.getByTestId("btn-rename-file").click();
+      await page.waitForTimeout(500);
+
       await page
         .getByTestId(`rename-input-${sourceFileName}`)
         .fill(renamedTxtFile);
-      await page.getByTestId(`rename-input-${sourceFileName}`).blur();
+
+      await page.waitForTimeout(500);
+      await page.getByTestId(`rename-input-${sourceFileName}`).press("Enter");
       await expect(page.getByText(`${renamedTxtFile}.txt`).first()).toBeVisible(
         {
           timeout: 1000,
