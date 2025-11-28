@@ -6,21 +6,30 @@ from pydantic import BaseModel
 
 
 class MockSchema(BaseModel):
-    name: str
-    age: int
-    tags: list[str]
-    meta: dict[str, Any]
-    is_active: bool
+    # Required fields - should NOT be filled
+    req_name: str
+    req_age: int
+    
+    # Optional fields - SHOULD be filled by _fill_defaults
+    opt_name: str | None = None
+    opt_tags: list[str] | None = None
+    opt_meta: dict[str, Any] | None = None
+    opt_active: bool | None = None
 
 
 def test_fill_defaults():
     provided_args = {}
     _fill_defaults(MockSchema, provided_args)
-    assert provided_args["name"] == ""
-    assert provided_args["age"] == 0
-    assert provided_args["tags"] == []
-    assert provided_args["meta"] == {}
-    assert provided_args["is_active"] is False
+    
+    # Required fields should NOT be filled (let Pydantic raise validation error)
+    assert "req_name" not in provided_args
+    assert "req_age" not in provided_args
+    
+    # Optional fields SHOULD be filled with type-based defaults
+    assert provided_args["opt_name"] == ""
+    assert provided_args["opt_tags"] == []
+    assert provided_args["opt_meta"] == {}
+    assert provided_args["opt_active"] is False
 
 
 def test_post_process_arguments_json_parsing():
