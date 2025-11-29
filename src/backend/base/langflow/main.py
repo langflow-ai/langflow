@@ -314,7 +314,7 @@ def get_lifespan(*, fix_migration=False, version=None):
             async with AsyncExitStack() as stack:
                 await stack.enter_async_context(init_streamable_http_manager().run())
 
-            yield
+                yield
 
         except asyncio.CancelledError:
             await logger.adebug("Lifespan received cancellation signal")

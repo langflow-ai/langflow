@@ -56,16 +56,7 @@ async def handle_global_call_tool(name: str, arguments: dict) -> list[types.Text
 
 
 sse = SseServerTransport("/api/v1/mcp/")
-########################################################
-# SseServerTransport.connect_sse handles the full ASGI response internally
-# but FastAPI still expects the endpoint to return a Response,
-# this results in ungraceful termination of the SSE connection
-# We use this class to return a Response that FastAPI can handle gracefully
-########################################################
-class SSECompletedNoOp(Response):
-    async def __call__(self, scope, receive, send) -> None: # noqa: ARG002
-        # connect_sse already produced the ASGI response; nothing left to send.
-        return
+
 
 # Manage state of the Streamable HTTP session manager
 streamable_http_session_manager: StreamableHTTPSessionManager | None = None
@@ -88,6 +79,20 @@ def clear_streamable_http_manager() -> None:
     global streamable_http_session_manager # noqa: PLW0603
     streamable_http_session_manager = None
 
+########################################################
+# The transports handle the full ASGI response.
+# FastAPI still expects the endpoint to return
+# a Response, while Starlette's middleware
+# stream validation panics when
+# a http.response.start message
+# is encountered twice within the same stream.
+# We use this class to nullify the redundant
+# response so that streams can end gracefully.
+########################################################
+class ResponseNoOp(Response):
+    async def __call__(self, scope, receive, send) -> None: # noqa: ARG002
+        # connect_sse already produced the ASGI response; nothing left to send.
+        return
 
 def find_validation_error(exc):
     """Searches for a pydantic.ValidationError in the exception chain."""
@@ -103,7 +108,7 @@ async def im_alive():
     return Response()
 
 
-@router.get("/sse", response_class=SSECompletedNoOp)
+@router.get("/sse", response_class=ResponseNoOp)
 async def handle_sse(request: Request, current_user: CurrentActiveMCPUser):
     msg = f"Starting SSE connection, server name: {server.name}"
     await logger.ainfo(msg)
@@ -183,12 +188,14 @@ async def _dispatch_streamable_http(
     finally:
         current_user_ctx.reset(context_token)
 
-    return Response()
 
 
-streamable_http_methods = ["GET", "POST", "DELETE"]
-@router.api_route("/streamable", methods=streamable_http_methods)
-@router.api_route("/streamable/", methods=streamable_http_methods)
+streamable_http_route_config = {
+    "methods": ["GET", "POST", "DELETE"],
+    "response_class": ResponseNoOp
+    }
+@router.api_route("/streamable", **streamable_http_route_config)
+@router.api_route("/streamable/", **streamable_http_route_config)
 async def handle_streamable_http(request: Request, current_user: CurrentActiveMCPUser):
     """Streamable HTTP endpoint for MCP clients that support the new transport."""
     return await _dispatch_streamable_http(request, current_user)
