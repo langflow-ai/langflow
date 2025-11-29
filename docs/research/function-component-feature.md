@@ -818,74 +818,797 @@ fetcher.set(url=url_input.text_response)
 
 ---
 
-## 8. Testing Strategy
+## 8. Comprehensive Test Plan
 
-### 8.1 Unit Tests for FunctionComponent
+### 8.1 Unit Tests: FunctionComponent Creation
+
+**File:** `src/lfx/tests/unit/base/functions/test_function_component.py`
 
 ```python
-# test_function_component.py
-
-def test_function_component_from_simple_function():
-    def greet(name: str) -> str:
-        return f"Hello, {name}!"
-
-    fc = FunctionComponent(greet)
-
-    assert len(fc.inputs) == 1
-    assert fc.inputs[0].name == "name"
-    assert fc.inputs[0].input_types == ["Text"]
-
-    assert len(fc.outputs) == 1
-    assert fc.outputs[0].name == "result"
-    assert "Text" in fc.outputs[0].types
+import pytest
+from typing import Literal, Annotated, Optional
+from lfx.base.functions import FunctionComponent, from_function
+from lfx.field_typing.range_spec import RangeSpec
 
 
-def test_function_component_with_docstring():
-    def process(data: str) -> str:
-        """Process the data.
+class TestFunctionComponentCreation:
+    """Tests for FunctionComponent instantiation and signature introspection."""
 
-        Args:
-            data: The input data to process
-        """
-        return data
+    def test_simple_function_single_param(self):
+        """Function with one typed parameter creates one input."""
+        def greet(name: str) -> str:
+            return f"Hello, {name}!"
 
-    fc = FunctionComponent(process)
-    assert fc.inputs[0].info == "The input data to process"
+        fc = FunctionComponent(greet)
+
+        assert len(fc.inputs) == 1
+        assert fc.inputs[0].name == "name"
+        assert fc.inputs[0].display_name == "Name"
+        assert fc.inputs[0].required is True  # No default
+        assert fc.inputs[0].value is None
+        assert "Text" in fc.inputs[0].input_types or "Message" in fc.inputs[0].input_types
+
+    def test_function_multiple_params(self):
+        """Function with multiple parameters creates multiple inputs."""
+        def calculate(a: int, b: int, c: float = 1.0) -> float:
+            return (a + b) * c
+
+        fc = FunctionComponent(calculate)
+
+        assert len(fc.inputs) == 3
+        assert fc.inputs[0].name == "a"
+        assert fc.inputs[0].required is True
+        assert fc.inputs[1].name == "b"
+        assert fc.inputs[1].required is True
+        assert fc.inputs[2].name == "c"
+        assert fc.inputs[2].required is False
+        assert fc.inputs[2].value == 1.0
+
+    def test_function_with_default_values(self):
+        """Default values are captured in input.value."""
+        def configure(
+            name: str = "default",
+            count: int = 10,
+            enabled: bool = True
+        ) -> str:
+            return f"{name}: {count}, {enabled}"
+
+        fc = FunctionComponent(configure)
+
+        assert fc.inputs[0].value == "default"
+        assert fc.inputs[1].value == 10
+        assert fc.inputs[2].value is True
+        assert all(inp.required is False for inp in fc.inputs)
+
+    def test_function_without_type_hints(self):
+        """Untyped parameters default to str/Text."""
+        def process(data):
+            return str(data)
+
+        fc = FunctionComponent(process)
+
+        assert len(fc.inputs) == 1
+        assert fc.inputs[0].name == "data"
+        # Should default to text-compatible type
+
+    def test_function_with_list_type(self):
+        """list[X] type creates is_list=True input."""
+        def process_items(items: list[str]) -> str:
+            return ", ".join(items)
+
+        fc = FunctionComponent(process_items)
+
+        assert fc.inputs[0].is_list is True
+
+    def test_function_with_literal_type(self):
+        """Literal type creates dropdown with options."""
+        def set_mode(mode: Literal["fast", "slow", "balanced"]) -> str:
+            return mode
+
+        fc = FunctionComponent(set_mode)
+
+        assert fc.inputs[0].options == ["fast", "slow", "balanced"]
+
+    def test_function_with_optional_type(self):
+        """Optional[X] is handled correctly."""
+        def maybe_process(data: Optional[str] = None) -> str:
+            return data or "empty"
+
+        fc = FunctionComponent(maybe_process)
+
+        assert fc.inputs[0].required is False
+        assert fc.inputs[0].value is None
+
+    def test_skips_self_and_cls(self):
+        """self and cls parameters are skipped."""
+        class MyClass:
+            def method(self, data: str) -> str:
+                return data
+
+        fc = FunctionComponent(MyClass().method)
+        # Should only have 'data', not 'self'
+        assert len(fc.inputs) == 1
+        assert fc.inputs[0].name == "data"
+
+    def test_skips_args_kwargs(self):
+        """*args and **kwargs are skipped."""
+        def flexible(required: str, *args, **kwargs) -> str:
+            return required
+
+        fc = FunctionComponent(flexible)
+
+        assert len(fc.inputs) == 1
+        assert fc.inputs[0].name == "required"
 
 
-def test_function_component_in_graph():
-    def double(x: int) -> int:
-        return x * 2
+class TestFunctionComponentDocstring:
+    """Tests for docstring parsing."""
 
-    chat_input = ChatInput(_id="input")
-    fc = FunctionComponent(double, _id="double")
-    fc.set(x=chat_input.message_response)  # Type mismatch - need to handle
+    def test_google_style_docstring(self):
+        """Google-style docstrings are parsed for parameter info."""
+        def process(data: str, count: int) -> str:
+            """Process the data multiple times.
 
-    graph = Graph(chat_input, fc)
-    # ... assertions
+            Args:
+                data: The input data to process
+                count: Number of times to process
+
+            Returns:
+                Processed result
+            """
+            return data * count
+
+        fc = FunctionComponent(process)
+
+        assert fc.inputs[0].info == "The input data to process"
+        assert fc.inputs[1].info == "Number of times to process"
+        assert fc.description == "Process the data multiple times."
+
+    def test_numpy_style_docstring(self):
+        """Numpy-style docstrings are parsed."""
+        def analyze(values: list[float]) -> float:
+            """Analyze numerical values.
+
+            Parameters
+            ----------
+            values : list[float]
+                The values to analyze
+
+            Returns
+            -------
+            float
+                The analysis result
+            """
+            return sum(values) / len(values)
+
+        fc = FunctionComponent(analyze)
+        # Should extract parameter description
+
+    def test_no_docstring(self):
+        """Functions without docstrings have empty info."""
+        def simple(x: int) -> int:
+            return x * 2
+
+        fc = FunctionComponent(simple)
+
+        assert fc.inputs[0].info == ""
+        assert fc.description is None or fc.description == ""
+
+
+class TestFunctionComponentOutput:
+    """Tests for output generation from return types."""
+
+    def test_simple_return_type(self):
+        """Simple return types create appropriate output."""
+        def get_text() -> str:
+            return "hello"
+
+        fc = FunctionComponent(get_text)
+
+        assert len(fc.outputs) == 1
+        assert fc.outputs[0].name == "result"
+        assert fc.outputs[0].method == "invoke_function"
+        assert "str" in fc.outputs[0].types or "Text" in fc.outputs[0].types
+
+    def test_no_return_type(self):
+        """Functions without return type get Any output."""
+        def mystery():
+            return 42
+
+        fc = FunctionComponent(mystery)
+
+        assert "Any" in fc.outputs[0].types
+
+    def test_none_return_type(self):
+        """Functions returning None are handled."""
+        def side_effect(data: str) -> None:
+            print(data)
+
+        fc = FunctionComponent(side_effect)
+        # Should still have an output, possibly with None/Any type
+
+    def test_union_return_type(self):
+        """Union return types create multiple output types."""
+        from typing import Union
+
+        def maybe_int(x: str) -> Union[int, None]:
+            try:
+                return int(x)
+            except ValueError:
+                return None
+
+        fc = FunctionComponent(maybe_int)
+        # Should have both int and None in types
+
+
+class TestFunctionComponentNaming:
+    """Tests for component naming and display."""
+
+    def test_display_name_from_function_name(self):
+        """Display name is derived from function name."""
+        def process_user_input(data: str) -> str:
+            return data
+
+        fc = FunctionComponent(process_user_input)
+
+        assert fc.display_name == "Process User Input"
+
+    def test_custom_id(self):
+        """Custom _id is respected."""
+        def simple(x: str) -> str:
+            return x
+
+        fc = FunctionComponent(simple, _id="my_custom_id")
+
+        assert fc._id == "my_custom_id"
+
+    def test_auto_generated_id(self):
+        """ID is auto-generated if not provided."""
+        def simple(x: str) -> str:
+            return x
+
+        fc = FunctionComponent(simple)
+
+        assert fc._id is not None
+        assert len(fc._id) > 0
+
+
+### 8.2 Unit Tests: Component Connection
+
+```python
+class TestFunctionComponentConnection:
+    """Tests for connecting FunctionComponents to other components."""
+
+    def test_connect_to_chat_input(self):
+        """FunctionComponent can receive from ChatInput."""
+        from lfx.components.input_output import ChatInput
+
+        def process(text: str) -> str:
+            return text.upper()
+
+        chat_input = ChatInput(_id="input")
+        fc = from_function(process, _id="processor")
+        fc.set(text=chat_input.message_response)
+
+        assert len(fc._components) == 1
+        assert fc._components[0] == chat_input
+        assert len(fc._edges) == 1
+
+    def test_connect_to_another_function(self):
+        """FunctionComponents can chain together."""
+        def step1(x: str) -> str:
+            return x.strip()
+
+        def step2(y: str) -> str:
+            return y.lower()
+
+        fc1 = from_function(step1, _id="step1")
+        fc2 = from_function(step2, _id="step2")
+
+        fc1.set(x="  hello  ")
+        fc2.set(y=fc1.result)
+
+        assert len(fc2._components) == 1
+        assert len(fc2._edges) == 1
+
+    def test_type_mismatch_error(self):
+        """Mismatched types raise clear error."""
+        from lfx.components.input_output import ChatInput
+
+        def needs_int(x: int) -> int:
+            return x * 2
+
+        chat_input = ChatInput(_id="input")
+        fc = from_function(needs_int, _id="processor")
+
+        # ChatInput outputs Message, but function needs int
+        # Should raise ValueError with helpful message
+        with pytest.raises(ValueError, match="no matching output"):
+            fc.set(x=chat_input.message_response)
+
+    def test_multiple_inputs_partial_connection(self):
+        """Can connect some inputs and set others as values."""
+        from lfx.components.input_output import ChatInput
+
+        def combine(prefix: str, text: str, suffix: str = "!") -> str:
+            return f"{prefix}{text}{suffix}"
+
+        chat_input = ChatInput(_id="input")
+        fc = from_function(combine, _id="combiner")
+
+        fc.set(
+            prefix="Hello, ",
+            text=chat_input.message_response,
+            suffix="!!!"
+        )
+
+        assert len(fc._edges) == 1  # Only text is connected
+        assert fc._parameters.get("prefix") == "Hello, "
+        assert fc._parameters.get("suffix") == "!!!"
 ```
 
-### 8.2 Integration Tests
+### 8.3 Integration Tests: Graph Execution
 
 ```python
-@pytest.mark.asyncio
-async def test_function_component_execution():
-    def add(a: int, b: int) -> int:
-        return a + b
+class TestFunctionComponentExecution:
+    """Tests for executing graphs with FunctionComponents."""
 
-    fc = FunctionComponent(add)
-    fc.set(a=5, b=3)
+    @pytest.mark.asyncio
+    async def test_simple_execution(self):
+        """FunctionComponent executes and produces output."""
+        def double(x: int) -> int:
+            return x * 2
 
-    graph = Graph(fc, fc)
-    results = [r async for r in graph.async_start()]
+        fc = from_function(double, _id="doubler")
+        fc.set(x=5)
 
-    # Verify result
-    assert results[-2].vertex.custom_component.get_output("result").value == 8
+        graph = Graph(fc, fc)
+        results = [r async for r in graph.async_start()]
+
+        # Find result
+        result_vertex = next(
+            r for r in results
+            if hasattr(r, "vertex") and r.vertex.id == "doubler"
+        )
+        assert result_vertex.vertex.custom_component._outputs_map["result"].value == 10
+
+    @pytest.mark.asyncio
+    async def test_chained_execution(self):
+        """Multiple FunctionComponents execute in order."""
+        def add_one(x: int) -> int:
+            return x + 1
+
+        def multiply_two(x: int) -> int:
+            return x * 2
+
+        fc1 = from_function(add_one, _id="add")
+        fc2 = from_function(multiply_two, _id="mult")
+
+        fc1.set(x=5)
+        fc2.set(x=fc1.result)
+
+        graph = Graph(fc1, fc2)
+        results = [r async for r in graph.async_start()]
+
+        # (5 + 1) * 2 = 12
+        # Verify final result
+
+    @pytest.mark.asyncio
+    async def test_async_function_execution(self):
+        """Async functions are awaited properly."""
+        async def async_process(data: str) -> str:
+            import asyncio
+            await asyncio.sleep(0.01)
+            return data.upper()
+
+        fc = from_function(async_process, _id="async_proc")
+        fc.set(data="hello")
+
+        graph = Graph(fc, fc)
+        results = [r async for r in graph.async_start()]
+
+        # Should complete without error
+
+    @pytest.mark.asyncio
+    async def test_function_with_exception(self):
+        """Exceptions in functions are handled gracefully."""
+        def risky(x: int) -> int:
+            if x < 0:
+                raise ValueError("x must be non-negative")
+            return x
+
+        fc = from_function(risky, _id="risky")
+        fc.set(x=-1)
+
+        graph = Graph(fc, fc)
+
+        with pytest.raises(ValueError, match="x must be non-negative"):
+            results = [r async for r in graph.async_start()]
+
+    @pytest.mark.asyncio
+    async def test_with_chat_input_output(self):
+        """Full flow with ChatInput -> Function -> ChatOutput."""
+        from lfx.components.input_output import ChatInput, ChatOutput
+
+        def process(text: str) -> str:
+            return f"Processed: {text}"
+
+        chat_input = ChatInput(_id="input")
+        fc = from_function(process, _id="processor")
+        chat_output = ChatOutput(_id="output")
+
+        fc.set(text=chat_input.message_response)
+        chat_output.set(input_value=fc.result)
+
+        graph = Graph(chat_input, chat_output)
+
+        # Execute with input
+        results = [r async for r in graph.async_start(
+            inputs=[{"input_value": "Hello"}]
+        )]
+
+        assert any("Processed: Hello" in str(r) for r in results)
+```
+
+### 8.4 Serialization Tests
+
+```python
+class TestFunctionComponentSerialization:
+    """Tests for graph.dump() with FunctionComponents."""
+
+    def test_to_frontend_node(self):
+        """FunctionComponent serializes to valid frontend node."""
+        def simple(x: str) -> str:
+            return x
+
+        fc = from_function(simple, _id="simple")
+        node = fc.to_frontend_node()
+
+        assert "data" in node
+        assert "id" in node["data"]
+        assert node["data"]["id"] == "simple"
+        assert "node" in node["data"]
+        assert "template" in node["data"]["node"]
+
+    def test_graph_dump_includes_functions(self):
+        """Graph.dump() includes FunctionComponent data."""
+        from lfx.components.input_output import ChatInput, ChatOutput
+
+        def process(text: str) -> str:
+            return text
+
+        chat_input = ChatInput(_id="input")
+        fc = from_function(process, _id="processor")
+        chat_output = ChatOutput(_id="output")
+
+        fc.set(text=chat_input.message_response)
+        chat_output.set(input_value=fc.result)
+
+        graph = Graph(chat_input, chat_output)
+        dump = graph.dump()
+
+        node_ids = [n["id"] for n in dump["data"]["nodes"]]
+        assert "processor" in node_ids
+
+    def test_edges_serialized_correctly(self):
+        """Edges between components are correctly serialized."""
+        from lfx.components.input_output import ChatInput
+
+        def process(text: str) -> str:
+            return text
+
+        chat_input = ChatInput(_id="input")
+        fc = from_function(process, _id="processor")
+        fc.set(text=chat_input.message_response)
+
+        graph = Graph(chat_input, fc)
+        dump = graph.dump()
+
+        edges = dump["data"]["edges"]
+        assert len(edges) >= 1
+
+        # Find edge from input to processor
+        edge = next(e for e in edges if e["target"] == "processor")
+        assert edge["source"] == "input"
+```
+
+### 8.5 Edge Case Tests
+
+```python
+class TestFunctionComponentEdgeCases:
+    """Tests for edge cases and error handling."""
+
+    def test_lambda_function(self):
+        """Lambda functions can be wrapped (limited introspection)."""
+        square = lambda x: x * 2
+
+        fc = FunctionComponent(square)
+
+        # Lambda has limited introspection
+        assert len(fc.inputs) >= 1
+
+    def test_builtin_function_raises(self):
+        """Built-in functions raise appropriate error."""
+        with pytest.raises((TypeError, ValueError)):
+            fc = FunctionComponent(len)
+
+    def test_class_as_function_raises(self):
+        """Classes are not valid functions."""
+        class MyClass:
+            pass
+
+        with pytest.raises((TypeError, ValueError)):
+            fc = FunctionComponent(MyClass)
+
+    def test_generator_function(self):
+        """Generator functions are handled (future enhancement)."""
+        def gen(n: int):
+            for i in range(n):
+                yield i
+
+        # Should either work or raise clear error
+        fc = FunctionComponent(gen)
+
+    def test_function_with_complex_defaults(self):
+        """Functions with mutable defaults are handled."""
+        def with_list(items: list[str] = None) -> str:
+            items = items or []
+            return ",".join(items)
+
+        fc = FunctionComponent(with_list)
+        assert fc.inputs[0].value is None  # Not []
+
+    def test_deeply_nested_types(self):
+        """Complex nested types are handled gracefully."""
+        from typing import Dict, List, Optional
+
+        def complex_fn(
+            data: Optional[Dict[str, List[int]]] = None
+        ) -> Dict[str, int]:
+            return {}
+
+        fc = FunctionComponent(complex_fn)
+        # Should not crash, may default to generic types
 ```
 
 ---
 
-## 9. Edge Cases to Handle
+## 9. Developer Experience (DX) Considerations
+
+### 9.1 API Design Decisions
+
+**Issue: The implicit wrapping API doesn't work well**
+
+The document shows this pattern that WON'T work:
+```python
+chat_output.set(input_value=process_message)
+process_message.set(text=chat_input.message_response)  # ❌ Won't work!
+```
+
+This fails because `process_message` is still a plain function - it hasn't been wrapped yet.
+
+**Recommended API Patterns:**
+
+```python
+# Pattern 1: Explicit wrapping (RECOMMENDED)
+from lfx.base.functions import from_function
+
+processor = from_function(process_message, _id="processor")
+processor.set(text=chat_input.message_response)
+chat_output.set(input_value=processor.result)
+
+# Pattern 2: Decorator at definition time
+from lfx.base.functions import component
+
+@component
+def process_message(text: str) -> str:
+    return text.upper()
+
+# Now process_message IS a FunctionComponent
+process_message.set(text=chat_input.message_response)
+chat_output.set(input_value=process_message.result)
+
+# Pattern 3: Inline lambda-like (concise but less readable)
+fc = from_function(lambda x: x.upper(), _id="upper")
+```
+
+### 9.2 Type Coercion Strategy
+
+**Problem:** A function expects `str` but receives `Message`.
+
+**Options:**
+
+1. **Automatic Coercion** (Recommended for DX):
+   ```python
+   # In invoke_function():
+   value = self._inputs[param_name].value
+   if isinstance(value, Message) and expected_type is str:
+       value = value.text
+   ```
+
+2. **Explicit Coercion Required**:
+   - User must handle conversion in function
+   - Clearer but more verbose
+
+3. **Hybrid Approach**:
+   - Auto-coerce for common cases (Message→str, Data→dict)
+   - Require explicit for complex cases
+
+**Recommendation:** Implement automatic coercion for:
+- `Message` → `str` (via `.text`)
+- `Data` → `dict` (via `.data`)
+- `str` → `Message` (via `Message(text=x)`)
+
+### 9.3 Error Messages
+
+**Bad Error Message:**
+```
+ValueError: No matching output found
+```
+
+**Good Error Message:**
+```
+ValueError: Cannot connect 'ChatInput.message_response' (outputs: ['Message'])
+to 'processor.x' (accepts: ['int']).
+
+Consider:
+  - Changing the parameter type to 'str' or 'Message'
+  - Adding a type conversion function between components
+  - Using fc.set(x=chat_input.message_response.text) for explicit conversion
+```
+
+### 9.4 Accessing Output Methods
+
+**How `fc.result` works:**
+
+The `FunctionComponent` needs to expose output methods as attributes:
+
+```python
+class FunctionComponent(Component):
+    @property
+    def result(self):
+        """Access the result output method for chaining."""
+        return self.invoke_function
+```
+
+This allows the chaining pattern:
+```python
+fc2.set(input=fc1.result)  # fc1.result returns the bound method
+```
+
+### 9.5 Debugging Support
+
+**Tracing:**
+```python
+# In invoke_function():
+logger.debug(f"FunctionComponent '{self._id}' invoking {self._func_name}")
+logger.debug(f"  Inputs: {kwargs}")
+result = self._wrapped_function(**kwargs)
+logger.debug(f"  Output: {result}")
+```
+
+**Vertex Display:**
+```python
+# Custom display in UI/logs
+@property
+def trace_name(self) -> str:
+    return f"Function: {self._func_name} ({self._id})"
+```
+
+### 9.6 IDE Support
+
+For good autocomplete:
+
+```python
+from lfx.base.functions import from_function
+
+# Type hint the return value
+def from_function(
+    func: Callable[..., T],
+    _id: str | None = None,
+    **kwargs
+) -> FunctionComponent:
+    """Create a FunctionComponent from a Python function.
+
+    Example:
+        >>> def greet(name: str) -> str:
+        ...     return f"Hello, {name}!"
+        >>> fc = from_function(greet, _id="greeter")
+        >>> fc.set(name="World")
+        >>> fc.result  # Returns the invoke_function method
+    """
+    return FunctionComponent(func, _id=_id, **kwargs)
+```
+
+---
+
+## 10. Identified Gaps & Open Issues
+
+### 10.1 Critical Issues to Resolve
+
+| Issue | Description | Proposed Solution |
+|-------|-------------|-------------------|
+| **Output accessor** | How does `fc.result` work? | Property that returns `self.invoke_function` |
+| **Type coercion** | Message→str automatic? | Yes, auto-coerce common types |
+| **Serialization** | Can graph with functions be saved/loaded? | Need `to_frontend_node()` impl |
+| **Code persistence** | Function code not serialized | Store source via `inspect.getsource()` |
+| **Rehydration** | Can't reload FunctionComponent from dump | Need special handling or limitation |
+
+### 10.2 Context & Dependencies
+
+**Problem:** How do functions access Langflow services?
+
+```python
+def fetch_from_storage(path: str) -> str:
+    # How to access storage service?
+    pass
+```
+
+**Options:**
+
+1. **Inject via special parameters:**
+   ```python
+   from lfx.base.functions import Context
+
+   def fetch_from_storage(path: str, ctx: Context) -> str:
+       return ctx.storage.read(path)
+   ```
+
+2. **Global/thread-local context:**
+   ```python
+   from lfx.base.functions import get_context
+
+   def fetch_from_storage(path: str) -> str:
+       ctx = get_context()
+       return ctx.storage.read(path)
+   ```
+
+3. **Closure capture (current pattern):**
+   ```python
+   storage = get_storage_service()
+
+   def fetch_from_storage(path: str) -> str:
+       return storage.read(path)  # Captured
+   ```
+
+### 10.3 Multiple Outputs
+
+**Future Enhancement:** Support tuple/dict returns as multiple outputs.
+
+```python
+def split_data(text: str) -> tuple[str, int]:
+    """Split and analyze.
+
+    Returns:
+        (processed_text, word_count)
+    """
+    words = text.split()
+    return " ".join(words), len(words)
+
+# Could generate two outputs: 'processed_text' and 'word_count'
+fc = from_function(split_data, _id="splitter")
+other.set(text=fc.processed_text, count=fc.word_count)
+```
+
+### 10.4 Stateful Functions
+
+**Question:** Should FunctionComponents support state?
+
+```python
+def counter(increment: int = 1) -> int:
+    # Where does state live?
+    counter.count = getattr(counter, 'count', 0) + increment
+    return counter.count
+```
+
+**Recommendation:** Keep functions stateless. State should be managed via:
+- Graph context (`graph.context`)
+- Dedicated state components
+- External services
+
+---
+
+## 11. Edge Cases to Handle
 
 1. **Functions with `*args` / `**kwargs`** - Skip these parameters
 2. **Functions with no type hints** - Default to `str` / `Text`
