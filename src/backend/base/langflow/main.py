@@ -320,7 +320,7 @@ def get_lifespan(*, fix_migration=False, version=None):
             async with AsyncExitStack() as stack:
                 await stack.enter_async_context(init_streamable_http_manager().run())
 
-            yield
+                yield
 
             await start_streamable_http_manager()
             await start_project_task_group()
