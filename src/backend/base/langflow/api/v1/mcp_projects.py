@@ -39,7 +39,7 @@ from langflow.api.utils.mcp import (
     get_url_by_os,
 )
 from langflow.api.v1.auth_helpers import handle_auth_settings_update
-from langflow.api.v1.mcp import SSECompletedNoOp
+from langflow.api.v1.mcp import ResponseNoOp
 from langflow.api.v1.mcp_utils import (
     current_request_variables_ctx,
     current_user_ctx,
@@ -408,7 +408,7 @@ async def handle_project_sse(
         current_project_ctx.reset(project_token)
         current_request_variables_ctx.reset(req_vars_token)
 
-    return SSECompletedNoOp(status_code=200)
+    return ResponseNoOp(status_code=200)
 
 
 async def _handle_project_sse_messages(
