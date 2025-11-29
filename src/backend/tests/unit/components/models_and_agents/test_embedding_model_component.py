@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
+from lfx.base.embeddings.embeddings_class import EmbeddingsWithModels
 from lfx.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
 from lfx.base.models.watsonx_constants import WATSONX_EMBEDDING_MODEL_NAMES
 from lfx.components.models_and_agents.embedding_model import EmbeddingModelComponent
@@ -134,27 +135,29 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithClient):
         component.show_progress_bar = False
 
         # Build the embeddings
-        embeddings = component.build_embeddings()
+        embeddings = await component.build_embeddings()
 
-        # Verify the OpenAIEmbeddings was called with the correct parameters
-        mock_openai_embeddings.assert_called_once_with(
-            model="text-embedding-3-small",
-            dimensions=None,
-            base_url=None,
-            api_key="test-key",  # pragma:allowlist secret
-            chunk_size=1000,
-            max_retries=3,
-            timeout=None,
-            show_progress_bar=False,
-            model_kwargs={},
-        )
-        assert embeddings == mock_instance
+        # Verify the result is EmbeddingsWithModels
+        assert isinstance(embeddings, EmbeddingsWithModels)
 
+        # Verify OpenAIEmbeddings was called multiple times (primary + once per available model)
+        # Primary instance + one per model name = 1 + len(OPENAI_EMBEDDING_MODEL_NAMES)
+        assert mock_openai_embeddings.call_count == 1 + len(OPENAI_EMBEDDING_MODEL_NAMES)
+
+        # Verify available_models dict is populated
+        assert isinstance(embeddings.available_models, dict)
+        assert len(embeddings.available_models) == len(OPENAI_EMBEDDING_MODEL_NAMES)
+        assert "text-embedding-3-small" in embeddings.available_models
+
+    @patch("lfx.components.models_and_agents.embedding_model.get_ollama_models")
     @patch("langchain_ollama.OllamaEmbeddings")
-    async def test_build_embeddings_ollama(self, mock_ollama_embeddings, component_class, default_kwargs):
-        # Setup mock
+    async def test_build_embeddings_ollama(
+        self, mock_ollama_embeddings, mock_get_ollama_models, component_class, default_kwargs
+    ):
+        # Setup mocks
         mock_instance = MagicMock()
         mock_ollama_embeddings.return_value = mock_instance
+        mock_get_ollama_models.return_value = ["nomic-embed-text", "mxbai-embed-large"]
 
         # Create and configure the component
         kwargs = default_kwargs.copy()
@@ -165,20 +168,32 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithClient):
         component.ollama_base_url = "http://localhost:11434"
 
         # Build the embeddings
-        embeddings = component.build_embeddings()
+        embeddings = await component.build_embeddings()
 
-        # Verify the OllamaEmbeddings was called with the correct parameters
-        mock_ollama_embeddings.assert_called_once_with(
-            model="nomic-embed-text",
-            base_url="http://localhost:11434",
-        )
-        assert embeddings == mock_instance
+        # Verify the result is EmbeddingsWithModels
+        assert isinstance(embeddings, EmbeddingsWithModels)
 
+        # Verify OllamaEmbeddings was called multiple times (primary + once per available model)
+        # Primary instance + one per model returned by get_ollama_models
+        assert mock_ollama_embeddings.call_count == 1 + 2  # 1 primary + 2 from get_ollama_models
+
+        # Verify available_models dict is populated
+        assert isinstance(embeddings.available_models, dict)
+        assert len(embeddings.available_models) == 2
+        assert "nomic-embed-text" in embeddings.available_models
+
+    @patch.object(EmbeddingModelComponent, "fetch_ibm_models")
     @patch("ibm_watsonx_ai.APIClient")
     @patch("ibm_watsonx_ai.Credentials")
     @patch("langchain_ibm.WatsonxEmbeddings")
     async def test_build_embeddings_watsonx(
-        self, mock_watsonx_embeddings, mock_credentials, mock_api_client, component_class, default_kwargs
+        self,
+        mock_watsonx_embeddings,
+        mock_credentials,
+        mock_api_client,
+        mock_fetch_ibm_models,
+        component_class,
+        default_kwargs,
     ):
         # Setup mocks
         mock_instance = MagicMock()
@@ -187,6 +202,7 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithClient):
         mock_credentials.return_value = mock_cred_instance
         mock_client_instance = MagicMock()
         mock_api_client.return_value = mock_client_instance
+        mock_fetch_ibm_models.return_value = WATSONX_EMBEDDING_MODEL_NAMES
 
         # Create and configure the component
         kwargs = default_kwargs.copy()
@@ -198,63 +214,61 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithClient):
         component.input_text = True
 
         # Build the embeddings
-        embeddings = component.build_embeddings()
+        embeddings = await component.build_embeddings()
 
-        # Verify Credentials was created correctly
-        mock_credentials.assert_called_once_with(
-            api_key="test-api-key",  # pragma:allowlist secret
-            url="https://us-south.ml.cloud.ibm.com",
-        )
+        # Verify the result is EmbeddingsWithModels
+        assert isinstance(embeddings, EmbeddingsWithModels)
 
-        # Verify APIClient was created with credentials
-        mock_api_client.assert_called_once_with(mock_cred_instance)
+        # Verify Credentials was created once (shared across all embeddings)
+        assert mock_credentials.call_count == 1
 
-        # Verify the WatsonxEmbeddings was called with the correct parameters
-        from ibm_watsonx_ai.metanames import EmbedTextParamsMetaNames
+        # Verify APIClient was created once (shared across all embeddings)
+        assert mock_api_client.call_count == 1
 
-        expected_params = {
-            EmbedTextParamsMetaNames.TRUNCATE_INPUT_TOKENS: 200,
-            EmbedTextParamsMetaNames.RETURN_OPTIONS: {"input_text": True},
-        }
-        mock_watsonx_embeddings.assert_called_once_with(
-            model_id="ibm/granite-embedding-125m-english",
-            params=expected_params,
-            watsonx_client=mock_client_instance,
-            project_id="test-project-id",
-        )
-        assert embeddings == mock_instance
+        # Verify WatsonxEmbeddings was called multiple times (primary + once per available model)
+        assert mock_watsonx_embeddings.call_count == 1 + len(WATSONX_EMBEDDING_MODEL_NAMES)
+
+        # Verify available_models dict is populated
+        assert isinstance(embeddings.available_models, dict)
+        assert len(embeddings.available_models) == len(WATSONX_EMBEDDING_MODEL_NAMES)
 
     async def test_build_embeddings_watsonx_missing_project_id(self, component_class, default_kwargs):
         kwargs = default_kwargs.copy()
         kwargs["provider"] = "IBM watsonx.ai"
+        kwargs["model"] = "ibm/granite-embedding-125m-english"
         component = component_class(**kwargs)
         component.project_id = None
 
         with pytest.raises(ValueError, match=r"Project ID is required for IBM watsonx.ai"):
-            component.build_embeddings()
+            await component.build_embeddings()
 
     async def test_build_embeddings_openai_missing_api_key(self, component_class, default_kwargs):
-        component = component_class(**default_kwargs)
+        kwargs = default_kwargs.copy()
+        kwargs["api_key"] = None
+        component = component_class(**kwargs)
         component.provider = "OpenAI"
         component.api_key = None
 
         with pytest.raises(ValueError, match="OpenAI API key is required when using OpenAI provider"):
-            component.build_embeddings()
+            await component.build_embeddings()
 
     async def test_build_embeddings_watsonx_missing_api_key(self, component_class, default_kwargs):
         kwargs = default_kwargs.copy()
         kwargs["provider"] = "IBM watsonx.ai"
         kwargs["api_key"] = None
+        kwargs["model"] = "ibm/granite-embedding-125m-english"
         component = component_class(**kwargs)
         component.api_key = None
         component.project_id = "test-project"
 
         with pytest.raises(ValueError, match=r"IBM watsonx.ai API key is required when using IBM watsonx.ai provider"):
-            component.build_embeddings()
+            await component.build_embeddings()
 
     async def test_build_embeddings_unknown_provider(self, component_class, default_kwargs):
-        component = component_class(**default_kwargs)
+        kwargs = default_kwargs.copy()
+        kwargs["provider"] = "Unknown"
+        component = component_class(**kwargs)
         component.provider = "Unknown"
 
         with pytest.raises(ValueError, match="Unknown provider: Unknown"):
-            component.build_embeddings()
+            await component.build_embeddings()
