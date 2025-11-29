@@ -4,7 +4,7 @@ import os
 import platform
 from asyncio.subprocess import create_subprocess_exec
 from collections.abc import Sequence
-from contextlib import AsyncExitStack
+from contextlib import AsyncExitStack, asynccontextmanager
 from contextvars import ContextVar
 from datetime import datetime, timezone
 from ipaddress import ip_address
@@ -1202,7 +1202,6 @@ class ProjectMCPServer:
         # TODO: implement an environment variable to enable/disable stateless mode
         self.session_manager = StreamableHTTPSessionManager(self.server, stateless=True)
         self._manager_lock = asyncio.Lock()
-        self._manager_stack: AsyncExitStack | None = None
         self._manager_started = False
 
         # Register handlers that filter by project
@@ -1247,25 +1246,34 @@ class ProjectMCPServer:
             if self._manager_started:
                 return
 
-            self._manager_stack = AsyncExitStack()
-            await self._manager_stack.enter_async_context(self.session_manager.run())
+            stack = _get_project_session_manager_stack()
+            await stack.enter_async_context(self.session_manager.run())
             self._manager_started = True
             await logger.adebug("Streamable HTTP manager started for project %s", self.project_id)
-
-    async def stop_session_manager(self) -> None:
-        """Stop the project's Streamable HTTP manager if it is running."""
-        async with self._manager_lock:
-            if not self._manager_started or self._manager_stack is None:
-                return
-
-            await self._manager_stack.aclose()
-            self._manager_stack = None
-            self._manager_started = False
-            await logger.adebug("Streamable HTTP manager stopped for project %s", self.project_id)
 
 
 # Cache of project MCP servers
 project_mcp_servers = {}
+_project_session_manager_stack: AsyncExitStack | None = None
+
+
+@asynccontextmanager
+async def project_session_manager_lifespan():
+    """Provide a shared AsyncExitStack so each project manager can rely on async with cleanup."""
+    global _project_session_manager_stack  # noqa: PLW0603
+    async with AsyncExitStack() as stack:
+        _project_session_manager_stack = stack
+        try:
+            yield
+        finally:
+            _project_session_manager_stack = None
+
+
+def _get_project_session_manager_stack() -> AsyncExitStack:
+    if _project_session_manager_stack is None:
+        error_message = "Project MCP session stack not initialized. Start the project session manager lifespan first."
+        raise RuntimeError(error_message)
+    return _project_session_manager_stack
 
 
 def get_project_mcp_server(project_id: UUID | None) -> ProjectMCPServer:
@@ -1278,16 +1286,6 @@ def get_project_mcp_server(project_id: UUID | None) -> ProjectMCPServer:
     if project_id_str not in project_mcp_servers:
         project_mcp_servers[project_id_str] = ProjectMCPServer(project_id)
     return project_mcp_servers[project_id_str]
-
-
-@router.on_event("shutdown")
-async def _shutdown_project_session_managers() -> None:
-    """Ensure all per-project session managers are cleanly stopped."""
-    for server in project_mcp_servers.values():
-        try:
-            await server.stop_session_manager()
-        except Exception as exc:  # noqa: BLE001
-            await logger.awarning(f"Error stopping Streamable HTTP manager for project {server.project_id}: {exc!s}")
 
 
 async def register_project_with_composer(project: Folder):
