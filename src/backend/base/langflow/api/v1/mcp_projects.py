@@ -1254,6 +1254,10 @@ class ProjectMCPServer:
 
 # Cache of project MCP servers
 project_mcp_servers = {}
+# Global exit stack for project MCP servers'
+# streamable-http session managers.
+# This is used to automatically clean up
+# session managers on application shutdown.
 _project_session_manager_stack: AsyncExitStack | None = None
 
 
@@ -1267,6 +1271,7 @@ async def project_session_manager_lifespan():
             yield
         finally:
             _project_session_manager_stack = None
+            await logger.adebug("Exited lifespan for MCP projects")
 
 
 def _get_project_session_manager_stack() -> AsyncExitStack:
