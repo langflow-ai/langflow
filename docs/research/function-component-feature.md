@@ -487,9 +487,158 @@ __all__ = [
 
 ---
 
-## 4. Type Mapping Strategy
+## 4. Input Attributes from BaseInputMixin
 
-### 4.1 Python Type to Langflow Type Mapping
+**Location:** `src/lfx/src/lfx/inputs/input_mixin.py:55-137`
+
+The `BaseInputMixin` class defines all attributes available for inputs. When creating a `FunctionComponent`, we can extract many of these from the function signature and docstring.
+
+### 4.1 Core Attributes (Extractable from Signature)
+
+| Attribute | Type | Default | How to Extract from Function |
+|-----------|------|---------|------------------------------|
+| `name` | `str` | required | Parameter name |
+| `required` | `bool` | `False` | `param.default is inspect.Parameter.empty` |
+| `value` | `Any` | `""` | `param.default` if not empty |
+| `field_type` | `FieldTypes` | `TEXT` | Map from type annotation |
+| `input_types` | `list[str]` | `None` | Map from type annotation for handle connections |
+| `is_list` | `bool` | `False` | Check if type is `list[X]` or `Sequence[X]` |
+| `display_name` | `str` | `None` | Format param name: `my_param` → `"My Param"` |
+| `info` | `str` | `""` | Parse from docstring Args section |
+
+### 4.2 Additional Attributes (Extractable from Annotations/Docstring)
+
+| Attribute | Type | Default | Extraction Strategy |
+|-----------|------|---------|---------------------|
+| `placeholder` | `str` | `""` | Could parse from docstring (e.g., "e.g., ..." pattern) |
+| `advanced` | `bool` | `False` | Custom annotation: `Annotated[str, Advanced()]` |
+| `show` | `bool` | `True` | Custom annotation: `Annotated[str, Hidden()]` |
+| `range_spec` | `RangeSpec` | `None` | `Annotated[int, Range(min=0, max=100, step=1)]` |
+| `options` | `list[str]` | `None` | `Literal["opt1", "opt2", "opt3"]` type |
+| `multiline` | `bool` | `False` | Custom annotation: `Annotated[str, Multiline()]` |
+
+### 4.3 FieldTypes Enum (for field_type mapping)
+
+**Location:** `src/lfx/src/lfx/inputs/input_mixin.py:18-39`
+
+```python
+class FieldTypes(str, Enum):
+    TEXT = "str"
+    INTEGER = "int"
+    PASSWORD = "str"
+    FLOAT = "float"
+    BOOLEAN = "bool"
+    DICT = "dict"
+    NESTED_DICT = "NestedDict"
+    FILE = "file"
+    CODE = "code"
+    OTHER = "other"
+    # ... more types
+```
+
+### 4.4 Available Input Classes
+
+**Location:** `src/lfx/src/lfx/inputs/inputs.py`
+
+| Input Class | field_type | input_types | Use Case |
+|------------|------------|-------------|----------|
+| `StrInput` | `TEXT` | - | Plain strings |
+| `MessageTextInput` | `TEXT` | `["Message"]` | Text that can receive Message connections |
+| `MessageInput` | `TEXT` | `["Message"]` | Receives Message objects directly |
+| `IntInput` | `INTEGER` | - | Integer values (includes RangeMixin) |
+| `FloatInput` | `FLOAT` | - | Float values (includes RangeMixin) |
+| `BoolInput` | `BOOLEAN` | - | Boolean values |
+| `DataInput` | `OTHER` | `["Data"]` | Data objects |
+| `HandleInput` | `OTHER` | configurable | Generic handle for any type |
+| `DropdownInput` | `TEXT` | - | Dropdown with options |
+| `MultilineInput` | `TEXT` | `["Message"]` | Multiline text (includes AIMixin) |
+| `SecretStrInput` | `PASSWORD` | - | Sensitive strings |
+| `FileInput` | `FILE` | - | File uploads |
+| `DictInput` | `DICT` | - | Dictionary values |
+| `NestedDictInput` | `NESTED_DICT` | - | Nested dictionaries |
+
+### 4.5 Useful Mixins for FunctionComponent
+
+| Mixin | Attributes | Use Case |
+|-------|------------|----------|
+| `ListableInputMixin` | `is_list`, `list_add_label` | `list[X]` type annotations |
+| `RangeMixin` | `range_spec` | Int/float ranges via `Annotated` |
+| `DropDownMixin` | `options`, `combobox` | `Literal` types |
+| `MultilineMixin` | `multiline=True` | Long text inputs |
+| `FileMixin` | `file_path`, `file_types` | File parameters |
+| `DatabaseLoadMixin` | `load_from_db` | Credentials/secrets |
+
+### 4.6 Implementation: Mapping Function Signature to Inputs
+
+```python
+import inspect
+from typing import get_type_hints, get_origin, get_args, Literal, Annotated
+
+def build_input_from_parameter(
+    param: inspect.Parameter,
+    type_hint: type | None,
+    docstring_info: str | None = None
+) -> InputTypes:
+    """Build a Langflow Input from a function parameter."""
+
+    # 1. Determine if required
+    required = param.default is inspect.Parameter.empty
+
+    # 2. Get default value
+    default = None if required else param.default
+
+    # 3. Check for list type
+    is_list = False
+    inner_type = type_hint
+    if get_origin(type_hint) in (list, List, Sequence):
+        is_list = True
+        args = get_args(type_hint)
+        inner_type = args[0] if args else str
+
+    # 4. Check for Literal (dropdown options)
+    options = None
+    if get_origin(inner_type) is Literal:
+        options = list(get_args(inner_type))
+        inner_type = str
+
+    # 5. Check for Annotated (custom metadata)
+    range_spec = None
+    advanced = False
+    multiline = False
+    if get_origin(inner_type) is Annotated:
+        args = get_args(inner_type)
+        inner_type = args[0]
+        for meta in args[1:]:
+            if isinstance(meta, RangeSpec):
+                range_spec = meta
+            elif isinstance(meta, Advanced):
+                advanced = True
+            elif isinstance(meta, Multiline):
+                multiline = True
+
+    # 6. Map type to Input class
+    input_class = TYPE_TO_INPUT_CLASS.get(inner_type, MessageTextInput)
+
+    # 7. Build input
+    return input_class(
+        name=param.name,
+        display_name=param.name.replace("_", " ").title(),
+        required=required,
+        value=default,
+        is_list=is_list,
+        info=docstring_info or "",
+        advanced=advanced,
+        options=options,
+        range_spec=range_spec,
+        # input_types set by input_class default
+    )
+```
+
+---
+
+## 5. Type Mapping Strategy
+
+### 5.1 Python Type to Langflow Type Mapping
 
 | Python Type | Langflow Input Class | input_types |
 |-------------|---------------------|-------------|
