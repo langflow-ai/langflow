@@ -1643,7 +1643,595 @@ def counter(increment: int = 1) -> int:
 
 ---
 
-## 12. Summary
+## 12. Decorator API Design
+
+### 12.1 Overview
+
+The `@component` decorator transforms a plain Python function into a `FunctionComponent` at decoration time. This provides the cleanest developer experience for defining function-based components.
+
+### 12.2 Basic Decorator Usage
+
+```python
+from lfx.base.functions import component
+
+@component
+def process_text(text: str) -> str:
+    """Process input text.
+
+    Args:
+        text: The input text to process
+
+    Returns:
+        Processed text in uppercase
+    """
+    return text.upper()
+
+# process_text is now a FunctionComponent instance
+process_text.set(text=chat_input.message_response)
+chat_output.set(input_value=process_text.result)
+```
+
+### 12.3 Decorator Parameters
+
+The decorator should support the following parameters for maximum flexibility:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `display_name` | `str \| None` | `None` | Override auto-generated display name |
+| `description` | `str \| None` | `None` | Override description from docstring |
+| `icon` | `str \| None` | `None` | Icon name for UI display |
+| `category` | `str` | `"Functions"` | Category for component browser |
+| `output_name` | `str` | `"result"` | Name of the output |
+| `output_display_name` | `str` | `"Result"` | Display name of the output |
+| `output_types` | `list[str] \| None` | `None` | Override inferred output types |
+| `trace_type` | `str` | `"function"` | Trace type for telemetry |
+| `_id` | `str \| None` | `None` | Explicit component ID |
+
+### 12.4 Decorator Implementation
+
+```python
+from __future__ import annotations
+
+import functools
+import inspect
+from collections.abc import Callable
+from typing import Any, ParamSpec, TypeVar, overload
+
+P = ParamSpec("P")
+T = TypeVar("T")
+
+
+@overload
+def component(func: Callable[P, T]) -> FunctionComponent: ...
+
+@overload
+def component(
+    *,
+    display_name: str | None = None,
+    description: str | None = None,
+    icon: str | None = None,
+    category: str = "Functions",
+    output_name: str = "result",
+    output_display_name: str = "Result",
+    output_types: list[str] | None = None,
+    trace_type: str = "function",
+    _id: str | None = None,
+) -> Callable[[Callable[P, T]], FunctionComponent]: ...
+
+
+def component(
+    func: Callable[P, T] | None = None,
+    *,
+    display_name: str | None = None,
+    description: str | None = None,
+    icon: str | None = None,
+    category: str = "Functions",
+    output_name: str = "result",
+    output_display_name: str = "Result",
+    output_types: list[str] | None = None,
+    trace_type: str = "function",
+    _id: str | None = None,
+) -> FunctionComponent | Callable[[Callable[P, T]], FunctionComponent]:
+    """Decorator to transform a Python function into a FunctionComponent.
+
+    Can be used with or without arguments:
+
+        @component
+        def my_func(x: str) -> str:
+            return x.upper()
+
+        @component(display_name="My Custom Name")
+        def my_func(x: str) -> str:
+            return x.upper()
+
+    Args:
+        func: The function to wrap (when used without parentheses)
+        display_name: Override the auto-generated display name
+        description: Override the docstring description
+        icon: Icon name for UI display
+        category: Category for component browser
+        output_name: Name of the output field
+        output_display_name: Display name of the output field
+        output_types: Override inferred output types
+        trace_type: Trace type for telemetry
+        _id: Explicit component ID
+
+    Returns:
+        FunctionComponent or decorator function
+    """
+    def decorator(fn: Callable[P, T]) -> FunctionComponent:
+        # Capture source code at decoration time
+        try:
+            source_code = inspect.getsource(fn)
+        except (OSError, TypeError):
+            # Fallback for dynamically defined functions
+            source_code = None
+
+        # Create the FunctionComponent
+        fc = FunctionComponent(
+            func=fn,
+            _id=_id,
+            display_name=display_name,
+            description=description,
+            icon=icon,
+            category=category,
+            output_name=output_name,
+            output_display_name=output_display_name,
+            output_types=output_types,
+            trace_type=trace_type,
+            _source_code=source_code,  # Store for persistence
+        )
+
+        # Preserve function metadata
+        functools.update_wrapper(fc, fn)
+
+        return fc
+
+    # Handle both @component and @component(...) syntax
+    if func is not None:
+        return decorator(func)
+    return decorator
+```
+
+### 12.5 Input Parameter Customization via Annotated
+
+For fine-grained control over input fields, use `typing.Annotated`:
+
+```python
+from typing import Annotated, Literal
+from lfx.base.functions import component, InputConfig
+from lfx.field_typing.range_spec import RangeSpec
+
+@component
+def configure(
+    # Basic string with placeholder
+    name: Annotated[str, InputConfig(placeholder="Enter name")] = "",
+
+    # Integer with range slider
+    count: Annotated[int, RangeSpec(min=1, max=100, step=1)] = 10,
+
+    # Dropdown from Literal
+    mode: Literal["fast", "slow", "balanced"] = "balanced",
+
+    # Advanced parameter (hidden by default)
+    debug: Annotated[bool, InputConfig(advanced=True)] = False,
+
+    # Multiline text
+    prompt: Annotated[str, InputConfig(multiline=True)] = "",
+
+    # Secret input
+    api_key: Annotated[str, InputConfig(password=True)] = "",
+) -> str:
+    """Configure the system."""
+    return f"{name}: {mode}"
+```
+
+### 12.6 InputConfig Class
+
+```python
+from dataclasses import dataclass, field
+from typing import Any
+
+
+@dataclass
+class InputConfig:
+    """Configuration for a function parameter input field.
+
+    Use with typing.Annotated to customize input behavior.
+    """
+    display_name: str | None = None
+    info: str | None = None
+    placeholder: str | None = None
+    advanced: bool = False
+    multiline: bool = False
+    password: bool = False
+    show: bool = True
+    required: bool | None = None  # None = infer from default
+    input_types: list[str] | None = None
+    # For dropdown
+    options: list[str] | None = None
+    combobox: bool = False
+```
+
+### 12.7 Examples
+
+**Example 1: Simple decorated function**
+```python
+@component
+def greet(name: str = "World") -> str:
+    """Generate a greeting message.
+
+    Args:
+        name: The name to greet
+    """
+    return f"Hello, {name}!"
+```
+
+**Example 2: With customization**
+```python
+@component(
+    display_name="Text Processor",
+    icon="TextIcon",
+    category="Text Processing",
+)
+def process_text(
+    text: str,
+    uppercase: bool = False,
+    repeat: Annotated[int, RangeSpec(min=1, max=10)] = 1,
+) -> str:
+    """Process and transform text.
+
+    Args:
+        text: Input text to process
+        uppercase: Convert to uppercase
+        repeat: Number of times to repeat
+    """
+    result = text.upper() if uppercase else text
+    return result * repeat
+```
+
+**Example 3: Async function**
+```python
+@component(output_types=["Data"])
+async def fetch_data(url: str) -> Data:
+    """Fetch data from a URL.
+
+    Args:
+        url: The URL to fetch
+    """
+    import aiohttp
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            content = await response.text()
+            return Data(data={"url": url, "content": content})
+```
+
+---
+
+## 13. Persistence & Serialization
+
+### 13.1 Current Flow for Components
+
+The existing persistence flow works as follows:
+
+1. **Serialization (`to_frontend_node`):**
+   - Component's `to_frontend_node()` method creates a frontend node
+   - `set_class_code()` uses `inspect.getsource(module)` to get source code
+   - Source code is stored in a "code" field in the template
+
+   **Location:** `src/lfx/src/lfx/custom/custom_component/component.py:998-1027`
+   ```python
+   def to_frontend_node(self):
+       # ... create frontend_node ...
+       if not self._code:
+           self.set_class_code()
+       code_field = Input(
+           dynamic=True,
+           required=True,
+           value=self._code,  # Source code stored here
+           name="code",
+           field_type="code",
+           # ...
+       )
+       frontend_node.template.add_field(code_field)
+   ```
+
+2. **Deserialization (`instantiate_class`):**
+   - `instantiate_class()` extracts "code" from vertex params
+   - Calls `eval_custom_component_code(code)` to evaluate
+   - `extract_class_name()` finds the Component subclass
+   - `create_class()` compiles and returns the class
+
+   **Location:** `src/lfx/src/lfx/interface/initialize/loading.py:28-54`
+   ```python
+   async def instantiate_class(...):
+       custom_params = get_params(vertex.params)
+       code = custom_params.pop("code")
+       class_object = eval_custom_component_code(code)
+       custom_component = class_object(...)
+   ```
+
+### 13.2 FunctionComponent Persistence Strategy
+
+For `FunctionComponent`, we need to:
+
+1. **At Creation Time:** Capture the function source via `inspect.getsource(func)`
+2. **At Serialization:** Store the function source in the "code" field
+3. **At Deserialization:** Detect function-based code and reconstruct
+
+#### 13.2.1 Source Code Capture
+
+```python
+class FunctionComponent(Component):
+    def __init__(
+        self,
+        func: Callable,
+        _source_code: str | None = None,
+        **kwargs
+    ):
+        self._wrapped_function = func
+
+        # Capture source code
+        if _source_code:
+            self._function_source = _source_code
+        else:
+            try:
+                self._function_source = inspect.getsource(func)
+            except (OSError, TypeError):
+                # Fallback: store a stub that will fail on reload
+                self._function_source = self._generate_stub_code()
+
+        # ... rest of init ...
+
+    def _generate_stub_code(self) -> str:
+        """Generate stub code for functions without source."""
+        return f'''
+# WARNING: Original function source could not be captured.
+# This component cannot be reloaded from JSON.
+def {self._func_name}(*args, **kwargs):
+    raise RuntimeError(
+        "This FunctionComponent was created from a dynamically defined "
+        "function and cannot be reloaded. Define the function in a module "
+        "or use the @component decorator."
+    )
+'''
+```
+
+#### 13.2.2 Modified set_class_code for Functions
+
+```python
+def set_class_code(self) -> None:
+    if self._code:
+        return
+
+    # For FunctionComponent, use function source + wrapper class
+    if hasattr(self, '_function_source'):
+        # Generate a complete module that includes the function
+        # and wraps it in a FunctionComponent
+        self._code = self._generate_persistable_code()
+        return
+
+    # Existing logic for regular components...
+    try:
+        module = inspect.getmodule(self.__class__)
+        if module is None:
+            msg = "Could not find module for class"
+            raise ValueError(msg)
+        class_code = inspect.getsource(module)
+        self._code = class_code
+    except (OSError, TypeError) as e:
+        msg = f"Could not find source code for {self.__class__.__name__}"
+        raise ValueError(msg) from e
+
+def _generate_persistable_code(self) -> str:
+    """Generate code that can be persisted and reloaded."""
+    return f'''
+from lfx.base.functions import FunctionComponent
+
+{self._function_source}
+
+# Metadata for reconstruction
+_FUNCTION_NAME = "{self._func_name}"
+_COMPONENT_CONFIG = {{
+    "display_name": {repr(self.display_name)},
+    "description": {repr(self.description)},
+    "_id": {repr(self._id)},
+}}
+'''
+```
+
+### 13.3 Modified Evaluation Functions
+
+#### 13.3.1 Updated `eval_custom_component_code`
+
+**Location:** `src/lfx/src/lfx/custom/eval.py`
+
+```python
+from lfx.custom import validate
+
+def eval_custom_component_code(code: str) -> type["CustomComponent"]:
+    """Evaluate custom component code.
+
+    Handles both class-based components and function-based components.
+    """
+    # Try to detect if this is a FunctionComponent
+    if _is_function_component_code(code):
+        return _eval_function_component_code(code)
+
+    # Existing class-based logic
+    class_name = validate.extract_class_name(code)
+    return validate.create_class(code, class_name)
+
+
+def _is_function_component_code(code: str) -> bool:
+    """Check if code represents a FunctionComponent."""
+    return "_FUNCTION_NAME" in code and "FunctionComponent" in code
+
+
+def _eval_function_component_code(code: str) -> type["FunctionComponent"]:
+    """Evaluate function component code and return the class."""
+    from lfx.base.functions import FunctionComponent
+
+    # Execute the code to get the function and config
+    namespace = {}
+    exec(code, namespace)
+
+    func_name = namespace.get("_FUNCTION_NAME")
+    config = namespace.get("_COMPONENT_CONFIG", {})
+    func = namespace.get(func_name)
+
+    if func is None:
+        msg = f"Function '{func_name}' not found in code"
+        raise ValueError(msg)
+
+    # Create a factory that returns a configured FunctionComponent
+    def create_component(**kwargs):
+        merged = {**config, **kwargs}
+        return FunctionComponent(func=func, **merged)
+
+    # Return something that acts like a class
+    class FunctionComponentFactory:
+        def __init__(self, **kwargs):
+            self._instance = create_component(**kwargs)
+
+        def __getattr__(self, name):
+            return getattr(self._instance, name)
+
+    return FunctionComponentFactory
+```
+
+#### 13.3.2 Updated `extract_class_name`
+
+**Location:** `src/lfx/src/lfx/custom/validate.py`
+
+Add support for detecting function-based components:
+
+```python
+def extract_class_name(code: str) -> str:
+    """Extract the name of the first Component subclass found in the code.
+
+    Also handles FunctionComponent patterns.
+    """
+    try:
+        module = ast.parse(code)
+
+        # First, check for FunctionComponent pattern
+        for node in module.body:
+            if isinstance(node, ast.Assign):
+                for target in node.targets:
+                    if isinstance(target, ast.Name) and target.id == "_FUNCTION_NAME":
+                        # This is a FunctionComponent - return the function name
+                        if isinstance(node.value, ast.Constant):
+                            return f"FunctionComponent:{node.value.value}"
+
+        # Fall back to class-based detection
+        for node in module.body:
+            if not isinstance(node, ast.ClassDef):
+                continue
+            for base in node.bases:
+                if isinstance(base, ast.Name) and any(
+                    pattern in base.id for pattern in ["Component", "LC"]
+                ):
+                    return node.name
+
+        msg = f"No Component subclass found in code. Code snippet: {code[:100]}"
+        raise TypeError(msg)
+    except SyntaxError as e:
+        msg = f"Invalid Python code: {e!s}"
+        raise ValueError(msg) from e
+```
+
+### 13.4 Alternative: Hybrid Approach
+
+Instead of generating wrapper code, store function metadata separately:
+
+```python
+# In to_frontend_node(), add function-specific fields:
+
+def to_frontend_node(self):
+    frontend_node = super().to_frontend_node()
+
+    if hasattr(self, '_function_source'):
+        # Add function-specific metadata
+        frontend_node.template.add_field(Input(
+            name="_function_source",
+            value=self._function_source,
+            field_type="code",
+            advanced=True,
+            show=False,
+        ))
+        frontend_node.template.add_field(Input(
+            name="_function_name",
+            value=self._func_name,
+            field_type="str",
+            advanced=True,
+            show=False,
+        ))
+        frontend_node.template.add_field(Input(
+            name="_is_function_component",
+            value=True,
+            field_type="bool",
+            advanced=True,
+            show=False,
+        ))
+
+    return frontend_node
+```
+
+Then in `instantiate_class`:
+
+```python
+async def instantiate_class(...):
+    custom_params = get_params(vertex.params)
+
+    # Check if this is a FunctionComponent
+    if custom_params.get("_is_function_component"):
+        func_source = custom_params.pop("_function_source")
+        func_name = custom_params.pop("_function_name")
+        custom_params.pop("_is_function_component")
+
+        # Evaluate the function
+        namespace = {}
+        exec(func_source, namespace)
+        func = namespace[func_name]
+
+        from lfx.base.functions import FunctionComponent
+        return FunctionComponent(func=func, **custom_params)
+
+    # Existing class-based logic
+    code = custom_params.pop("code")
+    class_object = eval_custom_component_code(code)
+    # ...
+```
+
+### 13.5 Limitations & Edge Cases
+
+| Scenario | Behavior | Recommendation |
+|----------|----------|----------------|
+| Lambda functions | `inspect.getsource()` fails | Use named functions |
+| REPL-defined functions | Source not available | Save to file first |
+| Closures with captured vars | Variables not serialized | Avoid closures or inject at runtime |
+| Functions with side effects | Re-execution may differ | Keep functions pure |
+| Functions importing local modules | Imports may fail on reload | Use absolute imports |
+
+### 13.6 Decorator with Source Capture
+
+The `@component` decorator captures source at decoration time:
+
+```python
+@component
+def my_func(x: str) -> str:
+    return x
+
+# my_func._function_source contains the source code
+# This is captured at decoration time, even in REPL
+```
+
+This works because `inspect.getsource()` is called while the decorator is being executed, at which point the function definition is still accessible.
+
+---
+
+## 14. Summary
 
 The FunctionComponent feature will enable a powerful new workflow where developers can:
 
@@ -1651,10 +2239,49 @@ The FunctionComponent feature will enable a powerful new workflow where develope
 2. Connect them directly to existing Langflow components
 3. Chain multiple functions together
 4. Have inputs/outputs automatically generated from signatures
+5. Use the `@component` decorator for the cleanest syntax
+6. Persist and reload function-based graphs
 
-The implementation requires:
-- Creating a new `FunctionComponent` class in `lfx.base.functions`
-- Modifying `Component.set()` to detect and wrap plain functions
-- Proper type mapping between Python types and Langflow types
+### 14.1 Implementation Requirements
+
+| Area | Changes Required |
+|------|------------------|
+| **New Files** | `src/lfx/src/lfx/base/functions/function_component.py` - FunctionComponent class |
+| | `src/lfx/src/lfx/base/functions/__init__.py` - Module exports with `component` decorator |
+| **Modified Files** | `src/lfx/src/lfx/custom/custom_component/component.py` - Add function handling in `_process_connection_or_parameter()` |
+| | `src/lfx/src/lfx/custom/eval.py` - Add `_is_function_component_code()` and `_eval_function_component_code()` |
+| | `src/lfx/src/lfx/custom/validate.py` - Update `extract_class_name()` for function detection |
+| | `src/lfx/src/lfx/interface/initialize/loading.py` - Handle FunctionComponent in `instantiate_class()` |
+| | `src/lfx/src/lfx/base/__init__.py` - Export new module |
+
+### 14.2 Key Design Decisions
+
+1. **Decorator API**: The `@component` decorator provides the cleanest DX and captures source code at decoration time
+2. **Annotated Types**: Use `typing.Annotated` with `InputConfig` for fine-grained input customization
+3. **Persistence**: Store function source in "code" field with `_FUNCTION_NAME` marker for detection
+4. **Type Coercion**: Automatically convert `Message→str` and `Data→dict` for seamless connections
+5. **Error Messages**: Provide clear, actionable error messages for type mismatches
+
+### 14.3 Implementation Phases
+
+**Phase 1: Core FunctionComponent**
+- Create `FunctionComponent` class with signature introspection
+- Implement `from_function()` factory function
+- Add type mapping for common Python types
+
+**Phase 2: Decorator & Customization**
+- Implement `@component` decorator with parameters
+- Create `InputConfig` class for `Annotated` customization
+- Add docstring parsing for parameter descriptions
+
+**Phase 3: Persistence**
+- Implement source code capture via `inspect.getsource()`
+- Modify `to_frontend_node()` for function serialization
+- Update evaluation functions for deserialization
+
+**Phase 4: Integration**
+- Modify `Component.set()` to auto-wrap plain functions
+- Add comprehensive test suite
+- Document API and provide examples
 
 This feature maintains backward compatibility while significantly expanding the expressiveness of the programmatic Graph building API.
