@@ -1,5 +1,6 @@
 import asyncio
 import json
+from contextlib import asynccontextmanager
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
@@ -12,6 +13,7 @@ from langflow.api.v1.mcp_projects import (
     get_project_mcp_server,
     init_mcp_servers,
     project_mcp_servers,
+    project_session_manager_lifespan,
 )
 from langflow.services.auth.utils import create_user_longterm_token, get_password_hash
 from langflow.services.database.models.flow import Flow
@@ -597,17 +599,43 @@ async def test_project_sse_creation(user_test_project):
     await asyncio.sleep(0)
 
 
+async def test_project_session_manager_lifespan_handles_cleanup(user_test_project, monkeypatch):
+    """Session manager contexts should be cleaned up automatically via shared lifespan stack."""
+    project_mcp_servers.clear()
+    lifecycle_events: list[str] = []
+
+    @asynccontextmanager
+    async def fake_run():
+        lifecycle_events.append("enter")
+        try:
+            yield
+        finally:
+            lifecycle_events.append("exit")
+
+    monkeypatch.setattr(
+        "langflow.api.v1.mcp_projects.StreamableHTTPSessionManager.run",
+        lambda self: fake_run(), # noqa: ARG005
+    )
+
+    async with project_session_manager_lifespan():
+        server = get_project_mcp_server(user_test_project.id)
+        await server.ensure_session_manager_running()
+        assert lifecycle_events == ["enter"]
+
+    assert lifecycle_events == ["enter", "exit"]
+
+
 def _prepare_install_test_env(monkeypatch, tmp_path, filename="cursor.json"):
     config_path = tmp_path / filename
     config_path.parent.mkdir(parents=True, exist_ok=True)
 
-    monkeypatch.setattr("langflow.api.v1.mcp_projects.get_client_ip", lambda request: "127.0.0.1")
-    async def fake_get_config_path(client_name):
+    monkeypatch.setattr("langflow.api.v1.mcp_projects.get_client_ip", lambda request: "127.0.0.1") # noqa: ARG005
+    async def fake_get_config_path(client_name): # noqa: ARG001
         return config_path
 
     monkeypatch.setattr("langflow.api.v1.mcp_projects.get_config_path", fake_get_config_path)
     monkeypatch.setattr("langflow.api.v1.mcp_projects.platform.system", lambda: "Linux")
-    monkeypatch.setattr("langflow.api.v1.mcp_projects.should_use_mcp_composer", lambda project: False)
+    monkeypatch.setattr("langflow.api.v1.mcp_projects.should_use_mcp_composer", lambda project: False) # noqa: ARG005
 
     async def fake_streamable(project_id):
         return f"https://langflow.local/api/v1/mcp/project/{project_id}/streamable"
