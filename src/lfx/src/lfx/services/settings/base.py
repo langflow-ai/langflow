@@ -71,6 +71,10 @@ class Settings(BaseSettings):
 
     dev: bool = False
     """If True, Langflow will run in development mode."""
+
+    website_domain: str | None = None
+    """Primary website domain used for admin detection and other host-bound logic."""
+
     database_url: str | None = None
     """Database URL for Langflow. If not provided, Langflow will use a SQLite database.
     The driver shall be an async one like `sqlite+aiosqlite` (`sqlite` and `postgresql`

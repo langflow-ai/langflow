@@ -18,11 +18,7 @@ on:
       commit_id:
         description: "Commit ID to deploy (leave blank for latest on branch)"
         required: false
-        default: ""  
-
-env:
-  STAGING_HOST: staging.visualaiagentsbuilder.com
-  PROD_HOST: visualaiagentsbuilder.com
+        default: ""
 
 jobs:
   build-and-push:
@@ -61,8 +57,149 @@ jobs:
           BRANCH_NAME=$(echo "${{ github.event.inputs.branch }}" | tr '/' '-')
           echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
     
-      - name: Install sshpass
-        run: sudo apt-get update && sudo apt-get install -y sshpass
+      - name: Install dependencies (sshpass + jq)
+        run: sudo apt-get update && sudo apt-get install -y sshpass jq
+
+      - name: Prepare env file with website domain
+        env:
+          ENVIRONMENT: ${{ github.event.inputs.environment }}
+        run: |
+          set -euo pipefail
+          ENV_FILE=".env-file"
+
+          if [ ! -f "$ENV_FILE" ]; then
+            echo "❌ $ENV_FILE not found"
+            exit 1
+          fi
+
+          BASE_DOMAIN=$(grep '^LANGFLOW_WEBSITE_DOMAIN=' "$ENV_FILE" | tail -n1 | cut -d'=' -f2-)
+          if [ -z "${BASE_DOMAIN}" ]; then
+            echo "❌ LANGFLOW_WEBSITE_DOMAIN is not set in $ENV_FILE"
+            exit 1
+          fi
+
+          STAGING_HOST="staging.${BASE_DOMAIN}"
+          PROD_HOST="${BASE_DOMAIN}"
+
+          if [ "$ENVIRONMENT" = "staging" ]; then
+            WEBSITE_DOMAIN="$STAGING_HOST"
+          else
+            WEBSITE_DOMAIN="$PROD_HOST"
+          fi
+
+          echo "🔧 Injecting LANGFLOW_WEBSITE_DOMAIN=${WEBSITE_DOMAIN} into ${ENV_FILE}"
+          echo "" >> "$ENV_FILE"
+          if grep -q '^LANGFLOW_WEBSITE_DOMAIN=' "$ENV_FILE"; then
+            sed -i "s|^LANGFLOW_WEBSITE_DOMAIN=.*|LANGFLOW_WEBSITE_DOMAIN=${WEBSITE_DOMAIN}|" "$ENV_FILE"
+          else
+            echo "LANGFLOW_WEBSITE_DOMAIN=${WEBSITE_DOMAIN}" >> "$ENV_FILE"
+          fi
+
+          {
+            echo "LANGFLOW_WEBSITE_DOMAIN=${WEBSITE_DOMAIN}"
+            echo "STAGING_HOST=${STAGING_HOST}"
+            echo "PROD_HOST=${PROD_HOST}"
+          } >> "$GITHUB_ENV"
+
+      - name: Ensure admin user exists in Clerk
+        env:
+          ENVIRONMENT: ${{ github.event.inputs.environment }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          STAGING_CLERK_SECRET_KEY: ${{ secrets.STAGING_CLERK_SECRET_KEY }}
+          PROD_CLERK_SECRET_KEY: ${{ secrets.PROD_CLERK_SECRET_KEY }}
+          STAGING_HOST: ${{ env.STAGING_HOST }}
+          PROD_HOST: ${{ env.PROD_HOST }}
+        run: |
+          set -euo pipefail
+
+          if [ "$ENVIRONMENT" = "staging" ]; then
+            CLERK_SECRET_KEY="$STAGING_CLERK_SECRET_KEY"
+            WEBSITE_DOMAIN="$STAGING_HOST"
+          else
+            CLERK_SECRET_KEY="$PROD_CLERK_SECRET_KEY"
+            WEBSITE_DOMAIN="$PROD_HOST"
+          fi
+
+          ADMIN_EMAIL="admin@${WEBSITE_DOMAIN}"
+          AUTH_HEADER="Authorization: Bearer ${CLERK_SECRET_KEY}"
+
+          echo "🔐 Ensuring Clerk admin user ${ADMIN_EMAIL} exists"
+
+          # === LOOKUP USER ===
+          LOOKUP=$(curl -s -H "$AUTH_HEADER" \
+            "https://api.clerk.com/v1/users?email_address=${ADMIN_EMAIL}")
+
+          USER_ID=$(echo "$LOOKUP" | jq -r '.[0]?.id // empty')
+
+          if [ -z "$USER_ID" ] || [ "$USER_ID" = "null" ]; then
+            echo "➕ Admin not found. Creating user..."
+
+            CREATE=$(curl -s -H "$AUTH_HEADER" -H "Content-Type: application/json" \
+              -X POST "https://api.clerk.com/v1/users" \
+              -d "{
+                \"email_address\": [\"${ADMIN_EMAIL}\"],
+                \"username\": \"admin\",
+                \"password\": \"${ADMIN_PASSWORD}\"
+              }")
+
+            USER_ID=$(echo "$CREATE" | jq -r '.id // empty')
+            EMAIL_ID=$(echo "$CREATE" | jq -r '.email_addresses[0]?.id // empty')
+
+            if [ -z "$USER_ID" ] || [ "$USER_ID" = "null" ]; then
+              echo "❌ User creation failed"
+              echo "$CREATE"
+              exit 1
+            fi
+
+            echo "✅ Created admin user with id ${USER_ID}"
+          else
+            echo "✅ Admin exists with id ${USER_ID} — refreshing password"
+
+            UPDATE=$(curl -s -H "$AUTH_HEADER" -H "Content-Type: application/json" \
+              -X PATCH "https://api.clerk.com/v1/users/${USER_ID}" \
+              -d "{\"password\": \"${ADMIN_PASSWORD}\"}")
+
+            UPDATED_ID=$(echo "$UPDATE" | jq -r '.id // empty')
+            if [ -z "$UPDATED_ID" ] || [ "$UPDATED_ID" = "null" ]; then
+              echo "❌ Failed to update password"
+              echo "$UPDATE"
+              exit 1
+            fi
+
+            echo "🔄 Password updated"
+
+            # Only fetch email ID once here
+            EMAIL_ID=$(echo "$UPDATE" | jq -r '.email_addresses[0]?.id // empty')
+
+            # If missing email array (rare), re-fetch
+            if [ -z "$EMAIL_ID" ] || [ "$EMAIL_ID" = "null" ]; then
+              USER=$(curl -s -H "$AUTH_HEADER" "https://api.clerk.com/v1/users/${USER_ID}")
+              EMAIL_ID=$(echo "$USER" | jq -r '.email_addresses[0]?.id // empty')
+            fi
+          fi
+
+          if [ -z "$EMAIL_ID" ] || [ "$EMAIL_ID" = "null" ]; then
+            echo "❌ Could not determine email ID for ${ADMIN_EMAIL}"
+            exit 1
+          fi
+
+          # === VERIFY EMAIL ===
+          echo "✉️  Marking email ${ADMIN_EMAIL} as verified"
+
+          VERIFY=$(curl -s -H "$AUTH_HEADER" -H "Content-Type: application/json" \
+            -X PATCH "https://api.clerk.com/v1/email_addresses/${EMAIL_ID}" \
+            -d '{"verified": true}')
+
+          # Updated jq (recommended)
+          STATUS=$(echo "$VERIFY" | jq -r '.verification?.status // empty')
+
+          if [ "$STATUS" = "verified" ]; then
+            echo "✅ Email marked as verified"
+          else
+            echo "❌ Email verification failed"
+            echo "$VERIFY"
+            exit 1
+          fi
 
       - name: Create GitHub Deployment
         env:

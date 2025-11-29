@@ -110,6 +110,7 @@ async def process_new_user_with_clerk(new_user: User):
         user_id = get_user_id_from_clerk_payload()
         new_user.id = user_id
         logger.info(f"[process_new_user_with_clerk] Assigned Clerk UUID {new_user.id} to new user object")
+        await _ensure_admin_superuser(new_user)
 
 
 async def get_user_from_clerk_payload(db: AsyncSession) -> User:
@@ -136,6 +137,36 @@ async def get_user_from_clerk_payload(db: AsyncSession) -> User:
         )
 
     return user
+
+
+def _get_admin_email_from_env() -> str | None:
+    settings_service = get_settings_service()
+    website_domain = getattr(settings_service.settings, "website_domain", None)
+    if not website_domain:
+        return None
+    return f"admin@{website_domain}".lower()
+
+
+async def _ensure_admin_superuser(user: User) -> None:
+    admin_email = _get_admin_email_from_env()
+    if not admin_email:
+        logger.debug("[ClerkAdmin] LANGFLOW_WEBSITE_DOMAIN/WEBSITE_DOMAIN not set; skipping admin promotion")
+        return
+
+    optins = getattr(user, "optins", None)
+    if not isinstance(optins, dict):
+        return
+
+    optins_email = optins.get("email")
+    if not optins_email:
+        return
+
+    if optins_email.lower() != admin_email:
+        return
+
+    if not user.is_superuser:
+        user.is_superuser = True
+        logger.info("[ClerkAdmin] Promoted %s to superuser based on admin email", user.username)
 
 
 async def clerk_token_middleware(request: Request, call_next):

@@ -58,8 +58,9 @@ export async function createOrganisation(token: string) {
 
 // Backend synchronization helpers
 export async function ensureLangflowUser(
-  token: string, 
+  token: string,
   username: string,
+  email?: string,
   maxRetries: number = 2
 ): Promise<{
   justCreated: boolean;
@@ -83,9 +84,22 @@ export async function ensureLangflowUser(
         try {
           // User doesn't exist → create it
           console.debug("[ensureLangflowUser] trying to create user...");
+          const optins = IS_CLERK_AUTH
+            ? {
+                email: email ?? username,
+                github_starred: false,
+                dialog_dismissed: false,
+                discord_clicked: false,
+              }
+            : undefined;
+
           await api.post(
             `${getURL("USERS")}/`,
-            { username, password: CLERK_DUMMY_PASSWORD },
+            {
+              username,
+              password: CLERK_DUMMY_PASSWORD,
+              ...(optins ? { optins } : {}),
+            },
             { headers: { Authorization: `Bearer ${token}` } },
           );
           console.log(`✅ [ensureLangflowUser] User created successfully: ${username}`);
@@ -234,7 +248,12 @@ export function ClerkAuthAdapter() {
               const username = user?.primaryEmailAddress?.emailAddress || user?.id || "clerk_user";
               console.log(`[AutoRecovery] Step 1: Ensuring user exists - ${username}`);
               
-              const { justCreated: userCreated } = await ensureLangflowUser(token, username, 2);
+              const { justCreated: userCreated } = await ensureLangflowUser(
+                token,
+                username,
+                user?.primaryEmailAddress?.emailAddress,
+                2,
+              );
               
               if (userCreated) {
                 console.log("✅ [AutoRecovery] User created successfully");

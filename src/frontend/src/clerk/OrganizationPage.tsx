@@ -89,6 +89,7 @@ export default function OrganizationSwitcherPage() {
         user?.primaryEmailAddress?.emailAddress ||
         user?.id ||
         "clerk_user";
+      const email = user?.primaryEmailAddress?.emailAddress;
       try {
         // Step 1: Create backend organization (DB provisioning or linking)
         console.debug("[OrgSwitcherPage] Calling createOrganisation()");
@@ -97,7 +98,7 @@ export default function OrganizationSwitcherPage() {
 
         // Step 2: Ensure Langflow user exists via /whoami or /users
         console.debug("[OrgSwitcherPage] Calling ensureLangflowUser()");
-        await ensureLangflowUser(orgToken, username);
+        await ensureLangflowUser(orgToken, username, email);
         // Step 3: Backend login using dummy password flow
         console.debug("[OrgSwitcherPage] Calling backendLogin()");
         const tokens = await backendLogin(username, orgToken);
