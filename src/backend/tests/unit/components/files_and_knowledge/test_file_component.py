@@ -1,6 +1,7 @@
 import json
 from unittest.mock import MagicMock, patch
 
+import pytest
 from langflow.io import Output
 from lfx.components.files_and_knowledge.file import FileComponent
 
@@ -271,3 +272,298 @@ class TestFileComponentDynamicOutputs:
         result = component.load_files_message()
 
         assert result.text == "Content from file_path_str", "file_path_str should take priority over path"
+
+
+class TestFileComponentToolMode:
+    """Tests for the tool mode functionality of FileComponent."""
+
+    def test_get_tool_description_without_files(self):
+        """Test tool description when no files are uploaded."""
+        component = FileComponent()
+        component._attributes["path"] = None
+
+        description = component.get_tool_description()
+
+        assert description == "Loads and returns the content from uploaded files."
+
+    def test_get_tool_description_with_single_file(self):
+        """Test tool description includes single file name."""
+        component = FileComponent()
+        component._attributes["path"] = ["flow123/document.pdf"]
+
+        description = component.get_tool_description()
+
+        assert "document.pdf" in description
+        assert "Available files:" in description
+
+    def test_get_tool_description_with_multiple_files(self):
+        """Test tool description includes all file names."""
+        component = FileComponent()
+        component._attributes["path"] = [
+            "flow123/report.pdf",
+            "flow123/data.csv",
+            "flow123/notes.txt",
+        ]
+
+        description = component.get_tool_description()
+
+        assert "report.pdf" in description
+        assert "data.csv" in description
+        assert "notes.txt" in description
+        assert "Available files:" in description
+
+    def test_get_tool_description_with_empty_list(self):
+        """Test tool description with empty file list."""
+        component = FileComponent()
+        component._attributes["path"] = []
+
+        description = component.get_tool_description()
+
+        assert description == "Loads and returns the content from uploaded files."
+
+    def test_description_property_returns_dynamic_description(self):
+        """Test that description property returns dynamic description."""
+        component = FileComponent()
+        component._attributes["path"] = ["flow123/test.pdf"]
+
+        # Access via property
+        description = component.description
+
+        assert "test.pdf" in description
+
+    # ==================== Edge Cases: File Names ====================
+
+    def test_get_tool_description_filename_with_spaces(self):
+        """Test handling of filenames with spaces."""
+        component = FileComponent()
+        component._attributes["path"] = ["flow123/my document with spaces.pdf"]
+
+        description = component.get_tool_description()
+
+        assert "my document with spaces.pdf" in description
+
+    def test_get_tool_description_filename_with_comma(self):
+        """Test handling of filenames with commas."""
+        component = FileComponent()
+        component._attributes["path"] = ["flow123/file,with,commas.txt"]
+
+        description = component.get_tool_description()
+
+        assert "file,with,commas.txt" in description
+
+    def test_get_tool_description_filename_with_multiple_dots(self):
+        """Test handling of filenames with multiple dots."""
+        component = FileComponent()
+        component._attributes["path"] = ["flow123/file.name.with.dots.pdf"]
+
+        description = component.get_tool_description()
+
+        assert "file.name.with.dots.pdf" in description
+
+    def test_get_tool_description_filename_with_special_characters(self):
+        """Test handling of filenames with special characters."""
+        component = FileComponent()
+        component._attributes["path"] = [
+            "flow123/file-with-dashes.pdf",
+            "flow123/file_with_underscores.txt",
+            "flow123/file (with) parentheses.doc",
+        ]
+
+        description = component.get_tool_description()
+
+        assert "file-with-dashes.pdf" in description
+        assert "file_with_underscores.txt" in description
+        assert "file (with) parentheses.doc" in description
+
+    def test_get_tool_description_filename_with_unicode(self):
+        """Test handling of filenames with unicode characters."""
+        component = FileComponent()
+        component._attributes["path"] = [
+            "flow123/文档.pdf",
+            "flow123/документ.txt",
+            "flow123/arquivo_português.pdf",
+        ]
+
+        description = component.get_tool_description()
+
+        assert "文档.pdf" in description
+        assert "документ.txt" in description
+        assert "arquivo_português.pdf" in description
+
+    def test_get_tool_description_filename_with_numbers(self):
+        """Test handling of filenames with numbers."""
+        component = FileComponent()
+        component._attributes["path"] = [
+            "flow123/report_2024_01_15.pdf",
+            "flow123/v1.2.3_release_notes.txt",
+        ]
+
+        description = component.get_tool_description()
+
+        assert "report_2024_01_15.pdf" in description
+        assert "v1.2.3_release_notes.txt" in description
+
+    def test_get_tool_description_very_long_filename(self):
+        """Test handling of very long filenames."""
+        component = FileComponent()
+        long_name = "a" * 200 + ".pdf"
+        component._attributes["path"] = [f"flow123/{long_name}"]
+
+        description = component.get_tool_description()
+
+        assert long_name in description
+
+    def test_get_tool_description_filters_empty_paths(self):
+        """Test that empty paths are filtered out."""
+        component = FileComponent()
+        component._attributes["path"] = ["flow123/valid.pdf", "", None, "flow123/another.txt"]
+
+        description = component.get_tool_description()
+
+        assert "valid.pdf" in description
+        assert "another.txt" in description
+        # Should not crash or include empty entries
+
+    # ==================== _get_tools() Tests ====================
+
+    @pytest.mark.asyncio
+    async def test_get_tools_returns_tool_without_parameters(self):
+        """Test that _get_tools() creates a tool without file_path_str parameter."""
+        component = FileComponent()
+        component._attributes["path"] = ["flow123/test.pdf"]
+
+        tools = await component._get_tools()
+
+        assert len(tools) == 1
+        tool = tools[0]
+        assert tool.name == "load_files_message"
+
+        # Check that args_schema has no required fields (empty schema)
+        schema = tool.args_schema.model_json_schema()
+        properties = schema.get("properties", {})
+        assert len(properties) == 0, f"Tool should have no parameters, but has: {properties}"
+
+    @pytest.mark.asyncio
+    async def test_get_tools_description_includes_filenames(self):
+        """Test that tool description includes uploaded filenames."""
+        component = FileComponent()
+        component._attributes["path"] = ["flow123/important_document.pdf"]
+
+        tools = await component._get_tools()
+
+        assert len(tools) == 1
+        tool = tools[0]
+        assert "important_document.pdf" in tool.description
+
+    @pytest.mark.asyncio
+    async def test_get_tools_works_with_no_files(self):
+        """Test that _get_tools() works even when no files are uploaded."""
+        component = FileComponent()
+        component._attributes["path"] = None
+
+        tools = await component._get_tools()
+
+        assert len(tools) == 1
+        tool = tools[0]
+        assert tool.name == "load_files_message"
+        assert "Loads and returns the content from uploaded files" in tool.description
+
+    @pytest.mark.asyncio
+    async def test_get_tools_metadata(self):
+        """Test that tool has correct metadata."""
+        component = FileComponent()
+        component._attributes["path"] = ["flow123/test.pdf"]
+
+        tools = await component._get_tools()
+
+        tool = tools[0]
+        assert tool.metadata["display_name"] == "Read File"
+        assert "test.pdf" in tool.metadata["display_description"]
+
+    @pytest.mark.asyncio
+    async def test_tool_execution_reads_uploaded_file(self, tmp_path):
+        """Test that the tool correctly reads the uploaded file when executed."""
+        # Create a test file
+        test_file = tmp_path / "test_content.txt"
+        test_content = "This is the file content for tool test."
+        test_file.write_text(test_content)
+
+        component = FileComponent()
+        component._attributes["path"] = [str(test_file)]
+        component.path = [str(test_file)]
+
+        tools = await component._get_tools()
+        tool = tools[0]
+
+        # Execute the tool (it should read the file without any arguments)
+        result = await tool.coroutine()
+
+        assert test_content in result
+
+    # ==================== Error Handling Tests ====================
+
+    @pytest.mark.asyncio
+    async def test_tool_execution_handles_missing_file(self):
+        """Test that tool handles missing file gracefully."""
+        component = FileComponent()
+        component._attributes["path"] = ["/nonexistent/path/file.txt"]
+        component.path = ["/nonexistent/path/file.txt"]
+
+        tools = await component._get_tools()
+        tool = tools[0]
+
+        # Execute the tool - should return error message, not crash
+        result = await tool.coroutine()
+
+        assert "Error" in result or "not found" in result.lower()
+
+    @pytest.mark.asyncio
+    async def test_tool_execution_handles_empty_file_list(self):
+        """Test that tool handles empty file list."""
+        component = FileComponent()
+        component._attributes["path"] = []
+        component.path = []
+
+        tools = await component._get_tools()
+        tool = tools[0]
+
+        # Execute the tool - should handle gracefully
+        result = await tool.coroutine()
+
+        # Should return an error or empty result, not crash
+        assert result is not None
+
+    def test_add_tool_output_is_enabled(self):
+        """Test that add_tool_output is True for FileComponent."""
+        component = FileComponent()
+
+        assert hasattr(component, "add_tool_output")
+        # Note: add_tool_output is a class attribute
+        assert FileComponent.add_tool_output is True
+
+    # ==================== Integration Tests ====================
+
+    def test_file_path_str_input_has_tool_mode_true(self):
+        """Verify file_path_str input has tool_mode=True for Toolset toggle."""
+        component = FileComponent()
+
+        file_path_str_input = None
+        for input_field in component.inputs:
+            if input_field.name == "file_path_str":
+                file_path_str_input = input_field
+                break
+
+        assert file_path_str_input is not None
+        assert file_path_str_input.tool_mode is True
+
+    def test_output_has_tool_mode_true(self):
+        """Verify the main output has tool_mode=True."""
+        component = FileComponent()
+
+        # Check static outputs
+        for output in component.outputs:
+            if output.name == "message":
+                assert output.tool_mode is True
+                break
+        else:
+            pytest.fail("Output 'message' not found in component outputs")
