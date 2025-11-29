@@ -27,7 +27,7 @@ from pydantic_core import PydanticSerializationError
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
 from langflow.api import health_check_router, log_router, router
-from langflow.api.v1.mcp_projects import init_mcp_servers
+from langflow.api.v1.mcp_projects import init_mcp_servers, project_session_manager_lifespan
 from langflow.initial_setup.setup import (
     copy_profile_pictures,
     create_or_update_starter_projects,
@@ -313,12 +313,23 @@ def get_lifespan(*, fix_migration=False, version=None):
             # Allows the server to start first to avoid race conditions with MCP Server startup
             mcp_init_task = asyncio.create_task(delayed_init_mcp_servers())
 
-            # Start streamable-http transport session manager for MCP server
-            from contextlib import AsyncExitStack # noqa: I001
+            # Create AsyncExitStack for context managers that need
+            # to be kept alive for the duration of lf main's lifespan.
+            # Right now, this includes the streamable-http
+            # session manager lifecycle for the v1/mcp server,
+            # and the project MCP global exit stack that manages
+            # each project's Streamable HTTP session manager.
+            from contextlib import AsyncExitStack
+
             from langflow.api.v1.mcp import init_streamable_http_manager
-            await logger.adebug("Starting MCP Server Streamable HTTP session manager")
+
             async with AsyncExitStack() as stack:
+                # Start streamable-http session manager for MCP server
+                await logger.adebug("Starting MCP Server Streamable HTTP session manager")
                 await stack.enter_async_context(init_streamable_http_manager().run())
+                # Start streamable-http lifespan manager and global exit stack for project mcp servers.
+                await logger.adebug("Starting project MCP Streamable HTTP session manager lifespan")
+                await stack.enter_async_context(project_session_manager_lifespan())
 
                 yield
 
