@@ -16,16 +16,16 @@ import orjson
 def _get_langflow_version():
     """Get the installed langflow version."""
     from importlib.metadata import PackageNotFoundError, version
-    
+
     # Try common package name variants (nightly first since it's more specific)
     package_names = ["langflow-nightly", "langflow"]
-    
+
     for name in package_names:
         try:
             return version(name)
         except PackageNotFoundError:
             continue
-    
+
     # Fallback
     return version("langflow")
 
