@@ -28,13 +28,10 @@ export function ChatSidebar({
   // Ensure currentSessionId is included in the list even if it's not in the API response
   const sessions = React.useMemo(() => {
     const sessionList = sessionsData?.sessions || [];
-    console.log("🔍 ChatSidebar - Raw sessions from API:", sessionList);
     // If currentSessionId exists and is not in the list, add it
     if (currentSessionId && !sessionList.includes(currentSessionId)) {
-      console.log("➕ Adding currentSessionId to list:", currentSessionId);
       return [currentSessionId, ...sessionList];
     }
-    console.log("✅ Final sessions list:", sessionList);
     return sessionList;
   }, [sessionsData?.sessions, currentSessionId]);
 
@@ -99,13 +96,11 @@ export function ChatSidebar({
               toggleVisibility={() => handleSessionClick(session)}
               isVisible={visibleSession === session}
               updateVisibleSession={handleSessionClick}
-              inspectSession={(session) => {
+              inspectSession={() => {
                 // TODO: Implement session inspection
-                console.log("Inspect session:", session);
               }}
-              setActiveSession={(session) => {
+              setActiveSession={() => {
                 // TODO: Implement active session
-                console.log("Set active session:", session);
               }}
               selectedView={undefined}
               setSelectedView={() => {}}
