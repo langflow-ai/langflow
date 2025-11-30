@@ -189,14 +189,15 @@ class TestFunctionComponentOutput:
         assert fc.outputs[0].method == "invoke_function"
 
     def test_no_return_type(self):
-        """Functions without return type get Any output."""
+        """Functions without return type get Message output."""
 
         def mystery():
             return 42
 
         fc = FunctionComponent(mystery)
 
-        assert "Any" in fc.outputs[0].types or len(fc.outputs[0].types) == 0
+        # Default to Message when no return type specified
+        assert "Message" in fc.outputs[0].types
 
     def test_dict_return_type_maps_to_data(self):
         """Functions returning dict have output type Data."""
@@ -527,3 +528,335 @@ class TestAutoWrappingWithComponentSet:
         # Manual FunctionComponent connection should work
         assert len(target._components) == 1
         assert target._components[0] is source
+
+
+class TestFunctionComponentConnection:
+    """Tests for connecting FunctionComponents to other components."""
+
+    def test_connect_to_chat_input(self):
+        """FunctionComponent can receive from ChatInput."""
+        from lfx.components.input_output import ChatInput
+
+        def process(text: str) -> str:
+            return text.upper()
+
+        chat_input = ChatInput(_id="chat_input_1")
+        fc = FunctionComponent(process, _id="processor")
+        fc.set(text=chat_input.message_response)
+
+        assert len(fc._components) == 1
+        assert fc._components[0] is chat_input
+        assert len(fc._edges) == 1
+
+        # Verify edge data structure
+        edge = fc._edges[0]
+        assert edge["source"] == "chat_input_1"
+        assert edge["target"] == "processor"
+        assert "sourceHandle" in edge["data"]
+        assert "targetHandle" in edge["data"]
+
+    def test_connect_to_another_function_component(self):
+        """FunctionComponents can chain together."""
+
+        @component
+        def step1(text: str) -> str:
+            return f"[{text}]"
+
+        @component
+        def step2(text: str) -> str:
+            return f"<{text}>"
+
+        step1.set(text="hello")
+        step2.set(text=step1.result)
+
+        assert len(step2._components) == 1
+        assert step2._components[0] is step1
+        assert len(step2._edges) == 1
+
+    def test_connect_to_chat_output(self):
+        """FunctionComponent output can connect to ChatOutput."""
+        from lfx.components.input_output import ChatOutput
+
+        @component
+        def transform(text: str) -> str:
+            return text.lower()
+
+        chat_output = ChatOutput(_id="chat_output_1")
+        transform.set(text="HELLO")
+        chat_output.set(input_value=transform.result)
+
+        assert len(chat_output._components) == 1
+        assert chat_output._components[0] is transform
+        assert len(chat_output._edges) == 1
+
+    def test_edge_has_correct_output_types(self):
+        """Edge data includes correct output types for FunctionComponent."""
+
+        @component
+        def process(text: str) -> str:
+            return text
+
+        @component
+        def consumer(text: str) -> str:
+            return text
+
+        consumer.set(text=process.result)
+
+        edge = consumer._edges[0]
+        source_handle = edge["data"]["sourceHandle"]
+
+        # FunctionComponent with str return should have Message output type
+        assert "Message" in source_handle["output_types"]
+
+    def test_edge_has_correct_input_types(self):
+        """Edge data includes correct input types for target."""
+
+        @component
+        def producer() -> str:
+            return "hello"
+
+        @component
+        def consumer(text: str) -> str:
+            return text
+
+        consumer.set(text=producer.result)
+
+        edge = consumer._edges[0]
+        target_handle = edge["data"]["targetHandle"]
+
+        # str input should accept Message type
+        assert "Message" in target_handle["inputTypes"]
+        assert target_handle["fieldName"] == "text"
+
+
+class TestFunctionComponentInvalidConnections:
+    """Tests for invalid type connections - types that don't match."""
+
+    def test_dict_output_to_str_input_type_mismatch(self):
+        """Graph creation with dict->str type mismatch raises ValueError."""
+        from lfx.components.input_output import ChatInput, ChatOutput
+        from lfx.graph import Graph
+
+        @component
+        def dict_producer(text: str) -> dict:
+            return {"key": text}
+
+        @component
+        def str_consumer(text: str) -> str:
+            return text
+
+        chat_input = ChatInput()
+        chat_output = ChatOutput()
+
+        dict_producer.set(text=chat_input.message_response)
+        str_consumer.set(text=dict_producer.result)
+        chat_output.set(input_value=str_consumer.result)
+
+        # Check edge data shows type mismatch
+        edge = str_consumer._edges[0]
+        source_handle = edge["data"]["sourceHandle"]
+        target_handle = edge["data"]["targetHandle"]
+
+        # dict output maps to Data type
+        assert "Data" in source_handle["output_types"]
+        # str input accepts Message type
+        assert "Message" in target_handle["inputTypes"]
+
+        # Types should not overlap - this is an invalid connection
+        output_types = set(source_handle["output_types"])
+        input_types = set(target_handle["inputTypes"])
+        assert not output_types.intersection(input_types), "Output and input types should not overlap"
+
+        # Graph creation should raise ValueError due to type mismatch
+        with pytest.raises(ValueError, match="invalid handles"):
+            Graph(start=chat_input, end=chat_output)
+
+    def test_int_output_to_str_input_type_mismatch(self):
+        """Graph creation with int->str type mismatch raises ValueError."""
+        from lfx.components.input_output import ChatInput, ChatOutput
+        from lfx.graph import Graph
+
+        @component
+        def int_producer(text: str) -> int:
+            return len(text)
+
+        @component
+        def str_consumer(text: str) -> str:
+            return text
+
+        chat_input = ChatInput()
+        chat_output = ChatOutput()
+
+        int_producer.set(text=chat_input.message_response)
+        str_consumer.set(text=int_producer.result)
+        chat_output.set(input_value=str_consumer.result)
+
+        edge = str_consumer._edges[0]
+        source_handle = edge["data"]["sourceHandle"]
+        target_handle = edge["data"]["targetHandle"]
+
+        # int output type shows as "int"
+        assert "int" in source_handle["output_types"]
+        # str input accepts Message type
+        assert "Message" in target_handle["inputTypes"]
+
+        # Types should NOT overlap - int and Message are different types
+        output_types = set(source_handle["output_types"]) - {"Any"}
+        input_types = set(target_handle["inputTypes"]) - {"Any"}
+        assert not output_types.intersection(input_types), "int and Message should not overlap"
+
+        # Graph creation should raise ValueError due to type mismatch
+        with pytest.raises(ValueError, match="invalid handles"):
+            Graph(start=chat_input, end=chat_output)
+
+    def test_list_output_to_single_input_type_mismatch(self):
+        """Graph creation with list->single type raises ValueError."""
+        from lfx.components.input_output import ChatInput, ChatOutput
+        from lfx.graph import Graph
+
+        @component
+        def list_producer(text: str) -> list[str]:
+            return text.split()
+
+        @component
+        def single_consumer(text: str) -> str:
+            return text
+
+        chat_input = ChatInput()
+        chat_output = ChatOutput()
+
+        list_producer.set(text=chat_input.message_response)
+        single_consumer.set(text=list_producer.result)
+        chat_output.set(input_value=single_consumer.result)
+
+        edge = single_consumer._edges[0]
+        source_handle = edge["data"]["sourceHandle"]
+        target_handle = edge["data"]["targetHandle"]
+
+        # Verify edge data is captured
+        assert "output_types" in source_handle
+        assert "inputTypes" in target_handle
+
+        # Graph creation should raise ValueError due to type mismatch
+        with pytest.raises(ValueError, match="invalid handles"):
+            Graph(start=chat_input, end=chat_output)
+
+    def test_data_output_to_message_input_type_mismatch(self):
+        """Graph creation with Data->Message type mismatch raises ValueError."""
+        from lfx.components.input_output import ChatInput, ChatOutput
+        from lfx.graph import Graph
+        from lfx.schema.data import Data
+
+        @component
+        def data_producer(text: str) -> Data:
+            return Data(data={"text": text})
+
+        @component
+        def message_consumer(text: str) -> str:
+            return text
+
+        chat_input = ChatInput()
+        chat_output = ChatOutput()
+
+        data_producer.set(text=chat_input.message_response)
+        message_consumer.set(text=data_producer.result)
+        chat_output.set(input_value=message_consumer.result)
+
+        edge = message_consumer._edges[0]
+        source_handle = edge["data"]["sourceHandle"]
+        target_handle = edge["data"]["targetHandle"]
+
+        # Data output type
+        assert "Data" in source_handle["output_types"]
+        # str input expects Message
+        assert "Message" in target_handle["inputTypes"]
+
+        # Types don't overlap
+        output_types = set(source_handle["output_types"])
+        input_types = set(target_handle["inputTypes"])
+        assert not output_types.intersection(input_types), "Data and Message should not overlap"
+
+        # Graph creation should raise ValueError due to type mismatch
+        with pytest.raises(ValueError, match="invalid handles"):
+            Graph(start=chat_input, end=chat_output)
+
+    def test_multiple_invalid_connections_in_graph(self):
+        """Graph with multiple type mismatches raises ValueError."""
+        from lfx.components.input_output import ChatInput, ChatOutput
+        from lfx.graph import Graph
+
+        @component
+        def dict_output(text: str) -> dict:
+            return {"a": text}
+
+        @component
+        def consumer(text: str, value: str) -> str:
+            return f"{text}:{value}"
+
+        @component
+        def another_dict(text: str) -> dict:
+            return {"b": text}
+
+        chat_input = ChatInput()
+        chat_output = ChatOutput()
+
+        dict_output.set(text=chat_input.message_response)
+        another_dict.set(text=chat_input.message_response)
+        consumer.set(text=dict_output.result, value=another_dict.result)
+        chat_output.set(input_value=consumer.result)
+
+        # Should have 2 edges on consumer
+        assert len(consumer._edges) == 2
+
+        # Both edges should show type mismatch (Data -> Message)
+        for edge in consumer._edges:
+            source_handle = edge["data"]["sourceHandle"]
+            target_handle = edge["data"]["targetHandle"]
+
+            output_types = set(source_handle["output_types"])
+            input_types = set(target_handle["inputTypes"])
+
+            # Verify type mismatch
+            assert "Data" in output_types
+            assert "Message" in input_types
+            assert not output_types.intersection(input_types)
+
+        # Graph creation should raise ValueError due to type mismatch
+        with pytest.raises(ValueError, match="invalid handles"):
+            Graph(start=chat_input, end=chat_output)
+
+    def test_valid_connection_in_graph(self):
+        """Graph with valid str->str connection has overlapping types."""
+        from lfx.components.input_output import ChatInput, ChatOutput
+        from lfx.graph import Graph
+
+        @component
+        def str_producer(text: str) -> str:
+            return text.upper()
+
+        @component
+        def str_consumer(text: str) -> str:
+            return text.lower()
+
+        chat_input = ChatInput()
+        chat_output = ChatOutput()
+
+        str_producer.set(text=chat_input.message_response)
+        str_consumer.set(text=str_producer.result)
+        chat_output.set(input_value=str_consumer.result)
+
+        edge = str_consumer._edges[0]
+        source_handle = edge["data"]["sourceHandle"]
+        target_handle = edge["data"]["targetHandle"]
+
+        # Both should have Message
+        output_types = set(source_handle["output_types"])
+        input_types = set(target_handle["inputTypes"])
+
+        # Types should overlap - this is a valid connection
+        assert output_types.intersection(input_types), "Valid connection should have overlapping types"
+        assert "Message" in output_types.intersection(input_types)
+
+        # Graph creation should work for valid connections
+        graph = Graph(start=chat_input, end=chat_output)
+        assert len(graph.vertices) == 4
