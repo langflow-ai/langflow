@@ -325,10 +325,10 @@ def get_lifespan(*, fix_migration=False, version=None):
 
             async with AsyncExitStack() as stack:
                 # Start streamable-http session manager for MCP server
-                await logger.adebug("Starting MCP Server Streamable HTTP session manager")
+                await logger.adebug("Starting MCP server streamable-http session manager")
                 await stack.enter_async_context(init_streamable_http_manager().run())
-                # Start streamable-http lifespan manager and global exit stack for project mcp servers.
-                await logger.adebug("Starting project MCP Streamable HTTP session manager lifespan")
+                # Start streamable-http lifespan manager/global exit stack for project mcp servers.
+                await logger.adebug("Starting MCP projects streamable-http lifespan manager")
                 await stack.enter_async_context(project_session_manager_lifespan())
 
                 yield
