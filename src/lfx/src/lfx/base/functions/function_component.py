@@ -387,7 +387,8 @@ def {self._func_name}(*args, **kwargs):
             output_types = self._get_output_types(return_type)
             output.add_types(output_types)
         else:
-            output.add_types(["Any"])
+            # Default to Message when no return type specified
+            output.add_types(["Message"])
 
         return [output]
 
@@ -414,11 +415,12 @@ def {self._func_name}(*args, **kwargs):
         if origin in (list, List if "List" in dir() else list):  # noqa: F821
             return ["list"]
 
-        # Default
+        # For custom types, use their class name
         if hasattr(return_type, "__name__"):
             return [return_type.__name__]
 
-        return ["Any"]
+        # Fallback to Message for unknown types
+        return ["Message"]
 
     async def invoke_function(self) -> Any:
         """Execute the wrapped function with the input values."""
