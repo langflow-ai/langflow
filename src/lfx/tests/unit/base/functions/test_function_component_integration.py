@@ -454,6 +454,288 @@ class TestFunctionComponentWithDifferentTypes:
         assert output is not None
 
 
+class TestFunctionComponentOnlyPipeline:
+    """Test pipelines containing only FunctionComponents (no ChatInput/ChatOutput)."""
+
+    @pytest.mark.asyncio
+    async def test_two_function_components_chained(self):
+        """Test two FunctionComponents connected directly."""
+
+        @component
+        def step1(text: str) -> str:
+            return text.upper()
+
+        @component
+        def step2(text: str) -> str:
+            return f"[{text}]"
+
+        # Set initial value BEFORE creating graph
+        step1.set(text="hello")
+        step2.set(text=step1.result)
+
+        graph = Graph(step1, step2)
+
+        # Should have 2 vertices
+        assert len(graph.vertices) == 2
+        assert len(graph.edges) == 1
+
+        # Run the graph
+        await graph.arun(inputs=[])
+
+        # Get result from final vertex
+        final_vertex = next(v for v in graph.vertices if "step2" in v.id)
+        output = final_vertex.results["result"]
+        assert output == "[HELLO]"
+
+    @pytest.mark.asyncio
+    async def test_three_function_components_pipeline(self):
+        """Test three FunctionComponents in a pipeline."""
+
+        @component
+        def to_upper(text: str) -> str:
+            return text.upper()
+
+        @component
+        def add_brackets(text: str) -> str:
+            return f"[{text}]"
+
+        @component
+        def add_prefix(text: str) -> str:
+            return f"Result: {text}"
+
+        # Set initial value and chain
+        to_upper.set(text="hello")
+        add_brackets.set(text=to_upper.result)
+        add_prefix.set(text=add_brackets.result)
+
+        graph = Graph(to_upper, add_prefix)
+
+        assert len(graph.vertices) == 3
+        assert len(graph.edges) == 2
+
+        await graph.arun(inputs=[])
+
+        # Get result from final vertex
+        final_vertex = next(v for v in graph.vertices if "add_prefix" in v.id)
+        output = final_vertex.results["result"]
+        assert output == "Result: [HELLO]"
+
+    @pytest.mark.asyncio
+    async def test_five_function_components_pipeline(self):
+        """Test a longer pipeline of 5 FunctionComponents."""
+
+        @component
+        def step1(text: str) -> str:
+            return f"1:{text}"
+
+        @component
+        def step2(text: str) -> str:
+            return f"2:{text}"
+
+        @component
+        def step3(text: str) -> str:
+            return f"3:{text}"
+
+        @component
+        def step4(text: str) -> str:
+            return f"4:{text}"
+
+        @component
+        def step5(text: str) -> str:
+            return f"5:{text}"
+
+        # Set initial value and chain
+        step1.set(text="start")
+        step2.set(text=step1.result)
+        step3.set(text=step2.result)
+        step4.set(text=step3.result)
+        step5.set(text=step4.result)
+
+        graph = Graph(step1, step5)
+
+        assert len(graph.vertices) == 5
+        assert len(graph.edges) == 4
+
+        await graph.arun(inputs=[])
+
+        # Get result from final vertex
+        final_vertex = next(v for v in graph.vertices if "step5" in v.id)
+        output = final_vertex.results["result"]
+        assert output == "5:4:3:2:1:start"
+
+    @pytest.mark.asyncio
+    async def test_function_pipeline_with_string_types(self):
+        """Test pipeline with string transformations through chain."""
+
+        @component
+        def wrap_brackets(text: str) -> str:
+            return f"[{text}]"
+
+        @component
+        def wrap_parens(text: str) -> str:
+            return f"({text})"
+
+        @component
+        def wrap_angles(text: str) -> str:
+            return f"<{text}>"
+
+        # Set initial value and chain
+        wrap_brackets.set(text="data")
+        wrap_parens.set(text=wrap_brackets.result)
+        wrap_angles.set(text=wrap_parens.result)
+
+        graph = Graph(wrap_brackets, wrap_angles)
+
+        assert len(graph.vertices) == 3
+
+        await graph.arun(inputs=[])
+
+        # Get result from final vertex
+        final_vertex = next(v for v in graph.vertices if "wrap_angles" in v.id)
+        output = final_vertex.results["result"]
+        assert output == "<([data])>"
+
+    @pytest.mark.asyncio
+    async def test_function_pipeline_round_trip(self):
+        """Test serialization round-trip for function-only pipeline."""
+
+        @component(_id="fc_step1")
+        def upper_step(text: str) -> str:
+            return text.upper()
+
+        @component(_id="fc_step2")
+        def bracket_step(text: str) -> str:
+            return f"[{text}]"
+
+        @component(_id="fc_step3")
+        def final_step(text: str) -> str:
+            return f"Final: {text}"
+
+        # Set initial value and chain
+        upper_step.set(text="test")
+        bracket_step.set(text=upper_step.result)
+        final_step.set(text=bracket_step.result)
+
+        graph1 = Graph(upper_step, final_step)
+
+        # Run original
+        await graph1.arun(inputs=[])
+        final_vertex1 = next(v for v in graph1.vertices if v.id == "fc_step3")
+        output1 = final_vertex1.results["result"]
+
+        # Serialize and deserialize
+        dump = graph1.dump()
+        graph2 = Graph.from_payload(dump)
+
+        # Run deserialized
+        await graph2.arun(inputs=[])
+        final_vertex2 = next(v for v in graph2.vertices if v.id == "fc_step3")
+        output2 = final_vertex2.results["result"]
+
+        assert output1 == output2 == "Final: [TEST]"
+
+    @pytest.mark.asyncio
+    async def test_function_pipeline_with_async_functions(self):
+        """Test pipeline mixing sync and async FunctionComponents."""
+
+        @component
+        def sync_upper(text: str) -> str:
+            return text.upper()
+
+        @component
+        async def async_wrap(text: str) -> str:
+            return f"<{text}>"
+
+        @component
+        def sync_prefix(text: str) -> str:
+            return f"Done: {text}"
+
+        # Set initial value and chain
+        sync_upper.set(text="hello")
+        async_wrap.set(text=sync_upper.result)
+        sync_prefix.set(text=async_wrap.result)
+
+        graph = Graph(sync_upper, sync_prefix)
+
+        await graph.arun(inputs=[])
+
+        # Get result from final vertex
+        final_vertex = next(v for v in graph.vertices if "sync_prefix" in v.id)
+        output = final_vertex.results["result"]
+        assert output == "Done: <HELLO>"
+
+    @pytest.mark.asyncio
+    async def test_function_pipeline_with_defaults(self):
+        """Test pipeline where a component uses default parameter values."""
+
+        @component
+        def greet(name: str) -> str:
+            return f"Hello, {name}"
+
+        @component
+        def format_msg(text: str, wrapper: str = "***") -> str:
+            """Component with a default parameter (wrapper)."""
+            return f"{wrapper} {text} {wrapper}"
+
+        # Set initial value and chain (wrapper uses default "***")
+        greet.set(name="World")
+        format_msg.set(text=greet.result)
+
+        graph = Graph(greet, format_msg)
+
+        await graph.arun(inputs=[])
+
+        # Get result from final vertex
+        final_vertex = next(v for v in graph.vertices if "format_msg" in v.id)
+        output = final_vertex.results["result"]
+        assert output == "*** Hello, World ***"
+
+    def test_function_pipeline_structure(self):
+        """Test that function-only pipeline has correct graph structure."""
+
+        @component(_id="pipeline_a")
+        def func_a(x: str) -> str:
+            return x
+
+        @component(_id="pipeline_b")
+        def func_b(x: str) -> str:
+            return x
+
+        @component(_id="pipeline_c")
+        def func_c(x: str) -> str:
+            return x
+
+        @component(_id="pipeline_d")
+        def func_d(x: str) -> str:
+            return x
+
+        func_b.set(x=func_a.result)
+        func_c.set(x=func_b.result)
+        func_d.set(x=func_c.result)
+
+        graph = Graph(func_a, func_d)
+
+        # Verify structure
+        assert len(graph.vertices) == 4
+        assert len(graph.edges) == 3
+
+        # Verify all components are in the graph
+        vertex_ids = {v.id for v in graph.vertices}
+        assert "pipeline_a" in vertex_ids
+        assert "pipeline_b" in vertex_ids
+        assert "pipeline_c" in vertex_ids
+        assert "pipeline_d" in vertex_ids
+
+        # Verify edges connect correctly
+        dump = graph.dump()
+        edges = dump["data"]["edges"]
+
+        edge_pairs = {(e["source"], e["target"]) for e in edges}
+        assert ("pipeline_a", "pipeline_b") in edge_pairs
+        assert ("pipeline_b", "pipeline_c") in edge_pairs
+        assert ("pipeline_c", "pipeline_d") in edge_pairs
+
+
 class TestFunctionComponentEdgeCases:
     """Test edge cases for FunctionComponent integration."""
 
