@@ -434,6 +434,10 @@ def {self._func_name}(*args, **kwargs):
             # Get value from inputs or attributes
             value = getattr(self, param_name, None)
 
+            # If value is None or empty string, use the default from function signature
+            if (value is None or value == "") and param.default is not inspect.Parameter.empty:
+                value = param.default
+
             # Type coercion: Message -> str
             expected_type = self._type_hints.get(param_name, str)
             # Handle Annotated
@@ -472,6 +476,43 @@ def {self._func_name}(*args, **kwargs):
             fc2.set(input=fc1.result)
         """
         return self.invoke_function
+
+    def set_class_code(self) -> None:
+        """Set the code for serialization.
+
+        For FunctionComponent, we store just the function source code
+        (without the @component decorator).
+        The deserialization side will wrap it in FunctionComponent.
+        """
+        if self._code:
+            return
+
+        # Strip decorators and dedent the function source
+        self._code = self._strip_decorators_and_dedent(self._function_source)
+
+    def _strip_decorators_and_dedent(self, source: str) -> str:
+        """Strip decorator lines and dedent the function source."""
+        import textwrap
+
+        lines = source.split("\n")
+        func_lines = []
+        in_decorator = False
+
+        for line in lines:
+            stripped = line.strip()
+            # Skip decorator lines (including multi-line decorators)
+            if stripped.startswith("@"):
+                in_decorator = True
+                continue
+            # Once we hit def/async def, we're past decorators
+            if in_decorator and stripped.startswith(("def ", "async def ")):
+                in_decorator = False
+            # Include non-decorator lines
+            if not in_decorator or stripped.startswith(("def ", "async def ")):
+                func_lines.append(line)
+                in_decorator = False
+
+        return textwrap.dedent("\n".join(func_lines)).strip()
 
 
 def from_function(func: Callable[P, T], _id: str | None = None, **kwargs) -> FunctionComponent:
