@@ -316,9 +316,10 @@ def get_lifespan(*, fix_migration=False, version=None):
             # Create AsyncExitStack for context managers that need
             # to be kept alive for the duration of lf main's lifespan.
             # Right now, this includes the streamable-http
-            # session manager's lifecycle for the v1/mcp server,
-            # and the project MCP global exit stack that manages
-            # each project's streamable-http session manager.
+            # session mgr's lifecycle ctx mgr for the v1/mcp server,
+            # and the MCP project servers' global lifecycle mgr
+            # that maintains each per-project streamable-http
+            # session mgr's lifecycle mgr.
             from contextlib import AsyncExitStack
 
             from langflow.api.v1.mcp import init_streamable_http_manager
