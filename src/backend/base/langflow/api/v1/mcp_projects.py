@@ -1201,6 +1201,9 @@ class ProjectMCPServer:
         self.server = Server(f"langflow-mcp-project-{project_id}")
         # TODO: implement an environment variable to enable/disable stateless mode
         self.session_manager = StreamableHTTPSessionManager(self.server, stateless=True)
+        # since we lazily initialize the session manager's
+        # lifecyle (run()), we use the lock to prevent
+        # race conditions on concurrent requests.
         self._manager_lock = asyncio.Lock()
         self._manager_started = False
 
