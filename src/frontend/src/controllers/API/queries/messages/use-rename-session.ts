@@ -24,8 +24,7 @@ export const useUpdateSessionName: useMutationFunctionType<
     const isPlayground = useFlowStore.getState().playgroundPage;
     // if we are in playground we will edit the local storage instead of the API
     if (isPlayground && flowId) {
-      const storageData = sessionStorage.getItem(flowId) || "[]";
-      const messages = JSON.parse(storageData);
+      const messages = JSON.parse(sessionStorage.getItem(flowId) || "");
       const messagesWithNewSessionId = messages.map((message: Message) => {
         if (message.session_id === data.old_session_id) {
           message.session_id = data.new_session_id;
@@ -48,7 +47,7 @@ export const useUpdateSessionName: useMutationFunctionType<
     }
   };
 
-  const mutation: UseMutationResult<Message[], unknown, UpdateSessionParams> =
+  const mutation: UseMutationResult<Message[], any, UpdateSessionParams> =
     mutate(["useUpdateSessionName"], updateSessionApi, {
       ...options,
       onSettled: () => {
