@@ -4,6 +4,7 @@ import asyncio
 import re
 from collections import OrderedDict
 from pathlib import Path
+from uuid import NAMESPACE_URL, UUID, uuid5
 
 import anyio
 import sqlalchemy as sa
@@ -14,7 +15,10 @@ from langflow.initial_setup.setup import create_or_update_starter_projects
 from langflow.interface.components import get_and_cache_all_types_dict
 from langflow.logging.logger import logger
 from langflow.services.auth.clerk_utils import auth_header_ctx
+from langflow.services.auth.utils import get_password_hash
+from langflow.services.database.constants import DUMMY_USER_NAMESPACE_TEMPLATE
 from langflow.services.database.service import DatabaseService
+from langflow.services.database.models.user.model import User, UserOptin
 from langflow.services.deps import get_settings_service
 from langflow.services.settings.service import SettingsService
 from langflow.services.utils import setup_superuser
@@ -125,6 +129,11 @@ class OrganizationService:
         return new_url
 
     @staticmethod
+    def _build_dummy_user_id(org_id: str) -> UUID:
+        dummy_seed = DUMMY_USER_NAMESPACE_TEMPLATE.format(org_id=org_id)
+        return uuid5(NAMESPACE_URL, dummy_seed)
+
+    @staticmethod
     async def _ensure_database_exists(base_url: str, org_id: str) -> None:
         """Create the organisation database if it doesn't already exist.
 
@@ -223,6 +232,7 @@ class OrganizationService:
             logger.info(f"[OrgInit] Setting up superuser for org_id={org_id}")
             async with new_db_service.with_session() as session:
                 await setup_superuser(new_settings_service, session)
+                await self._ensure_dummy_user(session, org_id)
 
             self._remember_org(org_id, new_db_service)
             # Populate starter projects for this organisation
@@ -268,6 +278,34 @@ class OrganizationService:
                 await engine.dispose()
             except Exception:  # noqa: BLE001
                 logger.exception("Error removing database %s during cleanup", database_url)
+
+    async def _ensure_dummy_user(self, session, org_id: str) -> None:
+        """Create a deterministic dummy user row for the organisation if missing."""
+
+        dummy_user_id = self._build_dummy_user_id(org_id)
+        existing_user = await session.get(User, dummy_user_id)
+        if existing_user:
+            logger.info("[OrgInit] Dummy user already exists for org_id=%s", org_id)
+            return
+
+        dummy_password = get_password_hash(f"dummy-user-{org_id}")
+        dummy_user = User(
+            id=str(dummy_user_id),
+            username=f"dummy_user_{org_id}",
+            password=dummy_password,
+            is_active=False,
+            is_superuser=False,
+            optins={
+                **UserOptin().model_dump(),
+                "skip_trial_access": False,
+                "trial_access_days": 7,
+            },
+        )
+
+        session.add(dummy_user)
+        await session.commit()
+        await session.refresh(dummy_user)
+        logger.info("[OrgInit] Dummy user created for org_id=%s with id=%s", org_id, dummy_user_id)
 
     @staticmethod
     async def _organisation_db_exists(db_service: DatabaseService) -> bool:
