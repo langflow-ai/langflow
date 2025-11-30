@@ -47,6 +47,7 @@ from .custom_component import CustomComponent
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from lfx.base.functions import FunctionComponent
     from lfx.base.tools.component_tool import ComponentToolkit
     from lfx.events.event_manager import EventManager
     from lfx.graph.edge.schema import EdgeData
@@ -680,6 +681,23 @@ class Component(CustomComponent):
         # and that it is an output of that class
         return hasattr(method, "__self__") and isinstance(method.__self__, Component)
 
+    def _is_plain_callable(self, value) -> bool:
+        """Check if value is a plain callable (function/lambda) that can be wrapped."""
+        # Must be callable
+        if not callable(value):
+            return False
+        # Must not be a Component method
+        if self._inherits_from_component(value):
+            return False
+        # Must be a function or coroutine function (not built-in, class, etc.)
+        return inspect.isfunction(value) or inspect.iscoroutinefunction(value)
+
+    def _wrap_function_as_component(self, func: Callable) -> FunctionComponent:
+        """Wrap a plain function in a FunctionComponent."""
+        from lfx.base.functions import FunctionComponent
+
+        return FunctionComponent(func)
+
     def _method_is_valid_output(self, method: Callable):
         # check if the method is a method from a class that inherits from Component
         # and that it is an output of that class
@@ -771,6 +789,11 @@ class Component(CustomComponent):
                 msg = f"Method {value.__name__} is not a valid output of {value.__self__.__class__.__name__}"
                 raise ValueError(msg) from e
             self._connect_to_component(key, value, input_)
+        elif self._is_plain_callable(value):
+            # Auto-wrap plain functions as FunctionComponents
+            fc = self._wrap_function_as_component(value)
+            # Connect via the FunctionComponent's result output
+            self._connect_to_component(key, fc.result, input_)
         else:
             self._set_parameter_or_attribute(key, value)
 
