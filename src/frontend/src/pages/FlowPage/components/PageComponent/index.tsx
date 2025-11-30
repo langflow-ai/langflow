@@ -742,10 +742,18 @@ export default function Page({
   };
 
   return (
-    <div className="h-full w-full bg-canvas" ref={reactFlowWrapper}>
+    <div
+      className="h-full w-full bg-canvas"
+      ref={reactFlowWrapper}
+      style={{ borderRadius: "5px" }}
+    >
       {showCanvas ? (
         <>
-          <div id="react-flow-id" className="h-full w-full bg-canvas relative">
+          <div
+            id="react-flow-id"
+            className="h-full w-full bg-canvas relative"
+            style={{ borderRadius: "5px" }}
+          >
             {!view && (
               <>
                 <MemoizedLogCanvasControls />

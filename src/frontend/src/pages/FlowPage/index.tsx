@@ -189,13 +189,13 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
                 {!view && !isFullscreen && (
                   <FlowSidebarComponent isLoading={isLoading} />
                 )}
-                <main className="flex w-full overflow-hidden relative">
+                {/* Will be reverted before merging this PR - Original main layout */}
+                {/* <main className="flex w-full overflow-hidden relative">
                   {!isFullscreen && (
                     <div className="h-full w-full">
                       <Page setIsLoading={setIsLoading} />
                     </div>
                   )}
-                  {/* Will be reverted before merging this PR - New sliding container for testing */}
                   {hasIO && (
                     <SlidingContainer
                       isOpen={isSlidingContainerOpen}
@@ -206,6 +206,40 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
                       className={
                         !isFullscreen
                           ? "absolute right-0 top-0 bottom-0 z-40"
+                          : ""
+                      }
+                    >
+                      <FlowPageSlidingContainerContent />
+                    </SlidingContainer>
+                  )}
+                </main> */}
+                {/* Will be reverted before merging this PR - New side-by-side layout */}
+                <main className="flex w-full overflow-hidden">
+                  {!isFullscreen && (
+                    <div
+                      className="h-full overflow-hidden"
+                      style={{
+                        width:
+                          hasIO && isSlidingContainerOpen
+                            ? `calc(100% - ${slidingContainerWidth}px)`
+                            : "100%",
+                        minWidth: 0,
+                        padding: "0.5rem",
+                      }}
+                    >
+                      <Page setIsLoading={setIsLoading} />
+                    </div>
+                  )}
+                  {hasIO && (
+                    <SlidingContainer
+                      isOpen={isSlidingContainerOpen}
+                      width={slidingContainerWidth}
+                      onWidthChange={setSlidingContainerWidth}
+                      resizable={!isFullscreen}
+                      isFullscreen={isFullscreen}
+                      className={
+                        isFullscreen
+                          ? "fixed top-[48px] left-0 right-0 bottom-0 z-50 bg-background"
                           : ""
                       }
                     >
