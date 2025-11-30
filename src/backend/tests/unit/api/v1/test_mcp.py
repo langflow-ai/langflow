@@ -36,6 +36,7 @@ def mock_mcp_server():
 def mock_streamable_http_manager():
     """Initialize the Streamable HTTP manager with a mocked handler."""
     manager = init_streamable_http_manager()
+
     async def fake_handle_request(_scope, _receive, send):
         await send(
             {
@@ -51,6 +52,7 @@ def mock_streamable_http_manager():
                 "more_body": False,
             }
         )
+
     manager.handle_request = AsyncMock(side_effect=fake_handle_request)
     yield manager
     clear_streamable_http_manager()
@@ -209,6 +211,7 @@ async def test_find_validation_error_with_pydantic_error():
     # Create a pydantic ValidationError by catching it
     validation_error = None
     try:
+
         class TestModel(pydantic.BaseModel):
             required_field: str
 
@@ -243,6 +246,7 @@ async def test_find_validation_error_with_context():
     # Create a pydantic ValidationError by catching it
     validation_error = None
     try:
+
         class TestModel(pydantic.BaseModel):
             required_field: str
 
@@ -280,8 +284,10 @@ async def test_mcp_sse_validation_error_logged():
     # Verify the function exists and works
     validation_error = None
     try:
+
         class TestModel(pydantic.BaseModel):
             required_field: str
+
         TestModel()
     except pydantic.ValidationError as e:
         validation_error = e

@@ -61,23 +61,27 @@ sse = SseServerTransport("/api/v1/mcp/")
 # Manage state of the Streamable HTTP session manager
 streamable_http_session_manager: StreamableHTTPSessionManager | None = None
 
+
 def init_streamable_http_manager(*, stateless: bool = True) -> StreamableHTTPSessionManager:
     """Create and register a Streamable HTTP session manager for the global MCP server."""
-    global streamable_http_session_manager # noqa: PLW0603
+    global streamable_http_session_manager  # noqa: PLW0603
     streamable_http_session_manager = StreamableHTTPSessionManager(server, stateless=stateless)
     return streamable_http_session_manager
 
+
 def get_streamable_http_manager() -> StreamableHTTPSessionManager:
     """Fetch the active Streamable HTTP session manager or raise if it is unavailable."""
-    global streamable_http_session_manager # noqa: PLW0602
+    global streamable_http_session_manager  # noqa: PLW0602
     if streamable_http_session_manager is None:
         raise HTTPException(status_code=503, detail="MCP Streamable HTTP transport is not initialized")
     return streamable_http_session_manager
 
+
 def clear_streamable_http_manager() -> None:
     """Clear the currently active Streamable HTTP session manager reference."""
-    global streamable_http_session_manager # noqa: PLW0603
+    global streamable_http_session_manager  # noqa: PLW0603
     streamable_http_session_manager = None
+
 
 ########################################################
 # The transports handle the full ASGI response.
@@ -90,9 +94,10 @@ def clear_streamable_http_manager() -> None:
 # response so that streams can end gracefully.
 ########################################################
 class ResponseNoOp(Response):
-    async def __call__(self, scope, receive, send) -> None: # noqa: ARG002
+    async def __call__(self, scope, receive, send) -> None:  # noqa: ARG002
         # connect_sse already produced the ASGI response; nothing left to send.
         return
+
 
 def find_validation_error(exc):
     """Searches for a pydantic.ValidationError in the exception chain."""
@@ -195,6 +200,8 @@ streamable_http_route_config = {
     "methods": ["GET", "POST", "DELETE"],
     "response_class": ResponseNoOp,
 }
+
+
 @router.api_route("/streamable", **streamable_http_route_config)
 @router.api_route("/streamable/", **streamable_http_route_config)
 async def handle_streamable_http(request: Request, current_user: CurrentActiveMCPUser):

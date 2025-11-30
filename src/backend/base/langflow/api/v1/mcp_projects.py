@@ -78,7 +78,6 @@ DEFAULT_NOTIFICATION_OPTIONS = NotificationOptions(
 )
 
 
-
 async def verify_project_auth(
     db: AsyncSession,
     project_id: UUID,
@@ -213,7 +212,6 @@ def get_project_sse(project_id: UUID | None) -> SseServerTransport:
     return project_sse_transports[project_id_str]
 
 
-
 async def _build_project_tools_response(
     project_id: UUID,
     current_user: CurrentActiveMCPUser,
@@ -320,7 +318,7 @@ async def im_alive(project_id: str):  # noqa: ARG001
 
 
 @router.head("/{project_id}/streamable", include_in_schema=False)
-async def streamable_health(project_id: UUID): # noqa: ARG001
+async def streamable_health(project_id: UUID):  # noqa: ARG001
     return Response()
 
 
@@ -345,9 +343,7 @@ async def _dispatch_project_streamable_http(
     except HTTPException:
         raise
     except Exception as exc:
-        await logger.aexception(
-            f"Error handling Streamable HTTP request for project {project_id}: {exc!s}"
-        )
+        await logger.aexception(f"Error handling Streamable HTTP request for project {project_id}: {exc!s}")
         raise HTTPException(status_code=500, detail="Internal server error in project MCP transport") from exc
     finally:
         current_request_variables_ctx.reset(request_vars_token)
@@ -433,8 +429,11 @@ async def _handle_project_sse_messages(
         current_project_ctx.reset(project_token)
         current_request_variables_ctx.reset(req_vars_token)
 
+
 # legacy SSE transport
 project_messages_methods = ["POST", "DELETE"]
+
+
 @router.api_route("/{project_id}", methods=project_messages_methods)
 @router.api_route("/{project_id}/", methods=project_messages_methods)
 async def handle_project_messages(
@@ -445,8 +444,11 @@ async def handle_project_messages(
     """Handle POST/DELETE messages for a project-specific MCP server."""
     return await _handle_project_sse_messages(project_id, request, current_user)
 
+
 # Streamable HTTP transport
 streamable_http_methods = ["GET", "POST", "DELETE"]
+
+
 @router.api_route("/{project_id}/streamable", methods=streamable_http_methods)
 @router.api_route("/{project_id}/streamable/", methods=streamable_http_methods)
 async def handle_project_streamable_http(
