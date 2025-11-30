@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import { useBlocker, useParams } from "react-router-dom";
+import { SlidingContainer } from "@/components/core/playgroundComponent/sliding-container/components";
+import { FlowPageSlidingContainerContent } from "@/components/core/playgroundComponent/sliding-container/components/flow-page-sliding-container";
+import { useSlidingContainerStore } from "@/components/core/playgroundComponent/sliding-container/stores";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { useGetTypes } from "@/controllers/API/queries/flows/use-get-types";
@@ -159,6 +162,19 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
 
   const isMobile = useIsMobile();
 
+  // Sliding container state - Will be reverted before merging this PR
+  const isSlidingContainerOpen = useSlidingContainerStore(
+    (state) => state.isOpen,
+  );
+  const slidingContainerWidth = useSlidingContainerStore(
+    (state) => state.width,
+  );
+  const setSlidingContainerWidth = useSlidingContainerStore(
+    (state) => state.setWidth,
+  );
+  const isFullscreen = useSlidingContainerStore((state) => state.isFullscreen);
+  const hasIO = useFlowStore((state) => state.hasIO);
+
   return (
     <>
       <div className="flow-page-positioning">
@@ -170,11 +186,66 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
               segmentedSidebar={ENABLE_NEW_SIDEBAR}
             >
               <FlowSearchProvider>
-                {!view && <FlowSidebarComponent isLoading={isLoading} />}
+                {!view && !isFullscreen && (
+                  <FlowSidebarComponent isLoading={isLoading} />
+                )}
+                {/* Will be reverted before merging this PR - Original main layout */}
+                {/* <main className="flex w-full overflow-hidden relative">
+                  {!isFullscreen && (
+                    <div className="h-full w-full">
+                      <Page setIsLoading={setIsLoading} />
+                    </div>
+                  )}
+                  {hasIO && (
+                    <SlidingContainer
+                      isOpen={isSlidingContainerOpen}
+                      width={slidingContainerWidth}
+                      onWidthChange={setSlidingContainerWidth}
+                      resizable={!isFullscreen}
+                      isFullscreen={isFullscreen}
+                      className={
+                        !isFullscreen
+                          ? "absolute right-0 top-0 bottom-0 z-40"
+                          : ""
+                      }
+                    >
+                      <FlowPageSlidingContainerContent />
+                    </SlidingContainer>
+                  )}
+                </main> */}
+                {/* Will be reverted before merging this PR - New side-by-side layout */}
                 <main className="flex w-full overflow-hidden">
-                  <div className="h-full w-full">
-                    <Page setIsLoading={setIsLoading} />
-                  </div>
+                  {!isFullscreen && (
+                    <div
+                      className="h-full overflow-hidden"
+                      style={{
+                        width:
+                          hasIO && isSlidingContainerOpen
+                            ? `calc(100% - ${slidingContainerWidth}px)`
+                            : "100%",
+                        minWidth: 0,
+                        padding: "0.5rem",
+                      }}
+                    >
+                      <Page setIsLoading={setIsLoading} />
+                    </div>
+                  )}
+                  {hasIO && (
+                    <SlidingContainer
+                      isOpen={isSlidingContainerOpen}
+                      width={slidingContainerWidth}
+                      onWidthChange={setSlidingContainerWidth}
+                      resizable={!isFullscreen}
+                      isFullscreen={isFullscreen}
+                      className={
+                        isFullscreen
+                          ? "fixed top-[48px] left-0 right-0 bottom-0 z-50 bg-background"
+                          : ""
+                      }
+                    >
+                      <FlowPageSlidingContainerContent />
+                    </SlidingContainer>
+                  )}
                 </main>
               </FlowSearchProvider>
             </SidebarProvider>
