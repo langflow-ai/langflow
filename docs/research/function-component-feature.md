@@ -2231,7 +2231,274 @@ This works because `inspect.getsource()` is called while the decorator is being 
 
 ---
 
-## 14. Summary
+## 14. UI Workflow: CustomComponent Code Editing
+
+### 14.1 Current UI Flow for Component Code Editing
+
+When a user edits code in a CustomComponent in the Langflow UI:
+
+```
+User edits code in CustomComponent
+            │
+            ▼
+Frontend calls POST /api/v1/custom_component/update
+            │
+            ▼
+endpoints.py: custom_component_update()
+  └─► Component(_code=code_request.code)
+            │
+            ▼
+build_custom_component_template()
+  └─► get_component_instance()
+            │
+            ▼
+eval_custom_component_code(code)
+  ├─► extract_class_name(code)  # Find Component subclass
+  └─► create_class(code, class_name)  # Compile and return class
+            │
+            ▼
+Frontend node returned with inputs/outputs
+```
+
+### 14.2 Key Files and Functions
+
+| File | Function | Purpose |
+|------|----------|---------|
+| `src/backend/base/langflow/api/v1/endpoints.py:865-884` | `custom_component()` | Handle new custom component |
+| `src/backend/base/langflow/api/v1/endpoints.py:887-953` | `custom_component_update()` | Handle code updates |
+| `src/lfx/src/lfx/custom/utils.py:540-577` | `build_custom_component_template()` | Build frontend node from component |
+| `src/lfx/src/lfx/custom/utils.py:300-320` | `get_component_instance()` | Evaluate code and get instance |
+| `src/lfx/src/lfx/custom/eval.py:9-12` | `eval_custom_component_code()` | Main code evaluation entry point |
+| `src/lfx/src/lfx/custom/validate.py:495-523` | `extract_class_name()` | Find Component subclass in code |
+| `src/lfx/src/lfx/custom/validate.py:241-286` | `create_class()` | Compile code and return class |
+
+### 14.3 Required Changes for FunctionComponent UI Support
+
+For users to write function code directly in the UI CustomComponent, we need:
+
+#### 14.3.1 Update `eval_custom_component_code`
+
+```python
+# src/lfx/src/lfx/custom/eval.py
+
+def eval_custom_component_code(code: str) -> type["CustomComponent"]:
+    """Evaluate custom component code.
+
+    Handles both class-based components and function-based components.
+    """
+    # Check if this is pure function code (no Component class)
+    if _is_pure_function_code(code):
+        return _create_function_component_from_code(code)
+
+    # Check if this is serialized FunctionComponent code
+    if _is_function_component_code(code):
+        return _eval_function_component_code(code)
+
+    # Existing class-based logic
+    class_name = validate.extract_class_name(code)
+    return validate.create_class(code, class_name)
+
+
+def _is_pure_function_code(code: str) -> bool:
+    """Check if code is a pure function definition (no Component class)."""
+    try:
+        tree = ast.parse(code)
+        has_function = False
+        has_component_class = False
+
+        for node in tree.body:
+            if isinstance(node, ast.FunctionDef):
+                has_function = True
+            elif isinstance(node, ast.ClassDef):
+                for base in node.bases:
+                    if isinstance(base, ast.Name) and any(
+                        pattern in base.id for pattern in ["Component", "LC"]
+                    ):
+                        has_component_class = True
+
+        return has_function and not has_component_class
+    except SyntaxError:
+        return False
+
+
+def _create_function_component_from_code(code: str) -> type:
+    """Create a FunctionComponent class from pure function code."""
+    from lfx.base.functions import FunctionComponent
+
+    # Execute code to get the function
+    namespace = {}
+    exec(code, namespace)
+
+    # Find the first function defined in the code
+    func = None
+    func_name = None
+    tree = ast.parse(code)
+    for node in tree.body:
+        if isinstance(node, ast.FunctionDef):
+            func_name = node.name
+            func = namespace.get(func_name)
+            break
+
+    if func is None:
+        msg = "No function found in code"
+        raise ValueError(msg)
+
+    # Create a factory class that behaves like a Component class
+    class FunctionComponentWrapper(FunctionComponent):
+        def __init__(self, **kwargs):
+            super().__init__(func=func, _source_code=code, **kwargs)
+
+    FunctionComponentWrapper.__name__ = f"FunctionComponent_{func_name}"
+    return FunctionComponentWrapper
+```
+
+#### 14.3.2 Update `extract_class_name` for Function Detection
+
+```python
+# src/lfx/src/lfx/custom/validate.py
+
+def extract_class_name(code: str) -> str:
+    """Extract the name of the first Component subclass found in the code.
+
+    Also handles FunctionComponent patterns and pure functions.
+    """
+    try:
+        module = ast.parse(code)
+
+        # First, check for FunctionComponent serialization pattern
+        for node in module.body:
+            if isinstance(node, ast.Assign):
+                for target in node.targets:
+                    if isinstance(target, ast.Name) and target.id == "_FUNCTION_NAME":
+                        if isinstance(node.value, ast.Constant):
+                            return f"FunctionComponent:{node.value.value}"
+
+        # Check for Component subclass
+        for node in module.body:
+            if isinstance(node, ast.ClassDef):
+                for base in node.bases:
+                    if isinstance(base, ast.Name) and any(
+                        pattern in base.id for pattern in ["Component", "LC"]
+                    ):
+                        return node.name
+
+        # Check for pure function definition (no Component class)
+        for node in module.body:
+            if isinstance(node, ast.FunctionDef):
+                return f"Function:{node.name}"
+
+        msg = f"No Component subclass or function found in code. Code snippet: {code[:100]}"
+        raise TypeError(msg)
+    except SyntaxError as e:
+        msg = f"Invalid Python code: {e!s}"
+        raise ValueError(msg) from e
+```
+
+#### 14.3.3 Update `get_component_instance`
+
+```python
+# src/lfx/src/lfx/custom/utils.py
+
+def get_component_instance(custom_component: CustomComponent | Component, user_id: str | UUID | None = None):
+    """Returns an instance of a custom component, evaluating its code if necessary."""
+    code = custom_component._code
+    if not isinstance(code, str):
+        error = "Code is None" if code is None else "Invalid code type"
+        msg = f"Invalid type conversion: {error}. Please check your code and try again."
+        logger.error(msg)
+        raise HTTPException(status_code=400, detail={"error": msg})
+
+    try:
+        custom_class = eval_custom_component_code(code)
+    except Exception as exc:
+        # ... existing error handling ...
+
+    # Instantiate the class (works for both Component and FunctionComponent)
+    try:
+        custom_instance = custom_class(_user_id=user_id, _code=code)
+    except TypeError:
+        # FunctionComponent might have different constructor signature
+        custom_instance = custom_class(_code=code)
+
+    return custom_instance
+```
+
+### 14.4 UI Code Example for Users
+
+With these changes, users can write code like this in the UI:
+
+**Option 1: Pure function (simplest)**
+```python
+def process_text(text: str) -> str:
+    """Process input text.
+
+    Args:
+        text: The input text to process
+    """
+    return text.upper()
+```
+
+**Option 2: Using @component decorator**
+```python
+from lfx.base.functions import component
+
+@component(
+    display_name="Text Processor",
+    category="Text Processing",
+)
+def process_text(text: str) -> str:
+    """Process input text.
+
+    Args:
+        text: The input text to process
+    """
+    return text.upper()
+```
+
+**Option 3: Explicit FunctionComponent (most control)**
+```python
+from lfx.base.functions import FunctionComponent
+
+def process_text(text: str) -> str:
+    """Process input text."""
+    return text.upper()
+
+# Create component with explicit configuration
+component = FunctionComponent(
+    func=process_text,
+    display_name="Text Processor",
+)
+```
+
+### 14.5 Validation Flow
+
+The existing `/validate/code` endpoint should also be updated:
+
+```python
+# src/backend/base/langflow/api/v1/validate.py
+
+@router.post("/code", status_code=200)
+async def post_validate_code(code: Code, _current_user: CurrentActiveUser) -> CodeValidationResponse:
+    try:
+        errors = validate_code(code.code)
+
+        # Add function-specific validation
+        if _is_pure_function_code(code.code):
+            func_errors = validate_function_code(code.code)
+            errors["function"]["errors"].extend(func_errors)
+
+        return CodeValidationResponse(
+            imports=errors.get("imports", {}),
+            function=errors.get("function", {}),
+        )
+    except Exception as e:
+        logger.debug("Error validating code", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+```
+
+---
+
+## 15. Summary
 
 The FunctionComponent feature will enable a powerful new workflow where developers can:
 
@@ -2242,27 +2509,30 @@ The FunctionComponent feature will enable a powerful new workflow where develope
 5. Use the `@component` decorator for the cleanest syntax
 6. Persist and reload function-based graphs
 
-### 14.1 Implementation Requirements
+### 15.1 Implementation Requirements
 
 | Area | Changes Required |
 |------|------------------|
 | **New Files** | `src/lfx/src/lfx/base/functions/function_component.py` - FunctionComponent class |
-| | `src/lfx/src/lfx/base/functions/__init__.py` - Module exports with `component` decorator |
+| | `src/lfx/src/lfx/base/functions/__init__.py` - Module exports with `component` decorator, `InputConfig` class |
 | **Modified Files** | `src/lfx/src/lfx/custom/custom_component/component.py` - Add function handling in `_process_connection_or_parameter()` |
-| | `src/lfx/src/lfx/custom/eval.py` - Add `_is_function_component_code()` and `_eval_function_component_code()` |
+| | `src/lfx/src/lfx/custom/eval.py` - Add `_is_pure_function_code()`, `_is_function_component_code()`, `_eval_function_component_code()`, `_create_function_component_from_code()` |
 | | `src/lfx/src/lfx/custom/validate.py` - Update `extract_class_name()` for function detection |
+| | `src/lfx/src/lfx/custom/utils.py` - Update `get_component_instance()` for FunctionComponent |
 | | `src/lfx/src/lfx/interface/initialize/loading.py` - Handle FunctionComponent in `instantiate_class()` |
 | | `src/lfx/src/lfx/base/__init__.py` - Export new module |
+| | `src/backend/base/langflow/api/v1/validate.py` - Add function validation support |
 
-### 14.2 Key Design Decisions
+### 15.2 Key Design Decisions
 
 1. **Decorator API**: The `@component` decorator provides the cleanest DX and captures source code at decoration time
 2. **Annotated Types**: Use `typing.Annotated` with `InputConfig` for fine-grained input customization
 3. **Persistence**: Store function source in "code" field with `_FUNCTION_NAME` marker for detection
 4. **Type Coercion**: Automatically convert `Message→str` and `Data→dict` for seamless connections
 5. **Error Messages**: Provide clear, actionable error messages for type mismatches
+6. **UI Support**: Users can write pure functions in CustomComponent code editor
 
-### 14.3 Implementation Phases
+### 15.3 Implementation Phases
 
 **Phase 1: Core FunctionComponent**
 - Create `FunctionComponent` class with signature introspection
