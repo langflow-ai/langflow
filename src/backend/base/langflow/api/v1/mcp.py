@@ -194,12 +194,13 @@ async def _dispatch_streamable_http(
     finally:
         current_user_ctx.reset(context_token)
 
+    return ResponseNoOp()
 
 
 streamable_http_route_config = {
     "methods": ["GET", "POST", "DELETE"],
-    "response_class": ResponseNoOp
-    }
+    "response_class": ResponseNoOp,
+}
 @router.api_route("/streamable", **streamable_http_route_config)
 @router.api_route("/streamable/", **streamable_http_route_config)
 async def handle_streamable_http(request: Request, current_user: CurrentActiveMCPUser):
