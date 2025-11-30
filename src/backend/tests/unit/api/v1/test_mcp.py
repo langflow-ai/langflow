@@ -4,6 +4,7 @@ from uuid import uuid4
 import pytest
 from fastapi import status
 from httpx import AsyncClient
+from langflow.api.v1.mcp import clear_streamable_http_manager, init_streamable_http_manager
 from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.user import User
 
@@ -33,10 +34,26 @@ def mock_mcp_server():
 
 @pytest.fixture
 def mock_streamable_http_manager():
-    """Mock the StreamableHTTPSessionManager."""
-    with patch("langflow.api.v1.mcp.streamable_http_session_manager") as mock:
-        mock.handle_request = AsyncMock()
-        yield mock
+    """Initialize the Streamable HTTP manager with a mocked handler."""
+    manager = init_streamable_http_manager()
+    async def fake_handle_request(_scope, _receive, send):
+        await send(
+            {
+                "type": "http.response.start",
+                "status": status.HTTP_200_OK,
+                "headers": [],
+            }
+        )
+        await send(
+            {
+                "type": "http.response.body",
+                "body": b"",
+                "more_body": False,
+            }
+        )
+    manager.handle_request = AsyncMock(side_effect=fake_handle_request)
+    yield manager
+    clear_streamable_http_manager()
 
 
 @pytest.fixture
