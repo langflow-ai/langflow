@@ -1042,12 +1042,21 @@ def _args_reference_urls(args: Sequence[Any] | None, urls: list[str]) -> bool:
     """Check whether the given args list references any of the provided URLs."""
     if not args or not urls:
         return False
-    args_strings = [arg for arg in args if isinstance(arg, str)]
-    if not args_strings:
+    # Avoid building a full list if not needed; early exit if possible
+    # Use generator for iterating only once
+    args_strs = []
+    for arg in args:
+        if isinstance(arg, str):
+            args_strs.append(arg)
+    if not args_strs:
         return False
-    args_set = set(args_strings)
-    last_arg = args_strings[-1]
-    return any((url == last_arg) or (url in args_set) for url in urls)
+    args_set = set(args_strs)
+    last_arg = args_strs[-1]
+    # Use set lookup for faster membership tests, and special-case last argument
+    for url in urls:
+        if url == last_arg or url in args_set:
+            return True
+    return False
 
 
 def config_contains_server_url(config_data: dict, urls: Sequence[str] | str) -> bool:
@@ -1151,20 +1160,22 @@ def remove_server_by_urls(config_data: dict, urls: Sequence[str] | str) -> tuple
     if not normalized_urls:
         return config_data, []
 
-    if "mcpServers" not in config_data:
+    mcp_servers = config_data.get("mcpServers")
+    if not mcp_servers:
         return config_data, []
 
     removed_servers: list[str] = []
-    servers_to_remove: list[str] = []
-
-    # Find servers to remove
-    for server_name, server_config in config_data["mcpServers"].items():
-        if _args_reference_urls(server_config.get("args", []), normalized_urls):
-            servers_to_remove.append(server_name)
+    # Iterate and collect server_names to remove in one pass with generator
+    servers_to_remove = [
+        server_name
+        for server_name, server_config in list(mcp_servers.items())
+        if _args_reference_urls(server_config.get("args", []), normalized_urls)
+    ]
+    # Remove servers
 
     # Remove the servers
     for server_name in servers_to_remove:
-        del config_data["mcpServers"][server_name]
+        del mcp_servers[server_name]
         removed_servers.append(server_name)
         logger.debug("Removed existing server with matching SSE URL: %s", server_name)
 
