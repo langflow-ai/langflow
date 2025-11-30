@@ -471,3 +471,59 @@ class TestSourceCodeCapture:
 
         assert hasattr(my_decorated_func, "_function_source")
         assert "def my_decorated_func" in my_decorated_func._function_source
+
+
+class TestAutoWrappingWithComponentSet:
+    """Tests for auto-wrapping plain functions when using Component.set()."""
+
+    @pytest.mark.asyncio
+    async def test_plain_function_auto_wrapped_on_set(self):
+        """Plain function passed to Component.set() is auto-wrapped in FunctionComponent."""
+        from lfx.custom.custom_component.component import Component
+        from lfx.inputs.inputs import MessageTextInput
+        from lfx.template.field.base import Output
+
+        # Create a target component that accepts input
+        class TargetComponent(Component):
+            inputs = [MessageTextInput(name="text", display_name="Text")]
+            outputs = [Output(display_name="Result", name="result", method="process")]
+
+            def process(self) -> str:
+                return self.text
+
+        def source_function() -> str:
+            return "hello from function"
+
+        target = TargetComponent()
+        target.set(text=source_function)
+
+        # The function should be wrapped and connected
+        assert len(target._components) == 1
+        assert isinstance(target._components[0], FunctionComponent)
+
+    @pytest.mark.asyncio
+    async def test_plain_function_with_args_auto_wrapped(self):
+        """Plain function with parameters is auto-wrapped and its result used."""
+        from lfx.custom.custom_component.component import Component
+        from lfx.inputs.inputs import MessageTextInput
+        from lfx.template.field.base import Output
+
+        class TargetComponent(Component):
+            inputs = [MessageTextInput(name="text", display_name="Text")]
+            outputs = [Output(display_name="Result", name="result", method="process")]
+
+            def process(self) -> str:
+                return self.text
+
+        def uppercase(text: str) -> str:
+            return text.upper()
+
+        source = FunctionComponent(uppercase)
+        source.set(text="hello")
+
+        target = TargetComponent()
+        target.set(text=source.result)
+
+        # Manual FunctionComponent connection should work
+        assert len(target._components) == 1
+        assert target._components[0] is source
