@@ -22,6 +22,25 @@ MIN_MODULE_PARTS = 2
 EXPECTED_RESULT_LENGTH = 2  # Expected length of the tuple returned by _process_single_module
 
 
+def _get_langflow_package_name() -> str:
+    """Get the actual installed package name for langflow.
+
+    This handles cases where the package might be installed as 'langflow-nightly' or other variants.
+    """
+    from importlib.metadata import PackageNotFoundError, version
+
+    package_names = ["langflow-nightly", "langflow"]
+
+    for name in package_names:
+        try:
+            version(name)
+            return name
+        except PackageNotFoundError:
+            continue
+
+    raise ValueError("langflow package not found")
+
+
 # Create a class to manage component cache instead of using globals
 class ComponentCache:
     def __init__(self):
@@ -145,7 +164,8 @@ def _read_component_index(custom_path: str | None = None) -> dict | None:
         # Version check: ensure index matches installed langflow version
         from importlib.metadata import version
 
-        installed_version = version("langflow")
+        package_name = _get_langflow_package_name()
+        installed_version = version(package_name)
         if blob.get("version") != installed_version:
             logger.debug(
                 f"Component index version mismatch: index={blob.get('version')}, installed={installed_version}"
@@ -185,7 +205,8 @@ def _save_generated_index(modules_dict: dict) -> None:
         # Get version
         from importlib.metadata import version
 
-        langflow_version = version("langflow")
+        package_name = _get_langflow_package_name()
+        langflow_version = version(package_name)
 
         # Build index structure
         index = {
