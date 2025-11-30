@@ -1,7 +1,9 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { PLAYGROUND_BUTTON_NAME } from "@/constants/constants";
-import { CustomIOModal } from "@/customization/components/custom-new-modal";
+import { PlaygroundButtonSliding } from "@/customization/components/custom-playground-button-sliding";
+// Will be reverted before merging this PR - IOModal commented out to test sliding container
+// import { CustomIOModal } from "@/customization/components/custom-new-modal";
 import { ENABLE_PUBLISH } from "@/customization/feature-flags";
 
 interface PlaygroundButtonProps {
@@ -49,22 +51,26 @@ const PlaygroundButton = ({
   setOpen,
   canvasOpen,
 }: PlaygroundButtonProps) => {
-  return hasIO ? (
-    <CustomIOModal
-      open={open}
-      setOpen={setOpen}
-      disable={!hasIO}
-      canvasOpen={canvasOpen}
-    >
-      <ActiveButton />
-    </CustomIOModal>
-  ) : (
-    <ShadTooltip content="Add a Chat Input or Chat Output to use the playground">
-      <div>
-        <DisabledButton />
-      </div>
-    </ShadTooltip>
-  );
+  // Will be reverted before merging this PR - IOModal commented out to test sliding container
+  // return hasIO ? (
+  //   <CustomIOModal
+  //     open={open}
+  //     setOpen={setOpen}
+  //     disable={!hasIO}
+  //     canvasOpen={canvasOpen}
+  //   >
+  //     <ActiveButton />
+  //   </CustomIOModal>
+  // ) : (
+  //   <ShadTooltip content="Add a Chat Input or Chat Output to use the playground">
+  //     <div>
+  //       <DisabledButton />
+  //     </div>
+  //   </ShadTooltip>
+  // );
+
+  // New sliding container implementation for testing
+  return <PlaygroundButtonSliding hasIO={hasIO} />;
 };
 
 export default PlaygroundButton;
