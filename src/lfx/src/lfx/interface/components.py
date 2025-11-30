@@ -25,14 +25,10 @@ EXPECTED_RESULT_LENGTH = 2  # Expected length of the tuple returned by _process_
 def _get_langflow_package_name() -> str:
     """Get the actual installed package name for langflow.
     
-    This handles cases where the package might be installed as 'langflow-nightly'
-    or other variants. Tries common package name variants and falls back to 'langflow'.
-    
-    Returns:
-        The package name that can be used with importlib.metadata.version()
+    This handles cases where the package might be installed as 'langflow-nightly' or other variants.
     """
     from importlib.metadata import PackageNotFoundError, version
-    
+
     package_names = ["langflow-nightly", "langflow"]
     
     for name in package_names:
