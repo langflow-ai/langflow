@@ -164,6 +164,12 @@ class FunctionComponent(Component):
         self.inputs = inputs
         self.outputs = outputs
 
+        # Set the name attribute for frontend styling/identification
+        # This is separate from display_name and is used as the component type
+        self.name = display_name
+        # Set display_name for get_template_config (ATTR_FUNC_MAPPING lookup)
+        self.display_name = display_name
+
         super().__init__(
             _id=_id,
             _display_name=display_name,
@@ -185,7 +191,12 @@ def {self._func_name}(*args, **kwargs):
 """
 
     def _parse_docstring_params(self) -> dict[str, str]:
-        """Parse parameter descriptions from docstring (Google/Numpy style)."""
+        """Parse parameter descriptions from docstring.
+
+        Supports multiple formats:
+        1. Google/Numpy style with Args: section
+        2. Simple format: "param_name: description" anywhere in docstring
+        """
         param_docs: dict[str, str] = {}
         if not self._docstring:
             return param_docs
@@ -193,6 +204,9 @@ def {self._func_name}(*args, **kwargs):
         lines = self._docstring.split("\n")
         in_args_section = False
         current_param: str | None = None
+
+        # Get parameter names from signature to validate simple format
+        param_names = set(self._signature.parameters.keys()) - {"self", "cls"}
 
         for line in lines:
             stripped = line.strip()
@@ -227,6 +241,13 @@ def {self._func_name}(*args, **kwargs):
                 elif current_param and stripped:
                     # Continuation of previous param description
                     param_docs[current_param] += " " + stripped
+            elif not in_args_section and ":" in stripped:
+                # Simple format: "param_name: description" without Args: section
+                # Only match if the word before : is a known parameter name
+                parts = stripped.split(":", 1)
+                potential_param = parts[0].strip()
+                if potential_param in param_names and len(parts) > 1:
+                    param_docs[potential_param] = parts[1].strip()
 
         return param_docs
 
@@ -433,8 +454,10 @@ def {self._func_name}(*args, **kwargs):
             if param.kind in (param.VAR_POSITIONAL, param.VAR_KEYWORD):
                 continue
 
-            # Get value from inputs or attributes
-            value = getattr(self, param_name, None)
+            # Get value from inputs first, fall back to attributes
+            # Note: We must use _inputs directly because getattr may return
+            # component attributes (like 'name' for display_name) instead of input values
+            value = self._inputs[param_name].value if param_name in self._inputs else getattr(self, param_name, None)
 
             # If value is None or empty string, use the default from function signature
             if (value is None or value == "") and param.default is not inspect.Parameter.empty:
