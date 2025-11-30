@@ -6,6 +6,7 @@ import pytest
 from lfx.base.functions import FunctionComponent
 from lfx.custom.eval import (
     _create_function_component_class,
+    _has_component_decorator,
     _is_function_code,
     eval_custom_component_code,
 )
@@ -144,8 +145,8 @@ y = 10
         with pytest.raises(ValueError, match="No function found"):
             _create_function_component_class(code)
 
-    def test_picks_first_function(self):
-        """Picks the first function when multiple are defined."""
+    def test_raises_on_multiple_functions_no_decorator(self):
+        """Raises ValueError when multiple functions exist and none is decorated."""
         code = """
 def first_func(a: int) -> int:
     return a
@@ -153,10 +154,68 @@ def first_func(a: int) -> int:
 def second_func(b: str) -> str:
     return b
 """
+        with pytest.raises(ValueError, match="Multiple functions found"):
+            _create_function_component_class(code)
+
+    def test_picks_decorated_function_among_multiple(self):
+        """Picks the decorated function when multiple functions exist."""
+        code = """
+from lfx.base.functions import component
+
+def helper(x: int) -> int:
+    return x * 2
+
+@component
+def main_func(text: str) -> str:
+    return text.upper()
+"""
         cls = _create_function_component_class(code)
         instance = cls()
-        # Should have picked first_func which has int param
-        assert instance.inputs[0].name == "a"
+        # Should have picked main_func which has text param
+        assert instance.inputs[0].name == "text"
+        assert "main_func" in cls.__name__
+
+    def test_raises_on_multiple_decorated_functions(self):
+        """Raises ValueError when multiple functions have @component."""
+        code = """
+from lfx.base.functions import component
+
+@component
+def first_func(a: int) -> int:
+    return a
+
+@component
+def second_func(b: str) -> str:
+    return b
+"""
+        with pytest.raises(ValueError, match="Multiple functions with @component"):
+            _create_function_component_class(code)
+
+    def test_single_function_implicit_component(self):
+        """Single function is used implicitly without decorator."""
+        code = """
+def only_func(value: str) -> str:
+    return value.lower()
+"""
+        cls = _create_function_component_class(code)
+        instance = cls()
+        assert instance.inputs[0].name == "value"
+        assert "only_func" in cls.__name__
+
+    def test_decorated_function_with_args(self):
+        """Picks function with @component(display_name=...) decorator."""
+        code = """
+from lfx.base.functions import component
+
+def helper(x: int) -> int:
+    return x
+
+@component(display_name="Custom Name")
+def main_func(text: str) -> str:
+    return text
+"""
+        cls = _create_function_component_class(code)
+        assert "main_func" in cls.__name__
 
 
 class TestEvalCustomComponentCode:
@@ -273,3 +332,71 @@ class TestEvalRoundTrip:
         assert "prefix" in param_names
         assert "text" in param_names
         assert "suffix" in param_names
+
+
+class TestHasComponentDecorator:
+    """Tests for _has_component_decorator helper."""
+
+    def test_simple_decorator(self):
+        """Detects @component decorator."""
+        import ast
+
+        code = """
+@component
+def my_func(x: str) -> str:
+    return x
+"""
+        tree = ast.parse(code)
+        func_node = tree.body[0]
+        assert _has_component_decorator(func_node) is True
+
+    def test_decorator_with_args(self):
+        """Detects @component(display_name='test') decorator."""
+        import ast
+
+        code = """
+@component(display_name="test")
+def my_func(x: str) -> str:
+    return x
+"""
+        tree = ast.parse(code)
+        func_node = tree.body[0]
+        assert _has_component_decorator(func_node) is True
+
+    def test_no_decorator(self):
+        """Returns False for function without decorator."""
+        import ast
+
+        code = """
+def my_func(x: str) -> str:
+    return x
+"""
+        tree = ast.parse(code)
+        func_node = tree.body[0]
+        assert _has_component_decorator(func_node) is False
+
+    def test_other_decorator(self):
+        """Returns False for function with non-component decorator."""
+        import ast
+
+        code = """
+@staticmethod
+def my_func(x: str) -> str:
+    return x
+"""
+        tree = ast.parse(code)
+        func_node = tree.body[0]
+        assert _has_component_decorator(func_node) is False
+
+    def test_module_qualified_decorator(self):
+        """Detects lfx.base.functions.component decorator."""
+        import ast
+
+        code = """
+@lfx.base.functions.component
+def my_func(x: str) -> str:
+    return x
+"""
+        tree = ast.parse(code)
+        func_node = tree.body[0]
+        assert _has_component_decorator(func_node) is True
