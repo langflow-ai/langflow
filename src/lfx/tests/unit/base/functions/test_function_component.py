@@ -1012,3 +1012,133 @@ class TestFunctionComponentInvalidConnections:
         # Graph creation should work for valid connections
         graph = Graph(start=chat_input, end=chat_output)
         assert len(graph.vertices) == 4
+
+
+class TestFunctionComponentNameAttribute:
+    """Tests for the name attribute used in UI styling/identification."""
+
+    def test_name_attribute_is_set(self):
+        """FunctionComponent name attribute is set from display_name."""
+
+        def build_output(test: str) -> str:
+            return test
+
+        fc = FunctionComponent(build_output)
+
+        # name attribute should be set (used for frontend styling/type)
+        assert fc.name is not None
+        assert fc.name == "Build Output"
+        # display_name should also be set
+        assert fc._display_name == "Build Output"
+
+    def test_name_attribute_matches_display_name(self):
+        """Name and display_name should be the same for FunctionComponent."""
+
+        def process_user_data(input_text: str) -> str:
+            return input_text.upper()
+
+        fc = FunctionComponent(process_user_data)
+
+        assert fc.name == fc._display_name
+        assert fc.name == "Process User Data"
+
+    def test_custom_display_name_sets_name(self):
+        """Custom display_name also sets name attribute."""
+
+        def my_func(x: str) -> str:
+            return x
+
+        fc = FunctionComponent(my_func, display_name="My Custom Name")
+
+        assert fc.name == "My Custom Name"
+        assert fc._display_name == "My Custom Name"
+
+    def test_decorated_function_has_name_attribute(self):
+        """Decorated function also has name attribute set."""
+
+        @component
+        def my_decorated_func(x: str) -> str:
+            return x
+
+        assert my_decorated_func.name is not None
+        assert my_decorated_func.name == "My Decorated Func"
+
+
+class TestSimpleDocstringFormat:
+    """Tests for simple docstring format without Args: section."""
+
+    def test_simple_docstring_param_description(self):
+        """Simple 'param: description' format is parsed without Args: section."""
+
+        def build_output(test: str) -> str:
+            """test: test info"""  # noqa: D415
+            return test
+
+        fc = FunctionComponent(build_output)
+
+        assert fc.inputs[0].info == "test info"
+
+    def test_simple_docstring_multiple_params(self):
+        """Multiple params in simple format are all parsed."""
+
+        def process(name: str, count: int) -> str:
+            """name: The user's name.
+
+            count: How many times to repeat
+            """
+            return name * count
+
+        fc = FunctionComponent(process)
+
+        assert fc.inputs[0].info == "The user's name."
+        assert fc.inputs[1].info == "How many times to repeat"
+
+    def test_simple_format_only_matches_actual_params(self):
+        """Simple format only matches known parameter names."""
+
+        def my_func(data: str) -> str:
+            """data: The actual parameter.
+
+            random_key: This should not be parsed (not a param)
+            """
+            return data
+
+        fc = FunctionComponent(my_func)
+
+        # Only 'data' should have info
+        assert fc.inputs[0].info == "The actual parameter."
+
+    def test_google_style_still_works(self):
+        """Google style docstrings still work alongside simple format."""
+
+        def process(text: str, count: int) -> str:
+            """Process the data.
+
+            Args:
+                text: The input text
+                count: Number of times
+            """
+            return text * count
+
+        fc = FunctionComponent(process)
+
+        assert fc.inputs[0].info == "The input text"
+        assert fc.inputs[1].info == "Number of times"
+
+    def test_mixed_docstring_args_takes_priority(self):
+        """If both Args: section and simple format exist, Args: section is used."""
+
+        def process(data: str) -> str:
+            """Process data.
+
+            data: This simple format is ignored
+
+            Args:
+                data: This Args format is used
+            """
+            return data
+
+        fc = FunctionComponent(process)
+
+        # Args section should be used
+        assert fc.inputs[0].info == "This Args format is used"
