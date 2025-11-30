@@ -629,6 +629,158 @@ class TestFunctionComponentConnection:
         assert target_handle["fieldName"] == "text"
 
 
+class TestFunctionComponentEdgeCases:
+    """Tests for edge cases and unusual function types."""
+
+    def test_none_return_type(self):
+        """Functions with None return type get NoneType output."""
+
+        def side_effect(x: str) -> None:
+            print(x)  # noqa: T201
+
+        fc = FunctionComponent(side_effect)
+
+        # None return type maps to NoneType
+        assert "NoneType" in fc.outputs[0].types
+
+    def test_union_return_type(self):
+        """Functions with Union return types include all types."""
+
+        def maybe_string(x: int) -> str | None:
+            if x > 0:
+                return str(x)
+            return None
+
+        fc = FunctionComponent(maybe_string)
+
+        # Should include Message (from str)
+        assert "Message" in fc.outputs[0].types
+
+    def test_union_multiple_return_types(self):
+        """Functions with multiple Union types include all."""
+
+        def multi_return(x: int) -> str | int:
+            if x > 0:
+                return str(x)
+            return x
+
+        fc = FunctionComponent(multi_return)
+
+        # Should include both Message and int
+        assert any(t in fc.outputs[0].types for t in ["Message", "int"])
+
+    def test_lambda_function(self):
+        """Lambda functions can be wrapped."""
+        double = lambda x: x * 2  # noqa: E731
+
+        with warnings.catch_warnings(record=True):
+            warnings.simplefilter("always")
+            fc = FunctionComponent(double)
+
+        assert len(fc.inputs) == 1
+        assert fc.inputs[0].name == "x"
+
+    def test_generator_function_creates_component(self):
+        """Generator functions can create a component (execution may differ)."""
+
+        def gen_numbers(n: int):  # Note: no return type hint for generators
+            yield from range(n)
+
+        with warnings.catch_warnings(record=True):
+            warnings.simplefilter("always")
+            fc = FunctionComponent(gen_numbers)
+
+        assert len(fc.inputs) == 1
+        assert fc.inputs[0].name == "n"
+
+    def test_function_with_complex_defaults(self):
+        """Functions with complex default values work."""
+
+        def with_defaults(
+            data: list[str] | None = None,
+            config: dict | None = None,  # noqa: ARG001
+            count: int = 10,  # noqa: ARG001
+        ) -> str:
+            return str(data)
+
+        fc = FunctionComponent(with_defaults)
+
+        assert len(fc.inputs) == 3
+        # None defaults for list/dict should be handled
+        assert fc.inputs[2].value == 10
+
+    def test_deeply_nested_types(self):
+        """Deeply nested type annotations are handled."""
+
+        def nested(data: list[dict[str, list[int]]]) -> dict[str, list[str]]:
+            return {"result": [str(x) for x in data[0].get("values", [])]}
+
+        fc = FunctionComponent(nested)
+
+        # Should create input (is_list=True for outer list)
+        assert len(fc.inputs) == 1
+        assert fc.inputs[0].is_list is True
+
+    def test_function_with_class_type_annotation(self):
+        """Functions with custom class types in annotations."""
+
+        class CustomData:
+            def __init__(self, value: str):
+                self.value = value
+
+        def process_custom(data: CustomData) -> str:
+            return data.value
+
+        # Should create component (with default text input for unknown types)
+        with warnings.catch_warnings(record=True):
+            warnings.simplefilter("always")
+            fc = FunctionComponent(process_custom)
+
+        assert len(fc.inputs) == 1
+
+
+class TestFunctionComponentSerialization:
+    """Tests for serialization to frontend node format."""
+
+    def test_to_frontend_node(self):
+        """FunctionComponent serializes to frontend node format."""
+
+        @component
+        def process(text: str) -> str:
+            return text.upper()
+
+        # Trigger code generation for serialization
+        process.set_class_code()
+
+        node = process.to_frontend_node()
+
+        assert "id" in node
+        assert node["id"] == process._id
+        # Check template has inputs/outputs
+        assert "template" in node["data"]["node"]
+
+    def test_edges_serialized_correctly(self):
+        """Edges between FunctionComponents are serialized correctly."""
+        from lfx.components.input_output import ChatInput
+
+        @component
+        def transform(text: str) -> str:
+            return text
+
+        chat_input = ChatInput(_id="chat_input_1")
+        transform.set(text=chat_input.message_response)
+
+        # Trigger code generation
+        transform.set_class_code()
+
+        edges = transform.get_edges()
+
+        assert len(edges) == 1
+        edge = edges[0]
+        assert edge["source"] == "chat_input_1"
+        assert edge["target"] == transform._id
+
+
 class TestFunctionComponentInvalidConnections:
     """Tests for invalid type connections - types that don't match."""
 
