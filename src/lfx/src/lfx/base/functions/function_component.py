@@ -1,4 +1,117 @@
-"""FunctionComponent - Wrap Python functions as Langflow components."""
+"""FunctionComponent - Transform Python functions into Langflow components.
+
+This module provides a way to create Langflow components from plain Python functions
+without the boilerplate of class-based components. Type annotations are automatically
+converted to inputs and outputs.
+
+Quick Start
+-----------
+
+The simplest way to create a component is with the ``@component`` decorator::
+
+    from lfx.base.functions import component
+
+    @component
+    def greet(name: str) -> str:
+        '''Say hello to someone.'''
+        return f"Hello, {name}!"
+
+    # Use it
+    greet.set(name="World")
+    result = await greet.invoke_function()  # "Hello, World!"
+
+Customizing Components
+----------------------
+
+Use decorator arguments to customize the component appearance::
+
+    @component(display_name="Text Greeter", description="A friendly greeter")
+    def greet(name: str) -> str:
+        return f"Hello, {name}!"
+
+Use ``InputConfig`` to customize individual inputs. It can be used as a default value::
+
+    from lfx.base.functions import component, InputConfig
+
+    @component
+    def format_text(
+        text: str,
+        uppercase: bool = InputConfig(
+            default=False,
+            display_name="Convert to Uppercase",
+            info="When enabled, converts all text to uppercase"
+        )
+    ) -> str:
+        '''Format text with optional transformations.'''
+        return text.upper() if uppercase else text
+
+Or with ``Annotated`` for type-safe configuration::
+
+    from typing import Annotated
+
+    @component
+    def process(
+        text: Annotated[str, InputConfig(multiline=True, placeholder="Enter text...")]
+    ) -> str:
+        return text.strip()
+
+Supported Types
+---------------
+
+The following Python types are automatically mapped to Langflow inputs:
+
+- ``str`` -> MessageTextInput
+- ``int`` -> IntInput
+- ``float`` -> FloatInput
+- ``bool`` -> BoolInput
+- ``Message`` -> MessageInput
+- ``Literal["a", "b"]`` -> DropdownInput with options
+- ``list[T]`` -> List input of type T
+- ``Optional[T]`` -> Optional input of type T
+
+Async Functions
+---------------
+
+Async functions are fully supported::
+
+    @component
+    async def fetch_data(url: str) -> str:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                return await response.text()
+
+Chaining Components
+-------------------
+
+Use ``.result`` to connect component outputs to inputs::
+
+    @component
+    def step1(text: str) -> str:
+        return text.upper()
+
+    @component
+    def step2(text: str) -> str:
+        return f"[{text}]"
+
+    # Connect step1's output to step2's input
+    step1.set(text="hello")
+    step2.set(text=step1.result)
+
+    # Build and run the graph
+    graph = Graph(step1, step2)
+    await graph.arun(inputs=[])
+
+Alternative: from_function
+--------------------------
+
+For programmatic creation without decorators::
+
+    def my_func(x: int) -> int:
+        return x * 2
+
+    fc = from_function(my_func, _id="doubler")
+    fc.set(x=21)
+"""
 
 from __future__ import annotations
 
@@ -31,6 +144,7 @@ from lfx.inputs.inputs import (
     MessageInput,
     MessageTextInput,
     MultilineInput,
+    SecretStrInput,
     StrInput,
 )
 from lfx.schema.data import Data
@@ -69,17 +183,76 @@ TYPE_TO_OUTPUT_TYPE: dict[type, str] = {
 
 @dataclass
 class InputConfig:
-    """Configuration for a function parameter input field.
+    """Configuration for customizing a function parameter's input field.
 
-    Use with typing.Annotated to customize input behavior.
+    Can be used in two ways:
 
-    Example:
-        def process(
-            name: Annotated[str, InputConfig(placeholder="Enter name")]
+    1. As a default value (includes the actual default)::
+
+        @component
+        def greet(
+            name: str = InputConfig(default="World", display_name="Name")
         ) -> str:
-            return name
+            return f"Hello, {name}!"
+
+    2. With ``typing.Annotated`` (type-safe, default specified separately)::
+
+        from typing import Annotated
+
+        @component
+        def greet(
+            name: Annotated[str, InputConfig(display_name="Name")] = "World"
+        ) -> str:
+            return f"Hello, {name}!"
+
+    Attributes:
+        default: Default value for the input (only when used as default value syntax).
+        display_name: Human-readable label shown in the UI.
+        info: Help text/tooltip displayed next to the input.
+        placeholder: Placeholder text shown when input is empty.
+        advanced: If True, input is hidden under "Advanced" section.
+        multiline: If True, uses a multiline text input (for str type).
+        password: If True, masks the input (for sensitive data).
+        show: If False, hides the input from the UI.
+        required: Override whether the input is required (default: inferred from presence of default).
+        input_types: List of accepted input types (e.g., ["str", "Message"]).
+        options: List of dropdown options (alternative to using Literal type).
+        combobox: If True with options, allows typing custom values.
+
+    Examples:
+        Advanced input with tooltip::
+
+            @component
+            def process(
+                debug: bool = InputConfig(
+                    default=False,
+                    advanced=True,
+                    info="Enable debug logging"
+                )
+            ) -> str:
+                ...
+
+        Password input::
+
+            @component
+            def authenticate(
+                api_key: str = InputConfig(password=True, display_name="API Key")
+            ) -> str:
+                ...
+
+        Dropdown with options::
+
+            @component
+            def select_model(
+                model: str = InputConfig(
+                    default="gpt-4",
+                    options=["gpt-4", "gpt-3.5-turbo", "claude-3"]
+                )
+            ) -> str:
+                ...
     """
 
+    default: Any = field(default=None)
     display_name: str | None = None
     info: str | None = None
     placeholder: str | None = None
@@ -277,11 +450,21 @@ def {self._func_name}(*args, **kwargs):
             # Get description from docstring
             info = self._param_docs.get(param_name, "")
 
-            # Determine if required (no default value)
-            required = param.default is inspect.Parameter.empty
+            # Get default value - check if it's an InputConfig used as default
+            raw_default = param.default
+            input_config_from_default: InputConfig | None = None
 
-            # Get default value
-            default = None if param.default is inspect.Parameter.empty else param.default
+            if isinstance(raw_default, InputConfig):
+                # InputConfig used as default value: `param: str = InputConfig(default="value")`
+                input_config_from_default = raw_default
+                default = raw_default.default
+                required = default is None and raw_default.required is not False
+            elif raw_default is inspect.Parameter.empty:
+                default = None
+                required = True
+            else:
+                default = raw_default
+                required = False
 
             # Parse type for special handling
             input_field = self._create_input_for_type(
@@ -290,6 +473,7 @@ def {self._func_name}(*args, **kwargs):
                 required=required,
                 default=default,
                 info=info,
+                input_config_from_default=input_config_from_default,
             )
             inputs.append(input_field)
 
@@ -303,14 +487,15 @@ def {self._func_name}(*args, **kwargs):
         required: bool,
         default: Any,
         info: str,
+        input_config_from_default: InputConfig | None = None,
     ) -> InputTypes:
         """Create appropriate input field based on type annotation."""
         display_name = param_name.replace("_", " ").title()
         is_list = False
         options: list[str] | None = None
-        input_config: InputConfig | None = None
+        input_config: InputConfig | None = input_config_from_default
 
-        # Check for Annotated with InputConfig
+        # Check for Annotated with InputConfig (takes precedence over default-based config)
         origin = get_origin(param_type)
         if origin is Annotated:
             args = get_args(param_type)
@@ -344,11 +529,17 @@ def {self._func_name}(*args, **kwargs):
         # Get input class
         input_class = TYPE_TO_INPUT_CLASS.get(param_type, MessageTextInput)
 
+        # Use SecretStrInput if password is configured
+        if input_config and input_config.password:
+            input_class = SecretStrInput
+
         # Use MultilineInput if configured
         if input_config and input_config.multiline:
             input_class = MultilineInput
 
-        # Use DropdownInput if we have options
+        # Use DropdownInput if we have options (from Literal or InputConfig)
+        if input_config and input_config.options:
+            options = input_config.options
         if options:
             input_class = DropdownInput
 
@@ -391,6 +582,8 @@ def {self._func_name}(*args, **kwargs):
                 input_kwargs["advanced"] = input_config.advanced
             if input_config.required is not None:
                 input_kwargs["required"] = input_config.required
+            if not input_config.show:
+                input_kwargs["show"] = False
 
         return input_class(**input_kwargs)
 

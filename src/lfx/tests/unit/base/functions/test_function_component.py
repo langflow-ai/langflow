@@ -342,6 +342,89 @@ class TestInputConfig:
         assert process._inputs["text"].multiline is True
 
 
+class TestInputConfigAsDefault:
+    """Tests for InputConfig used as default value syntax."""
+
+    def test_input_config_as_default_with_value(self):
+        """InputConfig as default provides both config and default value."""
+
+        @component
+        def greet(name: str = InputConfig(default="World", display_name="Your Name")) -> str:
+            return f"Hello, {name}!"
+
+        assert greet._inputs["name"].value == "World"
+        assert greet._inputs["name"].display_name == "Your Name"
+        assert greet._inputs["name"].required is False
+
+    def test_input_config_as_default_without_value(self):
+        """InputConfig as default without value makes input required."""
+
+        @component
+        def greet(name: str = InputConfig(display_name="Your Name")) -> str:
+            return f"Hello, {name}!"
+
+        assert greet._inputs["name"].display_name == "Your Name"
+        assert greet._inputs["name"].required is True
+
+    def test_input_config_as_default_with_options(self):
+        """InputConfig as default with options creates dropdown."""
+        from lfx.inputs.inputs import DropdownInput
+
+        @component
+        def select_model(
+            model: str = InputConfig(default="gpt-4", options=["gpt-4", "gpt-3.5-turbo", "claude-3"]),
+        ) -> str:
+            return model
+
+        assert isinstance(select_model._inputs["model"], DropdownInput)
+        assert select_model._inputs["model"].options == ["gpt-4", "gpt-3.5-turbo", "claude-3"]
+        assert select_model._inputs["model"].value == "gpt-4"
+
+    def test_input_config_as_default_password(self):
+        """InputConfig as default with password=True creates SecretStrInput."""
+        from lfx.inputs.inputs import SecretStrInput
+
+        @component
+        def authenticate(api_key: str = InputConfig(password=True, display_name="API Key")) -> str:
+            return f"authenticated with key length {len(api_key)}"
+
+        assert isinstance(authenticate._inputs["api_key"], SecretStrInput)
+        assert authenticate._inputs["api_key"].display_name == "API Key"
+        assert authenticate._inputs["api_key"].password is True
+
+    def test_input_config_as_default_info(self):
+        """InputConfig as default with info provides tooltip."""
+
+        @component
+        def process(
+            debug: bool = InputConfig(default=False, info="Enable debug logging for verbose output"),  # noqa: FBT001
+        ) -> str:
+            return str(debug)
+
+        assert process._inputs["debug"].info == "Enable debug logging for verbose output"
+        assert process._inputs["debug"].value is False
+
+    @pytest.mark.asyncio
+    async def test_input_config_as_default_execution(self):
+        """Function with InputConfig default executes correctly."""
+
+        @component
+        def multiply(
+            value: int = InputConfig(default=10, display_name="Value"),
+            factor: int = InputConfig(default=2, display_name="Factor"),
+        ) -> int:
+            return value * factor
+
+        # Use defaults
+        result = await multiply.invoke_function()
+        assert result == 20
+
+        # Override one value
+        multiply.set(value=5)
+        result = await multiply.invoke_function()
+        assert result == 10
+
+
 class TestTypeCoercion:
     """Tests for type coercion (Message->str, dict->Data)."""
 
