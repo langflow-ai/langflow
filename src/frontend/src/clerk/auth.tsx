@@ -1,4 +1,4 @@
-import { lazy, ReactNode, useContext, useEffect, useRef } from "react";
+import { lazy, ReactNode, useContext, useEffect, useMemo, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { AuthContext } from "@/contexts/authContext";
 import { api } from "@/controllers/API/api";
@@ -10,6 +10,7 @@ import { LANGFLOW_ACCESS_TOKEN, LANGFLOW_REFRESH_TOKEN } from "@/constants/const
 import { Cookies } from "react-cookie";
 import OrganizationPage from "./OrganizationPage";
 import authStore from "@/stores/authStore";
+import { useDarkStore } from "@/stores/darkStore";
 import {
   getStoredActiveOrgId as readStoredActiveOrgId,
   setStoredActiveOrgId as persistActiveOrgId,
@@ -426,8 +427,49 @@ export function useLogout(options?: Parameters<typeof useLogoutMutation>[0]) {
 //const LazyApp = lazy(() => import("../customization/custom-App"));
 
 export default function AppWithProvider({ children }: { children: ReactNode })  {
+  const dark = useDarkStore((state) => state.dark);
+
+  const clerkAppearance = useMemo(
+    () => ({
+      variables: {
+        colorPrimary: "hsl(var(--primary))",
+        colorText: "hsl(var(--foreground))",
+        colorTextSecondary: "hsl(var(--muted-foreground))",
+        colorInputText: "hsl(var(--foreground))",
+        colorBackground: "hsl(var(--card))",
+        colorInputBackground: "hsl(var(--input))",
+        colorDanger: "hsl(var(--destructive))",
+        fontFamily: "var(--font-sans)",
+        borderRadius: "12px",
+      },
+      elements: {
+        rootBox: "bg-transparent text-foreground",
+        card: "bg-card text-card-foreground border border-border shadow-xl",
+        modalContent:
+          "bg-background text-foreground border border-border shadow-xl backdrop-blur-sm",
+        headerTitle: "text-foreground",
+        headerSubtitle: "text-muted-foreground",
+        formButtonPrimary:
+          "bg-primary text-primary-foreground hover:bg-[hsl(var(--primary-hover))] border border-border shadow-sm",
+        formFieldInput:
+          "bg-input text-foreground border border-border focus:ring-2 focus:ring-primary/40 focus:border-primary/60 placeholder:text-muted-foreground",
+        formFieldLabel: "text-muted-foreground",
+        footerActionText: "text-muted-foreground",
+        footerActionLink: "text-primary hover:text-primary/80",
+        navbar: "bg-background text-foreground border-b border-border",
+        profileSectionPrimaryButton:
+          "bg-primary text-primary-foreground hover:bg-[hsl(var(--primary-hover))]",
+        profileSectionSecondaryButton:
+          "bg-secondary text-secondary-foreground hover:bg-[hsl(var(--secondary-hover))] border border-border",
+        socialButtonsBlockButton:
+          "border border-border bg-secondary text-secondary-foreground hover:bg-[hsl(var(--secondary-hover))]",
+      },
+    }),
+    [dark],
+  );
+
   return IS_CLERK_AUTH ? (
-    <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY}>
+    <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY} appearance={clerkAppearance}>
       {children}
     </ClerkProvider>
   ) : (

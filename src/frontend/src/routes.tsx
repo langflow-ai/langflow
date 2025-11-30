@@ -58,6 +58,9 @@ const ShortcutsPage = lazy(
 const MessagesPage = lazy(
   () => import("./pages/SettingsPage/pages/messagesPage"),
 );
+const DebuggingPage = lazy(
+  () => import("./pages/SettingsPage/pages/DebuggingPage"),
+);
 const MCPServersPage = lazy(
   () => import("./pages/SettingsPage/pages/MCPServersPage"),
 );
@@ -291,6 +294,14 @@ const router = createBrowserRouter(
                   element={
                     <Suspense fallback={<LoadingPage />}>
                       <MessagesPage />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="debugging"
+                  element={
+                    <Suspense fallback={<LoadingPage />}>
+                      <DebuggingPage />
                     </Suspense>
                   }
                 />
