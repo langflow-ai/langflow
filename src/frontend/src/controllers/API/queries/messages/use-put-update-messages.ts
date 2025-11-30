@@ -27,7 +27,8 @@ export const useUpdateMessage: useMutationFunctionType<
       message.files = JSON.parse(message.files);
     }
     if (isPlayground && flowId) {
-      const messages = JSON.parse(sessionStorage.getItem(flowId) || "");
+      const storageData = sessionStorage.getItem(flowId) || "[]";
+      const messages = JSON.parse(storageData);
       const messageIndex = messages.findIndex(
         (m: Message) => m.id === message.id,
       );
@@ -46,10 +47,8 @@ export const useUpdateMessage: useMutationFunctionType<
     }
   };
 
-  const mutation: UseMutationResult<Message, any, UpdateMessageParams> = mutate(
-    ["useUpdateMessages"],
-    updateMessageApi,
-    {
+  const mutation: UseMutationResult<Message, unknown, UpdateMessageParams> =
+    mutate(["useUpdateMessages"], updateMessageApi, {
       ...options,
       onSettled: (_, __, params, ___) => {
         //@ts-ignore
@@ -60,8 +59,7 @@ export const useUpdateMessage: useMutationFunctionType<
           });
         }
       },
-    },
-  );
+    });
 
   return mutation;
 };
