@@ -29,8 +29,28 @@ def add_type_ignores() -> None:
 
 
 def validate_code(code):
-    # Initialize the errors dictionary
-    errors = {"imports": {"errors": []}, "function": {"errors": []}}
+    """Validate custom component code.
+
+    Supports both:
+    - Function-based components: Plain functions that will be wrapped as FunctionComponent
+    - Class-based components: Custom classes inheriting from Component
+
+    Returns:
+        dict with keys:
+        - imports: Import validation errors
+        - function: Syntax and execution validation errors
+        - detected_type: "function", "class", or "unknown"
+        - function_name: Name of function (if function code)
+        - class_name: Name of class (if class code)
+    """
+    # Initialize the result dictionary
+    result = {
+        "imports": {"errors": []},
+        "function": {"errors": []},
+        "detected_type": "unknown",
+        "function_name": None,
+        "class_name": None,
+    }
 
     # Parse the code string into an abstract syntax tree (AST)
     try:
@@ -40,12 +60,20 @@ def validate_code(code):
             logger.debug("Error parsing code", exc_info=True)
         else:
             logger.debug("Error parsing code")
-        errors["function"]["errors"].append(str(e))
-        return errors
+        result["function"]["errors"].append(str(e))
+        return result
 
     # Add a dummy type_ignores field to the AST
     add_type_ignores()
     tree.type_ignores = []
+
+    # Detect code type and extract name
+    detected_type, name = _detect_code_type(tree)
+    result["detected_type"] = detected_type
+    if detected_type == "function":
+        result["function_name"] = name
+    elif detected_type == "class":
+        result["class_name"] = name
 
     # Evaluate the import statements
     for node in tree.body:
@@ -54,11 +82,11 @@ def validate_code(code):
                 try:
                     importlib.import_module(alias.name)
                 except ModuleNotFoundError as e:
-                    errors["imports"]["errors"].append(str(e))
+                    result["imports"]["errors"].append(str(e))
 
     # Evaluate the function definition with langflow context
     for node in tree.body:
-        if isinstance(node, ast.FunctionDef):
+        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
             code_obj = compile(ast.Module(body=[node], type_ignores=[]), "<string>", "exec")
             try:
                 # Create execution context with common langflow imports
@@ -66,10 +94,44 @@ def validate_code(code):
                 exec(code_obj, exec_globals)
             except Exception as e:  # noqa: BLE001
                 logger.debug("Error executing function code", exc_info=True)
-                errors["function"]["errors"].append(str(e))
+                result["function"]["errors"].append(str(e))
 
-    # Return the errors dictionary
-    return errors
+    # Return the result dictionary
+    return result
+
+
+def _detect_code_type(tree: ast.Module) -> tuple[str, str | None]:
+    """Detect if code is function-based or class-based component.
+
+    Args:
+        tree: AST module
+
+    Returns:
+        Tuple of (type, name) where type is "function", "class", or "unknown"
+        and name is the function or class name (or None if unknown)
+    """
+    first_function_name = None
+    component_class_name = None
+
+    for node in tree.body:
+        # Check for function definitions
+        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+            if first_function_name is None:
+                first_function_name = node.name
+
+        # Check for Component class definitions
+        elif isinstance(node, ast.ClassDef):
+            for base in node.bases:
+                if isinstance(base, ast.Name) and any(pattern in base.id for pattern in ["Component", "LC"]):
+                    component_class_name = node.name
+                    break
+
+    # Prefer class over function if both exist
+    if component_class_name:
+        return "class", component_class_name
+    if first_function_name:
+        return "function", first_function_name
+    return "unknown", None
 
 
 def _create_langflow_execution_context():
