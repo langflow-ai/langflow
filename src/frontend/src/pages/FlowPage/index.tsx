@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
 import { useBlocker, useParams } from "react-router-dom";
+import {
+  FlowPageSlidingContainerContent,
+  SlidingContainer,
+} from "@/components/core/playgroundComponent/sliding-container/components";
+import { useSlidingContainerStore } from "@/components/core/playgroundComponent/sliding-container/stores";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { useGetTypes } from "@/controllers/API/queries/flows/use-get-types";
-import { FlowPageSlidingContainerContent } from "@/customization/components/custom-flow-page-sliding-container";
-import { SlidingContainer } from "@/customization/components/custom-sliding-container";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
-import { useSlidingContainerStore } from "@/customization/stores/sliding-container-store";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { SaveChangesModal } from "@/modals/saveChangesModal";

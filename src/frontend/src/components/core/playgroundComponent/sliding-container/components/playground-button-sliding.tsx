@@ -2,7 +2,7 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { PLAYGROUND_BUTTON_NAME } from "@/constants/constants";
 import { ENABLE_PUBLISH } from "@/customization/feature-flags";
-import { useSlidingContainerStore } from "@/customization/stores/sliding-container-store";
+import { useSlidingContainerStore } from "../stores/sliding-container-store";
 
 interface PlaygroundButtonSlidingProps {
   hasIO: boolean;

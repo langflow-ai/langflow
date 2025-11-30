@@ -1,7 +1,7 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { PlaygroundButtonSliding } from "@/components/core/playgroundComponent/sliding-container/components";
 import { PLAYGROUND_BUTTON_NAME } from "@/constants/constants";
-import { PlaygroundButtonSliding } from "@/customization/components/custom-playground-button-sliding";
 // Will be reverted before merging this PR - IOModal commented out to test sliding container
 // import { CustomIOModal } from "@/customization/components/custom-new-modal";
 import { ENABLE_PUBLISH } from "@/customization/feature-flags";
