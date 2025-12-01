@@ -21,7 +21,7 @@ from tempfile import NamedTemporaryFile
 from typing import Any
 
 from lfx.base.data.base_file import BaseFileComponent
-from lfx.base.data.storage_utils import parse_storage_path
+from lfx.base.data.storage_utils import parse_storage_path, validate_image_content_type
 from lfx.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_file_to_data
 from lfx.inputs.inputs import DropdownInput, MessageTextInput, StrInput
 from lfx.io import BoolInput, FileInput, IntInput, Output
@@ -747,6 +747,27 @@ class FileComponent(BaseFileComponent):
         if not file_list:
             msg = "No files to process."
             raise ValueError(msg)
+
+        # Validate image files to detect content/extension mismatches
+        # This prevents API errors like "Image does not match the provided media type"
+        image_extensions = {"jpeg", "jpg", "png", "gif", "webp", "bmp", "tiff"}
+        for file in file_list:
+            extension = file.path.suffix[1:].lower()
+            if extension in image_extensions:
+                # file.path is already resolved, read bytes directly
+                try:
+                    content = file.path.read_bytes()
+                    is_valid, error_msg = validate_image_content_type(
+                        str(file.path),
+                        content=content,
+                    )
+                    if not is_valid:
+                        self.log(error_msg)
+                        if not self.silent_errors:
+                            raise ValueError(error_msg)
+                except OSError as e:
+                    self.log(f"Could not read file for validation: {e}")
+                    # Continue - let it fail later with better error
 
         # Validate that files requiring Docling are only processed when advanced mode is enabled
         if not self.advanced_mode:
