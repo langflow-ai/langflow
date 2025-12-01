@@ -59,6 +59,35 @@ def remove_api_keys(flow: dict):
     return flow
 
 
+def restore_missing_secrets(data: dict, db_flow_data: dict):
+    """Restore missing secrets in the flow data from the database flow data."""
+    if not data or not db_flow_data:
+        return data
+
+    db_nodes = {node["id"]: node for node in db_flow_data.get("nodes", [])}
+
+    for node in data.get("nodes", []):
+        node_id = node.get("id")
+        if node_id not in db_nodes:
+            continue
+
+        db_node = db_nodes[node_id]
+        node_data = node.get("data", {}).get("node", {})
+        db_node_data = db_node.get("data", {}).get("node", {})
+
+        template = node_data.get("template", {})
+        db_template = db_node_data.get("template", {})
+
+        for key, value in template.items():
+            if isinstance(value, dict) and value.get("password"):
+                # If the value is empty or None, try to restore from DB
+                if not value.get("value"):
+                    db_value = db_template.get(key, {})
+                    if db_value and db_value.get("value"):
+                        value["value"] = db_value["value"]
+    return data
+
+
 def build_input_keys_response(langchain_object, artifacts):
     """Build the input keys response."""
     input_keys_response = {

@@ -22,6 +22,7 @@ from langflow.api.utils import (
     get_top_level_vertices,
     parse_exception,
     verify_public_flow_and_get_user,
+    restore_missing_secrets,
 )
 from langflow.api.v1.schemas import (
     CancelFlowResponse,
@@ -170,6 +171,11 @@ async def build_flow(
         flow = await session.get(Flow, flow_id)
         if not flow:
             raise HTTPException(status_code=404, detail=f"Flow with id {flow_id} not found")
+
+        if data and flow.data:
+            data_dict = data.model_dump()
+            data_dict = restore_missing_secrets(data_dict, flow.data)
+            data = FlowDataRequest(**data_dict)
 
     job_id = await start_flow_build(
         flow_id=flow_id,
@@ -597,6 +603,14 @@ async def build_public_tmp(
         # Verify this is a public flow and get the associated user
         client_id = request.cookies.get("client_id")
         owner_user, new_flow_id = await verify_public_flow_and_get_user(flow_id=flow_id, client_id=client_id)
+
+        if data:
+            async with session_scope() as session:
+                flow = await session.get(Flow, flow_id)
+                if flow and flow.data:
+                    data_dict = data.model_dump()
+                    data_dict = restore_missing_secrets(data_dict, flow.data)
+                    data = FlowDataRequest(**data_dict)
 
         # Start the flow build using the new flow ID
         job_id = await start_flow_build(
