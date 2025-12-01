@@ -3,8 +3,7 @@ import json
 import os
 import platform
 from asyncio.subprocess import create_subprocess_exec
-from collections.abc import Sequence
-from contextlib import AsyncExitStack
+from collections.abc import Awaitable, Sequence
 from contextvars import ContextVar
 from datetime import datetime, timezone
 from ipaddress import ip_address
@@ -39,6 +38,7 @@ from langflow.api.utils.mcp import (
     get_url_by_os,
 )
 from langflow.api.v1.auth_helpers import handle_auth_settings_update
+from langflow.api.v1.mcp import ResponseNoOp
 from langflow.api.v1.mcp_utils import (
     current_request_variables_ctx,
     current_user_ctx,
@@ -295,18 +295,11 @@ async def _build_project_tools_response(
 @router.get("/{project_id}")
 async def list_project_tools(
     project_id: UUID,
-    request: Request,
     current_user: CurrentActiveMCPUser,
     *,
     mcp_enabled: bool = True,
 ) -> Response:
     """List project MCP tools, or open a Streamable HTTP stream when requested."""
-    accept_header = (request.headers.get("accept") or "").lower()
-
-    if "text/event-stream" in accept_header:
-        auth_user = await verify_project_auth_conditional(project_id, request)
-        return await _dispatch_project_streamable_http(project_id, request, auth_user)
-
     metadata = await _build_project_tools_response(project_id, current_user, mcp_enabled=mcp_enabled)
     return JSONResponse(content=metadata.model_dump(mode="json"))
 
@@ -403,7 +396,7 @@ async def handle_project_sse(
         current_project_ctx.reset(project_token)
         current_request_variables_ctx.reset(req_vars_token)
 
-    return Response(status_code=200)
+    return ResponseNoOp(status_code=200)
 
 
 async def _handle_project_sse_messages(
@@ -1200,12 +1193,16 @@ class ProjectMCPServer:
     def __init__(self, project_id: UUID):
         self.project_id = project_id
         self.server = Server(f"langflow-mcp-project-{project_id}")
-        # _configure_server_notification_defaults(self.server)
-
-        self.session_manager = StreamableHTTPSessionManager(self.server)
+        # TODO: implement an environment variable to enable/disable stateless mode
+        self.session_manager = StreamableHTTPSessionManager(self.server, stateless=True)
+        # since we lazily initialize the session manager's
+        # lifecyle (via .run(), which can only be called once),
+        # we use the lock to prevent race conditions on concurrent requests.
         self._manager_lock = asyncio.Lock()
-        self._manager_stack: AsyncExitStack | None = None
-        self._manager_started = False
+        self._manager_started = False  # whether or not the session manager is running
+        self._runner_task: asyncio.Task | None = None  # session manager run()
+        self._shutdown_event: asyncio.Event | None = None  # session manager run ended
+        self._started_event: asyncio.Event | None = None  # session manager run started
 
         # Register handlers that filter by project
         @self.server.list_tools()
@@ -1249,25 +1246,120 @@ class ProjectMCPServer:
             if self._manager_started:
                 return
 
-            self._manager_stack = AsyncExitStack()
-            await self._manager_stack.enter_async_context(self.session_manager.run())
+            self._shutdown_event = asyncio.Event()
+            self._started_event = asyncio.Event()
+            tg = get_project_task_group_tg()
+            self._runner_task = tg.create_task(self._run_session_manager())
             self._manager_started = True
             await logger.adebug("Streamable HTTP manager started for project %s", self.project_id)
+            await self._started_event.wait()
 
-    async def stop_session_manager(self) -> None:
-        """Stop the project's Streamable HTTP manager if it is running."""
-        async with self._manager_lock:
-            if not self._manager_started or self._manager_stack is None:
-                return
-
-            await self._manager_stack.aclose()
-            self._manager_stack = None
+    async def _run_session_manager(self) -> None:
+        """Own the lifecycle of the project's Streamable HTTP session manager."""
+        try:
+            async with self.session_manager.run():
+                self._started_event.set()
+                await self._shutdown_event.wait()
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            await logger.aexception(f"Project {self.project_id} Streamable HTTP manager crashed: {exc}")
+        finally:
+            self._started_event.set()  # prevent hanging if run() fails
+            self._runner_task = None
+            self._shutdown_event = None
+            self._started_event = None
             self._manager_started = False
             await logger.adebug("Streamable HTTP manager stopped for project %s", self.project_id)
 
+    def request_shutdown(self) -> None:
+        """Signal the runner task to stop."""
+        if self._shutdown_event and not self._shutdown_event.is_set():
+            self._shutdown_event.set()
+
 
 # Cache of project MCP servers
-project_mcp_servers = {}
+project_mcp_servers: dict[str, ProjectMCPServer] = {}
+
+
+# Due to the lazy initialization of the project MCP servers
+# We implement a global task group (asyncio) manager for
+# the project MCP servers' streamable-http session managers.
+# This ensures that each session manager's .run() context manager is
+# entered and exited from the same coroutine, otherwise asyncio will raise a RuntimeError.
+class ProjectTaskGroup:
+    """Manage the dynamically created MCP project servers' streamable-http session managers.
+
+    Utilizes a asyncio.TaskGroup to manage
+    the lifecycle of the streamable-http session managers.
+    This ensures that each session manager's .run()
+    context manager is entered and exited from the same coroutine,
+    otherwise asyncio will raise a RuntimeError.
+
+    """
+
+    def __init__(self):
+        self._task_group: asyncio.TaskGroup | None = None
+        self._started = False
+        self._start_stop_lock = asyncio.Lock()
+
+    async def start(self) -> None:
+        """Create the project task group."""
+        async with self._start_stop_lock:
+            if self._started:
+                return
+            self._task_group = asyncio.TaskGroup()
+            await self._task_group.__aenter__()
+            self._started = True
+
+    async def stop(self) -> None:
+        """Close the shared project task group and signal all servers to shut down."""
+        async with self._start_stop_lock:
+            if not self._started:
+                return
+            # TODO: Need a mechanism to prevent new servers from being created while/after stopping
+            try:
+                for server in list(project_mcp_servers.values()):
+                    try:
+                        server.request_shutdown()
+                    except Exception as e:  # noqa: BLE001
+                        await logger.aerror(f"Error shutting down project MCP server {server.project_id}: {e}")
+                if self._task_group is not None:
+                    await self._task_group.__aexit__(None, None, None)
+            finally:
+                self._task_group = None
+                self._started = False
+                project_mcp_servers.clear()
+                await logger.adebug("Project MCP session task group stopped")
+
+    def create_task(self, coro: Awaitable[Any]) -> asyncio.Task[Any]:
+        """Create a task bound to the shared task group."""
+        if not self._started:
+            error_message = "Project MCP session task group not initialized. Start the session stack before use."
+            raise RuntimeError(error_message)
+        return self._task_group.create_task(coro)
+
+    def get_task_group(self) -> asyncio.TaskGroup:
+        """Get the shared project task group."""
+        return self._task_group
+
+
+_project_task_group = ProjectTaskGroup()
+
+
+async def start_project_task_group() -> None:
+    """Initialize the shared project task group."""
+    await _project_task_group.start()
+
+
+def get_project_task_group_tg() -> asyncio.TaskGroup:
+    """Get the shared project task group."""
+    return _project_task_group.get_task_group()
+
+
+async def stop_project_task_group() -> None:
+    """Close the shared project task group."""
+    await _project_task_group.stop()
 
 
 def get_project_mcp_server(project_id: UUID | None) -> ProjectMCPServer:

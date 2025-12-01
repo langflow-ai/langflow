@@ -1,5 +1,6 @@
 import asyncio
 import json
+from contextlib import asynccontextmanager
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
@@ -20,6 +21,8 @@ from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service
 from lfx.services.deps import session_scope
 from sqlmodel import select
+
+from tests.unit.utils.mcp import project_session_manager_lifespan
 
 # Mark all tests in this module as asyncio
 pytestmark = pytest.mark.asyncio
@@ -597,18 +600,44 @@ async def test_project_sse_creation(user_test_project):
     await asyncio.sleep(0)
 
 
+async def test_project_session_manager_lifespan_handles_cleanup(user_test_project, monkeypatch):
+    """Session manager contexts should be cleaned up automatically via shared lifespan stack."""
+    project_mcp_servers.clear()
+    lifecycle_events: list[str] = []
+
+    @asynccontextmanager
+    async def fake_run():
+        lifecycle_events.append("enter")
+        try:
+            yield
+        finally:
+            lifecycle_events.append("exit")
+
+    monkeypatch.setattr(
+        "langflow.api.v1.mcp_projects.StreamableHTTPSessionManager.run",
+        lambda self: fake_run(),  # noqa: ARG005
+    )
+
+    async with project_session_manager_lifespan():
+        server = get_project_mcp_server(user_test_project.id)
+        await server.ensure_session_manager_running()
+        assert lifecycle_events == ["enter"]
+
+    assert lifecycle_events == ["enter", "exit"]
+
+
 def _prepare_install_test_env(monkeypatch, tmp_path, filename="cursor.json"):
     config_path = tmp_path / filename
     config_path.parent.mkdir(parents=True, exist_ok=True)
 
-    monkeypatch.setattr("langflow.api.v1.mcp_projects.get_client_ip", lambda request: "127.0.0.1")
+    monkeypatch.setattr("langflow.api.v1.mcp_projects.get_client_ip", lambda request: "127.0.0.1")  # noqa: ARG005
 
-    async def fake_get_config_path(client_name):
+    async def fake_get_config_path(client_name):  # noqa: ARG001
         return config_path
 
     monkeypatch.setattr("langflow.api.v1.mcp_projects.get_config_path", fake_get_config_path)
     monkeypatch.setattr("langflow.api.v1.mcp_projects.platform.system", lambda: "Linux")
-    monkeypatch.setattr("langflow.api.v1.mcp_projects.should_use_mcp_composer", lambda project: False)
+    monkeypatch.setattr("langflow.api.v1.mcp_projects.should_use_mcp_composer", lambda project: False)  # noqa: ARG005
 
     async def fake_streamable(project_id):
         return f"https://langflow.local/api/v1/mcp/project/{project_id}/streamable"
@@ -720,6 +749,119 @@ async def test_init_mcp_servers_error_handling():
     with patch("langflow.api.v1.mcp_projects.get_project_mcp_server", side_effect=mock_get_project_mcp_server):
         # This should not raise any exception, as the error should be caught
         await init_mcp_servers()
+
+
+async def test_list_project_tools_with_mcp_enabled_filter(
+    client: AsyncClient, user_test_project, active_user, logged_in_headers
+):
+    """Test that the list_project_tools endpoint correctly filters by mcp_enabled parameter."""
+    # Create two flows: one with mcp_enabled=True and one with mcp_enabled=False
+    enabled_flow_id = uuid4()
+    disabled_flow_id = uuid4()
+
+    async with session_scope() as session:
+        # Create an MCP-enabled flow
+        enabled_flow = Flow(
+            id=enabled_flow_id,
+            name="Enabled Flow",
+            description="This flow is MCP enabled",
+            mcp_enabled=True,
+            action_name="enabled_action",
+            action_description="Enabled action description",
+            folder_id=user_test_project.id,
+            user_id=active_user.id,
+        )
+        # Create an MCP-disabled flow
+        disabled_flow = Flow(
+            id=disabled_flow_id,
+            name="Disabled Flow",
+            description="This flow is MCP disabled",
+            mcp_enabled=False,
+            action_name="disabled_action",
+            action_description="Disabled action description",
+            folder_id=user_test_project.id,
+            user_id=active_user.id,
+        )
+        session.add(enabled_flow)
+        session.add(disabled_flow)
+        await session.flush()
+
+    try:
+        # Test 1: With mcp_enabled=True (default), should only return enabled flows
+        response = await client.get(
+            f"/api/v1/mcp/project/{user_test_project.id}",
+            headers=logged_in_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "tools" in data
+        tools = data["tools"]
+        # Should only include the enabled flow
+        assert len(tools) == 1
+        assert tools[0]["name"] == "Enabled Flow"
+        assert tools[0]["action_name"] == "enabled_action"
+
+        # Test 2: With mcp_enabled=True explicitly, should only return enabled flows
+        response = await client.get(
+            f"/api/v1/mcp/project/{user_test_project.id}?mcp_enabled=true",
+            headers=logged_in_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        tools = data["tools"]
+        assert len(tools) == 1
+        assert tools[0]["name"] == "Enabled Flow"
+
+        # Test 3: With mcp_enabled=False, should return all flows
+        response = await client.get(
+            f"/api/v1/mcp/project/{user_test_project.id}?mcp_enabled=false",
+            headers=logged_in_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        tools = data["tools"]
+        # Should include both flows
+        assert len(tools) == 2
+        flow_names = {tool["name"] for tool in tools}
+        assert "Enabled Flow" in flow_names
+        assert "Disabled Flow" in flow_names
+
+    finally:
+        # Clean up flows
+        async with session_scope() as session:
+            enabled_flow = await session.get(Flow, enabled_flow_id)
+            if enabled_flow:
+                await session.delete(enabled_flow)
+            disabled_flow = await session.get(Flow, disabled_flow_id)
+            if disabled_flow:
+                await session.delete(disabled_flow)
+
+
+async def test_list_project_tools_response_structure(
+    client: AsyncClient, user_test_project, user_test_flow, logged_in_headers
+):
+    """Test that the list_project_tools endpoint returns the correct MCPProjectResponse structure."""
+    response = await client.get(
+        f"/api/v1/mcp/project/{user_test_project.id}",
+        headers=logged_in_headers,
+    )
+    assert response.status_code == 200
+    data = response.json()
+
+    # Verify response structure matches MCPProjectResponse
+    assert "tools" in data
+    assert "auth_settings" in data
+    assert isinstance(data["tools"], list)
+
+    # Verify tool structure
+    if len(data["tools"]) > 0:
+        tool = data["tools"][0]
+        assert "id" in tool
+        assert "name" in tool
+        assert "description" in tool
+        assert "action_name" in tool
+        assert "action_description" in tool
+        assert "mcp_enabled" in tool
 
 
 @pytest.mark.asyncio
