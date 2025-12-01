@@ -265,6 +265,7 @@ else
 	@make start host=$(host) port=$(port) log_level=debug
 endif
 
+
 setup_devcontainer: ## set up the development container
 	make install_backend
 	make install_frontend

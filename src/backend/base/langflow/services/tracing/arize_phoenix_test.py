@@ -8,18 +8,18 @@ LANGFLOW_API_KEY = os.getenv("LANGFLOW_API_KEY", "sk-private")
 FLOW_URLS = [
     "http://localhost:7860/api/v1/run/cc255b04-b8b2-4077-85f6-dca5b43d41c9",
     "http://localhost:7860/api/v1/run/2dc917a4-9592-4872-898c-49123c18e7e4",
-    # "http://localhost:7860/api/v1/run/ccf397fa-15f4-44b9-926d-c6e1ae26d748",
-    # "http://localhost:7860/api/v1/run/caf3179f-2f2c-4f52-8a4f-ab9b2e874549",
-    # "http://localhost:7860/api/v1/run/213420e9-da09-4750-a273-4f2737e02f3b",
+    "http://localhost:7860/api/v1/run/ccf397fa-15f4-44b9-926d-c6e1ae26d748",
+    "http://localhost:7860/api/v1/run/caf3179f-2f2c-4f52-8a4f-ab9b2e874549",
+    "http://localhost:7860/api/v1/run/213420e9-da09-4750-a273-4f2737e02f3b",
 ]
 
 # Each flow gets its own message
 FLOW_MESSAGES = [
     "Hello",
     "what is my name",
-    # "Hello, how are you?",
-    # "The growing demand for personalized, AI-driven mental health support tools that can provide real-time interventions and track long-term emotional well-being.",
-    # "Create a Langflow post",
+    "Hello, how are you?",
+    "The growing demand for personalized, AI-driven mental health support tools that can provide real-time interventions and track long-term emotional well-being.",
+    "Create a Langflow post",
 ]
 
 
