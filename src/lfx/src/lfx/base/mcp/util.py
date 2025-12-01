@@ -16,7 +16,6 @@ import httpx
 from anyio import ClosedResourceError
 from httpx import codes as httpx_codes
 from langchain_core.tools import StructuredTool
-from lfx.utils.async_helpers import run_until_complete
 from mcp import ClientSession
 from mcp.shared.exceptions import McpError
 from pydantic import BaseModel
@@ -24,6 +23,7 @@ from pydantic import BaseModel
 from lfx.log.logger import logger
 from lfx.schema.json_schema import create_input_schema_from_json_schema
 from lfx.services.deps import get_settings_service
+from lfx.utils.async_helpers import run_until_complete
 
 HTTP_ERROR_STATUS_CODE = httpx_codes.BAD_REQUEST  # HTTP status code for client errors
 
