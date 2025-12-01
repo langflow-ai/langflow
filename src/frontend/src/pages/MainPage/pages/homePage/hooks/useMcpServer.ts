@@ -117,12 +117,11 @@ export const useMcpServer = ({
       composerUrlData?.streamable_http_url ??
       composerUrlData?.sse_url ??
       composerUrlData?.legacy_sse_url;
-    const legacyUrl = composerUrlData?.legacy_sse_url ?? composerUrlData?.sse_url;
+    const legacyUrl =
+      composerUrlData?.legacy_sse_url ?? composerUrlData?.sse_url;
     return {
       useComposer:
-        isOAuthProject &&
-        composerUrlData?.uses_composer &&
-        !!streamableUrl,
+        isOAuthProject && composerUrlData?.uses_composer && !!streamableUrl,
       streamableHttpUrl: streamableUrl,
       legacySseUrl: legacyUrl,
     };
