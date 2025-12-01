@@ -43,7 +43,7 @@ on:
         options:
           - ubuntu-latest
           - self-hosted
-          - "[self-hosted, linux, ARM64, langflow-arm64-runners-group-ephemeral]"
+          - '["self-hosted", "linux", "ARM64", "langflow-arm64-runners-group-ephemeral"]'
         default: ubuntu-latest
 env:
   POETRY_VERSION: "1.8.2"
