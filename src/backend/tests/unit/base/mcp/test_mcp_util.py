@@ -529,7 +529,7 @@ class TestToolExecutionWithFieldConversion:
 
     def test_create_tool_func_with_camel_case_fields(self):
         """Test that create_tool_func handles camelCase field conversion."""
-        from unittest.mock import AsyncMock, MagicMock
+        from unittest.mock import AsyncMock
 
         from pydantic import Field, create_model
 
@@ -666,7 +666,7 @@ class TestToolExecutionWithFieldConversion:
 
     def test_tool_func_field_conversion_sync(self):
         """Test that create_tool_func handles field conversion in sync context."""
-        from unittest.mock import AsyncMock, MagicMock
+        from unittest.mock import AsyncMock
 
         from pydantic import Field, create_model
 
@@ -1467,7 +1467,7 @@ class TestMCPStructuredTool:
 
     def test_run_passes_config_and_kwargs(self, mcp_tool, mock_client):
         """Test that run method properly passes config and kwargs to parent."""
-        from unittest.mock import MagicMock, patch
+        from unittest.mock import patch
 
         input_data = {"weatherMain": "Clear", "topN": 1}
         config = {"some": "config"}
