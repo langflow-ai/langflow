@@ -11,15 +11,20 @@ test.describe("Flow Logs Modal", () => {
 
       await page.getByTestId("blank-flow").click();
 
-      await page.waitForSelector('[data-testid="sidebar-custom-component-button"]', {
-        timeout: 3000,
-      });
+      await page.waitForSelector(
+        '[data-testid="sidebar-custom-component-button"]',
+        {
+          timeout: 3000,
+        },
+      );
 
       // Open the logs modal
       await page.getByText("Logs").click();
 
       // Verify modal is open by checking the description
-      await expect(page.getByText("Inspect component executions.")).toBeVisible();
+      await expect(
+        page.getByText("Inspect component executions."),
+      ).toBeVisible();
 
       // Close modal
       await page.keyboard.press("Escape");
@@ -34,9 +39,12 @@ test.describe("Flow Logs Modal", () => {
 
       await page.getByTestId("blank-flow").click();
 
-      await page.waitForSelector('[data-testid="sidebar-custom-component-button"]', {
-        timeout: 3000,
-      });
+      await page.waitForSelector(
+        '[data-testid="sidebar-custom-component-button"]',
+        {
+          timeout: 3000,
+        },
+      );
 
       // Open logs modal without running any component
       await page.getByText("Logs").click();
@@ -57,21 +65,28 @@ test.describe("Flow Logs Modal", () => {
 
       await page.getByTestId("blank-flow").click();
 
-      await page.waitForSelector('[data-testid="sidebar-custom-component-button"]', {
-        timeout: 3000,
-      });
+      await page.waitForSelector(
+        '[data-testid="sidebar-custom-component-button"]',
+        {
+          timeout: 3000,
+        },
+      );
 
       // Open logs modal
       await page.getByText("Logs").click();
 
       // Verify modal is open
-      await expect(page.getByText("Inspect component executions.")).toBeVisible();
+      await expect(
+        page.getByText("Inspect component executions."),
+      ).toBeVisible();
 
       // Close with Escape key
       await page.keyboard.press("Escape");
 
       // Verify modal is closed
-      await expect(page.getByText("Inspect component executions.")).not.toBeVisible();
+      await expect(
+        page.getByText("Inspect component executions."),
+      ).not.toBeVisible();
     },
   );
 
@@ -83,9 +98,12 @@ test.describe("Flow Logs Modal", () => {
 
       await page.getByTestId("blank-flow").click();
 
-      await page.waitForSelector('[data-testid="sidebar-custom-component-button"]', {
-        timeout: 3000,
-      });
+      await page.waitForSelector(
+        '[data-testid="sidebar-custom-component-button"]',
+        {
+          timeout: 3000,
+        },
+      );
 
       // Add a custom component
       await addCustomComponent(page);
@@ -147,9 +165,12 @@ class CustomComponent(Component):
 
       await page.getByTestId("blank-flow").click();
 
-      await page.waitForSelector('[data-testid="sidebar-custom-component-button"]', {
-        timeout: 3000,
-      });
+      await page.waitForSelector(
+        '[data-testid="sidebar-custom-component-button"]',
+        {
+          timeout: 3000,
+        },
+      );
 
       // Add a custom component
       await addCustomComponent(page);

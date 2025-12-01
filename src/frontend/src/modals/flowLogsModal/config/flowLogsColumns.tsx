@@ -89,7 +89,13 @@ export function createFlowLogsColumns(): ColDef[] {
         return (
           <div className="flex items-center">
             <Badge
-              variant={isSuccess ? "successStatic" : isError ? "errorStatic" : "secondaryStatic"}
+              variant={
+                isSuccess
+                  ? "successStatic"
+                  : isError
+                    ? "errorStatic"
+                    : "secondaryStatic"
+              }
               size="md"
             >
               {status}
