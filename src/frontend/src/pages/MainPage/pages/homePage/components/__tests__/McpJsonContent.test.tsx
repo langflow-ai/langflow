@@ -45,10 +45,10 @@ jest.mock("@/components/ui/button", () => ({
 
 jest.mock("@/components/ui/tabs-button", () => {
   const React = require("react");
-  
+
   // Store the onValueChange callback for each Tabs instance
   let currentOnValueChange: ((v: string) => void) | null = null;
-  
+
   return {
     Tabs: ({
       children,
