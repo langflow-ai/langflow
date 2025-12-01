@@ -68,14 +68,14 @@ else:
             if self._entered:
                 raise RuntimeError(  # noqa: TRY003
                     f"TaskGroup {self!r} has already been entered"
-                )  # noqa: EM102
+                )
             if self._loop is None:
                 self._loop = events.get_running_loop()
             self._parent_task = tasks.current_task(self._loop)
             if self._parent_task is None:
                 raise RuntimeError(  # noqa: TRY003
                     f"TaskGroup {self!r} cannot determine the parent task"
-                )  # noqa: EM102
+                )
             self._entered = True
 
             return self
