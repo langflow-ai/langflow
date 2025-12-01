@@ -53,7 +53,7 @@ export const Messages = ({
       mass={1}
     >
       <StickToBottom.Content className="flex flex-col min-h-full">
-        <div className="flex flex-col flex-grow place-self-center w-5/6 max-w-[768px]">
+        <div className="flex flex-col flex-grow place-self-center w-full">
           {chatHistory &&
             (isBuilding || chatHistory.length > 0 ? (
               chatHistory.map((chat, index) => (
@@ -92,9 +92,7 @@ export const Messages = ({
         </div>
         <div
           className={
-            displayLoadingMessage
-              ? "w-full max-w-[768px] py-4 word-break-break-word md:w-5/6"
-              : ""
+            displayLoadingMessage ? "w-full py-4 word-break-break-word" : ""
           }
         >
           {displayLoadingMessage &&
