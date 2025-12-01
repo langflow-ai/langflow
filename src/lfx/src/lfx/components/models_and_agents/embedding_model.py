@@ -76,6 +76,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             value=IBM_WATSONX_URLS[0],
             show=False,
             real_time_refresh=True,
+            combobox=True,
         ),
         DropdownInput(
             name="model",
@@ -278,7 +279,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
 
             from ibm_watsonx_ai import APIClient, Credentials
 
-            final_url = base_url_ibm_watsonx or "https://us-south.ml.cloud.ibm.com"
+            final_url = base_url_ibm_watsonx or IBM_WATSONX_URLS[0]
 
             credentials = Credentials(
                 api_key=self.api_key,
