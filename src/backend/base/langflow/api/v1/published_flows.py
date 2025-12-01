@@ -31,7 +31,8 @@ from langflow.services.database.models.published_flow_version.model import (
 from langflow.services.database.models.user.model import User
 from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.flow_status.model import FlowStatus, FlowStatusEnum
-from langflow.services.auth.permissions import can_edit_flow, get_user_roles_from_request
+from langflow.services.auth.permissions import can_edit_flow, get_user_roles_from_request, has_marketplace_admin_role
+from langflow.services.database.models.version_flow_input_sample.model import VersionFlowInputSample
 from langflow.services.auth.utils import get_user_info_from_auth_token, require_marketplace_admin
 from langflow.services.deps import get_settings_service
 from langflow.services.vector_database import VectorDatabaseService
@@ -1009,18 +1010,31 @@ async def unpublish_flow(
 
     session.add(published_flow)
 
-    # Deactivate ALL versions for this published_flow
-    await session.exec(
-        update(PublishedFlowVersion)
-        .where(PublishedFlowVersion.published_flow_id == published_flow.id)
-        .values(active=False)
-    )
+    # Update flow_version status to Unpublished (status_id=6)
+    original_flow_id = published_flow.flow_cloned_from
+
+    # Get status IDs
+    unpublished_status_stmt = select(FlowStatus).where(FlowStatus.status_name == FlowStatusEnum.UNPUBLISHED.value)
+    unpublished_status = (await session.exec(unpublished_status_stmt)).first()
+
+    published_status_stmt = select(FlowStatus).where(FlowStatus.status_name == FlowStatusEnum.PUBLISHED.value)
+    published_status = (await session.exec(published_status_stmt)).first()
+
+    if unpublished_status and published_status and original_flow_id:
+        # Update all Published flow_version records to Unpublished
+        await session.exec(
+            update(FlowVersion)
+            .where(FlowVersion.original_flow_id == original_flow_id)
+            .where(FlowVersion.status_id == published_status.id)
+            .values(status_id=unpublished_status.id, updated_at=datetime.now(timezone.utc))
+        )
+        logger.info(f"Updated flow_version status to Unpublished for original_flow_id: {original_flow_id}")
 
     await session.commit()
 
-    logger.info(f"Unpublished flow ID: {flow_id} and deactivated all versions")
+    logger.info(f"Unpublished flow ID: {flow_id}")
 
-    return {"message": "Flow unpublished successfully and all versions deactivated"}
+    return {"message": "Flow unpublished successfully"}
 
 
 @router.get("/{flow_id}/versions", response_model=list[PublishedFlowVersionRead], status_code=status.HTTP_200_OK)
@@ -1530,29 +1544,102 @@ async def get_published_flow_spec(
 @router.delete("/{published_flow_id}", status_code=status.HTTP_200_OK)
 async def delete_published_flow(
     published_flow_id: UUID,
+    request: Request,
     session: DbSession,
     current_user: CurrentActiveUser,
 ):
     """
-    Delete published flow (hard delete) - only owner can delete.
-    Permanently removes the published flow from the marketplace.
+    Delete published flow and ALL related data (hard delete).
+    Owner or Marketplace Admin can delete.
+
+    Deletes:
+    - published_flow record
+    - published_flow_version records (cascade)
+    - published_flow_input_sample records (cascade)
+    - flow_version records (for original flow)
+    - version_flow_input_sample records
+    - Cloned flow records
     """
-    query = select(PublishedFlow).where(
-        PublishedFlow.id == published_flow_id, PublishedFlow.user_id == current_user.id
-    )
+    # Get user info using same method as publish_flow_marketplace_admin
+    # This calls the external auth service API to get roles correctly
+    settings_service = get_settings_service()
+    user_info = await get_user_info_from_auth_token(request, session, settings_service)
+    is_marketplace_admin = user_info.get("is_marketplace_admin", False)
+
+    logger.info(f"Delete published flow: is_marketplace_admin={is_marketplace_admin}, current_user.id={current_user.id}")
+
+    # Fetch published flow - allow owner OR marketplace admin
+    if is_marketplace_admin:
+        logger.info(f"Marketplace admin: querying by published_flow_id only: {published_flow_id}")
+        query = select(PublishedFlow).where(PublishedFlow.id == published_flow_id)
+    else:
+        logger.info(f"Non-admin: querying by published_flow_id={published_flow_id} AND user_id={current_user.id}")
+        query = select(PublishedFlow).where(
+            PublishedFlow.id == published_flow_id,
+            PublishedFlow.user_id == current_user.id
+        )
+
     result = await session.exec(query)
     published_flow = result.first()
 
     if not published_flow:
+        # Debug: Check if the flow exists at all
+        debug_query = select(PublishedFlow).where(PublishedFlow.id == published_flow_id)
+        debug_result = await session.exec(debug_query)
+        debug_flow = debug_result.first()
+        if debug_flow:
+            logger.error(f"Flow exists but permission denied. Flow user_id={debug_flow.user_id}, current_user.id={current_user.id}")
+        else:
+            logger.error(f"Flow with id={published_flow_id} does not exist in database")
+
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Published flow not found or you don't have permission to delete it",
         )
 
+    original_flow_id = published_flow.flow_cloned_from
+    cloned_flow_id = published_flow.flow_id
+
+    # 1. Get all flow_version records for the original flow
+    flow_versions_stmt = select(FlowVersion).where(
+        FlowVersion.original_flow_id == original_flow_id
+    )
+    flow_versions_result = await session.exec(flow_versions_stmt)
+    flow_versions = flow_versions_result.all()
+
+    # Collect all cloned flow IDs from flow_version
+    cloned_flow_ids = set()
+    if cloned_flow_id:
+        cloned_flow_ids.add(cloned_flow_id)
+    for fv in flow_versions:
+        if fv.version_flow_id:
+            cloned_flow_ids.add(fv.version_flow_id)
+
+    # 2. Delete version_flow_input_sample for each flow_version
+    for fv in flow_versions:
+        if fv.sample_id:
+            sample = await session.get(VersionFlowInputSample, fv.sample_id)
+            if sample:
+                await session.delete(sample)
+
+    # 3. Delete all flow_version records
+    for fv in flow_versions:
+        await session.delete(fv)
+
+    # 4. Delete published_flow (cascades to published_flow_version, published_flow_input_sample)
     await session.delete(published_flow)
+
+    # 5. Delete all cloned flows
+    for flow_id in cloned_flow_ids:
+        cloned_flow = await session.get(Flow, flow_id)
+        if cloned_flow:
+            await session.delete(cloned_flow)
+
     await session.commit()
 
-    return {"message": "Published flow deleted successfully"}
+    logger.info(f"Deleted published flow {published_flow_id} and all related data")
+
+    return {"message": "Published flow and all related data deleted successfully"}
 
 
 # ---------------------------
