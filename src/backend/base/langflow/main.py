@@ -27,7 +27,7 @@ from pydantic_core import PydanticSerializationError
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
 from langflow.api import health_check_router, log_router, router
-from langflow.api.v1.mcp_projects import init_mcp_servers, project_session_manager_lifespan
+from langflow.api.v1.mcp_projects import init_mcp_servers
 from langflow.initial_setup.setup import (
     copy_profile_pictures,
     create_or_update_starter_projects,
@@ -313,29 +313,11 @@ def get_lifespan(*, fix_migration=False, version=None):
             # Allows the server to start first to avoid race conditions with MCP Server startup
             mcp_init_task = asyncio.create_task(delayed_init_mcp_servers())
 
-            # Create AsyncExitStack for context managers that need
-            # to be kept alive for the duration of lf main's lifespan.
-            # Right now, this includes the streamable-http
-            # session mgr's lifecycle ctx mgr for the v1/mcp server,
-            # and the MCP project servers' global lifecycle mgr
-            # that maintains each per-project streamable-http
-            # session mgr's lifecycle mgr.
-            from contextlib import AsyncExitStack
-
-            from langflow.api.v1.mcp import init_streamable_http_manager
-
-            async with AsyncExitStack() as stack:
-                # Start streamable-http session manager for MCP server
-                await logger.adebug("Starting MCP server streamable-http session manager")
-                await stack.enter_async_context(init_streamable_http_manager().run())
-                # Start streamable-http lifespan manager/global exit stack for project mcp servers.
-                await logger.adebug("Starting MCP projects streamable-http lifespan manager")
-                await stack.enter_async_context(project_session_manager_lifespan())
-
-                yield
-
+            # v1 and project MCP server context managers
+            from langflow.api.v1.mcp import start_streamable_http_manager
+            from langflow.api.v1.mcp_projects import start_project_context_stack
             await start_streamable_http_manager()
-            await start_project_task_group()
+            await start_project_context_stack()
 
             yield
         except asyncio.CancelledError:
@@ -364,23 +346,14 @@ def get_lifespan(*, fix_migration=False, version=None):
                     await logger.adebug("Stopping server gracefully...")
                     # The actual server stopping is handled by the lifespan context
                     await asyncio.sleep(0.1)  # Brief pause for visual effect
-
                 # Step 1: Cancelling Background Tasks
                 with shutdown_progress.step(1):
                     from langflow.api.v1.mcp import stop_streamable_http_manager
-                    from langflow.api.v1.mcp_projects import stop_project_task_group
-
-                    # Shutdown MCP project servers
-                    try:
-                        await stop_project_task_group()
-                    except Exception as e:  # noqa: BLE001
-                        await logger.aerror(f"Failed to stop MCP Project servers: {e}")
-                    # Close MCP server streamable-http session manager .run() context manager
-                    try:
-                        await stop_streamable_http_manager()
-                    except Exception as e:  # noqa: BLE001
-                        await logger.aerror(f"Failed to stop MCP server streamable-http session manager: {e}")
-                    # Cancel background tasks
+                    from langflow.api.v1.mcp_projects import stop_project_context_stack
+                    await logger.adebug("Closing MCP project streamable-http session managers")
+                    await stop_project_context_stack()
+                    await logger.adebug("Closing MCP server streamable-http session manager")
+                    await stop_streamable_http_manager()
                     tasks_to_cancel = []
                     if sync_flows_from_fs_task:
                         sync_flows_from_fs_task.cancel()
