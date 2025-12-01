@@ -13,7 +13,6 @@ from langflow.api.v1.mcp_projects import (
     get_project_mcp_server,
     init_mcp_servers,
     project_mcp_servers,
-    project_session_manager_lifespan,
 )
 from langflow.services.auth.utils import create_user_longterm_token, get_password_hash
 from langflow.services.database.models.flow import Flow
