@@ -3,7 +3,7 @@
 
 # Toggle Docling and heavyweight OCR deps inside the virtualenv.
 # Default keeps the image slim by stripping them after install.
-ARG INCLUDE_DOCLING=true
+ARG INCLUDE_DOCLING=false
 
 ################################
 # BUILDER
