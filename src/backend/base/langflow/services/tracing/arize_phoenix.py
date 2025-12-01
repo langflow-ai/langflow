@@ -194,7 +194,8 @@ class ArizePhoenixTracer(BaseTracer):
             self.tracer_provider = tracer_provider
         except ImportError:
             logger.exception(
-                "[Arize/Phoenix] Could not import OTEL package. Please install it with `pip install arize-phoenix-otel`."
+                "[Arize/Phoenix] Could not import Arize Phoenix OTEL packages."
+                "Please install it with `pip install arize-phoenix-otel`."
             )
             return False
 
