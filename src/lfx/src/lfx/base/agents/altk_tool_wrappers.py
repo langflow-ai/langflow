@@ -513,7 +513,7 @@ class PostToolProcessor(ALTKBaseTool):
                 output = None
                 try:
                     output = middleware.process(input_data, AgentPhase.RUNTIME)
-                except (AttributeError, TypeError, ValueError, RuntimeError) as e:
+                except Exception as e:  # noqa: BLE001
                     logger.error(f"Exception in executing CodeGenerationComponent: {e}")
                 if output is not None and hasattr(output, "result"):
                     logger.info(f"Output of CodeGenerationComponent: {output.result}")
