@@ -64,6 +64,7 @@ from langflow.services.database.models.api_key.model import ApiKey, ApiKeyCreate
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_service
+from langflow.utils.asyncio_taskgroup import TaskGroup
 
 # Constants
 ALL_INTERFACES_HOST = "0.0.0.0"  # noqa: S104
@@ -1300,7 +1301,7 @@ class ProjectTaskGroup:
     """
 
     def __init__(self):
-        self._task_group: asyncio.TaskGroup | None = None
+        self._task_group: TaskGroup | None = None
         self._started = False
         self._start_stop_lock = asyncio.Lock()
 
@@ -1309,7 +1310,7 @@ class ProjectTaskGroup:
         async with self._start_stop_lock:
             if self._started:
                 return
-            self._task_group = asyncio.TaskGroup()
+            self._task_group = TaskGroup()
             await self._task_group.__aenter__()
             self._started = True
 
@@ -1340,7 +1341,7 @@ class ProjectTaskGroup:
             raise RuntimeError(error_message)
         return self._task_group.create_task(coro)
 
-    def get_task_group(self) -> asyncio.TaskGroup:
+    def get_task_group(self) -> TaskGroup:
         """Get the shared project task group."""
         return self._task_group
 
@@ -1353,7 +1354,7 @@ async def start_project_task_group() -> None:
     await _project_task_group.start()
 
 
-def get_project_task_group_tg() -> asyncio.TaskGroup:
+def get_project_task_group_tg() -> TaskGroup:
     """Get the shared project task group."""
     return _project_task_group.get_task_group()
 
