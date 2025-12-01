@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import { useUpdateSessionName } from "@/controllers/API/queries/messages/use-rename-session";
+import { useMessagesStore } from "@/stores/messagesStore";
 import { isNoMessagesError } from "../utils/is-no-messages-error";
 
 interface UseChatHeaderRenameProps {
@@ -13,6 +14,7 @@ export function useChatHeaderRename({
 }: UseChatHeaderRenameProps) {
   const [isEditing, setIsEditing] = useState(false);
   const { mutate: updateSessionName } = useUpdateSessionName();
+  const renameSession = useMessagesStore((state) => state.renameSession);
 
   const handleRename = useCallback(() => {
     if (!currentSessionId) {
@@ -33,14 +35,9 @@ export function useChatHeaderRename({
       }
 
       const trimmedNewId = newSessionId.trim();
-
-      // Optimistically update the UI immediately
       setIsEditing(false);
-      if (onSessionSelect) {
-        onSessionSelect(trimmedNewId);
-      }
 
-      // Then update via API in the background
+      // Update via API first, then update UI on success
       updateSessionName(
         {
           old_session_id: currentSessionId,
@@ -48,23 +45,26 @@ export function useChatHeaderRename({
         },
         {
           onSuccess: () => {
-            // Already updated optimistically, just ensure state is correct
+            // Update messages in store with new session ID
+            renameSession(currentSessionId, trimmedNewId);
+            // Then update the selected session
             if (onSessionSelect) {
               onSessionSelect(trimmedNewId);
             }
           },
           onError: (error: unknown) => {
-            // If it's a "no messages found" error, the session exists in sessionStorage
-            // but not in the database. The optimistic update already handled this.
-            if (!isNoMessagesError(error) && onSessionSelect) {
-              // For other errors, revert to the old session ID
-              onSessionSelect(currentSessionId);
+            // If it's a "no messages found" error, the session may be new (no messages yet)
+            // In this case, we can still update the local session ID
+            if (isNoMessagesError(error) && onSessionSelect) {
+              renameSession(currentSessionId, trimmedNewId);
+              onSessionSelect(trimmedNewId);
             }
+            // For other errors, keep the old session ID (don't update)
           },
         },
       );
     },
-    [currentSessionId, updateSessionName, onSessionSelect],
+    [currentSessionId, updateSessionName, onSessionSelect, renameSession],
   );
 
   return {
