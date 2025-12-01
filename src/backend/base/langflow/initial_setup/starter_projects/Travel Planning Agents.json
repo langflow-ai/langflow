@@ -507,7 +507,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.123.0"
+                    "version": "0.120.0"
                   },
                   {
                     "name": "lfx",
@@ -1668,7 +1668,7 @@
                 "dependencies": [
                   {
                     "name": "langchain_core",
-                    "version": "0.3.80"
+                    "version": "0.3.79"
                   },
                   {
                     "name": "pydantic",
@@ -2394,7 +2394,7 @@
                 "dependencies": [
                   {
                     "name": "langchain_core",
-                    "version": "0.3.80"
+                    "version": "0.3.79"
                   },
                   {
                     "name": "pydantic",
@@ -3120,7 +3120,7 @@
                 "dependencies": [
                   {
                     "name": "langchain_core",
-                    "version": "0.3.80"
+                    "version": "0.3.79"
                   },
                   {
                     "name": "pydantic",
