@@ -58,30 +58,25 @@ export function FlowPageSlidingContainerContent() {
         onDeleteSession={handleDeleteSession}
         onClose={handleClose}
       />
-      {isFullscreen && sidebarOpen && (
-        <div className="absolute left-0 top-0 z-50 h-full w-1/5 max-w-[280px] border-r border-border bg-background overflow-y-auto">
-          <div className="p-4 pt-[15px]">
-            <ChatSidebar
-              onNewChat={handleNewChat}
-              onSessionSelect={handleSessionSelect}
-              currentSessionId={currentSessionId}
-              onDeleteSession={handleDeleteSession}
-            />
+      <div className="flex-1 flex overflow-hidden">
+        {isFullscreen && sidebarOpen && (
+          <div className="w-1/5 max-w-[280px] min-w-[250px] border-r border-border bg-background overflow-y-auto">
+            <div className="p-4 pt-[15px]">
+              <ChatSidebar
+                onNewChat={handleNewChat}
+                onSessionSelect={handleSessionSelect}
+                currentSessionId={currentSessionId}
+                onDeleteSession={handleDeleteSession}
+              />
+            </div>
           </div>
+        )}
+        <div className="flex-1 overflow-auto p-6">
+          <Messages
+            visibleSession={currentSessionId ?? currentFlowId}
+            playgroundPage={true}
+          />
         </div>
-      )}
-      <div
-        className="flex-1 overflow-auto p-6"
-        style={
-          isFullscreen && sidebarOpen
-            ? { marginLeft: "max(20%, 280px)" }
-            : undefined
-        }
-      >
-        <Messages
-          visibleSession={currentSessionId ?? currentFlowId}
-          playgroundPage={true}
-        />
       </div>
     </div>
   );
