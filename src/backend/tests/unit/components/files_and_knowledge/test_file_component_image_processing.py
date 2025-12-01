@@ -420,11 +420,8 @@ class TestProcessFilesEdgeCases:
         with pytest.raises(ValueError, match="No files to process"):
             component.process_files([])
 
-    @patch("subprocess.run")
     def test_process_files_docling_only_extension_without_advanced_mode(
-        self,
-        mock_subprocess,
-        tmp_path,
+        self, tmp_path
     ):
         """Test that Docling-only extensions require advanced mode."""
         test_image = tmp_path / "test.png"
