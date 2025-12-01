@@ -18,6 +18,7 @@ from langflow.io import (
     Output,
 )
 from langflow.schema.data import Data
+from langflow.schema.message import Message
 from langflow.schema.dataframe import DataFrame
 import pandas as pd
 from loguru import logger
