@@ -41,7 +41,10 @@ class CollectingSpanProcessor(SpanProcessor):
         self.correlation_id = None
         self._lock = threading.Lock()
 
-    def on_start(self, span, _parent_context=None):
+    def on_start(self, span, parent_context=None):
+        # Silence unused variable warnings
+        _ = parent_context  # noqa: F841
+
         # Generate the correlation ID once (thread-safe)
         with self._lock:
             if self.correlation_id is None:
