@@ -58,7 +58,8 @@ on:
         options:
           - ubuntu-latest
           - self-hosted
-          - langflow-arm64-runners-group-ephemeral
+          - >-
+            ["self-hosted", "linux", "ARM64", "langflow-arm64-runners-group-ephemeral"]
         default: ubuntu-latest
   pull_request:
     types: [opened, synchronize, labeled]
