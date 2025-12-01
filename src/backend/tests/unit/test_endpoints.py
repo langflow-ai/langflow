@@ -869,3 +869,110 @@ async def test_user_can_access_multiple_own_flows(
     # Cleanup
     await client.delete(f"api/v1/flows/{flow1_id}", headers=logged_in_headers)
     await client.delete(f"api/v1/flows/{flow2_id}", headers=logged_in_headers)
+
+
+# ============================================================================
+# Security Tests: Superuser Permission Checks for Flow Access
+# ============================================================================
+
+
+@pytest.mark.benchmark
+async def test_superuser_can_run_other_users_flow(client: AsyncClient, simple_api_test, superuser_api_key):
+    """Test that a superuser can run another user's flow."""
+    # simple_api_test belongs to active_user, but we're using superuser's API key
+    headers = {"x-api-key": superuser_api_key}
+    flow_id = simple_api_test["id"]
+
+    response = await client.post(f"/api/v1/run/{flow_id}", headers=headers)
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    json_response = response.json()
+    assert "session_id" in json_response
+    assert "outputs" in json_response
+
+
+@pytest.mark.benchmark
+async def test_superuser_can_run_other_users_flow_with_payload(client: AsyncClient, simple_api_test, superuser_api_key):
+    """Test that a superuser can run another user's flow with a valid payload."""
+    headers = {"x-api-key": superuser_api_key}
+    flow_id = simple_api_test["id"]
+    payload = {
+        "input_type": "chat",
+        "output_type": "debug",
+        "input_value": "test message",
+    }
+
+    response = await client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    json_response = response.json()
+    assert "session_id" in json_response
+    assert "outputs" in json_response
+
+
+@pytest.mark.benchmark
+async def test_superuser_can_run_other_users_flow_with_streaming(
+    client: AsyncClient, simple_api_test, superuser_api_key
+):
+    """Test that a superuser can run another user's flow with streaming enabled."""
+    headers = {"x-api-key": superuser_api_key}
+    flow_id = simple_api_test["id"]
+    payload = {
+        "input_type": "chat",
+        "output_type": "debug",
+        "input_value": "test",
+    }
+
+    async with client.stream("POST", f"/api/v1/run/{flow_id}?stream=true", headers=headers, json=payload) as response:
+        assert response.status_code == status.HTTP_200_OK, response.text
+        assert response.headers["content-type"].startswith("text/event-stream")
+
+
+@pytest.mark.benchmark
+async def test_superuser_can_run_own_flow(
+    client: AsyncClient, logged_in_headers, json_simple_api_test, superuser, created_superuser_api_key
+):
+    """Test that a superuser can run their own flow."""
+    # Create a flow owned by the superuser
+    flow_data = orjson.loads(json_simple_api_test)
+    flow = FlowCreate(name="Superuser Flow", data=flow_data["data"], description="Superuser's own flow")
+
+    # Login as superuser to create the flow
+    superuser_login_response = await client.post(
+        "api/v1/login", data={"username": superuser.username, "password": "superuser_password"}
+    )
+    assert superuser_login_response.status_code == 200
+    superuser_token = superuser_login_response.json()["access_token"]
+    superuser_headers = {"Authorization": f"Bearer {superuser_token}"}
+
+    # Create flow as superuser
+    create_response = await client.post("api/v1/flows/", json=flow.model_dump(), headers=superuser_headers)
+    assert create_response.status_code == 201
+    flow_id = create_response.json()["id"]
+
+    # Run the flow using superuser's API key
+    headers = {"x-api-key": created_superuser_api_key.api_key}
+    response = await client.post(f"/api/v1/run/{flow_id}", headers=headers)
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    json_response = response.json()
+    assert "session_id" in json_response
+    assert "outputs" in json_response
+
+    # Cleanup
+    await client.delete(f"api/v1/flows/{flow_id}", headers=superuser_headers)
+
+
+@pytest.mark.benchmark
+async def test_regular_user_still_cannot_run_other_users_flow_after_superuser_change(
+    client: AsyncClient, simple_api_test, user_two_api_key
+):
+    """Test that regular users still cannot run other users' flows (regression test)."""
+    # This ensures the superuser change didn't break regular user restrictions
+    headers = {"x-api-key": user_two_api_key}
+    flow_id = simple_api_test["id"]
+
+    response = await client.post(f"/api/v1/run/{flow_id}", headers=headers)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN, response.text
+    assert "You do not have permission to run this flow" in response.text
