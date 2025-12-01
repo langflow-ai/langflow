@@ -1249,39 +1249,70 @@ class ProjectMCPServer:
             if self._manager_started:
                 return
 
-            stack = _get_project_session_manager_stack()
-            await stack.enter_async_context(self.session_manager.run())
+            # stack = await get_project_context_stack()
+            await _project_context_stack._stack.enter_async_context(self.session_manager.run())
             self._manager_started = True
             await logger.adebug("Streamable HTTP manager started for project %s", self.project_id)
 
 
 # Cache of project MCP servers
 project_mcp_servers = {}
+
 # Global exit stack for project MCP servers'
 # streamable-http session managers.
-# This is used to automatically clean up
-# session managers on application shutdown.
-_project_session_manager_stack: AsyncExitStack | None = None
+class ProjectContextStack:
+    """Manage the shared AsyncExitStack used by all project Streamable HTTP managers."""
+
+    def __init__(self):
+        self._stack: AsyncExitStack | None = None
+        self._started = False
+        self._start_stop_lock = asyncio.Lock()
+
+    async def start(self) -> None:
+        """Create the shared project context stack."""
+        async with self._start_stop_lock:
+            if self._started:
+                return
+            self._stack = AsyncExitStack()
+            self._started = True
+
+    async def stop(self) -> None:
+        """Close the shared project context stack."""
+        async with self._start_stop_lock:
+            if not self._started:
+                return
+
+            try:
+                if self._stack is not None:
+                    await self._stack.aclose()
+            finally:
+                self._stack = None
+                self._started = False
+
+    async def get_stack(self) -> AsyncExitStack:
+        """Fetch the active AsyncExitStack for project session managers."""
+        if not self._started or self._stack is None:
+            error_message = "Project MCP session stack not initialized. Start the session stack before use."
+            raise RuntimeError(error_message)
+        return self._stack
 
 
-@asynccontextmanager
-async def project_session_manager_lifespan():
-    """Provide a shared AsyncExitStack so each project manager can rely on async with cleanup."""
-    global _project_session_manager_stack  # noqa: PLW0603
-    async with AsyncExitStack() as stack:
-        _project_session_manager_stack = stack
-        try:
-            yield
-        finally:
-            _project_session_manager_stack = None
-            await logger.adebug("Exited lifespan for MCP projects")
+_project_context_stack = ProjectContextStack()
 
 
-def _get_project_session_manager_stack() -> AsyncExitStack:
-    if _project_session_manager_stack is None:
-        error_message = "Project MCP session stack not initialized. Start the project session manager lifespan first."
-        raise RuntimeError(error_message)
-    return _project_session_manager_stack
+async def start_project_context_stack() -> None:
+    """Initialize the shared project session stack."""
+    await _project_context_stack.start()
+
+
+async def get_project_context_stack() -> AsyncExitStack:
+    """Fetch the active AsyncExitStack for project session managers."""
+    return await _project_context_stack.get_stack()
+
+
+async def stop_project_context_stack() -> None:
+    """Close the shared project session stack."""
+    await _project_context_stack.stop()
 
 
 def get_project_mcp_server(project_id: UUID | None) -> ProjectMCPServer:
