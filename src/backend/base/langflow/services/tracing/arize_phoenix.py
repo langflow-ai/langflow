@@ -54,7 +54,7 @@ class CollectingSpanProcessor(SpanProcessor):
     def shutdown(self):
         pass
 
-    def force_flush(self, timeout_millis):
+    def force_flush(self, timeout_millis=30000):
         pass
 
 
