@@ -281,6 +281,10 @@ Other endpoints are helpful for specific use cases, such as administration and f
     * DELETE `/v2/files/{file_id}`: Delete a file by ID.
     * DELETE `/v2/files` (alias `/v2/files/`): Delete all files for the current user.
 
+* Registration endpoints (v2):
+  * POST `/v2/registration/`: Register a user with email address.
+  * GET `/v2/registration/`: Get the registered user, or a message if no user is registered.
+
 * [API keys and authentication](/api-keys-and-authentication):
   * GET `/v1/api_key/`: List API keys for the current user.
   * POST `/v1/api_key/`: Create a new API key.
