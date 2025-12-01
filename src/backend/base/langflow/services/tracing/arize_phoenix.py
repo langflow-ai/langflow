@@ -43,7 +43,7 @@ class CollectingSpanProcessor(SpanProcessor):
 
     def on_start(self, span, parent_context=None):
         # Silence unused variable warnings
-        _ = parent_context  # noqa: F841
+        _ = parent_context
 
         # Generate the correlation ID once (thread-safe)
         with self._lock:
