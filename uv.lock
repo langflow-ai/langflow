@@ -51,7 +51,7 @@ wheels = [
 
 [[package]]
 name = "agent-lifecycle-toolkit"
-version = "0.4.3"
+version = "0.4.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "genson" },
@@ -77,9 +77,9 @@ dependencies = [
     { name = "trl" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/1a/f1/a01b57abb0dcfe3e87081c58b31f3ea8fa825d2af141792fa8571685108b/agent_lifecycle_toolkit-0.4.3.tar.gz", hash = "sha256:05a541e1c839e386109d2f0f7cb0c7458aed92c5f91c95e699f0ec5aa5da91e5", size = 7044700, upload-time = "2025-12-01T14:56:18.462Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/61/78/a8361e3fe77498da678e5555d9191a30448b288327f979eb34c5b06ab4bc/agent_lifecycle_toolkit-0.4.4.tar.gz", hash = "sha256:abc89cc6ffcabfcf2da88124df1e8a8cbafdd225355603906cf9be8ce97e7a6b", size = 7044767, upload-time = "2025-12-01T17:38:09.343Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/fe/0b/ef3500ae848e7148d8aa89dab94790c650db4a7a53f3047f2c11039a4e72/agent_lifecycle_toolkit-0.4.3-py3-none-any.whl", hash = "sha256:08ce7eb19b7d608e88b08e185d04dbe57a114728c66a57ff4cbb57506ba900e2", size = 200782, upload-time = "2025-12-01T14:56:16.759Z" },
+    { url = "https://files.pythonhosted.org/packages/eb/8e/c6ab3eef642842f81418b6130ed2aaa992aa3846811fe42fa50b07c57c4a/agent_lifecycle_toolkit-0.4.4-py3-none-any.whl", hash = "sha256:f8c1b16ec9c4c6a1ade8f2481ef3d8cc957f11fa57c56cba05b80e9e9bb99cb8", size = 200854, upload-time = "2025-12-01T17:38:07.49Z" },
 ]
 
 [[package]]
@@ -2168,7 +2168,7 @@ chunking = [
 
 [[package]]
 name = "docling-ibm-models"
-version = "3.10.2"
+version = "3.10.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "accelerate" },
@@ -2188,9 +2188,9 @@ dependencies = [
     { name = "tqdm" },
     { name = "transformers" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ba/81/e1fddd051c0af6a28d52c01b360867633c8091e594563b1dabb78f3730ab/docling_ibm_models-3.10.2.tar.gz", hash = "sha256:977591cb57f7b442af000614bbdb5cafce9973b2edff6d0b4c3cfafb638ed335", size = 87712, upload-time = "2025-10-28T10:34:38.463Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/11/36/6335f0bfa0ed92cd4bddacf0e391e2b41707b4409de327e035f93a9e310d/docling_ibm_models-3.10.3.tar.gz", hash = "sha256:6be756e45df155a367087b93e0e5f2d65905e7e81a5f57c1d3ae57096631655a", size = 87706, upload-time = "2025-12-01T17:04:43.511Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d9/76/3fe39f06350fd6118babfa0de85b100dbc4939990af4a738ad5003a3ec88/docling_ibm_models-3.10.2-py3-none-any.whl", hash = "sha256:b2ac6fbd9fb0729320ae4970891b96684a2375841b9ba2c316d2389f8b8ef796", size = 87357, upload-time = "2025-10-28T10:34:36.967Z" },
+    { url = "https://files.pythonhosted.org/packages/cb/a8/cc3d1e8bc665a7643de1201c6460b3fd7afebb924884d4a048e26f8e5225/docling_ibm_models-3.10.3-py3-none-any.whl", hash = "sha256:e034d1398c99059998da18e38ef80af8a5d975f04de17f6e93efa075fb29cac4", size = 87356, upload-time = "2025-12-01T17:04:41.886Z" },
 ]
 
 [[package]]
@@ -5742,7 +5742,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "agent-lifecycle-toolkit", specifier = "~=0.4.3" },
+    { name = "agent-lifecycle-toolkit", specifier = "~=0.4.4" },
     { name = "aioboto3", specifier = ">=15.2.0,<16.0.0" },
     { name = "aiofile", specifier = ">=3.9.0,<4.0.0" },
     { name = "aiosqlite", specifier = "==0.21.0" },
