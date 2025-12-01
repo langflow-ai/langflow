@@ -6,6 +6,6 @@ export const SnowflakeIcon = forwardRef<
   React.PropsWithChildren<{}>
 >((props, ref) => {
   return (
-    <SnowflakeIconSVG ref={ref} {...props} style={{ width: 12, height: 12 }} />
+    <SnowflakeIconSVG ref={ref} {...props} style={{ width: 20, height: 20 }} />
   );
 });
