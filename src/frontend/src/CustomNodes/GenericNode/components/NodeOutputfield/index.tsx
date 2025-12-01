@@ -429,7 +429,7 @@ function NodeOutputField({
                   errorOutput={errorOutput ?? false}
                   isToolMode={isToolMode}
                   title={title}
-                  onClick={() => { }}
+                  onClick={() => {}}
                   id={data?.type}
                 />
               </OutputModal>
