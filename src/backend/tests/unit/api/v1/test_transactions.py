@@ -128,8 +128,7 @@ class TestTransactionTransformers:
     def test_transform_transaction_table_list(self):
         """Test transforming a list of TransactionTable."""
         tables = [
-            TransactionTable(id=uuid4(), vertex_id=f"vertex-{i}", status="success", flow_id=uuid4())
-            for i in range(3)
+            TransactionTable(id=uuid4(), vertex_id=f"vertex-{i}", status="success", flow_id=uuid4()) for i in range(3)
         ]
 
         result = transform_transaction_table(tables)
@@ -152,8 +151,7 @@ class TestTransactionTransformers:
     def test_transform_transaction_table_for_logs_list(self):
         """Test transforming a list of TransactionTable for logs view."""
         tables = [
-            TransactionTable(id=uuid4(), vertex_id=f"vertex-{i}", status="success", flow_id=uuid4())
-            for i in range(3)
+            TransactionTable(id=uuid4(), vertex_id=f"vertex-{i}", status="success", flow_id=uuid4()) for i in range(3)
         ]
 
         result = transform_transaction_table_for_logs(tables)
