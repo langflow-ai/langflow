@@ -15,7 +15,7 @@ export const useChatHistory = (visibleSession: string | null) => {
     id: currentFlowId,
     mode: "union", // Dummy mode, we only care about the side effect of populating the store
     params: {
-      session_id: visibleSession,
+      session_id: visibleSession === currentFlowId ? undefined : visibleSession,
     },
   });
 
