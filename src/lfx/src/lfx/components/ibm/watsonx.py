@@ -66,7 +66,7 @@ class WatsonxAIComponent(LCModelComponent):
             display_name="Max Tokens",
             advanced=True,
             info="The maximum number of tokens to generate.",
-            range_spec=RangeSpec(min=1, max=128000),
+            range_spec=RangeSpec(min=1, max=100000),
             value=1000,
         ),
         StrInput(
