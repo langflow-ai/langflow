@@ -131,7 +131,8 @@ export const buildMcpServerJson = (opts: {
     argsParts.push(`"uvx"`);
   }
   argsParts.push(proxy);
-  const shouldUseStreamableFlag = !isOAuthProject && transport === "streamablehttp";
+  const shouldUseStreamableFlag =
+    !isOAuthProject && transport === "streamablehttp";
   if (shouldUseStreamableFlag) {
     argsParts.push('"--transport"', '"streamablehttp"');
   }
