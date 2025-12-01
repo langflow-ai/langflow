@@ -33,7 +33,7 @@ export function ChatHeaderTitle({
     <h2
       className={cn(
         TITLE_STYLES,
-        isFullscreen ? "flex-[0_0_auto]" : "min-w-0 truncate",
+        isFullscreen ? "flex-1 text-left min-w-0 truncate" : "min-w-0 truncate",
       )}
       style={TITLE_FONT_FAMILY}
     >
