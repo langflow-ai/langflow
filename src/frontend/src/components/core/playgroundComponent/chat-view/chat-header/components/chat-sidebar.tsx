@@ -24,16 +24,28 @@ export function ChatSidebar({
     id: currentFlowId,
   });
 
-  // Use sessions directly from query (it already includes currentFlowId if needed)
-  // Ensure currentSessionId is included in the list even if it's not in the API response
+  // Use sessions directly from query
+  // Ensure currentFlowId (Default Session) is always in the list
+  // Also ensure currentSessionId is included if it's not in the API response
   const sessions = React.useMemo(() => {
-    const sessionList = sessionsData?.sessions || [];
-    // If currentSessionId exists and is not in the list, add it
-    if (currentSessionId && !sessionList.includes(currentSessionId)) {
-      return [currentSessionId, ...sessionList];
+    const sessionList = [...(sessionsData?.sessions || [])];
+
+    // Always ensure currentFlowId (Default Session) is in the list
+    if (currentFlowId && !sessionList.includes(currentFlowId)) {
+      sessionList.unshift(currentFlowId);
     }
+
+    // If currentSessionId exists and is not in the list, add it
+    if (
+      currentSessionId &&
+      currentSessionId !== currentFlowId &&
+      !sessionList.includes(currentSessionId)
+    ) {
+      sessionList.push(currentSessionId);
+    }
+
     return sessionList;
-  }, [sessionsData?.sessions, currentSessionId]);
+  }, [sessionsData?.sessions, currentSessionId, currentFlowId]);
 
   const visibleSession = currentSessionId;
 

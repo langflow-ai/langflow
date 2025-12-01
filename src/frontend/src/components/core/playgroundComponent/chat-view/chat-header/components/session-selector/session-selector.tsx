@@ -2,6 +2,7 @@ import type React from "react";
 import { useState } from "react";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { useUpdateSessionName } from "@/controllers/API/queries/messages/use-rename-session";
+import { useMessagesStore } from "@/stores/messagesStore";
 import { useVoiceStore } from "@/stores/voiceStore";
 import { cn } from "@/utils/utils";
 import { SessionMoreMenu } from "../session-more-menu";
@@ -36,6 +37,7 @@ export function SessionSelector({
 }: SessionSelectorProps) {
   const [isEditing, setIsEditing] = useState(false);
   const { mutate: updateSessionName } = useUpdateSessionName();
+  const renameSession = useMessagesStore((state) => state.renameSession);
   const setNewSessionCloseVoiceAssistant = useVoiceStore(
     (state) => state.setNewSessionCloseVoiceAssistant,
   );
@@ -52,6 +54,8 @@ export function SessionSelector({
         { old_session_id: session, new_session_id: newSessionId.trim() },
         {
           onSuccess: () => {
+            // Update messages in store with new session ID
+            renameSession(session, newSessionId.trim());
             if (isVisible) {
               updateVisibleSession(newSessionId.trim());
             }
