@@ -12,7 +12,7 @@ from fastapi.responses import StreamingResponse
 from lfx.services.settings.service import SettingsService
 from lfx.utils.helpers import build_content_type_from_extension
 
-from langflow.api.utils import CurrentActiveUser, DbSession, is_file_used
+from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas import UploadFileResponse
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_settings_service, get_storage_service
@@ -213,3 +213,23 @@ async def delete_file(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
     return {"message": f"File {file_name} deleted successfully"}
+
+
+def is_file_used(flow_data: dict | None, file_name: str) -> bool:
+    """Check if a file is used in the flow."""
+    if not flow_data or "nodes" not in flow_data:
+        return False
+
+    for node in flow_data["nodes"]:
+        node_data = node.get("data", {}).get("node", {})
+        template = node_data.get("template", {})
+        for field in template.values():
+            if isinstance(field, dict) and "value" in field:
+                value = field["value"]
+                if isinstance(value, str) and file_name in value:
+                    return True
+                if isinstance(value, list):
+                    for item in value:
+                        if isinstance(item, str) and file_name in item:
+                            return True
+    return False

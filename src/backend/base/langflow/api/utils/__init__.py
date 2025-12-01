@@ -31,7 +31,6 @@ from langflow.api.utils.core import (
     get_suggestion_message,
     get_top_level_vertices,
     has_api_terms,
-    is_file_used,
     parse_exception,
     parse_value,
     remove_api_keys,

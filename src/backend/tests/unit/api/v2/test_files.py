@@ -1097,7 +1097,7 @@ class TestStorageFailureHandling:
 
         assert (
             result["message"]
-            == "2 files deleted successfully, 1 files kept in database due to transient storage errors (can retry)"
+            == "2 files deleted successfully, 1 files kept due to transient storage errors (can retry)"
         )
 
         assert mock_storage_service.delete_file.call_count == 3
@@ -1286,7 +1286,7 @@ class TestStorageFailureHandling:
 
         assert (
             result["message"]
-            == "2 files deleted successfully, 1 files kept in database due to transient storage errors (can retry)"
+            == "2 files deleted successfully, 1 files kept due to transient storage errors (can retry)"
         )
 
     async def test_delete_file_in_use(self):
