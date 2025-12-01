@@ -248,6 +248,76 @@ function validateOutputNodesReachable(nodes: AllNodeType[], edges: EdgeType[]): 
   return errors;
 }
 
+/**
+ * Get all Genesis Prompt Template nodes with their version status
+ * Returns info about prompts that are in Draft or Pending status
+ */
+export function getPromptTemplateNodes(nodes: AllNodeType[]): {
+  promptId: string;
+  promptName: string;
+  version: number;
+  status: string;
+}[] {
+  const promptNodes: {
+    promptId: string;
+    promptName: string;
+    version: number;
+    status: string;
+  }[] = [];
+
+  nodes.forEach((node) => {
+    const nodeData = node.data as NodeDataType;
+    // Check if this is a Genesis Prompt Template node
+    if (nodeData.type === "Genesis Prompt Template" || nodeData.node?.display_name === "Genesis Prompt Template") {
+      const template = nodeData.node?.template;
+      if (template) {
+        const savedPrompt = template.saved_prompt?.value;
+        const promptVersion = template.prompt_version?.value;
+        
+        if (savedPrompt && promptVersion) {
+          // Parse version info from the formatted string like "v1 (Latest) [Draft]"
+          const versionMatch = promptVersion.match(/v(\d+)/);
+          const statusMatch = promptVersion.match(/\[(Draft|Pending)\]/i);
+          
+          if (versionMatch) {
+            promptNodes.push({
+              promptId: savedPrompt,
+              promptName: savedPrompt,
+              version: parseInt(versionMatch[1], 10),
+              status: statusMatch ? statusMatch[1].toUpperCase() : "PUBLISHED",
+            });
+          }
+        }
+      }
+    }
+  });
+
+  return promptNodes;
+}
+
+/**
+ * Validate: All prompt templates must be published (not Draft or Pending)
+ */
+function validatePromptTemplatesPublished(nodes: AllNodeType[]): string[] {
+  const errors: string[] = [];
+  
+  const promptNodes = getPromptTemplateNodes(nodes);
+  const unpublishedPrompts = promptNodes.filter(
+    (p) => p.status === "DRAFT" || p.status === "PENDING" || p.status === "PENDING_APPROVAL"
+  );
+
+  if (unpublishedPrompts.length > 0) {
+    const promptList = unpublishedPrompts
+      .map((p) => `"${p.promptName}" (v${p.version} - ${p.status})`)
+      .join(", ");
+    errors.push(
+      `The following prompt templates are not published and must be approved before submitting the workflow: ${promptList}`
+    );
+  }
+
+  return errors;
+}
+
 // ============================================
 // MAIN VALIDATION FUNCTION
 // ============================================
@@ -277,6 +347,7 @@ export function validateFlowForPublish(
   errors.push(...validateOutputNodesAtEnd(nodes, edges));
   // errors.push(...validateRequiredFields(nodes, edges));
   errors.push(...validateOutputNodesReachable(nodes, edges));
+  errors.push(...validatePromptTemplatesPublished(nodes));
 
   // Return all errors found
   return errors;

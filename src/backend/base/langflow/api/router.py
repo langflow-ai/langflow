@@ -23,6 +23,7 @@ from langflow.api.v1 import (
     openai_responses_router,
     agent_observability_router,
     projects_router,
+    prompt_library_router,
     published_flows_router,
     spec_router,
     starter_projects_router,
@@ -67,6 +68,7 @@ router_v1.include_router(monitor_router)
 router_v1.include_router(openai_responses_router)
 router_v1.include_router(agent_observability_router)
 router_v1.include_router(projects_router)
+router_v1.include_router(prompt_library_router)
 router_v1.include_router(published_flows_router)
 router_v1.include_router(spec_router)
 router_v1.include_router(starter_projects_router)

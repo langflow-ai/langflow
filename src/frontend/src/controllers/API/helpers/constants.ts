@@ -38,7 +38,8 @@ export const URLs = {
   RUN: `run`,
   SPEC_BUILDER: `spec-builder`
   ,
-  OBSERVABILITY: `observability`
+  OBSERVABILITY: `observability`,
+  PROMPT_LIBRARY: `prompt-library`
 } as const;
 
 // IMPORTANT: FOLDERS endpoint now points to 'projects' for backward compatibility

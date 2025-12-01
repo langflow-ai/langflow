@@ -146,3 +146,4 @@ dmypy.json
 # Backup directories
 *_backup/
 *backup/
+*initial_setup/*

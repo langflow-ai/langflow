@@ -683,6 +683,7 @@ async def custom_component(
 
 @router.post("/custom_component/update", status_code=HTTPStatus.OK)
 async def custom_component_update(
+    request: Request,
     code_request: UpdateCustomComponentRequest,
     user: CurrentActiveUser,
 ):
@@ -724,6 +725,13 @@ async def custom_component_update(
             params = await update_params_with_load_from_db_fields(cc_instance, params, load_from_db_fields)
             cc_instance.set_attributes(params)
         updated_build_config = code_request.get_template()
+
+        # Extract token from Authorization header and inject into build_config
+        # This allows components like GenesisPromptComponent to make authenticated API calls
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            updated_build_config["_token"] = auth_header[7:]  # Remove "Bearer " prefix
+
         await update_component_build_config(
             cc_instance,
             build_config=updated_build_config,

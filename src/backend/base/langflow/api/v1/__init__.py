@@ -19,6 +19,7 @@ from langflow.api.v1.monitor import router as monitor_router
 from langflow.api.v1.openai_responses import router as openai_responses_router
 from langflow.api.v1.agent_observability import router as agent_observability_router
 from langflow.api.v1.projects import router as projects_router
+from langflow.api.v1.prompt_library import router as prompt_library_router
 from langflow.api.v1.published_flows import router as published_flows_router
 from langflow.api.v1.spec import router as spec_router
 from langflow.api.v1.starter_projects import router as starter_projects_router
@@ -52,6 +53,7 @@ __all__ = [
     "openai_responses_router",
     "agent_observability_router",
     "projects_router",
+    "prompt_library_router",
     "published_flows_router",
     "spec_router",
     "starter_projects_router",

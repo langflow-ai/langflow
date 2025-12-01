@@ -287,3 +287,4 @@ CLAUDE.md
 SPEC_CREATION_PROMPT.md
 test_spec_conversion.py
 .claude/
+**/starter_projects/

@@ -114,7 +114,7 @@ export default function Dropdown({
   // Utility functions
   const filterMetadataKeys = (
     metadata: Record<string, any> = {},
-    excludeKeys: string[] = ["api_endpoint", "icon", "status", "org_id"]
+    excludeKeys: string[] = ["api_endpoint", "icon", "status", "org_id", "disabled"]
   ) => {
     return Object.fromEntries(
       Object.entries(metadata).filter(([key]) => !excludeKeys.includes(key))
@@ -483,7 +483,9 @@ export default function Dropdown({
     <CommandList className="max-h-[300px] overflow-y-auto">
       <CommandGroup defaultChecked={false} className="p-0">
         {filteredOptions?.length > 0 ? (
-          filteredOptions?.map((option, index) => (
+          filteredOptions?.map((option, index) => {
+            const isDisabled = filteredMetadata?.[index]?.disabled === true;
+            return (
             <ShadTooltip
               key={index}
               delayDuration={700}
@@ -493,12 +495,17 @@ export default function Dropdown({
               <div>
                 <CommandItem
                   value={option}
+                  disabled={isDisabled}
                   onSelect={(currentValue) => {
+                    if (isDisabled) return;
                     onSelect(currentValue);
                     setOpen(false);
                     setWaitingForResponse(false);
                   }}
-                  className="w-full items-center rounded-none"
+                  className={cn(
+                    "w-full items-center rounded-none",
+                    isDisabled && "opacity-50 cursor-not-allowed"
+                  )}
                   data-testid={`${option}-${index}-option`}
                 >
                   <div
@@ -581,7 +588,8 @@ export default function Dropdown({
                 </CommandItem>
               </div>
             </ShadTooltip>
-          ))
+          );
+          })
         ) : (
           <CommandItem
             disabled
