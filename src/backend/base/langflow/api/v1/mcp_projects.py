@@ -428,12 +428,12 @@ project_messages_methods = ["POST", "DELETE"]
 
 def _is_streamable_http_request(request: Request) -> bool:
     """Detect if a request is for Streamable HTTP transport.
-    
+
     Streamable HTTP requests typically have:
     - A session_id header (for stateless mode) - x-mcp-session-id or session-id
     - Content-Type: application/json (for POST requests)
     - Accept header that includes application/json
-    
+
     SSE requests typically have:
     - Accept: text/event-stream header (often exclusive or primary)
     - No session_id header
@@ -441,7 +441,7 @@ def _is_streamable_http_request(request: Request) -> bool:
     # Check for session_id header (Streamable HTTP uses this for stateless mode)
     if request.headers.get("x-mcp-session-id") or request.headers.get("session-id"):
         return True
-    
+
     # Check Content-Type for POST requests (Streamable HTTP uses application/json)
     content_type = request.headers.get("content-type", "").lower()
     if request.method == "POST" and "application/json" in content_type:
@@ -451,7 +451,7 @@ def _is_streamable_http_request(request: Request) -> bool:
         # prefer Streamable HTTP for POST requests with JSON body
         if "application/json" in accept_header:
             return True
-    
+
     # For GET requests, check Accept header more carefully
     if request.method == "GET":
         accept_header = request.headers.get("accept", "").lower()
@@ -463,7 +463,7 @@ def _is_streamable_http_request(request: Request) -> bool:
                 return False
             # Otherwise, prefer Streamable HTTP if application/json is present
             return True
-    
+
     # Default to SSE for backward compatibility
     return False
 
@@ -476,15 +476,14 @@ async def handle_project_messages(
     current_user: Annotated[User, Depends(verify_project_auth_conditional)],
 ):
     """Handle POST/DELETE messages for a project-specific MCP server.
-    
+
     This endpoint supports both Streamable HTTP and SSE transports.
     It automatically detects the transport type and routes to the appropriate handler.
     """
     # Detect transport type and route accordingly
     if _is_streamable_http_request(request):
         return await _dispatch_project_streamable_http(project_id, request, current_user)
-    else:
-        return await _handle_project_sse_messages(project_id, request, current_user)
+    return await _handle_project_sse_messages(project_id, request, current_user)
 
 
 # Streamable HTTP transport
@@ -1084,12 +1083,21 @@ def _args_reference_urls(args: Sequence[Any] | None, urls: list[str]) -> bool:
     """Check whether the given args list references any of the provided URLs."""
     if not args or not urls:
         return False
-    args_strings = [arg for arg in args if isinstance(arg, str)]
-    if not args_strings:
+    # Instead of building a list of strings, use a generator and a set for O(1) lookup,
+    # and directly extract the last string as we scan (single pass).
+    args_strings_set = set()
+    last_arg = None
+    for arg in args:
+        if isinstance(arg, str):
+            args_strings_set.add(arg)
+            last_arg = arg
+    if last_arg is None:
         return False
-    args_set = set(args_strings)
-    last_arg = args_strings[-1]
-    return any((url == last_arg) or (url in args_set) for url in urls)
+    # By using a set and known last_arg, minimize lookup cost in the common case.
+    for url in urls:
+        if url == last_arg or url in args_strings_set:
+            return True
+    return False
 
 
 def config_contains_server_url(config_data: dict, urls: Sequence[str] | str) -> bool:
