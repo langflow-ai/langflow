@@ -7,6 +7,7 @@ from datetime import datetime
 from http import HTTPStatus
 from pathlib import Path
 from typing import Annotated
+from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
@@ -15,7 +16,7 @@ from lfx.log.logger import logger
 from sqlmodel import col, select
 
 from langflow.api.schemas import UploadFileResponse
-from langflow.api.utils import CurrentActiveUser, DbSession
+from langflow.api.utils import CurrentActiveUser, DbSession, is_file_used
 from langflow.services.database.models.file.model import File as UserFile
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_settings_service, get_storage_service
@@ -27,6 +28,76 @@ router = APIRouter(tags=["Files"], prefix="/files")
 # Set the static name of the MCP servers file
 MCP_SERVERS_FILE = "_mcp_servers"
 SAMPLE_DATA_DIR = Path(__file__).parent / "sample_data"
+
+# Maximum allowed filename length
+MAX_FILENAME_LENGTH = 255
+# Maximum reasonable extension length
+MAX_EXTENSION_LENGTH = 20
+
+
+def sanitize_filename(filename: str) -> str:
+    """Sanitize a filename to prevent path traversal and other security issues.
+
+    Args:
+        filename: The original filename from user input
+
+    Returns:
+        A sanitized filename safe for storage and headers
+    """
+    if not filename:
+        return "unnamed"
+
+    # Strip any path components to prevent path traversal (e.g., ../../etc/passwd)
+    base_filename = Path(filename).name
+
+    # Replace dangerous characters: control chars, path separators, quotes, etc.
+    # Keep only alphanumeric, spaces, dots, hyphens, underscores, and parentheses
+    safe_filename = re.sub(r"[^\w.\- ()]", "_", base_filename)
+
+    # Remove leading/trailing whitespace and dots (prevent hidden files)
+    safe_filename = safe_filename.strip().strip(".")
+
+    # Ensure we have a valid filename
+    if not safe_filename:
+        return "unnamed"
+
+    # Truncate to max length while preserving extension
+    if len(safe_filename) > MAX_FILENAME_LENGTH:
+        name_part, _, ext = safe_filename.rpartition(".")
+        if ext and len(ext) < MAX_EXTENSION_LENGTH:
+            max_name_len = MAX_FILENAME_LENGTH - len(ext) - 1
+            safe_filename = f"{name_part[:max_name_len]}.{ext}"
+        else:
+            safe_filename = safe_filename[:MAX_FILENAME_LENGTH]
+
+    return safe_filename
+
+
+def sanitize_content_disposition(filename: str) -> str:
+    """Create a safe Content-Disposition header value.
+
+    Uses RFC 5987 encoding for non-ASCII characters and escapes special chars.
+
+    Args:
+        filename: The filename to include in the header
+
+    Returns:
+        A properly formatted Content-Disposition header value
+    """
+    # First sanitize the filename
+    safe_name = sanitize_filename(filename)
+
+    # Check if filename contains non-ASCII or special characters
+    try:
+        safe_name.encode("ascii")
+    except UnicodeEncodeError:
+        # Contains non-ASCII: use RFC 5987 encoding
+        encoded = quote(safe_name, safe="")
+        return f"attachment; filename*=UTF-8''{encoded}"
+    else:
+        # ASCII-safe: use simple quoted format, escape quotes
+        escaped = safe_name.replace("\\", "\\\\").replace('"', '\\"')
+        return f'attachment; filename="{escaped}"'
 
 
 def is_permanent_storage_failure(error: Exception) -> bool:
@@ -158,8 +229,8 @@ async def upload_user_file(
 
     # Create a new database record for the uploaded file.
     try:
-        # Enforce unique constraint on name, except for the special _mcp_servers file
-        new_filename = file.filename
+        # Sanitize filename to prevent path traversal and other security issues
+        new_filename = sanitize_filename(file.filename)
         try:
             root_filename, file_extension = new_filename.rsplit(".", 1)
         except ValueError:
@@ -287,26 +358,6 @@ async def get_file_by_name(
         return result.first() or None
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching file: {e}") from e
-
-
-def is_file_used(flow_data: dict | None, file_name: str) -> bool:
-    """Check if a file is used in the flow."""
-    if not flow_data or "nodes" not in flow_data:
-        return False
-
-    for node in flow_data["nodes"]:
-        node_data = node.get("data", {}).get("node", {})
-        template = node_data.get("template", {})
-        for field in template.values():
-            if isinstance(field, dict) and "value" in field:
-                value = field["value"]
-                if isinstance(value, str) and file_name in value:
-                    return True
-                if isinstance(value, list):
-                    for item in value:
-                        if isinstance(item, str) and file_name in item:
-                            return True
-    return False
 
 
 async def load_sample_files(current_user: CurrentActiveUser, session: DbSession, storage_service: StorageService):
@@ -586,6 +637,8 @@ async def read_file_content(file_stream: AsyncIterable[bytes] | bytes, *, decode
             return content.decode("utf-8")
         except UnicodeDecodeError as exc:
             raise HTTPException(status_code=500, detail="Invalid file encoding") from exc
+    except HTTPException:
+        raise
     except ValueError as exc:
         raise HTTPException(status_code=500, detail=f"Error reading file: {exc}") from exc
     except Exception as exc:
@@ -642,7 +695,7 @@ async def download_file(
                 raise HTTPException(status_code=404, detail="File not found")
             byte_stream = byte_stream_generator(file_content)
 
-        # Create the filename with extension
+        # Create the filename with extension and sanitize for Content-Disposition header
         file_extension = Path(file.path).suffix
         filename_with_extension = f"{file.name}{file_extension}"
 
@@ -650,7 +703,7 @@ async def download_file(
         return StreamingResponse(
             byte_stream,
             media_type="application/octet-stream",
-            headers={"Content-Disposition": f'attachment; filename="{filename_with_extension}"'},
+            headers={"Content-Disposition": sanitize_content_disposition(filename_with_extension)},
         )
 
     except HTTPException:
@@ -669,13 +722,28 @@ async def edit_file_name(
     session: DbSession,
 ) -> UploadFileResponse:
     """Edit the name of a file by its ID."""
+    # Validate and sanitize the new name
+    if not name or not name.strip():
+        raise HTTPException(status_code=400, detail="Name cannot be empty")
+
+    sanitized_name = sanitize_filename(name)
+    if sanitized_name != name.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Name contains invalid characters. "
+            "Only alphanumeric, spaces, dots, hyphens, underscores, and parentheses are allowed.",
+        )
+
     try:
         # Fetch the file from the DB
         file = await fetch_file_object(file_id, current_user, session)
 
         # Update the file name
-        file.name = name
+        file.name = sanitized_name
         session.add(file)
+        await session.commit()
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error editing file: {e}") from e
 
@@ -743,6 +811,7 @@ async def delete_file(
         if storage_deleted:
             try:
                 await session.delete(file_to_delete)
+                await session.commit()
             except Exception as db_error:
                 await logger.aerror(
                     "Failed to delete file %s from database: %s",

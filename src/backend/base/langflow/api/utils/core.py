@@ -397,7 +397,6 @@ def extract_global_variables_from_headers(headers) -> dict[str, str]:
     Example:
         headers = {"X-LANGFLOW-GLOBAL-VAR-API-KEY": "secret", "Content-Type": "application/json"}
         result = extract_global_variables_from_headers(headers)
-        # Returns: {"API_KEY": "secret"}
     """
     variables: dict[str, str] = {}
 
@@ -412,3 +411,23 @@ def extract_global_variables_from_headers(headers) -> dict[str, str]:
         logger.exception("Failed to extract global variables from headers: %s", exc)
 
     return variables
+
+
+def is_file_used(flow_data: dict | None, file_name: str) -> bool:
+    """Check if a file is used in the flow."""
+    if not flow_data or "nodes" not in flow_data:
+        return False
+
+    for node in flow_data["nodes"]:
+        node_data = node.get("data", {}).get("node", {})
+        template = node_data.get("template", {})
+        for field in template.values():
+            if isinstance(field, dict) and "value" in field:
+                value = field["value"]
+                if isinstance(value, str) and file_name in value:
+                    return True
+                if isinstance(value, list):
+                    for item in value:
+                        if isinstance(item, str) and file_name in item:
+                            return True
+    return False
