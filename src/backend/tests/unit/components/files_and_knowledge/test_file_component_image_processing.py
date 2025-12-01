@@ -283,14 +283,10 @@ class TestStoragePathResolution:
         simple_file = "simple_file.png"
         assert "/" not in simple_file
 
-    @pytest.mark.xfail(
-        reason="Storage path resolution needs to be fixed - currently not using get_full_path correctly"
-    )
+    @pytest.mark.xfail(reason="Storage path resolution needs to be fixed - currently not using get_full_path correctly")
     @patch("lfx.services.deps.get_storage_service")
     @patch("lfx.services.deps.get_settings_service")
-    def test_validate_and_resolve_paths_uses_storage_service(
-        self, mock_settings, mock_storage, tmp_path
-    ):
+    def test_validate_and_resolve_paths_uses_storage_service(self, mock_settings, mock_storage, tmp_path):
         """Test that storage paths are resolved using storage service.
 
         This test currently fails because the path resolution doesn't properly
@@ -371,37 +367,41 @@ class TestDataFrameEmptyHandling:
 
     def test_dataframe_with_placeholder_data_is_not_empty(self):
         """Test that DataFrame with placeholder data is not empty."""
-        df = DataFrame([{
-            "file_path": "/some/path.png",
-            "text": "(No text content extracted from image)",
-            "info": "Image processed successfully",
-        }])
+        df = DataFrame(
+            [
+                {
+                    "file_path": "/some/path.png",
+                    "text": "(No text content extracted from image)",
+                    "info": "Image processed successfully",
+                }
+            ]
+        )
         assert not df.empty, "DataFrame with placeholder data should not be empty"
         assert "text" in df.columns
 
     def test_dataframe_with_empty_text_is_not_empty(self):
         """Test that DataFrame with empty string text is not empty."""
-        df = DataFrame([{
-            "file_path": "/some/path.png",
-            "text": "",
-        }])
+        df = DataFrame(
+            [
+                {
+                    "file_path": "/some/path.png",
+                    "text": "",
+                }
+            ]
+        )
         assert not df.empty, "DataFrame with empty text string should not be empty"
 
 
 class TestImageFileTypes:
     """Tests for different image file types."""
 
-    @pytest.mark.parametrize("extension", [
-        "png", "jpg", "jpeg", "bmp", "tiff", "webp"
-    ])
+    @pytest.mark.parametrize("extension", ["png", "jpg", "jpeg", "bmp", "tiff", "webp"])
     def test_image_extensions_are_docling_compatible(self, extension):
         """Test that image extensions are recognized as Docling-compatible."""
         component = FileComponent()
         assert component._is_docling_compatible(f"/path/to/image.{extension}")
 
-    @pytest.mark.parametrize("extension", [
-        "png", "jpg", "jpeg", "bmp", "tiff", "webp"
-    ])
+    @pytest.mark.parametrize("extension", ["png", "jpg", "jpeg", "bmp", "tiff", "webp"])
     def test_image_extensions_require_advanced_mode(self, extension):
         """Test that image extensions require advanced mode."""
         component = FileComponent()
@@ -422,7 +422,9 @@ class TestProcessFilesEdgeCases:
 
     @patch("subprocess.run")
     def test_process_files_docling_only_extension_without_advanced_mode(
-        self, mock_subprocess, tmp_path  # noqa: ARG002
+        self,
+        mock_subprocess,
+        tmp_path,  # noqa: ARG002
     ):
         """Test that Docling-only extensions require advanced mode."""
         test_image = tmp_path / "test.png"
@@ -461,10 +463,14 @@ class TestLoadFilesHelperValidation:
         """Test that error column is checked and raised."""
         component = FileComponent()
 
-        error_df = DataFrame([{
-            "error": "File processing failed",
-            "file_path": "/some/path",
-        }])
+        error_df = DataFrame(
+            [
+                {
+                    "error": "File processing failed",
+                    "file_path": "/some/path",
+                }
+            ]
+        )
 
         with (
             patch.object(component, "load_files", return_value=error_df),
@@ -477,11 +483,15 @@ class TestLoadFilesHelperValidation:
         component = FileComponent()
 
         # If we have both error and text, should not raise
-        df_with_both = DataFrame([{
-            "error": "Some warning",
-            "text": "Actual content",
-            "file_path": "/some/path",
-        }])
+        df_with_both = DataFrame(
+            [
+                {
+                    "error": "Some warning",
+                    "text": "Actual content",
+                    "file_path": "/some/path",
+                }
+            ]
+        )
 
         with patch.object(component, "load_files", return_value=df_with_both):
             result = component.load_files_helper()
