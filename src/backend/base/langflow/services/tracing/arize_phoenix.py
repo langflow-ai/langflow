@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import math
 import os
+import threading
 import traceback
 import types
 import uuid
@@ -38,11 +39,13 @@ if TYPE_CHECKING:
 class CollectingSpanProcessor(SpanProcessor):
     def __init__(self):
         self.correlation_id = None
+        self._lock = threading.Lock()
 
     def on_start(self, span, _parent_context=None):
-        # Generate the correlation ID once
-        if self.correlation_id is None:
-            self.correlation_id = str(uuid.uuid4())
+        # Generate the correlation ID once (thread-safe)
+        with self._lock:
+            if self.correlation_id is None:
+                self.correlation_id = str(uuid.uuid4())
 
         # Inject into the CHAIN & LLM spans
         if span.name in ("Langflow", "Language Model"):
@@ -409,7 +412,7 @@ class ArizePhoenixTracer(BaseTracer):
 
     def close(self):
         try:
-            if hasattr(self.tracer_provider, "force_flush"):
+            if hasattr(self, "tracer_provider") and hasattr(self.tracer_provider, "force_flush"):
                 self.tracer_provider.force_flush(timeout_millis=3000)
         except (ValueError, RuntimeError, OSError) as e:
             logger.error("[Arize/Phoenix] Error Flushing Spans: %s", str(e), exc_info=True)
