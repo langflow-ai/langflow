@@ -289,6 +289,7 @@ async def build_vertex(
         if isinstance(cache, CacheMiss):
             # If there's no cache
             await logger.awarning(f"No cache found for {flow_id_str}. Building graph starting at {vertex_id}")
+
             async with session_scope() as session:
                 graph = await build_graph_from_db(
                     flow_id=flow_id,
@@ -396,6 +397,7 @@ async def build_vertex(
             telemetry_service.log_package_component,
             ComponentPayload(
                 component_name=vertex_id.split("-")[0],
+                component_id=vertex_id,
                 component_seconds=int(time.perf_counter() - start_time),
                 component_success=valid,
                 component_error_message=error_message,
@@ -407,6 +409,7 @@ async def build_vertex(
             telemetry_service.log_package_component,
             ComponentPayload(
                 component_name=vertex_id.split("-")[0],
+                component_id=vertex_id,
                 component_seconds=int(time.perf_counter() - start_time),
                 component_success=False,
                 component_error_message=str(exc),

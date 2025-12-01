@@ -26,7 +26,7 @@ dependencies = [
     "docstring-parser>=0.16,<1.0.0",
     "networkx>=3.4.2,<4.0.0",
     "nanoid>=2.0.0,<3.0.0",
-    "cachetools>=5.5.2,<6.0.0",
+    "cachetools>=6.0.0",
     "emoji>=2.14.1,<3.0.0",
     "chardet>=5.2.0,<6.0.0",
     "defusedxml>=0.7.1,<1.0.0",
@@ -39,6 +39,8 @@ dependencies = [
     "loguru>=0.7.3,<1.0.0",
     "langchain~=0.3.23",
     "validators>=0.34.0,<1.0.0",
+    "filelock>=3.20.0",
+    "pypdf>=5.1.0",
 ]
 
 [project.scripts]
