@@ -134,8 +134,8 @@ async def download_profile_picture(
 ):
     """Download profile picture from local filesystem.
 
-    Profile pictures are always stored locally in config_dir/profile_pictures/,
-    regardless of the storage_type setting (local, s3, etc.).
+    Profile pictures are first looked up in config_dir/profile_pictures/,
+    then fallback to the package's bundled profile_pictures directory.
     """
     try:
         extension = file_name.split(".")[-1]
@@ -143,8 +143,15 @@ async def download_profile_picture(
         config_path = Path(config_dir)  # type: ignore[arg-type]
         file_path = config_path / "profile_pictures" / folder_name / file_name
 
+        # Fallback to package bundled profile pictures if not found in config_dir
         if not file_path.exists():
-            raise HTTPException(status_code=404, detail=f"Profile picture {folder_name}/{file_name} not found")
+            from langflow.initial_setup import setup
+
+            package_path = Path(setup.__file__).parent / "profile_pictures" / folder_name / file_name
+            if package_path.exists():
+                file_path = package_path
+            else:
+                raise HTTPException(status_code=404, detail=f"Profile picture {folder_name}/{file_name} not found")
 
         content_type = build_content_type_from_extension(extension)
         # Read file directly from local filesystem using async file operations
@@ -163,8 +170,8 @@ async def list_profile_pictures(
 ):
     """List profile pictures from local filesystem.
 
-    Profile pictures are always stored locally in config_dir/profile_pictures/,
-    regardless of the storage_type setting (local, s3, etc.).
+    Profile pictures are first looked up in config_dir/profile_pictures/,
+    then fallback to the package's bundled profile_pictures directory.
     """
     try:
         config_dir = settings_service.settings.config_dir
@@ -173,9 +180,19 @@ async def list_profile_pictures(
         people_path = config_path / "profile_pictures" / "People"
         space_path = config_path / "profile_pictures" / "Space"
 
-        # List files directly from local filesystem - bundled with the container
+        # List files directly from local filesystem
         people = [f.name for f in people_path.iterdir() if f.is_file()] if people_path.exists() else []
         space = [f.name for f in space_path.iterdir() if f.is_file()] if space_path.exists() else []
+
+        # Fallback to package bundled profile pictures if config_dir is empty
+        if not people and not space:
+            from langflow.initial_setup import setup
+
+            package_base = Path(setup.__file__).parent / "profile_pictures"
+            people_path = package_base / "People"
+            space_path = package_base / "Space"
+            people = [f.name for f in people_path.iterdir() if f.is_file()] if people_path.exists() else []
+            space = [f.name for f in space_path.iterdir() if f.is_file()] if space_path.exists() else []
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
