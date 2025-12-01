@@ -1,4 +1,3 @@
-from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -212,6 +211,7 @@ async def test_find_validation_error_with_pydantic_error():
     # Create a pydantic ValidationError by catching it
     validation_error = None
     try:
+
         class TestModel(pydantic.BaseModel):
             required_field: str
 
@@ -246,6 +246,7 @@ async def test_find_validation_error_with_context():
     # Create a pydantic ValidationError by catching it
     validation_error = None
     try:
+
         class TestModel(pydantic.BaseModel):
             required_field: str
 
@@ -283,8 +284,10 @@ async def test_mcp_sse_validation_error_logged():
     # Verify the function exists and works
     validation_error = None
     try:
+
         class TestModel(pydantic.BaseModel):
             required_field: str
+
         TestModel()
     except pydantic.ValidationError as e:
         validation_error = e
