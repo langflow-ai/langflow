@@ -16,20 +16,10 @@ import { useTypesStore } from "@/stores/typesStore";
 import type { ResponseErrorDetailAPI } from "@/types/api";
 import type { GlobalVariable, TAB_TYPES } from "@/types/global_variables";
 import InputComponent from "../parameterRenderComponent/components/inputComponent";
+import { assignTab } from "./utils/assign-tab";
 import sortByName from "./utils/sort-by-name";
 
 //TODO IMPLEMENT FORM LOGIC
-
-export const assignTab = (tab: string): TAB_TYPES => {
-  switch (tab.toLowerCase().trim()) {
-    case "credential":
-      return "Credential";
-    case "generic":
-      return "Generic";
-    default:
-      return "Credential";
-  }
-};
 
 export default function GlobalVariableModal({
   children,
@@ -86,6 +76,10 @@ export default function GlobalVariableModal({
   }, [globalVariables, componentFields, initialData]);
 
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
+
+  const handleOnValueCHange = (value: string) => {
+    setType(assignTab(value));
+  };
 
   function handleSaveVariable() {
     const data: {
@@ -169,9 +163,7 @@ export default function GlobalVariableModal({
             <Label>Type*</Label>
             <Tabs
               defaultValue={type}
-              onValueChange={(value) => {
-                setType(assignTab(value));
-              }}
+              onValueChange={handleOnValueCHange}
               className="w-full"
             >
               <TabsList className="grid w-full grid-cols-2">

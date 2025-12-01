@@ -1,5 +1,5 @@
 import { TAB_TYPES } from "@/types/global_variables";
-import { assignTab } from "../GlobalVariableModal";
+import { assignTab } from "../utils/assign-tab";
 
 describe("GlobalVariableModal - assignTab Function", () => {
   describe("Basic Functionality", () => {
