@@ -20,6 +20,17 @@ import sortByName from "./utils/sort-by-name";
 
 //TODO IMPLEMENT FORM LOGIC
 
+export const assignTab = (tab: string): TAB_TYPES => {
+  switch (tab.toLowerCase().trim()) {
+    case "credential":
+      return "Credential";
+    case "generic":
+      return "Generic";
+    default:
+      return "Credential";
+  }
+};
+
 export default function GlobalVariableModal({
   children,
   asChild,
@@ -133,17 +144,6 @@ export default function GlobalVariableModal({
     }
   }
 
-  const assignTab = (tab: string): TAB_TYPES => {
-    switch (tab.toLowerCase()) {
-      case "credential":
-        return "Credential";
-      case "generic":
-        return "Generic";
-      default:
-        return "Credential";
-    }
-  };
-
   return (
     <BaseModal
       open={open}
@@ -170,7 +170,7 @@ export default function GlobalVariableModal({
             <Tabs
               defaultValue={type}
               onValueChange={(value) => {
-                setType(assignTab(value) as TAB_TYPES);
+                setType(assignTab(value));
               }}
               className="w-full"
             >
