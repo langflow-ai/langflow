@@ -547,17 +547,14 @@ class TestToolExecutionWithFieldConversion:
         # Create tool function
         tool_func = util.create_tool_func("test_tool", test_schema, mock_client)
 
-        # Mock the event loop
-        mock_loop = MagicMock()
-        mock_loop.run_until_complete = MagicMock(return_value="tool_result")
-
-        with patch("asyncio.get_event_loop", return_value=mock_loop):
+        # Mock run_until_complete from async_helpers
+        with patch("lfx.base.mcp.util.run_until_complete", return_value="tool_result") as mock_run_until_complete:
             # Test with camelCase arguments
             result = tool_func(weatherMain="Snow", topN=6)
 
             assert result == "tool_result"
             # Verify that run_until_complete was called
-            mock_loop.run_until_complete.assert_called_once()
+            mock_run_until_complete.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_tool_coroutine_field_conversion_end_to_end(self):
@@ -686,16 +683,13 @@ class TestToolExecutionWithFieldConversion:
         # Create tool function
         tool_func = util.create_tool_func("test_tool", test_schema, mock_client)
 
-        # Mock asyncio.get_event_loop
-        mock_loop = MagicMock()
-        mock_loop.run_until_complete = MagicMock(return_value="sync_result")
-
-        with patch("asyncio.get_event_loop", return_value=mock_loop):
+        # Mock run_until_complete from async_helpers
+        with patch("lfx.base.mcp.util.run_until_complete", return_value="sync_result") as mock_run_until_complete:
             # Test with camelCase fields
             result = tool_func(userName="testuser", maxResults=10)
 
             assert result == "sync_result"
-            mock_loop.run_until_complete.assert_called_once()
+            mock_run_until_complete.assert_called_once()
 
 
 class TestMCPUtilityFunctions:
@@ -1479,11 +1473,8 @@ class TestMCPStructuredTool:
         config = {"some": "config"}
         extra_kwargs = {"extra": "param"}
 
-        # Mock the event loop to prevent the "no current event loop" error
-        mock_loop = MagicMock()
-        mock_loop.run_until_complete = MagicMock(return_value="tool_result")
-
-        with patch("asyncio.get_event_loop", return_value=mock_loop):
+        # Mock run_until_complete from async_helpers
+        with patch("lfx.base.mcp.util.run_until_complete", return_value="tool_result"):
             # Just verify that the method completes successfully with config/kwargs
             mcp_tool.run(input_data, config=config, **extra_kwargs)
 
