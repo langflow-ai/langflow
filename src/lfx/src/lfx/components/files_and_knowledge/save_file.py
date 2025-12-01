@@ -614,13 +614,13 @@ class SaveToFileComponent(Component):
         # Parse credentials with multiple fallback strategies
         credentials_dict = None
         parse_errors = []
-        
+
         # Strategy 1: Parse as-is with strict=False to allow control characters
         try:
             credentials_dict = json.loads(self.service_account_key, strict=False)
         except json.JSONDecodeError as e:
             parse_errors.append(f"Standard parse: {e!s}")
-        
+
         # Strategy 2: Strip whitespace and try again
         if credentials_dict is None:
             try:
@@ -628,7 +628,7 @@ class SaveToFileComponent(Component):
                 credentials_dict = json.loads(cleaned_key, strict=False)
             except json.JSONDecodeError as e:
                 parse_errors.append(f"Stripped parse: {e!s}")
-        
+
         # Strategy 3: Check if it's double-encoded (JSON string of a JSON string)
         if credentials_dict is None:
             try:
@@ -639,16 +639,16 @@ class SaveToFileComponent(Component):
                     credentials_dict = decoded_once
             except json.JSONDecodeError as e:
                 parse_errors.append(f"Double-encoded parse: {e!s}")
-        
+
         # Strategy 4: Try to fix common issues with newlines in the private_key field
         if credentials_dict is None:
             try:
                 # Replace literal \n with actual newlines which is common in pasted JSON
-                fixed_key = self.service_account_key.replace('\\n', '\n')
+                fixed_key = self.service_account_key.replace("\\n", "\n")
                 credentials_dict = json.loads(fixed_key, strict=False)
             except json.JSONDecodeError as e:
                 parse_errors.append(f"Newline-fixed parse: {e!s}")
-        
+
         if credentials_dict is None:
             error_details = "; ".join(parse_errors)
             msg = (
