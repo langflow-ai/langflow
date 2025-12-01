@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ChatHeader } from "@/components/core/playgroundComponent/chat-view/chat-header";
 import { ChatSidebar } from "@/components/core/playgroundComponent/chat-view/chat-header/components/chat-sidebar";
 import { useSessionManagement } from "@/components/core/playgroundComponent/chat-view/hooks/use-session-management";
+import { Messages } from "@/components/core/playgroundComponent/chat-view/messages";
 import { useSlidingContainerStore } from "../stores/sliding-container-store";
 
 export function FlowPageSlidingContainerContent() {
@@ -77,7 +78,10 @@ export function FlowPageSlidingContainerContent() {
             : undefined
         }
       >
-        {/* Content will be added here */}
+        <Messages
+          visibleSession={currentSessionId ?? currentFlowId}
+          playgroundPage={true}
+        />
       </div>
     </div>
   );
