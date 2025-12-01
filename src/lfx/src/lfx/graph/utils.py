@@ -109,21 +109,21 @@ async def log_transaction(
     flow_id: str | UUID,
     source: Vertex,
     status,
-    target: Vertex | None = None,  # noqa: ARG001
-    error=None,  # noqa: ARG001
+    target: Vertex | None = None,
+    error=None,
 ) -> None:
     """Asynchronously logs a transaction record for a vertex in a flow if transaction storage is enabled.
 
     This is a lightweight implementation that only logs if database service is available.
     """
     try:
-        settings_service = get_settings_service()
-        if not settings_service or not getattr(settings_service.settings, "transactions_storage_enabled", False):
-            return
+        # Use langflow's settings service to ensure transactions_storage_enabled is checked correctly
+        from langflow.services.deps import get_settings_service as langflow_get_settings_service
 
-        db_service = get_db_service()
-        if db_service is None:
-            logger.debug("Database service not available, skipping transaction logging")
+        settings_service = langflow_get_settings_service()
+        if not settings_service:
+            return
+        if not getattr(settings_service.settings, "transactions_storage_enabled", False):
             return
 
         if not flow_id:
@@ -132,8 +132,38 @@ async def log_transaction(
             else:
                 return
 
-        # Log basic transaction info - concrete implementation should be in langflow
-        logger.debug(f"Transaction logged: vertex={source.id}, flow={flow_id}, status={status}")
+        # Import here to avoid circular imports
+        from langflow.services.database.models.transactions.crud import (
+            log_transaction as crud_log_transaction,
+        )
+        from langflow.services.database.models.transactions.model import TransactionBase
+
+        if isinstance(flow_id, str):
+            flow_id = UUID(flow_id)
+
+        inputs = _vertex_to_primitive_dict(source) if source else None
+        outputs = _vertex_to_primitive_dict(target) if target else None
+
+        transaction = TransactionBase(
+            vertex_id=source.id,
+            target_id=target.id if target else None,
+            inputs=inputs,
+            outputs=outputs,
+            status=status,
+            error=str(error) if error else None,
+            flow_id=flow_id,
+        )
+
+        # Use langflow's database service, not lfx's NoopDatabaseService
+        from langflow.services.deps import get_db_service as langflow_get_db_service
+
+        db_service = langflow_get_db_service()
+        if db_service is None:
+            return
+
+        async with db_service._with_session() as session:  # noqa: SLF001
+            await crud_log_transaction(session, transaction)
+
     except Exception as exc:  # noqa: BLE001
         logger.debug(f"Error logging transaction: {exc!s}")
 

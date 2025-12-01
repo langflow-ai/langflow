@@ -81,3 +81,27 @@ class TransactionTable(TransactionBase, table=True):  # type: ignore[call-arg]
 class TransactionReadResponse(TransactionBase):
     id: UUID = Field(alias="transaction_id")
     flow_id: UUID
+
+
+class TransactionLogsResponse(SQLModel):
+    """Transaction response model for logs view - excludes error and flow_id fields."""
+
+    model_config = {"populate_by_name": True, "from_attributes": True}
+
+    id: UUID
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    vertex_id: str = Field(nullable=False)
+    target_id: str | None = Field(default=None)
+    inputs: dict | None = Field(default=None)
+    outputs: dict | None = Field(default=None)
+    status: str = Field(nullable=False)
+
+    @field_serializer("inputs")
+    def serialize_inputs(self, data) -> dict:
+        """Serialize with enforced text length and item count limits."""
+        return serialize(data, max_length=get_max_text_length(), max_items=get_max_items_length())
+
+    @field_serializer("outputs")
+    def serialize_outputs(self, data) -> dict:
+        """Serialize outputs with enforced limits."""
+        return serialize(data, max_length=get_max_text_length(), max_items=get_max_items_length())

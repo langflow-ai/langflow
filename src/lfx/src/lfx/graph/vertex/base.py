@@ -657,6 +657,12 @@ class Vertex:
         except Exception as exc:
             tb = traceback.format_exc()
             await logger.aexception(exc)
+            # Log transaction error
+            flow_id = self.graph.flow_id
+            if flow_id:
+                await self._log_transaction_async(
+                    str(flow_id), source=self, target=None, status="error", error=str(exc)
+                )
             msg = f"Error building Component {self.display_name}: \n\n{exc}"
             raise ComponentBuildError(msg, tb) from exc
 
@@ -771,6 +777,11 @@ class Vertex:
                     self.steps_ran.append(step)
 
             self.finalize_build()
+
+            # Log transaction after successful build
+            flow_id = self.graph.flow_id
+            if flow_id:
+                await self._log_transaction_async(str(flow_id), source=self, target=None, status="success")
 
         return await self.get_requester_result(requester)
 
