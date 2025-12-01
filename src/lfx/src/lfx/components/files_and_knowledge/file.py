@@ -786,7 +786,8 @@ class FileComponent(BaseFileComponent):
                 # --- UNNEST: expand each element in `doc` to its own Data row
                 payload = getattr(advanced_data, "data", {}) or {}
                 doc_rows = payload.get("doc")
-                if isinstance(doc_rows, list):
+                if isinstance(doc_rows, list) and doc_rows:
+                    # Non-empty list of structured rows
                     rows: list[Data | None] = [
                         Data(
                             data={
@@ -797,6 +798,19 @@ class FileComponent(BaseFileComponent):
                         for item in doc_rows
                     ]
                     final_return.extend(self.rollup_data(file_list, rows))
+                elif isinstance(doc_rows, list) and not doc_rows:
+                    # Empty list - file was processed but no text content found
+                    # Create a Data object indicating no content was extracted
+                    self.log(f"No text extracted from '{file_path}', creating placeholder data")
+                    empty_data = Data(
+                        data={
+                            "file_path": file_path,
+                            "text": "(No text content extracted from image)",
+                            "info": "Image processed successfully but contained no extractable text",
+                            **{k: v for k, v in payload.items() if k != "doc"},
+                        },
+                    )
+                    final_return.extend(self.rollup_data([file], [empty_data]))
                 else:
                     # If not structured, keep as-is (e.g., markdown export or error dict)
                     final_return.extend(self.rollup_data(file_list, [advanced_data]))
@@ -820,12 +834,16 @@ class FileComponent(BaseFileComponent):
     def load_files_helper(self) -> DataFrame:
         result = self.load_files()
 
-        # Error condition - raise error if no text and an error is present
-        if not hasattr(result, "text"):
-            if hasattr(result, "error"):
-                raise ValueError(result.error[0])
+        # Result is a DataFrame - check if it has any rows
+        if result.empty:
             msg = "Could not extract content from the provided file(s)."
             raise ValueError(msg)
+
+        # Check for error column with error messages
+        if "error" in result.columns:
+            errors = result["error"].dropna().tolist()
+            if errors and not any(col in result.columns for col in ["text", "doc", "exported_content"]):
+                raise ValueError(errors[0])
 
         return result
 
@@ -838,4 +856,17 @@ class FileComponent(BaseFileComponent):
         """Load files using advanced Docling processing and export to Markdown format."""
         self.markdown = True
         result = self.load_files_helper()
-        return Message(text=str(result.text[0]))
+
+        # Result is a DataFrame - check for text or exported_content columns
+        if "text" in result.columns and not result["text"].isna().all():
+            text_values = result["text"].dropna().tolist()
+            if text_values:
+                return Message(text=str(text_values[0]))
+
+        if "exported_content" in result.columns and not result["exported_content"].isna().all():
+            content_values = result["exported_content"].dropna().tolist()
+            if content_values:
+                return Message(text=str(content_values[0]))
+
+        # Return empty message with info that no text was found
+        return Message(text="(No text content extracted from file)")
