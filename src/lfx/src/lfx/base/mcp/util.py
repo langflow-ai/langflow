@@ -16,6 +16,7 @@ import httpx
 from anyio import ClosedResourceError
 from httpx import codes as httpx_codes
 from langchain_core.tools import StructuredTool
+from lfx.utils.async_helpers import run_until_complete
 from mcp import ClientSession
 from mcp.shared.exceptions import McpError
 from pydantic import BaseModel
@@ -351,8 +352,7 @@ def create_tool_func(tool_name: str, arg_schema: type[BaseModel], client) -> Cal
             _handle_tool_validation_error(e, tool_name, provided_args, arg_schema)
 
         try:
-            loop = asyncio.get_event_loop()
-            return loop.run_until_complete(client.run_tool(tool_name, arguments=validated.model_dump()))
+            return run_until_complete(client.run_tool(tool_name, arguments=validated.model_dump()))
         except Exception as e:
             logger.error(f"Tool '{tool_name}' execution failed: {e}")
             # Re-raise with more context
