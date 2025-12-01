@@ -249,21 +249,24 @@ function validateOutputNodesReachable(nodes: AllNodeType[], edges: EdgeType[]): 
 }
 
 /**
- * Get all Genesis Prompt Template nodes with their version status
- * Returns info about prompts that are in Draft or Pending status
+ * Genesis Prompt Template node info extracted from flow
  */
-export function getPromptTemplateNodes(nodes: AllNodeType[]): {
+export interface GenesisPromptNodeInfo {
   promptId: string;
   promptName: string;
   version: number;
   status: string;
-}[] {
-  const promptNodes: {
-    promptId: string;
-    promptName: string;
-    version: number;
-    status: string;
-  }[] = [];
+}
+
+/**
+ * Get all Genesis Prompt Template nodes with their version info.
+ * 
+ * This extracts prompt_id, version, and status from the node template.
+ * The template stores these values directly (prompt_id, prompt_version, version_status)
+ * which are more reliable than parsing the dropdown display strings.
+ */
+export function getPromptTemplateNodes(nodes: AllNodeType[]): GenesisPromptNodeInfo[] {
+  const promptNodes: GenesisPromptNodeInfo[] = [];
 
   nodes.forEach((node) => {
     const nodeData = node.data as NodeDataType;
@@ -271,20 +274,52 @@ export function getPromptTemplateNodes(nodes: AllNodeType[]): {
     if (nodeData.type === "Genesis Prompt Template" || nodeData.node?.display_name === "Genesis Prompt Template") {
       const template = nodeData.node?.template;
       if (template) {
+        // Get prompt_id from saved_prompt field
         const savedPrompt = template.saved_prompt?.value;
-        const promptVersion = template.prompt_version?.value;
         
-        if (savedPrompt && promptVersion) {
-          // Parse version info from the formatted string like "v1 (Latest) [Draft]"
-          const versionMatch = promptVersion.match(/v(\d+)/);
-          const statusMatch = promptVersion.match(/\[(Draft|Pending)\]/i);
+        // Get version number - prefer the numeric prompt_version stored in template metadata
+        // over parsing the dropdown string
+        const templatePromptVersion = template.template?.prompt_version;
+        const versionStatus = template.template?.version_status;
+        const promptVersionDropdown = template.prompt_version?.value;
+        
+        if (savedPrompt) {
+          let version: number | null = null;
+          let status = "UNKNOWN";
           
-          if (versionMatch) {
+          // First try to get version from template metadata (most reliable)
+          if (typeof templatePromptVersion === "number") {
+            version = templatePromptVersion;
+          } else if (promptVersionDropdown) {
+            // Fallback: parse version from dropdown string like "v1 - DRAFT (Latest)"
+            const versionMatch = promptVersionDropdown.match(/v(\d+)/);
+            if (versionMatch) {
+              version = parseInt(versionMatch[1], 10);
+            }
+          }
+          
+          // Get status from template metadata or parse from dropdown
+          if (versionStatus) {
+            status = versionStatus.toUpperCase();
+          } else if (promptVersionDropdown) {
+            // Parse status from dropdown string
+            if (promptVersionDropdown.includes("DRAFT")) {
+              status = "DRAFT";
+            } else if (promptVersionDropdown.includes("PENDING")) {
+              status = "PENDING_APPROVAL";
+            } else if (promptVersionDropdown.includes("PUBLISHED")) {
+              status = "PUBLISHED";
+            } else if (promptVersionDropdown.includes("REJECTED")) {
+              status = "REJECTED";
+            }
+          }
+          
+          if (version !== null) {
             promptNodes.push({
               promptId: savedPrompt,
               promptName: savedPrompt,
-              version: parseInt(versionMatch[1], 10),
-              status: statusMatch ? statusMatch[1].toUpperCase() : "PUBLISHED",
+              version,
+              status,
             });
           }
         }
@@ -296,22 +331,31 @@ export function getPromptTemplateNodes(nodes: AllNodeType[]): {
 }
 
 /**
- * Validate: All prompt templates must be published (not Draft or Pending)
+ * Validate: All Genesis Prompt Template nodes must use published prompt versions.
+ * 
+ * This validation only runs if there are Genesis Prompt Template components in the flow.
+ * It checks each prompt template node and verifies the selected version is PUBLISHED.
  */
 function validatePromptTemplatesPublished(nodes: AllNodeType[]): string[] {
   const errors: string[] = [];
   
+  // Get all Genesis Prompt Template nodes from the flow
   const promptNodes = getPromptTemplateNodes(nodes);
-  const unpublishedPrompts = promptNodes.filter(
-    (p) => p.status === "DRAFT" || p.status === "PENDING" || p.status === "PENDING_APPROVAL"
-  );
+  
+  // Only validate if there are Genesis Prompt Template components in the flow
+  if (promptNodes.length === 0) {
+    return errors;
+  }
+
+  // Check each prompt node - status must be PUBLISHED
+  const unpublishedPrompts = promptNodes.filter((p) => p.status !== "PUBLISHED");
 
   if (unpublishedPrompts.length > 0) {
     const promptList = unpublishedPrompts
-      .map((p) => `"${p.promptName}" (v${p.version} - ${p.status})`)
+      .map((p) => `"${p.promptName}" (v${p.version})`)
       .join(", ");
     errors.push(
-      `The following prompt templates are not published and must be approved before submitting the workflow: ${promptList}`
+      `Prompt templates used in this agent must be published. The following are not published: ${promptList}`
     );
   }
 
