@@ -67,8 +67,9 @@ async def handle_global_call_tool(name: str, arguments: dict) -> list[types.Text
 # response to end streams gracefully.
 ########################################################
 class ResponseNoOp(Response):
-    async def __call__(self, scope, receive, send) -> None: # noqa: ARG002
+    async def __call__(self, scope, receive, send) -> None:  # noqa: ARG002
         return
+
 
 def find_validation_error(exc):
     """Searches for a pydantic.ValidationError in the exception chain."""
@@ -245,6 +246,8 @@ streamable_http_route_config = {
     "methods": ["GET", "POST", "DELETE"],
     "response_class": ResponseNoOp,
 }
+
+
 @router.api_route("/streamable", **streamable_http_route_config)
 @router.api_route("/streamable/", **streamable_http_route_config)
 async def handle_streamable_http(request: Request, current_user: CurrentActiveMCPUser):

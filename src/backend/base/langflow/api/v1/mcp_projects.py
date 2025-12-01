@@ -206,7 +206,6 @@ def get_project_sse(project_id: UUID | None) -> SseServerTransport:
     return project_sse_transports[project_id_str]
 
 
-
 async def _build_project_tools_response(
     project_id: UUID,
     current_user: CurrentActiveMCPUser,
@@ -306,7 +305,7 @@ async def im_alive(project_id: str):  # noqa: ARG001
 
 
 @router.head("/{project_id}/streamable", include_in_schema=False)
-async def streamable_health(project_id: UUID): # noqa: ARG001
+async def streamable_health(project_id: UUID):  # noqa: ARG001
     return Response()
 
 
@@ -331,9 +330,7 @@ async def _dispatch_project_streamable_http(
     except HTTPException:
         raise
     except Exception as exc:
-        await logger.aexception(
-            f"Error handling Streamable HTTP request for project {project_id}: {exc!s}"
-        )
+        await logger.aexception(f"Error handling Streamable HTTP request for project {project_id}: {exc!s}")
         raise HTTPException(status_code=500, detail="Internal server error in project MCP transport") from exc
     finally:
         current_request_variables_ctx.reset(request_vars_token)
@@ -419,8 +416,11 @@ async def _handle_project_sse_messages(
         current_project_ctx.reset(project_token)
         current_request_variables_ctx.reset(req_vars_token)
 
+
 # legacy SSE transport
 project_messages_methods = ["POST", "DELETE"]
+
+
 @router.api_route("/{project_id}", methods=project_messages_methods)
 @router.api_route("/{project_id}/", methods=project_messages_methods)
 async def handle_project_messages(
@@ -431,8 +431,11 @@ async def handle_project_messages(
     """Handle POST/DELETE messages for a project-specific MCP server."""
     return await _handle_project_sse_messages(project_id, request, current_user)
 
+
 # Streamable HTTP transport
 streamable_http_methods = ["GET", "POST", "DELETE"]
+
+
 @router.api_route("/{project_id}/streamable", methods=streamable_http_methods)
 @router.api_route("/{project_id}/streamable/", methods=streamable_http_methods)
 async def handle_project_streamable_http(
@@ -1191,10 +1194,10 @@ class ProjectMCPServer:
         # lifecyle (via .run(), which can only be called once),
         # we use the lock to prevent race conditions on concurrent requests.
         self._manager_lock = asyncio.Lock()
-        self._manager_started = False # whether or not the session manager is running
-        self._runner_task: asyncio.Task | None = None # session manager run()
-        self._shutdown_event: asyncio.Event | None = None # session manager run ended
-        self._started_event: asyncio.Event | None = None # session manager run started
+        self._manager_started = False  # whether or not the session manager is running
+        self._runner_task: asyncio.Task | None = None  # session manager run()
+        self._shutdown_event: asyncio.Event | None = None  # session manager run ended
+        self._started_event: asyncio.Event | None = None  # session manager run started
 
         # Register handlers that filter by project
         @self.server.list_tools()
@@ -1241,9 +1244,7 @@ class ProjectMCPServer:
             self._shutdown_event = asyncio.Event()
             self._started_event = asyncio.Event()
             tg = get_project_task_group_tg()
-            self._runner_task = tg.create_task(
-                self._run_session_manager()
-            )
+            self._runner_task = tg.create_task(self._run_session_manager())
             self._manager_started = True
             await logger.adebug("Streamable HTTP manager started for project %s", self.project_id)
             await self._started_event.wait()
@@ -1257,11 +1258,9 @@ class ProjectMCPServer:
         except asyncio.CancelledError:
             raise
         except Exception as exc:  # noqa: BLE001
-            await logger.aexception(
-                f"Project {self.project_id} Streamable HTTP manager crashed: {exc}"
-            )
+            await logger.aexception(f"Project {self.project_id} Streamable HTTP manager crashed: {exc}")
         finally:
-            self._started_event.set() # prevent hanging if run() fails
+            self._started_event.set()  # prevent hanging if run() fails
             self._runner_task = None
             self._shutdown_event = None
             self._started_event = None
@@ -1276,6 +1275,7 @@ class ProjectMCPServer:
 
 # Cache of project MCP servers
 project_mcp_servers: dict[str, ProjectMCPServer] = {}
+
 
 # Due to the lazy initialization of the project MCP servers
 # We implement a global task group (asyncio) manager for
