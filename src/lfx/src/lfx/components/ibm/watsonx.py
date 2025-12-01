@@ -6,6 +6,7 @@ from langchain_ibm import ChatWatsonx
 from pydantic.v1 import SecretStr
 
 from lfx.base.models.model import LCModelComponent
+from lfx.base.models.watsonx_constants import IBM_WATSONX_URLS
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput
@@ -21,14 +22,7 @@ class WatsonxAIComponent(LCModelComponent):
     beta = False
 
     _default_models = ["ibm/granite-3-2b-instruct", "ibm/granite-3-8b-instruct", "ibm/granite-13b-instruct-v2"]
-    _urls = [
-        "https://us-south.ml.cloud.ibm.com",
-        "https://eu-de.ml.cloud.ibm.com",
-        "https://eu-gb.ml.cloud.ibm.com",
-        "https://au-syd.ml.cloud.ibm.com",
-        "https://jp-tok.ml.cloud.ibm.com",
-        "https://ca-tor.ml.cloud.ibm.com",
-    ]
+    _urls = IBM_WATSONX_URLS
     inputs = [
         *LCModelComponent.get_base_inputs(),
         DropdownInput(
@@ -39,6 +33,7 @@ class WatsonxAIComponent(LCModelComponent):
             options=_urls,
             real_time_refresh=True,
             required=True,
+            combobox=True,
         ),
         StrInput(
             name="project_id",
@@ -199,6 +194,7 @@ class WatsonxAIComponent(LCModelComponent):
 
         return ChatWatsonx(
             apikey=SecretStr(self.api_key).get_secret_value(),
+            username="adam.aghili@ibm.com",
             url=self.base_url,
             project_id=self.project_id,
             model_id=self.model_name,

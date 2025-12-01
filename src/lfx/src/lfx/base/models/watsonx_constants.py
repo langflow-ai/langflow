@@ -26,6 +26,7 @@ WATSONX_DEFAULT_EMBEDDING_MODELS = [
 
 WATSONX_EMBEDDING_MODEL_NAMES = [metadata["name"] for metadata in WATSONX_DEFAULT_EMBEDDING_MODELS]
 
+IBM_WATSONX_DEFAULT_MODELS = ["ibm/granite-3-2b-instruct", "ibm/granite-3-8b-instruct", "ibm/granite-13b-instruct-v2"]
 IBM_WATSONX_URLS = [
     "https://us-south.ml.cloud.ibm.com",
     "https://eu-de.ml.cloud.ibm.com",

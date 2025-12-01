@@ -9,6 +9,7 @@ from langchain_openai import ChatOpenAI
 from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS
 from lfx.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS
 from lfx.base.models.openai_constants import OPENAI_CHAT_MODEL_NAMES, OPENAI_REASONING_MODEL_NAMES
+from lfx.base.models.watsonx_constants import IBM_WATSONX_URLS
 from lfx.components.models_and_agents.language_model import IBM_WATSONX_DEFAULT_MODELS, LanguageModelComponent
 
 from tests.base import ComponentTestBaseWithoutClient
@@ -261,7 +262,7 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
     async def test_build_model_ibm_watsonx_missing_base_url(self, component_class, default_kwargs):
         component = component_class(**default_kwargs)
         component.provider = "IBM watsonx.ai"
-        component.api_key = "test-key"
+        component.api_key = "test-key"  # pragma: allowlist secret
         component.base_url_ibm_watsonx = None
 
         expected_error = r"IBM watsonx API Endpoint is required when using IBM watsonx\.ai provider"
@@ -271,8 +272,8 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
     async def test_build_model_ibm_watsonx_missing_project_id(self, component_class, default_kwargs):
         component = component_class(**default_kwargs)
         component.provider = "IBM watsonx.ai"
-        component.api_key = "test-key"
-        component.base_url_ibm_watsonx = "https://us-south.ml.cloud.ibm.com"
+        component.api_key = "test-key"  # pragma: allowlist secret
+        component.base_url_ibm_watsonx = IBM_WATSONX_URLS[0]
         component.project_id = None
 
         with pytest.raises(ValueError, match=r"IBM watsonx Project ID is required when using IBM watsonx\.ai provider"):
