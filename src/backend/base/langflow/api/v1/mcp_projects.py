@@ -1251,21 +1251,22 @@ class ProjectMCPServer:
             if self._manager_started:
                 return
 
-            shutdown_event, started_event = self.create_events()
-            stack = get_project_task_group_tg()
-            self._runner_task = stack.create_task(
-                self._run_session_manager(shutdown_event, started_event)
+            self._shutdown_event = asyncio.Event()
+            self._started_event = asyncio.Event()
+            tg = get_project_task_group_tg()
+            self._runner_task = tg.create_task(
+                self._run_session_manager()
             )
             self._manager_started = True
             await logger.adebug("Streamable HTTP manager started for project %s", self.project_id)
-            await started_event.wait()
+            await self._started_event.wait()
 
-    async def _run_session_manager(self, shutdown_event: asyncio.Event, started_event: asyncio.Event) -> None:
+    async def _run_session_manager(self) -> None:
         """Own the lifecycle of the project's Streamable HTTP session manager."""
         try:
             async with self.session_manager.run():
-                started_event.set()
-                await shutdown_event.wait()
+                self._started_event.set()
+                await self._shutdown_event.wait()
         except asyncio.CancelledError:
             raise
         except Exception as exc:  # noqa: BLE001
@@ -1273,12 +1274,10 @@ class ProjectMCPServer:
                 f"Project {self.project_id} Streamable HTTP manager crashed: {exc}"
             )
         finally:
-            started_event.set()
+            self._started_event.set() # prevent hanging if run() fails
             self._runner_task = None
-            if self._shutdown_event is shutdown_event:
-                self._shutdown_event = None
-            if self._started_event is started_event:
-                self._started_event = None
+            self._shutdown_event = None
+            self._started_event = None
             self._manager_started = False
             await logger.adebug("Streamable HTTP manager stopped for project %s", self.project_id)
 
@@ -1287,13 +1286,6 @@ class ProjectMCPServer:
         if self._shutdown_event and not self._shutdown_event.is_set():
             self._shutdown_event.set()
 
-    def create_events(self) -> tuple[asyncio.Event, asyncio.Event]:
-        """Create the shutdown and started events."""
-        shutdown_event = asyncio.Event()
-        started_event = asyncio.Event()
-        self._shutdown_event = shutdown_event
-        self._started_event = started_event
-        return shutdown_event, started_event
 
 # Cache of project MCP servers
 project_mcp_servers: dict[str, ProjectMCPServer] = {}
@@ -1359,6 +1351,7 @@ class ProjectTaskGroup:
         """Get the shared project task group."""
         return self._task_group
 
+
 _project_task_group = ProjectTaskGroup()
 
 
@@ -1366,9 +1359,11 @@ async def start_project_task_group() -> None:
     """Initialize the shared project task group."""
     await _project_task_group.start()
 
+
 def get_project_task_group_tg() -> asyncio.TaskGroup:
     """Get the shared project task group."""
     return _project_task_group.get_task_group()
+
 
 async def stop_project_task_group() -> None:
     """Close the shared project task group."""
