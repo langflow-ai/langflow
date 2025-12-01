@@ -1,6 +1,8 @@
 import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
 import { ENABLE_VOICE_ASSISTANT } from "@/customization/feature-flags";
 import type { FilePreviewType } from "@/types/components";
+import type { AudioRecordingState } from "../hooks/use-audio-recording";
+import AudioButton from "./audio-button";
 import ButtonSendWrapper from "./button-send-wrapper";
 import FilePreview from "./file-preview";
 import TextAreaWrapper from "./text-area-wrapper";
@@ -21,6 +23,10 @@ interface InputWrapperProps {
   handleButtonClick: () => void;
   currentFlowId: string;
   playgroundPage: boolean;
+  audioRecordingState: AudioRecordingState;
+  onStartRecording: () => void;
+  onStopRecording: () => void;
+  isAudioSupported: boolean;
 }
 
 const InputWrapper = ({
@@ -38,6 +44,10 @@ const InputWrapper = ({
   handleButtonClick,
   currentFlowId,
   playgroundPage,
+  audioRecordingState,
+  onStartRecording,
+  onStopRecording,
+  isAudioSupported,
 }: InputWrapperProps) => {
   const classNameFilePreview = `flex w-full items-center gap-2 py-2 overflow-auto`;
 
@@ -114,7 +124,14 @@ const InputWrapper = ({
             />
           </div>
 
-          <div className="flex-shrink-0">
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <AudioButton
+              isBuilding={isBuilding}
+              recordingState={audioRecordingState}
+              onStartRecording={onStartRecording}
+              onStopRecording={onStopRecording}
+              isSupported={isAudioSupported}
+            />
             <ButtonSendWrapper
               send={send}
               noInput={noInput}

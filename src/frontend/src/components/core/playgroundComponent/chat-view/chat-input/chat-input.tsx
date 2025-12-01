@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import ShortUniqueId from "short-unique-id";
 import {
   ALLOWED_IMAGE_INPUT_EXTENSIONS,
@@ -15,6 +15,7 @@ import { useUtilityStore } from "@/stores/utilityStore";
 import type { ChatInputType, FilePreviewType } from "@/types/components";
 import InputWrapper from "./components/input-wrapper";
 import NoInputView from "./components/no-input";
+import { useAudioRecording } from "./hooks/use-audio-recording";
 import useAutoResizeTextArea from "./hooks/use-auto-resize-text-area";
 
 interface ChatInputProps
@@ -47,6 +48,40 @@ export default function ChatInput({
   useAutoResizeTextArea(chatValue, inputRef);
 
   const { mutate } = usePostUploadFile();
+
+  // Audio transcription handler - appends transcribed text to the chat input
+  const handleTranscriptionComplete = useCallback(
+    (transcribedText: string) => {
+      // Append to existing chat value with a space if there's existing text
+      const currentValue = useUtilityStore.getState().chatValueStore;
+      setChatValueStore(
+        currentValue ? `${currentValue} ${transcribedText}` : transcribedText,
+      );
+      // Focus the input after transcription
+      inputRef.current?.focus();
+    },
+    [setChatValueStore],
+  );
+
+  const handleAudioError = useCallback(
+    (error: string) => {
+      setErrorData({
+        title: "Voice Input Error",
+        list: [error],
+      });
+    },
+    [setErrorData],
+  );
+
+  const {
+    state: audioRecordingState,
+    startRecording,
+    stopRecording,
+    isSupported: isAudioSupported,
+  } = useAudioRecording({
+    onTranscriptionComplete: handleTranscriptionComplete,
+    onError: handleAudioError,
+  });
 
   const handleFileChange = async (
     event: React.ChangeEvent<HTMLInputElement> | ClipboardEvent,
@@ -215,6 +250,10 @@ export default function ChatInput({
           handleButtonClick={handleButtonClick}
           currentFlowId={currentFlowId}
           playgroundPage={!!playgroundPage}
+          audioRecordingState={audioRecordingState}
+          onStartRecording={startRecording}
+          onStopRecording={stopRecording}
+          isAudioSupported={isAudioSupported}
         />
       </motion.div>
     </AnimatePresence>
