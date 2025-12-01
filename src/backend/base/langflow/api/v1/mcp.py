@@ -68,7 +68,6 @@ async def handle_global_call_tool(name: str, arguments: dict) -> list[types.Text
 ########################################################
 class ResponseNoOp(Response):
     async def __call__(self, scope, receive, send) -> None: # noqa: ARG002
-        # connect_sse already produced the ASGI response; nothing left to send.
         return
 
 def find_validation_error(exc):
