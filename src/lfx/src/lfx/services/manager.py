@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
 from lfx.services.schema import ServiceType
+from lfx.utils.concurrency import KeyedMemoryLockManager
 
 if TYPE_CHECKING:
     from lfx.services.base import Service
@@ -31,6 +32,7 @@ class ServiceManager:
         self.services: dict[str, Service] = {}
         self.factories: dict[str, ServiceFactory] = {}
         self._lock = threading.RLock()
+        self.keyed_lock = KeyedMemoryLockManager()
         self.factory_registered = False
         from lfx.services.settings.factory import SettingsServiceFactory
 
@@ -65,7 +67,7 @@ class ServiceManager:
 
     def get(self, service_name: ServiceType, default: ServiceFactory | None = None) -> Service:
         """Get (or create) a service by its name."""
-        with self._lock:
+        with self.keyed_lock.lock(service_name):
             if service_name not in self.services:
                 self._create_service(service_name, default)
             return self.services[service_name]
@@ -149,7 +151,7 @@ class ServiceManager:
 
                 # Find all classes in the module that are subclasses of ServiceFactory
                 for _, obj in inspect.getmembers(module, inspect.isclass):
-                    if issubclass(obj, ServiceFactory) and obj is not ServiceFactory:
+                    if isinstance(obj, type) and issubclass(obj, ServiceFactory) and obj is not ServiceFactory:
                         factories.append(obj())
                         break
 
@@ -161,12 +163,23 @@ class ServiceManager:
         return factories
 
 
-# Global service manager instance
-_service_manager = None
+# Global variables for lazy initialization
+_service_manager: ServiceManager | None = None
+_service_manager_lock = threading.Lock()
 
 
-def get_service_manager():
+def get_service_manager() -> ServiceManager:
+    """Get or create the service manager instance using lazy initialization.
+
+    This function ensures thread-safe lazy initialization of the service manager,
+    preventing automatic service creation during module import.
+
+    Returns:
+        ServiceManager: The singleton service manager instance.
+    """
     global _service_manager  # noqa: PLW0603
     if _service_manager is None:
-        _service_manager = ServiceManager()
+        with _service_manager_lock:
+            if _service_manager is None:
+                _service_manager = ServiceManager()
     return _service_manager

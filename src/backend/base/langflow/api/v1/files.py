@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Annotated
 from uuid import UUID
 
+import anyio
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from lfx.services.settings.service import SettingsService
@@ -129,34 +130,69 @@ async def download_image(file_name: str, flow_id: UUID):
 async def download_profile_picture(
     folder_name: str,
     file_name: str,
+    settings_service: Annotated[SettingsService, Depends(get_settings_service)],
 ):
+    """Download profile picture from local filesystem.
+
+    Profile pictures are first looked up in config_dir/profile_pictures/,
+    then fallback to the package's bundled profile_pictures directory.
+    """
     try:
-        storage_service = get_storage_service()
         extension = file_name.split(".")[-1]
-        config_dir = storage_service.settings_service.settings.config_dir
+        config_dir = settings_service.settings.config_dir
         config_path = Path(config_dir)  # type: ignore[arg-type]
-        folder_path = config_path / "profile_pictures" / folder_name
+        file_path = config_path / "profile_pictures" / folder_name / file_name
+
+        # Fallback to package bundled profile pictures if not found in config_dir
+        if not file_path.exists():
+            from langflow.initial_setup import setup
+
+            package_path = Path(setup.__file__).parent / "profile_pictures" / folder_name / file_name
+            if package_path.exists():
+                file_path = package_path
+            else:
+                raise HTTPException(status_code=404, detail=f"Profile picture {folder_name}/{file_name} not found")
+
         content_type = build_content_type_from_extension(extension)
-        file_content = await storage_service.get_file(flow_id=folder_path, file_name=file_name)  # type: ignore[arg-type]
+        # Read file directly from local filesystem using async file operations
+        file_content = await anyio.Path(file_path).read_bytes()
         return StreamingResponse(BytesIO(file_content), media_type=content_type)
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/profile_pictures/list")
-async def list_profile_pictures():
+async def list_profile_pictures(
+    settings_service: Annotated[SettingsService, Depends(get_settings_service)],
+):
+    """List profile pictures from local filesystem.
+
+    Profile pictures are first looked up in config_dir/profile_pictures/,
+    then fallback to the package's bundled profile_pictures directory.
+    """
     try:
-        storage_service = get_storage_service()
-        config_dir = storage_service.settings_service.settings.config_dir
+        config_dir = settings_service.settings.config_dir
         config_path = Path(config_dir)  # type: ignore[arg-type]
 
-        people_path = config_path / "profile_pictures/People"
-        space_path = config_path / "profile_pictures/Space"
+        people_path = config_path / "profile_pictures" / "People"
+        space_path = config_path / "profile_pictures" / "Space"
 
-        people = await storage_service.list_files(flow_id=people_path)  # type: ignore[arg-type]
-        space = await storage_service.list_files(flow_id=space_path)  # type: ignore[arg-type]
+        # List files directly from local filesystem
+        people = [f.name for f in people_path.iterdir() if f.is_file()] if people_path.exists() else []
+        space = [f.name for f in space_path.iterdir() if f.is_file()] if space_path.exists() else []
 
+        # Fallback to package bundled profile pictures if config_dir is empty
+        if not people and not space:
+            from langflow.initial_setup import setup
+
+            package_base = Path(setup.__file__).parent / "profile_pictures"
+            people_path = package_base / "People"
+            space_path = package_base / "Space"
+            people = [f.name for f in people_path.iterdir() if f.is_file()] if people_path.exists() else []
+            space = [f.name for f in space_path.iterdir() if f.is_file()] if space_path.exists() else []
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
