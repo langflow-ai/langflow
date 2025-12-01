@@ -192,31 +192,6 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
                 {!view && !isFullscreen && (
                   <FlowSidebarComponent isLoading={isLoading} />
                 )}
-                {/* Will be reverted before merging this PR - Original main layout */}
-                {/* <main className="flex w-full overflow-hidden relative">
-                  {!isFullscreen && (
-                    <div className="h-full w-full">
-                      <Page setIsLoading={setIsLoading} />
-                    </div>
-                  )}
-                  {hasIO && (
-                    <SlidingContainer
-                      isOpen={isSlidingContainerOpen}
-                      width={slidingContainerWidth}
-                      onWidthChange={setSlidingContainerWidth}
-                      resizable={!isFullscreen}
-                      isFullscreen={isFullscreen}
-                      className={
-                        !isFullscreen
-                          ? "absolute right-0 top-0 bottom-0 z-40"
-                          : ""
-                      }
-                    >
-                      <FlowPageSlidingContainerContent />
-                    </SlidingContainer>
-                  )}
-                </main> */}
-                {/* Will be reverted before merging this PR - New side-by-side layout */}
                 <main className="flex w-full overflow-hidden">
                   {!isFullscreen && (
                     <div
