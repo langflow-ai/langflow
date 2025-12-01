@@ -426,6 +426,48 @@ async def _handle_project_sse_messages(
 project_messages_methods = ["POST", "DELETE"]
 
 
+def _is_streamable_http_request(request: Request) -> bool:
+    """Detect if a request is for Streamable HTTP transport.
+    
+    Streamable HTTP requests typically have:
+    - A session_id header (for stateless mode) - x-mcp-session-id or session-id
+    - Content-Type: application/json (for POST requests)
+    - Accept header that includes application/json
+    
+    SSE requests typically have:
+    - Accept: text/event-stream header (often exclusive or primary)
+    - No session_id header
+    """
+    # Check for session_id header (Streamable HTTP uses this for stateless mode)
+    if request.headers.get("x-mcp-session-id") or request.headers.get("session-id"):
+        return True
+    
+    # Check Content-Type for POST requests (Streamable HTTP uses application/json)
+    content_type = request.headers.get("content-type", "").lower()
+    if request.method == "POST" and "application/json" in content_type:
+        # If it's a POST with JSON content, check Accept header
+        accept_header = request.headers.get("accept", "").lower()
+        # If Accept includes application/json (even if it also includes text/event-stream),
+        # prefer Streamable HTTP for POST requests with JSON body
+        if "application/json" in accept_header:
+            return True
+    
+    # For GET requests, check Accept header more carefully
+    if request.method == "GET":
+        accept_header = request.headers.get("accept", "").lower()
+        # If it accepts application/json but text/event-stream is not the primary type,
+        # likely Streamable HTTP
+        if "application/json" in accept_header:
+            # If text/event-stream is listed first or is the only type, it's SSE
+            if accept_header.startswith("text/event-stream"):
+                return False
+            # Otherwise, prefer Streamable HTTP if application/json is present
+            return True
+    
+    # Default to SSE for backward compatibility
+    return False
+
+
 @router.api_route("/{project_id}", methods=project_messages_methods)
 @router.api_route("/{project_id}/", methods=project_messages_methods)
 async def handle_project_messages(
@@ -433,8 +475,16 @@ async def handle_project_messages(
     request: Request,
     current_user: Annotated[User, Depends(verify_project_auth_conditional)],
 ):
-    """Handle POST/DELETE messages for a project-specific MCP server."""
-    return await _handle_project_sse_messages(project_id, request, current_user)
+    """Handle POST/DELETE messages for a project-specific MCP server.
+    
+    This endpoint supports both Streamable HTTP and SSE transports.
+    It automatically detects the transport type and routes to the appropriate handler.
+    """
+    # Detect transport type and route accordingly
+    if _is_streamable_http_request(request):
+        return await _dispatch_project_streamable_http(project_id, request, current_user)
+    else:
+        return await _handle_project_sse_messages(project_id, request, current_user)
 
 
 # Streamable HTTP transport
