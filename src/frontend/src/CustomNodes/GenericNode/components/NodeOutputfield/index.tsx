@@ -38,7 +38,6 @@ import { nodeColorsName } from "../../../../utils/styleUtils";
 import HandleRenderComponent from "../handleRenderComponent";
 import OutputComponent from "../OutputComponent";
 import OutputModal from "../outputModal";
-import { SnowflakeIcon } from "@/icons/Snowflake";
 
 const _EyeIcon = memo(
   ({ hidden, className }: { hidden: boolean; className: string }) => (
@@ -49,6 +48,9 @@ const _EyeIcon = memo(
     />
   ),
 );
+const SnowflakeIcon = memo(() => (
+  <IconComponent className="!w-3 !h-3 text-ice" name="Snowflake" />
+));
 
 const InspectButton = memo(
   forwardRef(
@@ -427,7 +429,7 @@ function NodeOutputField({
                   errorOutput={errorOutput ?? false}
                   isToolMode={isToolMode}
                   title={title}
-                  onClick={() => {}}
+                  onClick={() => { }}
                   id={data?.type}
                 />
               </OutputModal>
