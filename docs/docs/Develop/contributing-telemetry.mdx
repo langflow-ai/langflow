@@ -50,6 +50,16 @@ This telemetry event is sent once when the telemetry service starts.
 - **BackendOnly**: Boolean indicating whether Langflow is running in backend-only mode, useful for understanding deployment configurations.
 - **Desktop**: Indicates whether Langflow is running in desktop mode (Langflow Desktop), helping to understand usage patterns across different deployment types.
 
+### Email
+
+This telemetry event is sent to track registered email addresses. The event is triggered in two cases:
+
+1. Every time a new email address is registered via the POST `/api/v2/registration/` endpoint.
+2. Once at **Langflow Desktop** startup, if an email address has been previously registered.
+
+- **Email**: The registered email address, which helps track user registrations and understand the user base.
+- **ClientType**: Indicates the client type, which can be "desktop" or "oss".
+
 ### Playground
 
 This telemetry event monitors performance and usage patterns in the **Playground** environment.
