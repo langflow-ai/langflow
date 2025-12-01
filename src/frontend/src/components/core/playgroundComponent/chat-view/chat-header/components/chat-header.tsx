@@ -97,25 +97,11 @@ export function ChatHeader({
         </div>
       )}
       {isFullscreen && (
-        <div className="flex items-center gap-2">
-          <SessionMoreMenu
-            onRename={handleRename}
-            onMessageLogs={handleMessageLogs}
-            onDelete={handleDelete}
-            side="bottom"
-            align="end"
-            sideOffset={4}
-            contentClassName="z-[100] [&>div.p-1]:!h-auto [&>div.p-1]:!min-h-0"
-            isVisible={true}
-            tooltipContent="More options"
-            tooltipSide="left"
-          />
-          <ChatHeaderActions
-            isFullscreen={isFullscreen}
-            onToggleFullscreen={onToggleFullscreen}
-            onClose={onClose}
-          />
-        </div>
+        <ChatHeaderActions
+          isFullscreen={isFullscreen}
+          onToggleFullscreen={onToggleFullscreen}
+          onClose={onClose}
+        />
       )}
       {currentSessionId && (
         <SessionLogsModal
