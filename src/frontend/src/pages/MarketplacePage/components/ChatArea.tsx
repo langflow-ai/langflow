@@ -218,19 +218,17 @@ export function ChatArea({
                 </div>
                 <div className="flex items-center gap-1 ml-1">
                   <Button
-                    variant="ghost"
-                    size="sm"
+                    variant="link"
                     onClick={() => onPreviewFile(file)}
-                    className="h-6 w-6 p-0 text-muted-foreground hover:text-primary flex-shrink-0"
+                    className="h-6 w-6 p-0 !text-primary-font hover:text-secondary flex-shrink-0"
                     title="Preview file"
                   >
                     <Eye className="h-3 w-3" />
                   </Button>
                   <Button
-                    variant="ghost"
-                    size="sm"
+                    variant="link"
                     onClick={() => onRemoveSelectedFile(file.componentId)}
-                    className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive flex-shrink-0"
+                    className="h-6 w-6 p-0 !text-primary-font hover:text-error flex-shrink-0"
                     title="Remove file"
                   >
                     <X className="h-3 w-3" />
@@ -280,10 +278,11 @@ export function ChatArea({
                       : false) ||
                       isLoading)
                   }
-                  className={`w-8 h-8 rounded-md transition-colors ${streamingMessageId
-                    ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    : "bg-primary text-primary-foreground hover:bg-primary/90"
-                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                  className={`w-8 h-8 rounded-md transition-colors ${
+                    streamingMessageId
+                      ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      : "bg-primary text-primary-foreground hover:bg-primary/90"
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
                   aria-label={
                     streamingMessageId ? "Stop generation" : "Submit message"
                   }
@@ -318,10 +317,11 @@ export function ChatArea({
                 <button
                   onClick={streamingMessageId ? onStop : onSend}
                   disabled={!streamingMessageId && isLoading}
-                  className={`px-6 py-2.5 rounded-md transition-colors ${streamingMessageId
-                    ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    : "bg-primary text-primary-foreground hover:bg-primary/90"
-                    } disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2`}
+                  className={`px-6 py-2.5 rounded-md transition-colors ${
+                    streamingMessageId
+                      ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      : "bg-primary text-primary-foreground hover:bg-primary/90"
+                  } disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2`}
                   aria-label={
                     streamingMessageId ? "Stop generation" : "Process file"
                   }

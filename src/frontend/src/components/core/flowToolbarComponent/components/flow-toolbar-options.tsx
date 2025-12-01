@@ -30,7 +30,7 @@ import { USER_ROLES } from "@/types/auth";
 import SubmitForApprovalModal from "@/modals/submitForApprovalModal";
 import PublishFlowModal from "@/modals/publishFlowModal";
 import { CheckCircle } from "lucide-react";
-import { CrossCircledIcon } from "@radix-ui/react-icons";
+import { UploadIcon } from "@radix-ui/react-icons";
 
 export default function FlowToolbarOptions() {
   const navigate = useNavigate();
@@ -114,7 +114,8 @@ export default function FlowToolbarOptions() {
       latestStatus === "Unpublished");
 
   // Cancel Submission button - Show for non-Marketplace Admin when Submitted
-  const showCancelSubmission = !isMarketplaceAdmin && latestStatus === "Submitted";
+  const showCancelSubmission =
+    !isMarketplaceAdmin && latestStatus === "Submitted";
 
   // Handlers for reject
   const handleRejectClick = () => {
@@ -185,7 +186,7 @@ export default function FlowToolbarOptions() {
   return (
     <>
       <div className="flex items-center gap-1.5">
-        <div className="flex h-full w-full gap-1.5 rounded-sm transition-all">
+        <div className="flex h-fit w-full gap-1 rounded-sm transition-all">
           <PlaygroundButton
             hasIO={hasIO}
             open={open}
@@ -212,12 +213,12 @@ export default function FlowToolbarOptions() {
         {/* Publish to Marketplace Button */}
         {showPublishToMarketplace && (
           <Button
-            variant="default"
-            size="md"
-            className="!px-2.5 font-normal"
+            variant="link"
+            className="!px-1 font-medium text-menu hover:text-secondary !py-0 !h-auto !gap-1"
             onClick={() => setOpenPublishModal(true)}
             data-testid="publish-to-marketplace-button"
           >
+            <UploadIcon />
             Publish
           </Button>
         )}
@@ -226,10 +227,11 @@ export default function FlowToolbarOptions() {
         {showSubmitForReview && (
           <Button
             variant="link"
-            className="!px-1 font-medium text-menu hover:text-secondary"
+            className="!px-1 font-medium text-menu hover:text-secondary !py-0 !h-auto !gap-1"
             onClick={() => setOpenSubmitModal(true)}
             data-testid="submit-for-review-button"
           >
+            <UploadIcon />
             Submit for Review
           </Button>
         )}
@@ -238,7 +240,7 @@ export default function FlowToolbarOptions() {
         {showCancelSubmission && (
           <Button
             variant="link"
-            className="!px-1 font-medium text-menu hover:text-secondary"
+            className="!px-1 font-medium text-menu hover:text-secondary !py-0 !h-auto !gap-1"
             onClick={handleCancelSubmission}
             disabled={isCancelling}
             data-testid="cancel-submission-button"

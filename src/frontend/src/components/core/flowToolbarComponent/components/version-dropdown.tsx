@@ -93,14 +93,13 @@ export default function VersionDropdown({
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
-            variant="outline"
-            size="md"
-            className="gap-2"
+            variant="link"
+            className="!px-1 font-medium text-menu hover:text-secondary !py-0 !h-auto !gap-1"
             data-testid="version-dropdown-trigger"
           >
             <ForwardedIconComponent name="History" className="h-4 w-4" />
             Version {draftedVersion?.version || activeVersion?.version}
-            <ForwardedIconComponent name="ChevronDown" className="h-4 w-4" />
+            {/* <ForwardedIconComponent name="ChevronDown" className="h-4 w-4" /> */}
           </Button>
         </DropdownMenuTrigger>
 
