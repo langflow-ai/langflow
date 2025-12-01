@@ -120,8 +120,9 @@ test.describe("Flow Logs Modal", () => {
       // Open logs modal
       await page.getByText("Logs").click();
 
-      // Verify success status badge is displayed
-      await expect(page.locator("text=success").first()).toBeVisible();
+      // Verify success status badge is displayed (scoped to dialog)
+      const dialog = page.getByLabel("Dialog");
+      await expect(dialog.locator("text=success").first()).toBeVisible();
 
       // Close modal
       await page.keyboard.press("Escape");
@@ -202,8 +203,9 @@ class CustomComponent(Component):
       // Open logs modal
       await page.getByText("Logs").click();
 
-      // Verify error status badge is displayed
-      await expect(page.locator("text=error").first()).toBeVisible();
+      // Verify error status badge is displayed (scoped to dialog)
+      const dialog = page.getByLabel("Dialog");
+      await expect(dialog.locator("text=error").first()).toBeVisible();
 
       // Close modal
       await page.keyboard.press("Escape");

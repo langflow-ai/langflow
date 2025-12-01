@@ -117,6 +117,10 @@ async def log_transaction(
     This is a lightweight implementation that only logs if database service is available.
     """
     try:
+        # Guard against null source
+        if source is None:
+            return
+
         # Use langflow's settings service to ensure transactions_storage_enabled is checked correctly
         from langflow.services.deps import get_settings_service as langflow_get_settings_service
 
@@ -137,6 +141,7 @@ async def log_transaction(
             log_transaction as crud_log_transaction,
         )
         from langflow.services.database.models.transactions.model import TransactionBase
+        from langflow.services.deps import session_scope
 
         if isinstance(flow_id, str):
             flow_id = UUID(flow_id)
@@ -154,14 +159,7 @@ async def log_transaction(
             flow_id=flow_id,
         )
 
-        # Use langflow's database service, not lfx's NoopDatabaseService
-        from langflow.services.deps import get_db_service as langflow_get_db_service
-
-        db_service = langflow_get_db_service()
-        if db_service is None:
-            return
-
-        async with db_service._with_session() as session:  # noqa: SLF001
+        async with session_scope() as session:
             await crud_log_transaction(session, transaction)
 
     except Exception as exc:  # noqa: BLE001

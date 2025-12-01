@@ -57,7 +57,7 @@ export function createFlowLogsColumns(): ColDef[] {
       minWidth: 150,
       filter: false,
       sortable: false,
-      editable: true,
+      editable: false,
       cellClass: baseCellClass,
       valueGetter: (params) => formatObjectValue(params.data?.inputs),
     },
@@ -68,7 +68,7 @@ export function createFlowLogsColumns(): ColDef[] {
       minWidth: 150,
       filter: false,
       sortable: false,
-      editable: true,
+      editable: false,
       cellClass: baseCellClass,
       valueGetter: (params) => formatObjectValue(params.data?.outputs),
     },
@@ -81,8 +81,8 @@ export function createFlowLogsColumns(): ColDef[] {
       sortable: false,
       editable: false,
       cellClass: baseCellClass,
-      cellRenderer: (params: { value: string }) => {
-        const status = params.value;
+      cellRenderer: (params: { value: string | null | undefined }) => {
+        const status = params.value ?? "unknown";
         const isSuccess = status === "success";
         const isError = status === "error";
 
