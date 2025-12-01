@@ -342,7 +342,7 @@ async def check_flow_user_permission(
     Raises:
         HTTPException: If the user does not have permission to run the flow
     """
-    if flow and flow.user_id != api_key_user.id:
+    if flow and flow.user_id != api_key_user.id and not api_key_user.is_superuser:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to run this flow")
 
 
