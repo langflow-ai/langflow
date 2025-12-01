@@ -1,6 +1,7 @@
 from langchain.embeddings.base import Embeddings
 from langchain_community.vectorstores import Qdrant
 import os
+import json
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from typing import Any, Dict, List
@@ -17,6 +18,7 @@ from langflow.io import (
     Output,
 )
 from langflow.schema.data import Data
+from langflow.schema.message import Message
 from langflow.schema.dataframe import DataFrame
 import pandas as pd
 from loguru import logger
@@ -29,15 +31,15 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
     description = "Qdrant Vector Store with search capabilities"
     icon = "Qdrant"
 
-    # holds the last ingestion summary as a single-cell pandas DataFrame
-    last_ingestion_df: pd.DataFrame | None = None
+    # holds the last ingestion summary as JSON string
+    last_ingestion_json: str | None = None
 
     inputs = [
         StrInput(name="collection_name", display_name="Collection Name", required=True, real_time_refresh=True),
         MessageTextInput(name="document_hash", display_name="Document Hash", required=False, tool_mode=True),
         StrInput(name="host", display_name="Host", value="localhost", advanced=True),
-        IntInput(name="port", display_name="Port", value=443, advanced=True),
-        IntInput(name="grpc_port", display_name="gRPC Port", value=443, advanced=True),
+        IntInput(name="port", display_name="Port", value=6333, advanced=True),
+        IntInput(name="grpc_port", display_name="gRPC Port", value=6334, advanced=True),
         SecretStrInput(name="api_key", display_name="Qdrant API Key", required=False),
         StrInput(name="prefix", display_name="Prefix", advanced=True),
         IntInput(name="timeout", display_name="Timeout", advanced=True),
@@ -70,6 +72,13 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
             required=False,
             is_list=False,  # expect a single dict
             tool_mode=True
+        ),
+        BoolInput(
+            name="return_text_only",
+            display_name="Return Text Only",
+            info="If true, returns only the text column from search results as a DataFrame.",
+            value=False,
+            advanced=True,
         )
     ]
 
@@ -80,9 +89,9 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
             method="search_documents",
         ),
         Output(
-            display_name="Ingestion DataFrame",
-            name="ingestion_dataframe",
-            method="get_ingestion_dataframe",
+            display_name="Ingestion Result",
+            name="ingestion_result",
+            method="get_ingestion_result",
         ),
     ]
 
@@ -163,30 +172,38 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
         # Create Qdrant client
         client = QdrantClient(**server_kwargs)
 
-        # if doc already ingested, skip and return store; also set a single-cell DF
+        # if doc already ingested, skip and return store; also set JSON result
         logger.warning(f"ingestion - document with hash {self.document_hash} checking")
         if self.document_hash:
             if self._check_document_exists(client, self.document_hash):
                 logger.info(f"Skipping ingestion - document with hash {self.document_hash} already exists")
-                self.last_ingestion_df = pd.DataFrame({
-                    "result": [[{
-                        "status": "skipped",
-                        "reason": "document_exists",
-                        "file_hash": self.document_hash,
-                        "ingested_count": 0,
-                    }]]
-                })
+                result_data = {
+                    "status": "skipped",
+                    "reason": "document_exists",
+                    "file_hash": self.document_hash,
+                    "pages": []
+                }
+                self.last_ingestion_json = json.dumps(result_data, indent=2)
                 return Qdrant(embeddings=self.embedding, client=client, **qdrant_kwargs)
 
         # Prepare ingest inputs from parents
         self.ingest_data = self._prepare_ingest_data()
 
         documents: List[Any] = []
-        ingestion_rows: List[Dict[str, Any]] = []
+        page_info: List[Dict[str, Any]] = []
+        extracted_file_hash: str | None = None
 
         for _input in self.ingest_data or []:
             if isinstance(_input, Data):
+                # Extract file_hash from the Data object
+                if not extracted_file_hash:
+                    extracted_file_hash = _input.model_dump().get('data', {}).get('file_hash')
+                
                 result_pages = _input.model_dump().get('data', {}).get('result', [])
+                
+                # Fallback: try to extract file_hash from first page in result_pages
+                if not extracted_file_hash and result_pages and len(result_pages) > 0:
+                    extracted_file_hash = result_pages[0].get('file_hash')
                 if result_pages:
                     for page in result_pages:
                         page_data = Data(data=page)
@@ -196,15 +213,15 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
                         if not hasattr(doc, 'metadata') or doc.metadata is None:
                             doc.metadata = {}
 
-                        # attach file hash
-                        if self.document_hash:
-                            doc.metadata['file_hash'] = self.document_hash
+                        # attach file hash (prefer extracted, fallback to document_hash)
+                        file_hash_to_use = extracted_file_hash or self.document_hash
+                        if file_hash_to_use:
+                            doc.metadata['file_hash'] = file_hash_to_use
 
                         documents.append(doc)
 
-                        # collect ingestion row (no metadata saved here)
-                        ingestion_rows.append({
-                            "status": "prepared",
+                        # collect page info (no status here, just page details)
+                        page_info.append({
                             "page_number": doc.metadata.get("page_number"),
                             "content_len": len(getattr(doc, "page_content", "") or ""),
                         })
@@ -212,11 +229,11 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
                     doc = _input.to_lc_document()
                     if not hasattr(doc, 'metadata') or doc.metadata is None:
                         doc.metadata = {}
-                    if self.document_hash:
-                        doc.metadata['file_hash'] = self.document_hash
+                    file_hash_to_use = extracted_file_hash or self.document_hash
+                    if file_hash_to_use:
+                        doc.metadata['file_hash'] = file_hash_to_use
                     documents.append(doc)
-                    ingestion_rows.append({
-                        "status": "prepared",
+                    page_info.append({
                         "page_number": doc.metadata.get("page_number"),
                         "content_len": len(getattr(doc, "page_content", "") or ""),
                     })
@@ -224,17 +241,20 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
                 # Assume already an LC document-like
                 if not hasattr(_input, 'metadata') or _input.metadata is None:
                     _input.metadata = {}
-                if self.document_hash:
-                    _input.metadata['file_hash'] = self.document_hash
+                file_hash_to_use = extracted_file_hash or self.document_hash
+                if file_hash_to_use:
+                    _input.metadata['file_hash'] = file_hash_to_use
                 documents.append(_input)
-                ingestion_rows.append({
-                    "status": "prepared",
+                page_info.append({
                     "page_number": getattr(_input, "metadata", {}).get("page_number"),
                     "content_len": len(getattr(_input, "page_content", "") or ""),
                 })
 
         if not isinstance(self.embedding, Embeddings):
             raise TypeError("Invalid embedding object")
+
+        # Use extracted file hash if available, otherwise fall back to document_hash
+        final_file_hash = extracted_file_hash or self.document_hash
 
         if documents:
             # INGESTS into Qdrant
@@ -244,44 +264,41 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
                 **qdrant_kwargs,
                 **server_kwargs
             )
-            # mark rows as ingested
-            for row in ingestion_rows:
-                row["status"] = "ingested"
 
-            # single-cell DataFrame under 'result'
-            self.last_ingestion_df = pd.DataFrame({
-                "result": [ingestion_rows if ingestion_rows else [{
-                    "status": "ingested",
-                    "page_number": None,
-                    "content_len": None
-                }]]
-            })
+            # Build result with status at outer level
+            result_data = {
+                "status": "ingested",
+                "file_hash": final_file_hash,
+                "pages": page_info
+            }
+            
+            # Store as JSON string
+            self.last_ingestion_json = json.dumps(result_data, indent=2)
         else:
             # no docs prepared
             qdrant = Qdrant(embeddings=self.embedding, client=client, **qdrant_kwargs)
-            self.last_ingestion_df = pd.DataFrame({
-                "result": [[{
-                    "status": "no_input",
-                    "reason": "no_documents_prepared",
-                    "file_hash": self.document_hash,
-                    "ingested_count": 0,
-                }]]
-            })
+            result_data = {
+                "status": "no_input",
+                "reason": "no_documents_prepared",
+                "file_hash": final_file_hash,
+                "pages": []
+            }
+            self.last_ingestion_json = json.dumps(result_data, indent=2)
 
         return qdrant
 
-    def get_ingestion_dataframe(self) -> DataFrame:
+    def get_ingestion_result(self) -> Message:
         """
-        Output #2: return a DataFrame (single row, single 'result' cell) with the last ingestion summary.
+        Output #2: return a JSON string with the last ingestion summary.
         """
-        if self.last_ingestion_df is None:
-            # Force a build to populate DF if not already run
+        if self.last_ingestion_json is None:
+            # Force a build to populate result if not already run
             _ = self.build_vector_store()
-        return DataFrame(self.last_ingestion_df if self.last_ingestion_df is not None else pd.DataFrame({"result": [[]]}))
+        return self.last_ingestion_json if self.last_ingestion_json is not None else json.dumps({"status": "no_data", "file_hash": None, "pages": []}, indent=2)
 
-    def search_documents(self) -> List[Data]:
+    def search_documents(self) -> List[Data] | DataFrame:
         """
-        Output #1: standard similarity search results as Data objects.
+        Output #1: standard similarity search results as Data objects, or DataFrame with text column only if return_text_only is True.
         """
         vector_store = self.build_vector_store()
 
@@ -301,7 +318,26 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
                 k=int(self.number_of_results),
                 filter=base_filters or None
             )
+            
+            # If return_text_only is True, convert to DataFrame with text column only
+            if self.return_text_only:
+                data = docs_to_data(docs)
+                # Convert Data list to DataFrame
+                df_data = [item.data for item in data]
+                df = pd.DataFrame(df_data)
+                
+                # Return only the text column if it exists
+                if 'text' in df.columns:
+                    return DataFrame(df[['text']])
+                else:
+                    # Fallback: return empty DataFrame with text column
+                    return DataFrame(pd.DataFrame({'text': []}))
+            
+            # Default behavior: return Data objects
             data = docs_to_data(docs)
             return data
-        return []
         
+        # Return empty result based on return_text_only flag
+        if self.return_text_only:
+            return DataFrame(pd.DataFrame({'text': []}))
+        return []
