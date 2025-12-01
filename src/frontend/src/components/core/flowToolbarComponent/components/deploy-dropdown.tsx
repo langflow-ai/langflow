@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useHref } from "react-router-dom";
 import IconComponent from "@/components/common/genericIconComponent";
-import ShadTooltipComponent from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -27,6 +26,7 @@ import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { cn } from "@/utils/utils";
 import FlowSettingsModal from "@/modals/flowSettingsModal";
+import { ShareNewIcon } from "@/assets/icons/ShareNewIcon";
 
 export default function PublishDropdown() {
   const location = useHref("/");
@@ -129,13 +129,13 @@ export default function PublishDropdown() {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
-            variant="outline"
-            size="md"
-            className="!px-2.5"
+            variant="link"
+            className="!px-1 font-medium text-menu hover:text-secondary !py-0 !h-auto !gap-1"
             data-testid="publish-button"
           >
+            {/* <IconComponent name="ChevronDown" className="!h-5 !w-5" /> */}
+            <ShareNewIcon className="!h-3 !w-3" />
             Share
-            <IconComponent name="ChevronDown" className="!h-5 !w-5" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent

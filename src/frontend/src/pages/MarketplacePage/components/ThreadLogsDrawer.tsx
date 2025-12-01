@@ -80,7 +80,13 @@ export default function ThreadLogsDrawer({
     >
       <div className="flex items-center justify-between pt-4 px-4">
         <h3 className="font-medium text-menu text-sm">Thread Logs</h3>
-        <Button variant="ghost" size="iconSm" onClick={onClose} title="Close">
+        <Button
+          variant="outline"
+          size="iconSm"
+          onClick={onClose}
+          title="Close"
+          className="border-0"
+        >
           <ForwardedIconComponent name="X" className="h-4 w-4" />
         </Button>
       </div>
@@ -103,7 +109,7 @@ export default function ThreadLogsDrawer({
               </div>
             ) : (
               groups.map((g) => (
-                <div key={g.session_id} className="rounded-md bg-[#F7F6FF]">
+                <div key={g.session_id} className="rounded-md bg-primary-light">
                   <ShadTooltip content={g.session_id} side="top">
                     <button
                       className="w-full text-left px-3 py-2 grid grid-cols-[auto_1fr] items-center gap-2"
@@ -115,16 +121,16 @@ export default function ThreadLogsDrawer({
                             ? "ChevronDown"
                             : "ChevronRight"
                         }
-                        className="h-4 w-4 text-[#64616A]"
+                        className="h-4 w-4 text-secondary-font"
                       />
                       <div className="min-w-0">
                         <div
-                          className="text-sm font-medium truncate text-[#350E84]"
+                          className="text-sm font-medium truncate text-menu"
                           // title={g.session_id}
                         >
                           {g.session_id}
                         </div>
-                        <div className="text-xs text-[#64616A]">
+                        <div className="text-xs text-secondary-font">
                           {g.count} traces
                         </div>
                       </div>
@@ -137,7 +143,7 @@ export default function ThreadLogsDrawer({
                           <ShadTooltip content={tid} side="top">
                             <li
                               key={tid}
-                              className="text-xs break-all bg-white p-1.5 rounded-md text-[#64616A] hover:text-[#731FE3] cursor-pointer"
+                              className="text-xs break-all bg-background-surface p-1.5 rounded-md text-secondary-font hover:text-[#731FE3] cursor-pointer"
                             >
                               <button
                                 className="font-medium"

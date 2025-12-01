@@ -58,8 +58,8 @@ export default function TraceDetailsModal({
     .trace-detail-modal .boxed-muted { border: 1px solid var(--modal-border); border-radius: 8px; background: var(--muted-bg); }
     .trace-detail-modal .scroll-y { overflow-y: auto; }
     .trace-detail-modal .node-row { display: flex; align-items: center; justify-content: space-between; padding: 4px 8px; border-radius: 6px; cursor: pointer; }
-    .trace-detail-modal .node-row:hover { background: var(--muted-bg); }
-    .trace-detail-modal .node-row.active { background: var(--muted-bg); }
+    .trace-detail-modal .node-row:hover { background: var(--mainBg); }
+    .trace-detail-modal .node-row.active { background: var(--background-surface); }
     .trace-detail-modal pre { white-space: pre-wrap; word-wrap: break-word; overflow-x: auto; }
   `;
 
@@ -68,11 +68,9 @@ export default function TraceDetailsModal({
       {/* Fixed-size modal with internal scroll to avoid content-based resizing */}
       <DialogContent className="trace-detail-modal sm:max-w-[1200px] w-[95vw] h-[80vh] overflow-hidden">
         <style dangerouslySetInnerHTML={{ __html: modalScopedStyles }} />
-        <DialogHeader>
+        <DialogHeader className="mb-6">
           <DialogTitle className="flex items-center justify-between w-full">
-            <span className="text-[#350E84] text-[16px]">
-              Trace Id {traceId}
-            </span>
+            <span className="text-[16px]">Trace Id {traceId}</span>
             {/* <div className="flex items-center gap-2">
               {traceId && (
                 <span
@@ -99,26 +97,25 @@ export default function TraceDetailsModal({
                 placeholder="Search (type, title, ID)"
               />
             </div> */}
-            <div className="p-3 border border-[#EFEFEF] flex-1 scroll-y">
+            <div className="p-3 border border-primary-border flex-1 scroll-y">
               <h3 className="text-sm font-medium mb-2 text-primary-font">
                 Trace Breakdown
               </h3>
 
               <Input
+                type="search"
+                icon={"Search"}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Search (type, title, ID)"
-                icon="search"
                 className="mb-3"
               />
               {loading && (
-                <div className="py-2 text-sm text-muted-foreground">
+                <div className="py-2 text-sm text-secondary-font opacity-60">
                   Loading breakdown…
                 </div>
               )}
-              {error && (
-                <div className="py-2 text-sm text-destructive">{error}</div>
-              )}
+              {error && <div className="py-2 text-sm text-error">{error}</div>}
               {!loading && !error && trace && (
                 <TraceBreakdown
                   trace={trace}
@@ -131,8 +128,8 @@ export default function TraceDetailsModal({
           </div>
 
           {/* Right: Meta header + Tabs */}
-          <div className="col-span-8 right-pane flex flex-col h-full border border-[#efefef] border-l-0 p-3">
-            <h3 className="text-[16px] font-medium text-[#350E84]">
+          <div className="col-span-8 right-pane flex flex-col h-full border border-primary-border border-l-0 p-3">
+            <h3 className="text-[16px] font-medium text-menu">
               Chat Input (ChatInput-cGagA)
             </h3>
             <p className="text-xs text-secondary-font mt-0.5">
@@ -167,7 +164,7 @@ function HeaderMeta({ trace }: { trace: any }) {
   const duration_ms = trace?.latency_ms;
   const createdOn = trace?.timestamp ? formatDate(trace.timestamp) : "-";
   return (
-    <div className="flex items-center justify-between">
+    <div className="flex items-center justify-between my-3">
       {/* <div className="text-xs text-muted-foreground">
         Created on: {createdOn}
       </div> */}
@@ -277,7 +274,7 @@ function TraceDetailsView({
             {/* Inputs */}
             <AccordionItem
               value="inputs"
-              className="border border-[#efefef] rounded bg-white"
+              className="border border-primary-border rounded bg-background-surface"
             >
               <AccordionTrigger className="px-3 py-2 text-sm font-semibold text-secondary-font hover:no-underline">
                 Inputs
@@ -290,7 +287,7 @@ function TraceDetailsView({
             {/* Outputs */}
             <AccordionItem
               value="outputs"
-              className="border border-[#efefef] rounded bg-white"
+              className="border border-primary-border rounded bg-background-surface"
             >
               <AccordionTrigger className="px-3 py-2 text-sm font-semibold text-secondary-font hover:no-underline">
                 Outputs
@@ -305,7 +302,7 @@ function TraceDetailsView({
           value="attr"
           className="space-y-3 overflow-y-auto max-h-[calc(100vh-390px)]"
         >
-          <div className="border border-[#efefef] rounded bg-white px-3 py-2">
+          <div className="border border-primary-border rounded bg-background-surface px-3 py-2">
             <div className=" text-sm font-semibold text-secondary-font mb-2">
               Attributes
             </div>

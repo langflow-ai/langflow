@@ -110,8 +110,8 @@ export default function PlaygroundTab({
     publishedFlowData?.input_samples
   )
     ? publishedFlowData!.input_samples.flatMap((s: any) =>
-      Array.isArray(s?.file_names) ? s.file_names : []
-    )
+        Array.isArray(s?.file_names) ? s.file_names : []
+      )
     : [];
 
   const sampleFileNames: string[] = sampleFilePaths.map((path: string) => {
@@ -126,8 +126,8 @@ export default function PlaygroundTab({
   // Aggregate sample input texts from input_samples
   const sampleTexts: string[] = Array.isArray(publishedFlowData?.input_samples)
     ? publishedFlowData!.input_samples.flatMap((s: any) =>
-      Array.isArray(s?.sample_text) ? s.sample_text : []
-    )
+        Array.isArray(s?.sample_text) ? s.sample_text : []
+      )
     : [];
 
   // Helper to safely stringify JSON-like values
@@ -146,11 +146,11 @@ export default function PlaygroundTab({
     publishedFlowData?.input_samples
   )
     ? (() => {
-      const found = publishedFlowData!.input_samples.find(
-        (s: any) => s && s.sample_output
-      );
-      return stringifyIfObject(found?.sample_output);
-    })()
+        const found = publishedFlowData!.input_samples.find(
+          (s: any) => s && s.sample_output
+        );
+        return stringifyIfObject(found?.sample_output);
+      })()
     : undefined;
 
   // Helper to open sample text modal
@@ -418,7 +418,7 @@ export default function PlaygroundTab({
         : filePathOrName;
       const type = getFileTypeFromName(name);
       setPreviewFile({ url: signedUrl, name, type });
-    } catch (e) { }
+    } catch (e) {}
   };
 
   const selectSampleFile = async (filePathOrName: string) => {
@@ -434,7 +434,7 @@ export default function PlaygroundTab({
       const targetComponentId = fileInputComponents[0].id;
       setShowSampleSection(false);
       setFileUrls({ [targetComponentId]: signedUrl });
-    } catch (e) { }
+    } catch (e) {}
   };
 
   useEffect(() => {
@@ -454,8 +454,9 @@ export default function PlaygroundTab({
   return (
     <div className="flex h-full w-full flex-col ">
       <div
-        className={`flex flex-1 overflow-hidden h-full items-center ${isThreadLogsOpen ? "mr-[312px]" : ""
-          }`}
+        className={`flex flex-1 overflow-hidden h-full items-center ${
+          isThreadLogsOpen ? "mr-[312px]" : ""
+        }`}
       >
         {/* Agent Details Panel */}
         <div
@@ -478,7 +479,7 @@ export default function PlaygroundTab({
 
         {/* Drag Handle */}
         <div
-          className="w-3 h-[28px] bg-background-surface cursor-col-resize rounded-[4px] text-menu flex items-center justify-center"
+          className="w-3 h-[28px] bg-accent cursor-col-resize rounded-[4px] text-menu flex items-center justify-center"
           onMouseDown={handleDragStart}
         >
           <DragIcon />
