@@ -420,10 +420,8 @@ class TestProcessFilesEdgeCases:
         with pytest.raises(ValueError, match="No files to process"):
             component.process_files([])
 
-    @patch("subprocess.run")
     def test_process_files_docling_only_extension_without_advanced_mode(
         self,
-        mock_subprocess,
         tmp_path,
     ):
         """Test that Docling-only extensions require advanced mode."""
@@ -615,8 +613,7 @@ class TestImageContentTypeValidation:
         assert is_valid is True
         assert error is None
 
-    @patch("subprocess.run")
-    def test_process_files_rejects_mismatched_image(self, mock_subprocess, tmp_path):
+    def test_process_files_rejects_mismatched_image(self, tmp_path):
         """Test that process_files rejects images with content/extension mismatch."""
         # Create a JPEG file but with .png extension
         mismatched_file = tmp_path / "fake.png"
