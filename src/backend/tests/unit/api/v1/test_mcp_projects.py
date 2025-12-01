@@ -13,7 +13,6 @@ from langflow.api.v1.mcp_projects import (
     get_project_mcp_server,
     init_mcp_servers,
     project_mcp_servers,
-    project_session_manager_lifespan,
 )
 from langflow.services.auth.utils import create_user_longterm_token, get_password_hash
 from langflow.services.database.models.flow import Flow
@@ -22,6 +21,8 @@ from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service
 from lfx.services.deps import session_scope
 from sqlmodel import select
+
+from tests.unit.utils.mcp import project_session_manager_lifespan
 
 # Mark all tests in this module as asyncio
 pytestmark = pytest.mark.asyncio
