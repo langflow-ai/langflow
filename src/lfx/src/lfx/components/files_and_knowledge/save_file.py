@@ -611,12 +611,52 @@ class SaveToFileComponent(Component):
             msg = "Google API client libraries are not installed. Please install them."
             raise ImportError(msg) from e
 
-        # Parse credentials
+        # Parse credentials with multiple fallback strategies
+        credentials_dict = None
+        parse_errors = []
+        
+        # Strategy 1: Parse as-is with strict=False to allow control characters
         try:
-            credentials_dict = json.loads(self.service_account_key)
+            credentials_dict = json.loads(self.service_account_key, strict=False)
         except json.JSONDecodeError as e:
-            msg = f"Invalid JSON in service account key: {e!s}"
-            raise ValueError(msg) from e
+            parse_errors.append(f"Standard parse: {e!s}")
+        
+        # Strategy 2: Strip whitespace and try again
+        if credentials_dict is None:
+            try:
+                cleaned_key = self.service_account_key.strip()
+                credentials_dict = json.loads(cleaned_key, strict=False)
+            except json.JSONDecodeError as e:
+                parse_errors.append(f"Stripped parse: {e!s}")
+        
+        # Strategy 3: Check if it's double-encoded (JSON string of a JSON string)
+        if credentials_dict is None:
+            try:
+                decoded_once = json.loads(self.service_account_key, strict=False)
+                if isinstance(decoded_once, str):
+                    credentials_dict = json.loads(decoded_once, strict=False)
+                else:
+                    credentials_dict = decoded_once
+            except json.JSONDecodeError as e:
+                parse_errors.append(f"Double-encoded parse: {e!s}")
+        
+        # Strategy 4: Try to fix common issues with newlines in the private_key field
+        if credentials_dict is None:
+            try:
+                # Replace literal \n with actual newlines which is common in pasted JSON
+                fixed_key = self.service_account_key.replace('\\n', '\n')
+                credentials_dict = json.loads(fixed_key, strict=False)
+            except json.JSONDecodeError as e:
+                parse_errors.append(f"Newline-fixed parse: {e!s}")
+        
+        if credentials_dict is None:
+            error_details = "; ".join(parse_errors)
+            msg = (
+                f"Unable to parse service account key JSON. Tried multiple strategies: {error_details}. "
+                "Please ensure you've copied the entire JSON content from your service account key file. "
+                "The JSON should start with '{' and contain fields like 'type', 'project_id', 'private_key', etc."
+            )
+            raise ValueError(msg)
 
         # Create Google Drive service
         credentials = service_account.Credentials.from_service_account_info(
