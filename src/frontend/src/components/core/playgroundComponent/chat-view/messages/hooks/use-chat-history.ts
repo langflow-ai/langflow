@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useGetMessagesQuery } from "@/controllers/API/queries/messages";
 import { useMessagesStore } from "@/stores/messagesStore";
 import { ChatMessageType } from "@/types/chat";
 import { useGetFlowId } from "../../hooks/use-get-flow-id";
@@ -8,6 +9,15 @@ export const useChatHistory = (visibleSession: string | null) => {
   const currentFlowId = useGetFlowId();
   const messages = useMessagesStore((state) => state.messages);
   const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
+
+  // Fetch messages using the query hook to populate the store
+  useGetMessagesQuery({
+    id: currentFlowId,
+    mode: "union", // Dummy mode, we only care about the side effect of populating the store
+    params: {
+      session_id: visibleSession,
+    },
+  });
 
   useEffect(() => {
     const messagesFromMessagesStore: ChatMessageType[] = messages
