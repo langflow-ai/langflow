@@ -46,6 +46,18 @@ def has_manage_account_role(roles: list[str]) -> bool:
     return "manage-account" in roles
 
 
+def has_marketplace_admin_role(roles: list[str]) -> bool:
+    """Check if user has 'Marketplace Admin' role.
+
+    Args:
+        roles: List of role names
+
+    Returns:
+        True if "Marketplace Admin" in roles, False otherwise
+    """
+    return "Marketplace Admin" in roles
+
+
 def can_edit_flow(
     current_user: "User",
     flow: "Flow",
@@ -57,7 +69,8 @@ def can_edit_flow(
     1. Flow owner (flow.user_id == user.id) → ALLOW
     2. Superuser (user.is_superuser == True) → ALLOW
     3. User has "manage-account" role → ALLOW
-    4. Otherwise → DENY
+    4. User has "Marketplace Admin" role → ALLOW
+    5. Otherwise → DENY
 
     Args:
         current_user: Current authenticated user
@@ -79,8 +92,12 @@ def can_edit_flow(
     if user_roles and has_manage_account_role(user_roles):
         return True
 
-    # 4. Deny by default
-    return True
+    # 4. Role check - user has "Marketplace Admin" role
+    if user_roles and has_marketplace_admin_role(user_roles):
+        return True
+
+    # 5. Deny by default
+    return False
 
 
 def can_delete_flow(
@@ -116,7 +133,8 @@ def can_view_flow(
     1. Flow owner (flow.user_id == user.id) → ALLOW
     2. Superuser (user.is_superuser == True) → ALLOW
     3. User has "manage-account" role → ALLOW
-    4. Otherwise → DENY
+    4. User has "Marketplace Admin" role → ALLOW
+    5. Otherwise → DENY
 
     Args:
         current_user: Current authenticated user

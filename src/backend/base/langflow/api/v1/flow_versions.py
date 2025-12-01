@@ -1073,6 +1073,88 @@ async def get_flow_versions(
         )
 
 
+def _parse_version(version_str: str) -> tuple:
+    """Parse a semantic version string into a tuple for comparison.
+
+    Args:
+        version_str: Version string like "1.0.0", "1.2.3", etc.
+
+    Returns:
+        Tuple of integers (major, minor, patch) for comparison.
+        Returns (0, 0, 0) if parsing fails.
+    """
+    try:
+        parts = version_str.split(".")
+        return tuple(int(p) for p in parts[:3])
+    except (ValueError, AttributeError):
+        return (0, 0, 0)
+
+
+def _increment_patch_version(version_str: str) -> str:
+    """Increment the patch version of a semantic version string.
+
+    Args:
+        version_str: Version string like "1.0.0"
+
+    Returns:
+        Incremented version string like "1.0.1"
+    """
+    try:
+        parts = version_str.split(".")
+        if len(parts) >= 3:
+            major, minor, patch = int(parts[0]), int(parts[1]), int(parts[2])
+            return f"{major}.{minor}.{patch + 1}"
+    except (ValueError, AttributeError):
+        pass
+    return "1.0.0"
+
+
+def _calculate_suggested_version(all_versions: list) -> str:
+    """Calculate the suggested version for publish modal based on flow_version entries.
+
+    Logic:
+    - If no entries: return "1.0.0"
+    - If highest version has status=Submitted(2) or Rejected(4): return same version (can be published)
+    - If highest version has status=Published(5): return incremented version
+    - If highest version has status=Unpublished(6) or other: increment from highest published, or highest+1
+
+    Args:
+        all_versions: List of FlowVersion objects
+
+    Returns:
+        Suggested version string
+    """
+    if not all_versions:
+        return "1.0.0"
+
+    # Status IDs
+    SUBMITTED = 2
+    REJECTED = 4
+    PUBLISHED = 5
+
+    # Sort by version number semantically (highest first)
+    sorted_versions = sorted(
+        all_versions,
+        key=lambda v: _parse_version(v.version) if v.version else (0, 0, 0),
+        reverse=True
+    )
+    highest = sorted_versions[0]
+
+    if highest.status_id in [SUBMITTED, REJECTED]:
+        # Can reuse this version (submitted for review or rejected)
+        return highest.version
+    elif highest.status_id == PUBLISHED:
+        # Increment from published
+        return _increment_patch_version(highest.version)
+    else:
+        # Unpublished or other - find highest published and increment, or increment from highest
+        published_versions = [v for v in sorted_versions if v.status_id == PUBLISHED]
+        if published_versions:
+            return _increment_patch_version(published_versions[0].version)
+        else:
+            return _increment_patch_version(highest.version)
+
+
 @router.get("/flow/{flow_id}/latest-status")
 async def get_flow_latest_status(
     flow_id: UUID,
@@ -1084,26 +1166,35 @@ async def get_flow_latest_status(
 
     Returns the most recent version's status, useful for UI to show
     current approval state in the flow header.
+    Also returns suggested_version for publish modal.
     """
     try:
-        stmt = (
+        # Fetch ALL versions for this flow to calculate suggested version
+        all_versions_stmt = (
             select(FlowVersion)
             .where(FlowVersion.original_flow_id == flow_id)
             .options(
                 joinedload(FlowVersion.status),
                 joinedload(FlowVersion.input_sample),
             )
-            .order_by(FlowVersion.created_at.desc())
-            .limit(1)
         )
-        result = await session.exec(stmt)
-        latest_version = result.first()
+        all_versions_result = await session.exec(all_versions_stmt)
+        all_versions = all_versions_result.unique().all()
+
+        # Calculate suggested version based on all versions
+        suggested_version = _calculate_suggested_version(all_versions)
+
+        # Find the latest version by created_at for other fields
+        latest_version = None
+        if all_versions:
+            latest_version = max(all_versions, key=lambda v: v.created_at if v.created_at else datetime.min.replace(tzinfo=timezone.utc))
 
         if not latest_version:
             return {
                 "has_submissions": False,
                 "latest_status": None,
                 "latest_version": None,
+                "suggested_version": "1.0.0",
             }
 
         # Extract sample data if available
@@ -1115,6 +1206,7 @@ async def get_flow_latest_status(
             "has_submissions": True,
             "latest_status": latest_version.status.status_name if latest_version.status else None,
             "latest_version": latest_version.version,
+            "suggested_version": suggested_version,
             "latest_version_id": str(latest_version.id),
             "submitted_at": latest_version.submitted_at.isoformat() if latest_version.submitted_at else None,
             "reviewed_at": latest_version.reviewed_at.isoformat() if latest_version.reviewed_at else None,

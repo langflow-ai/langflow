@@ -6,6 +6,7 @@ export interface FlowLatestStatusResponse {
   has_submissions: boolean;
   latest_status: string | null;
   latest_version: string | null;
+  suggested_version?: string | null;
   latest_version_id?: string | null;
   submitted_at?: string | null;
   reviewed_at?: string | null;

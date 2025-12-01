@@ -172,13 +172,13 @@ export default function FlowPage({
                 message: error?.response?.data?.detail || error?.message,
               });
               if (!propFlowId) {
-                navigate("/all");
+                navigate("/marketplace");
               }
             }
           } else {
             // No ID provided, redirect
             if (!propFlowId) {
-              navigate("/all");
+              navigate("/marketplace");
             }
           }
           return;

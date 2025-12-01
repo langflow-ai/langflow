@@ -178,8 +178,10 @@ export default function PublishFlowModal({
         // Previously published: Always use current flow name
         setMarketplaceName(currentFlow?.name || flowName);
 
-        // Auto-increment version only if currently published, otherwise keep same version
-        if (existingPublishedData.is_published) {
+        // Use suggested_version from backend if available, otherwise fallback to previous logic
+        if (approvalData?.suggested_version) {
+          setVersion(approvalData.suggested_version);
+        } else if (existingPublishedData.is_published) {
           const newVersion = incrementPatchVersion(
             existingPublishedData.version
           );
@@ -205,9 +207,11 @@ export default function PublishFlowModal({
           setTags([]);
         }
 
-        // Use approval data for version and logo if available (approved but not yet published)
-        if (approvalData?.latest_version) {
-          // Keep the approved version (don't auto-increment for first publish)
+        // Use suggested_version from backend if available (smart version based on flow_version table)
+        if (approvalData?.suggested_version) {
+          setVersion(approvalData.suggested_version);
+        } else if (approvalData?.latest_version) {
+          // Fallback: Keep the approved version (don't auto-increment for first publish)
           setVersion(approvalData.latest_version);
         } else {
           setVersion("1.0.0");

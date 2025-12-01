@@ -7,6 +7,7 @@ import zipfile
 from datetime import datetime, timezone
 from typing import Annotated
 from uuid import UUID
+import time
 
 import orjson
 from aiofile import async_open
@@ -173,9 +174,10 @@ async def clone_flow_for_marketplace(
     # Deep copy flow data
     cloned_data = copy.deepcopy(original_flow.data) if original_flow.data else {}
 
+    timestamp = int(time.time())
     # Create unique name using version: {flow_name}-{version}-copy
-    cloned_name = f"{marketplace_flow_name}-{version}-copy"
-
+    cloned_name = f"{marketplace_flow_name}-published-{version}-copy-{timestamp}"
+    # f"{payload.title}-Submitted-{payload.version}-{str(flow_id)[:8]}"
     # Create cloned flow
     cloned_flow = Flow(
         name=cloned_name,

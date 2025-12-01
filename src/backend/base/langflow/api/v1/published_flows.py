@@ -613,6 +613,16 @@ async def publish_flow_marketplace_admin(
         # Get marketplace agent folder for cloned flows
         marketplace_folder = await get_or_create_marketplace_agent_folder(session)
 
+        # ALWAYS unpublish all existing published versions for this flow
+        # This ensures only one version is ever Published at a time
+        if unpublished_status and all_versions:
+            for version in all_versions:
+                if version.status_id == published_status.id:
+                    logger.info(f"Unpublishing old version {version.version} for flow {flow_id}")
+                    version.status_id = unpublished_status.id
+                    version.updated_at = datetime.now(timezone.utc)
+                    session.add(version)
+
         if not latest_version:
             # Scenario: No version exists - create new clone and flow_version
             logger.info(f"No version exists for flow {flow_id}, creating new clone")
@@ -647,6 +657,10 @@ async def publish_flow_marketplace_admin(
                 published_by_name=user_info.get("name"),
                 published_by_email=user_info.get("email"),
                 published_at=datetime.now(timezone.utc),
+                submitted_by=current_user.id,
+                submitted_by_name=user_info.get("name"),
+                submitted_by_email=user_info.get("email"),
+                submitted_at=datetime.now(timezone.utc),
             )
             session.add(flow_version)
 
@@ -761,6 +775,10 @@ async def publish_flow_marketplace_admin(
                 published_by_name=user_info.get("name"),
                 published_by_email=user_info.get("email"),
                 published_at=datetime.now(timezone.utc),
+                submitted_by=current_user.id,
+                submitted_by_name=user_info.get("name"),
+                submitted_by_email=user_info.get("email"),
+                submitted_at=datetime.now(timezone.utc),
             )
             session.add(flow_version)
 
@@ -768,6 +786,15 @@ async def publish_flow_marketplace_admin(
             # Scenario: Status=Unpublished/Draft or any other status - create new clone
             logger.info(f"Flow {flow_id} has status {current_status_name}, creating new clone")
             is_new_clone = True
+
+            # Unpublish any existing Published versions for this flow
+            if unpublished_status:
+                for version in all_versions:
+                    if version.status_id == published_status.id:
+                        logger.info(f"Unpublishing old version {version.version} for flow {flow_id}")
+                        version.status_id = unpublished_status.id
+                        version.updated_at = datetime.now(timezone.utc)
+                        session.add(version)
 
             # Clone the flow
             cloned_flow = await clone_flow_for_marketplace(
@@ -784,22 +811,49 @@ async def publish_flow_marketplace_admin(
             session.add(cloned_flow)
             await session.flush()
 
-            # Create flow_version with Published status
-            flow_version = FlowVersion(
-                original_flow_id=flow_id,
-                version_flow_id=cloned_flow.id,
-                version=payload.version,
-                title=payload.marketplace_flow_name,
-                description=payload.description,
-                tags=payload.tags,
-                agent_logo=payload.flow_icon,
-                status_id=published_status.id,
-                published_by=current_user.id,
-                published_by_name=user_info.get("name"),
-                published_by_email=user_info.get("email"),
-                published_at=datetime.now(timezone.utc),
+            # Check if FlowVersion with same (original_flow_id, version) already exists
+            # This can happen if a previous publish attempt failed partway through
+            existing_version_query = select(FlowVersion).where(
+                FlowVersion.original_flow_id == flow_id,
+                FlowVersion.version == payload.version
             )
-            session.add(flow_version)
+            existing_version_result = await session.exec(existing_version_query)
+            existing_flow_version = existing_version_result.first()
+
+            if existing_flow_version:
+                # Update existing flow_version record
+                existing_flow_version.version_flow_id = cloned_flow.id
+                existing_flow_version.title = payload.marketplace_flow_name
+                existing_flow_version.description = payload.description
+                existing_flow_version.tags = payload.tags
+                existing_flow_version.agent_logo = payload.flow_icon
+                existing_flow_version.status_id = published_status.id
+                existing_flow_version.published_by = current_user.id
+                existing_flow_version.published_by_name = user_info.get("name")
+                existing_flow_version.published_by_email = user_info.get("email")
+                existing_flow_version.published_at = datetime.now(timezone.utc)
+                flow_version = existing_flow_version
+            else:
+                # Create new flow_version record
+                flow_version = FlowVersion(
+                    original_flow_id=flow_id,
+                    version_flow_id=cloned_flow.id,
+                    version=payload.version,
+                    title=payload.marketplace_flow_name,
+                    description=payload.description,
+                    tags=payload.tags,
+                    agent_logo=payload.flow_icon,
+                    status_id=published_status.id,
+                    published_by=current_user.id,
+                    published_by_name=user_info.get("name"),
+                    published_by_email=user_info.get("email"),
+                    published_at=datetime.now(timezone.utc),
+                    submitted_by=current_user.id,
+                    submitted_by_name=user_info.get("name"),
+                    submitted_by_email=user_info.get("email"),
+                    submitted_at=datetime.now(timezone.utc),
+                )
+                session.add(flow_version)
 
         # Step 7: Update original flow metadata
         # Note: We don't update original_flow.name to avoid unique constraint violations

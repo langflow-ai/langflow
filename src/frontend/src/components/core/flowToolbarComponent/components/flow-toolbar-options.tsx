@@ -114,8 +114,7 @@ export default function FlowToolbarOptions() {
       latestStatus === "Unpublished");
 
   // Cancel Submission button - Show for non-Marketplace Admin when Submitted
-  const showCancelSubmission =
-    !isMarketplaceAdmin && latestStatus === "Submitted";
+  const showCancelSubmission = !isMarketplaceAdmin && latestStatus === "Submitted";
 
   // Handlers for reject
   const handleRejectClick = () => {

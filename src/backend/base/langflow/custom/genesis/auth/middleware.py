@@ -35,6 +35,18 @@ class LangflowUser:
         # Store original data for compatibility
         self._user_data = user_data
 
+        # Extract roles from user_data for permission checks
+        # Roles come from KeycloakValidator.get_user_details() as:
+        # {"realm": [...], "resources": {"client_name": {"roles": [...]}}}
+        roles_data = user_data.get("roles", {})
+        realm_roles = roles_data.get("realm", []) if isinstance(roles_data, dict) else []
+        resource_roles = []
+        if isinstance(roles_data, dict):
+            for resource_data in roles_data.get("resources", {}).values():
+                if isinstance(resource_data, dict):
+                    resource_roles.extend(resource_data.get("roles", []))
+        self.roles = realm_roles + resource_roles
+
     def dict(self) -> dict[str, Any]:
         """Return user data as dictionary for compatibility."""
         return {
