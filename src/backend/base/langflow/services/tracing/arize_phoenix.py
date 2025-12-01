@@ -414,6 +414,7 @@ class ArizePhoenixTracer(BaseTracer):
         return None
 
     def close(self):
+        """Flush tracer provider spans safely before shutdown."""
         try:
             if hasattr(self, "tracer_provider") and hasattr(self.tracer_provider, "force_flush"):
                 self.tracer_provider.force_flush(timeout_millis=3000)
@@ -421,4 +422,5 @@ class ArizePhoenixTracer(BaseTracer):
             logger.error("[Arize/Phoenix] Error Flushing Spans: %s", str(e), exc_info=True)
 
     def __del__(self):
+        """Ensure tracer provider flushes on object destruction."""
         self.close()
