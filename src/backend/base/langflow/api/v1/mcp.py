@@ -1,4 +1,5 @@
 import asyncio
+from contextlib import AsyncExitStack
 
 import pydantic
 from anyio import BrokenResourceError
@@ -55,30 +56,6 @@ async def handle_global_call_tool(name: str, arguments: dict) -> list[types.Text
     return await handle_call_tool(name, arguments, server)
 
 
-sse = SseServerTransport("/api/v1/mcp/")
-
-
-# Manage state of the Streamable HTTP session manager
-streamable_http_session_manager: StreamableHTTPSessionManager | None = None
-
-def init_streamable_http_manager(*, stateless: bool = True) -> StreamableHTTPSessionManager:
-    """Create and register a Streamable HTTP session manager for the global MCP server."""
-    global streamable_http_session_manager # noqa: PLW0603
-    streamable_http_session_manager = StreamableHTTPSessionManager(server, stateless=stateless)
-    return streamable_http_session_manager
-
-def get_streamable_http_manager() -> StreamableHTTPSessionManager:
-    """Fetch the active Streamable HTTP session manager or raise if it is unavailable."""
-    global streamable_http_session_manager # noqa: PLW0602
-    if streamable_http_session_manager is None:
-        raise HTTPException(status_code=503, detail="MCP Streamable HTTP transport is not initialized")
-    return streamable_http_session_manager
-
-def clear_streamable_http_manager() -> None:
-    """Clear the currently active Streamable HTTP session manager reference."""
-    global streamable_http_session_manager # noqa: PLW0603
-    streamable_http_session_manager = None
-
 ########################################################
 # The transports handle the full ASGI response.
 # FastAPI still expects the endpoint to return
@@ -86,8 +63,8 @@ def clear_streamable_http_manager() -> None:
 # stream validation panics when
 # a http.response.start message
 # is encountered twice within the same stream.
-# We use this class to nullify the redundant
-# response so that streams can end gracefully.
+# This class nullifies the redundant
+# response to end streams gracefully.
 ########################################################
 class ResponseNoOp(Response):
     async def __call__(self, scope, receive, send) -> None: # noqa: ARG002
@@ -171,6 +148,73 @@ async def handle_messages(request: Request):
         raise HTTPException(status_code=500, detail=f"Internal server error: {e}") from e
 
 
+################################################################################
+# Streamable HTTP Transport
+################################################################################
+class StreamableHTTP:
+    def __init__(self):
+        self.session_manager: StreamableHTTPSessionManager | None = None
+        self._context_stack: AsyncExitStack | None = None
+        self._started = False
+        self._start_stop_lock = asyncio.Lock()
+
+    async def start(self, *, stateless: bool = True) -> None:
+        """Create and enter the Streamable HTTP session manager lifecycle."""
+        async with self._start_stop_lock:
+            if self._started:
+                await logger.adebug("Streamable HTTP session manager already running; skipping start")
+                return
+
+            manager = StreamableHTTPSessionManager(server, stateless=stateless)
+            stack = AsyncExitStack()
+            try:
+                await stack.enter_async_context(manager.run())
+            except Exception:
+                await stack.aclose()
+                raise
+
+            self.session_manager = manager
+            self._context_stack = stack
+            self._started = True
+            await logger.adebug("Streamable HTTP session manager started")
+
+    def get_manager(self) -> StreamableHTTPSessionManager:
+        """Fetch the active Streamable HTTP session manager or raise if it is unavailable."""
+        if not self._started or self.session_manager is None:
+            raise HTTPException(status_code=503, detail="MCP Streamable HTTP transport is not initialized")
+        return self.session_manager
+
+    async def stop(self) -> None:
+        """Close the Streamable HTTP session manager context."""
+        async with self._start_stop_lock:
+            if not self._started:
+                return
+
+            try:
+                if self._context_stack is not None:
+                    await self._context_stack.aclose()
+            finally:
+                self._context_stack = None
+                self.session_manager = None
+                self._started = False
+                await logger.adebug("Streamable HTTP session manager stopped")
+
+
+_streamable_http = StreamableHTTP()
+
+
+async def start_streamable_http_manager(stateless: bool = True) -> None:  # noqa: FBT001, FBT002
+    await _streamable_http.start(stateless=stateless)
+
+
+def get_streamable_http_manager() -> StreamableHTTPSessionManager:
+    return _streamable_http.get_manager()
+
+
+async def stop_streamable_http_manager() -> None:
+    await _streamable_http.stop()
+
+
 async def _dispatch_streamable_http(
     request: Request,
     current_user: CurrentActiveMCPUser,
@@ -185,7 +229,8 @@ async def _dispatch_streamable_http(
 
     context_token = current_user_ctx.set(current_user)
     try:
-        await streamable_http_session_manager.handle_request(request.scope, request.receive, request._send)  # noqa: SLF001
+        manager = get_streamable_http_manager()
+        await manager.handle_request(request.scope, request.receive, request._send)  # noqa: SLF001
     except HTTPException:
         raise
     except Exception as exc:
