@@ -297,18 +297,11 @@ async def _build_project_tools_response(
 @router.get("/{project_id}")
 async def list_project_tools(
     project_id: UUID,
-    request: Request,
     current_user: CurrentActiveMCPUser,
     *,
     mcp_enabled: bool = True,
 ) -> Response:
     """List project MCP tools, or open a Streamable HTTP stream when requested."""
-    accept_header = (request.headers.get("accept") or "").lower()
-
-    if "text/event-stream" in accept_header:
-        auth_user = await verify_project_auth_conditional(project_id, request)
-        return await _dispatch_project_streamable_http(project_id, request, auth_user)
-
     metadata = await _build_project_tools_response(project_id, current_user, mcp_enabled=mcp_enabled)
     return JSONResponse(content=metadata.model_dump(mode="json"))
 
