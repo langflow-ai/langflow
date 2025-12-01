@@ -930,7 +930,7 @@ async def test_superuser_can_run_other_users_flow_with_streaming(
 
 @pytest.mark.benchmark
 async def test_superuser_can_run_own_flow(
-    client: AsyncClient, logged_in_headers, json_simple_api_test, superuser, created_superuser_api_key
+    client: AsyncClient, json_simple_api_test, superuser, created_superuser_api_key
 ):
     """Test that a superuser can run their own flow."""
     # Create a flow owned by the superuser
