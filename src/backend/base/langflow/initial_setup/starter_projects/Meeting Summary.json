@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-Bjjjv",
+            "id": "ChatInput-y1N5A",
             "name": "message",
             "output_types": [
               "Message"
@@ -15,7 +15,7 @@
           },
           "targetHandle": {
             "fieldName": "input",
-            "id": "Prompt-08j7R",
+            "id": "Prompt-36nA8",
             "inputTypes": [
               "Message",
               "Text"
@@ -23,12 +23,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-Bjjjv{œdataTypeœ:œChatInputœ,œidœ:œChatInput-Bjjjvœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-08j7R{œfieldNameœ:œinputœ,œidœ:œPrompt-08j7Rœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-y1N5A{œdataTypeœ:œChatInputœ,œidœ:œChatInput-y1N5Aœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-36nA8{œfieldNameœ:œinputœ,œidœ:œPrompt-36nA8œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-Bjjjv",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-Bjjjvœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-08j7R",
-        "targetHandle": "{œfieldNameœ: œinputœ, œidœ: œPrompt-08j7Rœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-y1N5A",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-y1N5Aœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-36nA8",
+        "targetHandle": "{œfieldNameœ: œinputœ, œidœ: œPrompt-36nA8œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -36,7 +36,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "AssemblyAITranscriptionJobCreator",
-            "id": "AssemblyAITranscriptionJobCreator-IuPzc",
+            "id": "AssemblyAITranscriptionJobCreator-Nu1dV",
             "name": "transcript_id",
             "output_types": [
               "Data"
@@ -44,19 +44,19 @@
           },
           "targetHandle": {
             "fieldName": "transcript_id",
-            "id": "AssemblyAITranscriptionJobPoller-rjY01",
+            "id": "AssemblyAITranscriptionJobPoller-sCJsy",
             "inputTypes": [
               "Data"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-AssemblyAITranscriptionJobCreator-IuPzc{œdataTypeœ:œAssemblyAITranscriptionJobCreatorœ,œidœ:œAssemblyAITranscriptionJobCreator-IuPzcœ,œnameœ:œtranscript_idœ,œoutput_typesœ:[œDataœ]}-AssemblyAITranscriptionJobPoller-rjY01{œfieldNameœ:œtranscript_idœ,œidœ:œAssemblyAITranscriptionJobPoller-rjY01œ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-AssemblyAITranscriptionJobCreator-Nu1dV{œdataTypeœ:œAssemblyAITranscriptionJobCreatorœ,œidœ:œAssemblyAITranscriptionJobCreator-Nu1dVœ,œnameœ:œtranscript_idœ,œoutput_typesœ:[œDataœ]}-AssemblyAITranscriptionJobPoller-sCJsy{œfieldNameœ:œtranscript_idœ,œidœ:œAssemblyAITranscriptionJobPoller-sCJsyœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "AssemblyAITranscriptionJobCreator-IuPzc",
-        "sourceHandle": "{œdataTypeœ: œAssemblyAITranscriptionJobCreatorœ, œidœ: œAssemblyAITranscriptionJobCreator-IuPzcœ, œnameœ: œtranscript_idœ, œoutput_typesœ: [œDataœ]}",
-        "target": "AssemblyAITranscriptionJobPoller-rjY01",
-        "targetHandle": "{œfieldNameœ: œtranscript_idœ, œidœ: œAssemblyAITranscriptionJobPoller-rjY01œ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "source": "AssemblyAITranscriptionJobCreator-Nu1dV",
+        "sourceHandle": "{œdataTypeœ: œAssemblyAITranscriptionJobCreatorœ, œidœ: œAssemblyAITranscriptionJobCreator-Nu1dVœ, œnameœ: œtranscript_idœ, œoutput_typesœ: [œDataœ]}",
+        "target": "AssemblyAITranscriptionJobPoller-sCJsy",
+        "targetHandle": "{œfieldNameœ: œtranscript_idœ, œidœ: œAssemblyAITranscriptionJobPoller-sCJsyœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -64,7 +64,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "AssemblyAITranscriptionJobPoller",
-            "id": "AssemblyAITranscriptionJobPoller-rjY01",
+            "id": "AssemblyAITranscriptionJobPoller-sCJsy",
             "name": "transcription_result",
             "output_types": [
               "Data"
@@ -72,7 +72,7 @@
           },
           "targetHandle": {
             "fieldName": "input_data",
-            "id": "parser-XdCqo",
+            "id": "parser-6bJ9b",
             "inputTypes": [
               "DataFrame",
               "Data"
@@ -80,12 +80,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-AssemblyAITranscriptionJobPoller-rjY01{œdataTypeœ:œAssemblyAITranscriptionJobPollerœ,œidœ:œAssemblyAITranscriptionJobPoller-rjY01œ,œnameœ:œtranscription_resultœ,œoutput_typesœ:[œDataœ]}-parser-XdCqo{œfieldNameœ:œinput_dataœ,œidœ:œparser-XdCqoœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-AssemblyAITranscriptionJobPoller-sCJsy{œdataTypeœ:œAssemblyAITranscriptionJobPollerœ,œidœ:œAssemblyAITranscriptionJobPoller-sCJsyœ,œnameœ:œtranscription_resultœ,œoutput_typesœ:[œDataœ]}-parser-6bJ9b{œfieldNameœ:œinput_dataœ,œidœ:œparser-6bJ9bœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "AssemblyAITranscriptionJobPoller-rjY01",
-        "sourceHandle": "{œdataTypeœ: œAssemblyAITranscriptionJobPollerœ, œidœ: œAssemblyAITranscriptionJobPoller-rjY01œ, œnameœ: œtranscription_resultœ, œoutput_typesœ: [œDataœ]}",
-        "target": "parser-XdCqo",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-XdCqoœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
+        "source": "AssemblyAITranscriptionJobPoller-sCJsy",
+        "sourceHandle": "{œdataTypeœ: œAssemblyAITranscriptionJobPollerœ, œidœ: œAssemblyAITranscriptionJobPoller-sCJsyœ, œnameœ: œtranscription_resultœ, œoutput_typesœ: [œDataœ]}",
+        "target": "parser-6bJ9b",
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-6bJ9bœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -93,7 +93,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "parser",
-            "id": "parser-XdCqo",
+            "id": "parser-6bJ9b",
             "name": "parsed_text",
             "output_types": [
               "Message"
@@ -101,7 +101,7 @@
           },
           "targetHandle": {
             "fieldName": "transcript",
-            "id": "Prompt-ozWGs",
+            "id": "Prompt-AMW8y",
             "inputTypes": [
               "Message",
               "Text"
@@ -109,12 +109,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-parser-XdCqo{œdataTypeœ:œparserœ,œidœ:œparser-XdCqoœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-ozWGs{œfieldNameœ:œtranscriptœ,œidœ:œPrompt-ozWGsœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-parser-6bJ9b{œdataTypeœ:œparserœ,œidœ:œparser-6bJ9bœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-AMW8y{œfieldNameœ:œtranscriptœ,œidœ:œPrompt-AMW8yœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "parser-XdCqo",
-        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-XdCqoœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-ozWGs",
-        "targetHandle": "{œfieldNameœ: œtranscriptœ, œidœ: œPrompt-ozWGsœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "source": "parser-6bJ9b",
+        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-6bJ9bœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-AMW8y",
+        "targetHandle": "{œfieldNameœ: œtranscriptœ, œidœ: œPrompt-AMW8yœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -122,7 +122,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "parser",
-            "id": "parser-XdCqo",
+            "id": "parser-6bJ9b",
             "name": "parsed_text",
             "output_types": [
               "Message"
@@ -130,7 +130,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-l0SpO",
+            "id": "ChatOutput-iChI5",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -139,20 +139,134 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-parser-XdCqo{œdataTypeœ:œparserœ,œidœ:œparser-XdCqoœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-l0SpO{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-l0SpOœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-parser-6bJ9b{œdataTypeœ:œparserœ,œidœ:œparser-6bJ9bœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-iChI5{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-iChI5œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "parser-XdCqo",
-        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-XdCqoœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-l0SpO",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-l0SpOœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "parser-6bJ9b",
+        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-6bJ9bœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-iChI5",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-iChI5œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-AMW8y",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "LanguageModelComponent-cPCaH",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Prompt-AMW8y{œdataTypeœ:œPromptœ,œidœ:œPrompt-AMW8yœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-cPCaH{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-cPCaHœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Prompt-AMW8y",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-AMW8yœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "LanguageModelComponent-cPCaH",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-cPCaHœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "LanguageModelComponent",
+            "id": "LanguageModelComponent-cPCaH",
+            "name": "text_output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-9KeOi",
+            "inputTypes": [
+              "Data",
+              "DataFrame",
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-LanguageModelComponent-cPCaH{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-cPCaHœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-9KeOi{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-9KeOiœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "LanguageModelComponent-cPCaH",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-cPCaHœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-9KeOi",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-9KeOiœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-36nA8",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "LanguageModelComponent-mMKmF",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Prompt-36nA8{œdataTypeœ:œPromptœ,œidœ:œPrompt-36nA8œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-mMKmF{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-mMKmFœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Prompt-36nA8",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-36nA8œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "LanguageModelComponent-mMKmF",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-mMKmFœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "LanguageModelComponent",
+            "id": "LanguageModelComponent-mMKmF",
+            "name": "text_output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-R039P",
+            "inputTypes": [
+              "Data",
+              "DataFrame",
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-LanguageModelComponent-mMKmF{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-mMKmFœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-R039P{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-R039Pœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "LanguageModelComponent-mMKmF",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-mMKmFœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-R039P",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-R039Pœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "data": {
+          "sourceHandle": {
             "dataType": "Memory",
-            "id": "Memory-aC7Tt",
+            "id": "Memory-dFlpS",
             "name": "messages_text",
             "output_types": [
               "Message"
@@ -160,7 +274,7 @@
           },
           "targetHandle": {
             "fieldName": "history",
-            "id": "Prompt-08j7R",
+            "id": "Prompt-36nA8",
             "inputTypes": [
               "Message",
               "Text"
@@ -168,130 +282,17 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Memory-aC7Tt{œdataTypeœ:œMemoryœ,œidœ:œMemory-aC7Ttœ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-08j7R{œfieldNameœ:œhistoryœ,œidœ:œPrompt-08j7Rœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "Memory-aC7Tt",
-        "sourceHandle": "{œdataTypeœ: œMemoryœ, œidœ: œMemory-aC7Ttœ, œnameœ: œmessages_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-08j7R",
-        "targetHandle": "{œfieldNameœ: œhistoryœ, œidœ: œPrompt-08j7Rœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Prompt",
-            "id": "Prompt-ozWGs",
-            "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "LanguageModelComponent-sVnCY",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "xy-edge__Prompt-ozWGs{œdataTypeœ:œPromptœ,œidœ:œPrompt-ozWGsœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-sVnCY{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-sVnCYœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "Prompt-ozWGs",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-ozWGsœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LanguageModelComponent-sVnCY",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-sVnCYœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "LanguageModelComponent",
-            "id": "LanguageModelComponent-sVnCY",
-            "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "ChatOutput-SjlrY",
-            "inputTypes": [
-              "Data",
-              "DataFrame",
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "xy-edge__LanguageModelComponent-sVnCY{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-sVnCYœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-SjlrY{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-SjlrYœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "LanguageModelComponent-sVnCY",
-        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-sVnCYœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-SjlrY",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-SjlrYœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Prompt",
-            "id": "Prompt-08j7R",
-            "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "LanguageModelComponent-39Sf7",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "xy-edge__Prompt-08j7R{œdataTypeœ:œPromptœ,œidœ:œPrompt-08j7Rœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-39Sf7{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-39Sf7œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-08j7R",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-08j7Rœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LanguageModelComponent-39Sf7",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-39Sf7œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "LanguageModelComponent",
-            "id": "LanguageModelComponent-39Sf7",
-            "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "ChatOutput-v13y3",
-            "inputTypes": [
-              "Data",
-              "DataFrame",
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "xy-edge__LanguageModelComponent-39Sf7{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-39Sf7œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-v13y3{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-v13y3œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
-        "source": "LanguageModelComponent-39Sf7",
-        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-39Sf7œ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-v13y3",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-v13y3œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "id": "xy-edge__Memory-dFlpS{œdataTypeœ:œMemoryœ,œidœ:œMemory-dFlpSœ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-36nA8{œfieldNameœ:œhistoryœ,œidœ:œPrompt-36nA8œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "Memory-dFlpS",
+        "sourceHandle": "{œdataTypeœ: œMemoryœ, œidœ: œMemory-dFlpSœ, œnameœ: œmessages_textœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-36nA8",
+        "targetHandle": "{œfieldNameœ: œhistoryœ, œidœ: œPrompt-36nA8œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "AssemblyAITranscriptionJobPoller-rjY01",
+          "id": "AssemblyAITranscriptionJobPoller-sCJsy",
           "node": {
             "base_classes": [
               "Data"
@@ -357,7 +358,7 @@
                 "dynamic": false,
                 "info": "Your AssemblyAI API key. You can get one from https://www.assemblyai.com/",
                 "input_types": [],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -365,7 +366,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "ASSEMBLYAI_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -438,7 +439,7 @@
           "showNode": true,
           "type": "AssemblyAITranscriptionJobPoller"
         },
-        "id": "AssemblyAITranscriptionJobPoller-rjY01",
+        "id": "AssemblyAITranscriptionJobPoller-sCJsy",
         "measured": {
           "height": 264,
           "width": 320
@@ -452,7 +453,7 @@
       },
       {
         "data": {
-          "id": "Prompt-ozWGs",
+          "id": "Prompt-AMW8y",
           "node": {
             "base_classes": [
               "Message"
@@ -594,7 +595,7 @@
           "showNode": true,
           "type": "Prompt"
         },
-        "id": "Prompt-ozWGs",
+        "id": "Prompt-AMW8y",
         "measured": {
           "height": 367,
           "width": 320
@@ -608,7 +609,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-SjlrY",
+          "id": "ChatOutput-9KeOi",
           "node": {
             "base_classes": [
               "Message"
@@ -873,7 +874,7 @@
           "showNode": true,
           "type": "ChatOutput"
         },
-        "id": "ChatOutput-SjlrY",
+        "id": "ChatOutput-9KeOi",
         "measured": {
           "height": 204,
           "width": 320
@@ -887,7 +888,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-l0SpO",
+          "id": "ChatOutput-iChI5",
           "node": {
             "base_classes": [
               "Message"
@@ -1152,7 +1153,7 @@
           "showNode": false,
           "type": "ChatOutput"
         },
-        "id": "ChatOutput-l0SpO",
+        "id": "ChatOutput-iChI5",
         "measured": {
           "height": 48,
           "width": 192
@@ -1166,7 +1167,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-v13y3",
+          "id": "ChatOutput-R039P",
           "node": {
             "base_classes": [
               "Message"
@@ -1431,7 +1432,7 @@
           "showNode": false,
           "type": "ChatOutput"
         },
-        "id": "ChatOutput-v13y3",
+        "id": "ChatOutput-R039P",
         "measured": {
           "height": 48,
           "width": 192
@@ -1445,7 +1446,7 @@
       },
       {
         "data": {
-          "id": "Prompt-08j7R",
+          "id": "Prompt-36nA8",
           "node": {
             "base_classes": [
               "Message"
@@ -1611,7 +1612,7 @@
           "showNode": true,
           "type": "Prompt"
         },
-        "id": "Prompt-08j7R",
+        "id": "Prompt-36nA8",
         "measured": {
           "height": 419,
           "width": 320
@@ -1625,7 +1626,7 @@
       },
       {
         "data": {
-          "id": "Memory-aC7Tt",
+          "id": "Memory-dFlpS",
           "node": {
             "base_classes": [
               "Data",
@@ -1972,7 +1973,7 @@
           "type": "Memory"
         },
         "dragging": false,
-        "id": "Memory-aC7Tt",
+        "id": "Memory-dFlpS",
         "measured": {
           "height": 218,
           "width": 320
@@ -1986,7 +1987,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-Bjjjv",
+          "id": "ChatInput-y1N5A",
           "node": {
             "base_classes": [
               "Message"
@@ -2241,7 +2242,7 @@
           "showNode": false,
           "type": "ChatInput"
         },
-        "id": "ChatInput-Bjjjv",
+        "id": "ChatInput-y1N5A",
         "measured": {
           "height": 48,
           "width": 192
@@ -2255,7 +2256,7 @@
       },
       {
         "data": {
-          "id": "note-fQNhV",
+          "id": "note-KeDpr",
           "node": {
             "description": "### 💡 Add your Assembly AI API key and audio file here",
             "display_name": "",
@@ -2268,7 +2269,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-fQNhV",
+        "id": "note-KeDpr",
         "measured": {
           "height": 324,
           "width": 456
@@ -2284,7 +2285,7 @@
       },
       {
         "data": {
-          "id": "note-obeDU",
+          "id": "note-59kOs",
           "node": {
             "description": "### 💡 Add your Assembly AI API key here",
             "display_name": "",
@@ -2297,7 +2298,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-obeDU",
+        "id": "note-59kOs",
         "measured": {
           "height": 324,
           "width": 365
@@ -2313,7 +2314,7 @@
       },
       {
         "data": {
-          "id": "note-NNWxI",
+          "id": "note-KvTWl",
           "node": {
             "description": "### 💡 Add your OpenAI API key here",
             "display_name": "",
@@ -2326,7 +2327,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-NNWxI",
+        "id": "note-KvTWl",
         "measured": {
           "height": 324,
           "width": 335
@@ -2342,7 +2343,7 @@
       },
       {
         "data": {
-          "id": "note-GIQ9P",
+          "id": "note-cvsjg",
           "node": {
             "description": "### 💡 Add your OpenAI API key here",
             "display_name": "",
@@ -2354,7 +2355,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-GIQ9P",
+        "id": "note-cvsjg",
         "measured": {
           "height": 324,
           "width": 324
@@ -2368,7 +2369,7 @@
       },
       {
         "data": {
-          "id": "AssemblyAITranscriptionJobCreator-IuPzc",
+          "id": "AssemblyAITranscriptionJobCreator-Nu1dV",
           "node": {
             "base_classes": [
               "Data"
@@ -2443,7 +2444,7 @@
                 "dynamic": false,
                 "info": "Your AssemblyAI API key. You can get one from https://www.assemblyai.com/",
                 "input_types": [],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -2451,7 +2452,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "ASSEMBLYAI_API_KEY"
               },
               "audio_file": {
                 "_input_type": "FileInput",
@@ -2702,7 +2703,7 @@
           "type": "AssemblyAITranscriptionJobCreator"
         },
         "dragging": false,
-        "id": "AssemblyAITranscriptionJobCreator-IuPzc",
+        "id": "AssemblyAITranscriptionJobCreator-Nu1dV",
         "measured": {
           "height": 343,
           "width": 320
@@ -2716,7 +2717,7 @@
       },
       {
         "data": {
-          "id": "note-zT6T7",
+          "id": "note-a9dFN",
           "node": {
             "description": "# Meeting Summary Generator\n\nThis flow automatically transcribes and summarizes meetings by converting audio recordings into concise summaries using **AssemblyAI** and **OpenAI GPT-4**. \n\n## Prerequisites\n\n- **[AssemblyAI API Key](https://www.assemblyai.com/)**\n- **[OpenAI API Key](https://platform.openai.com/)**\n\n## Quickstart\n\n1. Upload an audio file. Most common audio file formats are [supported](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/components/assemblyai/assemblyai_start_transcript.py#L27).\n2. To run the summary generator flow, click **Playground**.\n\nThe flow transcribes the audio using **AssemblyAI**.\nThe transcript is formatted for AI processing.\nThe **GPT-4** model extracts key points and insights.\nThe summarized meeting details are displayed in a chat-friendly format.\n\n\n\n",
             "display_name": "",
@@ -2727,7 +2728,7 @@
         },
         "dragging": false,
         "height": 612,
-        "id": "note-zT6T7",
+        "id": "note-a9dFN",
         "measured": {
           "height": 612,
           "width": 548
@@ -2743,7 +2744,7 @@
       },
       {
         "data": {
-          "id": "parser-XdCqo",
+          "id": "parser-6bJ9b",
           "node": {
             "base_classes": [
               "Message"
@@ -2925,7 +2926,7 @@
           "type": "parser"
         },
         "dragging": false,
-        "id": "parser-XdCqo",
+        "id": "parser-6bJ9b",
         "measured": {
           "height": 278,
           "width": 320
@@ -2939,21 +2940,23 @@
       },
       {
         "data": {
-          "id": "LanguageModelComponent-sVnCY",
+          "id": "LanguageModelComponent-cPCaH",
           "node": {
             "base_classes": [
               "LanguageModel",
               "Message"
             ],
             "beta": false,
+            "category": "models",
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Runs a language model given a specified provider.",
             "display_name": "Language Model",
-            "documentation": "https://docs.langflow.org/components-models",
+            "documentation": "",
             "edited": false,
             "field_order": [
-              "model",
+              "provider",
+              "model_name",
               "api_key",
               "input_value",
               "system_message",
@@ -2962,9 +2965,10 @@
             ],
             "frozen": false,
             "icon": "brain-circuit",
+            "key": "LanguageModelComponent",
             "legacy": false,
             "metadata": {
-              "code_hash": "ce0b00e37a88",
+              "code_hash": "bb5f8714781b",
               "dependencies": {
                 "dependencies": [
                   {
@@ -2972,12 +2976,8 @@
                     "version": "0.3.14"
                   },
                   {
-                    "name": "langchain_ibm",
-                    "version": "0.3.19"
-                  },
-                  {
-                    "name": "langchain_ollama",
-                    "version": "0.2.1"
+                    "name": "langchain_google_genai",
+                    "version": "2.0.6"
                   },
                   {
                     "name": "langchain_openai",
@@ -2988,7 +2988,7 @@
                     "version": null
                   }
                 ],
-                "total_dependencies": 5
+                "total_dependencies": 4
               },
               "keywords": [
                 "model",
@@ -3008,6 +3008,8 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text_output",
+                "options": null,
+                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -3022,6 +3024,9 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
+                "options": null,
+                "required_inputs": null,
+                "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
                   "LanguageModel"
@@ -3031,16 +3036,17 @@
             ],
             "pinned": false,
             "priority": 0,
+            "score": 0.28173906304863156,
             "template": {
               "_type": "Component",
               "api_key": {
                 "_input_type": "SecretStrInput",
-                "advanced": true,
-                "display_name": "API Key",
+                "advanced": false,
+                "display_name": "OpenAI API Key",
                 "dynamic": false,
                 "info": "Model Provider API key",
                 "input_types": [],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -3049,7 +3055,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "OPENAI_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -3092,568 +3098,82 @@
                 "type": "str",
                 "value": ""
               },
-              "model": {
-                "_input_type": "ModelInput",
+              "model_name": {
+                "_input_type": "DropdownInput",
                 "advanced": false,
-                "display_name": "Language Model",
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Model Name",
                 "dynamic": false,
-                "info": "Select your model provider",
-                "list": false,
-                "list_add_label": "Add More",
-                "model_type": "language",
-                "name": "model",
+                "info": "Select the model to use",
+                "name": "model_name",
                 "options": [
+                  "gpt-4o-mini",
+                  "gpt-4o",
+                  "gpt-4.1",
+                  "gpt-4.1-mini",
+                  "gpt-4.1-nano",
+                  "gpt-4-turbo",
+                  "gpt-4-turbo-preview",
+                  "gpt-4",
+                  "gpt-3.5-turbo",
+                  "gpt-5",
+                  "gpt-5-mini",
+                  "gpt-5-nano",
+                  "gpt-5-chat-latest",
+                  "o1",
+                  "o3-mini",
+                  "o3",
+                  "o3-pro",
+                  "o4-mini",
+                  "o4-mini-high"
+                ],
+                "options_metadata": [],
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "gpt-4o-mini"
+              },
+              "provider": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Model Provider",
+                "dynamic": false,
+                "info": "Select the model provider",
+                "name": "provider",
+                "options": [
+                  "OpenAI",
+                  "Anthropic",
+                  "Google"
+                ],
+                "options_metadata": [
                   {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5",
-                        "gpt-5-mini",
-                        "gpt-5-nano",
-                        "gpt-5-chat-latest",
-                        "o1",
-                        "o3-mini",
-                        "o3",
-                        "o3-pro",
-                        "o4-mini",
-                        "o4-mini-high"
-                      ]
-                    },
-                    "name": "gpt-4o-mini",
-                    "provider": "OpenAI"
+                    "icon": "OpenAI"
                   },
                   {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5",
-                        "gpt-5-mini",
-                        "gpt-5-nano",
-                        "gpt-5-chat-latest",
-                        "o1",
-                        "o3-mini",
-                        "o3",
-                        "o3-pro",
-                        "o4-mini",
-                        "o4-mini-high"
-                      ]
-                    },
-                    "name": "gpt-4o",
-                    "provider": "OpenAI"
+                    "icon": "Anthropic"
                   },
                   {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5",
-                        "gpt-5-mini",
-                        "gpt-5-nano",
-                        "gpt-5-chat-latest",
-                        "o1",
-                        "o3-mini",
-                        "o3",
-                        "o3-pro",
-                        "o4-mini",
-                        "o4-mini-high"
-                      ]
-                    },
-                    "name": "gpt-4.1",
-                    "provider": "OpenAI"
-                  },
-                  {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5",
-                        "gpt-5-mini",
-                        "gpt-5-nano",
-                        "gpt-5-chat-latest",
-                        "o1",
-                        "o3-mini",
-                        "o3",
-                        "o3-pro",
-                        "o4-mini",
-                        "o4-mini-high"
-                      ]
-                    },
-                    "name": "gpt-4.1-mini",
-                    "provider": "OpenAI"
-                  },
-                  {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5",
-                        "gpt-5-mini",
-                        "gpt-5-nano",
-                        "gpt-5-chat-latest",
-                        "o1",
-                        "o3-mini",
-                        "o3",
-                        "o3-pro",
-                        "o4-mini",
-                        "o4-mini-high"
-                      ]
-                    },
-                    "name": "gpt-4.1-nano",
-                    "provider": "OpenAI"
-                  },
-                  {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5",
-                        "gpt-5-mini",
-                        "gpt-5-nano",
-                        "gpt-5-chat-latest",
-                        "o1",
-                        "o3-mini",
-                        "o3",
-                        "o3-pro",
-                        "o4-mini",
-                        "o4-mini-high"
-                      ]
-                    },
-                    "name": "gpt-4-turbo",
-                    "provider": "OpenAI"
-                  },
-                  {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5",
-                        "gpt-5-mini",
-                        "gpt-5-nano",
-                        "gpt-5-chat-latest",
-                        "o1",
-                        "o3-mini",
-                        "o3",
-                        "o3-pro",
-                        "o4-mini",
-                        "o4-mini-high"
-                      ]
-                    },
-                    "name": "gpt-4-turbo-preview",
-                    "provider": "OpenAI"
-                  },
-                  {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5",
-                        "gpt-5-mini",
-                        "gpt-5-nano",
-                        "gpt-5-chat-latest",
-                        "o1",
-                        "o3-mini",
-                        "o3",
-                        "o3-pro",
-                        "o4-mini",
-                        "o4-mini-high"
-                      ]
-                    },
-                    "name": "gpt-4",
-                    "provider": "OpenAI"
-                  },
-                  {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5",
-                        "gpt-5-mini",
-                        "gpt-5-nano",
-                        "gpt-5-chat-latest",
-                        "o1",
-                        "o3-mini",
-                        "o3",
-                        "o3-pro",
-                        "o4-mini",
-                        "o4-mini-high"
-                      ]
-                    },
-                    "name": "gpt-3.5-turbo",
-                    "provider": "OpenAI"
-                  },
-                  {
-                    "category": "Anthropic",
-                    "icon": "Anthropic",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 200000,
-                      "model_class": "ChatAnthropic",
-                      "model_name_param": "model"
-                    },
-                    "name": "claude-sonnet-4-5-20250929",
-                    "provider": "Anthropic"
-                  },
-                  {
-                    "category": "Anthropic",
-                    "icon": "Anthropic",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 200000,
-                      "model_class": "ChatAnthropic",
-                      "model_name_param": "model"
-                    },
-                    "name": "claude-opus-4-1-20250805",
-                    "provider": "Anthropic"
-                  },
-                  {
-                    "category": "Anthropic",
-                    "icon": "Anthropic",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 200000,
-                      "model_class": "ChatAnthropic",
-                      "model_name_param": "model"
-                    },
-                    "name": "claude-opus-4-20250514",
-                    "provider": "Anthropic"
-                  },
-                  {
-                    "category": "Anthropic",
-                    "icon": "Anthropic",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 200000,
-                      "model_class": "ChatAnthropic",
-                      "model_name_param": "model"
-                    },
-                    "name": "claude-sonnet-4-20250514",
-                    "provider": "Anthropic"
-                  },
-                  {
-                    "category": "Anthropic",
-                    "icon": "Anthropic",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 200000,
-                      "model_class": "ChatAnthropic",
-                      "model_name_param": "model"
-                    },
-                    "name": "claude-3-7-sonnet-latest",
-                    "provider": "Anthropic"
-                  },
-                  {
-                    "category": "Anthropic",
-                    "icon": "Anthropic",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 200000,
-                      "model_class": "ChatAnthropic",
-                      "model_name_param": "model"
-                    },
-                    "name": "claude-3-5-sonnet-latest",
-                    "provider": "Anthropic"
-                  },
-                  {
-                    "category": "Anthropic",
-                    "icon": "Anthropic",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 200000,
-                      "model_class": "ChatAnthropic",
-                      "model_name_param": "model"
-                    },
-                    "name": "claude-3-5-haiku-latest",
-                    "provider": "Anthropic"
-                  },
-                  {
-                    "category": "Anthropic",
-                    "icon": "Anthropic",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 200000,
-                      "model_class": "ChatAnthropic",
-                      "model_name_param": "model"
-                    },
-                    "name": "claude-3-opus-latest",
-                    "provider": "Anthropic"
-                  },
-                  {
-                    "category": "Google",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "api_key_param": "google_api_key",
-                      "context_length": 32768,
-                      "model_class": "ChatGoogleGenerativeAIFixed",
-                      "model_name_param": "model"
-                    },
-                    "name": "gemini-1.5-pro",
-                    "provider": "Google"
-                  },
-                  {
-                    "category": "Google",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "api_key_param": "google_api_key",
-                      "context_length": 32768,
-                      "model_class": "ChatGoogleGenerativeAIFixed",
-                      "model_name_param": "model"
-                    },
-                    "name": "gemini-1.5-flash",
-                    "provider": "Google"
-                  },
-                  {
-                    "category": "Google",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "api_key_param": "google_api_key",
-                      "context_length": 32768,
-                      "model_class": "ChatGoogleGenerativeAIFixed",
-                      "model_name_param": "model"
-                    },
-                    "name": "gemini-1.5-flash-8b",
-                    "provider": "Google"
-                  },
-                  {
-                    "category": "Google",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "api_key_param": "google_api_key",
-                      "context_length": 32768,
-                      "model_class": "ChatGoogleGenerativeAIFixed",
-                      "model_name_param": "model"
-                    },
-                    "name": "gemini-2.5-pro",
-                    "provider": "Google"
-                  },
-                  {
-                    "category": "Google",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "api_key_param": "google_api_key",
-                      "context_length": 32768,
-                      "model_class": "ChatGoogleGenerativeAIFixed",
-                      "model_name_param": "model"
-                    },
-                    "name": "gemini-2.5-flash",
-                    "provider": "Google"
-                  },
-                  {
-                    "category": "Google",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "api_key_param": "google_api_key",
-                      "context_length": 32768,
-                      "model_class": "ChatGoogleGenerativeAIFixed",
-                      "model_name_param": "model"
-                    },
-                    "name": "gemini-2.5-flash-lite",
-                    "provider": "Google"
-                  },
-                  {
-                    "category": "Google",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "api_key_param": "google_api_key",
-                      "context_length": 32768,
-                      "model_class": "ChatGoogleGenerativeAIFixed",
-                      "model_name_param": "model"
-                    },
-                    "name": "gemini-2.0-flash-lite",
-                    "provider": "Google"
-                  },
-                  {
-                    "category": "Google",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "api_key_param": "google_api_key",
-                      "context_length": 32768,
-                      "model_class": "ChatGoogleGenerativeAIFixed",
-                      "model_name_param": "model"
-                    },
-                    "name": "gemini-2.0-flash",
-                    "provider": "Google"
-                  },
-                  {
-                    "category": "Google",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "api_key_param": "google_api_key",
-                      "context_length": 32768,
-                      "model_class": "ChatGoogleGenerativeAIFixed",
-                      "model_name_param": "model"
-                    },
-                    "name": "gemini-exp-1206",
-                    "provider": "Google"
-                  },
-                  {
-                    "category": "Google",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "api_key_param": "google_api_key",
-                      "context_length": 32768,
-                      "model_class": "ChatGoogleGenerativeAIFixed",
-                      "model_name_param": "model"
-                    },
-                    "name": "gemini-2.0-flash-thinking-exp-01-21",
-                    "provider": "Google"
-                  },
-                  {
-                    "category": "Google",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "api_key_param": "google_api_key",
-                      "context_length": 32768,
-                      "model_class": "ChatGoogleGenerativeAIFixed",
-                      "model_name_param": "model"
-                    },
-                    "name": "learnlm-1.5-pro-experimental",
-                    "provider": "Google"
-                  },
-                  {
-                    "category": "Google",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "api_key_param": "google_api_key",
-                      "context_length": 32768,
-                      "model_class": "ChatGoogleGenerativeAIFixed",
-                      "model_name_param": "model"
-                    },
-                    "name": "gemma-2-2b",
-                    "provider": "Google"
-                  },
-                  {
-                    "category": "Google",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "api_key_param": "google_api_key",
-                      "context_length": 32768,
-                      "model_class": "ChatGoogleGenerativeAIFixed",
-                      "model_name_param": "model"
-                    },
-                    "name": "gemma-2-9b",
-                    "provider": "Google"
-                  },
-                  {
-                    "category": "Google",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "api_key_param": "google_api_key",
-                      "context_length": 32768,
-                      "model_class": "ChatGoogleGenerativeAIFixed",
-                      "model_name_param": "model"
-                    },
-                    "name": "gemma-2-27b",
-                    "provider": "Google"
-                  },
-                  {
-                    "category": "Ollama",
-                    "icon": "Ollama",
-                    "metadata": {
-                      "base_url_param": "base_url",
-                      "context_length": 8192,
-                      "model_class": "ChatOllama",
-                      "model_name_param": "model"
-                    },
-                    "name": "ChatOllama",
-                    "provider": "Ollama"
-                  },
-                  {
-                    "category": "IBM WatsonX",
-                    "icon": "WatsonxAI",
-                    "metadata": {
-                      "api_key_param": "apikey",
-                      "context_length": 8192,
-                      "model_class": "ChatWatsonx",
-                      "model_name_param": "model_id",
-                      "project_id_param": "project_id",
-                      "url_param": "url"
-                    },
-                    "name": "ChatWatsonx",
-                    "provider": "IBM WatsonX"
+                    "icon": "GoogleGenerativeAI"
                   }
                 ],
                 "placeholder": "",
-                "providers": [
-                  "OpenAI",
-                  "OpenAI",
-                  "OpenAI",
-                  "OpenAI",
-                  "OpenAI",
-                  "OpenAI",
-                  "OpenAI",
-                  "OpenAI",
-                  "OpenAI",
-                  "Anthropic",
-                  "Anthropic",
-                  "Anthropic",
-                  "Anthropic",
-                  "Anthropic",
-                  "Anthropic",
-                  "Anthropic",
-                  "Anthropic",
-                  "Google",
-                  "Google",
-                  "Google",
-                  "Google",
-                  "Google",
-                  "Google",
-                  "Google",
-                  "Google",
-                  "Google",
-                  "Google",
-                  "Google",
-                  "Google",
-                  "Google",
-                  "Google",
-                  "Ollama",
-                  "IBM WatsonX"
-                ],
                 "real_time_refresh": true,
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
-                "trace_as_input": true,
-                "type": "model",
-                "value": ""
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "OpenAI"
               },
               "stream": {
                 "_input_type": "BoolInput",
@@ -3675,7 +3195,7 @@
               },
               "system_message": {
                 "_input_type": "MultilineInput",
-                "advanced": false,
+                "advanced": true,
                 "copy_field": false,
                 "display_name": "System Message",
                 "dynamic": false,
@@ -3729,40 +3249,41 @@
             },
             "tool_mode": false
           },
-          "selected_output": "text_output",
           "showNode": true,
           "type": "LanguageModelComponent"
         },
         "dragging": false,
-        "id": "LanguageModelComponent-sVnCY",
+        "id": "LanguageModelComponent-cPCaH",
         "measured": {
-          "height": 369,
+          "height": 451,
           "width": 320
         },
         "position": {
-          "x": 2151.4531628558857,
-          "y": 568.8259295067822
+          "x": 2173.9107323014864,
+          "y": 602.584363428964
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "LanguageModelComponent-39Sf7",
+          "id": "LanguageModelComponent-mMKmF",
           "node": {
             "base_classes": [
               "LanguageModel",
               "Message"
             ],
             "beta": false,
+            "category": "models",
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Runs a language model given a specified provider.",
             "display_name": "Language Model",
-            "documentation": "https://docs.langflow.org/components-models",
+            "documentation": "",
             "edited": false,
             "field_order": [
-              "model",
+              "provider",
+              "model_name",
               "api_key",
               "input_value",
               "system_message",
@@ -3771,9 +3292,10 @@
             ],
             "frozen": false,
             "icon": "brain-circuit",
+            "key": "LanguageModelComponent",
             "legacy": false,
             "metadata": {
-              "code_hash": "ce0b00e37a88",
+              "code_hash": "bb5f8714781b",
               "dependencies": {
                 "dependencies": [
                   {
@@ -3781,12 +3303,8 @@
                     "version": "0.3.14"
                   },
                   {
-                    "name": "langchain_ibm",
-                    "version": "0.3.19"
-                  },
-                  {
-                    "name": "langchain_ollama",
-                    "version": "0.2.1"
+                    "name": "langchain_google_genai",
+                    "version": "2.0.6"
                   },
                   {
                     "name": "langchain_openai",
@@ -3797,7 +3315,7 @@
                     "version": null
                   }
                 ],
-                "total_dependencies": 5
+                "total_dependencies": 4
               },
               "keywords": [
                 "model",
@@ -3817,6 +3335,8 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text_output",
+                "options": null,
+                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -3831,6 +3351,9 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
+                "options": null,
+                "required_inputs": null,
+                "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
                   "LanguageModel"
@@ -3840,16 +3363,17 @@
             ],
             "pinned": false,
             "priority": 0,
+            "score": 0.28173906304863156,
             "template": {
               "_type": "Component",
               "api_key": {
                 "_input_type": "SecretStrInput",
-                "advanced": true,
-                "display_name": "API Key",
+                "advanced": false,
+                "display_name": "OpenAI API Key",
                 "dynamic": false,
                 "info": "Model Provider API key",
                 "input_types": [],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -3858,7 +3382,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "OPENAI_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -3901,568 +3425,82 @@
                 "type": "str",
                 "value": ""
               },
-              "model": {
-                "_input_type": "ModelInput",
+              "model_name": {
+                "_input_type": "DropdownInput",
                 "advanced": false,
-                "display_name": "Language Model",
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Model Name",
                 "dynamic": false,
-                "info": "Select your model provider",
-                "list": false,
-                "list_add_label": "Add More",
-                "model_type": "language",
-                "name": "model",
+                "info": "Select the model to use",
+                "name": "model_name",
                 "options": [
+                  "gpt-4o-mini",
+                  "gpt-4o",
+                  "gpt-4.1",
+                  "gpt-4.1-mini",
+                  "gpt-4.1-nano",
+                  "gpt-4-turbo",
+                  "gpt-4-turbo-preview",
+                  "gpt-4",
+                  "gpt-3.5-turbo",
+                  "gpt-5",
+                  "gpt-5-mini",
+                  "gpt-5-nano",
+                  "gpt-5-chat-latest",
+                  "o1",
+                  "o3-mini",
+                  "o3",
+                  "o3-pro",
+                  "o4-mini",
+                  "o4-mini-high"
+                ],
+                "options_metadata": [],
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "gpt-4o-mini"
+              },
+              "provider": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Model Provider",
+                "dynamic": false,
+                "info": "Select the model provider",
+                "name": "provider",
+                "options": [
+                  "OpenAI",
+                  "Anthropic",
+                  "Google"
+                ],
+                "options_metadata": [
                   {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5",
-                        "gpt-5-mini",
-                        "gpt-5-nano",
-                        "gpt-5-chat-latest",
-                        "o1",
-                        "o3-mini",
-                        "o3",
-                        "o3-pro",
-                        "o4-mini",
-                        "o4-mini-high"
-                      ]
-                    },
-                    "name": "gpt-4o-mini",
-                    "provider": "OpenAI"
+                    "icon": "OpenAI"
                   },
                   {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5",
-                        "gpt-5-mini",
-                        "gpt-5-nano",
-                        "gpt-5-chat-latest",
-                        "o1",
-                        "o3-mini",
-                        "o3",
-                        "o3-pro",
-                        "o4-mini",
-                        "o4-mini-high"
-                      ]
-                    },
-                    "name": "gpt-4o",
-                    "provider": "OpenAI"
+                    "icon": "Anthropic"
                   },
                   {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5",
-                        "gpt-5-mini",
-                        "gpt-5-nano",
-                        "gpt-5-chat-latest",
-                        "o1",
-                        "o3-mini",
-                        "o3",
-                        "o3-pro",
-                        "o4-mini",
-                        "o4-mini-high"
-                      ]
-                    },
-                    "name": "gpt-4.1",
-                    "provider": "OpenAI"
-                  },
-                  {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5",
-                        "gpt-5-mini",
-                        "gpt-5-nano",
-                        "gpt-5-chat-latest",
-                        "o1",
-                        "o3-mini",
-                        "o3",
-                        "o3-pro",
-                        "o4-mini",
-                        "o4-mini-high"
-                      ]
-                    },
-                    "name": "gpt-4.1-mini",
-                    "provider": "OpenAI"
-                  },
-                  {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5",
-                        "gpt-5-mini",
-                        "gpt-5-nano",
-                        "gpt-5-chat-latest",
-                        "o1",
-                        "o3-mini",
-                        "o3",
-                        "o3-pro",
-                        "o4-mini",
-                        "o4-mini-high"
-                      ]
-                    },
-                    "name": "gpt-4.1-nano",
-                    "provider": "OpenAI"
-                  },
-                  {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5",
-                        "gpt-5-mini",
-                        "gpt-5-nano",
-                        "gpt-5-chat-latest",
-                        "o1",
-                        "o3-mini",
-                        "o3",
-                        "o3-pro",
-                        "o4-mini",
-                        "o4-mini-high"
-                      ]
-                    },
-                    "name": "gpt-4-turbo",
-                    "provider": "OpenAI"
-                  },
-                  {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5",
-                        "gpt-5-mini",
-                        "gpt-5-nano",
-                        "gpt-5-chat-latest",
-                        "o1",
-                        "o3-mini",
-                        "o3",
-                        "o3-pro",
-                        "o4-mini",
-                        "o4-mini-high"
-                      ]
-                    },
-                    "name": "gpt-4-turbo-preview",
-                    "provider": "OpenAI"
-                  },
-                  {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5",
-                        "gpt-5-mini",
-                        "gpt-5-nano",
-                        "gpt-5-chat-latest",
-                        "o1",
-                        "o3-mini",
-                        "o3",
-                        "o3-pro",
-                        "o4-mini",
-                        "o4-mini-high"
-                      ]
-                    },
-                    "name": "gpt-4",
-                    "provider": "OpenAI"
-                  },
-                  {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5",
-                        "gpt-5-mini",
-                        "gpt-5-nano",
-                        "gpt-5-chat-latest",
-                        "o1",
-                        "o3-mini",
-                        "o3",
-                        "o3-pro",
-                        "o4-mini",
-                        "o4-mini-high"
-                      ]
-                    },
-                    "name": "gpt-3.5-turbo",
-                    "provider": "OpenAI"
-                  },
-                  {
-                    "category": "Anthropic",
-                    "icon": "Anthropic",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 200000,
-                      "model_class": "ChatAnthropic",
-                      "model_name_param": "model"
-                    },
-                    "name": "claude-sonnet-4-5-20250929",
-                    "provider": "Anthropic"
-                  },
-                  {
-                    "category": "Anthropic",
-                    "icon": "Anthropic",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 200000,
-                      "model_class": "ChatAnthropic",
-                      "model_name_param": "model"
-                    },
-                    "name": "claude-opus-4-1-20250805",
-                    "provider": "Anthropic"
-                  },
-                  {
-                    "category": "Anthropic",
-                    "icon": "Anthropic",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 200000,
-                      "model_class": "ChatAnthropic",
-                      "model_name_param": "model"
-                    },
-                    "name": "claude-opus-4-20250514",
-                    "provider": "Anthropic"
-                  },
-                  {
-                    "category": "Anthropic",
-                    "icon": "Anthropic",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 200000,
-                      "model_class": "ChatAnthropic",
-                      "model_name_param": "model"
-                    },
-                    "name": "claude-sonnet-4-20250514",
-                    "provider": "Anthropic"
-                  },
-                  {
-                    "category": "Anthropic",
-                    "icon": "Anthropic",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 200000,
-                      "model_class": "ChatAnthropic",
-                      "model_name_param": "model"
-                    },
-                    "name": "claude-3-7-sonnet-latest",
-                    "provider": "Anthropic"
-                  },
-                  {
-                    "category": "Anthropic",
-                    "icon": "Anthropic",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 200000,
-                      "model_class": "ChatAnthropic",
-                      "model_name_param": "model"
-                    },
-                    "name": "claude-3-5-sonnet-latest",
-                    "provider": "Anthropic"
-                  },
-                  {
-                    "category": "Anthropic",
-                    "icon": "Anthropic",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 200000,
-                      "model_class": "ChatAnthropic",
-                      "model_name_param": "model"
-                    },
-                    "name": "claude-3-5-haiku-latest",
-                    "provider": "Anthropic"
-                  },
-                  {
-                    "category": "Anthropic",
-                    "icon": "Anthropic",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 200000,
-                      "model_class": "ChatAnthropic",
-                      "model_name_param": "model"
-                    },
-                    "name": "claude-3-opus-latest",
-                    "provider": "Anthropic"
-                  },
-                  {
-                    "category": "Google",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "api_key_param": "google_api_key",
-                      "context_length": 32768,
-                      "model_class": "ChatGoogleGenerativeAIFixed",
-                      "model_name_param": "model"
-                    },
-                    "name": "gemini-1.5-pro",
-                    "provider": "Google"
-                  },
-                  {
-                    "category": "Google",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "api_key_param": "google_api_key",
-                      "context_length": 32768,
-                      "model_class": "ChatGoogleGenerativeAIFixed",
-                      "model_name_param": "model"
-                    },
-                    "name": "gemini-1.5-flash",
-                    "provider": "Google"
-                  },
-                  {
-                    "category": "Google",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "api_key_param": "google_api_key",
-                      "context_length": 32768,
-                      "model_class": "ChatGoogleGenerativeAIFixed",
-                      "model_name_param": "model"
-                    },
-                    "name": "gemini-1.5-flash-8b",
-                    "provider": "Google"
-                  },
-                  {
-                    "category": "Google",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "api_key_param": "google_api_key",
-                      "context_length": 32768,
-                      "model_class": "ChatGoogleGenerativeAIFixed",
-                      "model_name_param": "model"
-                    },
-                    "name": "gemini-2.5-pro",
-                    "provider": "Google"
-                  },
-                  {
-                    "category": "Google",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "api_key_param": "google_api_key",
-                      "context_length": 32768,
-                      "model_class": "ChatGoogleGenerativeAIFixed",
-                      "model_name_param": "model"
-                    },
-                    "name": "gemini-2.5-flash",
-                    "provider": "Google"
-                  },
-                  {
-                    "category": "Google",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "api_key_param": "google_api_key",
-                      "context_length": 32768,
-                      "model_class": "ChatGoogleGenerativeAIFixed",
-                      "model_name_param": "model"
-                    },
-                    "name": "gemini-2.5-flash-lite",
-                    "provider": "Google"
-                  },
-                  {
-                    "category": "Google",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "api_key_param": "google_api_key",
-                      "context_length": 32768,
-                      "model_class": "ChatGoogleGenerativeAIFixed",
-                      "model_name_param": "model"
-                    },
-                    "name": "gemini-2.0-flash-lite",
-                    "provider": "Google"
-                  },
-                  {
-                    "category": "Google",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "api_key_param": "google_api_key",
-                      "context_length": 32768,
-                      "model_class": "ChatGoogleGenerativeAIFixed",
-                      "model_name_param": "model"
-                    },
-                    "name": "gemini-2.0-flash",
-                    "provider": "Google"
-                  },
-                  {
-                    "category": "Google",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "api_key_param": "google_api_key",
-                      "context_length": 32768,
-                      "model_class": "ChatGoogleGenerativeAIFixed",
-                      "model_name_param": "model"
-                    },
-                    "name": "gemini-exp-1206",
-                    "provider": "Google"
-                  },
-                  {
-                    "category": "Google",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "api_key_param": "google_api_key",
-                      "context_length": 32768,
-                      "model_class": "ChatGoogleGenerativeAIFixed",
-                      "model_name_param": "model"
-                    },
-                    "name": "gemini-2.0-flash-thinking-exp-01-21",
-                    "provider": "Google"
-                  },
-                  {
-                    "category": "Google",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "api_key_param": "google_api_key",
-                      "context_length": 32768,
-                      "model_class": "ChatGoogleGenerativeAIFixed",
-                      "model_name_param": "model"
-                    },
-                    "name": "learnlm-1.5-pro-experimental",
-                    "provider": "Google"
-                  },
-                  {
-                    "category": "Google",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "api_key_param": "google_api_key",
-                      "context_length": 32768,
-                      "model_class": "ChatGoogleGenerativeAIFixed",
-                      "model_name_param": "model"
-                    },
-                    "name": "gemma-2-2b",
-                    "provider": "Google"
-                  },
-                  {
-                    "category": "Google",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "api_key_param": "google_api_key",
-                      "context_length": 32768,
-                      "model_class": "ChatGoogleGenerativeAIFixed",
-                      "model_name_param": "model"
-                    },
-                    "name": "gemma-2-9b",
-                    "provider": "Google"
-                  },
-                  {
-                    "category": "Google",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "api_key_param": "google_api_key",
-                      "context_length": 32768,
-                      "model_class": "ChatGoogleGenerativeAIFixed",
-                      "model_name_param": "model"
-                    },
-                    "name": "gemma-2-27b",
-                    "provider": "Google"
-                  },
-                  {
-                    "category": "Ollama",
-                    "icon": "Ollama",
-                    "metadata": {
-                      "base_url_param": "base_url",
-                      "context_length": 8192,
-                      "model_class": "ChatOllama",
-                      "model_name_param": "model"
-                    },
-                    "name": "ChatOllama",
-                    "provider": "Ollama"
-                  },
-                  {
-                    "category": "IBM WatsonX",
-                    "icon": "WatsonxAI",
-                    "metadata": {
-                      "api_key_param": "apikey",
-                      "context_length": 8192,
-                      "model_class": "ChatWatsonx",
-                      "model_name_param": "model_id",
-                      "project_id_param": "project_id",
-                      "url_param": "url"
-                    },
-                    "name": "ChatWatsonx",
-                    "provider": "IBM WatsonX"
+                    "icon": "GoogleGenerativeAI"
                   }
                 ],
                 "placeholder": "",
-                "providers": [
-                  "OpenAI",
-                  "OpenAI",
-                  "OpenAI",
-                  "OpenAI",
-                  "OpenAI",
-                  "OpenAI",
-                  "OpenAI",
-                  "OpenAI",
-                  "OpenAI",
-                  "Anthropic",
-                  "Anthropic",
-                  "Anthropic",
-                  "Anthropic",
-                  "Anthropic",
-                  "Anthropic",
-                  "Anthropic",
-                  "Anthropic",
-                  "Google",
-                  "Google",
-                  "Google",
-                  "Google",
-                  "Google",
-                  "Google",
-                  "Google",
-                  "Google",
-                  "Google",
-                  "Google",
-                  "Google",
-                  "Google",
-                  "Google",
-                  "Google",
-                  "Ollama",
-                  "IBM WatsonX"
-                ],
                 "real_time_refresh": true,
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
-                "trace_as_input": true,
-                "type": "model",
-                "value": ""
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "OpenAI"
               },
               "stream": {
                 "_input_type": "BoolInput",
@@ -4484,7 +3522,7 @@
               },
               "system_message": {
                 "_input_type": "MultilineInput",
-                "advanced": false,
+                "advanced": true,
                 "copy_field": false,
                 "display_name": "System Message",
                 "dynamic": false,
@@ -4538,35 +3576,34 @@
             },
             "tool_mode": false
           },
-          "selected_output": "text_output",
           "showNode": true,
           "type": "LanguageModelComponent"
         },
         "dragging": false,
-        "id": "LanguageModelComponent-39Sf7",
+        "id": "LanguageModelComponent-mMKmF",
         "measured": {
-          "height": 369,
+          "height": 451,
           "width": 320
         },
         "position": {
-          "x": 1654.4866350220416,
-          "y": 1412.0751024367912
+          "x": 1682.4309619697785,
+          "y": 1466.0777133523027
         },
         "selected": false,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": 0.8343758374737718,
-      "y": -111.2745261371748,
-      "zoom": 0.42510249369401887
+      "x": -95.23081423706287,
+      "y": -97.99210056496133,
+      "zoom": 0.5620453086026018
     }
   },
   "description": "An AI-powered meeting summary generator that transcribes and summarizes meetings using  AssemblyAI and OpenAI for quick insights.",
   "endpoint_name": null,
-  "id": "91a41537-bb03-4055-9b7b-24e4c07b6012",
+  "id": "5f6a79a4-2a18-4754-b8fb-cbfabce79cc9",
   "is_component": false,
-  "last_tested_version": "1.6.4",
+  "last_tested_version": "1.4.3",
   "name": "Meeting Summary",
   "tags": [
     "chatbots",

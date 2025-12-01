@@ -1784,25 +1784,16 @@
                   },
                   {
                     "icon": "OpenAI"
-                  },
-                  {
-                    "icon": "WatsonxAI"
-                  },
-                  {
-                    "icon": "Ollama"
                   }
                 ],
-                "override_skip": false,
                 "placeholder": "",
                 "real_time_refresh": true,
-                "refresh_button": false,
                 "required": false,
                 "show": true,
                 "title_case": false,
                 "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "track_in_telemetry": true,
                 "type": "str",
                 "value": "OpenAI"
               },
@@ -1834,7 +1825,6 @@
                 "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "base_url",
-                "override_skip": false,
                 "placeholder": "",
                 "required": true,
                 "show": false,
@@ -1979,7 +1969,6 @@
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "max_output_tokens",
-                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": false,
@@ -1999,14 +1988,12 @@
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "max_retries",
-                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "track_in_telemetry": true,
                 "type": "int",
                 "value": 5
               },
@@ -2019,11 +2006,10 @@
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "max_tokens",
-                "override_skip": false,
                 "placeholder": "",
                 "range_spec": {
-                  "max": 128000.0,
-                  "min": 0.0,
+                  "max": 128000,
+                  "min": 0,
                   "step": 0.1,
                   "step_type": "float"
                 },
@@ -2032,7 +2018,6 @@
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "track_in_telemetry": true,
                 "type": "int",
                 "value": ""
               },
@@ -2045,14 +2030,12 @@
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "model_kwargs",
-                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_input": true,
-                "track_in_telemetry": false,
                 "type": "dict",
                 "value": {}
               },
@@ -2063,8 +2046,8 @@
                 "dialog_inputs": {},
                 "display_name": "Model Name",
                 "dynamic": false,
-                "external_options": {},
                 "info": "To see the model names, first choose a provider. Then, enter your API key and click the refresh button next to the model name.",
+                "load_from_db": false,
                 "name": "model_name",
                 "options": [
                   "gpt-4o-mini",
@@ -2089,7 +2072,6 @@
                   "o4-mini-high"
                 ],
                 "options_metadata": [],
-                "override_skip": false,
                 "placeholder": "",
                 "real_time_refresh": false,
                 "required": false,
@@ -2098,9 +2080,8 @@
                 "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "track_in_telemetry": true,
                 "type": "str",
-                "value": "gpt-4o-mini"
+                "value": "gpt-4.1"
               },
               "n_messages": {
                 "_input_type": "IntInput",
@@ -2130,14 +2111,12 @@
                 "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "openai_api_base",
-                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "track_in_telemetry": false,
                 "type": "str",
                 "value": ""
               },
@@ -2213,7 +2192,6 @@
                 "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "project_id",
-                "override_skip": false,
                 "placeholder": "",
                 "required": true,
                 "show": false,
@@ -2233,14 +2211,12 @@
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "seed",
-                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "track_in_telemetry": true,
                 "type": "int",
                 "value": 1
               },
@@ -2280,11 +2256,10 @@
                 "min_label": "",
                 "min_label_icon": "",
                 "name": "temperature",
-                "override_skip": false,
                 "placeholder": "",
                 "range_spec": {
-                  "max": 1.0,
-                  "min": 0.0,
+                  "max": 1,
+                  "min": 0,
                   "step": 0.01,
                   "step_type": "float"
                 },
@@ -2295,7 +2270,6 @@
                 "slider_input": false,
                 "title_case": false,
                 "tool_mode": false,
-                "track_in_telemetry": false,
                 "type": "slider",
                 "value": 0.1
               },
@@ -2308,14 +2282,12 @@
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "timeout",
-                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "track_in_telemetry": true,
                 "type": "int",
                 "value": 700
               },
@@ -2538,25 +2510,16 @@
                   },
                   {
                     "icon": "OpenAI"
-                  },
-                  {
-                    "icon": "WatsonxAI"
-                  },
-                  {
-                    "icon": "Ollama"
                   }
                 ],
-                "override_skip": false,
                 "placeholder": "",
                 "real_time_refresh": true,
-                "refresh_button": false,
                 "required": false,
                 "show": true,
                 "title_case": false,
                 "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "track_in_telemetry": true,
                 "type": "str",
                 "value": "OpenAI"
               },
@@ -2588,7 +2551,6 @@
                 "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "base_url",
-                "override_skip": false,
                 "placeholder": "",
                 "required": true,
                 "show": false,
@@ -2733,7 +2695,6 @@
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "max_output_tokens",
-                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": false,
@@ -2753,14 +2714,12 @@
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "max_retries",
-                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "track_in_telemetry": true,
                 "type": "int",
                 "value": 5
               },
@@ -2773,11 +2732,10 @@
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "max_tokens",
-                "override_skip": false,
                 "placeholder": "",
                 "range_spec": {
-                  "max": 128000.0,
-                  "min": 0.0,
+                  "max": 128000,
+                  "min": 0,
                   "step": 0.1,
                   "step_type": "float"
                 },
@@ -2786,7 +2744,6 @@
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "track_in_telemetry": true,
                 "type": "int",
                 "value": ""
               },
@@ -2799,14 +2756,12 @@
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "model_kwargs",
-                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_input": true,
-                "track_in_telemetry": false,
                 "type": "dict",
                 "value": {}
               },
@@ -2817,8 +2772,8 @@
                 "dialog_inputs": {},
                 "display_name": "Model Name",
                 "dynamic": false,
-                "external_options": {},
                 "info": "To see the model names, first choose a provider. Then, enter your API key and click the refresh button next to the model name.",
+                "load_from_db": false,
                 "name": "model_name",
                 "options": [
                   "gpt-4o-mini",
@@ -2843,7 +2798,6 @@
                   "o4-mini-high"
                 ],
                 "options_metadata": [],
-                "override_skip": false,
                 "placeholder": "",
                 "real_time_refresh": false,
                 "required": false,
@@ -2852,9 +2806,8 @@
                 "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "track_in_telemetry": true,
                 "type": "str",
-                "value": "gpt-4o-mini"
+                "value": "gpt-4.1"
               },
               "n_messages": {
                 "_input_type": "IntInput",
@@ -2884,14 +2837,12 @@
                 "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "openai_api_base",
-                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "track_in_telemetry": false,
                 "type": "str",
                 "value": ""
               },
@@ -2967,7 +2918,6 @@
                 "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "project_id",
-                "override_skip": false,
                 "placeholder": "",
                 "required": true,
                 "show": false,
@@ -2987,14 +2937,12 @@
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "seed",
-                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "track_in_telemetry": true,
                 "type": "int",
                 "value": 1
               },
@@ -3034,11 +2982,10 @@
                 "min_label": "",
                 "min_label_icon": "",
                 "name": "temperature",
-                "override_skip": false,
                 "placeholder": "",
                 "range_spec": {
-                  "max": 1.0,
-                  "min": 0.0,
+                  "max": 1,
+                  "min": 0,
                   "step": 0.01,
                   "step_type": "float"
                 },
@@ -3049,7 +2996,6 @@
                 "slider_input": false,
                 "title_case": false,
                 "tool_mode": false,
-                "track_in_telemetry": false,
                 "type": "slider",
                 "value": 0.1
               },
@@ -3062,14 +3008,12 @@
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "timeout",
-                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "track_in_telemetry": true,
                 "type": "int",
                 "value": 700
               },
@@ -3292,25 +3236,16 @@
                   },
                   {
                     "icon": "OpenAI"
-                  },
-                  {
-                    "icon": "WatsonxAI"
-                  },
-                  {
-                    "icon": "Ollama"
                   }
                 ],
-                "override_skip": false,
                 "placeholder": "",
                 "real_time_refresh": true,
-                "refresh_button": false,
                 "required": false,
                 "show": true,
                 "title_case": false,
                 "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "track_in_telemetry": true,
                 "type": "str",
                 "value": "OpenAI"
               },
@@ -3342,7 +3277,6 @@
                 "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "base_url",
-                "override_skip": false,
                 "placeholder": "",
                 "required": true,
                 "show": false,
@@ -3487,7 +3421,6 @@
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "max_output_tokens",
-                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": false,
@@ -3507,14 +3440,12 @@
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "max_retries",
-                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "track_in_telemetry": true,
                 "type": "int",
                 "value": 5
               },
@@ -3527,11 +3458,10 @@
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "max_tokens",
-                "override_skip": false,
                 "placeholder": "",
                 "range_spec": {
-                  "max": 128000.0,
-                  "min": 0.0,
+                  "max": 128000,
+                  "min": 0,
                   "step": 0.1,
                   "step_type": "float"
                 },
@@ -3540,7 +3470,6 @@
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "track_in_telemetry": true,
                 "type": "int",
                 "value": ""
               },
@@ -3553,14 +3482,12 @@
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "model_kwargs",
-                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_input": true,
-                "track_in_telemetry": false,
                 "type": "dict",
                 "value": {}
               },
@@ -3571,8 +3498,8 @@
                 "dialog_inputs": {},
                 "display_name": "Model Name",
                 "dynamic": false,
-                "external_options": {},
                 "info": "To see the model names, first choose a provider. Then, enter your API key and click the refresh button next to the model name.",
+                "load_from_db": false,
                 "name": "model_name",
                 "options": [
                   "gpt-4o-mini",
@@ -3597,7 +3524,6 @@
                   "o4-mini-high"
                 ],
                 "options_metadata": [],
-                "override_skip": false,
                 "placeholder": "",
                 "real_time_refresh": false,
                 "required": false,
@@ -3606,9 +3532,8 @@
                 "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "track_in_telemetry": true,
                 "type": "str",
-                "value": "gpt-4o-mini"
+                "value": "gpt-4.1"
               },
               "n_messages": {
                 "_input_type": "IntInput",
@@ -3638,14 +3563,12 @@
                 "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "openai_api_base",
-                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "track_in_telemetry": false,
                 "type": "str",
                 "value": ""
               },
@@ -3721,7 +3644,6 @@
                 "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "project_id",
-                "override_skip": false,
                 "placeholder": "",
                 "required": true,
                 "show": false,
@@ -3741,14 +3663,12 @@
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "seed",
-                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "track_in_telemetry": true,
                 "type": "int",
                 "value": 1
               },
@@ -3788,11 +3708,10 @@
                 "min_label": "",
                 "min_label_icon": "",
                 "name": "temperature",
-                "override_skip": false,
                 "placeholder": "",
                 "range_spec": {
-                  "max": 1.0,
-                  "min": 0.0,
+                  "max": 1,
+                  "min": 0,
                   "step": 0.01,
                   "step_type": "float"
                 },
@@ -3803,7 +3722,6 @@
                 "slider_input": false,
                 "title_case": false,
                 "tool_mode": false,
-                "track_in_telemetry": false,
                 "type": "slider",
                 "value": 0.1
               },
@@ -3816,14 +3734,12 @@
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "timeout",
-                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "track_in_telemetry": true,
                 "type": "int",
                 "value": 700
               },
