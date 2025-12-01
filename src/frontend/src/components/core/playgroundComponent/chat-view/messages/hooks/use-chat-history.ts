@@ -11,11 +11,19 @@ export const useChatHistory = (visibleSession: string | null) => {
 
   useEffect(() => {
     const messagesFromMessagesStore: ChatMessageType[] = messages
-      .filter(
-        (message) =>
-          message.flow_id === currentFlowId &&
-          (visibleSession === message.session_id || visibleSession === null),
-      )
+      .filter((message) => {
+        const isCurrentFlow = message.flow_id === currentFlowId;
+        // If visibleSession is the flow_id, it means we are in the default session
+        // In the default session, we show messages that have the same session_id as the flow_id
+        // OR messages that have NO session_id (legacy behavior)
+        if (visibleSession === currentFlowId) {
+          return (
+            isCurrentFlow &&
+            (message.session_id === visibleSession || !message.session_id)
+          );
+        }
+        return isCurrentFlow && message.session_id === visibleSession;
+      })
       .map((message) => {
         let files = message.files;
         // Handle the "[]" case, empty string, or already parsed array
