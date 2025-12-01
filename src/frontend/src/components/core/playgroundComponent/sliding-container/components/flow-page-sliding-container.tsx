@@ -46,18 +46,6 @@ export function FlowPageSlidingContainerContent() {
 
   return (
     <div className="h-full w-full bg-background border-l border-transparent shadow-lg flex flex-col relative">
-      <ChatHeader
-        onNewChat={handleNewChat}
-        onSessionSelect={handleSessionSelect}
-        currentSessionId={currentSessionId}
-        currentFlowId={currentFlowId}
-        onToggleFullscreen={
-          isFullscreen ? handleExitFullscreen : () => setIsFullscreen(true)
-        }
-        isFullscreen={isFullscreen}
-        onDeleteSession={handleDeleteSession}
-        onClose={handleClose}
-      />
       <div className="flex-1 flex overflow-hidden">
         {isFullscreen && sidebarOpen && (
           <div className="w-1/5 max-w-[280px] min-w-[250px] border-r border-border bg-background overflow-y-auto">
@@ -71,11 +59,25 @@ export function FlowPageSlidingContainerContent() {
             </div>
           </div>
         )}
-        <div className="flex-1 overflow-auto p-6">
-          <Messages
-            visibleSession={currentSessionId ?? currentFlowId}
-            playgroundPage={true}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <ChatHeader
+            onNewChat={handleNewChat}
+            onSessionSelect={handleSessionSelect}
+            currentSessionId={currentSessionId}
+            currentFlowId={currentFlowId}
+            onToggleFullscreen={
+              isFullscreen ? handleExitFullscreen : () => setIsFullscreen(true)
+            }
+            isFullscreen={isFullscreen}
+            onDeleteSession={handleDeleteSession}
+            onClose={handleClose}
           />
+          <div className="flex-1 overflow-auto p-6">
+            <Messages
+              visibleSession={currentSessionId ?? currentFlowId}
+              playgroundPage={true}
+            />
+          </div>
         </div>
       </div>
     </div>
