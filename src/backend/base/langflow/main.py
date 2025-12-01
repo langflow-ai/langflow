@@ -310,6 +310,7 @@ def get_lifespan(*, fix_migration=False, version=None):
             # v1 and project MCP server context managers
             from langflow.api.v1.mcp import start_streamable_http_manager
             from langflow.api.v1.mcp_projects import start_project_task_group
+
             await start_streamable_http_manager()
             await start_project_task_group()
 
@@ -345,6 +346,7 @@ def get_lifespan(*, fix_migration=False, version=None):
                 with shutdown_progress.step(1):
                     from langflow.api.v1.mcp import stop_streamable_http_manager
                     from langflow.api.v1.mcp_projects import stop_project_task_group
+
                     # Shutdown MCP project servers
                     try:
                         await stop_project_task_group()
