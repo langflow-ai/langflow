@@ -39,7 +39,7 @@ class CollectingSpanProcessor(SpanProcessor):
     def __init__(self):
         self.correlation_id = None
 
-    def on_start(self, span, parent_context=None):
+    def on_start(self, span, _parent_context=None):
         # Generate the correlation ID once
         if self.correlation_id is None:
             self.correlation_id = str(uuid.uuid4())
@@ -194,8 +194,7 @@ class ArizePhoenixTracer(BaseTracer):
             self.tracer_provider = tracer_provider
         except ImportError:
             logger.exception(
-                "[Arize/Phoenix] Could not import OTEL package."
-                "Please install it with `pip install arize-phoenix-otel`."
+                "[Arize/Phoenix] Could not import OTEL package. Please install it with `pip install arize-phoenix-otel`."
             )
             return False
 
