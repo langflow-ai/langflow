@@ -105,6 +105,7 @@ class LanguageModelComponent(LCModelComponent):
             value=IBM_WATSONX_URLS[0],
             show=False,
             real_time_refresh=True,
+            combobox=True,
         ),
         StrInput(
             name="project_id",
