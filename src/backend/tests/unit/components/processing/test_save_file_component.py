@@ -328,18 +328,16 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
     @pytest.mark.asyncio
     async def test_google_drive_credential_parsing_with_control_characters(self, component_class):
         """Test that GCP service account JSON with literal newlines (control characters) can be parsed.
-        
+
         This tests the fix for the bug where pasted GCP service account JSON fails with:
         'Invalid control character at: line 1 column 183 (char 182)'
         """
-        import json
-        
         component = component_class(_user_id=str(uuid4()))
-        
+
         # Simulate a GCP service account JSON with literal newlines in the private_key field
         # This is what causes the original bug - the private_key contains literal \n characters
         service_account_json = '{"type": "service_account", "project_id": "test-project-123", "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC\n-----END PRIVATE KEY-----\n"}'
-        
+
         message = Message(text="test content")
         component.set_attributes(
             {
@@ -351,7 +349,7 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
                 "folder_id": "test_folder_id_123",
             }
         )
-        
+
         # Mock Google Drive dependencies
         with (
             patch("google.oauth2.service_account.Credentials.from_service_account_info") as mock_creds,
@@ -359,42 +357,40 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
         ):
             mock_drive_service = MagicMock()
             mock_build.return_value = mock_drive_service
-            
+
             # Mock the file upload response
             mock_drive_service.files().create().execute.return_value = {"id": "file123"}
-            
+
             result = await component.save_to_file()
-            
+
             # Verify credentials were parsed successfully (should not raise JSONDecodeError)
             mock_creds.assert_called_once()
             creds_dict = mock_creds.call_args[0][0]
-            
+
             # Verify the parsed credentials have the expected structure
             assert creds_dict["type"] == "service_account"
             assert creds_dict["project_id"] == "test-project-123"
             assert "private_key" in creds_dict
             assert "BEGIN PRIVATE KEY" in creds_dict["private_key"]
-            
+
             # Verify successful upload message
             assert "successfully uploaded to Google Drive" in result.text
             assert "file123" in result.text
-    
+
     @pytest.mark.asyncio
     async def test_google_drive_credential_parsing_strategies(self, component_class):
         """Test various GCP credential parsing strategies."""
         component = component_class(_user_id=str(uuid4()))
-        
+
         test_cases = [
             # Case 1: Normal JSON (should work)
             ('{"type": "service_account", "project_id": "test"}', "Normal JSON"),
-            
             # Case 2: JSON with literal newlines (the bug case)
             ('{"type": "service_account", "private_key": "-----BEGIN\nKEY\n-----END"}', "With control chars"),
-            
             # Case 3: JSON with extra whitespace
             ('  \n{"type": "service_account", "project_id": "test"}  \n', "With whitespace"),
         ]
-        
+
         for service_account_json, test_name in test_cases:
             message = Message(text="test")
             component.set_attributes(
@@ -407,7 +403,7 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
                     "folder_id": "test_folder",
                 }
             )
-            
+
             with (
                 patch("google.oauth2.service_account.Credentials.from_service_account_info") as mock_creds,
                 patch("googleapiclient.discovery.build") as mock_build,
@@ -415,14 +411,14 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
                 mock_drive_service = MagicMock()
                 mock_build.return_value = mock_drive_service
                 mock_drive_service.files().create().execute.return_value = {"id": f"file_{test_name}"}
-                
+
                 # Should not raise JSONDecodeError for any case
                 result = await component.save_to_file()
-                
+
                 # Verify credentials were parsed
                 mock_creds.assert_called_once()
                 creds_dict = mock_creds.call_args[0][0]
                 assert isinstance(creds_dict, dict)
                 assert creds_dict["type"] == "service_account"
-                
+
                 mock_creds.reset_mock()
