@@ -36,10 +36,12 @@ class FileComponent(BaseFileComponent):
     """File component with optional Docling processing (isolated in a subprocess)."""
 
     display_name = "Read File"
-    description = "Loads content from one or more files."
+    # description is now a dynamic property - see get_tool_description()
+    _base_description = "Loads content from one or more files."
     documentation: str = "https://docs.langflow.org/read-file"
     icon = "file-text"
     name = "File"
+    add_tool_output = True  # Enable tool mode toggle without requiring tool_mode inputs
 
     # Extensions that can be processed without Docling (using standard text parsing)
     TEXT_EXTENSIONS = TEXT_FILE_TYPES
@@ -99,7 +101,7 @@ class FileComponent(BaseFileComponent):
             ),
             show=False,
             advanced=True,
-            tool_mode=True,
+            tool_mode=True,  # Required for Toolset toggle, but _get_tools() ignores this parameter
             required=False,
         ),
         BoolInput(
@@ -182,6 +184,84 @@ class FileComponent(BaseFileComponent):
     outputs = [
         Output(display_name="Raw Content", name="message", method="load_files_message", tool_mode=True),
     ]
+
+    # ------------------------------ Tool description with file names --------------
+
+    def get_tool_description(self) -> str:
+        """Return a dynamic description that includes the names of uploaded files.
+
+        This helps the Agent understand which files are available to read.
+        """
+        base_description = "Loads and returns the content from uploaded files."
+
+        # Get the list of uploaded file paths
+        file_paths = getattr(self, "path", None)
+        if not file_paths:
+            return base_description
+
+        # Ensure it's a list
+        if not isinstance(file_paths, list):
+            file_paths = [file_paths]
+
+        # Extract just the file names from the paths
+        file_names = []
+        for fp in file_paths:
+            if fp:
+                name = Path(fp).name
+                file_names.append(name)
+
+        if file_names:
+            files_str = ", ".join(file_names)
+            return f"{base_description} Available files: {files_str}. Call this tool to read these files."
+
+        return base_description
+
+    @property
+    def description(self) -> str:
+        """Dynamic description property that includes uploaded file names."""
+        return self.get_tool_description()
+
+    async def _get_tools(self) -> list:
+        """Override to create a tool without parameters.
+
+        The Read File component should use the files already uploaded via UI,
+        not accept file paths from the Agent (which wouldn't know the internal paths).
+        """
+        from langchain_core.tools import StructuredTool
+        from pydantic import BaseModel
+
+        # Empty schema - no parameters needed
+        class EmptySchema(BaseModel):
+            """No parameters required - uses pre-uploaded files."""
+
+        async def read_files_tool() -> str:
+            """Read the content of uploaded files."""
+            try:
+                result = self.load_files_message()
+                if hasattr(result, "get_text"):
+                    return result.get_text()
+                if hasattr(result, "text"):
+                    return result.text
+                return str(result)
+            except (FileNotFoundError, ValueError, OSError, RuntimeError) as e:
+                return f"Error reading files: {e}"
+
+        description = self.get_tool_description()
+
+        tool = StructuredTool(
+            name="load_files_message",
+            description=description,
+            coroutine=read_files_tool,
+            args_schema=EmptySchema,
+            handle_tool_error=True,
+            tags=["load_files_message"],
+            metadata={
+                "display_name": "Read File",
+                "display_description": description,
+            },
+        )
+
+        return [tool]
 
     # ------------------------------ UI helpers --------------------------------------
 
@@ -706,7 +786,8 @@ class FileComponent(BaseFileComponent):
                 # --- UNNEST: expand each element in `doc` to its own Data row
                 payload = getattr(advanced_data, "data", {}) or {}
                 doc_rows = payload.get("doc")
-                if isinstance(doc_rows, list):
+                if isinstance(doc_rows, list) and doc_rows:
+                    # Non-empty list of structured rows
                     rows: list[Data | None] = [
                         Data(
                             data={
@@ -717,6 +798,19 @@ class FileComponent(BaseFileComponent):
                         for item in doc_rows
                     ]
                     final_return.extend(self.rollup_data(file_list, rows))
+                elif isinstance(doc_rows, list) and not doc_rows:
+                    # Empty list - file was processed but no text content found
+                    # Create a Data object indicating no content was extracted
+                    self.log(f"No text extracted from '{file_path}', creating placeholder data")
+                    empty_data = Data(
+                        data={
+                            "file_path": file_path,
+                            "text": "(No text content extracted from image)",
+                            "info": "Image processed successfully but contained no extractable text",
+                            **{k: v for k, v in payload.items() if k != "doc"},
+                        },
+                    )
+                    final_return.extend(self.rollup_data([file], [empty_data]))
                 else:
                     # If not structured, keep as-is (e.g., markdown export or error dict)
                     final_return.extend(self.rollup_data(file_list, [advanced_data]))
@@ -740,12 +834,16 @@ class FileComponent(BaseFileComponent):
     def load_files_helper(self) -> DataFrame:
         result = self.load_files()
 
-        # Error condition - raise error if no text and an error is present
-        if not hasattr(result, "text"):
-            if hasattr(result, "error"):
-                raise ValueError(result.error[0])
+        # Result is a DataFrame - check if it has any rows
+        if result.empty:
             msg = "Could not extract content from the provided file(s)."
             raise ValueError(msg)
+
+        # Check for error column with error messages
+        if "error" in result.columns:
+            errors = result["error"].dropna().tolist()
+            if errors and not any(col in result.columns for col in ["text", "doc", "exported_content"]):
+                raise ValueError(errors[0])
 
         return result
 
@@ -758,4 +856,17 @@ class FileComponent(BaseFileComponent):
         """Load files using advanced Docling processing and export to Markdown format."""
         self.markdown = True
         result = self.load_files_helper()
-        return Message(text=str(result.text[0]))
+
+        # Result is a DataFrame - check for text or exported_content columns
+        if "text" in result.columns and not result["text"].isna().all():
+            text_values = result["text"].dropna().tolist()
+            if text_values:
+                return Message(text=str(text_values[0]))
+
+        if "exported_content" in result.columns and not result["exported_content"].isna().all():
+            content_values = result["exported_content"].dropna().tolist()
+            if content_values:
+                return Message(text=str(content_values[0]))
+
+        # Return empty message with info that no text was found
+        return Message(text="(No text content extracted from file)")
