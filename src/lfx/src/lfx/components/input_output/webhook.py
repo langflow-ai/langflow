@@ -7,7 +7,7 @@ from lfx.schema.data import Data
 
 class WebhookComponent(Component):
     display_name = "Webhook"
-    documentation: str = "https://docs.langflow.org/components-data#webhook"
+    documentation: str = "https://docs.langflow.org/component-webhook"
     name = "Webhook"
     icon = "webhook"
 

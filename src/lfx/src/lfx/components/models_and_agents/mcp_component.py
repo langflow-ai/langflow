@@ -66,7 +66,7 @@ class MCPToolsComponent(ComponentWithCache):
 
     display_name = "MCP Tools"
     description = "Connect to an MCP server to use its tools."
-    documentation: str = "https://docs.langflow.org/mcp-client"
+    documentation: str = "https://docs.langflow.org/mcp-tools"
     icon = "Mcp"
     name = "MCPTools"
 
@@ -566,7 +566,6 @@ class MCPToolsComponent(ComponentWithCache):
             text = item_dict.get("text")
             try:
                 return json.loads(text)
-                # convert it to dict
             except json.JSONDecodeError:
                 return item_dict
         return item_dict
