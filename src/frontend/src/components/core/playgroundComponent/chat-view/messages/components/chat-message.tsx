@@ -1,28 +1,9 @@
-import Convert from "ansi-to-html";
-import { useContext, useEffect, useRef, useState } from "react";
-import LangflowLogo from "@/assets/LangflowLogo.svg?react";
-import IconComponent, {
-  ForwardedIconComponent,
-} from "@/components/common/genericIconComponent";
-import SanitizedHTMLWrapper from "@/components/common/sanitizedHTMLWrapper";
-import { ContentBlockDisplay } from "@/components/core/chatComponents/ContentBlockDisplay";
-import { EMPTY_INPUT_SEND_MESSAGE } from "@/constants/constants";
-import { AuthContext } from "@/contexts/authContext";
-import { useUpdateMessage } from "@/controllers/API/queries/messages";
-import { CustomMarkdownField } from "@/customization/components/custom-markdown-field";
-import { CustomProfileIcon } from "@/customization/components/custom-profile-icon";
-import { BASE_URL_API } from "@/customization/config-constants";
-import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
-import useAlertStore from "@/stores/alertStore";
+import { useEffect, useState } from "react";
 import useFlowStore from "@/stores/flowStore";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { chatMessagePropsType } from "@/types/components";
-import { cn } from "@/utils/utils";
-import { convertFiles } from "../utils/convert-files";
+import { BotMessage } from "./bot-message";
 import { ErrorView } from "./content-view";
-import EditMessageField from "./edit-message-field";
-import FileCardWrapper from "./file-card-wrapper";
-import { EditMessageButton } from "./message-options";
+import { UserMessage } from "./user-message";
 
 export default function ChatMessage({
   chat,
@@ -31,92 +12,12 @@ export default function ChatMessage({
   closeChat,
   playgroundPage,
 }: chatMessagePropsType): JSX.Element {
-  const { userData } = useContext(AuthContext);
-  const convert = new Convert({ newline: true });
-  const [hidden, setHidden] = useState(true);
-  const [streamUrl, setStreamUrl] = useState(chat.stream_url);
-  const flow_id = useFlowsManagerStore((state) => state.currentFlowId);
   const fitViewNode = useFlowStore((state) => state.fitViewNode);
-  // We need to check if message is not undefined because
-  // we need to run .toString() on it
-  const [chatMessage, setChatMessage] = useState(
-    chat.message ? chat.message.toString() : "",
-  );
-  const [isStreaming, setIsStreaming] = useState(false);
-  const eventSource = useRef<EventSource | undefined>(undefined);
-  const setErrorData = useAlertStore((state) => state.setErrorData);
-  const chatMessageRef = useRef(chatMessage);
-  const [editMessage, setEditMessage] = useState(false);
   const [showError, setShowError] = useState(false);
-  const isBuilding = useFlowStore((state) => state.isBuilding);
 
-  const isAudioMessage = chat.category === "audio";
-
-  useEffect(() => {
-    const chatMessageString = chat.message ? chat.message.toString() : "";
-    setChatMessage(chatMessageString);
-    chatMessageRef.current = chatMessage;
-  }, [chat, isBuilding]);
-
-  // The idea now is that chat.stream_url MAY be a URL if we should stream the output of the chat
-  // probably the message is empty when we have a stream_url
-  // what we need is to update the chat_message with the SSE data
-  const streamChunks = (url: string) => {
-    setIsStreaming(true); // Streaming starts
-    return new Promise<boolean>((resolve, reject) => {
-      eventSource.current = new EventSource(url);
-      eventSource.current.onmessage = (event) => {
-        const parsedData = JSON.parse(event.data);
-        if (parsedData.chunk) {
-          setChatMessage((prev) => prev + parsedData.chunk);
-        }
-      };
-      eventSource.current.onerror = (event: Event) => {
-        setIsStreaming(false);
-        eventSource.current?.close();
-        setStreamUrl(undefined);
-        // @ts-ignore
-        if (JSON.parse(event.data)?.error) {
-          setErrorData({
-            title: "Error on Streaming",
-            // @ts-ignore
-            list: [JSON.parse(event.data)?.error],
-          });
-        }
-        updateChat(chat, chatMessageRef.current);
-        reject(new Error("Streaming failed"));
-      };
-      eventSource.current.addEventListener("close", (event) => {
-        setStreamUrl(undefined); // Update state to reflect the stream is closed
-        eventSource.current?.close();
-        setIsStreaming(false);
-        resolve(true);
-      });
-    });
-  };
-
-  useEffect(() => {
-    if (streamUrl && !isStreaming) {
-      streamChunks(streamUrl)
-        .then(() => {
-          if (updateChat) {
-            updateChat(chat, chatMessageRef.current);
-          }
-        })
-        .catch((error) => {
-          console.error(error);
-        });
-    }
-  }, [streamUrl, chatMessage]);
-  useEffect(() => {
-    return () => {
-      eventSource.current?.close();
-    };
-  }, []);
-
+  // Handle error display delay
   useEffect(() => {
     if (chat.category === "error") {
-      // Short delay before showing error to allow for loading animation
       const timer = setTimeout(() => {
         setShowError(true);
       }, 50);
@@ -124,78 +25,9 @@ export default function ChatMessage({
     }
   }, [chat.category]);
 
-  let decodedMessage = chatMessage ?? "";
-  try {
-    decodedMessage = decodeURIComponent(chatMessage);
-  } catch (_e) {
-    // console.error(e);
-  }
-  const isEmpty = decodedMessage?.trim() === "";
-  const { mutate: updateMessageMutation } = useUpdateMessage();
-
-  const handleEditMessage = (message: string) => {
-    updateMessageMutation(
-      {
-        message: {
-          id: chat.id,
-          files: convertFiles(chat.files),
-          sender_name: chat.sender_name ?? "AI",
-          text: message,
-          sender: chat.isSend ? "User" : "Machine",
-          flow_id,
-          session_id: chat.session ?? "",
-        },
-        refetch: true,
-      },
-      {
-        onSuccess: () => {
-          updateChat(chat, message);
-          setEditMessage(false);
-        },
-        onError: () => {
-          setErrorData({
-            title: "Error updating messages.",
-          });
-        },
-      },
-    );
-  };
-
-  const handleEvaluateAnswer = (evaluation: boolean | null) => {
-    updateMessageMutation(
-      {
-        message: {
-          ...chat,
-          files: convertFiles(chat.files),
-          sender_name: chat.sender_name ?? "AI",
-          text: chat.message.toString(),
-          sender: chat.isSend ? "User" : "Machine",
-          flow_id,
-          session_id: chat.session ?? "",
-          properties: {
-            ...chat.properties,
-            positive_feedback: evaluation,
-          },
-        },
-        refetch: true,
-      },
-      {
-        onError: () => {
-          setErrorData({
-            title: "Error updating messages.",
-          });
-        },
-      },
-    );
-  };
-
-  const editedFlag = chat.edit ? (
-    <div className="text-sm text-muted-foreground">(Edited)</div>
-  ) : null;
-
+  // Error messages
   if (chat.category === "error") {
     const blocks = chat.content_blocks ?? [];
-
     return (
       <ErrorView
         blocks={blocks}
@@ -208,204 +40,31 @@ export default function ChatMessage({
     );
   }
 
+  // Check if message is empty (would show "No input message provided")
+  const chatMessage = chat.message ? chat.message.toString() : "";
+  const isEmpty = chatMessage.trim() === "";
+
+  // User messages (but treat empty messages as bot messages)
+  if (chat.isSend && !isEmpty) {
+    return (
+      <UserMessage
+        chat={chat}
+        lastMessage={lastMessage}
+        updateChat={updateChat}
+        closeChat={closeChat}
+        playgroundPage={playgroundPage}
+      />
+    );
+  }
+
+  // Bot messages (and empty user messages)
   return (
-    <>
-      <div className="w-full py-4 word-break-break-word">
-        <div
-          className={cn(
-            "group relative flex w-full gap-4 rounded-md p-2",
-            editMessage ? "" : "hover:bg-muted",
-          )}
-        >
-          <div
-            className={cn(
-              "relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-md text-2xl",
-              !chat.isSend
-                ? "bg-muted"
-                : "border border-border hover:border-input",
-            )}
-            style={
-              chat.properties?.background_color
-                ? { backgroundColor: chat.properties.background_color }
-                : {}
-            }
-          >
-            {!chat.isSend ? (
-              <div className="flex h-5 w-5 items-center justify-center">
-                {chat.properties?.icon ? (
-                  chat.properties.icon.match(
-                    /[\u2600-\u27BF\uD83C-\uDBFF\uDC00-\uDFFF]/,
-                  ) ? (
-                    <span className="">{chat.properties.icon}</span>
-                  ) : (
-                    <ForwardedIconComponent name={chat.properties.icon} />
-                  )
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center rounded-full bg-white p-[3px] border border-border">
-                    <LangflowLogo className="h-full w-full" />
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="flex h-5 w-5 items-center justify-center">
-                {chat.properties?.icon ? (
-                  chat.properties.icon.match(
-                    /[\u2600-\u27BF\uD83C-\uDBFF\uDC00-\uDFFF]/,
-                  ) ? (
-                    <div className="">{chat.properties.icon}</div>
-                  ) : (
-                    <ForwardedIconComponent name={chat.properties.icon} />
-                  )
-                ) : userData?.profile_image ? (
-                  <img
-                    src={`${BASE_URL_API}files/profile_pictures/${userData.profile_image}`}
-                    className="h-full w-full rounded-full object-cover"
-                    alt="User Profile"
-                  />
-                ) : (
-                  <ForwardedIconComponent name="User" />
-                )}
-              </div>
-            )}
-          </div>
-          <div className="flex w-[94%] flex-col gap-2">
-            {chat.content_blocks && chat.content_blocks.length > 0 && (
-              <ContentBlockDisplay
-                playgroundPage={playgroundPage}
-                contentBlocks={chat.content_blocks}
-                isLoading={
-                  chat.properties?.state === "partial" &&
-                  isBuilding &&
-                  lastMessage
-                }
-                state={chat.properties?.state}
-                chatId={chat.id}
-              />
-            )}
-            {!chat.isSend ? (
-              <div className="form-modal-chat-text-position flex-grow">
-                <div className="form-modal-chat-text">
-                  {hidden && chat.thought && chat.thought !== "" && (
-                    <div
-                      onClick={(): void => setHidden((prev) => !prev)}
-                      className="form-modal-chat-icon-div"
-                    >
-                      <IconComponent
-                        name="MessageSquare"
-                        className="form-modal-chat-icon"
-                      />
-                    </div>
-                  )}
-                  {chat.thought && chat.thought !== "" && !hidden && (
-                    <SanitizedHTMLWrapper
-                      className="form-modal-chat-thought"
-                      content={convert.toHtml(chat.thought ?? "")}
-                      onClick={() => setHidden((prev) => !prev)}
-                    />
-                  )}
-                  {chat.thought && chat.thought !== "" && !hidden && <br></br>}
-                  <div className="flex w-full flex-col">
-                    <div
-                      className="flex w-full flex-col dark:text-white"
-                      data-testid="div-chat-message"
-                    >
-                      <div
-                        data-testid={
-                          "chat-message-" + chat.sender_name + "-" + chatMessage
-                        }
-                        className="flex w-full flex-col"
-                      >
-                        {chatMessage === "" && isBuilding && lastMessage ? (
-                          <IconComponent
-                            name="MoreHorizontal"
-                            className="h-8 w-8 animate-pulse"
-                          />
-                        ) : (
-                          <div className="min-h-8 w-full">
-                            {editMessage ? (
-                              <EditMessageField
-                                key={`edit-message-${chat.id}`}
-                                message={decodedMessage}
-                                onEdit={(message) => {
-                                  handleEditMessage(message);
-                                }}
-                                onCancel={() => setEditMessage(false)}
-                              />
-                            ) : (
-                              <CustomMarkdownField
-                                isAudioMessage={isAudioMessage}
-                                chat={chat}
-                                isEmpty={isEmpty}
-                                chatMessage={chatMessage}
-                                editedFlag={editedFlag}
-                              />
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="form-modal-chat-text-position flex-grow">
-                <div className="flex w-full flex-col">
-                  {editMessage ? (
-                    <EditMessageField
-                      key={`edit-message-${chat.id}`}
-                      message={decodedMessage}
-                      onEdit={(message) => {
-                        handleEditMessage(message);
-                      }}
-                      onCancel={() => setEditMessage(false)}
-                    />
-                  ) : (
-                    <>
-                      <div
-                        className={cn(
-                          "w-full items-baseline whitespace-pre-wrap break-words text-sm font-normal",
-                          isEmpty ? "text-muted-foreground" : "text-primary",
-                        )}
-                        data-testid={`chat-message-${chat.sender_name}-${chatMessage}`}
-                      >
-                        {isEmpty ? EMPTY_INPUT_SEND_MESSAGE : decodedMessage}
-                        {editedFlag}
-                      </div>
-                    </>
-                  )}
-                  {chat.files && (
-                    <div className="my-2 flex flex-col gap-5">
-                      {chat.files?.map((file, index) => {
-                        return <FileCardWrapper index={index} path={file} />;
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-          {!editMessage && (
-            <div className="invisible absolute -top-4 right-0 group-hover:visible">
-              <div>
-                <EditMessageButton
-                  onCopy={() => {
-                    navigator.clipboard.writeText(chatMessage);
-                  }}
-                  onEdit={
-                    playgroundPage ? undefined : () => setEditMessage(true)
-                  }
-                  className="h-fit group-hover:visible"
-                  isBotMessage={!chat.isSend}
-                  onEvaluate={handleEvaluateAnswer}
-                  evaluation={chat.properties?.positive_feedback}
-                  isAudioMessage={isAudioMessage}
-                />
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-      <div id={lastMessage ? "last-chat-message" : undefined} />
-    </>
+    <BotMessage
+      chat={chat}
+      lastMessage={lastMessage}
+      updateChat={updateChat}
+      closeChat={closeChat}
+      playgroundPage={playgroundPage}
+    />
   );
 }
