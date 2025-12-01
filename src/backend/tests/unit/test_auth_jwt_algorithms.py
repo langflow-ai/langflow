@@ -102,7 +102,7 @@ class TestAuthSettingsAlgorithms:
             settings2 = AuthSettings(CONFIG_DIR=tmpdir, ALGORITHM="RS256")
 
             assert settings2.PRIVATE_KEY.get_secret_value() == original_private
-            assert settings2.PUBLIC_KEY == original_public
+            assert original_public == settings2.PUBLIC_KEY
 
     def test_custom_private_key_derives_public_key(self):
         """When custom private key is provided, public key should be derived."""
@@ -119,7 +119,7 @@ class TestAuthSettingsAlgorithms:
             )
 
             assert settings.PRIVATE_KEY.get_secret_value() == custom_private
-            assert settings.PUBLIC_KEY == expected_public
+            assert expected_public == settings.PUBLIC_KEY
 
     def test_no_config_dir_generates_keys_in_memory(self):
         """Without CONFIG_DIR, keys should be generated in memory."""
