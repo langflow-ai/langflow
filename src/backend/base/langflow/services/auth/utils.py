@@ -581,3 +581,163 @@ async def get_current_active_user_mcp(current_user: Annotated[User, Depends(get_
     if not current_user.is_active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user")
     return current_user
+
+
+async def get_user_info_from_auth_token(
+    request,  # FastAPI Request
+    session: AsyncSession,
+    settings_service: SettingsService | None = None,
+) -> dict:
+    """
+    Get user information from auth token by calling external auth service.
+
+    Extracts user details from the authorization header, calls the auth service
+    to get role and contact information, then looks up the internal user ID
+    from the database by matching email/username.
+
+    Args:
+        request: FastAPI request object containing Authorization header
+        session: Database session for user lookup
+        settings_service: Settings service for auth URL configuration
+
+    Returns:
+        dict containing:
+            - user_id: UUID from internal user table
+            - email: User's email address
+            - name: Full name (firstName + lastName)
+            - roles: List of role names
+            - is_marketplace_admin: Boolean indicating Marketplace Admin role
+            - first_name: User's first name
+            - last_name: User's last name
+
+    Raises:
+        HTTPException: If auth token is missing, invalid, or user not found
+    """
+    import os
+    import jwt
+    import httpx
+    from sqlalchemy import select
+    from langflow.logging import logger
+
+    # Get authorization header
+    authorization = request.headers.get("Authorization")
+    if not authorization:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authorization header is required",
+        )
+
+    # Extract and decode JWT token to get email
+    try:
+        token = authorization.replace("Bearer ", "")
+        decoded = jwt.decode(token, options={"verify_signature": False})
+        email_id = decoded.get("email")
+        if not email_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Email not found in token",
+            )
+    except jwt.exceptions.DecodeError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Invalid token: {str(e)}",
+        )
+
+    # Get auth service URL from environment variable
+    auth_service_url = os.getenv("GENESIS_SERVICE_AUTH_URL")
+    if not auth_service_url:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Auth service URL not configured",
+        )
+
+    # Call auth service to get user details (using correct endpoint path)
+    auth_endpoint = f"{auth_service_url}/auth/api/v1/user/email/{email_id}"
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                auth_endpoint,
+                headers={"authorization": authorization},  # Use lowercase for consistency
+                timeout=10.0,
+            )
+            response.raise_for_status()
+            auth_data = response.json()
+    except httpx.HTTPStatusError as e:
+        # Log the actual response for debugging
+        logger.error(f"Auth service returned {e.response.status_code}: {e.response.text}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Failed to authenticate with auth service: {e.response.status_code}",
+        ) from e
+    except httpx.HTTPError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Failed to connect to auth service: {str(e)}",
+        ) from e
+
+    # Extract data from auth response
+    if "data" not in auth_data:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid auth service response",
+        )
+
+    user_data = auth_data["data"]
+
+    # Extract email from userContact
+    email = user_data.get("userContact", {}).get("email")
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Email not found in auth response",
+        )
+
+    # Look up user in database by email (username field)
+    stmt = select(User).where(User.username == email)
+    result = await session.execute(stmt)
+    db_user = result.scalar_one_or_none()
+
+    if not db_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"User with email {email} not found in database",
+        )
+
+    # Extract roles
+    roles = [role["name"] for role in user_data.get("roles", [])]
+
+    # Build full name
+    first_name = user_data.get("firstName", "")
+    last_name = user_data.get("lastName", "")
+    full_name = f"{first_name} {last_name}".strip()
+
+    # Check if user is Marketplace Admin
+    is_marketplace_admin = "Marketplace Admin" in roles
+
+    return {
+        "user_id": db_user.id,
+        "email": email,
+        "name": full_name,
+        "roles": roles,
+        "is_marketplace_admin": is_marketplace_admin,
+        "first_name": first_name,
+        "last_name": last_name,
+    }
+
+
+def require_marketplace_admin(user_info: dict) -> None:
+    """
+    Check if user has Marketplace Admin role, raise exception if not.
+
+    Args:
+        user_info: User information dict from get_user_info_from_auth_token
+
+    Raises:
+        HTTPException: 403 Forbidden if user is not Marketplace Admin
+    """
+    if not user_info.get("is_marketplace_admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only Marketplace Admin can perform this action",
+        )

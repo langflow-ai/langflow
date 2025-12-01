@@ -141,25 +141,29 @@ async def clone_flow_for_marketplace(
     target_folder_id: UUID,
     user_id: UUID,
     marketplace_flow_name: str,
+    version: str,
     tags: list[str] | None = None,
     description: str | None = None,
+    locked: bool = True,
 ) -> Flow:
     """
     Clone a flow for marketplace publication.
 
     Creates a deep copy of the flow with a new ID and places it in the target folder.
-    The cloned flow is marked as locked to prevent direct editing.
+    The cloned flow name follows the pattern: {marketplace_flow_name}-{version}-copy
 
     Args:
         session: Database session
         original_flow: The flow to clone
         target_folder_id: Folder where the clone should be placed
         user_id: User ID who owns the flow
-        marketplace_flow_name: Name for the cloned flow
+        marketplace_flow_name: Base name for the cloned flow
+        version: Version string for the flow (e.g., "v1.0", "v2.0")
         tags: Optional tags for the cloned flow (marketplace tags from publish modal).
               If None, copies tags from original flow.
         description: Optional description for the cloned flow (from publish modal).
                     If None, copies description from original flow.
+        locked: Whether the cloned flow should be locked. Defaults to True.
 
     Returns:
         The cloned Flow object with a new ID
@@ -169,21 +173,19 @@ async def clone_flow_for_marketplace(
     # Deep copy flow data
     cloned_data = copy.deepcopy(original_flow.data) if original_flow.data else {}
 
-    # Handle duplicate names in target folder
-    final_name = await _get_unique_flow_name(
-        session, marketplace_flow_name, user_id, target_folder_id
-    )
+    # Create unique name using version: {flow_name}-{version}-copy
+    cloned_name = f"{marketplace_flow_name}-{version}-copy"
 
     # Create cloned flow
     cloned_flow = Flow(
-        name=final_name,
+        name=cloned_name,
         description=description if description is not None else original_flow.description,
         data=cloned_data,
         user_id=user_id,
         folder_id=target_folder_id,
         icon=original_flow.icon,
         tags=tags if tags is not None else original_flow.tags,  # Use marketplace tags if provided
-        locked=True,  # Prevent direct editing
+        locked=locked,  # Prevent direct editing by default, but configurable
         is_component=original_flow.is_component,
     )
 
@@ -191,7 +193,7 @@ async def clone_flow_for_marketplace(
     await session.commit()
     await session.refresh(cloned_flow)
 
-    logger.info(f"Cloned flow '{original_flow.name}' to '{final_name}' for marketplace")
+    logger.info(f"Cloned flow '{original_flow.name}' to '{cloned_name}' for marketplace")
 
     return cloned_flow
 

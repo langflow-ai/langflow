@@ -16,7 +16,7 @@ export const useGetUserRoles = (enabled: boolean = true) => {
     queryKey: ["userRoles"],
     queryFn: getUserRoles,
     enabled,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 1 * 60 * 1000, // 1 minutes
     retry: 1,
   });
 };

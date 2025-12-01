@@ -22,7 +22,6 @@ import VersionDropdown from "./version-dropdown";
 import { useCheckFlowPublished } from "@/controllers/API/queries/published-flows";
 import {
   useGetFlowLatestStatus,
-  useApproveVersion,
   useRejectVersion,
   useCancelSubmission,
 } from "@/controllers/API/queries/flow-versions";
@@ -61,6 +60,7 @@ export default function FlowToolbarOptions() {
     currentUserId &&
     flowUserId === currentUserId
   );
+  const isFlowCreatedByCurrentUser = isFlowOwner;
 
   // Alert store for success/error messages
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
@@ -75,9 +75,7 @@ export default function FlowToolbarOptions() {
   const latestStatus = flowStatusData?.latest_status;
   const latestVersionId = flowStatusData?.latest_version_id;
 
-  // Mutations for approve/reject/cancel
-  const { mutate: approveVersion, isPending: isApproving } =
-    useApproveVersion();
+  // Mutations for reject/cancel
   const { mutate: rejectVersion, isPending: isRejecting } = useRejectVersion();
   const { mutate: cancelSubmission, isPending: isCancelling } =
     useCancelSubmission();
@@ -89,41 +87,36 @@ export default function FlowToolbarOptions() {
     (state) => state.setCurrentFlow
   );
 
-  // Button visibility logic based on status and ownership
-  // Submit for Review: Show for Draft, Rejected, Published, Submitted, or no status - ONLY if user is flow owner
-  // Disabled when status is 'Submitted' (under review)
-  const hiddenSubmitStatuses = ["Approved", "Unpublished", "Deleted"];
-  const showSubmitButton =
-    isFlowOwner && !hiddenSubmitStatuses.includes(latestStatus || "");
-  const isUnderReview = latestStatus === "Submitted";
+  // Button visibility logic based on new role-based requirements
+  // Publish to Marketplace button - Marketplace Admin only
+  const showPublishToMarketplace =
+    isMarketplaceAdmin &&
+    (!latestStatus ||
+      latestStatus === "Draft" ||
+      latestStatus === "Submitted" ||
+      latestStatus === "Rejected" ||
+      latestStatus === "Published" ||
+      latestStatus === "Unpublished");
 
-  // Publish to Marketplace: Show only when status is Approved - ONLY if user is flow owner
-  const showPublishButton = isFlowOwner && latestStatus === "Approved";
+  // Reject button - Marketplace Admin can reject flows NOT created by them (only when status is Submitted)
+  const showRejectButton =
+    isMarketplaceAdmin &&
+    !isFlowCreatedByCurrentUser &&
+    latestStatus === "Submitted";
 
-  // Approve and Reject: Only for Marketplace Admin when status is Submitted
-  const showApproveRejectButtons =
-    isMarketplaceAdmin && latestStatus === "Submitted";
+  // Submit for Review button - Show for non-Marketplace Admin users (Agent Developers)
+  const showSubmitForReview =
+    !isMarketplaceAdmin &&
+    (!latestStatus ||
+      latestStatus === "Draft" ||
+      latestStatus === "Rejected" ||
+      latestStatus === "Published" ||
+      latestStatus === "Unpublished");
 
-  // Handlers for approve/reject
-  const handleApprove = () => {
-    if (!latestVersionId) return;
+  // Cancel Submission button - Show for non-Marketplace Admin when Submitted
+  const showCancelSubmission = !isMarketplaceAdmin && latestStatus === "Submitted";
 
-    approveVersion(latestVersionId, {
-      onSuccess: () => {
-        setSuccessData({ title: `"${currentFlowName}" has been approved` });
-        navigate("/all-requests");
-      },
-      onError: (error: any) => {
-        setErrorData({
-          title: "Failed to approve",
-          list: [
-            error?.response?.data?.detail || error.message || "Unknown error",
-          ],
-        });
-      },
-    });
-  };
-
+  // Handlers for reject
   const handleRejectClick = () => {
     setRejectionReason("");
     setOpenRejectModal(true);
@@ -201,38 +194,36 @@ export default function FlowToolbarOptions() {
           />
         </div>
 
-        {/* Approve and Reject Buttons - show for Marketplace Admin when status is Submitted */}
-        {showApproveRejectButtons && (
-          <>
-            <Button
-              variant="link"
-              className="!px-1 font-normal text-success !font-medium"
-              onClick={handleApprove}
-              disabled={isApproving}
-              data-testid="approve-button"
-            >
-              <IconComponent name="CheckCircle" className="h-4 w-4" />
-              Approve
-            </Button>
-            <Button
-              variant="link"
-              className="!px-1 font-normal !text-error !font-medium"
-              onClick={handleRejectClick}
-              disabled={isRejecting}
-              data-testid="reject-button"
-            >
-              <CrossCircledIcon className="h-4 w-4" />
-              {/* <IconComponent
-                name="CrossCircledIcon"
-                className="mr-1.5 h-4 w-4"
-              /> */}
-              Reject
-            </Button>
-          </>
+        {/* Reject Button - Only for Marketplace Admin on Rejected flows NOT created by them */}
+        {showRejectButton && (
+          <Button
+            variant="ghost"
+            size="xs"
+            className="!px-2.5 font-normal text-red-600 hover:text-red-700 hover:bg-red-50"
+            onClick={handleRejectClick}
+            disabled={isRejecting}
+            data-testid="reject-button"
+          >
+            <IconComponent name="X" className="mr-1.5 h-4 w-4" />
+            Reject
+          </Button>
         )}
 
-        {/* Submit for Review Button - show for Agent Developer (not Marketplace Admin), disabled when under review */}
-        {showSubmitButton && !isUnderReview && (
+        {/* Publish to Marketplace Button */}
+        {showPublishToMarketplace && (
+          <Button
+            variant="default"
+            size="md"
+            className="!px-2.5 font-normal"
+            onClick={() => setOpenPublishModal(true)}
+            data-testid="publish-to-marketplace-button"
+          >
+            Publish
+          </Button>
+        )}
+
+        {/* Submit for Review Button - Agent Developer only */}
+        {showSubmitForReview && (
           <Button
             variant="link"
             className="!px-1 font-medium text-menu hover:text-secondary"
@@ -243,8 +234,8 @@ export default function FlowToolbarOptions() {
           </Button>
         )}
 
-        {/* Cancel Submission Button - show when status is Submitted and user is flow owner */}
-        {isFlowOwner && isUnderReview && (
+        {/* Cancel Submission Button - Agent Developer when Submitted */}
+        {showCancelSubmission && (
           <Button
             variant="link"
             className="!px-1 font-medium text-menu hover:text-secondary"
@@ -254,18 +245,6 @@ export default function FlowToolbarOptions() {
           >
             <IconComponent name="XCircle" className="mr-1.5 h-4 w-4" />
             Cancel Submission
-          </Button>
-        )}
-
-        {/* Publish to Marketplace Button - show when status is Approved */}
-        {showPublishButton && (
-          <Button
-            variant="link"
-            className="!px-1 font-medium text-menu hover:text-secondary"
-            onClick={() => setOpenPublishModal(true)}
-            data-testid="publish-to-marketplace-button"
-          >
-            Publish to Marketplace
           </Button>
         )}
 

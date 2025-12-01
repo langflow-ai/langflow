@@ -15,6 +15,7 @@ import {
 } from "@/controllers/API/queries/published-flows";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { useDarkStore } from "@/stores/darkStore";
+import useAuthStore from "@/stores/authStore";
 import FlowPage from "../FlowPage";
 import PlaygroundTab from "./components/PlaygroundTab";
 import { FilesIcon } from "lucide-react";
@@ -22,6 +23,7 @@ import { FilesIcon } from "lucide-react";
 export default function MarketplaceDetailPage() {
   const { publishedFlowId } = useParams<{ publishedFlowId: string }>();
   const dark = useDarkStore((state) => state.dark);
+  const { isMarketplaceAdmin, userData } = useAuthStore();
   const navigate = useCustomNavigate();
   const [activeTab, setActiveTab] = useState("playground");
   const location = useLocation();
@@ -171,8 +173,11 @@ export default function MarketplaceDetailPage() {
                 </TabsTrigger>
               </TabsList>
 
-              {/* Edit Button - only show if flow_cloned_from exists AND on Flow Visualization tab */}
-              {publishedFlowData?.flow_cloned_from && activeTab === "flow" && (
+              {/* Edit Button - only show if flow_cloned_from exists AND on Flow Visualization tab AND user is Marketplace Admin or original flow creator */}
+              {publishedFlowData?.flow_cloned_from &&
+                activeTab === "flow" &&
+                (isMarketplaceAdmin() ||
+                  userData?.id === publishedFlowData?.original_flow_user_id) && (
                 <Button
                   variant="outline"
                   onClick={handleEditClick}

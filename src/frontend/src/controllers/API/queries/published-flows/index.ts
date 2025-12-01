@@ -1,4 +1,5 @@
 export { usePublishFlow } from "./use-publish-flow";
+export { usePublishFlowMarketplaceAdmin } from "./use-publish-flow-marketplace-admin";
 export { useUnpublishFlow } from "./use-unpublish-flow";
 export { useGetAllPublishedFlows } from "./use-get-all-published-flows";
 export { useCheckFlowPublished, type PublishCheckResponse } from "./use-check-flow-published";

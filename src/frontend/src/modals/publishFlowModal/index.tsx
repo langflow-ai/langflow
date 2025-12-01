@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { MultiSelect } from "@/components/ui/multi-select";
 import {
   usePublishFlow,
+  usePublishFlowMarketplaceAdmin,
   useValidateMarketplaceName,
   useGetPublishedFlow,
   usePatchInputSample,
@@ -39,6 +40,8 @@ import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import type { FlowLatestStatusResponse } from "@/controllers/API/queries/flow-versions";
 import { cn } from "@/utils/utils";
 import { RiUploadCloud2Fill } from "react-icons/ri";
+import useAuthStore from "@/stores/authStore";
+import { USER_ROLES } from "@/types/auth";
 
 interface PublishFlowModalProps {
   open: boolean;
@@ -89,7 +92,17 @@ export default function PublishFlowModal({
   const [sampleTexts, setSampleTexts] = useState<string[]>([""]); // show one placeholder by default
   // Removed Sample Output state: modal no longer manages sample output here
 
-  const { mutate: publishFlow, isPending } = usePublishFlow();
+  // Check if user is Marketplace Admin to use the correct endpoint
+  const userRoles = useAuthStore((state) => state.userRoles);
+  const isMarketplaceAdmin = userRoles.includes(USER_ROLES.MARKETPLACE_ADMIN);
+
+  // Use appropriate publish hook based on user role
+  const { mutate: publishFlowAgent, isPending: isPendingAgent } = usePublishFlow();
+  const { mutate: publishFlowMarketplaceAdmin, isPending: isPendingMarketplaceAdmin } = usePublishFlowMarketplaceAdmin();
+
+  // Select the correct hook based on role
+  const publishFlow = isMarketplaceAdmin ? publishFlowMarketplaceAdmin : publishFlowAgent;
+  const isPending = isMarketplaceAdmin ? isPendingMarketplaceAdmin : isPendingAgent;
   // Ensure `publishedFlowId` is `string | undefined` (coerce possible `null` to `undefined`)
   const publishedFlowId: string | undefined =
     existingPublishedData?.published_flow_id ?? undefined;

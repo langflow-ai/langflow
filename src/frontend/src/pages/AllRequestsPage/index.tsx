@@ -81,10 +81,10 @@ export default function AllRequestsPage() {
             Under Review
           </span>
         );
-      case "Approved":
+      case "Published":
         return (
-          <span className="inline-flex items-center rounded-full bg-success-bg px-2.5 py-0.5 text-xs font-medium text-success min-h-6">
-            Approved
+          <span className="inline-flex items-center rounded-full bg-[#f2fff0] px-2.5 py-0.5 text-xs font-medium text-[#3fa33c] min-h-6">
+            Published
           </span>
         );
       case "Rejected":
@@ -192,8 +192,11 @@ export default function AllRequestsPage() {
                 )}
               </TableCell>
               <TableCell>
-                {version.status_name === "Approved" ||
-                version.status_name === "Rejected" ? (
+                {version.status_name === "Published" ? (
+                  <div>
+                    {version.published_by_name || "-"}
+                  </div>
+                ) : version.status_name === "Rejected" ? (
                   <div>
                     {version.reviewed_by_name || version.reviewer_name || "-"}
                   </div>
@@ -232,7 +235,7 @@ export default function AllRequestsPage() {
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
             <SelectItem value="Submitted">Under Review</SelectItem>
-            <SelectItem value="Approved">Approved</SelectItem>
+            <SelectItem value="Published">Published</SelectItem>
             <SelectItem value="Rejected">Rejected</SelectItem>
           </SelectContent>
         </Select>

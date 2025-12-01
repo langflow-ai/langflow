@@ -132,6 +132,7 @@ class PublishedFlowRead(PublishedFlowBase):
     published_by_username: str | None = None
     flow_data: dict | None = None  # Flow data from cloned flow for visualization
     input_samples: list[PublishedFlowInputSampleRead] | None = None
+    original_flow_user_id: UUID | None = None  # Creator of the original flow
 
 
 class PublishedFlowUpdate(SQLModel):

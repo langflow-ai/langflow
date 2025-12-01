@@ -180,6 +180,12 @@ export const MenuBar = memo((): JSX.Element => {
                   >
                     {currentFlowName || "Untitled Flow"}
                   </span>
+                  {flowStatus && (
+                    <FlowStatusBadge
+                      status={flowStatus}
+                      rejectionReason={rejectionReason}
+                    />
+                  )}
                   <IconComponent
                     name="pencil"
                     className={cn(

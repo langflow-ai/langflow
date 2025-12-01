@@ -157,6 +157,7 @@ async def submit_for_approval(
             marketplace_flow_name=cloned_flow_name,
             tags=payload.tags,
             description=payload.description,
+            version=payload.version
         )
         session.add(cloned_flow)
         await session.flush()
@@ -356,11 +357,11 @@ async def get_all_flow_versions(
     """
     Get all flow versions with optional status filtering.
 
-    This endpoint returns all flow versions (Submitted, Approved, Rejected) in a single list.
+    This endpoint returns all flow versions (Submitted, Published, Rejected) in a single list.
     Optionally filter by status using the status parameter.
     Returns paginated results.
 
-    Valid status values: "Submitted", "Approved", "Rejected"
+    Valid status values: "Submitted", "Published", "Rejected"
     If status is not provided, returns all flow versions.
     """
     try:
@@ -369,7 +370,7 @@ async def get_all_flow_versions(
 
         if status:
             # Validate status name
-            valid_statuses = ["Submitted", "Approved", "Rejected"]
+            valid_statuses = ["Submitted", "Published", "Rejected"]
             if status not in valid_statuses:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -378,12 +379,12 @@ async def get_all_flow_versions(
             status_id = await _get_status_id_by_name(session, status)
             query_conditions.append(FlowVersion.status_id == status_id)
         else:
-            # Get all relevant statuses (Submitted, Approved, Rejected)
+            # Get all relevant statuses (Submitted, Published, Rejected)
             submitted_id = await _get_status_id_by_name(session, FlowStatusEnum.SUBMITTED.value)
-            approved_id = await _get_status_id_by_name(session, FlowStatusEnum.APPROVED.value)
+            published_id = await _get_status_id_by_name(session, FlowStatusEnum.PUBLISHED.value)
             rejected_id = await _get_status_id_by_name(session, FlowStatusEnum.REJECTED.value)
             query_conditions.append(
-                FlowVersion.status_id.in_([submitted_id, approved_id, rejected_id])
+                FlowVersion.status_id.in_([submitted_id, published_id, rejected_id])
             )
 
         # Count total items
@@ -436,6 +437,10 @@ async def get_all_flow_versions(
                 reviewed_by_email=v.reviewed_by_email,
                 reviewed_at=v.reviewed_at,
                 rejection_reason=v.rejection_reason,
+                published_by=v.published_by,
+                published_by_name=v.published_by_name,
+                published_by_email=v.published_by_email,
+                published_at=v.published_at,
                 created_at=v.created_at,
                 updated_at=v.updated_at,
                 status_name=v.status.status_name if v.status else None,
