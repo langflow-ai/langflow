@@ -5,7 +5,7 @@ import zipfile
 from collections.abc import AsyncGenerator, AsyncIterable
 from datetime import datetime
 from http import HTTPStatus
-from pathlib import Path
+from pathlib import Path, PurePath
 from typing import Annotated
 from urllib.parse import quote
 from zoneinfo import ZoneInfo
@@ -22,6 +22,8 @@ from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_settings_service, get_storage_service
 from langflow.services.settings.service import SettingsService
 from langflow.services.storage.service import StorageService
+
+_SANITIZE_FILENAME_RE = re.compile(r"[^\w.\- ()]")
 
 router = APIRouter(tags=["Files"], prefix="/files")
 
@@ -48,11 +50,13 @@ def sanitize_filename(filename: str) -> str:
         return "unnamed"
 
     # Strip any path components to prevent path traversal (e.g., ../../etc/passwd)
-    base_filename = Path(filename).name
+    base_filename = PurePath(filename).name
 
     # Replace dangerous characters: control chars, path separators, quotes, etc.
     # Keep only alphanumeric, spaces, dots, hyphens, underscores, and parentheses
-    safe_filename = re.sub(r"[^\w.\- ()]", "_", base_filename)
+    safe_filename = _SANITIZE_FILENAME_RE.sub("_", base_filename)
+
+    # Remove leading/trailing whitespace and dots (prevent hidden files)
 
     # Remove leading/trailing whitespace and dots (prevent hidden files)
     safe_filename = safe_filename.strip().strip(".")
