@@ -18,4 +18,3 @@ async def project_session_manager_lifespan():
     finally:
         await stop_project_task_group()
         project_mcp_servers.clear()
-
