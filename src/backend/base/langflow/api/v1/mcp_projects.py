@@ -71,13 +71,6 @@ ALL_INTERFACES_HOST = "0.0.0.0"  # noqa: S104
 
 router = APIRouter(prefix="/mcp/project", tags=["mcp_projects"])
 
-DEFAULT_NOTIFICATION_OPTIONS = NotificationOptions(
-    prompts_changed=True,
-    resources_changed=True,
-    tools_changed=True,
-)
-
-
 
 async def verify_project_auth(
     db: AsyncSession,
