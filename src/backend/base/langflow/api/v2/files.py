@@ -17,6 +17,7 @@ from sqlmodel import col, select
 from langflow.api.schemas import UploadFileResponse
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.services.database.models.file.model import File as UserFile
+from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_settings_service, get_storage_service
 from langflow.services.settings.service import SettingsService
 from langflow.services.storage.service import StorageService
@@ -288,6 +289,26 @@ async def get_file_by_name(
         raise HTTPException(status_code=500, detail=f"Error fetching file: {e}") from e
 
 
+def is_file_used(flow_data: dict | None, file_name: str) -> bool:
+    """Check if a file is used in the flow."""
+    if not flow_data or "nodes" not in flow_data:
+        return False
+
+    for node in flow_data["nodes"]:
+        node_data = node.get("data", {}).get("node", {})
+        template = node_data.get("template", {})
+        for field in template.values():
+            if isinstance(field, dict) and "value" in field:
+                value = field["value"]
+                if isinstance(value, str) and file_name in value:
+                    return True
+                if isinstance(value, list):
+                    for item in value:
+                        if isinstance(item, str) and file_name in item:
+                            return True
+    return False
+
+
 async def load_sample_files(current_user: CurrentActiveUser, session: DbSession, storage_service: StorageService):
     # Check if the sample files in the SAMPLE_DATA_DIR exist
     for sample_file_path in Path(SAMPLE_DATA_DIR).iterdir():
@@ -374,6 +395,28 @@ async def delete_files_batch(
         if not files:
             raise HTTPException(status_code=404, detail="No files found")
 
+        # Fetch all flows for the current user to check for file usage
+        flows_stmt = select(Flow).where(Flow.user_id == current_user.id)
+        flows = (await session.exec(flows_stmt)).all()
+
+        files_not_deleted = []
+        files_to_process = []
+
+        for file in files:
+            # Check if file is used in any flow
+            file_is_used = False
+            for flow in flows:
+                if is_file_used(flow.data, file.name):
+                    file_is_used = True
+                    break
+
+            if file_is_used:
+                files_not_deleted.append(file.name)
+            else:
+                files_to_process.append(file)
+
+        files = files_to_process
+
         # Track storage deletion failures
         storage_failures = []
         # Track database deletion failures
@@ -439,19 +482,23 @@ async def delete_files_batch(
         files_kept = len(storage_failures)  # Files with transient storage failures kept in DB
 
         # Build response message
-        if files_deleted == len(files):
+        if files_deleted == len(files) and not files_not_deleted:
             message = f"{files_deleted} files deleted successfully"
-        elif files_deleted > 0:
+        else:
             message = f"{files_deleted} files deleted successfully"
             if files_kept > 0:
                 message += f", {files_kept} files kept in database due to transient storage errors (can retry)"
-        else:
-            message = "No files were deleted from database"
+            if files_not_deleted:
+                message += f", {len(files_not_deleted)} files not deleted because they are in use"
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error deleting files: {e}") from e
 
-    return {"message": message}
+    return {
+        "message": message,
+        "deleted_files": [f.name for f in files if f.name not in storage_failures and f.name not in db_failures],
+        "files_not_deleted": files_not_deleted,
+    }
 
 
 @router.post("/batch/", status_code=HTTPStatus.OK)
@@ -649,6 +696,18 @@ async def delete_file(
         if not file_to_delete:
             raise HTTPException(status_code=404, detail="File not found")
 
+        # Fetch all flows for the current user to check for file usage
+        flows_stmt = select(Flow).where(Flow.user_id == current_user.id)
+        flows = (await session.exec(flows_stmt)).all()
+
+        # Check if file is used in any flow
+        for flow in flows:
+            if is_file_used(flow.data, file_to_delete.name):
+                return {
+                    "detail": f"File {file_to_delete.name} is in use and cannot be deleted",
+                    "files_not_deleted": [file_to_delete.name],
+                }
+
         # Extract just the filename from the path (strip user_id prefix)
         file_name = file_to_delete.path.split("/")[-1]
 
@@ -694,7 +753,7 @@ async def delete_file(
                     status_code=500, detail=f"Error deleting file from database: {db_error}"
                 ) from db_error
 
-            return {"detail": f"File {file_to_delete.name} deleted successfully"}
+            return {"detail": f"File {file_to_delete.name} deleted successfully", "files_not_deleted": []}
     except HTTPException:
         # Re-raise HTTPException to avoid being caught by the generic exception handler
         raise
@@ -717,6 +776,28 @@ async def delete_all_files(
         stmt = select(UserFile).where(UserFile.user_id == current_user.id)
         results = await session.exec(stmt)
         files = results.all()
+
+        # Fetch all flows for the current user to check for file usage
+        flows_stmt = select(Flow).where(Flow.user_id == current_user.id)
+        flows = (await session.exec(flows_stmt)).all()
+
+        files_not_deleted = []
+        files_to_process = []
+
+        for file in files:
+            # Check if file is used in any flow
+            file_is_used = False
+            for flow in flows:
+                if is_file_used(flow.data, file.name):
+                    file_is_used = True
+                    break
+
+            if file_is_used:
+                files_not_deleted.append(file.name)
+            else:
+                files_to_process.append(file)
+
+        files = files_to_process
 
         storage_failures = []
         db_failures = []
@@ -779,16 +860,16 @@ async def delete_all_files(
         files_deleted = len(files) - len(storage_failures) - len(db_failures)
         files_kept = len(storage_failures) + len(db_failures)
 
-        if files_deleted == len(files):
+        if files_deleted == len(files) and not files_not_deleted:
             message = f"All {files_deleted} files deleted successfully"
-        elif files_deleted > 0:
+        else:
             message = f"{files_deleted} files deleted successfully"
             if files_kept > 0:
                 message += f", {files_kept} files failed to delete. See logs for details."
-        else:
-            message = "Failed to delete files. See logs for details."
+            if files_not_deleted:
+                message += f", {len(files_not_deleted)} files not deleted because they are in use"
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error deleting all files: {e}") from e
 
-    return {"message": message}
+    return {"message": message, "files_not_deleted": files_not_deleted}
