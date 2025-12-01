@@ -420,10 +420,7 @@ class TestProcessFilesEdgeCases:
         with pytest.raises(ValueError, match="No files to process"):
             component.process_files([])
 
-    def test_process_files_docling_only_extension_without_advanced_mode(
-        self,
-        tmp_path,
-    ):
+    def test_process_files_docling_only_extension_without_advanced_mode(self, tmp_path):
         """Test that Docling-only extensions require advanced mode."""
         test_image = tmp_path / "test.png"
         test_image.write_bytes(b"\x89PNG\r\n\x1a\n" + b"\x00" * 100)
