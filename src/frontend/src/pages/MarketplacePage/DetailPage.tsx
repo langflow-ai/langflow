@@ -35,7 +35,7 @@ export default function MarketplaceDetailPage() {
 
   // Fetch specification
   const { data: spec, isLoading: isLoadingSpec } =
-    useGetPublishedFlowSpec(publishedFlowId);
+    useGetPublishedFlowSpec(publishedFlowData?.flow_id);
 
   const title = publishedFlowData?.flow_name || "Published Flow";
   const description = publishedFlowData?.description || "";
@@ -88,9 +88,8 @@ export default function MarketplaceDetailPage() {
         .map((item) => {
           if (item && typeof item === "object") {
             const nested = jsonToYaml(item, nextIndent);
-            return `${spacer}- ${
-              nested.startsWith("\n") ? nested.substring(1) : `\n${nested}`
-            }`;
+            return `${spacer}- ${nested.startsWith("\n") ? nested.substring(1) : `\n${nested}`
+              }`;
           }
           return `${spacer}- ${formatScalar(item)}`;
         })
@@ -106,9 +105,8 @@ export default function MarketplaceDetailPage() {
           if (val && typeof val === "object") {
             const nested = jsonToYaml(val, nextIndent);
             if (Array.isArray(val)) {
-              return `${spacer}${key}: ${
-                nested.includes("\n") ? `\n${nested}` : nested
-              }`;
+              return `${spacer}${key}: ${nested.includes("\n") ? `\n${nested}` : nested
+                }`;
             }
             return `${spacer}${key}:\n${nested}`;
           }
@@ -121,9 +119,10 @@ export default function MarketplaceDetailPage() {
   };
 
   const specYaml =
-    spec && Object.keys(spec).length > 0
+    spec?.yaml_content ||
+    (spec && Object.keys(spec).length > 0
       ? jsonToYaml(spec)
-      : "# No specification available";
+      : "# No specification available");
 
   return (
     <PageLayout
@@ -178,19 +177,19 @@ export default function MarketplaceDetailPage() {
                 activeTab === "flow" &&
                 (isMarketplaceAdmin() ||
                   userData?.id === publishedFlowData?.original_flow_user_id) && (
-                <Button
-                  variant="outline"
-                  onClick={handleEditClick}
-                  size="sm"
-                  className="shrink-0 absolute right-3 top-[64px] bg-white !text-[#731FE3] !gap-1 z-[9]"
-                >
-                  <ForwardedIconComponent
-                    name="Pencil"
-                    className="h-4 w-4 shrink-0"
-                  />
-                  Edit
-                </Button>
-              )}
+                  <Button
+                    variant="outline"
+                    onClick={handleEditClick}
+                    size="sm"
+                    className="shrink-0 absolute right-3 top-[64px] bg-white !text-[#731FE3] !gap-1 z-[9]"
+                  >
+                    <ForwardedIconComponent
+                      name="Pencil"
+                      className="h-4 w-4 shrink-0"
+                    />
+                    Edit
+                  </Button>
+                )}
             </div>
 
             <TabsContent value="flow" className="mt-3 w-full">

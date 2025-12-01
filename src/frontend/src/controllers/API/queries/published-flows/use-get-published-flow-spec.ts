@@ -7,7 +7,7 @@ export const useGetPublishedFlowSpec = (publishedFlowId: string | undefined) => 
     queryKey: ["published-flow-spec", publishedFlowId],
     queryFn: async () => {
       const response = await api.get(
-        `${getURL("PUBLISHED_FLOWS")}/${publishedFlowId}/spec`
+        `${getURL("SPEC_BUILDER")}/published-agent-yaml/${publishedFlowId}`
       );
       return response.data;
     },

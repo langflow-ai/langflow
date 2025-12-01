@@ -143,10 +143,10 @@ const NodeToolbarComponent = memo(
       if (data.node?.tool_mode !== undefined) {
         setToolMode(
           data.node?.tool_mode ||
-            data.node?.outputs?.some(
-              (output) => output.name === "component_as_tool"
-            ) ||
-            false
+          data.node?.outputs?.some(
+            (output) => output.name === "component_as_tool"
+          ) ||
+          false
         );
       }
     }, [data.node?.tool_mode, data.node?.outputs]);
@@ -435,7 +435,7 @@ const NodeToolbarComponent = memo(
     const renderToolbarButtons = useMemo(
       () => (
         <>
-          {hasCode && (
+          {/* {hasCode && (
             <ToolbarButton
               className={isCustomComponent ? "animate-pulse-pink" : ""}
               icon="Code"
@@ -446,7 +446,7 @@ const NodeToolbarComponent = memo(
               )}
               dataTestId="code-button-modal"
             />
-          )}
+          )} */}
           {nodeLength > 0 && (
             <ToolbarButton
               icon="SlidersHorizontal"
@@ -653,9 +653,8 @@ const NodeToolbarComponent = memo(
                 {(isMinimal || !showNode) && (
                   <SelectItem
                     value={"show"}
-                    data-testid={`${
-                      showNode ? "minimize" : "expand"
-                    }-button-modal`}
+                    data-testid={`${showNode ? "minimize" : "expand"
+                      }-button-modal`}
                   >
                     <ToolbarSelectItem
                       shortcut={
