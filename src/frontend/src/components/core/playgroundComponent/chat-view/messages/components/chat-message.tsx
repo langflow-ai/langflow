@@ -1,15 +1,17 @@
 import Convert from "ansi-to-html";
-import { useEffect, useRef, useState } from "react";
-import Robot from "@/assets/robot.png";
+import { useContext, useEffect, useRef, useState } from "react";
+import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import IconComponent, {
   ForwardedIconComponent,
 } from "@/components/common/genericIconComponent";
 import SanitizedHTMLWrapper from "@/components/common/sanitizedHTMLWrapper";
 import { ContentBlockDisplay } from "@/components/core/chatComponents/ContentBlockDisplay";
 import { EMPTY_INPUT_SEND_MESSAGE } from "@/constants/constants";
+import { AuthContext } from "@/contexts/authContext";
 import { useUpdateMessage } from "@/controllers/API/queries/messages";
 import { CustomMarkdownField } from "@/customization/components/custom-markdown-field";
 import { CustomProfileIcon } from "@/customization/components/custom-profile-icon";
+import { BASE_URL_API } from "@/customization/config-constants";
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
@@ -29,6 +31,7 @@ export default function ChatMessage({
   closeChat,
   playgroundPage,
 }: chatMessagePropsType): JSX.Element {
+  const { userData } = useContext(AuthContext);
   const convert = new Convert({ newline: true });
   const [hidden, setHidden] = useState(true);
   const [streamUrl, setStreamUrl] = useState(chat.stream_url);
@@ -68,13 +71,15 @@ export default function ChatMessage({
           setChatMessage((prev) => prev + parsedData.chunk);
         }
       };
-      eventSource.current.onerror = (event: any) => {
+      eventSource.current.onerror = (event: Event) => {
         setIsStreaming(false);
         eventSource.current?.close();
         setStreamUrl(undefined);
+        // @ts-ignore
         if (JSON.parse(event.data)?.error) {
           setErrorData({
             title: "Error on Streaming",
+            // @ts-ignore
             list: [JSON.parse(event.data)?.error],
           });
         }
@@ -214,7 +219,7 @@ export default function ChatMessage({
         >
           <div
             className={cn(
-              "relative flex h-[32px] w-[32px] items-center justify-center overflow-hidden rounded-md text-2xl",
+              "relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-md text-2xl",
               !chat.isSend
                 ? "bg-muted"
                 : "border border-border hover:border-input",
@@ -226,7 +231,7 @@ export default function ChatMessage({
             }
           >
             {!chat.isSend ? (
-              <div className="flex h-[18px] w-[18px] items-center justify-center">
+              <div className="flex h-5 w-5 items-center justify-center">
                 {chat.properties?.icon ? (
                   chat.properties.icon.match(
                     /[\u2600-\u27BF\uD83C-\uDBFF\uDC00-\uDFFF]/,
@@ -236,15 +241,13 @@ export default function ChatMessage({
                     <ForwardedIconComponent name={chat.properties.icon} />
                   )
                 ) : (
-                  <img
-                    src={Robot}
-                    className="absolute bottom-0 left-0 scale-[60%]"
-                    alt={"robot_image"}
-                  />
+                  <div className="flex h-full w-full items-center justify-center rounded-full bg-white p-[3px] border border-border">
+                    <LangflowLogo className="h-full w-full" />
+                  </div>
                 )}
               </div>
             ) : (
-              <div className="flex h-[18px] w-[18px] items-center justify-center">
+              <div className="flex h-5 w-5 items-center justify-center">
                 {chat.properties?.icon ? (
                   chat.properties.icon.match(
                     /[\u2600-\u27BF\uD83C-\uDBFF\uDC00-\uDFFF]/,
@@ -253,49 +256,19 @@ export default function ChatMessage({
                   ) : (
                     <ForwardedIconComponent name={chat.properties.icon} />
                   )
-                ) : !ENABLE_DATASTAX_LANGFLOW && !playgroundPage ? (
-                  <CustomProfileIcon />
-                ) : playgroundPage ? (
-                  <ForwardedIconComponent name="User" />
+                ) : userData?.profile_image ? (
+                  <img
+                    src={`${BASE_URL_API}files/profile_pictures/${userData.profile_image}`}
+                    className="h-full w-full rounded-full object-cover"
+                    alt="User Profile"
+                  />
                 ) : (
-                  <CustomProfileIcon />
+                  <ForwardedIconComponent name="User" />
                 )}
               </div>
             )}
           </div>
-          <div className="flex w-[94%] flex-col">
-            <div>
-              <div
-                className={cn(
-                  "flex max-w-full items-baseline gap-3 truncate pb-2 text-sm font-semibold",
-                )}
-                style={
-                  chat.properties?.text_color
-                    ? { color: chat.properties.text_color }
-                    : {}
-                }
-                data-testid={
-                  "sender_name_" + chat.sender_name?.toLocaleLowerCase()
-                }
-              >
-                <span className="flex items-center gap-2">
-                  {chat.sender_name}
-                  {isAudioMessage && (
-                    <div className="flex h-5 w-5 items-center justify-center rounded-sm bg-muted">
-                      <ForwardedIconComponent
-                        name="mic"
-                        className="h-3 w-3 text-muted-foreground"
-                      />
-                    </div>
-                  )}
-                </span>
-                {chat.properties?.source && !playgroundPage && (
-                  <div className="text-mmd font-normal text-muted-foreground">
-                    {chat.properties?.source.source}
-                  </div>
-                )}
-              </div>
-            </div>
+          <div className="flex w-[94%] flex-col gap-2">
             {chat.content_blocks && chat.content_blocks.length > 0 && (
               <ContentBlockDisplay
                 playgroundPage={playgroundPage}
