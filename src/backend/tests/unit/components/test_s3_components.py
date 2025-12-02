@@ -33,7 +33,7 @@ class TestS3CompatibleComponents:
     async def test_file_component_s3_path_handling(self, s3_settings):
         """Test FileComponent with S3 paths."""
         from langflow.schema import Data
-        
+
         with patch("langflow.services.deps.get_settings_service", return_value=s3_settings):
             component = FileComponent()
 
@@ -113,7 +113,7 @@ class TestS3CompatibleComponents:
     async def test_components_work_in_local_mode(self, local_settings):
         """Test that components work in local mode."""
         from langflow.schema import Data
-        
+
         with patch("langflow.services.deps.get_settings_service", return_value=local_settings):
             component = FileComponent()
             local_path = "/local/path/file.txt"
@@ -126,7 +126,7 @@ class TestS3CompatibleComponents:
     async def test_s3_path_parsing(self, s3_settings):
         """Test S3 path parsing in components."""
         from langflow.schema import Data
-        
+
         with patch("langflow.services.deps.get_settings_service", return_value=s3_settings):
             # Test various S3 path formats
             test_paths = ["user_123/file.txt", "flow_456/document.pdf", "user_789/folder/subfolder/file.json"]
@@ -142,7 +142,7 @@ class TestS3CompatibleComponents:
     async def test_s3_file_download_and_processing(self, s3_settings):
         """Test downloading and processing S3 files."""
         from langflow.schema import Data
-        
+
         with patch("langflow.services.deps.get_settings_service", return_value=s3_settings):
             component = FileComponent()
             component.file_path = [Data(data={"file_path": "user_123/large_file.csv"})]
@@ -158,7 +158,7 @@ class TestS3CompatibleComponents:
     async def test_s3_error_handling(self, s3_settings):
         """Test error handling with S3 operations."""
         from langflow.schema import Data
-        
+
         with patch("langflow.services.deps.get_settings_service", return_value=s3_settings):
             component = FileComponent()
             component.file_path = [Data(data={"file_path": "user_123/nonexistent.txt"})]
@@ -176,13 +176,13 @@ class TestS3CompatibleComponents:
     async def test_s3_streaming_operations(self, s3_settings):
         """Test streaming operations with S3."""
         from langflow.schema import Data
-        
+
         with patch("langflow.services.deps.get_settings_service", return_value=s3_settings):
             component = FileComponent()
             component.file_path = [Data(data={"file_path": "user_123/large_file.txt"})]
 
             # Mock streaming
-            async def mock_stream():  # noqa: ARG001
+            async def mock_stream():
                 yield b"chunk1"
                 yield b"chunk2"
                 yield b"chunk3"
@@ -197,7 +197,7 @@ class TestS3CompatibleComponents:
     async def test_s3_metadata_handling(self, s3_settings):
         """Test metadata handling with S3 files."""
         from langflow.schema import Data
-        
+
         with patch("langflow.services.deps.get_settings_service", return_value=s3_settings):
             component = FileComponent()
             component.file_path = [Data(data={"file_path": "user_123/metadata_file.json"})]
@@ -214,7 +214,7 @@ class TestS3CompatibleComponents:
     async def test_s3_concurrent_operations(self, s3_settings):
         """Test concurrent S3 operations."""
         from langflow.schema import Data
-        
+
         with patch("langflow.services.deps.get_settings_service", return_value=s3_settings):
             import asyncio
 
