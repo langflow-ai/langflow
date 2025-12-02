@@ -258,7 +258,13 @@ def _setup_auth_dependency_overrides(app):
         return current_user
 
     # Import Langflow's original auth functions
-    from langflow.services.auth.utils import get_current_user, get_current_active_user, api_key_security
+    from langflow.services.auth.utils import (
+        get_current_user,
+        get_current_active_user,
+        api_key_security,
+        get_current_user_mcp,
+        get_current_active_user_mcp,
+    )
     from langflow.services.database.models.user.model import UserRead
 
     async def api_key_security_override(
@@ -282,10 +288,51 @@ def _setup_auth_dependency_overrides(app):
             header_param=request.headers.get("x-api-key", "")
         )
 
+    async def get_current_user_mcp_override(
+        request: Request,
+        db: Annotated[AsyncSession, Depends(get_session)],
+    ) -> User:
+        """
+        Override MCP-specific get_current_user_mcp to support Genesis Bearer auth and x-api-key.
+
+        Behaviour:
+        - If Genesis middleware already set request.state.user from a validated Bearer token,
+          reuse get_current_user_override so the Langflow User is created/updated.
+        - Otherwise, fall back to Langflow's original MCP auth (JWT + API key).
+        """
+        # If Genesis middleware set a user, trust it
+        if hasattr(request.state, "user"):
+            return await get_current_user_override(request, db)
+
+        # Fallback to original MCP auth (Langflow JWT / x-api-key)
+        from langflow.services.auth.utils import get_current_user_mcp as original_get_current_user_mcp
+
+        auth_header = request.headers.get("authorization", "")
+        token = auth_header.replace("Bearer ", "") if auth_header.startswith("Bearer ") else ""
+        query_param = request.query_params.get("x-api-key", "")
+        header_param = request.headers.get("x-api-key", "")
+
+        return await original_get_current_user_mcp(
+            token=token,
+            query_param=query_param,
+            header_param=header_param,
+            db=db,
+        )
+
+    async def get_current_active_user_mcp_override(
+        current_user: Annotated[User, Depends(get_current_user_mcp_override)],
+    ) -> User:
+        """Override MCP-specific get_current_active_user_mcp to use Genesis/Langflow blended auth."""
+        if not current_user.is_active:
+            raise HTTPException(status_code=401, detail="Inactive user")
+        return current_user
+
     # Override the dependencies
     app.dependency_overrides[get_current_user] = get_current_user_override
     app.dependency_overrides[get_current_active_user] = get_current_active_user_override
     app.dependency_overrides[api_key_security] = api_key_security_override
+    app.dependency_overrides[get_current_user_mcp] = get_current_user_mcp_override
+    app.dependency_overrides[get_current_active_user_mcp] = get_current_active_user_mcp_override
 
 
 __all__ = [
