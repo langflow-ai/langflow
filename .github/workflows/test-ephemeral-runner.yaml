@@ -6,7 +6,7 @@ on:
 jobs:
   show-runner-info:
     runs-on: 
-      labels: ["self-hosted", "linux", "ARM64", "langflow-ai-arm64-40gb-ephemeral"]
+      labels: ["self-hosted", "linux", "ARM64", "langflow-ai-arm64-40gb-ephemeral"] 
     permissions:
       actions: read
       contents: read
