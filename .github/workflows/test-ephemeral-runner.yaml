@@ -35,7 +35,7 @@ jobs:
           if [ -n "$ORG_RUNNER" ] && [ "$ORG_RUNNER" != "null" ]; then
             ORG_LABELS=$(echo "$ORG_RUNNER" | jq -r ".labels[]?.name // empty" | tr '\n' ' ')
             echo "✅ Found in organization runners" >> "$GITHUB_STEP_SUMMARY"
-            echo "**Labels:** $ORG_LABELS" >> "$GITHUB_STEP_SUMMARY"
+            echo "**Labels:** $ORG_LABELS" >> "$GITHUB_STEP_SUMMARY" 
           else
             echo "❌ Not found in organization runners" >> "$GITHUB_STEP_SUMMARY" 
             
