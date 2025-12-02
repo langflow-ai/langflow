@@ -155,10 +155,10 @@ class ServiceManager:
                         factories.append(obj())
                         break
 
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001, S110
                 # This is expected during initial service discovery - some services
                 # may not have factories yet or depend on settings service being ready first
-                # Only log at trace level to avoid startup noise
+                # Intentionally suppressed to avoid startup noise - not an error condition
                 pass
 
         return factories
