@@ -281,6 +281,7 @@ module.exports = {
               items: [
                 "Components/data-operations",
                 "Components/dataframe-operations",
+                "Components/dynamic-create-data",
                 "Components/parser",
                 "Components/split-text",
                 "Components/type-convert",
@@ -294,8 +295,6 @@ module.exports = {
                 "Components/mock-data",
                 "Components/url",
                 "Components/web-search",
-                "Components/news-search",
-                "Components/rss-reader",
               ]
             },
             {
@@ -322,7 +321,7 @@ module.exports = {
               label: "LLM Operations",
               items: [
                 "Components/batch-run",
-                "Components/llm-router",
+                "Components/llm-selector",
                 "Components/smart-router",
                 "Components/smart-transform",
                 "Components/structured-output",
