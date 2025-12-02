@@ -1,0 +1,27 @@
+name: 🧪 test invoke ephemeral runner
+on:
+  push: 
+    branches: [test-ephemeral-runner]
+
+jobs:
+  show-runner-info:
+    runs-on: 
+      labels: ["self-hosted", "linux", "ARM64", "langflow-ai-arm64-40gb-ephemeral"]        
+    steps:
+      - name: Show Runner Info in Summary
+        run: |
+          {
+            echo "## 🖥️ Self-Hosted Runner Info"
+            echo ""
+            echo "**Hostname:** $(hostname)"
+            echo "**Machine:** $(uname -a)"
+            echo "**Runner Labels:** $RUNNER_LABELS"
+            echo "**GitHub Workspace:** $GITHUB_WORKSPACE"
+            echo "**Runner Temp Dir:** $RUNNER_TEMP"
+            echo "**Runner Tool Cache:** $RUNNER_TOOL_CACHE"
+            echo ""
+            echo "### Environment Variables"
+            echo '```'
+            printenv | sort
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
