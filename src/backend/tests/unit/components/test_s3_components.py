@@ -9,7 +9,7 @@ import pytest
 from langflow.components.data.file import FileComponent
 from langflow.components.langchain_utilities.csv_agent import CSVAgentComponent
 from langflow.components.langchain_utilities.json_agent import JsonAgentComponent
-from langflow.components.processing.save_file import SaveFileComponent
+from langflow.components.processing.save_file import SaveToFileComponent
 
 
 class TestS3CompatibleComponents:
@@ -50,7 +50,7 @@ class TestS3CompatibleComponents:
     async def test_save_file_component_s3_upload(self, s3_settings):
         """Test SaveFileComponent with S3 storage."""
         with patch("langflow.services.deps.get_settings_service", return_value=s3_settings):
-            component = SaveFileComponent()
+            component = SaveToFileComponent()
 
             # Mock database and storage services
             with (
