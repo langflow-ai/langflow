@@ -778,22 +778,25 @@ async def load_agentic_flows() -> list[tuple[anyio.Path, dict]]:
     return agentic_flows
 
 
-async def update_agentic_flow_files(all_types_dict: dict) -> None:
-    """Update agentic flow files with the latest component versions.
+async def update_flow_files(flows_dir: anyio.Path, all_types_dict: dict, flow_type: str = "flow") -> int:
+    """Update flow files with the latest component versions.
 
-    This function updates the flow JSON files in the agentic/flows directory
-    with the latest component versions, similar to how starter projects are updated.
+    This is a generic function that can update any flow JSON files with the latest
+    component versions, similar to how starter projects are updated.
 
     Args:
+        flows_dir: Path to the directory containing flow JSON files
         all_types_dict: Dictionary containing all component types and their templates
+        flow_type: Type of flow being updated (for logging purposes)
+
+    Returns:
+        Number of files updated
     """
-    flows_dir = anyio.Path(__file__).parent.parent / "agentic" / "flows"
-
     if not await flows_dir.exists():
-        await logger.adebug(f"Agentic flows directory does not exist: {flows_dir}")
-        return
+        await logger.adebug(f"{flow_type.capitalize()} directory does not exist: {flows_dir}")
+        return 0
 
-    await logger.adebug("Updating agentic flow files with latest component versions")
+    await logger.adebug(f"Updating {flow_type} files with latest component versions")
     updated_count = 0
 
     async for flow_file in flows_dir.glob("*.json"):
@@ -813,16 +816,31 @@ async def update_agentic_flow_files(all_types_dict: dict) -> None:
                     flow_data["data"] = updated_project_data
                     async with async_open(str(flow_file), "w", encoding="utf-8") as f:
                         await f.write(orjson.dumps(flow_data, option=ORJSON_OPTIONS).decode())
-                    await logger.adebug(f"Updated agentic flow file: {flow_file.name}")
+                    await logger.adebug(f"Updated {flow_type} file: {flow_file.name}")
                     updated_count += 1
 
         except (OSError, orjson.JSONDecodeError) as e:
-            await logger.aexception(f"Error updating agentic flow file {flow_file}: {e}")
+            await logger.aexception(f"Error updating {flow_type} file {flow_file}: {e}")
 
     if updated_count > 0:
-        await logger.adebug(f"Updated {updated_count} agentic flow files")
+        await logger.adebug(f"Updated {updated_count} {flow_type} files")
     else:
-        await logger.adebug("No agentic flow files needed updates")
+        await logger.adebug(f"No {flow_type} files needed updates")
+
+    return updated_count
+
+
+async def update_agentic_flow_files(all_types_dict: dict) -> None:
+    """Update agentic flow files with the latest component versions.
+
+    This function updates the flow JSON files in the agentic/flows directory
+    with the latest component versions, similar to how starter projects are updated.
+
+    Args:
+        all_types_dict: Dictionary containing all component types and their templates
+    """
+    flows_dir = anyio.Path(__file__).parent.parent / "agentic" / "flows"
+    await update_flow_files(flows_dir, all_types_dict, "agentic flow")
 
 
 async def create_or_update_agentic_flows(session: AsyncSession, user_id: UUID, all_types_dict: dict | None = None) -> None:
