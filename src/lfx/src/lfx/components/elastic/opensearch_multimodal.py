@@ -1424,9 +1424,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
                     f"Query vector has {vector_dim} dimensions but field '{selected_field}' expects {field_dim}. "
                     f"Skipping this model to prevent search errors."
                 )
-                self.log(
-                    f"[DIM MISMATCH] Model '{model_name}': query={vector_dim} vs field={field_dim} - skipping"
-                )
+                self.log(f"[DIM MISMATCH] Model '{model_name}': query={vector_dim} vs field={field_dim} - skipping")
                 continue
 
             logger.info(
