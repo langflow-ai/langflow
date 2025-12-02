@@ -6,7 +6,10 @@ on:
 jobs:
   show-runner-info:
     runs-on: 
-      labels: ["self-hosted", "linux", "ARM64", "langflow-ai-arm64-40gb-ephemeral"]        
+      labels: ["self-hosted", "linux", "ARM64", "langflow-ai-arm64-40gb-ephemeral"]
+    permissions:
+      actions: read
+      contents: read
     steps:
 
       - name: Print runner labels from context
@@ -16,13 +19,50 @@ jobs:
         run: |
           RUNNER_NAME="${{ runner.name }}"
           ORG="${{ github.repository_owner }}"
+          REPO="${{ github.repository }}"
           
-          # Get runner labels via API
-          LABELS=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/orgs/$ORG/actions/runners" | \
-            jq -r ".runners[] | select(.name == \"$RUNNER_NAME\") | .labels[].name")
-    
-            echo "Runner labels: $LABELS " >> "$GITHUB_STEP_SUMMARY"
+          echo "### Runner Labels from API" >> "$GITHUB_STEP_SUMMARY"
+          echo "Looking for runner: **$RUNNER_NAME**" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          
+          # Try organization-level API first
+          echo "Checking organization runners..." >> "$GITHUB_STEP_SUMMARY"
+          ORG_RESPONSE=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/orgs/$ORG/actions/runners")
+          
+          ORG_RUNNER=$(echo "$ORG_RESPONSE" | jq -r ".runners[]? | select(.name == \"$RUNNER_NAME\")")
+          
+          if [ -n "$ORG_RUNNER" ] && [ "$ORG_RUNNER" != "null" ]; then
+            ORG_LABELS=$(echo "$ORG_RUNNER" | jq -r ".labels[]?.name // empty" | tr '\n' ' ')
+            echo "✅ Found in organization runners" >> "$GITHUB_STEP_SUMMARY"
+            echo "**Labels:** $ORG_LABELS" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "❌ Not found in organization runners" >> "$GITHUB_STEP_SUMMARY"
+            
+            # Try repository-level API
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "Checking repository runners..." >> "$GITHUB_STEP_SUMMARY"
+            REPO_RESPONSE=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              "https://api.github.com/repos/$REPO/actions/runners")
+            
+            REPO_RUNNER=$(echo "$REPO_RESPONSE" | jq -r ".runners[]? | select(.name == \"$RUNNER_NAME\")")
+            
+            if [ -n "$REPO_RUNNER" ] && [ "$REPO_RUNNER" != "null" ]; then
+              REPO_LABELS=$(echo "$REPO_RUNNER" | jq -r ".labels[]?.name // empty" | tr '\n' ' ')
+              echo "✅ Found in repository runners" >> "$GITHUB_STEP_SUMMARY"
+              echo "**Labels:** $REPO_LABELS" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "❌ Not found in repository runners either" >> "$GITHUB_STEP_SUMMARY"
+              echo "" >> "$GITHUB_STEP_SUMMARY"
+              echo "⚠️ **Note:** Self-hosted runners should have labels. If labels are missing, check:" >> "$GITHUB_STEP_SUMMARY"
+              echo "- Runner registration and configuration" >> "$GITHUB_STEP_SUMMARY"
+              echo "- API token permissions (needs `actions:read` scope)" >> "$GITHUB_STEP_SUMMARY"
+              echo "- Whether runner is online and visible to the API" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
+          
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Workflow-configured labels:** \`self-hosted, linux, ARM64, langflow-ai-arm64-40gb-ephemeral\`" >> "$GITHUB_STEP_SUMMARY"
           
       - name: Show Runner Info in Summary
         run: |
