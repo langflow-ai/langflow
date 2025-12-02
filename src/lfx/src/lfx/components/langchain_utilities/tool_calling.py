@@ -44,12 +44,20 @@ class ToolCallingAgentComponent(LCToolsAgentComponent):
         return self.chat_history
 
     def create_agent_runnable(self):
-        messages = [
-            ("system", "{system_prompt}"),
-            ("placeholder", "{chat_history}"),
-            ("human", "{input}"),
-            ("placeholder", "{agent_scratchpad}"),
-        ]
+        messages = []
+
+        # Only include system message if system_prompt is provided and not empty
+        if hasattr(self, "system_prompt") and self.system_prompt and self.system_prompt.strip():
+            messages.append(("system", "{system_prompt}"))
+
+        messages.extend(
+            [
+                ("placeholder", "{chat_history}"),
+                ("human", "{input}"),
+                ("placeholder", "{agent_scratchpad}"),
+            ]
+        )
+
         prompt = ChatPromptTemplate.from_messages(messages)
         self.validate_tool_names()
         try:

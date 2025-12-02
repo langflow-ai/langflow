@@ -465,6 +465,7 @@ export const lazyIconsMapping = {
     })),
   VertexAI: () =>
     import("@/icons/VertexAI").then((mod) => ({ default: mod.VertexAIIcon })),
+  vLLM: () => import("@/icons/vLLM").then((mod) => ({ default: mod.VllmIcon })),
   WatsonxAI: () =>
     import("@/icons/IBMWatsonx").then((mod) => ({
       default: mod.WatsonxAiIcon,
