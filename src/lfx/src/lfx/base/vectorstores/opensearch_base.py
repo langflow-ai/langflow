@@ -436,4 +436,3 @@ class OpenSearchBaseMixin(
     OpenSearchBulkMixin,
 ):
     """Combined mixin with all OpenSearch utilities."""
-

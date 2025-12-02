@@ -100,9 +100,7 @@ def build_embedding_identifiers(emb_obj) -> list[str]:
     # Add available_models keys
     if available_models_attr and isinstance(available_models_attr, dict):
         identifiers.extend(
-            str(model_key).strip()
-            for model_key in available_models_attr
-            if model_key and str(model_key).strip()
+            str(model_key).strip() for model_key in available_models_attr if model_key and str(model_key).strip()
         )
 
     return identifiers
@@ -142,4 +140,3 @@ def build_embedding_info_string(emb_obj, idx: int) -> str:
         identifiers.append(f"available_models={list(available_models_attr.keys())}")
 
     return f"  [{idx}] {emb_type}: {', '.join(identifiers) if identifiers else 'No identifiers'}"
-

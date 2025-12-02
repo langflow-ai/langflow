@@ -625,8 +625,15 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
                 "embedding_models": {"terms": {"field": "embedding_model", "size": 10}},
             },
             "_source": [
-                "filename", "mimetype", "page", "text", "source_url",
-                "owner", "embedding_model", "allowed_users", "allowed_groups",
+                "filename",
+                "mimetype",
+                "page",
+                "text",
+                "source_url",
+                "owner",
+                "embedding_model",
+                "allowed_users",
+                "allowed_groups",
             ],
             "size": limit,
         }
