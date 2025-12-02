@@ -202,7 +202,7 @@ class WatsonxAIComponent(LCModelComponent):
         api_key_value = self.api_key
         if isinstance(api_key_value, SecretStr):
             api_key_value = api_key_value.get_secret_value()
-        
+
         return ChatWatsonx(
             apikey=api_key_value,
             url=self.base_url,
