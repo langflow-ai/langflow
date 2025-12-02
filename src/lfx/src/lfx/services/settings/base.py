@@ -563,11 +563,10 @@ class Settings(BaseSettings):
 
         if not value:
             value = [BASE_COMPONENTS_PATH]
-        else:
-            if isinstance(value, Path):
-                value = [str(value)]
-            elif isinstance(value, list):
-                value = [str(p) if isinstance(p, Path) else p for p in value]
+        elif isinstance(value, Path):
+            value = [str(value)]
+        elif isinstance(value, list):
+            value = [str(p) if isinstance(p, Path) else p for p in value]
         return value
 
     model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")
