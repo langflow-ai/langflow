@@ -11,7 +11,18 @@ jobs:
 
       - name: Print runner labels from context
         run: | 
-          echo "Runner labels: ${{ toJson(runner.labels) }}" >> "$GITHUB_STEP_SUMMARY"
+      
+      - name: Get runner labels from API
+        run: |
+          RUNNER_NAME="${{ runner.name }}"
+          ORG="${{ github.repository_owner }}"
+          
+          # Get runner labels via API
+          LABELS=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/orgs/$ORG/actions/runners" | \
+            jq -r ".runners[] | select(.name == \"$RUNNER_NAME\") | .labels[].name")
+    
+            echo "Runner labels: $LABELS " >> "$GITHUB_STEP_SUMMARY"
           
       - name: Show Runner Info in Summary
         run: |
@@ -20,9 +31,6 @@ jobs:
             echo "---------- "
             echo "GITHUB_RUNNER_NAME   : '${{ runner.name }}'"
             echo "GITHUB_RUNNER_OS     : '${{ runner.os }}'"
-            echo "runner.labels raw    : '${{ runner.labels }}'"
-            echo "runner.labels json   : '${{ toJson(runner.labels) }}'"
-            echo "ENV RUNNER_LABELS    : '$RUNNER_LABELS'"
             echo "ENV RUNNER_NAME      : '$RUNNER_NAME'"            
             echo "----------"
             echo "**Hostname:** $(hostname)"
