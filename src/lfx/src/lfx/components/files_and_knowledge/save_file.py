@@ -77,7 +77,10 @@ class SaveToFileComponent(Component):
         BoolInput(
             name="append_mode",
             display_name="Append",
-            info="Append to file if it exists (only for Local storage with plain text formats). Not supported for cloud storage (AWS/Google Drive).",
+            info=(
+                "Append to file if it exists (only for Local storage with plain text formats). "
+                "Not supported for cloud storage (AWS/Google Drive)."
+            ),
             value=False,
             show=False,
         ),
