@@ -25,8 +25,24 @@ class DoclingDependencyError(Exception):
         super().__init__(f"{dependency_name} is not correctly installed. {install_command}")
 
 
-def extract_docling_documents(data_inputs: Data | list[Data] | DataFrame, doc_key: str) -> list[DoclingDocument]:
+def extract_docling_documents(
+    data_inputs: Data | list[Data] | DataFrame, doc_key: str
+) -> tuple[list[DoclingDocument], str | None]:
+    """Extract DoclingDocument objects from data inputs.
+
+    Args:
+        data_inputs: The data inputs containing DoclingDocument objects
+        doc_key: The key/column name to look for DoclingDocument objects
+
+    Returns:
+        A tuple of (documents, warning_message) where warning_message is None if no warning
+
+    Raises:
+        TypeError: If the data cannot be extracted or is invalid
+    """
     documents: list[DoclingDocument] = []
+    warning_message: str | None = None
+
     if isinstance(data_inputs, DataFrame):
         if not len(data_inputs):
             msg = "DataFrame is empty"
@@ -53,10 +69,11 @@ def extract_docling_documents(data_inputs: Data | list[Data] | DataFrame, doc_ke
                     continue
 
             if found_column:
-                logger.warning(
+                warning_message = (
                     f"Column '{doc_key}' not found, but found DoclingDocument objects in column '{found_column}'. "
                     f"Using '{found_column}' instead. Consider updating the 'Doc Key' parameter."
                 )
+                logger.warning(warning_message)
                 try:
                     documents = data_inputs[found_column].tolist()
                 except Exception as e:
@@ -103,7 +120,7 @@ def extract_docling_documents(data_inputs: Data | list[Data] | DataFrame, doc_ke
             except AttributeError as e:
                 msg = f"Invalid input type in collection: {e}"
                 raise TypeError(msg) from e
-    return documents
+    return documents, warning_message
 
 
 def _unwrap_secrets(obj):

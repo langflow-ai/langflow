@@ -17,12 +17,13 @@ class TestExtractDoclingDocuments:
         data = Data(data={"doc": doc, "file_path": "test.pdf"})
 
         # Extract documents
-        result = extract_docling_documents(data, "doc")
+        result, warning = extract_docling_documents(data, "doc")
 
         # Verify
         assert len(result) == 1
         assert isinstance(result[0], DoclingDocument)
         assert result[0].name == "test_doc"
+        assert warning is None
 
     def test_extract_from_data_with_wrong_key(self):
         """Test extracting DoclingDocument from Data with wrong key raises error."""
@@ -43,13 +44,14 @@ class TestExtractDoclingDocuments:
         ]
 
         # Extract documents
-        result = extract_docling_documents(data_list, "doc")
+        result, warning = extract_docling_documents(data_list, "doc")
 
         # Verify
         assert len(result) == 2
         assert all(isinstance(d, DoclingDocument) for d in result)
         assert result[0].name == "test_doc1"
         assert result[1].name == "test_doc2"
+        assert warning is None
 
     def test_extract_from_dataframe_with_correct_column(self):
         """Test extracting DoclingDocument from DataFrame with correct column name."""
@@ -60,14 +62,18 @@ class TestExtractDoclingDocuments:
         df = DataFrame([{"doc": doc1, "file_path": "test1.pdf"}, {"doc": doc2, "file_path": "test2.pdf"}])
 
         # Extract documents
-        result = extract_docling_documents(df, "doc")
+        result, warning = extract_docling_documents(df, "doc")
 
         # Verify
         assert len(result) == 2
         assert all(isinstance(d, DoclingDocument) for d in result)
+        assert warning is None
 
     def test_extract_from_dataframe_with_fallback_column(self):
-        """Test extracting DoclingDocument from DataFrame when exact column name not found but DoclingDocument exists."""
+        """Test extracting DoclingDocument from DataFrame when exact column name not found.
+
+        But DoclingDocument exists.
+        """
         doc1 = DoclingDocument(name="test_doc1")
         doc2 = DoclingDocument(name="test_doc2")
 
@@ -76,11 +82,16 @@ class TestExtractDoclingDocuments:
         df = DataFrame([{"document": doc1, "file_path": "test1.pdf"}, {"document": doc2, "file_path": "test2.pdf"}])
 
         # Extract documents - should find 'document' column as fallback
-        result = extract_docling_documents(df, "doc")
+        result, warning = extract_docling_documents(df, "doc")
 
         # Verify
         assert len(result) == 2
         assert all(isinstance(d, DoclingDocument) for d in result)
+        # Verify warning is present since we used fallback column
+        assert warning is not None
+        assert "Column 'doc' not found" in warning
+        assert "found DoclingDocument objects in column 'document'" in warning
+        assert "Consider updating the 'Doc Key' parameter" in warning
 
     def test_extract_from_dataframe_no_docling_column(self):
         """Test extracting DoclingDocument from DataFrame with no DoclingDocument column raises helpful error."""
