@@ -638,7 +638,7 @@ export default function AgentBuilderPage() {
           {/* Create from Scratch and Use a Template cards */}
           <div className="mt-6 flex justify-center gap-4">
             <Card
-              className="w-[280px] cursor-pointer hover:shadow-md transition-all duration-200 border border-primary-border bg-background"
+              className="min-w-[280px] cursor-pointer hover:shadow-md transition-all duration-200 border border-primary-border bg-secondary"
               onClick={() => {
                 addFlow().then((id) => {
                   navigate(
@@ -652,23 +652,24 @@ export default function AgentBuilderPage() {
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent shrink-0">
                     <ForwardedIconComponent
                       name="Plus"
-                      className="h-5 w-5 text-primary"
+                      className="h-5 w-5 text-menu"
                     />
                   </div>
-                  <CardTitle className="text-md font-semibold text-primary-font">
+                  <CardTitle className="text-md font-semibold text-white">
                     Create from Scratch
                   </CardTitle>
                 </div>
               </CardHeader>
-              <CardContent>
-                <CardDescription className="text-sm text-secondary-font">
-                  Manually define your agent's persona, instructions, and model settings for complete control.
+              <CardContent className="pt-0">
+                <CardDescription className="text-sm text-white/80">
+                  Manually define your agent's persona, instructions, and model
+                  settings for complete control.
                 </CardDescription>
               </CardContent>
             </Card>
 
             <Card
-              className="w-[280px] cursor-pointer hover:shadow-md transition-all duration-200 border border-primary-border bg-background"
+              className="min-w-[280px] cursor-pointer hover:shadow-md transition-all duration-200 border border-primary-border bg-secondary"
               onClick={() => setShowTemplatesModal(true)}
             >
               <CardHeader className="pb-2">
@@ -676,17 +677,18 @@ export default function AgentBuilderPage() {
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent shrink-0">
                     <ForwardedIconComponent
                       name="FileText"
-                      className="h-5 w-5 text-primary"
+                      className="h-5 w-5 text-menu"
                     />
                   </div>
-                  <CardTitle className="text-md font-semibold text-primary-font">
+                  <CardTitle className="text-md font-semibold text-white">
                     Use a Template
                   </CardTitle>
                 </div>
               </CardHeader>
-              <CardContent>
-                <CardDescription className="text-sm text-secondary-font">
-                  Start with pre-built agents for common tasks like Support, Coding, or Data Analysis.
+              <CardContent className="pt-0">
+                <CardDescription className="text-sm text-white/80">
+                  Start with pre-built agents for common tasks like Support,
+                  Coding, or Data Analysis.
                 </CardDescription>
               </CardContent>
             </Card>
