@@ -1,0 +1,555 @@
+name: Alembic Migration - Staging/Prod Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Select a Branch to deploy"
+        required: true
+        default: "main"
+      environment:
+        description: "Select environment to deploy (staging or prod)"
+        required: true
+        default: "staging"
+      email:
+        description: "Admin email for deployment"
+        required: true
+        default: "saravana.k.r@gmail.com"
+      commit_id:
+        description: "Commit ID to deploy (leave blank for latest on branch)"
+        required: false
+        default: ""
+
+jobs:
+  check-db-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      db_changes: ${{ steps.compare.outputs.db_changes }}
+
+    steps:
+      - name: Checkout selected branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install alembic SQLAlchemy psycopg2-binary fastapi pydantic python-dotenv google-generativeai
+
+      - name: Get repo alembic version
+        id: repo_version
+        run: python .github/script/detect_alembic_revision.py
+
+      - name: Copy check_db_changes.py to VM
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ github.event.inputs.environment == 'staging' && env.STAGING_HOST || env.PROD_HOST }}
+          username: root
+          password: ${{ github.event.inputs.environment == 'staging' && secrets.VM_PASSWORD || secrets.PROD_VM_PASSWORD }}
+          source: ".github/script/check_db_changes.py"
+          target: "/root/workspace/"
+
+      - name: Get VM alembic version
+        id: vm_version
+        uses: appleboy/ssh-action@v1.1.0
+        with:
+          host: ${{ github.event.inputs.environment == 'staging' && env.STAGING_HOST || env.PROD_HOST }}
+          username: root
+          password: ${{ github.event.inputs.environment == 'staging' && secrets.VM_PASSWORD || secrets.PROD_VM_PASSWORD }}
+          script: python /root/workspace/check_db_changes.py
+
+      - name: Compare alembic versions
+        id: compare
+        run: |
+          echo "Repo Revision: ${{ steps.repo_version.outputs.repo_alembic_version }}"
+          echo "VM Revision:   ${{ steps.vm_version.outputs.vm_alembic_version }}"
+
+          if [ "${{ steps.repo_version.outputs.repo_alembic_version }}" != "${{ steps.vm_version.outputs.vm_alembic_version }}" ]; then
+            echo "db_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "db_changes=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate SQL Migration Files
+        if: steps.compare.outputs.db_changes == 'true'
+        run: |
+          cd src/backend/base/langflow
+          mkdir -p alembic_sql
+          alembic upgrade head --sql > alembic_sql/upgrade.sql
+          alembic downgrade -1 --sql > alembic_sql/downgrade.sql
+
+      - name: Upload SQL files
+        if: steps.compare.outputs.db_changes == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: alembic-sql
+          path: src/backend/base/langflow/alembic_sql/
+
+      - name: Install Bytebase CLI
+        if: steps.compare.outputs.db_changes == 'true'
+        run: |
+          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/bytebase/install/HEAD/install.sh)"
+          sudo mv bb /usr/local/bin
+
+      - name: Validate SQL with Bytebase
+        if: steps.compare.outputs.db_changes == 'true'
+        run: |
+          bb check-sql --file src/backend/base/langflow/alembic_sql/upgrade.sql
+          bb check-sql --file src/backend/base/langflow/alembic_sql/downgrade.sql
+
+      - name: Validate SQL with Gemini
+        if: steps.compare.outputs.db_changes == 'true'
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python .github/script/verify_sql_with_gemini.py src/backend/base/langflow/alembic_sql/upgrade.sql src/backend/base/langflow/alembic_sql/downgrade.sql
+
+      - name: Manual approval for DB changes
+        if: steps.compare.outputs.db_changes == 'true'
+        uses: trstringer/manual-approval@v1
+        with:
+          secret: ${{ secrets.GITHUB_TOKEN }}
+          approvers: ${{ github.actor }}
+          minimum-approvals: 1
+
+      - name: Upload SQL artifacts
+        if: steps.compare.outputs.db_changes == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: sql-migrations
+          path: |
+            src/backend/base/langflow/alembic_sql/upgrade.sql
+            src/backend/base/langflow/alembic_sql/downgrade.sql
+
+  apply-db-changes:
+    runs-on: ubuntu-latest
+    needs: check-db-changes
+    if: needs.check-db-changes.outputs.db_changes == 'true'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download SQL artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: sql-migrations
+          path: migrations
+
+      - name: Install DB dependencies
+        run: pip install sqlalchemy psycopg2-binary alembic
+
+      - name: Manual approval to apply DB changes
+        uses: trstringer/manual-approval@v1
+        with:
+          secret: ${{ secrets.GITHUB_TOKEN }}
+          approvers: ${{ github.actor }}
+          minimum-approvals: 1
+
+      - name: Apply DB changes
+        env:
+          ENVIRONMENT: ${{ github.event.inputs.environment }}
+          STAGING_DB_USER: ${{ secrets.POSTGRES_USER }}
+          STAGING_DB_PASSWORD: ${{ secrets.POSTGRES_PASSWD }}
+          STAGING_DB_NAME: ${{ secrets.POSTGRES_DB }}
+          STAGING_DB_HOST: ${{ env.STAGING_HOST }}
+          PROD_DB_USER: ${{ secrets.PROD_POSTGRES_USER }}
+          PROD_DB_PASSWORD: ${{ secrets.PROD_POSTGRES_PASSWD }}
+          PROD_DB_NAME: ${{ secrets.PROD_POSTGRES_DB }}
+          PROD_DB_HOST: ${{ env.PROD_HOST }}
+        run: python .github/script/apply_db_changes.py          
+
+  build-and-push:
+    runs-on: ubuntu-latest
+    needs: apply-db-changes
+    if: needs.apply-db-changes.result == 'success' || needs.check-db-changes.outputs.db_changes == 'false'
+
+    steps:
+      - name: Checkout selected branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch }}
+
+      - name: Checkout specific commit if provided
+        if: ${{ github.event.inputs.commit_id != '' }}
+        run: |
+          git fetch --depth=1 origin ${{ github.event.inputs.commit_id }}
+          git checkout ${{ github.event.inputs.commit_id }}
+          echo "✅ Checked out commit ${{ github.event.inputs.commit_id }}"
+
+      - name: Determine Commit ID
+        id: commit
+        run: |
+          if [ -n "${{ github.event.inputs.commit_id }}" ]; then
+            echo "commit_id=${{ github.event.inputs.commit_id }}" >> $GITHUB_OUTPUT
+          else
+            if [ "${{ github.event.inputs.branch }}" = "main" ]; then
+              COMMIT_ID=$(git rev-parse HEAD)
+            else
+              COMMIT_ID=$(git log -1 --format="%H")
+            fi
+              echo "commit_id=$COMMIT_ID" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Determine Branch Name
+        id: branch
+        run: |
+          BRANCH_NAME=$(echo "${{ github.event.inputs.branch }}" | tr '/' '-')
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+    
+      - name: Install dependencies (sshpass + jq)
+        run: sudo apt-get update && sudo apt-get install -y sshpass jq
+
+      - name: Prepare env file with website domain
+        env:
+          ENVIRONMENT: ${{ github.event.inputs.environment }}
+        run: |
+          set -euo pipefail
+          ENV_FILE=".env-file"
+
+          if [ ! -f "$ENV_FILE" ]; then
+            echo "❌ $ENV_FILE not found"
+            exit 1
+          fi
+
+          BASE_DOMAIN=$(grep '^LANGFLOW_WEBSITE_DOMAIN=' "$ENV_FILE" | tail -n1 | cut -d'=' -f2-)
+          if [ -z "${BASE_DOMAIN}" ]; then
+            echo "❌ LANGFLOW_WEBSITE_DOMAIN is not set in $ENV_FILE"
+            exit 1
+          fi
+
+          STAGING_HOST="staging.${BASE_DOMAIN}"
+          PROD_HOST="${BASE_DOMAIN}"
+
+          if [ "$ENVIRONMENT" = "staging" ]; then
+            WEBSITE_DOMAIN="$STAGING_HOST"
+          else
+            WEBSITE_DOMAIN="$PROD_HOST"
+          fi
+
+          echo "🔧 Injecting LANGFLOW_WEBSITE_DOMAIN=${WEBSITE_DOMAIN} into ${ENV_FILE}"
+          echo "" >> "$ENV_FILE"
+          if grep -q '^LANGFLOW_WEBSITE_DOMAIN=' "$ENV_FILE"; then
+            sed -i "s|^LANGFLOW_WEBSITE_DOMAIN=.*|LANGFLOW_WEBSITE_DOMAIN=${WEBSITE_DOMAIN}|" "$ENV_FILE"
+          else
+            echo "LANGFLOW_WEBSITE_DOMAIN=${WEBSITE_DOMAIN}" >> "$ENV_FILE"
+          fi
+
+          {
+            echo "LANGFLOW_WEBSITE_DOMAIN=${WEBSITE_DOMAIN}"
+            echo "STAGING_HOST=${STAGING_HOST}"
+            echo "PROD_HOST=${PROD_HOST}"
+          } >> "$GITHUB_ENV"
+
+      - name: Ensure admin user exists in Clerk
+        env:
+          ENVIRONMENT: ${{ github.event.inputs.environment }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          STAGING_CLERK_SECRET_KEY: ${{ secrets.STAGING_CLERK_SECRET_KEY }}
+          PROD_CLERK_SECRET_KEY: ${{ secrets.PROD_CLERK_SECRET_KEY }}
+          STAGING_HOST: ${{ env.STAGING_HOST }}
+          PROD_HOST: ${{ env.PROD_HOST }}
+        run: |
+          set -euo pipefail
+
+          if [ "$ENVIRONMENT" = "staging" ]; then
+            CLERK_SECRET_KEY="$STAGING_CLERK_SECRET_KEY"
+            WEBSITE_DOMAIN="$STAGING_HOST"
+          else
+            CLERK_SECRET_KEY="$PROD_CLERK_SECRET_KEY"
+            WEBSITE_DOMAIN="$PROD_HOST"
+          fi
+
+          ADMIN_EMAIL="admin@${WEBSITE_DOMAIN}"
+          AUTH_HEADER="Authorization: Bearer ${CLERK_SECRET_KEY}"
+
+          echo "🔐 Ensuring Clerk admin user ${ADMIN_EMAIL} exists"
+
+          # === LOOKUP USER ===
+          LOOKUP=$(curl -s -H "$AUTH_HEADER" \
+            "https://api.clerk.com/v1/users?email_address=${ADMIN_EMAIL}")
+
+          USER_ID=$(echo "$LOOKUP" | jq -r '.[0]?.id // empty')
+
+          if [ -z "$USER_ID" ] || [ "$USER_ID" = "null" ]; then
+            echo "➕ Admin not found. Creating user..."
+
+            CREATE=$(curl -s -H "$AUTH_HEADER" -H "Content-Type: application/json" \
+              -X POST "https://api.clerk.com/v1/users" \
+              -d "{
+                \"email_address\": [\"${ADMIN_EMAIL}\"],
+                \"username\": \"admin\",
+                \"password\": \"${ADMIN_PASSWORD}\"
+              }")
+
+            USER_ID=$(echo "$CREATE" | jq -r '.id // empty')
+            EMAIL_ID=$(echo "$CREATE" | jq -r '.email_addresses[0]?.id // empty')
+
+            if [ -z "$USER_ID" ] || [ "$USER_ID" = "null" ]; then
+              echo "❌ User creation failed"
+              echo "$CREATE"
+              exit 1
+            fi
+
+            echo "✅ Created admin user with id ${USER_ID}"
+          else
+            echo "✅ Admin exists with id ${USER_ID} — refreshing password"
+
+            UPDATE=$(curl -s -H "$AUTH_HEADER" -H "Content-Type: application/json" \
+              -X PATCH "https://api.clerk.com/v1/users/${USER_ID}" \
+              -d "{\"password\": \"${ADMIN_PASSWORD}\"}")
+
+            UPDATED_ID=$(echo "$UPDATE" | jq -r '.id // empty')
+            if [ -z "$UPDATED_ID" ] || [ "$UPDATED_ID" = "null" ]; then
+              echo "❌ Failed to update password"
+              echo "$UPDATE"
+              exit 1
+            fi
+
+            echo "🔄 Password updated"
+
+            # Only fetch email ID once here
+            EMAIL_ID=$(echo "$UPDATE" | jq -r '.email_addresses[0]?.id // empty')
+
+            # If missing email array (rare), re-fetch
+            if [ -z "$EMAIL_ID" ] || [ "$EMAIL_ID" = "null" ]; then
+              USER=$(curl -s -H "$AUTH_HEADER" "https://api.clerk.com/v1/users/${USER_ID}")
+              EMAIL_ID=$(echo "$USER" | jq -r '.email_addresses[0]?.id // empty')
+            fi
+          fi
+
+          if [ -z "$EMAIL_ID" ] || [ "$EMAIL_ID" = "null" ]; then
+            echo "❌ Could not determine email ID for ${ADMIN_EMAIL}"
+            exit 1
+          fi
+
+          # === VERIFY EMAIL ===
+          echo "✉️  Marking email ${ADMIN_EMAIL} as verified"
+
+          VERIFY=$(curl -s -H "$AUTH_HEADER" -H "Content-Type: application/json" \
+            -X PATCH "https://api.clerk.com/v1/email_addresses/${EMAIL_ID}" \
+            -d '{"verified": true}')
+
+          # Updated jq (recommended)
+          STATUS=$(echo "$VERIFY" | jq -r '.verification?.status // empty')
+
+          if [ "$STATUS" = "verified" ]; then
+            echo "✅ Email marked as verified"
+          else
+            echo "❌ Email verification failed"
+            echo "$VERIFY"
+            exit 1
+          fi
+
+      - name: Create GitHub Deployment
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          COMMIT_ID=${{ steps.commit.outputs.commit_id }}
+          ENVIRONMENT=${{ github.event.inputs.environment }}
+          BRANCH=${{ github.event.inputs.branch }}
+          ACTOR=${{ github.actor }}
+
+          echo "📦 Creating deployment for $ENVIRONMENT commit=$COMMIT_ID branch=$BRANCH"
+
+          DEPLOYMENT_ID=$(gh api repos/${{ github.repository }}/deployments \
+            -F ref=${{ github.event.inputs.branch }} \
+            -F environment=$ENVIRONMENT \
+            -F description="Deployment by $ACTOR from branch $BRANCH with commit $COMMIT_ID" \
+            -F auto_merge=false \
+            -F required_contexts[]=null --jq '.id')
+
+          echo "DEPLOYMENT_ID=$DEPLOYMENT_ID" >> $GITHUB_ENV
+
+      - name: Mark Deployment In Progress
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api repos/${{ github.repository }}/deployments/${{ env.DEPLOYMENT_ID }}/statuses \
+            -F state=in_progress \
+            -F description="Deployment started and is in progress"    
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: forwardemailforaifirstdesk
+          password: ${{ secrets.DOCKERHUB_TOKEN }}  
+      
+      - name: Free up disk space
+        run: |
+          echo "=== Cleaning up space for Docker build ==="
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
+          docker builder prune -f
+          df -h
+
+      - name: Build Docker Image (staging)
+        if: ${{ github.event.inputs.environment == 'staging' }}
+        run: |
+          COMMIT_ID=${{ steps.commit.outputs.commit_id }}
+          BRANCH_NAME=${{ steps.branch.outputs.branch_name }}
+          echo "Using branch=$BRANCH_NAME commit=$COMMIT_ID"
+
+          echo "=== Building Staging Image ==="
+          DOCKER_BUILDKIT=1 \
+          VITE_AUTO_LOGIN=false \
+          VITE_CLERK_AUTH_ENABLED=true \
+          VITE_CLERK_PUBLISHABLE_KEY=${{ secrets.CLERK_PUBLISHABLE_KEY }} \
+          VITE_CLERK_FRONTEND_API=${{ vars.STAGING_CLERK_FRONTEND_API }} \
+          make docker_build TAG=langflow:staging-$BRANCH_NAME-$COMMIT_ID DOCKER=docker
+
+          docker tag langflow:staging-$BRANCH_NAME-$COMMIT_ID forwardemailforaifirstdesk/langflow:staging-$BRANCH_NAME-$COMMIT_ID
+          docker push forwardemailforaifirstdesk/langflow:staging-$BRANCH_NAME-$COMMIT_ID
+          
+      - name: Build Docker Image (production)
+        if: ${{ github.event.inputs.environment == 'prod' }}
+        run: |
+          COMMIT_ID=${{ steps.commit.outputs.commit_id }}
+          BRANCH_NAME=${{ steps.branch.outputs.branch_name }}
+          echo "Using branch=$BRANCH_NAME commit=$COMMIT_ID"
+
+          echo "=== Building Production Image ==="
+          DOCKER_BUILDKIT=1 \
+          VITE_AUTO_LOGIN=false \
+          VITE_CLERK_AUTH_ENABLED=true \
+          VITE_CLERK_PUBLISHABLE_KEY=${{ secrets.PROD_CLERK_PUBLISHABLE_KEY }} \
+          VITE_CLERK_FRONTEND_API=${{ vars.PROD_CLERK_FRONTEND_API }} \
+          make docker_build TAG=langflow:prod-$BRANCH_NAME-$COMMIT_ID DOCKER=docker
+
+          docker tag langflow:prod-$BRANCH_NAME-$COMMIT_ID forwardemailforaifirstdesk/langflow:prod-$BRANCH_NAME-$COMMIT_ID
+          docker push forwardemailforaifirstdesk/langflow:prod-$BRANCH_NAME-$COMMIT_ID
+
+      - name: Cleanup old Docker Hub tags (skip for prod)
+        if: ${{ github.event.inputs.environment == 'staging' }}
+        run: |
+          #!/usr/bin/env bash
+          set -euo pipefail
+
+          DOCKERHUB_USERNAME="forwardemailforaifirstdesk"
+          DOCKERHUB_PASSWORD="${{ secrets.DOCKERHUB_TOKEN }}"
+          REPOSITORY="forwardemailforaifirstdesk/langflow"
+
+          echo "=== Getting Docker Hub token ==="
+          TOKEN=$(curl -s -H "Content-Type: application/json" -X POST \
+            -d '{"username": "'$DOCKERHUB_USERNAME'", "password": "'$DOCKERHUB_PASSWORD'"}' \
+            https://hub.docker.com/v2/users/login/ | jq -r .token)
+
+          if [ -z "$TOKEN" ] || [ "$TOKEN" == "null" ]; then
+            echo "❌ Failed to authenticate"
+            exit 1
+          fi
+          echo "✅ Authentication successful"
+
+          echo "=== Fetching tags ==="
+          RESPONSE=$(curl -s -H "Authorization: JWT $TOKEN" \
+            "https://hub.docker.com/v2/repositories/$REPOSITORY/tags?page_size=100")
+
+          TAGS=$(echo "$RESPONSE" | jq -r '.results[] | .name')
+
+          if [ -z "$TAGS" ]; then
+            echo "ℹ️ No tags found in repository $REPOSITORY. Nothing to delete."
+            exit 0
+          fi
+
+          echo "Found tags: $TAGS"
+
+          for TAG in $TAGS; do
+            COMMIT_ID=${{ steps.commit.outputs.commit_id }}
+            BRANCH_NAME=${{ steps.branch.outputs.branch_name }}
+            if [[ "$TAG" == "staging-$BRANCH_NAME-$COMMIT_ID" || "$TAG" == "prod-$BRANCH_NAME-$COMMIT_ID" ]]; then
+              echo "⏭️ Skipping current branch+commit tag: $TAG"
+              continue
+            fi
+
+            echo "Deleting old tag: $TAG"
+            DELETE_RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" \
+              -X DELETE -H "Authorization: JWT $TOKEN" \
+              "https://hub.docker.com/v2/repositories/$REPOSITORY/tags/$TAG/")
+
+            HTTP_CODE=$(echo $DELETE_RESPONSE | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
+
+            if [ "$HTTP_CODE" = "204" ]; then
+              echo "  ✅ Successfully deleted tag $TAG"
+            else
+              echo "  ❌ Failed to delete tag $TAG (HTTP: $HTTP_CODE)"
+            fi
+
+            sleep 1
+          done
+
+          echo "Note: Docker Hub will automatically clean up unreferenced images within 24-48 hours"    
+
+      - name: Copy deployment files to VM
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ github.event.inputs.environment == 'staging' && env.STAGING_HOST || env.PROD_HOST }}
+          username: root
+          password: ${{ github.event.inputs.environment == 'staging' && secrets.VM_PASSWORD || secrets.PROD_VM_PASSWORD }}
+          source: "./deploy/ebs-staging-prod.sh,./.env-file"
+          target: /root/
+
+      - name: Run deployment script on VM
+        uses: appleboy/ssh-action@v1.1.0
+        with:
+          host: ${{ github.event.inputs.environment == 'staging' && env.STAGING_HOST || env.PROD_HOST }}
+          username: root
+          password: ${{ github.event.inputs.environment == 'staging' && secrets.VM_PASSWORD || secrets.PROD_VM_PASSWORD }}
+          script: |
+            chmod +x /root/deploy/ebs-staging-prod.sh
+
+            if [ "${{ github.event.inputs.environment }}" = "staging" ]; then
+              IMAGE="forwardemailforaifirstdesk/langflow:staging-${{ steps.branch.outputs.branch_name }}-${{ steps.commit.outputs.commit_id }}"
+              DOMAIN="${{env.STAGING_HOST}}"
+              EMAIL="${{ github.event.inputs.email }}"
+              ENV_FILE="/root/.env-file"
+              DB_USER="${{ secrets.POSTGRES_USER }}"
+              DB_PASSWORD="${{ secrets.POSTGRES_PASSWD }}"
+              DB_NAME="${{ secrets.POSTGRES_DB }}"
+              VOLUME_NAME="${{ vars.STAGING_VOLUME_NAME }}"
+            else
+              IMAGE="forwardemailforaifirstdesk/langflow:prod-${{ steps.branch.outputs.branch_name }}-${{ steps.commit.outputs.commit_id }}"
+              DOMAIN="${{env.PROD_HOST}}"
+              EMAIL="${{ github.event.inputs.email }}"
+              ENV_FILE="/root/.env-file"
+              DB_USER="${{ secrets.PROD_POSTGRES_USER }}"
+              DB_PASSWORD="${{ secrets.PROD_POSTGRES_PASSWD }}"
+              DB_NAME="${{ secrets.PROD_POSTGRES_DB }}"
+              VOLUME_NAME="${{ vars.PROD_VOLUME_NAME }}"
+            fi
+
+            /root/deploy/ebs-staging-prod.sh \
+              --image "$IMAGE" \
+              --domain "$DOMAIN" \
+              --email "$EMAIL" \
+              --env-file "$ENV_FILE" \
+              --db-user "$DB_USER" \
+              --db-password "$DB_PASSWORD" \
+              --db-name "$DB_NAME" \
+              --volume-name "$VOLUME_NAME"
+
+          command_timeout: 20m
+
+      - name: Copy deploy_status.env from VM
+        run: |
+          sshpass -p "${{ secrets.VM_PASSWORD }}" scp -o StrictHostKeyChecking=no \
+            root@staging.visualaiagentsbuilder.com:/root/deploy_status.env \
+            $GITHUB_WORKSPACE/deploy_status.env
+
+      - name: Update GitHub Deployment Status with Docker info
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          source "${GITHUB_WORKSPACE}/deploy_status.env"
+          # Encode container info for safe URL usage
+          CONTAINER_ENCODED=$(echo "$FINAL_CONTAINER" | jq -s -R -r @uri)
+
+          gh api repos/${{ github.repository }}/deployments/${{ env.DEPLOYMENT_ID }}/statuses \
+            -F state=$FINAL_STATUS \
+            -F description="$FINAL_DESCRIPTION" \
+            -F log_url="https://logs.${{ github.repository_owner }}.com/deploy/${{ env.DEPLOYMENT_ID }}?container=${CONTAINER_ENCODED}"
