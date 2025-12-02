@@ -336,7 +336,12 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
 
         # Simulate a GCP service account JSON with literal newlines in the private_key field
         # This is what causes the original bug - the private_key contains literal \n characters
-        service_account_json = '{"type": "service_account", "project_id": "test-project-123", "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC\n-----END PRIVATE KEY-----\n"}'
+        # Note: The key is fake :) It's just for testing parsing
+        service_account_json = (
+            '{"type": "service_account", "project_id": "test-project-123", '
+            '"private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC\n'
+            '-----END PRIVATE KEY-----\n"}'
+        )
 
         message = Message(text="test content")
         component.set_attributes(
@@ -413,7 +418,7 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
                 mock_drive_service.files().create().execute.return_value = {"id": f"file_{test_name}"}
 
                 # Should not raise JSONDecodeError for any case
-                result = await component.save_to_file()
+                await component.save_to_file()
 
                 # Verify credentials were parsed
                 mock_creds.assert_called_once()
