@@ -10,7 +10,8 @@ jobs:
     steps:
 
       - name: Print runner labels from context
-        run: echo "${{ toJson(runner.labels) }}"
+        run: | 
+          echo "Runner labels: ${{ toJson(runner.labels) }}" >> "$GITHUB_STEP_SUMMARY"
           
       - name: Show Runner Info in Summary
         run: |
@@ -19,7 +20,6 @@ jobs:
             echo ""
             echo "**Hostname:** $(hostname)"
             echo "**Machine:** $(uname -a)"
-            echo "**Runner Labels:** $RUNNER_LABELS"
             echo "**GitHub Workspace:** $GITHUB_WORKSPACE"
             echo "**Runner Temp Dir:** $RUNNER_TEMP"
             echo "**Runner Tool Cache:** $RUNNER_TOOL_CACHE"
