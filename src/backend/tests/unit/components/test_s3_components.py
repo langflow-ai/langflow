@@ -3,7 +3,7 @@
 This test class focuses on components that are compatible with S3 storage.
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from langflow.components.data.file import FileComponent
@@ -34,23 +34,24 @@ class TestS3CompatibleComponents:
         """Test FileComponent can be instantiated and has correct structure for S3."""
         # Just verify the component can be created and has the right attributes
         component = FileComponent()
-        
+
         # Verify it's a BaseFileComponent
         from langflow.base.data.base_file import BaseFileComponent
+
         assert isinstance(component, BaseFileComponent)
-        
+
         # Verify it has the expected attributes
-        assert hasattr(component, 'file_path')
-        assert hasattr(component, 'load_files')
+        assert hasattr(component, "file_path")
+        assert hasattr(component, "load_files")
 
     @pytest.mark.asyncio
     async def test_save_file_component_s3_upload(self, s3_settings):
         """Test SaveFileComponent structure."""
         # Verify component can be instantiated
         component = SaveToFileComponent()
-        assert hasattr(component, 'save_to_file')
-        assert hasattr(component, 'file_name')
-        assert hasattr(component, 'file_format')
+        assert hasattr(component, "save_to_file")
+        assert hasattr(component, "file_name")
+        assert hasattr(component, "file_format")
 
     @pytest.mark.asyncio
     async def test_csv_agent_s3_file_handling(self, s3_settings):
@@ -114,29 +115,29 @@ class TestS3CompatibleComponents:
         """Test FileComponent structure for S3 file processing."""
         # Verify component can be instantiated
         component = FileComponent()
-        assert hasattr(component, 'load_files')
-        assert hasattr(component, 'file_path')
+        assert hasattr(component, "load_files")
+        assert hasattr(component, "file_path")
 
     @pytest.mark.asyncio
     async def test_s3_error_handling(self, s3_settings):
         """Test FileComponent has error handling capabilities."""
         # Verify component can be instantiated
         component = FileComponent()
-        assert hasattr(component, 'silent_errors')
+        assert hasattr(component, "silent_errors")
 
     @pytest.mark.asyncio
     async def test_s3_streaming_operations(self, s3_settings):
         """Test FileComponent structure for streaming."""
         # Verify component can be instantiated
         component = FileComponent()
-        assert hasattr(component, 'load_files')
+        assert hasattr(component, "load_files")
 
     @pytest.mark.asyncio
     async def test_s3_metadata_handling(self, s3_settings):
         """Test FileComponent structure for metadata."""
         # Verify component can be instantiated
         component = FileComponent()
-        assert hasattr(component, 'file_path')
+        assert hasattr(component, "file_path")
 
     @pytest.mark.asyncio
     async def test_s3_concurrent_operations(self, s3_settings):
@@ -145,4 +146,4 @@ class TestS3CompatibleComponents:
         components = [FileComponent() for _ in range(3)]
         assert len(components) == 3
         for component in components:
-            assert hasattr(component, 'load_files')
+            assert hasattr(component, "load_files")

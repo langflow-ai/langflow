@@ -226,8 +226,8 @@ class TestS3FileEndpoints:
                 patch("langflow.api.v2.files.CurrentActiveUser", return_value=mock_user),
             ):
                 # Test error handling
-                from langflow.api.v2.files import download_file
                 from fastapi import HTTPException
+                from langflow.api.v2.files import download_file
 
                 # Mock the database session
                 mock_session = MagicMock()
@@ -241,7 +241,7 @@ class TestS3FileEndpoints:
                         storage_service=s3_storage_service,
                         return_content=True,
                     )
-                
+
                 # Verify it's a 500 error with appropriate message
                 assert exc_info.value.status_code == 500
                 assert "Error downloading file" in str(exc_info.value.detail)
