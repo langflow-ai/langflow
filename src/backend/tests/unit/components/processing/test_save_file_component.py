@@ -334,13 +334,12 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
         """
         component = component_class(_user_id=str(uuid4()))
 
-        # Simulate a GCP service account JSON with literal newlines in the private_key field
-        # This is what causes the original bug - the private_key contains literal \n characters
-        # Note: The key is fake :) It's just for testing parsing
+        # Simulate a GCP service account JSON with literal newlines in the private_key field.
+        # Use a clearly fake, short key to avoid tripping secret scanners while preserving the newline pattern.
+        fake_private_key = "-----BEGIN KEY-----\nFAKE\n-----END KEY-----\n"
         service_account_json = (
             '{"type": "service_account", "project_id": "test-project-123", '
-            '"private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC\n'
-            '-----END PRIVATE KEY-----\n"}'
+            f'"private_key": "{fake_private_key}"}}'
         )
 
         message = Message(text="test content")
@@ -376,7 +375,7 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
             assert creds_dict["type"] == "service_account"
             assert creds_dict["project_id"] == "test-project-123"
             assert "private_key" in creds_dict
-            assert "BEGIN PRIVATE KEY" in creds_dict["private_key"]
+            assert "BEGIN KEY" in creds_dict["private_key"]
 
             # Verify successful upload message
             assert "successfully uploaded to Google Drive" in result.text
