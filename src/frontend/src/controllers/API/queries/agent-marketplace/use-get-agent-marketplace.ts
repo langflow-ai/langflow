@@ -15,6 +15,7 @@ export interface AgentSpecItem {
   file_name: string;
   flow_id?: string | null;
   flow_icon?: string | null;
+  status?: string;
   // Spec schema is flexible; we surface name/description/tags when present
   spec: {
     name?: string;

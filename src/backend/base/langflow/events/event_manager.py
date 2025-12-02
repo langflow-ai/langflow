@@ -105,4 +105,5 @@ def create_stream_tokens_event_manager(queue):
     manager.register_event("on_message", "add_message")
     manager.register_event("on_token", "token")
     manager.register_event("on_end", "end")
+    manager.register_event("on_error", "error")
     return manager

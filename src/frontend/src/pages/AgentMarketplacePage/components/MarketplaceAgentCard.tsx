@@ -27,8 +27,11 @@ export default function MarketplaceAgentCard({ item, viewMode = "grid", expand =
 
   const navigate = useCustomNavigate();
 
+  const isPublished = (item.status ?? "").toString().toUpperCase() === "PUBLISHED";
+  const isClickable = item.flow_id && isPublished;
+
   const handleCardClick = () => {
-    if (!item.flow_id) return;
+    if (!isClickable) return;
     navigate(`/agent-marketplace/detail/${item.flow_id}`, {
       state: {
         name,
@@ -40,8 +43,10 @@ export default function MarketplaceAgentCard({ item, viewMode = "grid", expand =
 
   return (
     <div
-      className={`group relative flex ${expand ? "h-full" : ""} flex-col rounded-lg border border-[#EBE8FF] bg-white dark:bg-card px-4 py-3 transition-shadow hover:shadow-md ${item.flow_id ? "cursor-pointer" : "cursor-default"} ${!expand ? "max-h-[260px] md:max-h-[280px] xl:max-h-[300px] overflow-hidden" : ""}`}
-      onClick={item.flow_id ? handleCardClick : undefined}
+      className={`group relative flex ${expand ? "h-full" : ""} flex-col rounded-lg border border-[#EBE8FF] bg-white dark:bg-card px-4 py-3 transition-shadow hover:shadow-md ${isClickable ? "cursor-pointer" : "cursor-default"
+        } ${!expand ? "max-h-[260px] md:max-h-[280px] xl:max-h-[300px] overflow-hidden" : ""} ${!isPublished ? "opacity-60 grayscale pointer-events-none" : ""
+        }`}
+      onClick={isClickable ? handleCardClick : undefined}
     >
       {/* Header */}
       <div className="mb-3 flex items-start justify-between gap-3">
@@ -66,6 +71,11 @@ export default function MarketplaceAgentCard({ item, viewMode = "grid", expand =
         </div>
 
         <div className="flex items-center gap-2">
+          {!isPublished && (
+            <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100 text-[10px] px-1.5 py-0.5 h-5 whitespace-nowrap">
+              Coming Soon
+            </Badge>
+          )}
           {version && (
             <span className="text-xs text-muted-foreground">Ver. {version}</span>
           )}
@@ -83,8 +93,8 @@ export default function MarketplaceAgentCard({ item, viewMode = "grid", expand =
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-[12rem]">
               {item.flow_id && (
-                <DropdownMenuItem onClick={(e) => { 
-                  e.stopPropagation(); 
+                <DropdownMenuItem onClick={(e) => {
+                  e.stopPropagation();
                   navigate(`/flow/${item.flow_id}/`);
                 }} className="gap-2">
                   <Pencil className="h-4 w-4" />
@@ -147,29 +157,29 @@ export default function MarketplaceAgentCard({ item, viewMode = "grid", expand =
               content={
                 <div className="flex max-w-[240px] flex-wrap gap-1">
                   {tags.slice(2).map((tag) => (
-                  <Badge
-                    key={`hidden-${tag}`}
-                    variant="secondary"
-                    className="text-[11px] bg-[#F5F2FF] dark:bg-white/10 dark:text-white"
-                  >
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
-            }
-          >
-            <span className="inline-flex">
-              <Badge
-                variant="secondary"
-                size="xq"
-                className="cursor-pointer bg-[#F5F2FF] dark:bg-white/10 dark:text-white"
-              >
-                +{tags.length - 2}
-              </Badge>
-            </span>
-          </ShadTooltip>
-        )}
-      </div>
+                    <Badge
+                      key={`hidden-${tag}`}
+                      variant="secondary"
+                      className="text-[11px] bg-[#F5F2FF] dark:bg-white/10 dark:text-white"
+                    >
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              }
+            >
+              <span className="inline-flex">
+                <Badge
+                  variant="secondary"
+                  size="xq"
+                  className="cursor-pointer bg-[#F5F2FF] dark:bg-white/10 dark:text-white"
+                >
+                  +{tags.length - 2}
+                </Badge>
+              </span>
+            </ShadTooltip>
+          )}
+        </div>
       )}
     </div>
   );

@@ -237,8 +237,24 @@ export function usePlaygroundChat(publishedFlowData: any) {
         );
       }
     } else if (eventData.event === "error") {
-      const errorMsg = data?.error || "Stream error";
-      throw new Error(errorMsg);
+      const errorMsg = data?.error || "An error occurred during flow execution";
+      console.error("[Playground] Stream error:", errorMsg);
+
+      // Clear loading state
+      setIsLoading(false);
+      setStreamingMessageId(null);
+
+      // Update the agent message to show the error
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === localAgentMessageId || msg.id === streamingIdRef.current
+            ? { ...msg, text: "Something went wrong when running the agent, please try again", isStreaming: false }
+            : msg
+        )
+      );
+
+      // Don't throw - just handle gracefully
+      return;
     }
   };
 

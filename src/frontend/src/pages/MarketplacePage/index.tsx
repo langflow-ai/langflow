@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { Search, Grid3x3, List, Filter } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -177,7 +177,19 @@ export default function MarketplacePage() {
   const currentPage = Math.min(pageIndex, pages);
   const start = (currentPage - 1) * pageSize;
   const end = start + pageSize;
-  const visibleItems = items;
+  const visibleItems = useMemo(() => {
+    const list = items || [];
+    return [...list].sort((a: any, b: any) => {
+      const aStatus = (a.status ?? "").toString().toUpperCase();
+      const bStatus = (b.status ?? "").toString().toUpperCase();
+      const isAPublished = aStatus === "PUBLISHED";
+      const isBPublished = bStatus === "PUBLISHED";
+
+      if (isAPublished && !isBPublished) return -1;
+      if (!isAPublished && isBPublished) return 1;
+      return 0;
+    });
+  }, [items]);
   const expandCards = visibleItems.length === 12;
 
   const handlePageChange = useCallback((newPageIndex: number) => {
@@ -359,10 +371,9 @@ export default function MarketplacePage() {
               {items.length > 0 && (
                 <div
                   className={`max-h-[calc(100vh-172px)] overflow-auto
-                    ${
-                      viewMode === "grid"
-                        ? "grid grid-cols-2 md:grid-cols-3 3xl:grid-cols-4 gap-4 "
-                        : "flex flex-col gap-2 flex-1"
+                    ${viewMode === "grid"
+                      ? "grid grid-cols-2 md:grid-cols-3 3xl:grid-cols-4 gap-4 "
+                      : "flex flex-col gap-2 flex-1"
                     }`}
                 >
                   {visibleItems.map((item: any) => (

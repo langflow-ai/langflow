@@ -160,7 +160,7 @@ export default function MarketplaceDetailPage() {
                   />
                   Flow Visualization
                 </TabsTrigger>
-                <TabsTrigger
+                {/* <TabsTrigger
                   value="spec"
                   className="px-4 py-2.5 text-sm text-secondary-font"
                 >
@@ -169,7 +169,7 @@ export default function MarketplaceDetailPage() {
                     className="h-4 w-4 mr-2"
                   />
                   Specification
-                </TabsTrigger>
+                </TabsTrigger> */}
               </TabsList>
 
               {/* Edit Button - only show if flow_cloned_from exists AND on Flow Visualization tab AND user is Marketplace Admin or original flow creator */}
@@ -220,7 +220,7 @@ export default function MarketplaceDetailPage() {
               )}
             </TabsContent>
 
-            <TabsContent value="spec" className="mt-3 w-full">
+            {/* <TabsContent value="spec" className="mt-3 w-full">
               <div className="flex h-[calc(100vh-158px)] w-full flex-col overflow-hidden rounded-lg border border-primary-border bg-background-surface">
                 <div className="flex items-center justify-between border-b border-primary-border px-3 py-2">
                   <p className="text-xs font-medium text-primary-font">
@@ -265,7 +265,7 @@ export default function MarketplaceDetailPage() {
                   )}
                 </div>
               </div>
-            </TabsContent>
+            </TabsContent> */}
 
             <TabsContent value="playground" className="mt-3 w-full" forceMount>
               <div className="h-[calc(100vh-158px)] w-full overflow-hidden">

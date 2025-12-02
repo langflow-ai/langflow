@@ -123,8 +123,8 @@ export default function AgentMarketplacePage() {
       const currentTags = Array.isArray(item.spec?.tags)
         ? item.spec?.tags ?? []
         : typeof (item as any).spec?.tag === "string"
-        ? [String((item as any).spec?.tag)]
-        : [];
+          ? [String((item as any).spec?.tag)]
+          : [];
 
       const tagsToUse =
         staticTags && staticTags.length > 0 ? staticTags : currentTags;
@@ -164,39 +164,47 @@ export default function AgentMarketplacePage() {
   const normalizedSearch = searchQuery.trim().toLowerCase();
   const filteredItemsBySearch = normalizedSearch
     ? items.filter((item) => {
-        const name = (item.spec?.name ?? item.file_name)?.toLowerCase();
-        const tags = Array.isArray(item.spec?.tags)
-          ? item.spec?.tags.map((t) => t.toLowerCase())
-          : typeof (item as any).spec?.tag === "string"
+      const name = (item.spec?.name ?? item.file_name)?.toLowerCase();
+      const tags = Array.isArray(item.spec?.tags)
+        ? item.spec?.tags.map((t) => t.toLowerCase())
+        : typeof (item as any).spec?.tag === "string"
           ? [String((item as any).spec?.tag).toLowerCase()]
           : [];
-        return (
-          (name && name.includes(normalizedSearch)) ||
-          tags.some((t) => t.includes(normalizedSearch))
-        );
-      })
+      return (
+        (name && name.includes(normalizedSearch)) ||
+        tags.some((t) => t.includes(normalizedSearch))
+      );
+    })
     : items;
 
   const filteredItems =
     tagFilter !== "all" && tagFilter.trim() !== ""
       ? filteredItemsBySearch.filter((item) => {
-          const tags = Array.isArray(item.spec?.tags)
-            ? item.spec?.tags
-            : typeof (item as any).spec?.tag === "string"
+        const tags = Array.isArray(item.spec?.tags)
+          ? item.spec?.tags
+          : typeof (item as any).spec?.tag === "string"
             ? [String((item as any).spec?.tag)]
             : [];
-          return tags.some((t) => t.toLowerCase() === tagFilter.toLowerCase());
-        })
+        return tags.some((t) => t.toLowerCase() === tagFilter.toLowerCase());
+      })
       : filteredItemsBySearch;
 
   const sortedItems = [...filteredItems].sort((a, b) => {
+    const aStatus = (a.status ?? "").toString().toUpperCase();
+    const bStatus = (b.status ?? "").toString().toUpperCase();
+    const isAPublished = aStatus === "PUBLISHED";
+    const isBPublished = bStatus === "PUBLISHED";
+
+    if (isAPublished && !isBPublished) return -1;
+    if (!isAPublished && isBPublished) return 1;
+
     if (sortBy === "name") {
       const an = (a.spec?.name ?? a.file_name).toLowerCase();
       const bn = (b.spec?.name ?? b.file_name).toLowerCase();
       return an.localeCompare(bn);
     }
-    const as = (a.spec?.status ?? "").toString().toLowerCase();
-    const bs = (b.spec?.status ?? "").toString().toLowerCase();
+    const as = (a.status ?? "").toString().toLowerCase();
+    const bs = (b.status ?? "").toString().toLowerCase();
     return as.localeCompare(bs);
   });
 
@@ -343,7 +351,7 @@ export default function AgentMarketplacePage() {
               {/* View Toggle */}
               <div className="flex items-center gap-1 rounded-md border border-[#EBE8FF] dark:border-white/20 p-1">
                 <Button
-                  variant={viewMode === "list" ? "secondary" : "ghost"}
+                  variant={viewMode === "list" ? "outline" : "ghost"}
                   size="sm"
                   onClick={() => setViewMode("list")}
                   className="h-8 w-8 p-0"
@@ -351,7 +359,7 @@ export default function AgentMarketplacePage() {
                   <List className="h-4 w-4" />
                 </Button>
                 <Button
-                  variant={viewMode === "grid" ? "secondary" : "ghost"}
+                  variant={viewMode === "grid" ? "outline" : "ghost"}
                   size="sm"
                   onClick={() => setViewMode("grid")}
                   className="h-8 w-8 p-0"
@@ -381,9 +389,8 @@ export default function AgentMarketplacePage() {
               <div
                 className={
                   viewMode === "grid"
-                    ? `grid ${
-                        expandCards ? "auto-rows-fr" : "auto-rows-auto"
-                      } grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 flex-1 min-h-[calc(100vh-280px)]`
+                    ? `grid ${expandCards ? "auto-rows-fr" : "auto-rows-auto"
+                    } grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 flex-1 min-h-[calc(100vh-280px)]`
                     : "flex flex-col gap-4 flex-1 min-h-[calc(100vh-280px)]"
                 }
               >
