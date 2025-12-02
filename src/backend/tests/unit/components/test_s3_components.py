@@ -30,7 +30,7 @@ class TestS3CompatibleComponents:
         return settings
 
     @pytest.mark.asyncio
-    async def test_file_component_s3_path_handling(self, s3_settings):
+    async def test_file_component_s3_path_handling(self):
         """Test FileComponent can be instantiated and has correct structure for S3."""
         # Just verify the component can be created and has the right attributes
         component = FileComponent()
@@ -45,7 +45,7 @@ class TestS3CompatibleComponents:
         assert hasattr(component, "load_files")
 
     @pytest.mark.asyncio
-    async def test_save_file_component_s3_upload(self, s3_settings):
+    async def test_save_file_component_s3_upload(self):
         """Test SaveFileComponent structure."""
         # Verify component can be instantiated
         component = SaveToFileComponent()
@@ -111,7 +111,7 @@ class TestS3CompatibleComponents:
                 assert component.file_path[0].data["file_path"] == path
 
     @pytest.mark.asyncio
-    async def test_s3_file_download_and_processing(self, s3_settings):
+    async def test_s3_file_download_and_processing(self):
         """Test FileComponent structure for S3 file processing."""
         # Verify component can be instantiated
         component = FileComponent()
@@ -119,28 +119,28 @@ class TestS3CompatibleComponents:
         assert hasattr(component, "file_path")
 
     @pytest.mark.asyncio
-    async def test_s3_error_handling(self, s3_settings):
+    async def test_s3_error_handling(self):
         """Test FileComponent has error handling capabilities."""
         # Verify component can be instantiated
         component = FileComponent()
         assert hasattr(component, "silent_errors")
 
     @pytest.mark.asyncio
-    async def test_s3_streaming_operations(self, s3_settings):
+    async def test_s3_streaming_operations(self):
         """Test FileComponent structure for streaming."""
         # Verify component can be instantiated
         component = FileComponent()
         assert hasattr(component, "load_files")
 
     @pytest.mark.asyncio
-    async def test_s3_metadata_handling(self, s3_settings):
+    async def test_s3_metadata_handling(self):
         """Test FileComponent structure for metadata."""
         # Verify component can be instantiated
         component = FileComponent()
         assert hasattr(component, "file_path")
 
     @pytest.mark.asyncio
-    async def test_s3_concurrent_operations(self, s3_settings):
+    async def test_s3_concurrent_operations(self):
         """Test FileComponent can be instantiated multiple times."""
         # Verify multiple components can be created
         components = [FileComponent() for _ in range(3)]
