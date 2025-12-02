@@ -1255,18 +1255,20 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
             model_id = getattr(emb_obj, "model_id", None)
             model_name = getattr(emb_obj, "model_name", None)
             dimensions = getattr(emb_obj, "dimensions", None)
-            available_models = getattr(emb_obj, "available_models", None)
+            available_models_attr = getattr(emb_obj, "available_models", None)
 
             logger.info(
                 f"Embedding object {idx}: deployment={deployment}, model={model}, "
                 f"model_id={model_id}, model_name={model_name}, dimensions={dimensions}, "
-                f"available_models={available_models}"
+                f"available_models={available_models_attr}"
             )
 
             # If this embedding has available_models dict, map all models to their dedicated instances
-            if available_models and isinstance(available_models, dict):
-                logger.info(f"Embedding object {idx} provides {len(available_models)} models via available_models dict")
-                for model_name_key, dedicated_embedding in available_models.items():
+            if available_models_attr and isinstance(available_models_attr, dict):
+                logger.info(
+                    f"Embedding object {idx} provides {len(available_models_attr)} models via available_models dict"
+                )
+                for model_name_key, dedicated_embedding in available_models_attr.items():
                     if model_name_key and str(model_name_key).strip():
                         model_str = str(model_name_key).strip()
                         if model_str not in embedding_by_model:
