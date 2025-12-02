@@ -77,7 +77,7 @@ class SaveToFileComponent(Component):
         BoolInput(
             name="append_mode",
             display_name="Append",
-            info="Append to file if it exists (only for plain text formats). Disabled for binary formats like Excel.",
+            info="Append to file if it exists (only for Local storage with plain text formats). Not supported for cloud storage (AWS/Google Drive).",
             value=False,
             show=False,
         ),
@@ -196,11 +196,13 @@ class SaveToFileComponent(Component):
         if len(selected) == 1:
             location = selected[0]
 
-            # Show file_name and append_mode when any storage location is selected
+            # Show file_name when any storage location is selected
             if "file_name" in build_config:
                 build_config["file_name"]["show"] = True
+
+            # Show append_mode only for Local storage (not supported for cloud storage)
             if "append_mode" in build_config:
-                build_config["append_mode"]["show"] = True
+                build_config["append_mode"]["show"] = location == "Local"
 
             if location == "Local":
                 if "local_format" in build_config:
