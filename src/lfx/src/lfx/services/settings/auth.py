@@ -116,8 +116,6 @@ class AuthSettings(BaseSettings):
             secret_value = value.get_secret_value() if isinstance(value, SecretStr) else value
             write_secret_to_file(secret_key_path, secret_value)
         else:
-            logger.debug("No secret key provided, generating a random one")
-
             if secret_key_path.exists():
                 value = read_secret_from_file(secret_key_path)
                 logger.debug("Loaded secret key")
