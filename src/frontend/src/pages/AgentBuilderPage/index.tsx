@@ -43,6 +43,7 @@ import { usePostFolders } from "@/controllers/API/queries/folders/use-post-folde
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import TemplatesModal from "@/modals/templatesModal";
 import { useGetTemplateStyle } from "@/pages/MainPage/utils/get-template-style";
+import useAddFlow from "@/hooks/flows/use-add-flow";
 import { timeElapsed } from "@/pages/MainPage/utils/time-elapse";
 import KeycloakService from "@/services/keycloak";
 import { useFolderStore } from "@/stores/foldersStore";
@@ -339,6 +340,7 @@ const AgentListItem = ({
 
 export default function AgentBuilderPage() {
   const { userData } = useContext(AuthContext);
+  const addFlow = useAddFlow();
 
   const displayName = useMemo(() => {
     if (envConfig.keycloakEnabled) {
@@ -583,7 +585,7 @@ export default function AgentBuilderPage() {
                 }
               }}
             /> */}
-            <input
+            {/* <input
               value={promptValue}
               onChange={(e) => setPromptValue(e.target.value)}
               placeholder="Describe your agent... e.g., 'Create an agent that can create a clinical summary from a patient chart'"
@@ -595,7 +597,7 @@ export default function AgentBuilderPage() {
                   // handlePromptSubmit();
                 }
               }}
-            />
+            /> */}
             {/* <button
               onClick={handlePromptSubmit}
               className="absolute right-3 bottom-4 p-2 rounded-md bg-primary text-primary-foreground disabled:opacity-50 disabled:pointer-events-none"
@@ -606,7 +608,7 @@ export default function AgentBuilderPage() {
               <VscSend name="Send" className="h-4 w-4" />
             </button> */}
 
-            <Button
+            {/* <Button
               size="md"
               onClick={handlePromptSubmit}
               className="absolute w-8 right-3 top-2.5 p-0 rounded-md bg-primary text-background-surface disabled:opacity-50 disabled:pointer-events-none"
@@ -618,8 +620,9 @@ export default function AgentBuilderPage() {
                 name="Send"
                 className="h-4 w-4 disabled:cursor-not-allowed"
               />
-            </Button>
+            </Button> */}
           </div>
+          {/* Commented out - Or Get Started Step-by-Step button
           <div className="mt-3 text-center">
             <Button
               variant="link"
@@ -629,15 +632,64 @@ export default function AgentBuilderPage() {
             >
               Or Get Started Step-by-Step
             </Button>
+          </div>
+          */}
 
-            {/* <button
-              onClick={() => setShowTemplatesModal(true)}
-              className="text-sm text-primary dark:text-white font-medium"
+          {/* Create from Scratch and Use a Template cards */}
+          <div className="mt-6 flex justify-center gap-4">
+            <Card
+              className="w-[280px] cursor-pointer hover:shadow-md transition-all duration-200 border border-primary-border bg-background"
+              onClick={() => {
+                addFlow().then((id) => {
+                  navigate(
+                    `/flow/${id}${folderId ? `/folder/${folderId}` : ""}`
+                  );
+                });
+              }}
             >
-              <span className="not-italic font-medium text-xs tracking-[0] text-[var(--text-link,#671EE3)]">
-                Or Get Started Step-by-Step
-              </span>
-            </button> */}
+              <CardHeader className="pb-2">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent shrink-0">
+                    <ForwardedIconComponent
+                      name="Plus"
+                      className="h-5 w-5 text-primary"
+                    />
+                  </div>
+                  <CardTitle className="text-md font-semibold text-primary-font">
+                    Create from Scratch
+                  </CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <CardDescription className="text-sm text-secondary-font">
+                  Manually define your agent's persona, instructions, and model settings for complete control.
+                </CardDescription>
+              </CardContent>
+            </Card>
+
+            <Card
+              className="w-[280px] cursor-pointer hover:shadow-md transition-all duration-200 border border-primary-border bg-background"
+              onClick={() => setShowTemplatesModal(true)}
+            >
+              <CardHeader className="pb-2">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent shrink-0">
+                    <ForwardedIconComponent
+                      name="FileText"
+                      className="h-5 w-5 text-primary"
+                    />
+                  </div>
+                  <CardTitle className="text-md font-semibold text-primary-font">
+                    Use a Template
+                  </CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <CardDescription className="text-sm text-secondary-font">
+                  Start with pre-built agents for common tasks like Support, Coding, or Data Analysis.
+                </CardDescription>
+              </CardContent>
+            </Card>
           </div>
         </div>
 
