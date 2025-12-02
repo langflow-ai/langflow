@@ -252,6 +252,11 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "Deployment/deployment-jwt-authentication",
+          label: "JWT Authentication Configuration",
+        },
+        {
+          type: "doc",
           id: "Deployment/security",
           label: "Security",
         },
