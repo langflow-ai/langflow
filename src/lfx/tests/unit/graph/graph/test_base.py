@@ -174,7 +174,7 @@ def test_get_terminal_nodes_linear_chain():
         ChatInput(_id="node_a"),
         TextOutputComponent(_id="node_b"),
         TextOutputComponent(_id="node_c"),
-        ChatOutput(_id="node_d")
+        ChatOutput(_id="node_d"),
     ]
 
     graph = Graph()
@@ -198,9 +198,7 @@ def test_get_terminal_nodes_linear_chain():
     terminal_nodes = graph.get_terminal_nodes()
 
     # Only the last node should be terminal
-    assert terminal_nodes == [node_ids[-1]], (
-        f"Expected only [{node_ids[-1]}] to be terminal, got {terminal_nodes}"
-    )
+    assert terminal_nodes == [node_ids[-1]], f"Expected only [{node_ids[-1]}] to be terminal, got {terminal_nodes}"
 
 
 def test_get_terminal_nodes_empty_graph():
