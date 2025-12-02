@@ -1,29 +1,29 @@
-import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
-import CodeAreaComponent from "@/components/core/parameterRenderComponent/components/codeAreaComponent";
-import ModelInputComponent from "@/components/core/parameterRenderComponent/components/modelInputComponent";
-import SliderComponent from "@/components/core/parameterRenderComponent/components/sliderComponent";
-import TableNodeComponent from "@/components/core/parameterRenderComponent/components/TableNodeComponent";
-import TabComponent from "@/components/core/parameterRenderComponent/components/tabComponent";
-import { TEXT_FIELD_TYPES } from "@/constants/constants";
-import CustomConnectionComponent from "@/customization/components/custom-connectionComponent";
-import CustomInputFileComponent from "@/customization/components/custom-input-file";
-import CustomLinkComponent from "@/customization/components/custom-linkComponent";
-import type { APIClassType, InputFieldType } from "@/types/api";
-import DictComponent from "./components/dictComponent";
-import { EmptyParameterComponent } from "./components/emptyParameterComponent";
-import FloatComponent from "./components/floatComponent";
-import InputListComponent from "./components/inputListComponent";
-import IntComponent from "./components/intComponent";
-import KeypairListComponent from "./components/keypairListComponent";
-import McpComponent from "./components/mcpComponent";
-import MultiselectComponent from "./components/multiselectComponent";
-import PromptAreaComponent from "./components/promptComponent";
-import QueryComponent from "./components/queryComponent";
-import SortableListComponent from "./components/sortableListComponent";
-import { StrRenderComponent } from "./components/strRenderComponent";
-import ToolsComponent from "./components/ToolsComponent";
-import ToggleShadComponent from "./components/toggleShadComponent";
-import type { InputProps, NodeInfoType } from "./types";
+import type { handleOnNewValueType } from '@/CustomNodes/hooks/use-handle-new-value';
+import CodeAreaComponent from '@/components/core/parameterRenderComponent/components/codeAreaComponent';
+import ModelInputComponent from '@/components/core/parameterRenderComponent/components/modelInputComponent';
+import SliderComponent from '@/components/core/parameterRenderComponent/components/sliderComponent';
+import TableNodeComponent from '@/components/core/parameterRenderComponent/components/TableNodeComponent';
+import TabComponent from '@/components/core/parameterRenderComponent/components/tabComponent';
+import { TEXT_FIELD_TYPES } from '@/constants/constants';
+import CustomConnectionComponent from '@/customization/components/custom-connectionComponent';
+import CustomInputFileComponent from '@/customization/components/custom-input-file';
+import CustomLinkComponent from '@/customization/components/custom-linkComponent';
+import type { APIClassType, InputFieldType } from '@/types/api';
+import DictComponent from './components/dictComponent';
+import { EmptyParameterComponent } from './components/emptyParameterComponent';
+import FloatComponent from './components/floatComponent';
+import InputListComponent from './components/inputListComponent';
+import IntComponent from './components/intComponent';
+import KeypairListComponent from './components/keypairListComponent';
+import McpComponent from './components/mcpComponent';
+import MultiselectComponent from './components/multiselectComponent';
+import PromptAreaComponent from './components/promptComponent';
+import QueryComponent from './components/queryComponent';
+import SortableListComponent from './components/sortableListComponent';
+import { StrRenderComponent } from './components/strRenderComponent';
+import ToolsComponent from './components/ToolsComponent';
+import ToggleShadComponent from './components/toggleShadComponent';
+import type { InputProps, NodeInfoType } from './types';
 
 export function ParameterRenderComponent({
   handleOnNewValue,
@@ -57,8 +57,8 @@ export function ParameterRenderComponent({
   // no-op
   const id = (
     templateData.type +
-    "_" +
-    (editNode ? "edit_" : "") +
+    '_' +
+    (editNode ? 'edit_' : '') +
     templateData.name
   ).toLowerCase();
 
@@ -74,13 +74,13 @@ export function ParameterRenderComponent({
       nodeId,
       helperText: templateData?.helper_text,
       readonly: templateData.readonly,
-      placeholder,
+      placeholder: placeholder || templateData?.placeholder,
       isToolMode,
       nodeInformationMetadata,
       hasRefreshButton: templateData.refresh_button,
     };
 
-    if (TEXT_FIELD_TYPES.includes(templateData.type ?? "")) {
+    if (TEXT_FIELD_TYPES.includes(templateData.type ?? '')) {
       if (templateData.list) {
         if (!templateData.options) {
           return (
@@ -115,21 +115,21 @@ export function ParameterRenderComponent({
           handleNodeClass={handleNodeClass}
           templateData={templateData}
           name={name}
-          display_name={templateData.display_name ?? ""}
+          display_name={templateData.display_name ?? ''}
           editNode={editNode}
         />
       );
     }
     switch (templateData.type) {
-      case "NestedDict":
+      case 'NestedDict':
         return (
           <DictComponent
-            name={name ?? ""}
+            name={name ?? ''}
             {...baseInputProps}
             id={`dict_${id}`}
           />
         );
-      case "dict":
+      case 'dict':
         return (
           <KeypairListComponent
             {...baseInputProps}
@@ -137,7 +137,7 @@ export function ParameterRenderComponent({
             id={`keypair_${id}`}
           />
         );
-      case "bool":
+      case 'bool':
         return (
           <ToggleShadComponent
             size="medium"
@@ -145,7 +145,7 @@ export function ParameterRenderComponent({
             id={`toggle_${id}`}
           />
         );
-      case "link":
+      case 'link':
         return (
           <CustomLinkComponent
             {...baseInputProps}
@@ -154,7 +154,7 @@ export function ParameterRenderComponent({
             id={`link_${id}`}
           />
         );
-      case "float":
+      case 'float':
         return (
           <FloatComponent
             {...baseInputProps}
@@ -162,7 +162,7 @@ export function ParameterRenderComponent({
             rangeSpec={templateData.range_spec}
           />
         );
-      case "int":
+      case 'int':
         return (
           <IntComponent
             {...baseInputProps}
@@ -170,7 +170,7 @@ export function ParameterRenderComponent({
             id={`int_${id}`}
           />
         );
-      case "file":
+      case 'file':
         return (
           <CustomInputFileComponent
             {...baseInputProps}
@@ -181,7 +181,7 @@ export function ParameterRenderComponent({
             id={`inputfile_${id}`}
           />
         );
-      case "prompt":
+      case 'prompt':
         return (
           <PromptAreaComponent
             {...baseInputProps}
@@ -190,34 +190,34 @@ export function ParameterRenderComponent({
             id={`promptarea_${id}`}
           />
         );
-      case "code":
+      case 'code':
         return <CodeAreaComponent {...baseInputProps} id={`codearea_${id}`} />;
-      case "table":
+      case 'table':
         return (
           <TableNodeComponent
             {...baseInputProps}
-            description={templateData.info || "Add or edit data"}
+            description={templateData.info || 'Add or edit data'}
             columns={
               templateData?.table_schema?.columns ?? templateData?.table_schema
             }
-            tableTitle={templateData?.display_name ?? "Table"}
+            tableTitle={templateData?.display_name ?? 'Table'}
             table_options={templateData?.table_options}
             trigger_icon={templateData?.trigger_icon}
             trigger_text={templateData?.trigger_text}
             table_icon={templateData?.table_icon}
           />
         );
-      case "tools":
+      case 'tools':
         return (
           <ToolsComponent
             {...baseInputProps}
-            description={templateData.info || "Add or edit data"}
-            title={nodeClass?.display_name ?? "Tools"}
-            icon={nodeClass?.icon ?? ""}
+            description={templateData.info || 'Add or edit data'}
+            title={nodeClass?.display_name ?? 'Tools'}
+            icon={nodeClass?.icon ?? ''}
             template={nodeClass?.template}
           />
         );
-      case "slider":
+      case 'slider':
         return (
           <SliderComponent
             {...baseInputProps}
@@ -233,7 +233,7 @@ export function ParameterRenderComponent({
             id={`slider_${id}`}
           />
         );
-      case "sortableList":
+      case 'sortableList':
         return (
           <SortableListComponent
             {...baseInputProps}
@@ -244,11 +244,11 @@ export function ParameterRenderComponent({
             limit={templateData?.limit}
           />
         );
-      case "connect": {
+      case 'connect': {
         const link =
           templateData?.options?.find(
-            (option: any) => option?.name === templateValue,
-          )?.link || "";
+            (option: any) => option?.name === templateValue
+          )?.link || '';
 
         return (
           <CustomConnectionComponent
@@ -265,7 +265,7 @@ export function ParameterRenderComponent({
           />
         );
       }
-      case "tab":
+      case 'tab':
         return (
           <TabComponent
             {...baseInputProps}
@@ -273,17 +273,17 @@ export function ParameterRenderComponent({
             id={`tab_${id}`}
           />
         );
-      case "query":
+      case 'query':
         return (
           <QueryComponent
             {...baseInputProps}
-            display_name={templateData.display_name ?? ""}
-            info={templateData.info ?? ""}
+            display_name={templateData.display_name ?? ''}
+            info={templateData.info ?? ''}
             separator={templateData.separator}
             id={`query_${id}`}
           />
         );
-      case "mcp":
+      case 'mcp':
         return (
           <McpComponent
             {...baseInputProps}
@@ -293,15 +293,12 @@ export function ParameterRenderComponent({
             value={templateValue}
           />
         );
-      case "model":
+      case 'model':
         return (
           <ModelInputComponent
             {...baseInputProps}
             options={templateData?.options || []}
-            placeholder={
-              templateData?.placeholder || "Select or Connect a Model"
-            }
-            providers={templateData?.providers}
+            placeholder={templateData?.placeholder}
             externalOptions={templateData?.external_options}
           />
         );

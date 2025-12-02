@@ -1,19 +1,19 @@
-import { Outlet, type To } from "react-router-dom";
-import SideBarButtonsComponent from "@/components/core/sidebarComponent";
-import { SidebarProvider } from "@/components/ui/sidebar";
-import { CustomStoreSidebar } from "@/customization/components/custom-store-sidebar";
+import { Outlet, type To } from 'react-router-dom';
+import SideBarButtonsComponent from '@/components/core/sidebarComponent';
+import { SidebarProvider } from '@/components/ui/sidebar';
+import { CustomStoreSidebar } from '@/customization/components/custom-store-sidebar';
 import {
   ENABLE_DATASTAX_LANGFLOW,
   ENABLE_LANGFLOW_STORE,
   ENABLE_PROFILE_ICONS,
-} from "@/customization/feature-flags";
-import useAuthStore from "@/stores/authStore";
-import { useStoreStore } from "@/stores/storeStore";
-import ForwardedIconComponent from "../../components/common/genericIconComponent";
-import PageLayout from "../../components/common/pageLayout";
+} from '@/customization/feature-flags';
+import useAuthStore from '@/stores/authStore';
+import { useStoreStore } from '@/stores/storeStore';
+import ForwardedIconComponent from '../../components/common/genericIconComponent';
+import PageLayout from '../../components/common/pageLayout';
 export default function SettingsPage(): JSX.Element {
-  const autoLogin = useAuthStore((state) => state.autoLogin);
-  const hasStore = useStoreStore((state) => state.hasStore);
+  const autoLogin = useAuthStore(state => state.autoLogin);
+  const hasStore = useStoreStore(state => state.hasStore);
 
   // Hides the General settings if there is nothing to show
   const showGeneralSettings = ENABLE_PROFILE_ICONS || hasStore || !autoLogin;
@@ -26,8 +26,8 @@ export default function SettingsPage(): JSX.Element {
 
   if (showGeneralSettings) {
     sidebarNavItems.push({
-      title: "General",
-      href: "/settings/general",
+      title: 'General',
+      href: '/settings/general',
       icon: (
         <ForwardedIconComponent
           name="SlidersHorizontal"
@@ -39,18 +39,8 @@ export default function SettingsPage(): JSX.Element {
 
   sidebarNavItems.push(
     {
-      title: "Model Providers",
-      href: "/settings/model-providers",
-      icon: (
-        <ForwardedIconComponent
-          name="BrainCircuit"
-          className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
-        />
-      ),
-    },
-    {
-      title: "MCP Servers",
-      href: "/settings/mcp-servers",
+      title: 'MCP Servers',
+      href: '/settings/mcp-servers',
       icon: (
         <ForwardedIconComponent
           name="Mcp"
@@ -59,8 +49,8 @@ export default function SettingsPage(): JSX.Element {
       ),
     },
     {
-      title: "Global Variables",
-      href: "/settings/global-variables",
+      title: 'Global Variables',
+      href: '/settings/global-variables',
       icon: (
         <ForwardedIconComponent
           name="Globe"
@@ -70,8 +60,8 @@ export default function SettingsPage(): JSX.Element {
     },
 
     {
-      title: "Shortcuts",
-      href: "/settings/shortcuts",
+      title: 'Shortcuts',
+      href: '/settings/shortcuts',
       icon: (
         <ForwardedIconComponent
           name="Keyboard"
@@ -80,15 +70,15 @@ export default function SettingsPage(): JSX.Element {
       ),
     },
     {
-      title: "Messages",
-      href: "/settings/messages",
+      title: 'Messages',
+      href: '/settings/messages',
       icon: (
         <ForwardedIconComponent
           name="MessagesSquare"
           className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
         />
       ),
-    },
+    }
   );
 
   // TODO: Remove this on cleanup

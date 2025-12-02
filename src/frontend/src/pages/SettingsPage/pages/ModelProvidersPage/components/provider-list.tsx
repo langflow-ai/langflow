@@ -1,19 +1,23 @@
-import { useState } from "react";
-import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
-import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
-import { useGetDefaultModel } from "@/controllers/API/queries/models/use-get-default-model";
-import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
-import ApiKeyModal from "@/modals/apiKeyModal";
-import ProviderModelsDialog from "./provider-models-dialog";
-import ProviderListItem from "./provider-list-item";
-import { useProviderActions } from "./use-provider-actions";
-import { Provider } from "./types";
+import { useState } from 'react';
+import { useGetModelProviders } from '@/controllers/API/queries/models/use-get-model-providers';
+import { useGetEnabledModels } from '@/controllers/API/queries/models/use-get-enabled-models';
+import { useGetDefaultModel } from '@/controllers/API/queries/models/use-get-default-model';
+import { useGetGlobalVariables } from '@/controllers/API/queries/variables';
+import ApiKeyModal from '@/modals/apiKeyModal';
+import ProviderModelsDialog from './provider-models-dialog';
+import ProviderListItem from './provider-list-item';
+import { useProviderActions } from './use-provider-actions';
+import { Provider } from './types';
 
 type ProviderListProps = {
-  type: "enabled" | "available";
+  onProviderSelect?: (provider: Provider) => void;
+  selectedProviderName?: string | null;
 };
 
-const ProviderList = ({ type }: ProviderListProps) => {
+const ProviderList = ({
+  onProviderSelect,
+  selectedProviderName,
+}: ProviderListProps) => {
   const {
     data: providersData = [],
     isLoading,
@@ -21,10 +25,10 @@ const ProviderList = ({ type }: ProviderListProps) => {
   } = useGetModelProviders({});
   const { data: enabledModelsData } = useGetEnabledModels();
   const { data: defaultModelData } = useGetDefaultModel({
-    model_type: "language",
+    model_type: 'language',
   });
   const { data: defaultEmbeddingModelData } = useGetDefaultModel({
-    model_type: "embedding",
+    model_type: 'embedding',
   });
   const { data: globalVariables } = useGetGlobalVariables();
 
@@ -45,7 +49,7 @@ const ProviderList = ({ type }: ProviderListProps) => {
     useState<Provider | null>(null);
 
   const handleEnableProvider = (providerName: string) => {
-    if (providerName === "Ollama") {
+    if (providerName === 'Ollama') {
       handleEnableProviderFromHook(providerName);
     } else {
       setOpenApiKeyDialog(true);
@@ -62,7 +66,7 @@ const ProviderList = ({ type }: ProviderListProps) => {
       () => {
         setDeleteDialogOpen(false);
         setProviderToDelete(null);
-      },
+      }
     );
   };
 
@@ -70,21 +74,20 @@ const ProviderList = ({ type }: ProviderListProps) => {
     if (provider.model_count && provider.model_count > 0) {
       setSelectedProviderForDialog(provider);
       setOpenProviderDialog(true);
+      onProviderSelect?.(provider);
     }
   };
 
   const filteredProviders: Provider[] = providersData
-    .filter((provider) => {
+    .filter(provider => {
       // Exclude providers where all models are deprecated and not supported
       const filteredMetaData = provider?.models?.filter(
-        (model) => model.metadata?.deprecated && model.metadata?.not_supported,
+        model => model.metadata?.deprecated && model.metadata?.not_supported
       )?.length;
 
-      return type === "enabled"
-        ? provider.is_enabled && !filteredMetaData
-        : !provider.is_enabled;
+      return !filteredMetaData;
     })
-    .map((provider) => ({
+    .map(provider => ({
       provider: provider.provider,
       icon: provider.icon,
       is_enabled: provider.is_enabled,
@@ -100,66 +103,56 @@ const ProviderList = ({ type }: ProviderListProps) => {
   return (
     <>
       <div>
-        <h2 className="text-muted-foreground text-sm--medium mb-4">
-          {type.charAt(0).toUpperCase() + type.slice(1)}
-        </h2>
-        {filteredProviders.length === 0 ? (
-          <div className="text-muted-foreground text-sm">
-            No {type} providers
-          </div>
-        ) : (
-          <div className="space-y-1">
-            {filteredProviders.map((provider) => {
-              // Show default model name only if it's from this provider
-              const defaultModelForProvider =
-                defaultModelData?.default_model?.provider === provider.provider
-                  ? defaultModelData?.default_model?.model_name
-                  : null;
+        <div>
+          {filteredProviders.map(provider => {
+            // Show default model name only if it's from this provider
+            const defaultModelForProvider =
+              defaultModelData?.default_model?.provider === provider.provider
+                ? defaultModelData?.default_model?.model_name
+                : null;
 
-              const defaultEmbeddingModelForProvider =
-                defaultEmbeddingModelData?.default_model?.provider ===
-                provider.provider
-                  ? defaultEmbeddingModelData?.default_model?.model_name
-                  : null;
+            const defaultEmbeddingModelForProvider =
+              defaultEmbeddingModelData?.default_model?.provider ===
+              provider.provider
+                ? defaultEmbeddingModelData?.default_model?.model_name
+                : null;
 
-              return (
-                <ProviderListItem
-                  key={provider.provider}
-                  provider={provider}
-                  type={type}
-                  defaultModelName={defaultModelForProvider}
-                  defaultEmbeddingModelName={defaultEmbeddingModelForProvider}
-                  onCardClick={handleCardClick}
-                  onEnableProvider={handleEnableProvider}
-                  onDeleteProvider={handleDeleteProviderWithCleanup}
-                  deleteDialogOpen={deleteDialogOpen}
-                  setDeleteDialogOpen={setDeleteDialogOpen}
-                  providerToDelete={providerToDelete}
-                  setProviderToDelete={setProviderToDelete}
-                />
-              );
-            })}
-          </div>
-        )}
+            return (
+              <ProviderListItem
+                key={provider.provider}
+                provider={provider}
+                defaultModelName={defaultModelForProvider}
+                defaultEmbeddingModelName={defaultEmbeddingModelForProvider}
+                isSelected={selectedProviderName === provider.provider}
+                onCardClick={handleCardClick}
+                onEnableProvider={handleEnableProvider}
+                onDeleteProvider={handleDeleteProviderWithCleanup}
+                deleteDialogOpen={deleteDialogOpen}
+                setDeleteDialogOpen={setDeleteDialogOpen}
+                providerToDelete={providerToDelete}
+                setProviderToDelete={setProviderToDelete}
+              />
+            );
+          })}
+        </div>
       </div>
 
-      <ProviderModelsDialog
+      {/* <ProviderModelsDialog
         open={openProviderDialog}
         onOpenChange={setOpenProviderDialog}
         provider={selectedProviderForDialog}
-        type={type}
         enabledModelsData={enabledModelsData}
         defaultModelData={defaultModelData}
         defaultEmbeddingModelData={defaultEmbeddingModelData}
         onBatchToggleModels={handleBatchToggleModels}
         onSetDefaultModel={handleSetDefaultModel}
         onClearDefaultModel={handleClearDefaultModel}
-      />
+      /> */}
 
       <ApiKeyModal
         open={openApiKeyDialog}
         onClose={() => setOpenApiKeyDialog(false)}
-        provider={selectedProvider || "Provider"}
+        provider={selectedProvider || 'Provider'}
       />
     </>
   );

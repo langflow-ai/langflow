@@ -1,20 +1,21 @@
-import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
-import { Button } from "@/components/ui/button";
+import { ForwardedIconComponent } from '@/components/common/genericIconComponent';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
-import { cn } from "@/utils/utils";
-import { Provider } from "./types";
+} from '@/components/ui/dropdown-menu';
+import DeleteConfirmationModal from '@/modals/deleteConfirmationModal';
+import { cn } from '@/utils/utils';
+import { Provider } from './types';
+import { useState } from 'react';
 
 type ProviderListItemProps = {
   provider: Provider;
-  type: "enabled" | "available";
   defaultModelName?: string | null;
   defaultEmbeddingModelName?: string | null;
+  isSelected?: boolean;
   onCardClick: (provider: Provider) => void;
   onEnableProvider: (providerName: string) => void;
   onDeleteProvider: (providerName: string) => void;
@@ -26,9 +27,9 @@ type ProviderListItemProps = {
 
 const ProviderListItem = ({
   provider,
-  type,
   defaultModelName,
   defaultEmbeddingModelName,
+  isSelected,
   onCardClick,
   onEnableProvider,
   onDeleteProvider,
@@ -37,53 +38,35 @@ const ProviderListItem = ({
   providerToDelete,
   setProviderToDelete,
 }: ProviderListItemProps) => {
+  const [type, setType] = useState<'enabled' | 'available'>(
+    provider.is_enabled ? 'enabled' : 'available'
+  );
   const hasModels = provider.model_count && provider.model_count > 0;
-  const isDeleteDialogForThisProvider =
-    deleteDialogOpen && providerToDelete === provider.provider;
-
-  const handleEnableClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onEnableProvider(provider.provider);
-  };
-
-  const handleDeleteClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setProviderToDelete(provider.provider);
-    setDeleteDialogOpen(true);
-  };
-
-  const handleDeleteConfirm = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (providerToDelete) {
-      onDeleteProvider(providerToDelete);
-    }
-  };
-
-  const handleDeleteDialogChange = (open: boolean) => {
-    setDeleteDialogOpen(open);
-    if (!open) setProviderToDelete(null);
-  };
 
   return (
     <>
       <div
         key={provider.provider}
         className={cn(
-          "flex items-center justify-between py-2 px-3 rounded-lg hover:bg-muted/50 transition-colors",
-          hasModels ? "cursor-pointer" : "opacity-60 cursor-not-allowed",
+          'flex items-center justify-between py-3 px-2 rounded-lg hover:bg-muted/50 transition-colors',
+          hasModels ? 'cursor-pointer' : 'opacity-60 cursor-not-allowed',
+          isSelected && 'bg-muted/50'
         )}
         onClick={() => onCardClick(provider)}
       >
         <div className="flex items-center gap-3 flex-1 min-w-0">
           <ForwardedIconComponent
-            name={provider.icon || "Bot"}
-            className="w-5 h-5 flex-shrink-0"
+            name={provider.icon || 'Bot'}
+            className={cn(
+              'w-5 h-5 flex-shrink-0 transition-all',
+              !provider.is_enabled && 'grayscale opacity-50'
+            )}
           />
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <span className="text-sm font-medium truncate">
               {provider.provider}
             </span>
-            {provider.model_count !== undefined && (
+            {/* {provider.model_count !== undefined && (
               <span
                 className={cn(
                   "text-xs",
@@ -95,8 +78,8 @@ const ProviderListItem = ({
                 {provider.model_count}{" "}
                 {provider.model_count === 1 ? "model" : "models"}
               </span>
-            )}
-            {defaultModelName && (
+            )} */}
+            {/* {defaultModelName && (
               <>
                 <ForwardedIconComponent
                   name="Sparkle"
@@ -117,68 +100,16 @@ const ProviderListItem = ({
                   {defaultEmbeddingModelName}
                 </span>
               </>
-            )}
+            )} */}
           </div>
         </div>
-        <div
-          className="flex items-center gap-2"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {type === "enabled" ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={(e) => e.stopPropagation()}
-                  className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-transparent"
-                >
-                  <ForwardedIconComponent
-                    name="MoreVertical"
-                    className="h-4 w-4"
-                  />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleEnableClick}>
-                  <ForwardedIconComponent
-                    name="Pencil"
-                    className="h-4 w-4 mr-2"
-                  />
-                  Update API Key
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={handleDeleteClick}
-                  className="text-destructive focus:text-destructive"
-                >
-                  <ForwardedIconComponent
-                    name="Trash"
-                    className="h-4 w-4 mr-2"
-                  />
-                  Remove Provider
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={handleEnableClick}
-              className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-transparent"
-            >
-              <ForwardedIconComponent name="Plus" className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
-      </div>
 
-      <DeleteConfirmationModal
-        open={isDeleteDialogForThisProvider}
-        setOpen={handleDeleteDialogChange}
-        onConfirm={handleDeleteConfirm}
-        description={`access to ${provider.provider}`}
-        note="You can re-enable this provider at any time by adding your API key again"
-      />
+        <ForwardedIconComponent
+          name={type === 'enabled' ? 'MoreVertical' : 'Plus'}
+          className="h-4 w-4"
+          onClick={() => onCardClick(provider)}
+        />
+      </div>
     </>
   );
 };

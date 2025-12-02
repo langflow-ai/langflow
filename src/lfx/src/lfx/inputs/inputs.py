@@ -139,6 +139,7 @@ class ModelInput(BaseInputMixin, ModelInputMixin, ListableInputMixin, InputTrace
     """
 
     field_type: SerializableFieldTypes = FieldTypes.MODEL
+    placeholder: str | None = "Setup Provider"
     input_types: list[str] = Field(default_factory=lambda: ["LanguageModel"])
     refresh_button: bool | None = True
     external_options: dict = Field(
