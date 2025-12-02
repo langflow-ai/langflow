@@ -181,7 +181,8 @@ class LCAgentComponent(Component):
         else:
             input_dict = {"input": self.input_value}
 
-        if hasattr(self, "system_prompt"):
+        input_dict: dict[str, str | list[BaseMessage]] = {}
+        if hasattr(self, "system_prompt") and self.system_prompt and self.system_prompt.strip():
             input_dict["system_prompt"] = self.system_prompt
 
         if hasattr(self, "chat_history") and self.chat_history:
