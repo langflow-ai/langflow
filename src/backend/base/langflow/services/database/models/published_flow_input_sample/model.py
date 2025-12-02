@@ -38,9 +38,6 @@ class PublishedFlowInputSample(PublishedFlowInputSampleBase, table=True):
     # Relationships
     published_flow: Optional["PublishedFlow"] = Relationship(
         back_populates="input_samples",
-        sa_relationship_kwargs={
-            "cascade": "all, delete",
-        },
     )
     
     __table_args__ = (

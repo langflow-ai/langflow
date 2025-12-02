@@ -15,9 +15,6 @@ import {
   usePublishFlowMarketplaceAdmin,
   useValidateMarketplaceName,
   useGetPublishedFlow,
-  usePatchInputSample,
-  useDeleteInputSampleFile,
-  useDeleteInputSampleText,
   type PublishCheckResponse,
 } from "@/controllers/API/queries/published-flows";
 import {
@@ -106,11 +103,7 @@ export default function PublishFlowModal({
   // Ensure `publishedFlowId` is `string | undefined` (coerce possible `null` to `undefined`)
   const publishedFlowId: string | undefined =
     existingPublishedData?.published_flow_id ?? undefined;
-  const { mutate: patchInputSample } = usePatchInputSample(publishedFlowId);
-  const { mutate: deleteInputSampleFile } =
-    useDeleteInputSampleFile(publishedFlowId);
-  const { mutate: deleteInputSampleText } =
-    useDeleteInputSampleText(publishedFlowId);
+
   const { mutateAsync: getUploadUrl } = usePostUploadPresignedUrl();
   const { mutateAsync: uploadToBlob } = useUploadToBlob();
   const { mutateAsync: getFlow } = useGetFlow();
@@ -127,23 +120,7 @@ export default function PublishFlowModal({
   const { data: publishedFlowData } = useGetPublishedFlow(publishedFlowId);
 
   // Derived lists for existing sample files and texts grouped by sample record
-  const existingSampleRecords = (publishedFlowData?.input_samples ??
-    []) as Array<{
-    id: string;
-    file_names?: string[] | null;
-    sample_text?: string[] | null;
-  }>;
-  const existingFiles = useMemo(
-    () =>
-      existingSampleRecords.flatMap((rec) =>
-        (rec.file_names ?? []).map((fname) => ({
-          displayName: fname.split("/").pop() || fname,
-          rawName: fname,
-          sampleId: rec.id,
-        }))
-      ),
-    [existingSampleRecords]
-  );
+
 
   // Sample Output removed: no prefill or tracking here
 
@@ -258,6 +235,37 @@ export default function PublishFlowModal({
     currentFlow?.name,
     currentFlow?.description,
   ]);
+
+  // Separate useEffect to handle publishedFlowData loading
+  // This ensures sample inputs are set when data becomes available (async)
+  useEffect(() => {
+    if (open && existingPublishedData?.marketplace_flow_name && publishedFlowData) {
+      console.log("publishedFlowData loaded, setting sample inputs", publishedFlowData);
+
+      if (publishedFlowData.input_samples && publishedFlowData.input_samples.length > 0) {
+        // Extract sample texts
+        const allSampleTexts = publishedFlowData.input_samples.flatMap(
+          (sample: any) => sample.sample_text || []
+        );
+        console.log("Setting sample texts:", allSampleTexts);
+        if (allSampleTexts.length > 0) {
+          setSampleTexts(allSampleTexts);
+        }
+
+        // Extract sample files
+        const allSampleFiles = publishedFlowData.input_samples.flatMap(
+          (sample: any) => (sample.file_names || []).map((path: string) => ({
+            name: path.split("/").pop() || path,
+            path: path,
+          }))
+        );
+        console.log("Setting sample files:", allSampleFiles);
+        if (allSampleFiles.length > 0) {
+          setUploadedSampleFiles(allSampleFiles);
+        }
+      }
+    }
+  }, [open, existingPublishedData?.marketplace_flow_name, publishedFlowData]);
 
   // Run validation when modal opens
   useEffect(() => {
@@ -719,38 +727,38 @@ export default function PublishFlowModal({
               {/* Upload Dropzone */}
               {(logoRemoved ||
                 (!logoPreviewUrl && !existingPublishedData?.flow_icon)) && (
-                <div
-                  className={`flex flex-col py-10 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-primary-border hover:border-secondary-border border-dashed p-8 transition-colors `}
-                  onClick={() => fileInputRef.current?.click()}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
-                >
-                  {/* <Upload className="h-5 w-5 text-muted-foreground" /> */}
-                  <RiUploadCloud2Fill className="h-14 w-14 text-secondary-font opacity-70" />
-                  <p className="text-center">
-                    <span className="text-[13px] font-medium text-secondary-font block">
-                      {isDragging
-                        ? "Drop logo here"
-                        : "Drag and drop or click to upload"}
-                    </span>
-                    <span className="text-[10px] text-secondary-font italic opacity-70 block">
-                      Supported formats:{" "}
-                      {ALLOWED_IMAGE_INPUT_EXTENSIONS.join(", ").toUpperCase()}
-                    </span>
-                  </p>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    hidden
-                    accept={ALLOWED_IMAGE_INPUT_EXTENSIONS.join(",")}
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) handleFileSelect(file);
-                    }}
-                  />
-                </div>
-              )}
+                  <div
+                    className={`flex flex-col py-10 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-primary-border hover:border-secondary-border border-dashed p-8 transition-colors `}
+                    onClick={() => fileInputRef.current?.click()}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                  >
+                    {/* <Upload className="h-5 w-5 text-muted-foreground" /> */}
+                    <RiUploadCloud2Fill className="h-14 w-14 text-secondary-font opacity-70" />
+                    <p className="text-center">
+                      <span className="text-[13px] font-medium text-secondary-font block">
+                        {isDragging
+                          ? "Drop logo here"
+                          : "Drag and drop or click to upload"}
+                      </span>
+                      <span className="text-[10px] text-secondary-font italic opacity-70 block">
+                        Supported formats:{" "}
+                        {ALLOWED_IMAGE_INPUT_EXTENSIONS.join(", ").toUpperCase()}
+                      </span>
+                    </p>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      hidden
+                      accept={ALLOWED_IMAGE_INPUT_EXTENSIONS.join(",")}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleFileSelect(file);
+                      }}
+                    />
+                  </div>
+                )}
             </div>
             {/* <p className="text-xs text-muted-foreground">
               Upload a logo for your agent (PNG, JPG, JPEG). This will be
@@ -816,48 +824,7 @@ export default function PublishFlowModal({
                     </div>
                   )}
 
-                  {/* Existing Sample Files (from published data) */}
-                  {existingFiles.length > 0 && (
-                    <div className="mt-2 space-y-1">
-                      <p className="text-xs text-muted-foreground">
-                        Existing files
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {existingFiles.map((f) => (
-                          <div
-                            key={`${f.sampleId}-${f.rawName}`}
-                            className="flex items-center gap-2 bg-muted px-2 py-1 rounded"
-                          >
-                            <span className="text-xs">{f.displayName}</span>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="ghost"
-                              className="h-6 w-6 p-0"
-                              onClick={() =>
-                                deleteInputSampleFile(
-                                  { sample_id: f.sampleId, name: f.rawName },
-                                  {
-                                    onError: (error: any) =>
-                                      setErrorData({
-                                        title: "Failed to remove file",
-                                        list: [
-                                          error?.response?.data?.detail ||
-                                            error?.message ||
-                                            "Unknown error",
-                                        ],
-                                      }),
-                                  }
-                                )
-                              }
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+
                 </div>
               )}
 
@@ -898,76 +865,6 @@ export default function PublishFlowModal({
                           >
                             <X className="h-4 w-4 text-error" />
                           </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Existing Sample Texts (grouped by sample record) */}
-                  {existingSampleRecords.length > 0 && (
-                    <div className="mt-2 space-y-2">
-                      <p className="text-xs text-muted-foreground">
-                        Existing sample texts
-                      </p>
-                      {existingSampleRecords.map((rec) => (
-                        <div
-                          key={`existing-sample-texts-${rec.id}`}
-                          className="space-y-2"
-                        >
-                          {(rec.sample_text ?? []).map((txt, index) => (
-                            <div
-                              key={`${rec.id}-${index}`}
-                              className="flex items-center gap-2"
-                            >
-                              <Input
-                                defaultValue={txt}
-                                onBlur={(e) => {
-                                  const next = [...(rec.sample_text ?? [])];
-                                  next[index] = e.target.value;
-                                  patchInputSample(
-                                    {
-                                      sample_id: rec.id,
-                                      data: { sample_text: next },
-                                    },
-                                    {
-                                      onError: (error: any) =>
-                                        setErrorData({
-                                          title: "Failed to update sample text",
-                                          list: [
-                                            error?.response?.data?.detail ||
-                                              error?.message ||
-                                              "Unknown error",
-                                          ],
-                                        }),
-                                    }
-                                  );
-                                }}
-                              />
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="ghost"
-                                onClick={() =>
-                                  deleteInputSampleText(
-                                    { sample_id: rec.id, index },
-                                    {
-                                      onError: (error: any) =>
-                                        setErrorData({
-                                          title: "Failed to remove sample text",
-                                          list: [
-                                            error?.response?.data?.detail ||
-                                              error?.message ||
-                                              "Unknown error",
-                                          ],
-                                        }),
-                                    }
-                                  )
-                                }
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          ))}
                         </div>
                       ))}
                     </div>
@@ -1030,10 +927,10 @@ export default function PublishFlowModal({
             {isUploadingLogo
               ? "Uploading Logo..."
               : isUploadingSamples
-              ? "Uploading Samples..."
-              : isPending
-              ? "Publishing..."
-              : "Publish to Marketplace"}
+                ? "Uploading Samples..."
+                : isPending
+                  ? "Publishing..."
+                  : "Publish to Marketplace"}
           </Button>
         </div>
       </DialogContent>
