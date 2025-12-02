@@ -215,7 +215,7 @@ def fetch_flow_by_id(
 def fetch_published_flow_input_samples(
     conn: psycopg2.extensions.connection, published_flow_id: str
 ) -> list[dict]:
-    """Fetch input samples for a published flow."""
+    """Fetch input samples for a published flow, ordered by most recent first."""
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
             """
@@ -224,6 +224,8 @@ def fetch_published_flow_input_samples(
                 file_names, sample_text, sample_output, created_at, updated_at
             FROM published_flow_input_sample
             WHERE published_flow_id = %s
+            ORDER BY updated_at DESC
+            LIMIT 1
             """,
             (published_flow_id,),
         )
