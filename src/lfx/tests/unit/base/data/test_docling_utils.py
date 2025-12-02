@@ -1,12 +1,19 @@
 """Tests for docling_utils module."""
 
 import pytest
-from docling_core.types.doc import DoclingDocument
+
+try:
+    from docling_core.types.doc import DoclingDocument
+    DOCLING_AVAILABLE = True
+except ImportError:
+    DOCLING_AVAILABLE = False
+
 from lfx.base.data.docling_utils import extract_docling_documents
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 
 
+@pytest.mark.skipif(not DOCLING_AVAILABLE, reason="docling_core not installed")
 class TestExtractDoclingDocuments:
     """Test extract_docling_documents function."""
 
