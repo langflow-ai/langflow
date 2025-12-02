@@ -149,12 +149,14 @@ class TestSuperuserCommand:
 
 def test_get_number_of_workers():
     """Test that get_number_of_workers uses cpu_count on Linux."""
-    with patch("langflow.__main__.platform.system", return_value="Linux"), \
-         patch("langflow.__main__.cpu_count", return_value=4):
-            # Test default behavior (None)
-            workers = get_number_of_workers(None)
-            assert workers == (4 * 2) + 1  # 9 workers
+    with (
+        patch("langflow.__main__.platform.system", return_value="Linux"),
+        patch("langflow.__main__.cpu_count", return_value=4),
+    ):
+        # Test default behavior (None)
+        workers = get_number_of_workers(None)
+        assert workers == (4 * 2) + 1  # 9 workers
 
-            # Test explicit value is respected
-            workers = get_number_of_workers(2)
-            assert workers == 2
+        # Test explicit value is respected
+        workers = get_number_of_workers(2)
+        assert workers == 2
