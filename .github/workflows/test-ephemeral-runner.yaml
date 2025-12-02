@@ -17,7 +17,14 @@ jobs:
         run: |
           {
             echo "## 🖥️ Self-Hosted Runner Info"
-            echo ""
+            echo "---------- "
+            echo "GITHUB_RUNNER_NAME   : '${{ runner.name }}'"
+            echo "GITHUB_RUNNER_OS     : '${{ runner.os }}'"
+            echo "runner.labels raw    : '${{ runner.labels }}'"
+            echo "runner.labels json   : '${{ toJson(runner.labels) }}'"
+            echo "ENV RUNNER_LABELS    : '$RUNNER_LABELS'"
+            echo "ENV RUNNER_NAME      : '$RUNNER_NAME'"            
+            echo "----------"
             echo "**Hostname:** $(hostname)"
             echo "**Machine:** $(uname -a)"
             echo "**GitHub Workspace:** $GITHUB_WORKSPACE"
