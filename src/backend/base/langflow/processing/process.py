@@ -138,33 +138,43 @@ def validate_input(
 
 
 def apply_tweaks(node: dict[str, Any], node_tweaks: dict[str, Any]) -> None:
-    template_data = node.get("data", {}).get("node", {}).get("template")
+    # Cache the deeply nested template_data lookup to a local variable
+    node_data = node.get("data")
+    if not node_data:
+        return
+    node_node = node_data.get("node")
+    if not node_node:
+        return
+    template_data = node_node.get("template")
 
     if not isinstance(template_data, dict):
         logger.warning(f"Template data for node {node.get('id')} should be a dictionary")
         return
 
     for tweak_name, tweak_value in node_tweaks.items():
-        if tweak_name not in template_data:
+        template_field = template_data.get(tweak_name)
+        if template_field is None:
             continue
         if tweak_name == "code":
             logger.warning("Security: Code field cannot be overridden via tweaks.")
             continue
-        if tweak_name in template_data:
-            field_type = template_data[tweak_name].get("type", "")
-            if field_type == "NestedDict":
-                value = validate_and_repair_json(tweak_value)
-                template_data[tweak_name]["value"] = value
-            elif field_type == "mcp":
-                # MCP fields expect dict values to be set directly
-                template_data[tweak_name]["value"] = tweak_value
-            elif isinstance(tweak_value, dict):
+        field_type = template_field.get("type", "")
+        if field_type == "NestedDict":
+            value = validate_and_repair_json(tweak_value)
+            template_field["value"] = value
+        elif field_type == "mcp":
+            template_field["value"] = tweak_value
+        elif isinstance(tweak_value, dict):
+            # Use .update() if possible for large dicts, but preserve behavior of file field.
+            if field_type == "file":
+                # Copy the dict and also set "file_path" as the only key equal to v, otherwise as k
                 for k, v in tweak_value.items():
-                    k_ = "file_path" if field_type == "file" else k
-                    template_data[tweak_name][k_] = v
+                    template_field["file_path"] = v
             else:
-                key = "file_path" if field_type == "file" else "value"
-                template_data[tweak_name][key] = tweak_value
+                template_field.update(tweak_value)
+        else:
+            key = "file_path" if field_type == "file" else "value"
+            template_field[key] = tweak_value
 
 
 def apply_tweaks_on_vertex(vertex: Vertex, node_tweaks: dict[str, Any]) -> None:
