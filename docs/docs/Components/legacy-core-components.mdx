@@ -179,15 +179,6 @@ It accepts the following parameters:
 </details>
 
 <details>
-<summary>Extract Key</summary>
-
-Replace this legacy component with the [**Data Operations** component](/data-operations).
-
-This component extracts a specific key from a `Data` object and returns the value associated with that key.
-
-</details>
-
-<details>
 <summary>Data to DataFrame/Data to Message</summary>
 
 Replace these legacy components with newer Processing components, such as the [**Data Operations** component](/data-operations) and [**Type Convert** component](/type-convert).
@@ -196,6 +187,34 @@ These components converted one or more `Data` objects into a `DataFrame` or `Mes
 
 For the **Data to DataFrame** component, each `Data` object corresponds to one row in the resulting `DataFrame`.
 Fields from the `.data` attribute become columns, and the `.text` field (if present) is placed in a `text` column.
+
+</details>
+
+<details>
+<summary>DataFrame to Toolset</summary>
+
+Replace this legacy component with the [**Data Operations** component](/data-operations).
+
+This component converts each row of a DataFrame into a callable tool/action within a toolset. Each row becomes a tool where the action name comes from one column and the content/response comes from another column.
+
+It accepts the following parameters:
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| dataframe | DataFrame | Input parameter. DataFrame where each row will become a tool/action. |
+| tool_name_column | Tool Name Column | Input parameter. Column with tool names. |
+| tool_output_column | Tool Output Column | Input parameter. Column with tool outputs/responses. |
+| tools | Tools | Output parameter. List of tools created from the DataFrame. |
+| message | Message | Output parameter. Message describing the created toolset. |
+
+</details>
+
+<details>
+<summary>Extract Key</summary>
+
+Replace this legacy component with the [**Data Operations** component](/data-operations).
+
+This component extracts a specific key from a `Data` object and returns the value associated with that key.
 
 </details>
 
@@ -324,25 +343,6 @@ It accepts the following parameters:
 | text_key | Text Key | Input parameter. The key for text content. |
 | text_key_validator | Text Key Validator | Input parameter. Validates the text key presence. |
 | data | Data | Output parameter. The updated Data objects. |
-
-</details>
-
-<details>
-<summary>DataFrame to Toolset</summary>
-
-Replace this legacy component with the [**Data Operations** component](/data-operations).
-
-This component converts each row of a DataFrame into a callable tool/action within a toolset. Each row becomes a tool where the action name comes from one column and the content/response comes from another column.
-
-It accepts the following parameters:
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| dataframe | DataFrame | Input parameter. DataFrame where each row will become a tool/action. |
-| tool_name_column | Tool Name Column | Input parameter. Column with tool names. |
-| tool_output_column | Tool Output Column | Input parameter. Column with tool outputs/responses. |
-| tools | Tools | Output parameter. List of tools created from the DataFrame. |
-| message | Message | Output parameter. Message describing the created toolset. |
 
 </details>
 
