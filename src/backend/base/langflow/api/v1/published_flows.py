@@ -235,23 +235,41 @@ async def publish_flow(
             # Unlock the flow after publishing
             original_flow.locked = False
 
-            # Step 4: Update published_flow record to point to existing clone from flow_version
-            existing.flow_id = new_cloned_flow.id  # Use existing clone from flow_version
-            existing.version = payload.version  # Update to new version
-            existing.tags = payload.tags
-            existing.description = payload.description or original_flow.description
-            existing.flow_name = marketplace_name
-            existing.flow_icon = payload.flow_icon or existing.flow_icon
-            if payload.flow_icon and payload.flow_icon != existing.flow_icon:
-                existing.flow_icon_updated_at = datetime.now(timezone.utc)
-            existing.published_by = current_user.id
-            existing.published_by_username = current_user.username
-            existing.published_at = datetime.now(timezone.utc)
-            existing.updated_at = datetime.now(timezone.utc)
-            existing.status = PublishStatusEnum.PUBLISHED
+            # Step 4: Update published_flow record using explicit UPDATE to avoid implicit deletes
+            stmt = (
+                update(PublishedFlow)
+                .where(PublishedFlow.id == existing.id)
+                .values(
+                    flow_id=new_cloned_flow.id,
+                    version=payload.version,
+                    tags=payload.tags,
+                    description=payload.description or original_flow.description,
+                    flow_name=marketplace_name,
+                    flow_icon=payload.flow_icon or existing.flow_icon,
+                    flow_icon_updated_at=datetime.now(timezone.utc) if payload.flow_icon and payload.flow_icon != existing.flow_icon else existing.flow_icon_updated_at,
+                    published_by=current_user.id,
+                    published_by_username=current_user.username,
+                    published_at=datetime.now(timezone.utc),
+                    updated_at=datetime.now(timezone.utc),
+                    status=PublishStatusEnum.PUBLISHED,
+                )
+            )
+            await session.exec(stmt)
 
-            session.add(existing)
             session.add(original_flow)
+
+            # Delete existing sample input records before creating new ones
+            existing_samples_query = select(PublishedFlowInputSample).where(
+                PublishedFlowInputSample.published_flow_id == existing.id
+            )
+            existing_samples_result = await session.exec(existing_samples_query)
+            existing_samples = existing_samples_result.all()
+            for sample in existing_samples:
+                await session.delete(sample)
+            
+            # Force flush to ensure samples are deleted before proceeding
+            # This prevents ForeignKeyViolation if PublishedFlow is modified in a way that triggers checks
+            await session.flush()
 
             # Create PublishedFlowInputSample record if sample data is provided
             if any([payload.storage_account, payload.container_name, payload.file_names, payload.sample_text, payload.sample_output]):
@@ -871,22 +889,26 @@ async def publish_flow_marketplace_admin(
         existing_published = existing_published_result.first()
 
         if existing_published:
-            # Update existing PublishedFlow record
-            existing_published.flow_id = cloned_flow.id
-            existing_published.version = payload.version
-            existing_published.tags = payload.tags
-            existing_published.description = payload.description or original_flow.description
-            existing_published.flow_name = marketplace_name
-            existing_published.flow_icon = payload.flow_icon or existing_published.flow_icon
-            if payload.flow_icon and payload.flow_icon != existing_published.flow_icon:
-                existing_published.flow_icon_updated_at = datetime.now(timezone.utc)
-            existing_published.published_by = current_user.id
-            existing_published.published_by_username = current_user.username
-            existing_published.published_at = datetime.now(timezone.utc)
-            existing_published.updated_at = datetime.now(timezone.utc)
-            existing_published.status = PublishStatusEnum.PUBLISHED
-
-            session.add(existing_published)
+            # Update existing PublishedFlow record using explicit UPDATE
+            stmt = (
+                update(PublishedFlow)
+                .where(PublishedFlow.id == existing_published.id)
+                .values(
+                    flow_id=cloned_flow.id,
+                    version=payload.version,
+                    tags=payload.tags,
+                    description=payload.description or original_flow.description,
+                    flow_name=marketplace_name,
+                    flow_icon=payload.flow_icon or existing_published.flow_icon,
+                    flow_icon_updated_at=datetime.now(timezone.utc) if payload.flow_icon and payload.flow_icon != existing_published.flow_icon else existing_published.flow_icon_updated_at,
+                    published_by=current_user.id,
+                    published_by_username=current_user.username,
+                    published_at=datetime.now(timezone.utc),
+                    updated_at=datetime.now(timezone.utc),
+                    status=PublishStatusEnum.PUBLISHED,
+                )
+            )
+            await session.exec(stmt)
             published_flow = existing_published
         else:
             # Create new PublishedFlow record
@@ -909,37 +931,32 @@ async def publish_flow_marketplace_admin(
             )
             session.add(published_flow)
 
-        # Step 9: Update or create PublishedFlowInputSample if provided
-        if any([payload.storage_account, payload.container_name, payload.file_names, payload.sample_text, payload.sample_output]):
-            # Check if input sample already exists
-            existing_sample_query = select(PublishedFlowInputSample).where(
-                PublishedFlowInputSample.published_flow_id == published_flow.id
-            )
-            existing_sample_result = await session.exec(existing_sample_query)
-            existing_sample = existing_sample_result.first()
+        # Step 9: Delete existing samples and create new ones if provided
+        # Delete all existing sample input records first
+        existing_samples_query = select(PublishedFlowInputSample).where(
+            PublishedFlowInputSample.published_flow_id == published_flow.id
+        )
+        existing_samples_result = await session.exec(existing_samples_query)
+        existing_samples = existing_samples_result.all()
+        for sample in existing_samples:
+            await session.delete(sample)
+        
+        # Force flush to ensure samples are deleted
+        await session.flush()
 
-            if existing_sample:
-                # UPDATE existing sample
-                existing_sample.storage_account = payload.storage_account
-                existing_sample.container_name = payload.container_name
-                existing_sample.file_names = payload.file_names
-                existing_sample.sample_text = payload.sample_text
-                existing_sample.sample_output = payload.sample_output
-                existing_sample.updated_at = datetime.now(timezone.utc)
-                session.add(existing_sample)
-            else:
-                # CREATE new sample (first time publishing)
-                input_sample = PublishedFlowInputSample(
-                    published_flow_id=published_flow.id,
-                    storage_account=payload.storage_account,
-                    container_name=payload.container_name,
-                    file_names=payload.file_names,
-                    sample_text=payload.sample_text,
-                    sample_output=payload.sample_output,
-                    created_at=datetime.now(timezone.utc),
-                    updated_at=datetime.now(timezone.utc),
-                )
-                session.add(input_sample)
+        # Create new PublishedFlowInputSample if sample data is provided
+        if any([payload.storage_account, payload.container_name, payload.file_names, payload.sample_text, payload.sample_output]):
+            input_sample = PublishedFlowInputSample(
+                published_flow_id=published_flow.id,
+                storage_account=payload.storage_account,
+                container_name=payload.container_name,
+                file_names=payload.file_names,
+                sample_text=payload.sample_text,
+                sample_output=payload.sample_output,
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc),
+            )
+            session.add(input_sample)
 
         # Step 10: Commit all changes
         await session.flush()

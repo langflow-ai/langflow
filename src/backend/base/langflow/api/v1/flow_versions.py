@@ -26,6 +26,8 @@ from langflow.services.database.models.version_flow_input_sample.model import (
     VersionFlowInputSample,
     VersionFlowInputSampleRead,
 )
+from langflow.services.database.models.published_flow.model import PublishedFlow
+from langflow.services.database.models.published_flow_input_sample.model import PublishedFlowInputSample
 from langflow.services.database.models.user.model import User
 from langflow.services.auth.permissions import can_edit_flow, get_user_roles_from_request
 from langflow.logging import logger
@@ -1201,6 +1203,23 @@ async def get_flow_latest_status(
         input_sample = latest_version.input_sample
         sample_text = input_sample.sample_text if input_sample else None
         file_names = input_sample.file_names if input_sample else None
+
+        # Check for PublishedFlow inputs (prioritize these if they exist)
+        # This ensures that if a user updated inputs during publishing, those updates carry forward
+        published_flow_stmt = (
+            select(PublishedFlow)
+            .where(PublishedFlow.flow_cloned_from == flow_id)
+            .options(selectinload(PublishedFlow.input_samples))
+        )
+        published_flow_result = await session.exec(published_flow_stmt)
+        published_flow = published_flow_result.first()
+
+        if published_flow and published_flow.input_samples:
+            # Use published flow inputs as they are the most recent "public" state
+            # We take the first one as we enforce single record per published flow now
+            latest_published_sample = published_flow.input_samples[0]
+            sample_text = latest_published_sample.sample_text
+            file_names = latest_published_sample.file_names
 
         return {
             "has_submissions": True,

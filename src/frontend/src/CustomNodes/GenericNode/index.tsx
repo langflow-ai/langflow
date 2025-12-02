@@ -154,6 +154,13 @@ function GenericNode({
     updateNodeInternals(data.id);
   }, [data.node.template]);
 
+  // Auto-update effect for all outdated components
+  useEffect(() => {
+    if (isOutdated && !isUserEdited && !loadingUpdate) {
+      handleUpdateCode(true, true);
+    }
+  }, [isOutdated, isUserEdited, loadingUpdate]);
+
   if (!data.node!.template) {
     setErrorData({
       title: `Error in component ${data.node!.display_name}`,
@@ -167,7 +174,7 @@ function GenericNode({
   }
 
   const handleUpdateCode = useCallback(
-    (confirmed: boolean = false) => {
+    (confirmed: boolean = false, autoUpdate: boolean = false) => {
       if (!confirmed && hasBreakingChange) {
         setOpenUpdateModal(true);
         return;
@@ -193,6 +200,13 @@ function GenericNode({
                 updateNodeCode(newNode, currentCode, "code", type);
                 removeDismissedNodes([data.id]);
                 setLoadingUpdate(false);
+
+                // Show success notification for auto-updates
+                if (autoUpdate) {
+                  useAlertStore.getState().setSuccessData({
+                    title: `Component "${data.node?.display_name}" has been updated`,
+                  });
+                }
               }
             },
             onError: (error) => {
@@ -398,7 +412,7 @@ function GenericNode({
             numberOfOutputHandles={shownOutputs.length ?? 0}
             showNode={showNode}
             openAdvancedModal={false}
-            onCloseAdvancedModal={() => {}}
+            onCloseAdvancedModal={() => { }}
             updateNode={() => handleUpdateCode()}
             isOutdated={isOutdated && (dismissAll || isUserEdited)}
             isUserEdited={isUserEdited}
