@@ -168,3 +168,92 @@ async def test_agent_component_send_message_events(monkeypatch):  # noqa: ARG001
     assert result.sender_name == "Test"
     # The focus is on testing the message handling logic, not the database persistence layer
     assert event_manager.on_message.called
+
+
+class TestComponentOutputProperty:
+    """Tests for the .output property and passing components directly to .set()."""
+
+    def test_output_returns_bound_method(self):
+        """Test that .output returns the bound method for the default output."""
+        chat_input = ChatInput()
+
+        # .output should return the bound method, not the Output object
+        assert callable(chat_input.output)
+        assert hasattr(chat_input.output, "__self__")
+        assert chat_input.output.__self__ is chat_input
+
+    def test_output_returns_first_output_method(self):
+        """Test that .output returns the first output's method by default."""
+        chat_input = ChatInput()
+
+        # Get the first output's method name
+        first_output = next(iter(chat_input._outputs_map.values()))
+        expected_method = getattr(chat_input, first_output.method)
+
+        # .output should return the same method
+        assert chat_input.output.__name__ == expected_method.__name__
+
+    def test_output_respects_selected_output(self):
+        """Test that .output uses selected_output when set."""
+        chat_input = ChatInput()
+
+        # ChatInput has multiple outputs, set selected_output to a different one
+        outputs = list(chat_input._outputs_map.keys())
+        if len(outputs) > 1:
+            # Select a different output than the default
+            chat_input.selected_output = outputs[1]
+            selected_output_obj = chat_input._outputs_map[outputs[1]]
+
+            assert chat_input.output.__name__ == selected_output_obj.method
+
+    def test_output_raises_error_when_no_outputs(self):
+        """Test that .output raises ValueError when component has no outputs."""
+
+        class NoOutputComponent(Component):
+            outputs = []
+
+        component = NoOutputComponent()
+        with pytest.raises(ValueError, match="has no outputs defined"):
+            _ = component.output
+
+    def test_set_with_component_uses_output(self):
+        """Test that passing a Component to .set() uses its .output property."""
+        chat_input = ChatInput()
+        chat_output = ChatOutput()
+
+        # Pass component directly instead of component.output
+        chat_output.set(input_value=chat_input)
+
+        # Should create an edge
+        assert len(chat_output._edges) == 1
+        assert chat_output._edges[0]["source"] == chat_input._id
+        assert chat_input in chat_output._components
+
+    def test_set_with_component_equivalent_to_output(self):
+        """Test that .set(comp) creates the same edge as .set(comp.output)."""
+        chat_input1 = ChatInput()
+        chat_output1 = ChatOutput()
+        chat_output1.set(input_value=chat_input1)
+
+        chat_input2 = ChatInput()
+        chat_output2 = ChatOutput()
+        chat_output2.set(input_value=chat_input2.output)
+
+        # Both should create edges with the same structure
+        edge1 = chat_output1._edges[0]
+        edge2 = chat_output2._edges[0]
+
+        # Source handle should reference the same output
+        assert edge1["data"]["sourceHandle"]["name"] == edge2["data"]["sourceHandle"]["name"]
+        assert edge1["data"]["targetHandle"]["fieldName"] == edge2["data"]["targetHandle"]["fieldName"]
+
+    def test_set_with_explicit_output_method(self):
+        """Test that passing an explicit output method still works."""
+        chat_input = ChatInput()
+        chat_output = ChatOutput()
+
+        # Explicit method reference should still work
+        chat_output.set(input_value=chat_input.message_response)
+
+        assert len(chat_output._edges) == 1
+        assert chat_output._edges[0]["source"] == chat_input._id
