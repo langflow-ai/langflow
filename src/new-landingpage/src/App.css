@@ -12,6 +12,59 @@ body {
   min-height: 100vh;
 }
 
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 7, 29, 0.6);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1.5rem;
+  box-sizing: border-box;
+}
+
+.loading-card {
+  width: min(440px, 100%);
+  background: rgba(12, 16, 35, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  padding: 1.75rem 1.5rem 1.5rem;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+  color: #e5e7eb;
+  text-align: center;
+  display: grid;
+  gap: 1rem;
+  justify-items: center;
+}
+
+.loading-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.loading-progress-shell {
+  width: 100%;
+  max-width: 360px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  height: 12px;
+}
+
+.loading-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6366f1, #8b5cf6);
+  transition: width 300ms ease-out;
+}
+
+.loading-subtitle {
+  color: #c7d2fe;
+  font-size: 0.95rem;
+}
+
 .hero {
   min-height: 100vh;
   display: grid;
@@ -91,4 +144,156 @@ body {
 
 .feature-card li:last-child {
   border-bottom: none;
+}
+
+.login-shell {
+  min-height: 100vh;
+  background: radial-gradient(circle at top, #0b1120, #030712 70%);
+  padding: clamp(2rem, 5vw, 4rem);
+  box-sizing: border-box;
+}
+
+.login-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 2rem;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.login-card {
+  background: rgba(12, 16, 35, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
+  padding: clamp(1.5rem, 3vw, 3rem);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
+}
+
+.login-card--primary {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 64, 175, 0.85));
+}
+
+.login-eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.35em;
+  font-size: 0.75rem;
+  color: rgba(191, 219, 254, 0.75);
+}
+
+.login-heading {
+  font-size: clamp(2rem, 4vw, 2.75rem);
+  margin: 0.5rem 0 1rem;
+}
+
+.login-heading-small {
+  margin: 0.35rem 0 0;
+}
+
+.login-subheading {
+  color: rgba(226, 232, 240, 0.85);
+  margin-bottom: 1.25rem;
+}
+
+.login-status {
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  background: rgba(59, 130, 246, 0.15);
+  color: #bfdbfe;
+  font-size: 0.95rem;
+}
+
+.login-alert {
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
+}
+
+.login-alert--error {
+  background: rgba(248, 113, 113, 0.15);
+  color: #fecaca;
+}
+
+.login-alert--info {
+  background: rgba(59, 130, 246, 0.15);
+  color: #bfdbfe;
+}
+
+.login-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.login-link {
+  border: none;
+  background: none;
+  color: #93c5fd;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.login-user-summary {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  padding: 0.85rem 1rem;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.8);
+}
+
+.login-avatar {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 999px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(59, 130, 246, 0.25);
+  border: 2px solid rgba(191, 219, 254, 0.4);
+}
+
+.login-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.login-avatar span {
+  font-weight: 700;
+  color: #e0e7ff;
+}
+
+.login-user-name {
+  margin: 0;
+  font-weight: 600;
+}
+
+.login-user-email {
+  margin: 0;
+  color: rgba(148, 163, 184, 0.9);
+  font-size: 0.9rem;
+}
+
+.login-button {
+  margin-top: 1.5rem;
+  width: 100%;
+  border: none;
+  border-radius: 999px;
+  padding: 0.9rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #0f172a;
+  background: linear-gradient(135deg, #60a5fa, #a855f7);
+  cursor: pointer;
+  transition: opacity 200ms ease;
+}
+
+.login-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
