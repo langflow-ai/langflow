@@ -91,6 +91,8 @@ const HeaderComponent = ({
     );
   };
 
+  const hasSelection = selectedFlows.length > 0;
+
   return (
     <>
       <div
@@ -197,11 +199,12 @@ const HeaderComponent = ({
                     data-testid="download-bulk-btn"
                     onClick={handleDownload}
                     loading={isDownloading}
+                    tabIndex={hasSelection ? 0 : -1}
                   >
                     <ForwardedIconComponent name="Download" />
                   </Button>
-
                   <DeleteConfirmationModal
+                    asChild
                     onConfirm={handleDelete}
                     description={"flow" + (selectedFlows.length > 1 ? "s" : "")}
                     note={
@@ -216,6 +219,7 @@ const HeaderComponent = ({
                       className="px-2.5 !text-mmd"
                       data-testid="delete-bulk-btn"
                       loading={isDeleting}
+                      tabIndex={hasSelection ? 0 : -1}
                     >
                       <ForwardedIconComponent name="Trash2" />
                       Delete
