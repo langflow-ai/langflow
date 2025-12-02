@@ -1,6 +1,6 @@
 name: 🧪 test invoke ephemeral runner 
 on:
-  push: 
+  push:  
     branches: [test-ephemeral-runner]
 
 jobs:
