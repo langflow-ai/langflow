@@ -169,7 +169,7 @@ class BatchRunComponent(Component):
                         "callbacks": self.get_langchain_callbacks(),
                     }
                 )
-            except Exception as e:
+            except (TypeError, ValueError, AttributeError) as e:
                 # Log warning and continue without configuration
                 await logger.awarning(
                     f"Could not configure model with callbacks and project info: {e!s}. "
