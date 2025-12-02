@@ -71,7 +71,7 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 - Changes to read/write file components
 
     The **Save File** component was renamed to **Write File**, and it can now save to S3 and Google Drive.
-    The **Read File** component was renamed to **Read File**.
+    The **File** component was renamed to **Read File**.
     Both components support **Tool Mode**.
 
 - New integrations, bundles, and components:
@@ -97,11 +97,15 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
   New [**CometAPI** bundle](/bundles-cometapi)
 
+  New [**CUGA** bundle](/bundles-cuga)
+
   The **LLM Router** component is now called the [**LLM Selector** component](/llm-selector).
 
   The [**Web Search** component](/web-search) now consolidates Web Search, News Search, and RSS Reader into a single component with tabs for different search modes. You can search the web using DuckDuckGo, search Google News, or read RSS feeds—all from one component. The separate **News Search** and **RSS Reader** components have been removed.
 
 ### Deprecations
+
+The [**DataFrame to Toolset** component](/legacy-core-components) is now in legacy status.
 
 ## 1.6.0
 
