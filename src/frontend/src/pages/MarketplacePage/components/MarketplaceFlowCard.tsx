@@ -103,11 +103,15 @@ export default function MarketplaceFlowCard({
 
   return (
     <div
-      className={`group relative border border-primary-border p-3 rounded-lg bg-background-surface flex flex-col  ${
-        item.flow_id ? "cursor-pointer" : "cursor-default"
-      }
+      className={`group relative border border-primary-border p-3 rounded-lg bg-background-surface flex flex-col  ${item.flow_id && item.status === "PUBLISHED"
+          ? "cursor-pointer"
+          : "cursor-default"
+        } ${item.status !== "PUBLISHED"
+          ? "opacity-60 grayscale pointer-events-none"
+          : ""
+        }
       `}
-      onClick={handleCardClick}
+      onClick={item.status === "PUBLISHED" ? handleCardClick : undefined}
     >
       {/* <div */}
       {/* //   className={`group relative flex ${expand ? "" : ""} flex-col rounded-lg border border-[#EBE8FF] bg-white dark:bg-card px-4 py-3 transition-shadow h-[152px] w-full hover:shadow-md ${item.flow_id ? "cursor-pointer" : "cursor-default"} ${!expand ? " max-h-[260px] md:max-h-[280px] xl:max-h-[300px] overflow-hidden" : ""}`} */}
@@ -122,8 +126,15 @@ export default function MarketplaceFlowCard({
           >
             {name}
           </h3>
-          {item.status === "PUBLISHED" && (
+          {item.status === "PUBLISHED" ? (
             <LiveIcon className="w-[14px] h-[14px]" />
+          ) : (
+            <Badge
+              variant="secondary"
+              className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100 text-[10px] px-1.5 py-0.5 h-5 whitespace-nowrap"
+            >
+              Coming Soon
+            </Badge>
           )}
         </div>
         <div className="flex items-center gap-2">
