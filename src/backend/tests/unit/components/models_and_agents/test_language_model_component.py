@@ -133,8 +133,8 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
         assert updated_config["project_id"]["show"] is True
         assert updated_config["ollama_base_url"]["show"] is False
 
-    @patch("lfx.components.models.language_model.get_ollama_models")
-    @patch("lfx.components.models.language_model.is_valid_ollama_url")
+    @patch("lfx.components.models_and_agents.language_model.get_ollama_models")
+    @patch("lfx.components.models_and_agents.language_model.is_valid_ollama_url")
     async def test_update_build_config_ollama(
         self, mock_is_valid_url, mock_get_ollama_models, component_class, default_kwargs
     ):
@@ -261,7 +261,7 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
     async def test_build_model_ibm_watsonx_missing_base_url(self, component_class, default_kwargs):
         component = component_class(**default_kwargs)
         component.provider = "IBM watsonx.ai"
-        component.api_key = "test-key"
+        component.api_key = "test-key"  # pragma: allowlist secret
         component.base_url_ibm_watsonx = None
 
         expected_error = r"IBM watsonx API Endpoint is required when using IBM watsonx\.ai provider"
@@ -271,7 +271,7 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
     async def test_build_model_ibm_watsonx_missing_project_id(self, component_class, default_kwargs):
         component = component_class(**default_kwargs)
         component.provider = "IBM watsonx.ai"
-        component.api_key = "test-key"
+        component.api_key = "test-key"  # pragma: allowlist secret
         component.base_url_ibm_watsonx = "https://us-south.ml.cloud.ibm.com"
         component.project_id = None
 
