@@ -65,7 +65,7 @@ jobs:
           echo "**Workflow-configured labels:** \`self-hosted, linux, ARM64, langflow-ai-arm64-40gb-ephemeral\`" >> "$GITHUB_STEP_SUMMARY"
           
       - name: Show Runner Info in Summary
-        run: |
+        run: | 
           {
             echo "## 🖥️ Self-Hosted Runner Info"
             echo "---------- "
