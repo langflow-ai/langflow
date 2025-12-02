@@ -29,6 +29,7 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from langflow.api import health_check_router, log_router, router
 from langflow.api.v1.mcp_projects import init_mcp_servers
 from langflow.initial_setup.setup import (
+    copy_profile_pictures,
     create_or_update_starter_projects,
     initialize_auto_login_default_superuser,
     load_bundles_from_urls,
@@ -182,6 +183,11 @@ def get_lifespan(*, fix_migration=False, version=None):
             setup_llm_caching()
             await logger.adebug(f"LLM caching setup in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
+            current_time = asyncio.get_event_loop().time()
+            await logger.adebug("Copying profile pictures")
+            await copy_profile_pictures()
+            await logger.adebug(f"Profile pictures copied in {asyncio.get_event_loop().time() - current_time:.2f}s")
+
             if get_settings_service().auth_settings.AUTO_LOGIN:
                 current_time = asyncio.get_event_loop().time()
                 await logger.adebug("Initializing default super user")
@@ -306,13 +312,6 @@ def get_lifespan(*, fix_migration=False, version=None):
             # Start the delayed initialization as a background task
             # Allows the server to start first to avoid race conditions with MCP Server startup
             mcp_init_task = asyncio.create_task(delayed_init_mcp_servers())
-
-            # v1 and project MCP server context managers
-            from langflow.api.v1.mcp import start_streamable_http_manager
-            from langflow.api.v1.mcp_projects import start_project_task_group
-
-            await start_streamable_http_manager()
-            await start_project_task_group()
 
             # v1 and project MCP server context managers
             from langflow.api.v1.mcp import start_streamable_http_manager
