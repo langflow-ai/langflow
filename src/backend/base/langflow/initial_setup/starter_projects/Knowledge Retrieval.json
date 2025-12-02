@@ -241,7 +241,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.120.0"
+                    "version": "0.123.0"
                   },
                   {
                     "name": "lfx",
@@ -544,7 +544,7 @@
                   },
                   {
                     "name": "langchain_cohere",
-                    "version": "0.3.3"
+                    "version": "0.3.5"
                   }
                 ],
                 "total_dependencies": 8
