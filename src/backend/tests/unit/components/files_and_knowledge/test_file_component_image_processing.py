@@ -492,6 +492,7 @@ class TestLoadFilesHelperValidation:
             result = component.load_files_helper()
             assert not result.empty
 
+
 class TestImageContentTypeValidation:
     """Tests for validating that image content matches file extension."""
 
