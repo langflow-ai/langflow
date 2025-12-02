@@ -1,0 +1,21 @@
+name: Alembic Migration - Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Select a Branch to deploy"
+        required: true
+        default: "main"
+      environment:
+        description: "Select environment to deploy (staging or prod)"
+        required: true
+        default: "staging"
+      email:
+        description: "Admin email for deployment"
+        required: true
+        default: "saravana.k.r@gmail.com"
+      commit_id:
+        description: "Commit ID to deploy (leave blank for latest on branch)"
+        required: false
+        default: ""
