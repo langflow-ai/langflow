@@ -1,4 +1,4 @@
-import { memo, useMemo } from "react";
+import { Fragment, memo, useMemo } from "react";
 import { StickToBottom } from "use-stick-to-bottom";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import { TextEffectPerChar } from "@/components/ui/textAnimation";
@@ -86,7 +86,7 @@ export const Messages = ({
                     thinkingInsertIndex < chatHistory.length;
 
                   return (
-                    <div key={`${chat.id}-${index}`}>
+                    <Fragment key={`${chat.id}-${index}`}>
                       <MemoizedChatMessage
                         chat={chat}
                         lastMessage={chatHistory.length - 1 === index}
@@ -100,7 +100,7 @@ export const Messages = ({
                           duration={duration}
                         />
                       )}
-                    </div>
+                    </Fragment>
                   );
                 })}
                 {/* If user message is the last message (no bot response yet), show at the end */}
