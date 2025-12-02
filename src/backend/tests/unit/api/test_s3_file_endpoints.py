@@ -153,7 +153,7 @@ class TestS3FileEndpoints:
             mock_file.name = "document"
 
             with (
-                patch("langflow.api.v2.files.fetch_file_object", return_value=mock_file),
+                patch("langflow.api.v2.files.fetch_file_object", new_callable=AsyncMock, return_value=mock_file),
                 patch("langflow.api.v2.files.CurrentActiveUser", return_value=mock_user),
             ):
                 # Test delete logic
@@ -161,6 +161,7 @@ class TestS3FileEndpoints:
 
                 # Mock the database session
                 mock_session = MagicMock()
+                mock_session.delete = AsyncMock()
 
                 await delete_file(
                     file_id="test-id", current_user=mock_user, session=mock_session, storage_service=s3_storage_service
@@ -195,8 +196,10 @@ class TestS3FileEndpoints:
 
                 _, _ = await save_file_routine(mock_file, s3_storage_service, mock_user, file_name="test.txt")
 
-                # Should get file size from S3
-                s3_storage_service.get_file_size.assert_called_once_with(flow_id="user_123", file_name="test.txt")
+                # Should save file to S3
+                s3_storage_service.save_file.assert_called_once_with(
+                    flow_id="user_123", file_name="test.txt", data=b"file content"
+                )
 
     @pytest.mark.asyncio
     async def test_s3_error_handling(self, s3_storage_service, s3_settings):
@@ -216,18 +219,21 @@ class TestS3FileEndpoints:
             mock_file.path = "user_123/nonexistent.pdf"
             mock_file.name = "nonexistent"
 
+            mock_fetch = AsyncMock(return_value=mock_file)
+
             with (
-                patch("langflow.api.v2.files.fetch_file_object", return_value=mock_file),
+                patch("langflow.api.v2.files.fetch_file_object", mock_fetch),
                 patch("langflow.api.v2.files.CurrentActiveUser", return_value=mock_user),
             ):
                 # Test error handling
                 from langflow.api.v2.files import download_file
+                from fastapi import HTTPException
 
                 # Mock the database session
                 mock_session = MagicMock()
 
-                # Should handle S3 errors gracefully
-                with pytest.raises(FileNotFoundError):
+                # Should handle S3 errors gracefully by converting to HTTPException
+                with pytest.raises(HTTPException) as exc_info:
                     await download_file(
                         file_id="test-id",
                         current_user=mock_user,
@@ -235,6 +241,10 @@ class TestS3FileEndpoints:
                         storage_service=s3_storage_service,
                         return_content=True,
                     )
+                
+                # Verify it's a 500 error with appropriate message
+                assert exc_info.value.status_code == 500
+                assert "Error downloading file" in str(exc_info.value.detail)
 
     @pytest.mark.asyncio
     async def test_s3_streaming_performance(self, s3_storage_service, s3_settings):

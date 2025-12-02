@@ -583,6 +583,9 @@ class BaseFileComponent(Component, ABC):
         Returns:
             list[BaseFile]: Updated list of BaseFile instances.
         """
+        from langflow.services.deps import get_settings_service
+
+        settings = get_settings_service().settings
         collected_files = []
 
         for file in files:
@@ -590,7 +593,11 @@ class BaseFileComponent(Component, ABC):
             delete_after_processing = file.delete_after_processing
             data = file.data
 
-            if path.is_dir():
+            # For S3 storage, paths are virtual keys - skip filesystem checks
+            if settings.storage_type == "s3":
+                # S3 paths are always treated as files, not directories or bundles
+                collected_files.append(file)
+            elif path.is_dir():
                 # Recurse into directories
                 collected_files.extend(
                     [
@@ -625,7 +632,8 @@ class BaseFileComponent(Component, ABC):
                 collected_files.append(file)
 
         # Recurse again if any directories or bundles are left in the list
-        if any(
+        # Skip recursion check for S3 storage since paths are virtual
+        if settings.storage_type != "s3" and any(
             file.path.is_dir() or file.path.suffix[1:] in self.SUPPORTED_BUNDLE_EXTENSIONS for file in collected_files
         ):
             return self._unpack_and_collect_files(collected_files)
