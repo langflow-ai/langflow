@@ -224,7 +224,7 @@ export const SIDEBAR_CATEGORIES = [
   },
   { display_name: "Processing", name: "processing", icon: "ListFilter" },
   {
-    display_name: "Flow Controls",
+    display_name: "Flow Control",
     name: "flow_controls",
     icon: "ArrowRightLeft",
   },
@@ -236,6 +236,7 @@ export const SIDEBAR_CATEGORIES = [
 export const SIDEBAR_BUNDLES = [
   { display_name: "AI/ML API", name: "aiml", icon: "AIML" },
   { display_name: "AgentQL", name: "agentql", icon: "AgentQL" },
+  { display_name: "ALTK", name: "altk", icon: "Zap" },
   {
     display_name: "Language Models",
     name: "languagemodels",
@@ -262,6 +263,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Confluence", name: "confluence", icon: "Confluence" },
   { display_name: "Couchbase", name: "couchbase", icon: "Couchbase" },
   { display_name: "CrewAI", name: "crewai", icon: "CrewAI" },
+  { display_name: "CUGA", name: "cuga", icon: "Bot" },
   { display_name: "DataStax", name: "datastax", icon: "AstraDB" },
   { display_name: "DeepSeek", name: "deepseek", icon: "DeepSeek" },
   { display_name: "Docling", name: "docling", icon: "Docling" },
@@ -320,6 +322,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "VLM Run", name: "vlmrun", icon: "VLMRun" },
   { display_name: "Vectara", name: "vectara", icon: "Vectara" },
   { display_name: "Vector Stores", name: "vectorstores", icon: "Layers" },
+  { display_name: "vLLM", name: "vllm", icon: "vLLM" },
   { display_name: "Weaviate", name: "weaviate", icon: "Weaviate" },
   { display_name: "Vertex AI", name: "vertexai", icon: "VertexAI" },
   { display_name: "Wikipedia", name: "wikipedia", icon: "Wikipedia" },
