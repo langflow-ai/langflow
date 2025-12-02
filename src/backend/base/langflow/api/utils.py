@@ -19,7 +19,7 @@ from langflow.services.database.models.message.model import MessageTable
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.user.model import User
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
-from langflow.services.deps import get_session, get_session_with_commit
+from langflow.services.deps import get_session, get_session_with_commit, session_scope
 from langflow.services.store.utils import get_lf_version_from_pypi
 
 if TYPE_CHECKING:

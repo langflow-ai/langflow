@@ -311,14 +311,14 @@ def parse_text_file_to_data(file_path: str, *, silent_errors: bool) -> Data | No
             text = read_text_file(file_path)
 
         # Parse structured formats (JSON, YAML, XML)
-        text = parse_structured_text(text, file_path)
+        parsed_text = parse_structured_text(text, file_path)
     except Exception as e:
         if not silent_errors:
             msg = f"Error loading file {file_path}: {e}"
             raise ValueError(msg) from e
         return None
 
-    return Data(data={"file_path": file_path, "text": text})
+    return Data(data={"file_path": file_path, "text": parsed_text})
 
 
 async def parse_text_file_to_data_async(file_path: str, *, silent_errors: bool) -> Data | None:
@@ -339,9 +339,9 @@ async def parse_text_file_to_data_async(file_path: str, *, silent_errors: bool) 
             text = await read_text_file_async(file_path)
 
         # Parse structured formats (JSON, YAML, XML)
-        text = parse_structured_text(text, file_path)
+        parsed_text = parse_structured_text(text, file_path)
 
-        return Data(data={"file_path": file_path, "text": text})
+        return Data(data={"file_path": file_path, "text": parsed_text})
 
     except Exception as e:
         if not silent_errors:
