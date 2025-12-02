@@ -46,6 +46,7 @@ from langflow.services.deps import (
 )
 from langflow.services.schema import ServiceType
 from langflow.services.utils import initialize_services, initialize_settings_service, teardown_services
+from langflow.utils.memory_tracking import get_memory_tracker
 
 if TYPE_CHECKING:
     from tempfile import TemporaryDirectory
@@ -161,6 +162,10 @@ def get_lifespan(*, fix_migration=False, version=None):
 
         configure()
 
+        # Initialize memory tracking
+        memory_tracker = get_memory_tracker()
+        memory_tracker.log_snapshot("app_startup", level="info")
+
         # Startup message
         if version:
             await logger.adebug(f"Starting Langflow v{version}...")
@@ -170,6 +175,7 @@ def get_lifespan(*, fix_migration=False, version=None):
         temp_dirs: list[TemporaryDirectory] = []
         sync_flows_from_fs_task = None
         mcp_init_task = None
+        memory_log_task = None
 
         try:
             start_time = asyncio.get_event_loop().time()
@@ -289,6 +295,9 @@ def get_lifespan(*, fix_migration=False, version=None):
             total_time = asyncio.get_event_loop().time() - start_time
             await logger.adebug(f"Total initialization time: {total_time:.2f}s")
 
+            # Log memory after initialization
+            memory_tracker.log_snapshot("after_initialization", level="info")
+
             async def delayed_init_mcp_servers():
                 await asyncio.sleep(10.0)  # Increased delay to allow starter projects to be created
                 current_time = asyncio.get_event_loop().time()
@@ -312,6 +321,21 @@ def get_lifespan(*, fix_migration=False, version=None):
             # Start the delayed initialization as a background task
             # Allows the server to start first to avoid race conditions with MCP Server startup
             mcp_init_task = asyncio.create_task(delayed_init_mcp_servers())
+
+            # Start periodic memory logging task
+            async def periodic_memory_log():
+                """Periodically log memory usage."""
+                while True:
+                    try:
+                        await asyncio.sleep(300)  # Log every 5 minutes
+                        memory_tracker.log_snapshot("periodic_check", level="info")
+                    except asyncio.CancelledError:
+                        break
+                    except Exception as e:
+                        await logger.awarning(f"Error in periodic memory logging: {e}")
+
+            memory_log_task = asyncio.create_task(periodic_memory_log())
+            _tasks.append(memory_log_task)
 
             yield
 
@@ -351,6 +375,9 @@ def get_lifespan(*, fix_migration=False, version=None):
                     if mcp_init_task and not mcp_init_task.done():
                         mcp_init_task.cancel()
                         tasks_to_cancel.append(mcp_init_task)
+                    if memory_log_task and not memory_log_task.done():
+                        memory_log_task.cancel()
+                        tasks_to_cancel.append(memory_log_task)
                     if tasks_to_cancel:
                         # Wait for all tasks to complete, capturing exceptions
                         results = await asyncio.gather(*tasks_to_cancel, return_exceptions=True)
@@ -376,6 +403,12 @@ def get_lifespan(*, fix_migration=False, version=None):
 
                 # Step 4: Finalizing Shutdown
                 with shutdown_progress.step(4):
+                    memory_tracker.log_snapshot("app_shutdown", level="info")
+                    # Write all snapshots to file
+                    try:
+                        memory_tracker.write_snapshots_to_file()
+                    except Exception as e:
+                        await logger.awarning(f"Failed to write memory snapshots: {e}")
                     await logger.adebug("Langflow shutdown complete")
 
                 # Show completion summary and farewell

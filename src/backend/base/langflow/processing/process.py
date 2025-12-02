@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from langflow.schema.graph import InputValue, Tweaks
 from langflow.schema.schema import INPUT_FIELD_NAME
 from langflow.services.deps import get_settings_service
+from langflow.utils.memory_tracking import get_memory_tracker
 
 if TYPE_CHECKING:
     from lfx.events.event_manager import EventManager
@@ -49,6 +50,11 @@ async def run_graph_internal(
 
     fallback_to_env_vars = get_settings_service().settings.fallback_to_env_var
     graph.session_id = effective_session_id
+    
+    # Track memory before graph execution
+    memory_tracker = get_memory_tracker()
+    memory_tracker.log_snapshot(f"before_graph_arun_{flow_id}", context={"session_id": effective_session_id}, level="debug")
+    
     run_outputs = await graph.arun(
         inputs=inputs_list,
         inputs_components=components,
@@ -59,6 +65,10 @@ async def run_graph_internal(
         fallback_to_env_vars=fallback_to_env_vars,
         event_manager=event_manager,
     )
+    
+    # Track memory after graph execution
+    memory_tracker.log_snapshot(f"after_graph_arun_{flow_id}", context={"session_id": effective_session_id}, level="debug")
+    
     return run_outputs, effective_session_id
 
 

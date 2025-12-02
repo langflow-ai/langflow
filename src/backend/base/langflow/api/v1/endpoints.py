@@ -52,6 +52,7 @@ from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import get_session_service, get_settings_service, get_telemetry_service
 from langflow.services.telemetry.schema import RunPayload
 from langflow.utils.compression import compress_response
+from langflow.utils.memory_tracking import get_memory_tracker, memory_context
 from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
@@ -143,56 +144,78 @@ async def simple_run_flow(
     run_id: str | None = None,
 ):
     validate_input_and_tweaks(input_request)
-    try:
-        task_result: list[RunOutputs] = []
-        user_id = api_key_user.id if api_key_user else None
-        flow_id_str = str(flow.id)
-        if flow.data is None:
-            msg = f"Flow {flow_id_str} has no data"
-            raise ValueError(msg)
-        graph_data = flow.data.copy()
-        graph_data = process_tweaks(graph_data, input_request.tweaks or {}, stream=stream)
-        graph = Graph.from_payload(
-            graph_data, flow_id=flow_id_str, user_id=str(user_id), flow_name=flow.name, context=context
-        )
-        if run_id is None:
-            run_id = str(uuid4())
-        graph.set_run_id(run_id)
-        inputs = None
-        if input_request.input_value is not None:
-            inputs = [
-                InputValueRequest(
-                    components=[],
-                    input_value=input_request.input_value,
-                    type=input_request.input_type,
-                )
-            ]
-        if input_request.output_component:
-            outputs = [input_request.output_component]
-        else:
-            outputs = [
-                vertex.id
-                for vertex in graph.vertices
-                if input_request.output_type == "debug"
-                or (
-                    vertex.is_output
-                    and (input_request.output_type == "any" or input_request.output_type in vertex.id.lower())  # type: ignore[operator]
-                )
-            ]
-        task_result, session_id = await run_graph_internal(
-            graph=graph,
-            flow_id=flow_id_str,
-            session_id=input_request.session_id,
-            inputs=inputs,
-            outputs=outputs,
-            stream=stream,
-            event_manager=event_manager,
-        )
+    flow_id_str = str(flow.id)
+    memory_tracker = get_memory_tracker()
+    
+    # Memory tracking context for flow execution
+    with memory_context(f"flow_run_{flow_id_str}", log_before=True, log_after=True):
+        try:
+            task_result: list[RunOutputs] = []
+            user_id = api_key_user.id if api_key_user else None
+            if flow.data is None:
+                msg = f"Flow {flow_id_str} has no data"
+                raise ValueError(msg)
+            # Track memory before graph data processing
+            memory_tracker.log_snapshot(f"before_graph_data_copy_{flow_id_str}", context={"run_id": run_id}, level="debug")
+            
+            graph_data = flow.data.copy()
+            
+            memory_tracker.log_snapshot(f"after_graph_data_copy_{flow_id_str}", context={"run_id": run_id}, level="debug")
+            
+            graph_data = process_tweaks(graph_data, input_request.tweaks or {}, stream=stream)
+            
+            memory_tracker.log_snapshot(f"after_process_tweaks_{flow_id_str}", context={"run_id": run_id}, level="debug")
+            
+            graph = Graph.from_payload(
+                graph_data, flow_id=flow_id_str, user_id=str(user_id), flow_name=flow.name, context=context
+            )
+            
+            memory_tracker.log_snapshot(f"after_graph_from_payload_{flow_id_str}", context={"run_id": run_id}, level="debug")
+            if run_id is None:
+                run_id = str(uuid4())
+            graph.set_run_id(run_id)
+            inputs = None
+            if input_request.input_value is not None:
+                inputs = [
+                    InputValueRequest(
+                        components=[],
+                        input_value=input_request.input_value,
+                        type=input_request.input_type,
+                    )
+                ]
+            if input_request.output_component:
+                outputs = [input_request.output_component]
+            else:
+                outputs = [
+                    vertex.id
+                    for vertex in graph.vertices
+                    if input_request.output_type == "debug"
+                    or (
+                        vertex.is_output
+                        and (input_request.output_type == "any" or input_request.output_type in vertex.id.lower())  # type: ignore[operator]
+                    )
+                ]
+            
+            # Track memory before graph execution
+            memory_tracker.log_snapshot(f"before_graph_run_{flow_id_str}", context={"run_id": run_id}, level="debug")
+            
+            task_result, session_id = await run_graph_internal(
+                graph=graph,
+                flow_id=flow_id_str,
+                session_id=input_request.session_id,
+                inputs=inputs,
+                outputs=outputs,
+                stream=stream,
+                event_manager=event_manager,
+            )
+            
+            # Track memory after graph execution
+            memory_tracker.log_snapshot(f"after_graph_run_{flow_id_str}", context={"run_id": run_id}, level="debug")
 
-        return RunResponse(outputs=task_result, session_id=session_id)
+            return RunResponse(outputs=task_result, session_id=session_id)
 
-    except sa.exc.StatementError as exc:
-        raise ValueError(str(exc)) from exc
+        except sa.exc.StatementError as exc:
+            raise ValueError(str(exc)) from exc
 
 
 async def simple_run_flow_task(

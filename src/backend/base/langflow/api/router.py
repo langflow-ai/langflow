@@ -1,6 +1,7 @@
 # Router for base api
 from fastapi import APIRouter
 
+from langflow.api.debug_router import debug_router
 from langflow.api.v1 import (
     api_key_router,
     chat_router,
@@ -63,3 +64,4 @@ router = APIRouter(
 )
 router.include_router(router_v1)
 router.include_router(router_v2)
+router.include_router(debug_router)
