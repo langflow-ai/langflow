@@ -27,7 +27,7 @@ async def main():
     all_types_dict = await get_and_cache_all_types_dict(settings_service, telemetry_service)
     print("Types cached.")
 
-    flows_dir = Path(__file__).resolve().parents[2] / "agentic" / "flows"
+    flows_dir = Path(__file__).resolve().parent.parent / "agentic" / "flows"
     print(f"Flows directory: {flows_dir}")
     
     for flow_file in flows_dir.glob("*.json"):

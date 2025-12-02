@@ -35,6 +35,7 @@ from langflow.initial_setup.setup import (
     load_bundles_from_urls,
     load_flows_from_directory,
     sync_flows_from_fs,
+    update_agentic_flow_files,
 )
 from langflow.middleware import ContentSizeLimitMiddleware
 from langflow.services.deps import (
@@ -210,6 +211,18 @@ def get_lifespan(*, fix_migration=False, version=None):
             await logger.adebug("Caching types")
             all_types_dict = await get_and_cache_all_types_dict(get_settings_service(), telemetry_service)
             await logger.adebug(f"Types cached in {asyncio.get_event_loop().time() - current_time:.2f}s")
+
+            # Update agentic flow files with latest component versions
+            if get_settings_service().settings.agentic_experience:
+                current_time = asyncio.get_event_loop().time()
+                await logger.adebug("Updating agentic flow files")
+                try:
+                    await update_agentic_flow_files(all_types_dict)
+                    await logger.adebug(
+                        f"Agentic flow files updated in {asyncio.get_event_loop().time() - current_time:.2f}s"
+                    )
+                except Exception as e:  # noqa: BLE001
+                    await logger.awarning(f"Failed to update agentic flow files: {e}")
 
             # Use file-based lock to prevent multiple workers from creating duplicate starter projects concurrently.
             # Note that it's still possible that one worker may complete this task, release the lock,

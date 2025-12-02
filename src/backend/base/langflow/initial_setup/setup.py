@@ -778,7 +778,54 @@ async def load_agentic_flows() -> list[tuple[anyio.Path, dict]]:
     return agentic_flows
 
 
-async def create_or_update_agentic_flows(session: AsyncSession, user_id: UUID) -> None:
+async def update_agentic_flow_files(all_types_dict: dict) -> None:
+    """Update agentic flow files with the latest component versions.
+
+    This function updates the flow JSON files in the agentic/flows directory
+    with the latest component versions, similar to how starter projects are updated.
+
+    Args:
+        all_types_dict: Dictionary containing all component types and their templates
+    """
+    flows_dir = anyio.Path(__file__).parent.parent / "agentic" / "flows"
+
+    if not await flows_dir.exists():
+        await logger.adebug(f"Agentic flows directory does not exist: {flows_dir}")
+        return
+
+    await logger.adebug("Updating agentic flow files with latest component versions")
+    updated_count = 0
+
+    async for flow_file in flows_dir.glob("*.json"):
+        try:
+            async with async_open(str(flow_file), "r", encoding="utf-8") as f:
+                content = await f.read()
+            flow_data = orjson.loads(content)
+
+            if "data" in flow_data:
+                project_data = flow_data["data"]
+                updated_project_data = update_projects_components_with_latest_component_versions(
+                    deepcopy(project_data), all_types_dict
+                )
+                updated_project_data = update_edges_with_latest_component_versions(updated_project_data)
+
+                if updated_project_data != project_data:
+                    flow_data["data"] = updated_project_data
+                    async with async_open(str(flow_file), "w", encoding="utf-8") as f:
+                        await f.write(orjson.dumps(flow_data, option=ORJSON_OPTIONS).decode())
+                    await logger.adebug(f"Updated agentic flow file: {flow_file.name}")
+                    updated_count += 1
+
+        except (OSError, orjson.JSONDecodeError) as e:
+            await logger.aexception(f"Error updating agentic flow file {flow_file}: {e}")
+
+    if updated_count > 0:
+        await logger.adebug(f"Updated {updated_count} agentic flow files")
+    else:
+        await logger.adebug("No agentic flow files needed updates")
+
+
+async def create_or_update_agentic_flows(session: AsyncSession, user_id: UUID, all_types_dict: dict | None = None) -> None:
     """Create or update agentic flows in the Langflow Assistant folder for a user.
 
     This function is called on user login to ensure that all agentic flows
@@ -786,12 +833,13 @@ async def create_or_update_agentic_flows(session: AsyncSession, user_id: UUID) -
 
     The function will:
     - Extract flow_id and endpoint_name from the JSON
-    - Skip updates if flow already exists (only create new flows)
+    - Update existing flows with latest component versions
     - Create new flows if they don't exist
 
     Args:
         session: Database session
         user_id: The ID of the user
+        all_types_dict: Optional dictionary of all component types for updating flows
     """
     from lfx.services.deps import get_settings_service
 
@@ -829,6 +877,13 @@ async def create_or_update_agentic_flows(session: AsyncSession, user_id: UUID) -
                 flow_tags,
             ) = get_project_data(flow_data)
 
+            # Update project data with latest component versions if all_types_dict is provided
+            if all_types_dict:
+                project_data = update_projects_components_with_latest_component_versions(
+                    project_data.copy(), all_types_dict
+                )
+                project_data = update_edges_with_latest_component_versions(project_data)
+
             # Extract flow_id and endpoint_name from JSON
             flow_id = flow_data.get("id")
             flow_endpoint_name = flow_data.get("endpoint_name")
@@ -845,8 +900,15 @@ async def create_or_update_agentic_flows(session: AsyncSession, user_id: UUID) -
             existing_flow = await find_existing_flow(session, flow_id, flow_endpoint_name)
 
             if existing_flow:
-                # Skip update if flow already exists
-                await logger.adebug(f"Agentic flow already exists, skipping: {flow_name}")
+                # Update existing flow with latest component versions
+                await logger.adebug(f"Updating agentic flow: {flow_name}")
+                existing_flow.data = project_data
+                existing_flow.description = flow_description
+                existing_flow.is_component = flow_is_component
+                existing_flow.updated_at = updated_at_datetime
+                existing_flow.icon = flow_icon
+                existing_flow.icon_bg_color = flow_icon_bg_color
+                session.add(existing_flow)
                 flows_updated += 1
             else:
                 try:
@@ -879,13 +941,14 @@ async def create_or_update_agentic_flows(session: AsyncSession, user_id: UUID) -
         if flows_created > 0 or flows_updated > 0:
             await session.commit()
             await logger.adebug(
-                f"Successfully created {flows_created} and skipped {flows_updated} existing agentic flows"
+                f"Successfully created {flows_created} and updated {flows_updated} agentic flows"
             )
         else:
-            await logger.adebug("No agentic flows to create")
+            await logger.adebug("No agentic flows to create or update")
 
     except Exception:  # noqa: BLE001
         await logger.aexception("Error in create_or_update_agentic_flows")
+
 
 
 def _is_valid_uuid(val):
