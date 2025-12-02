@@ -8,6 +8,10 @@ jobs:
     runs-on: 
       labels: ["self-hosted", "linux", "ARM64", "langflow-ai-arm64-40gb-ephemeral"]        
     steps:
+
+      - name: Print runner labels from context
+        run: echo "${{ toJson(runner.labels) }}"
+          
       - name: Show Runner Info in Summary
         run: |
           {
