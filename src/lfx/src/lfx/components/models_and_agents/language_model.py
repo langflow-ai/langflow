@@ -270,11 +270,10 @@ class LanguageModelComponent(LCModelComponent):
                 build_config["project_id"]["show"] = False
                 build_config["ollama_base_url"]["show"] = False
             elif field_value == "IBM watsonx.ai":
-                build_config["model_name"]["options"] = IBM_WATSONX_DEFAULT_MODELS
-                build_config["model_name"]["value"] = IBM_WATSONX_DEFAULT_MODELS[0]
                 build_config["api_key"]["display_name"] = "IBM API Key"
                 build_config["api_key"]["show"] = True
                 build_config["base_url_ibm_watsonx"]["show"] = True
+                build_config["base_url_ibm_watsonx"]["combobox"] = True
                 build_config["project_id"]["show"] = True
                 build_config["ollama_base_url"]["show"] = False
             elif field_value == "Ollama":
