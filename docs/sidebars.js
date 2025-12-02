@@ -412,6 +412,7 @@ module.exports = {
             "Components/bundles-serper",
             "Components/bundles-supabase",
             "Components/bundles-upstash",
+            "Components/bundles-vllm",
             "Components/bundles-vectara",
             "Components/bundles-vertexai",
             "Components/bundles-weaviate",
