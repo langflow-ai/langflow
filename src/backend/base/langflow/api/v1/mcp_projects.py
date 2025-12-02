@@ -1255,10 +1255,9 @@ class ProjectMCPServer:
 
 # Cache of project MCP servers
 project_mcp_servers: dict[str, ProjectMCPServer] = {}
-
-# Due to the lazy initialization of the project MCP servers
-# we implement a global task group (AnyIO) manager for
-# the project MCP servers' streamable-http session managers.
+# Due to the lazy initialization of the project MCP servers'
+# streamable-http session managers, we implement a global
+# task group (AnyIO) manager for the session managers.
 # This ensures that each session manager's .run() context manager is
 # entered and exited from the same coroutine, otherwise Asyncio will raise a RuntimeError.
 class ProjectTaskGroup:
@@ -1268,7 +1267,7 @@ class ProjectTaskGroup:
     the lifecycle of the streamable-http session managers.
     This ensures that each session manager's .run()
     context manager is entered and exited from the same coroutine,
-    otherwise AnyIO will raise a RuntimeError.
+    otherwise Asyncio will raise a RuntimeError.
     """
     def __init__(self):
         self._started = False
@@ -1304,9 +1303,7 @@ class ProjectTaskGroup:
                 return
             try:
                 self._task_group.cancel_scope.cancel()
-                with contextlib.suppress(anyio.get_cancelled_exc_class()):
-                    await self._tg_task
-                    await logger.adebug("Project MCP task group cancelled")
+                await self._tg_task
             finally:
                 self._cleanup()
                 await logger.adebug("Project MCP task group stopped")
