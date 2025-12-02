@@ -43,7 +43,7 @@ export default function ThinkingMessage({
   const displayTime = isThinking ? elapsedTime : duration || 0;
 
   return (
-    <div className="w-5/6 max-w-[768px] py-4 word-break-break-word place-self-start">
+    <div className="w-full py-4 word-break-break-word">
       <div className="group relative flex w-full gap-4 rounded-md p-2">
         {/* Brain Icon - aligned with avatar */}
         <div className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center">
