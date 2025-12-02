@@ -15,6 +15,9 @@ from langflow.services.deps import get_settings_service, get_storage_service
 if TYPE_CHECKING:
     from langflow.services.storage.service import StorageService
 
+# Constants
+EXPECTED_PATH_PARTS = 2
+
 
 def parse_storage_path(path: str) -> tuple[str, str] | None:
     """Parse a storage service path into flow_id and filename.
@@ -32,7 +35,7 @@ def parse_storage_path(path: str) -> tuple[str, str] | None:
         return None
 
     parts = path.split("/", 1)
-    if len(parts) != 2 or not parts[0] or not parts[1]:
+    if len(parts) != EXPECTED_PATH_PARTS or not parts[0] or not parts[1]:
         return None
 
     return parts[0], parts[1]
@@ -140,6 +143,7 @@ def file_exists(file_path: str, storage_service: StorageService | None = None) -
     """
     try:
         get_file_size(file_path, storage_service)
-        return True
     except (FileNotFoundError, ValueError):
         return False
+    else:
+        return True

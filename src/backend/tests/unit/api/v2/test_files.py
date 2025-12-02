@@ -660,9 +660,9 @@ async def s3_files_client_fixture(
                 if "Contents" in response:
                     for obj in response["Contents"]:
                         s3.delete_object(Bucket=bucket_name, Key=obj["Key"])
-            except Exception:
+            except Exception:  # noqa: S110
                 pass  # Ignore cleanup errors
-        except Exception:
+        except Exception:  # noqa: S110
             pass  # Ignore cleanup errors
 
         monkeypatch.undo()

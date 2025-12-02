@@ -364,9 +364,7 @@ class DatabaseService(Service):
             script_dir = script.ScriptDirectory.from_config(alembic_cfg)
             try:
                 script_dir.get_revision(db_revision)
-                # Revision exists in code, so DB is not ahead
-                return False
-            except Exception:
+            except Exception:  # noqa: BLE001
                 # Revision doesn't exist in code - database is ahead
                 code_head = script_dir.get_current_head()
                 logger.warning(
@@ -374,7 +372,10 @@ class DatabaseService(Service):
                     "Allowing startup assuming backwards-compatible migrations."
                 )
                 return True
-        except Exception as exc:
+            else:
+                # Revision exists in code, so DB is not ahead
+                return False
+        except Exception as exc:  # noqa: BLE001
             logger.debug(f"Could not determine if database is ahead: {exc}")
             return False
 

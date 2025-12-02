@@ -239,9 +239,9 @@ async def read_docx_file_async(file_path: str) -> str:
         doc = Document(temp_path)
         return "\n\n".join([p.text for p in doc.paragraphs])
     finally:
-        try:
+        try:  # noqa: SIM105
             Path(temp_path).unlink()
-        except Exception:  # noqa: S110
+        except Exception:  # noqa: BLE001, S110
             pass
 
 

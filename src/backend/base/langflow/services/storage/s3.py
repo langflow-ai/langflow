@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any
 
 from langflow.logging.logger import logger
@@ -11,6 +10,8 @@ from langflow.logging.logger import logger
 from .service import StorageService
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
     from langflow.services.session.service import SessionService
     from langflow.services.settings.service import SettingsService
 
@@ -161,10 +162,6 @@ class S3StorageService(StorageService):
             async with self._get_client() as s3_client:
                 response = await s3_client.get_object(Bucket=self.bucket_name, Key=key)
                 content = await response["Body"].read()
-
-            logger.debug(f"File {file_name} retrieved successfully from S3: s3://{self.bucket_name}/{key}")
-            return content
-
         except Exception as e:
             if hasattr(e, "response") and e.response.get("Error", {}).get("Code") == "NoSuchKey":
                 await logger.awarning(f"File {file_name} not found in S3 flow {flow_id}")
@@ -173,6 +170,9 @@ class S3StorageService(StorageService):
 
             logger.exception(f"Error retrieving file {file_name} from S3 in flow {flow_id}")
             raise
+        else:
+            logger.debug(f"File {file_name} retrieved successfully from S3: s3://{self.bucket_name}/{key}")
+            return content
 
     async def get_file_stream(self, flow_id: str, file_name: str, chunk_size: int = 8192) -> AsyncIterator[bytes]:
         """Retrieve a file from S3 as a stream.
@@ -196,9 +196,6 @@ class S3StorageService(StorageService):
 
                 async for chunk in response["Body"].iter_chunks(chunk_size):
                     yield chunk
-
-            logger.debug(f"File {file_name} streamed successfully from S3: s3://{self.bucket_name}/{key}")
-
         except Exception as e:
             if hasattr(e, "response") and e.response.get("Error", {}).get("Code") == "NoSuchKey":
                 await logger.awarning(f"File {file_name} not found in S3 flow {flow_id}")
@@ -207,6 +204,8 @@ class S3StorageService(StorageService):
 
             logger.exception(f"Error streaming file {file_name} from S3 in flow {flow_id}")
             raise
+        else:
+            logger.debug(f"File {file_name} streamed successfully from S3: s3://{self.bucket_name}/{key}")
 
     async def list_files(self, flow_id: str) -> list[str]:
         """List all files in a specified S3 prefix (flow namespace).
@@ -239,13 +238,12 @@ class S3StorageService(StorageService):
                             file_name = full_key[len(prefix) :]
                             if file_name:  # Skip the directory marker if it exists
                                 files.append(file_name)
-
-            await logger.ainfo(f"Listed {len(files)} files in S3 flow {flow_id}")
-            return files
-
         except Exception:
             logger.exception(f"Error listing files in S3 flow {flow_id}")
             raise
+        else:
+            await logger.ainfo(f"Listed {len(files)} files in S3 flow {flow_id}")
+            return files
 
     async def delete_file(self, flow_id: str, file_name: str) -> None:
         """Delete a file from S3.
@@ -288,10 +286,6 @@ class S3StorageService(StorageService):
             async with self._get_client() as s3_client:
                 response = await s3_client.head_object(Bucket=self.bucket_name, Key=key)
                 file_size = response["ContentLength"]
-
-            logger.debug(f"File {file_name} size: {file_size} bytes")
-            return file_size
-
         except Exception as e:
             # Check if it's a 404 error
             if hasattr(e, "response") and e.response.get("Error", {}).get("Code") in ["NoSuchKey", "404"]:
@@ -301,6 +295,9 @@ class S3StorageService(StorageService):
 
             logger.exception(f"Error getting file size for {file_name} in S3 flow {flow_id}")
             raise
+        else:
+            logger.debug(f"File {file_name} size: {file_size} bytes")
+            return file_size
 
     async def teardown(self) -> None:
         """Perform any cleanup operations when the service is being torn down.

@@ -216,7 +216,7 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
             await logger.aexception("An error occurred during the session scope.", exc_info=True)
             # Only rollback if session is still in a valid state
             if session.is_active:
-                try:
+                try:  # noqa: SIM105
                     await session.rollback()
                 except InvalidRequestError:
                     # Session was already rolled back by SQLAlchemy

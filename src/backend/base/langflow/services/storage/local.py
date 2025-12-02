@@ -5,6 +5,9 @@ from langflow.logging.logger import logger
 
 from .service import StorageService
 
+# Constants
+EXPECTED_PATH_PARTS = 2
+
 
 class LocalStorageService(StorageService):
     """A service class for handling local storage operations without aiofiles."""
@@ -29,7 +32,7 @@ class LocalStorageService(StorageService):
         """
         # Split the logical path into flow_id and filename
         parts = logical_path.split("/", 1)
-        if len(parts) != 2:
+        if len(parts) != EXPECTED_PATH_PARTS:
             # Handle edge case - return as-is if format is unexpected
             return logical_path
 

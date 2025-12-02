@@ -62,7 +62,7 @@ class JsonAgentComponent(LCAgentComponent):
                 # Store temp path for cleanup
                 self._temp_file_path = temp_path
                 return Path(temp_path)
-            except Exception:
+            except Exception:  # noqa: BLE001, S110
                 # If S3 download fails, fall back to treating it as a local path
                 pass
 
@@ -72,9 +72,9 @@ class JsonAgentComponent(LCAgentComponent):
     def _cleanup_temp_file(self) -> None:
         """Clean up temporary file if one was created."""
         if hasattr(self, "_temp_file_path"):
-            try:
+            try:  # noqa: SIM105
                 Path(self._temp_file_path).unlink()
-            except Exception:  # noqa: S110
+            except Exception:  # noqa: BLE001, S110
                 pass  # Ignore cleanup errors
 
     def build_agent(self) -> AgentExecutor:
@@ -95,10 +95,9 @@ class JsonAgentComponent(LCAgentComponent):
 
             # Clean up temp file after agent is created
             self._cleanup_temp_file()
-
-            return agent
-
-        except Exception as e:
+        except Exception:
             # Make sure to clean up temp file on error
             self._cleanup_temp_file()
-            raise e
+            raise
+        else:
+            return agent

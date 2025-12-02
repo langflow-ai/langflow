@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from langflow.components.langchain_utilities.json_agent import JsonAgentComponent
+
 from tests.base import ComponentTestBaseWithoutClient
 
 
@@ -18,7 +19,7 @@ class TestJsonAgentComponent(ComponentTestBaseWithoutClient):
         """Return the default kwargs for the component."""
         return {
             "llm": MagicMock(),
-            "path": "/tmp/test.json",
+            "path": "/tmp/test.json",  # noqa: S108
         }
 
     @pytest.fixture
@@ -30,7 +31,7 @@ class TestJsonAgentComponent(ComponentTestBaseWithoutClient):
         """Test basic component initialization."""
         component = component_class()
         component.set_attributes(default_kwargs)
-        assert component.path == "/tmp/test.json"
+        assert component.path == "/tmp/test.json"  # noqa: S108
 
     def test_get_local_path_with_local_json_file(self, component_class):
         """Test _get_local_path returns Path for local JSON files."""
@@ -280,7 +281,7 @@ class TestJsonAgentComponent(ComponentTestBaseWithoutClient):
             mock_get_settings.return_value = mock_settings
             mock_read_bytes.return_value = json_content
 
-            with pytest.raises(Exception):
+            with pytest.raises(Exception):  # noqa: B017, PT011
                 component.build_agent()
 
             # Temp file should be cleaned up even after error

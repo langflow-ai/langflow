@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from langflow.components.langchain_utilities.csv_agent import CSVAgentComponent
 from langflow.schema import Message
+
 from tests.base import ComponentTestBaseWithoutClient
 
 
@@ -19,7 +20,7 @@ class TestCSVAgentComponent(ComponentTestBaseWithoutClient):
         """Return the default kwargs for the component."""
         return {
             "llm": MagicMock(),
-            "path": "/tmp/test.csv",
+            "path": "/tmp/test.csv",  # noqa: S108
             "agent_type": "openai-tools",
             "input_value": "What is the sum of column A?",
         }
@@ -39,7 +40,7 @@ class TestCSVAgentComponent(ComponentTestBaseWithoutClient):
     def test_path_message_input(self, component_class):
         """Test that path can be provided as Message object."""
         component = component_class()
-        message = Message(text="/tmp/test.csv")
+        message = Message(text="/tmp/test.csv")  # noqa: S108
         component.set_attributes(
             {
                 "llm": MagicMock(),
@@ -48,7 +49,7 @@ class TestCSVAgentComponent(ComponentTestBaseWithoutClient):
                 "input_value": "test query",
             }
         )
-        assert component._path() == "/tmp/test.csv"
+        assert component._path() == "/tmp/test.csv"  # noqa: S108
 
     def test_path_string_input(self, component_class):
         """Test that path can be provided as string."""
@@ -56,12 +57,12 @@ class TestCSVAgentComponent(ComponentTestBaseWithoutClient):
         component.set_attributes(
             {
                 "llm": MagicMock(),
-                "path": "/tmp/test.csv",
+                "path": "/tmp/test.csv",  # noqa: S108
                 "agent_type": "openai-tools",
                 "input_value": "test query",
             }
         )
-        assert component._path() == "/tmp/test.csv"
+        assert component._path() == "/tmp/test.csv"  # noqa: S108
 
     def test_get_local_path_with_local_file(self, component_class):
         """Test _get_local_path returns path as-is for local storage."""
@@ -69,7 +70,7 @@ class TestCSVAgentComponent(ComponentTestBaseWithoutClient):
         component.set_attributes(
             {
                 "llm": MagicMock(),
-                "path": "/tmp/test.csv",
+                "path": "/tmp/test.csv",  # noqa: S108
                 "agent_type": "openai-tools",
                 "input_value": "test",
             }
@@ -82,7 +83,7 @@ class TestCSVAgentComponent(ComponentTestBaseWithoutClient):
             mock_get_settings.return_value = mock_settings
 
             local_path = component._get_local_path()
-            assert local_path == "/tmp/test.csv"
+            assert local_path == "/tmp/test.csv"  # noqa: S108
             # Should not have created temp file path
             assert not hasattr(component, "_temp_file_path")
 
@@ -186,7 +187,7 @@ class TestCSVAgentComponent(ComponentTestBaseWithoutClient):
     def test_cleanup_temp_file_handles_errors(self, component_class):
         """Test that cleanup silently handles errors for non-existent files."""
         component = component_class()
-        component._temp_file_path = "/tmp/non_existent_file_xyz.csv"
+        component._temp_file_path = "/tmp/non_existent_file_xyz.csv"  # noqa: S108
         # Should not raise an error
         component._cleanup_temp_file()
 

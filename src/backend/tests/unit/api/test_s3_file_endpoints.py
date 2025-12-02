@@ -58,7 +58,7 @@ class TestS3FileEndpoints:
                 mock_session = MagicMock()
 
                 # Test streaming download
-                response = await download_file(
+                _ = await download_file(
                     file_id="test-id",
                     current_user=mock_user,
                     session=mock_session,
@@ -95,7 +95,7 @@ class TestS3FileEndpoints:
                 mock_session = MagicMock()
 
                 # Test content download
-                response = await download_file(
+                _ = await download_file(
                     file_id="test-id",
                     current_user=mock_user,
                     session=mock_session,
@@ -130,7 +130,7 @@ class TestS3FileEndpoints:
                 # Test upload logic
                 from langflow.api.v2.files import save_file_routine
 
-                file_id, file_name = await save_file_routine(
+                _, _ = await save_file_routine(
                     mock_file, s3_storage_service, mock_user, file_name="test.txt"
                 )
 
@@ -195,7 +195,7 @@ class TestS3FileEndpoints:
                 # Test size calculation
                 from langflow.api.v2.files import save_file_routine
 
-                file_id, file_name = await save_file_routine(
+                _, _ = await save_file_routine(
                     mock_file, s3_storage_service, mock_user, file_name="test.txt"
                 )
 
@@ -270,7 +270,7 @@ class TestS3FileEndpoints:
                 mock_session = MagicMock()
 
                 # Should handle large files efficiently
-                response = await download_file(
+                _ = await download_file(
                     file_id="test-id",
                     current_user=mock_user,
                     session=mock_session,

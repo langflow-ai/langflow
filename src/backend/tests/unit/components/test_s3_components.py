@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from langflow.components.data.file import FileComponent
 from langflow.components.langchain_utilities.csv_agent import CSVAgentComponent
-from langflow.components.langchain_utilities.json_agent import JSONAgentComponent
+from langflow.components.langchain_utilities.json_agent import JsonAgentComponent
 from langflow.components.processing.save_file import SaveFileComponent
 
 
@@ -54,7 +54,7 @@ class TestS3CompatibleComponents:
 
             # Mock database and storage services
             with (
-                patch("langflow.components.processing.save_file.session_scope") as mock_session,
+                patch("langflow.components.processing.save_file.session_scope"),
                 patch(
                     "langflow.components.processing.save_file.get_user_by_id", new_callable=AsyncMock
                 ) as mock_get_user,
@@ -96,7 +96,7 @@ class TestS3CompatibleComponents:
     async def test_json_agent_s3_file_handling(self, s3_settings):
         """Test JSONAgentComponent with S3 files."""
         with patch("langflow.services.deps.get_settings_service", return_value=s3_settings):
-            component = JSONAgentComponent()
+            component = JsonAgentComponent()
             component.set_attributes({"llm": MagicMock(), "path": "user_123/data.json", "verbose": False})
 
             # Mock storage utils

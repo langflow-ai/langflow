@@ -49,7 +49,7 @@ def mock_settings_service():
     the S3StorageService properly respects these settings.
     """
     settings_service = Mock()
-    settings_service.settings.config_dir = "/tmp/langflow_test"
+    settings_service.settings.config_dir = "/tmp/langflow_test"  # noqa: S108
 
     # Bucket name from env or default
     settings_service.settings.object_storage_bucket_name = os.environ.get(
@@ -80,7 +80,7 @@ def mock_session_service():
 
 
 @pytest.fixture
-async def s3_storage_service(mock_session_service, mock_settings_service, aws_credentials):
+async def s3_storage_service(mock_session_service, mock_settings_service, aws_credentials):  # noqa: ARG001
     """Create an S3StorageService instance for testing with real AWS."""
     service = S3StorageService(mock_session_service, mock_settings_service)
     yield service
@@ -151,9 +151,9 @@ class TestS3StorageServiceFileOperations:
             assert retrieved == data
         finally:
             # Cleanup
-            try:
+            try:  # noqa: SIM105
                 await s3_storage_service.delete_file(test_flow_id, file_name)
-            except Exception:
+            except Exception:  # noqa: S110
                 pass
 
     async def test_save_file_overwrites_existing(self, s3_storage_service, test_flow_id):
@@ -173,9 +173,9 @@ class TestS3StorageServiceFileOperations:
             assert retrieved == new_data
         finally:
             # Cleanup
-            try:
+            try:  # noqa: SIM105
                 await s3_storage_service.delete_file(test_flow_id, file_name)
-            except Exception:
+            except Exception:  # noqa: S110
                 pass
 
     async def test_get_file_not_found(self, s3_storage_service, test_flow_id):
@@ -195,9 +195,9 @@ class TestS3StorageServiceFileOperations:
             assert retrieved == data
         finally:
             # Cleanup
-            try:
+            try:  # noqa: SIM105
                 await s3_storage_service.delete_file(test_flow_id, file_name)
-            except Exception:
+            except Exception:  # noqa: S110
                 pass
 
     async def test_save_large_file(self, s3_storage_service, test_flow_id):
@@ -217,9 +217,9 @@ class TestS3StorageServiceFileOperations:
             assert retrieved == data
         finally:
             # Cleanup
-            try:
+            try:  # noqa: SIM105
                 await s3_storage_service.delete_file(test_flow_id, file_name)
-            except Exception:
+            except Exception:  # noqa: S110
                 pass
 
 
@@ -238,7 +238,7 @@ class TestS3StorageServiceStreamOperations:
             # Stream the file
             chunks = []
             async for chunk in s3_storage_service.get_file_stream(test_flow_id, file_name, chunk_size=1024):
-                chunks.append(chunk)
+                chunks.append(chunk)  # noqa: PERF401
 
             # Verify content
             streamed_data = b"".join(chunks)
@@ -246,9 +246,9 @@ class TestS3StorageServiceStreamOperations:
             assert len(chunks) > 1  # Should be multiple chunks
         finally:
             # Cleanup
-            try:
+            try:  # noqa: SIM105
                 await s3_storage_service.delete_file(test_flow_id, file_name)
-            except Exception:
+            except Exception:  # noqa: S110
                 pass
 
     async def test_get_file_stream_not_found(self, s3_storage_service, test_flow_id):
@@ -284,9 +284,9 @@ class TestS3StorageServiceListOperations:
         finally:
             # Cleanup
             for file_name in file_names:
-                try:
+                try:  # noqa: SIM105
                     await s3_storage_service.delete_file(test_flow_id, file_name)
-                except Exception:
+                except Exception:  # noqa: S110
                     pass
 
     async def test_list_files_excludes_other_flows(self, s3_storage_service, test_flow_id):
@@ -316,7 +316,7 @@ class TestS3StorageServiceListOperations:
             try:
                 await s3_storage_service.delete_file(test_flow_id, "file1.txt")
                 await s3_storage_service.delete_file(other_flow_id, "file2.txt")
-            except Exception:
+            except Exception:  # noqa: S110
                 pass
 
 
@@ -366,9 +366,9 @@ class TestS3StorageServiceDeleteOperations:
         finally:
             # Cleanup any remaining
             for file_name in files:
-                try:
+                try:  # noqa: SIM105
                     await s3_storage_service.delete_file(test_flow_id, file_name)
-                except Exception:
+                except Exception:  # noqa: S110
                     pass
 
 
@@ -388,9 +388,9 @@ class TestS3StorageServiceFileSizeOperations:
             assert size == 1234
         finally:
             # Cleanup
-            try:
+            try:  # noqa: SIM105
                 await s3_storage_service.delete_file(test_flow_id, file_name)
-            except Exception:
+            except Exception:  # noqa: S110
                 pass
 
     async def test_get_file_size_empty_file(self, s3_storage_service, test_flow_id):
@@ -404,9 +404,9 @@ class TestS3StorageServiceFileSizeOperations:
             assert size == 0
         finally:
             # Cleanup
-            try:
+            try:  # noqa: SIM105
                 await s3_storage_service.delete_file(test_flow_id, file_name)
-            except Exception:
+            except Exception:  # noqa: S110
                 pass
 
     async def test_get_file_size_nonexistent(self, s3_storage_service, test_flow_id):
@@ -432,9 +432,9 @@ class TestS3StorageServiceEdgeCases:
             assert retrieved.decode("utf-8") == "Hello 世界 🌍"
         finally:
             # Cleanup
-            try:
+            try:  # noqa: SIM105
                 await s3_storage_service.delete_file(test_flow_id, file_name)
-            except Exception:
+            except Exception:  # noqa: S110
                 pass
 
     async def test_file_name_with_special_characters(self, s3_storage_service, test_flow_id):
@@ -449,9 +449,9 @@ class TestS3StorageServiceEdgeCases:
             assert retrieved == data
         finally:
             # Cleanup
-            try:
+            try:  # noqa: SIM105
                 await s3_storage_service.delete_file(test_flow_id, file_name)
-            except Exception:
+            except Exception:  # noqa: S110
                 pass
 
     async def test_concurrent_file_operations(self, s3_storage_service, test_flow_id):
@@ -476,9 +476,9 @@ class TestS3StorageServiceEdgeCases:
         finally:
             # Cleanup
             for file_name in file_names:
-                try:
+                try:  # noqa: SIM105
                     await s3_storage_service.delete_file(test_flow_id, file_name)
-                except Exception:
+                except Exception:  # noqa: S110
                     pass
 
 

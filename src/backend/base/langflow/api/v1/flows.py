@@ -422,8 +422,7 @@ async def create_flows(
     for db_flow in db_flows:
         await session.refresh(db_flow)
     # Convert to FlowRead while session is still active to avoid detached instance errors
-    flow_reads = [FlowRead.model_validate(db_flow, from_attributes=True) for db_flow in db_flows]
-    return flow_reads
+    return [FlowRead.model_validate(db_flow, from_attributes=True) for db_flow in db_flows]
 
 
 @router.post("/upload/", response_model=list[FlowRead], status_code=201)

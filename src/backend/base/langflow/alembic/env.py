@@ -95,10 +95,10 @@ def _do_run_migrations(connection):
             namespace = os.getenv("LANGFLOW_MIGRATION_LOCK_NAMESPACE")
             if namespace:
                 lock_key = int(hashlib.sha256(namespace.encode()).hexdigest()[:16], 16) % (2**63 - 1)
-                logger.info(f"Using migration lock namespace: {namespace}, lock_key: {lock_key}")
+                logger.info("Using migration lock namespace: %s, lock_key: %s", namespace, lock_key)
             else:
                 lock_key = 11223344
-                logger.info(f"Using default migration lock_key: {lock_key}")
+                logger.info("Using default migration lock_key: %s", lock_key)
             connection.execute(text("SET LOCAL lock_timeout = '180s';"))
             connection.execute(text(f"SELECT pg_advisory_xact_lock({lock_key});"))
         context.run_migrations()

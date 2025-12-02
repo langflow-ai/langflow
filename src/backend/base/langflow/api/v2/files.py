@@ -199,9 +199,9 @@ async def upload_user_file(
             await session.refresh(new_file)
         except Exception as db_err:
             # Database insert failed - clean up the uploaded file to avoid orphaned files
-            try:
+            try:  # noqa: SIM105
                 await storage_service.delete_file(flow_id=str(current_user.id), file_name=stored_file_name)
-            except Exception:  # noqa: S110
+            except Exception:  # noqa: BLE001, S110
                 pass
             raise HTTPException(status_code=500, detail=f"Database error: {db_err}") from db_err
     except HTTPException:
@@ -324,7 +324,7 @@ async def delete_files_batch(
             file_name = file.path.split("/")[-1]
             try:
                 await storage_service.delete_file(flow_id=str(current_user.id), file_name=file_name)
-            except Exception as storage_error:
+            except Exception as storage_error:  # noqa: BLE001
                 # Log the storage error but continue with database deletion
                 storage_failures.append(f"{file_name}: {storage_error}")
                 await logger.awarning(
@@ -335,7 +335,8 @@ async def delete_files_batch(
                 # For S3 bucket errors, log more specifically
                 if "NoSuchBucket" in str(storage_error):
                     await logger.aerror(
-                        "S3 bucket does not exist for file %s. File will be removed from database but may still exist in storage.",
+                        "S3 bucket does not exist for file %s. "
+                        "File will be removed from database but may still exist in storage.",
                         file_name,
                     )
 
@@ -551,7 +552,7 @@ async def delete_file(
         # If this fails, we don't want to delete from the database
         try:
             await storage_service.delete_file(flow_id=str(current_user.id), file_name=file_name)
-        except Exception as storage_error:
+        except Exception as storage_error:  # noqa: BLE001
             # Log the storage error but don't fail the entire operation
             # This handles cases like missing buckets, network issues, etc.
             await logger.awarning(
@@ -560,14 +561,14 @@ async def delete_file(
             # For S3 bucket errors, we might want to be more specific
             if "NoSuchBucket" in str(storage_error):
                 await logger.aerror(
-                    "S3 bucket does not exist for file %s. File will be removed from database but may still exist in storage.",
+                    "S3 bucket does not exist for file %s. "
+                    "File will be removed from database but may still exist in storage.",
                     file_name,
                 )
 
         # Delete from the database (this should always succeed if we got this far)
         await session.delete(file_to_delete)
-
-        return {"detail": f"File {file_to_delete.name} deleted successfully"}
+        return {"detail": f"File {file_to_delete.name} deleted successfully"}  # noqa: TRY300
 
     except HTTPException:
         # Re-raise HTTPException to avoid being caught by the generic exception handler
@@ -601,7 +602,7 @@ async def delete_all_files(
             file_name = file.path.split("/")[-1]
             try:
                 await storage_service.delete_file(flow_id=str(current_user.id), file_name=file_name)
-            except Exception as storage_error:
+            except Exception as storage_error:  # noqa: BLE001
                 # Log the storage error but continue with database deletion
                 storage_failures.append(f"{file_name}: {storage_error}")
                 await logger.awarning(
@@ -612,7 +613,8 @@ async def delete_all_files(
                 # For S3 bucket errors, log more specifically
                 if "NoSuchBucket" in str(storage_error):
                     await logger.aerror(
-                        "S3 bucket does not exist for file %s. File will be removed from database but may still exist in storage.",
+                        "S3 bucket does not exist for file %s. "
+                        "File will be removed from database but may still exist in storage.",
                         file_name,
                     )
 

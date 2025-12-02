@@ -371,9 +371,9 @@ class FileComponent(BaseFileComponent):
         finally:
             # Clean up temp file if we created one
             if should_delete:
-                try:
+                try:  # noqa: SIM105
                     Path(local_path).unlink()
-                except Exception:  # noqa: S110
+                except Exception:  # noqa: BLE001, S110
                     pass  # Ignore cleanup errors
 
     def _process_docling_subprocess_impl(self, local_file_path: str, original_file_path: str) -> Data | None:

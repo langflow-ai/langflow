@@ -131,6 +131,7 @@ async def download_profile_picture(
     file_name: str,
 ):
     """Download a profile picture.
+
     Profile pictures are system files bundled with the package, served from the installation directory.
     """
     try:
@@ -153,6 +154,7 @@ async def download_profile_picture(
 @router.get("/profile_pictures/list")
 async def list_profile_pictures():
     """List available profile pictures.
+
     Profile pictures are system files bundled with the package, served from the installation directory.
     """
     try:

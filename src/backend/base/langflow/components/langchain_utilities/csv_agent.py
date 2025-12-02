@@ -101,10 +101,12 @@ class CSVAgentComponent(LCAgentComponent):
 
                 # Store temp path for cleanup
                 self._temp_file_path = temp_path
-                return temp_path
-            except Exception:
+            except Exception:  # noqa: BLE001
                 # If S3 download fails, fall back to treating it as a local path
-                pass
+                # Local storage or fallback - return path as-is
+                return file_path
+            else:
+                return temp_path
 
         # Local storage or fallback - return path as-is
         return file_path
@@ -112,9 +114,9 @@ class CSVAgentComponent(LCAgentComponent):
     def _cleanup_temp_file(self) -> None:
         """Clean up temporary file if one was created."""
         if hasattr(self, "_temp_file_path"):
-            try:
+            try:  # noqa: SIM105
                 Path(self._temp_file_path).unlink()
-            except Exception:  # noqa: S110
+            except Exception:  # noqa: BLE001, S110
                 pass  # Ignore cleanup errors
 
     def build_agent_response(self) -> Message:

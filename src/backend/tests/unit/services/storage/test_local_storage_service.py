@@ -11,7 +11,7 @@ from langflow.services.storage.local import LocalStorageService
 def mock_settings_service():
     """Create a mock settings service."""
     settings_service = Mock()
-    settings_service.settings.config_dir = "/tmp/langflow_test"
+    settings_service.settings.config_dir = "/tmp/langflow_test"  # noqa: S108
     return settings_service
 
 
