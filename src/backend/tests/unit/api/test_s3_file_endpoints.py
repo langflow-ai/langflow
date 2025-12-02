@@ -130,9 +130,7 @@ class TestS3FileEndpoints:
                 # Test upload logic
                 from langflow.api.v2.files import save_file_routine
 
-                _, _ = await save_file_routine(
-                    mock_file, s3_storage_service, mock_user, file_name="test.txt"
-                )
+                _, _ = await save_file_routine(mock_file, s3_storage_service, mock_user, file_name="test.txt")
 
                 # Should save to S3
                 s3_storage_service.save_file.assert_called_once_with(
@@ -195,9 +193,7 @@ class TestS3FileEndpoints:
                 # Test size calculation
                 from langflow.api.v2.files import save_file_routine
 
-                _, _ = await save_file_routine(
-                    mock_file, s3_storage_service, mock_user, file_name="test.txt"
-                )
+                _, _ = await save_file_routine(mock_file, s3_storage_service, mock_user, file_name="test.txt")
 
                 # Should get file size from S3
                 s3_storage_service.get_file_size.assert_called_once_with(flow_id="user_123", file_name="test.txt")
