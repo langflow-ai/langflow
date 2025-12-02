@@ -160,6 +160,7 @@ class SaveToFileComponent(Component):
                 "The Google Drive folder ID where the file will be uploaded. "
                 "The folder must be shared with the service account email."
             ),
+            required=True,
             show=False,
             advanced=True,
         ),
@@ -684,6 +685,18 @@ class SaveToFileComponent(Component):
             temp_file_path = temp_file.name
 
         try:
+            # Verify folder exists and is accessible
+            try:
+                drive_service.files().get(fileId=self.folder_id, fields="id,name").execute()
+            except Exception as e:
+                msg = (
+                    f"Unable to access Google Drive folder '{self.folder_id}'. "
+                    f"Error: {e!s}. "
+                    "Please ensure: 1) The folder ID is correct, 2) The folder exists, "
+                    "3) The service account has been granted access to this folder."
+                )
+                raise ValueError(msg) from e
+
             # Upload to Google Drive
             file_metadata = {"name": file_path, "parents": [self.folder_id]}
             media = MediaFileUpload(temp_file_path, resumable=True)
