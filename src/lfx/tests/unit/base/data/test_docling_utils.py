@@ -4,6 +4,7 @@ import pytest
 
 try:
     from docling_core.types.doc import DoclingDocument
+
     DOCLING_AVAILABLE = True
 except ImportError:
     DOCLING_AVAILABLE = False
