@@ -4,6 +4,7 @@ import hashlib
 import logging
 import os
 from logging.config import fileConfig
+from typing import Any
 
 from alembic import context
 from sqlalchemy import pool, text
@@ -109,7 +110,7 @@ async def _run_async_migrations() -> None:
     config_section = config.get_section(config.config_ini_section, {})
     db_url = config_section.get("sqlalchemy.url", "")
 
-    connect_args = {}
+    connect_args: dict[str, Any] = {}
     if "postgresql" in db_url:
         connect_args["prepare_threshold"] = None
 
