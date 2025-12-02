@@ -159,13 +159,22 @@ class BatchRunComponent(Component):
             ]
 
             # Configure the model with project info and callbacks
-            model = model.with_config(
-                {
-                    "run_name": self.display_name,
-                    "project_name": self.get_project_name(),
-                    "callbacks": self.get_langchain_callbacks(),
-                }
-            )
+            # Some models (e.g., ChatWatsonx) may have serialization issues with with_config()
+            # due to SecretStr or other non-serializable attributes
+            try:
+                model = model.with_config(
+                    {
+                        "run_name": self.display_name,
+                        "project_name": self.get_project_name(),
+                        "callbacks": self.get_langchain_callbacks(),
+                    }
+                )
+            except Exception as e:
+                # Log warning and continue without configuration
+                await logger.awarning(
+                    f"Could not configure model with callbacks and project info: {e!s}. "
+                    "Proceeding with batch processing without configuration."
+                )
             # Process batches and track progress
             responses_with_idx = list(
                 zip(
