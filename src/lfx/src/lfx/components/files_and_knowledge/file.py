@@ -537,7 +537,7 @@ class FileComponent(BaseFileComponent):
                 if pipeline == "standard":
                     try:
                         from docling.datamodel.pipeline_options import PdfPipelineOptions  # type: ignore
-                        from docling.document_converter import PdfFormatOption  # type: ignore
+                        from docling.document_converter import PdfFormatOption, ImageFormatOption  # type: ignore
 
                         pipe = PdfPipelineOptions()
                         pipe.do_ocr = False
@@ -556,7 +556,7 @@ class FileComponent(BaseFileComponent):
                         if hasattr(input_format, "PDF"):
                             fmt[getattr(input_format, "PDF")] = PdfFormatOption(pipeline_options=pipe)
                         if hasattr(input_format, "IMAGE"):
-                            fmt[getattr(input_format, "IMAGE")] = PdfFormatOption(pipeline_options=pipe)
+                            fmt[getattr(input_format, "IMAGE")] = ImageFormatOption(pipeline_options=pipe)
 
                         return DocumentConverter(format_options=fmt)
                     except Exception:
@@ -567,7 +567,7 @@ class FileComponent(BaseFileComponent):
                     try:
                         from docling.datamodel.pipeline_options import VlmPipelineOptions
                         from docling.datamodel.vlm_model_specs import GRANITEDOCLING_MLX, GRANITEDOCLING_TRANSFORMERS
-                        from docling.document_converter import PdfFormatOption
+                        from docling.document_converter import PdfFormatOption, ImageFormatOption
                         from docling.pipeline.vlm_pipeline import VlmPipeline
 
                         vl_pipe = VlmPipelineOptions(
@@ -589,7 +589,7 @@ class FileComponent(BaseFileComponent):
                             pipeline_options=vl_pipe
                         )
                         if hasattr(input_format, "IMAGE"):
-                            fmt[getattr(input_format, "IMAGE")] = PdfFormatOption(
+                            fmt[getattr(input_format, "IMAGE")] = ImageFormatOption(
                             pipeline_cls=VlmPipeline,
                             pipeline_options=vl_pipe
                         )
