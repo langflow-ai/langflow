@@ -83,7 +83,7 @@ class TestS3UploaderComponent(ComponentTestBaseWithoutClient):
         """Test uploading files to an S3 bucket."""
         # Mock S3 client
         mock_s3_client = MagicMock()
-        
+
         with patch("boto3.client", return_value=mock_s3_client):
             component = S3BucketUploaderComponent()
 
@@ -104,7 +104,7 @@ class TestS3UploaderComponent(ComponentTestBaseWithoutClient):
 
             # Verify upload_file was called for each temp file
             assert mock_s3_client.upload_file.call_count == len(temp_files)
-            
+
             # Verify the correct keys were used
             for i, temp_file in enumerate(temp_files):
                 expected_key = f"test/{Path(temp_file.data['file_path']).name}"
