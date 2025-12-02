@@ -1035,7 +1035,6 @@ async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> 
     Returns:
         UUID: The ID of the default folder.
     """
-
     stmt = select(Folder).where(Folder.user_id == user_id, Folder.name == DEFAULT_FOLDER_NAME)
     result = await session.exec(stmt)
     folder = result.first()

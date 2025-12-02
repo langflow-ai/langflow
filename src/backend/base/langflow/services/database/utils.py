@@ -41,7 +41,7 @@ async def initialize_database(*, fix_migration: bool = False) -> None:
         await database_service.run_migrations(fix=fix_migration)
     except CommandError as exc:
         error_msg = str(exc)
-        
+
         # Check if database is ahead (backwards-compatible scenario)
         # This is a fallback in case the error propagates up from run_migrations
         if "Can't locate revision identified by" in error_msg:
@@ -50,7 +50,7 @@ async def initialize_database(*, fix_migration: bool = False) -> None:
                 "Assuming backwards-compatible migrations and allowing startup."
             )
             return
-        
+
         # Handle overlapping revisions (corrupted alembic_version table)
         if "overlaps with other requested revisions" in error_msg:
             logger.warning("Overlapping revisions in DB, deleting alembic_version table and running migrations again")
@@ -58,7 +58,7 @@ async def initialize_database(*, fix_migration: bool = False) -> None:
                 await session.exec(text("DROP TABLE alembic_version"))
             await database_service.run_migrations(fix=fix_migration)
             return
-        
+
         # Unhandled CommandError - re-raise
         raise
     except Exception as exc:

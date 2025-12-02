@@ -166,7 +166,9 @@ async def aadd_messagetables(messages: list[MessageTable], session: AsyncSession
             # We are doing this because build_public_tmp causes the CancelledError to be raised
             # while build_flow does not.
         except asyncio.CancelledError:
-            await logger.awarning("DEBUG LOG: aadd_messagetables: CancelledError. Recursively calling aadd_messagetables")
+            await logger.awarning(
+                "DEBUG LOG: aadd_messagetables: CancelledError. Recursively calling aadd_messagetables"
+            )
             return await aadd_messagetables(messages, session)
         for message in messages:
             await session.refresh(message)
