@@ -109,8 +109,9 @@ class TestCheckKeyRouting:
             mock_env_check.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_check_key_routes_to_env_when_configured(self, mock_session, mock_settings_service_env):
-        """check_key should route to _check_key_from_env when API_KEY_SOURCE='env'."""
+    async def test_check_key_routes_to_env_when_configured_and_succeeds(self, mock_session, mock_settings_service_env):
+        """check_key should route to _check_key_from_env when API_KEY_SOURCE='env' and env succeeds."""
+        mock_user = MagicMock(spec=User)
         with (
             patch(
                 "langflow.services.database.models.api_key.crud.get_settings_service",
@@ -125,12 +126,66 @@ class TestCheckKeyRouting:
                 new_callable=AsyncMock,
             ) as mock_env_check,
         ):
-            mock_env_check.return_value = None
+            mock_env_check.return_value = mock_user
 
-            await check_key(mock_session, "sk-test-key")
+            result = await check_key(mock_session, "sk-test-key")
 
             mock_env_check.assert_called_once()
             mock_db_check.assert_not_called()
+            assert result == mock_user
+
+    @pytest.mark.asyncio
+    async def test_check_key_falls_back_to_db_when_env_fails(self, mock_session, mock_settings_service_env):
+        """check_key should fallback to _check_key_from_db when API_KEY_SOURCE='env' but env validation fails."""
+        mock_user = MagicMock(spec=User)
+        with (
+            patch(
+                "langflow.services.database.models.api_key.crud.get_settings_service",
+                return_value=mock_settings_service_env,
+            ),
+            patch(
+                "langflow.services.database.models.api_key.crud._check_key_from_db",
+                new_callable=AsyncMock,
+            ) as mock_db_check,
+            patch(
+                "langflow.services.database.models.api_key.crud._check_key_from_env",
+                new_callable=AsyncMock,
+            ) as mock_env_check,
+        ):
+            mock_env_check.return_value = None  # env validation fails
+            mock_db_check.return_value = mock_user  # db has the key
+
+            result = await check_key(mock_session, "sk-test-key")
+
+            mock_env_check.assert_called_once()
+            mock_db_check.assert_called_once()  # Should fallback to db
+            assert result == mock_user
+
+    @pytest.mark.asyncio
+    async def test_check_key_returns_none_when_both_env_and_db_fail(self, mock_session, mock_settings_service_env):
+        """check_key should return None when both env and db validation fail."""
+        with (
+            patch(
+                "langflow.services.database.models.api_key.crud.get_settings_service",
+                return_value=mock_settings_service_env,
+            ),
+            patch(
+                "langflow.services.database.models.api_key.crud._check_key_from_db",
+                new_callable=AsyncMock,
+            ) as mock_db_check,
+            patch(
+                "langflow.services.database.models.api_key.crud._check_key_from_env",
+                new_callable=AsyncMock,
+            ) as mock_env_check,
+        ):
+            mock_env_check.return_value = None  # env validation fails
+            mock_db_check.return_value = None  # db validation also fails
+
+            result = await check_key(mock_session, "sk-test-key")
+
+            mock_env_check.assert_called_once()
+            mock_db_check.assert_called_once()
+            assert result is None
 
 
 # ============================================================================
@@ -470,18 +525,55 @@ class TestCheckKeyIntegration:
             assert result == mock_superuser
 
     @pytest.mark.asyncio
-    async def test_full_flow_env_mode_invalid_key(self, mock_session, monkeypatch):
-        """Full flow test: env mode with invalid key."""
+    async def test_full_flow_env_mode_invalid_key_falls_back_to_db(self, mock_session, mock_user, monkeypatch):
+        """Full flow test: env mode with invalid key falls back to db."""
         monkeypatch.setenv("LANGFLOW_API_KEY", "sk-correct-key")
+
+        # Setup mock for db fallback
+        mock_api_key = MagicMock()
+        mock_api_key.user = mock_user
+        mock_api_key.total_uses = 0
+
+        mock_result = MagicMock()
+        mock_result.first.return_value = mock_api_key
+        mock_session.exec.return_value = mock_result
 
         mock_settings = MagicMock()
         mock_settings.auth_settings.API_KEY_SOURCE = "env"
         mock_settings.auth_settings.SUPERUSER = "langflow"
+        mock_settings.settings.disable_track_apikey_usage = False
 
         with patch(
             "langflow.services.database.models.api_key.crud.get_settings_service",
             return_value=mock_settings,
         ):
+            # Key doesn't match env, but exists in db
             result = await check_key(mock_session, "sk-wrong-key")
 
+            # Should return user from db fallback
+            assert result == mock_user
+
+    @pytest.mark.asyncio
+    async def test_full_flow_env_mode_invalid_key_not_in_db(self, mock_session, monkeypatch):
+        """Full flow test: env mode with invalid key that's also not in db returns None."""
+        monkeypatch.setenv("LANGFLOW_API_KEY", "sk-correct-key")
+
+        # Setup mock for db - key not found
+        mock_result = MagicMock()
+        mock_result.first.return_value = None
+        mock_session.exec.return_value = mock_result
+
+        mock_settings = MagicMock()
+        mock_settings.auth_settings.API_KEY_SOURCE = "env"
+        mock_settings.auth_settings.SUPERUSER = "langflow"
+        mock_settings.settings.disable_track_apikey_usage = False
+
+        with patch(
+            "langflow.services.database.models.api_key.crud.get_settings_service",
+            return_value=mock_settings,
+        ):
+            # Key doesn't match env AND not in db
+            result = await check_key(mock_session, "sk-wrong-key")
+
+            # Should return None since both failed
             assert result is None
