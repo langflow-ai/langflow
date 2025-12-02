@@ -172,6 +172,11 @@ export default function MarketplaceDetailPage() {
                 </TabsTrigger> */}
               </TabsList>
 
+              {/* Deploy Button - disabled for now, feature to be implemented */}
+              <Button variant="outline" disabled>
+                Deploy
+              </Button>
+
               {/* Edit Button - only show if flow_cloned_from exists AND on Flow Visualization tab AND user is Marketplace Admin or original flow creator */}
               {publishedFlowData?.flow_cloned_from &&
                 activeTab === "flow" &&
