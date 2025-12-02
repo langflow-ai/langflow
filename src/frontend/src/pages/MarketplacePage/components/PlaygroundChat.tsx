@@ -240,8 +240,7 @@ export function usePlaygroundChat(publishedFlowData: any) {
       const errorMsg = data?.error || "An error occurred during flow execution";
       console.error("[Playground] Stream error:", errorMsg);
 
-      // Set error state and clear loading
-      setError(errorMsg);
+      // Clear loading state
       setIsLoading(false);
       setStreamingMessageId(null);
 
@@ -249,7 +248,7 @@ export function usePlaygroundChat(publishedFlowData: any) {
       setMessages((prev) =>
         prev.map((msg) =>
           msg.id === localAgentMessageId || msg.id === streamingIdRef.current
-            ? { ...msg, text: "Error In Executing the Agent", isStreaming: false }
+            ? { ...msg, text: "Something went wrong when running the agent, please try again", isStreaming: false }
             : msg
         )
       );
