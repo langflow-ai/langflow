@@ -1,4 +1,3 @@
-import platform
 import socket
 import threading
 import time
