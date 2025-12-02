@@ -17,7 +17,7 @@ jobs:
       
       - name: Get runner labels from API 
         run: |
-          RUNNER_NAME="${{ runner.name }}"
+          RUNNER_NAME="${{ runner.name }}" 
           ORG="${{ github.repository_owner }}"
           REPO="${{ github.repository }}"
           
