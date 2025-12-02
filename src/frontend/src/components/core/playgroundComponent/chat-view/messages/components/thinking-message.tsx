@@ -1,0 +1,66 @@
+import { useEffect, useState } from "react";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { useThinkingDurationStore } from "../hooks/use-thinking-duration";
+
+interface ThinkingMessageProps {
+  isThinking: boolean;
+  duration: number | null;
+}
+
+export default function ThinkingMessage({
+  isThinking,
+  duration,
+}: ThinkingMessageProps) {
+  const { startTime } = useThinkingDurationStore();
+  const [elapsedTime, setElapsedTime] = useState(0);
+
+  // Live timer while building
+  useEffect(() => {
+    if (!isThinking || !startTime) {
+      return;
+    }
+
+    setElapsedTime(Date.now() - startTime);
+
+    const interval = setInterval(() => {
+      const start = useThinkingDurationStore.getState().startTime;
+      if (start) {
+        setElapsedTime(Date.now() - start);
+      }
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [isThinking, startTime]);
+
+  const formatTime = (ms: number) => {
+    const seconds = ms / 1000;
+    if (seconds < 60) return `${seconds.toFixed(1)}s`;
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}m ${remainingSeconds.toFixed(0)}s`;
+  };
+
+  const displayTime = isThinking ? elapsedTime : duration || 0;
+
+  return (
+    <div className="w-5/6 max-w-[768px] py-4 word-break-break-word place-self-start">
+      <div className="group relative flex w-full gap-4 rounded-md p-2">
+        {/* Brain Icon - aligned with avatar */}
+        <div className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center">
+          <ForwardedIconComponent
+            name="Brain"
+            className={`h-7 w-7 ${isThinking ? "text-primary animate-pulse" : "text-muted-foreground"}`}
+          />
+        </div>
+
+        {/* Content */}
+        <div className="flex items-center">
+          <span className="text-sm text-muted-foreground">
+            {isThinking ? "Thinking for " : "Thought for "}
+            {formatTime(displayTime)}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
