@@ -433,6 +433,39 @@ class Component(CustomComponent):
         """Returns a list of output names."""
         return [_output.name for _output in self._outputs_map.values()]
 
+    @property
+    def output(self) -> Any:
+        """Returns the default output method for simple chaining.
+
+        Uses `selected_output` if set, otherwise falls back to the first output.
+        This mirrors the UI behavior where nodes show a single output handle by default.
+
+        Returns:
+            The bound method for the default output, suitable for use in `.set()` connections.
+
+        Raises:
+            ValueError: If the component has no outputs defined.
+
+        Example:
+            # Instead of:
+            chat_output.set(input_value=chat_input.message_response)
+
+            # You can use:
+            chat_output.set(input_value=chat_input.output)
+        """
+        if not self._outputs_map:
+            msg = f"{self.__class__.__name__} has no outputs defined"
+            raise ValueError(msg)
+
+        output_name = self.selected_output
+        if output_name is None:
+            # Use the first output as default
+            output_name = next(iter(self._outputs_map.keys()))
+
+        # Get the Output object and return its method
+        output_obj = self._outputs_map[output_name]
+        return getattr(self, output_obj.method)
+
     async def run(self):
         """Executes the component's logic and returns the result.
 
@@ -760,10 +793,9 @@ class Component(CustomComponent):
         input_ = self._get_or_create_input(key)
         # We need to check if callable AND if it is a method from a class that inherits from Component
         if isinstance(value, Component):
-            # We need to find the Output that can connect to an input of the current component
-            # if there's more than one output that matches, we need to raise an error
-            # because we don't know which one to connect to
-            value = self._find_matching_output_method(key, value)
+            # Use the component's default output (selected_output or first output)
+            # This mirrors the UI behavior where nodes show a single output by default
+            value = value.output
         if callable(value) and self._inherits_from_component(value):
             try:
                 self._method_is_valid_output(value)
