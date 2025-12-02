@@ -10,7 +10,7 @@ from lfx.schema.dataframe import DataFrame
 class DataFrameOperationsComponent(Component):
     display_name = "DataFrame Operations"
     description = "Perform various operations on a DataFrame."
-    documentation: str = "https://docs.langflow.org/components-processing#dataframe-operations"
+    documentation: str = "https://docs.langflow.org/dataframe-operations"
     icon = "table"
     name = "DataFrameOperations"
 
