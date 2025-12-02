@@ -338,8 +338,7 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
         # Use a clearly fake, short key to avoid tripping secret scanners while preserving the newline pattern.
         fake_private_key = "-----BEGIN KEY-----\nFAKE\n-----END KEY-----\n"
         service_account_json = (
-            '{"type": "service_account", "project_id": "test-project-123", '
-            f'"private_key": "{fake_private_key}"}}'
+            f'{{"type": "service_account", "project_id": "test-project-123", "private_key": "{fake_private_key}"}}'
         )
 
         message = Message(text="test content")
