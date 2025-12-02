@@ -54,13 +54,17 @@ async def check_key(session: AsyncSession, api_key: str) -> User | None:
 
     Validates API keys based on the LANGFLOW_API_KEY_SOURCE setting:
     - 'db': Validates against database-stored API keys (default)
-    - 'env': Validates against the LANGFLOW_API_KEY environment variable
+    - 'env': Validates against the LANGFLOW_API_KEY environment variable,
+             falls back to database if env validation fails
     """
     settings_service = get_settings_service()
     api_key_source = settings_service.auth_settings.API_KEY_SOURCE
 
     if api_key_source == "env":
-        return await _check_key_from_env(session, api_key, settings_service)
+        user = await _check_key_from_env(session, api_key, settings_service)
+        if user is not None:
+            return user
+        # Fallback to database if env validation fails
     return await _check_key_from_db(session, api_key, settings_service)
 
 
