@@ -287,7 +287,7 @@ For more information, see [Tokenization errors due to chunk size](/split-text#ch
 
 ## Document processing errors in Docker containers
 
-If you're running Langflow in a Docker container and encounter errors when using components that handle files or images, such as the [**Read File** component](/read-file) or [**Docling** components](/bundles-docling), you may need to install additional system dependencies.
+If you're running Langflow in a Docker container, you might encounter errors when using components that handle files or images, such as the [**Read File** component](/read-file) or [**Docling** components](/bundles-docling). To resolve these errors, you might need to install additional system dependencies.
 
 When running Langflow in a Linux-based Docker container, Docling requires system libraries that aren't included in the base Docker image. If you see errors related to document or image processing, add the following to your Dockerfile:
 
