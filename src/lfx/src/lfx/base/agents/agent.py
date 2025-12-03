@@ -181,7 +181,7 @@ class LCAgentComponent(Component):
         else:
             input_dict = {"input": self.input_value}
 
-        input_dict: dict[str, str | list[BaseMessage]] = {}
+        # Add system_prompt and chat_history to input_dict (preserve existing input)
         if hasattr(self, "system_prompt") and self.system_prompt and self.system_prompt.strip():
             input_dict["system_prompt"] = self.system_prompt
 
@@ -254,6 +254,12 @@ class LCAgentComponent(Component):
         on_token_callback: OnTokenFunctionType | None = None
         if self._event_manager:
             on_token_callback = cast("OnTokenFunctionType", self._event_manager.on_token)
+
+        # DEBUG: Log the input_dict being passed to the agent
+        await logger.ainfo(f"[DEBUG] input_dict keys: {input_dict.keys()}")
+        await logger.ainfo(f"[DEBUG] input: {input_dict.get('input', 'MISSING')[:200] if input_dict.get('input') else 'EMPTY'}")
+        await logger.ainfo(f"[DEBUG] system_prompt: {input_dict.get('system_prompt', 'MISSING')[:100] if input_dict.get('system_prompt') else 'EMPTY'}...")
+        await logger.ainfo(f"[DEBUG] chat_history length: {len(input_dict.get('chat_history', []))}")
 
         try:
             result = await process_agent_events(
