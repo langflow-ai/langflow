@@ -19,6 +19,7 @@ import useAuthStore from "@/stores/authStore";
 import FlowPage from "../FlowPage";
 import PlaygroundTab from "./components/PlaygroundTab";
 import { FilesIcon } from "lucide-react";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 
 export default function MarketplaceDetailPage() {
   const { publishedFlowId } = useParams<{ publishedFlowId: string }>();
@@ -34,8 +35,9 @@ export default function MarketplaceDetailPage() {
     useGetPublishedFlow(publishedFlowId);
 
   // Fetch specification
-  const { data: spec, isLoading: isLoadingSpec } =
-    useGetPublishedFlowSpec(publishedFlowData?.flow_id);
+  const { data: spec, isLoading: isLoadingSpec } = useGetPublishedFlowSpec(
+    publishedFlowData?.flow_id
+  );
 
   const title = publishedFlowData?.flow_name || "Published Flow";
   const description = publishedFlowData?.description || "";
@@ -88,8 +90,9 @@ export default function MarketplaceDetailPage() {
         .map((item) => {
           if (item && typeof item === "object") {
             const nested = jsonToYaml(item, nextIndent);
-            return `${spacer}- ${nested.startsWith("\n") ? nested.substring(1) : `\n${nested}`
-              }`;
+            return `${spacer}- ${
+              nested.startsWith("\n") ? nested.substring(1) : `\n${nested}`
+            }`;
           }
           return `${spacer}- ${formatScalar(item)}`;
         })
@@ -105,8 +108,9 @@ export default function MarketplaceDetailPage() {
           if (val && typeof val === "object") {
             const nested = jsonToYaml(val, nextIndent);
             if (Array.isArray(val)) {
-              return `${spacer}${key}: ${nested.includes("\n") ? `\n${nested}` : nested
-                }`;
+              return `${spacer}${key}: ${
+                nested.includes("\n") ? `\n${nested}` : nested
+              }`;
             }
             return `${spacer}${key}:\n${nested}`;
           }
@@ -173,15 +177,24 @@ export default function MarketplaceDetailPage() {
               </TabsList>
 
               {/* Deploy Button - disabled for now, feature to be implemented */}
-              <Button variant="outline" disabled>
-                Deploy
-              </Button>
-
+              <ShadTooltip content="Coming Soon">
+                <div className="inline-block absolute right-0 top-0">
+                  <Button
+                    variant="default"
+                    size="md"
+                    disabled
+                    className="pointer-events-none"
+                  >
+                    Deploy
+                  </Button>
+                </div>
+              </ShadTooltip>
               {/* Edit Button - only show if flow_cloned_from exists AND on Flow Visualization tab AND user is Marketplace Admin or original flow creator */}
               {publishedFlowData?.flow_cloned_from &&
                 activeTab === "flow" &&
                 (isMarketplaceAdmin() ||
-                  userData?.id === publishedFlowData?.original_flow_user_id) && (
+                  userData?.id ===
+                    publishedFlowData?.original_flow_user_id) && (
                   <Button
                     variant="outline"
                     onClick={handleEditClick}
