@@ -1,9 +1,9 @@
-import { ForwardedIconComponent } from '@/components/common/genericIconComponent';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import ShadTooltip from '@/components/common/shadTooltipComponent';
-import { cn } from '@/utils/utils';
-import { Model, DefaultModelData } from './types';
+import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { cn } from "@/utils/utils";
+import { Model, DefaultModelData } from "./types";
 
 type ModelListItemProps = {
   model: Model;
@@ -14,12 +14,12 @@ type ModelListItemProps = {
   onToggleModel: (
     providerName: string,
     modelName: string,
-    enabled: boolean
+    enabled: boolean,
   ) => void;
   onSetDefaultModel: (
     providerName: string,
     modelName: string,
-    modelType: string
+    modelType: string,
   ) => void;
   onClearDefaultModel: (modelType: string) => void;
 };
@@ -35,14 +35,14 @@ const ModelListItem = ({
   onClearDefaultModel,
 }: ModelListItemProps) => {
   const isPreview = model.metadata.preview;
-  const modelType = model.metadata.model_type || 'llm';
-  const isLanguageModel = modelType === 'llm';
+  const modelType = model.metadata.model_type || "llm";
+  const isLanguageModel = modelType === "llm";
   const isDefaultModel =
     defaultModelData?.default_model?.model_name === model.model_name &&
     defaultModelData?.default_model?.provider === providerName;
 
   const handleDefaultToggle = () => {
-    const modelTypeKey = isLanguageModel ? 'language' : 'embedding';
+    const modelTypeKey = isLanguageModel ? "language" : "embedding";
     if (isDefaultModel) {
       onClearDefaultModel(modelTypeKey);
     } else {
@@ -112,11 +112,11 @@ const ModelListItem = ({
             content={
               isDefaultModel
                 ? isLanguageModel
-                  ? 'Default LLM Model'
-                  : 'Default Embedding Model'
+                  ? "Default LLM Model"
+                  : "Default Embedding Model"
                 : isLanguageModel
-                ? 'Set as Default LLM Model'
-                : 'Set as Default Embedding Model'
+                  ? "Set as Default LLM Model"
+                  : "Set as Default Embedding Model"
             }
             side="left"
           >
@@ -129,22 +129,22 @@ const ModelListItem = ({
             >
               {isLanguageModel ? (
                 <ForwardedIconComponent
-                  name={isDefaultModel ? 'Sparkle' : 'Sparkle'}
+                  name={isDefaultModel ? "Sparkle" : "Sparkle"}
                   className={cn(
-                    'h-4 w-4',
+                    "h-4 w-4",
                     isDefaultModel
-                      ? 'text-yellow-500 fill-yellow-500'
-                      : 'text-muted-foreground hover:text-yellow-500'
+                      ? "text-yellow-500 fill-yellow-500"
+                      : "text-muted-foreground hover:text-yellow-500",
                   )}
                 />
               ) : (
                 <ForwardedIconComponent
-                  name={isDefaultModel ? 'Zap' : 'Zap'}
+                  name={isDefaultModel ? "Zap" : "Zap"}
                   className={cn(
-                    'h-4 w-4',
+                    "h-4 w-4",
                     isDefaultModel
-                      ? 'text-purple-500 fill-purple-500'
-                      : 'text-muted-foreground hover:text-purple-500'
+                      ? "text-purple-500 fill-purple-500"
+                      : "text-muted-foreground hover:text-purple-500",
                   )}
                 />
               )}

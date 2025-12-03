@@ -1,15 +1,15 @@
-import { ForwardedIconComponent } from '@/components/common/genericIconComponent';
-import { Button } from '@/components/ui/button';
+import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import DeleteConfirmationModal from '@/modals/deleteConfirmationModal';
-import { cn } from '@/utils/utils';
-import { Provider } from './types';
-import { useState } from 'react';
+} from "@/components/ui/dropdown-menu";
+import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
+import { cn } from "@/utils/utils";
+import { Provider } from "./types";
+import { useState } from "react";
 
 type ProviderListItemProps = {
   provider: Provider;
@@ -38,8 +38,8 @@ const ProviderListItem = ({
   providerToDelete,
   setProviderToDelete,
 }: ProviderListItemProps) => {
-  const [type, setType] = useState<'enabled' | 'available'>(
-    provider.is_enabled ? 'enabled' : 'available'
+  const [type, setType] = useState<"enabled" | "available">(
+    provider.is_enabled ? "enabled" : "available",
   );
   const hasModels = provider.model_count && provider.model_count > 0;
 
@@ -48,18 +48,18 @@ const ProviderListItem = ({
       <div
         key={provider.provider}
         className={cn(
-          'flex items-center justify-between py-3 px-2 rounded-lg hover:bg-muted/50 transition-colors',
-          hasModels ? 'cursor-pointer' : 'opacity-60 cursor-not-allowed',
-          isSelected && 'bg-muted/50'
+          "flex items-center justify-between py-3 px-2 rounded-lg hover:bg-muted/50 transition-colors",
+          hasModels ? "cursor-pointer" : "opacity-60 cursor-not-allowed",
+          isSelected && "bg-muted/50",
         )}
         onClick={() => onCardClick(provider)}
       >
         <div className="flex items-center gap-3 flex-1 min-w-0">
           <ForwardedIconComponent
-            name={provider.icon || 'Bot'}
+            name={provider.icon || "Bot"}
             className={cn(
-              'w-5 h-5 flex-shrink-0 transition-all',
-              !provider.is_enabled && 'grayscale opacity-50'
+              "w-5 h-5 flex-shrink-0 transition-all",
+              !provider.is_enabled && "grayscale opacity-50",
             )}
           />
           <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -105,7 +105,7 @@ const ProviderListItem = ({
         </div>
 
         <ForwardedIconComponent
-          name={type === 'enabled' ? 'MoreVertical' : 'Plus'}
+          name={type === "enabled" ? "MoreVertical" : "Plus"}
           className="h-4 w-4"
           onClick={() => onCardClick(provider)}
         />
