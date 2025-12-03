@@ -5,7 +5,7 @@ import { ForwardedIconComponent } from "@/components/common/genericIconComponent
 import CodeTabsComponent from "@/components/core/codeTabsComponent";
 import { TextShimmer } from "@/components/ui/TextShimmer";
 import { cn } from "@/utils/utils";
-import LogoIcon from "./chat-logo-icon";
+import LogoIcon from "./bot-message-logo";
 
 export const ErrorView = ({
   closeChat,
