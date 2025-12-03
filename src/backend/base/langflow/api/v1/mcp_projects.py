@@ -1,5 +1,4 @@
 import asyncio
-import contextlib
 import json
 import os
 import platform
@@ -208,7 +207,6 @@ def get_project_sse(project_id: UUID | None) -> SseServerTransport:
     return project_sse_transports[project_id_str]
 
 
-
 async def _build_project_tools_response(
     project_id: UUID,
     current_user: CurrentActiveMCPUser,
@@ -308,7 +306,7 @@ async def im_alive(project_id: str):  # noqa: ARG001
 
 
 @router.head("/{project_id}/streamable", include_in_schema=False)
-async def streamable_health(project_id: UUID): # noqa: ARG001
+async def streamable_health(project_id: UUID):  # noqa: ARG001
     return Response()
 
 
@@ -333,9 +331,7 @@ async def _dispatch_project_streamable_http(
     except HTTPException:
         raise
     except Exception as exc:
-        await logger.aexception(
-            f"Error handling Streamable HTTP request for project {project_id}: {exc!s}"
-        )
+        await logger.aexception(f"Error handling Streamable HTTP request for project {project_id}: {exc!s}")
         raise HTTPException(status_code=500, detail="Internal server error in project MCP transport") from exc
     finally:
         current_request_variables_ctx.reset(request_vars_token)
@@ -421,8 +417,11 @@ async def _handle_project_sse_messages(
         current_project_ctx.reset(project_token)
         current_request_variables_ctx.reset(req_vars_token)
 
+
 # legacy SSE transport
 project_messages_methods = ["POST", "DELETE"]
+
+
 @router.api_route("/{project_id}", methods=project_messages_methods)
 @router.api_route("/{project_id}/", methods=project_messages_methods)
 async def handle_project_messages(
@@ -433,8 +432,11 @@ async def handle_project_messages(
     """Handle POST/DELETE messages for a project-specific MCP server."""
     return await _handle_project_sse_messages(project_id, request, current_user)
 
+
 # Streamable HTTP transport
 streamable_http_methods = ["GET", "POST", "DELETE"]
+
+
 @router.api_route("/{project_id}/streamable", methods=streamable_http_methods)
 @router.api_route("/{project_id}/streamable/", methods=streamable_http_methods)
 async def handle_project_streamable_http(
@@ -1193,7 +1195,7 @@ class ProjectMCPServer:
         # via .run(), which can only be called once, otherwise an error is raised,
         # we use the lock to prevent race conditions on concurrent requests to prevent such an error
         self._manager_lock = anyio.Lock()
-        self._manager_started = False # whether or not the session manager is running
+        self._manager_started = False  # whether or not the session manager is running
 
         # Register handlers that filter by project
         @self.server.list_tools()
@@ -1255,6 +1257,8 @@ class ProjectMCPServer:
 
 # Cache of project MCP servers
 project_mcp_servers: dict[str, ProjectMCPServer] = {}
+
+
 # Due to the lazy initialization of the project MCP servers'
 # streamable-http session managers, we implement a global
 # task group (AnyIO) manager for the session managers.
@@ -1269,6 +1273,7 @@ class ProjectTaskGroup:
     context manager is entered and exited from the same coroutine,
     otherwise Asyncio will raise a RuntimeError.
     """
+
     def __init__(self):
         self._started = False
         self._start_stop_lock = anyio.Lock()

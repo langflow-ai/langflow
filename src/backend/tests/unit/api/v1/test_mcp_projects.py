@@ -615,7 +615,7 @@ async def test_project_session_manager_lifespan_handles_cleanup(user_test_projec
 
     monkeypatch.setattr(
         "langflow.api.v1.mcp_projects.StreamableHTTPSessionManager.run",
-        lambda self: fake_run(), # noqa: ARG005
+        lambda self: fake_run(),  # noqa: ARG005
     )
 
     async with project_session_manager_lifespan():
@@ -630,13 +630,14 @@ def _prepare_install_test_env(monkeypatch, tmp_path, filename="cursor.json"):
     config_path = tmp_path / filename
     config_path.parent.mkdir(parents=True, exist_ok=True)
 
-    monkeypatch.setattr("langflow.api.v1.mcp_projects.get_client_ip", lambda request: "127.0.0.1") # noqa: ARG005
-    async def fake_get_config_path(client_name): # noqa: ARG001
+    monkeypatch.setattr("langflow.api.v1.mcp_projects.get_client_ip", lambda request: "127.0.0.1")  # noqa: ARG005
+
+    async def fake_get_config_path(client_name):  # noqa: ARG001
         return config_path
 
     monkeypatch.setattr("langflow.api.v1.mcp_projects.get_config_path", fake_get_config_path)
     monkeypatch.setattr("langflow.api.v1.mcp_projects.platform.system", lambda: "Linux")
-    monkeypatch.setattr("langflow.api.v1.mcp_projects.should_use_mcp_composer", lambda project: False) # noqa: ARG005
+    monkeypatch.setattr("langflow.api.v1.mcp_projects.should_use_mcp_composer", lambda project: False)  # noqa: ARG005
 
     async def fake_streamable(project_id):
         return f"https://langflow.local/api/v1/mcp/project/{project_id}/streamable"
