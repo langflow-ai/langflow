@@ -10,6 +10,7 @@ from fastapi import HTTPException, status
 from httpx import AsyncClient
 from langflow.api.v1.mcp_projects import (
     ProjectMCPServer,
+    _args_reference_urls,
     get_project_mcp_server,
     init_mcp_servers,
     project_mcp_servers,
@@ -26,6 +27,26 @@ from tests.unit.utils.mcp import project_session_manager_lifespan
 
 # Mark all tests in this module as asyncio
 pytestmark = pytest.mark.asyncio
+
+
+@pytest.mark.parametrize(
+    ("args", "urls", "expected"),
+    [
+        (None, ["https://langflow.local/sse"], False),
+        ([], ["https://langflow.local/sse"], False),
+        ([123, {"url": "foo"}], ["https://langflow.local/sse"], False),
+        (["https://langflow.local/sse", 42], ["https://langflow.local/sse"], True),
+        (["alpha", "beta"], [], False),
+    ],
+)
+def test_args_reference_urls_filters_strings_only(args, urls, expected):
+    assert _args_reference_urls(args, urls) is expected
+
+
+def test_args_reference_urls_matches_non_last_string_argument():
+    args = ["match-me", "other"]
+    urls = ["match-me"]
+    assert _args_reference_urls(args, urls) is True
 
 
 @pytest.fixture
@@ -82,8 +103,11 @@ def mock_streamable_http_manager():
         async_cm = AsyncContextManagerMock()
         manager_instance.run = MagicMock(return_value=async_cm)
 
-        # Mock handle_request as an async method (this is what gets called, not handle_post_message)
-        manager_instance.handle_request = AsyncMock()
+        async def _fake_handle_request(scope, receive, send): # noqa: ARG001
+            await send({"type": "http.response.start", "status": 200, "headers": []})
+            await send({"type": "http.response.body", "body": b"", "more_body": False})
+
+        manager_instance.handle_request = AsyncMock(side_effect=_fake_handle_request)
 
         # Make the class constructor return our mocked instance
         mock_class.return_value = manager_instance
