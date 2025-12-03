@@ -1,6 +1,7 @@
 from lfx.components.data import FileComponent
 from lfx.components.input_output import ChatInput, ChatOutput
-from lfx.components.models_and_agents import LanguageModelComponent, PromptComponent
+from lfx.components.models import LanguageModelComponent
+from lfx.components.models_and_agents import PromptComponent
 from lfx.graph import Graph
 
 
