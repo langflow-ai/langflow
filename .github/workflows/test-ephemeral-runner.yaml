@@ -30,7 +30,7 @@ jobs:
       actions: read
       contents: read
     steps:
-      - name: Show Runner Info in Summary
+      - name: Show Runner Info in Summary 
         run: |
           {
             echo "## 🖥️ Self-Hosted Runner Info" 
