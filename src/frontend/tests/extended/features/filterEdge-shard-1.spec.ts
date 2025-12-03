@@ -1,7 +1,20 @@
+import type { Locator } from "@playwright/test";
+
 import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+
+async function findVisibleElement(
+  elements: Locator[],
+): Promise<Locator | undefined> {
+  for (const element of elements) {
+    if (await element.isVisible()) {
+      return element;
+    }
+  }
+  return undefined;
+}
 
 test(
   "user must see on handle click the possibility connections - RetrievalQA",
@@ -37,17 +50,14 @@ test(
     await page.mouse.down();
 
     await adjustScreenView(page);
-    let visibleElementHandle;
 
     const outputElements = await page
       .getByTestId("handle-retrievalqa-shownode-text-right")
       .all();
 
-    for (const element of outputElements) {
-      if (await element.isVisible()) {
-        visibleElementHandle = element;
-        break;
-      }
+    let visibleElementHandle = await findVisibleElement(outputElements);
+    if (!visibleElementHandle) {
+      throw new Error("Output handle not visible");
     }
 
     await visibleElementHandle.click({
@@ -123,11 +133,9 @@ test(
       .getByTestId("handle-retrievalqa-shownode-llm-left")
       .all();
 
-    for (const element of chainInputElements1) {
-      if (await element.isVisible()) {
-        visibleElementHandle = element;
-        break;
-      }
+    const llmHandle = await findVisibleElement(chainInputElements1);
+    if (llmHandle) {
+      visibleElementHandle = llmHandle;
     }
 
     await visibleElementHandle.blur();
@@ -142,11 +150,9 @@ test(
       .getByTestId("handle-retrievalqa-shownode-template-left")
       .all();
 
-    for (const element of rqaChainInputElements0) {
-      if (await element.isVisible()) {
-        visibleElementHandle = element;
-        break;
-      }
+    const templateHandle = await findVisibleElement(rqaChainInputElements0);
+    if (templateHandle) {
+      visibleElementHandle = templateHandle;
     }
 
     await visibleElementHandle.click();
