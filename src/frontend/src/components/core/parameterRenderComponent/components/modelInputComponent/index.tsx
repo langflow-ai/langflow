@@ -1,31 +1,12 @@
-<<<<<<< HEAD
-=======
-
-import Fuse from "fuse.js";
-
->>>>>>> 166528f555acf5e51ccaeb2e7d4c0401f94ad21e
-
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
 import { RECEIVING_INPUT_VALUE } from "@/constants/constants";
 import { PROVIDER_VARIABLE_MAPPING } from "@/constants/providerConstants";
 
-<<<<<<< HEAD
-
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
-
-=======
-
-import { useGetDefaultModel } from "@/controllers/API/queries/models/use-get-default-model";
-import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
-import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
-import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
-import ApiKeyModal from "@/modals/apiKeyModal";
-
->>>>>>> 166528f555acf5e51ccaeb2e7d4c0401f94ad21e
 
 import ModelProviderModal from "@/modals/modelProviderModal";
 import useAlertStore from "@/stores/alertStore";
