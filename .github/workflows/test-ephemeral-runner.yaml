@@ -143,6 +143,96 @@ jobs:
             echo "**Conclusion:** Runner is truly ephemeral - each job runs on a fresh VM instance." >> "$GITHUB_STEP_SUMMARY"
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Verify Workspace Clean from Previous Run
+        run: |
+          {
+            echo "## 🔍 Workspace Cleanup Validation"
+            echo ""
+            echo "### Checking if workspace directory persists from previous runs"
+            echo ""
+            
+            WORKSPACE_DIR="${{ github.workspace }}"
+            WORKSPACE_PARENT=$(dirname "$WORKSPACE_DIR")
+            
+            echo "**Workspace directory:** \`$WORKSPACE_DIR\`" >> "$GITHUB_STEP_SUMMARY"
+            echo "**Workspace parent:** \`$WORKSPACE_PARENT\`" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            
+            # Check if there are any directories in the workspace parent that look like previous checkouts
+            # GitHub Actions typically creates directories like: _work/repo-name/repo-name
+            echo "Checking for leftover workspace directories from previous runs..."
+            
+            # Check the _work directory structure
+            if [ -d "$WORKSPACE_PARENT" ]; then
+              echo "**Contents of workspace parent:**" >> "$GITHUB_STEP_SUMMARY"
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
+              ls -la "$WORKSPACE_PARENT" >> "$GITHUB_STEP_SUMMARY" 2>&1 || echo "Cannot list directory" >> "$GITHUB_STEP_SUMMARY"
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
+              echo "" >> "$GITHUB_STEP_SUMMARY"
+              
+              # Count directories (excluding current workspace)
+              OTHER_DIRS=$(find "$WORKSPACE_PARENT" -maxdepth 1 -type d ! -path "$WORKSPACE_DIR" ! -path "$WORKSPACE_PARENT" 2>/dev/null | wc -l || echo "0")
+              
+              if [ "$OTHER_DIRS" -gt 0 ]; then
+                echo "⚠️ Found $OTHER_DIRS other directory(ies) in workspace parent" >> "$GITHUB_STEP_SUMMARY"
+                echo "**Other directories:**" >> "$GITHUB_STEP_SUMMARY"
+                echo '```' >> "$GITHUB_STEP_SUMMARY"
+                find "$WORKSPACE_PARENT" -maxdepth 1 -type d ! -path "$WORKSPACE_DIR" ! -path "$WORKSPACE_PARENT" >> "$GITHUB_STEP_SUMMARY" 2>&1
+                echo '```' >> "$GITHUB_STEP_SUMMARY"
+              else
+                echo "✅ No other directories found in workspace parent" >> "$GITHUB_STEP_SUMMARY"
+              fi
+            fi
+            
+            # Check if current workspace has unexpected files (indicating it wasn't cleaned)
+            # After checkout, we should only have repo files, not test artifacts
+            echo ""
+            echo "Checking current workspace for unexpected files from previous runs..."
+            
+            # Look for test artifact files in the workspace
+            TEST_FILES_IN_WORKSPACE=$(find "$WORKSPACE_DIR" -name "ephemeral-test-*" -o -name "*ephemeral*" 2>/dev/null | grep -v ".git" || true)
+            
+            if [ -n "$TEST_FILES_IN_WORKSPACE" ]; then
+              echo "❌ **FAILED:** Found test files in workspace from previous run(s):"
+              echo "$TEST_FILES_IN_WORKSPACE"
+              echo "" >> "$GITHUB_STEP_SUMMARY"
+              echo "❌ **Workspace cleanup validation FAILED**" >> "$GITHUB_STEP_SUMMARY"
+              echo "**Test files found in workspace:**" >> "$GITHUB_STEP_SUMMARY"
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
+              echo "$TEST_FILES_IN_WORKSPACE" >> "$GITHUB_STEP_SUMMARY"
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
+              exit 1
+            else
+              echo "✅ No test files found in workspace"
+              echo "✅ **Workspace cleanup check PASSED**" >> "$GITHUB_STEP_SUMMARY"
+            fi
+            
+            # Check workspace directory modification time vs current time
+            # If workspace was created/modified long ago, it might be from a previous run
+            if [ -d "$WORKSPACE_DIR" ]; then
+              WORKSPACE_MTIME=$(stat -c '%Y' "$WORKSPACE_DIR" 2>/dev/null || stat -f '%m' "$WORKSPACE_DIR" 2>/dev/null || echo "0")
+              CURRENT_TIME=$(date +%s)
+              TIME_DIFF=$((CURRENT_TIME - WORKSPACE_MTIME))
+              
+              echo "" >> "$GITHUB_STEP_SUMMARY"
+              echo "**Workspace directory age:** $TIME_DIFF seconds old" >> "$GITHUB_STEP_SUMMARY"
+              
+              # If workspace is more than 5 minutes old and we just checked out, something is wrong
+              if [ "$TIME_DIFF" -gt 300 ]; then
+                echo "⚠️ Workspace directory is $TIME_DIFF seconds old (may indicate persistence)" >> "$GITHUB_STEP_SUMMARY"
+              else
+                echo "✅ Workspace directory appears fresh" >> "$GITHUB_STEP_SUMMARY"
+              fi
+            fi
+            
+            echo ""
+            echo "### ✅ Workspace Validation Summary" >> "$GITHUB_STEP_SUMMARY"
+            echo "✅ Workspace appears clean from previous runs" >> "$GITHUB_STEP_SUMMARY"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
       - name: Create Test Artifacts (File and Docker Image) 
         id: create-artifacts
         run: |
