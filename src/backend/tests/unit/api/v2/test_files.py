@@ -1,5 +1,8 @@
 import asyncio
+import json
+import os
 import tempfile
+import uuid
 from contextlib import suppress
 from pathlib import Path
 
@@ -48,7 +51,7 @@ async def files_created_api_key(files_client, files_active_user):  # noqa: ARG00
 @pytest.fixture(name="files_active_user")
 async def files_active_user(files_client):  # noqa: ARG001
     db_manager = get_db_service()
-    async with db_manager.with_session() as session:
+    async with db_manager._with_session() as session:
         user = User(
             username="files_active_user",
             password=get_password_hash("testpassword"),
@@ -66,7 +69,7 @@ async def files_active_user(files_client):  # noqa: ARG001
     yield user
     # Clean up
     # Now cleanup transactions, vertex_build
-    async with db_manager.with_session() as session:
+    async with db_manager._with_session() as session:
         user = await session.get(User, user.id, options=[selectinload(User.flows)])
         await _delete_transactions_and_vertex_builds(session, user.flows)
         await session.delete(user)
@@ -103,6 +106,7 @@ async def files_client_fixture(
             db_path = Path(db_dir) / "test.db"
             monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
             monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
+            monkeypatch.setenv("LANGFLOW_STORAGE_TYPE", "local")  # Force local storage for tests
             from langflow.services.manager import service_manager
 
             service_manager.factories.clear()
@@ -525,3 +529,352 @@ async def test_unique_filename_path_storage(files_client, files_created_api_key)
     download2 = await files_client.get(f"api/v2/files/{file2['id']}", headers=headers)
     assert download2.status_code == 200
     assert download2.content == b"path content 2"
+
+
+# ==================== S3 STORAGE TESTS ====================
+
+
+@pytest.fixture
+def aws_credentials():
+    """Verify AWS credentials are set via environment variables."""
+    required_vars = ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"]
+    missing_vars = [var for var in required_vars if not os.environ.get(var)]
+
+    if missing_vars:
+        pytest.skip(f"Missing required environment variables: {', '.join(missing_vars)}")
+
+    # Set default region if not provided
+    if not os.environ.get("AWS_DEFAULT_REGION"):
+        os.environ["AWS_DEFAULT_REGION"] = "us-west-2"
+
+    # No cleanup needed - we're using existing env vars
+
+
+@pytest.fixture(name="s3_files_created_api_key")
+async def s3_files_created_api_key(s3_files_client, s3_files_active_user):  # noqa: ARG001
+    hashed = get_password_hash("s3_random_key")
+    api_key = ApiKey(
+        name="s3_files_created_api_key",
+        user_id=s3_files_active_user.id,
+        api_key="s3_random_key",
+        hashed_api_key=hashed,
+    )
+    db_manager = get_db_service()
+    async with session_getter(db_manager) as session:
+        stmt = select(ApiKey).where(ApiKey.api_key == api_key.api_key)
+        if existing_api_key := (await session.exec(stmt)).first():
+            yield existing_api_key
+            return
+        session.add(api_key)
+        await session.commit()
+        await session.refresh(api_key)
+        yield api_key
+        # Clean up
+        await session.delete(api_key)
+        await session.commit()
+
+
+@pytest.fixture(name="s3_files_active_user")
+async def s3_files_active_user(s3_files_client):  # noqa: ARG001
+    db_manager = get_db_service()
+    async with db_manager._with_session() as session:
+        user = User(
+            username="s3_files_active_user",
+            password=get_password_hash("testpassword"),
+            is_active=True,
+            is_superuser=False,
+        )
+        stmt = select(User).where(User.username == user.username)
+        if active_user := (await session.exec(stmt)).first():
+            user = active_user
+        else:
+            session.add(user)
+            await session.commit()
+            await session.refresh(user)
+        user = UserRead.model_validate(user, from_attributes=True)
+    yield user
+    # Clean up
+    # Now cleanup transactions, vertex_build
+    async with db_manager._with_session() as session:
+        user = await session.get(User, user.id, options=[selectinload(User.flows)])
+        await _delete_transactions_and_vertex_builds(session, user.flows)
+        await session.delete(user)
+
+        await session.commit()
+
+
+@pytest.fixture(name="s3_files_client")
+async def s3_files_client_fixture(
+    monkeypatch,
+    request,
+    aws_credentials,  # noqa: ARG001
+):
+    """S3 storage client fixture for testing with real S3."""
+    # Set the database url to a test database
+    if "noclient" in request.keywords:
+        yield
+    else:
+
+        def init_app():
+            db_dir = tempfile.mkdtemp()
+            db_path = Path(db_dir) / "test_s3.db"
+            monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
+            monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
+            # Configure S3 storage
+            monkeypatch.setenv("LANGFLOW_STORAGE_TYPE", "s3")
+            monkeypatch.setenv(
+                "LANGFLOW_OBJECT_STORAGE_BUCKET_NAME",
+                os.environ.get("LANGFLOW_OBJECT_STORAGE_BUCKET_NAME", "langflow-ci"),
+            )
+            # Use unique prefix per test run to avoid conflicts
+            test_prefix = f"test-files-api-{uuid.uuid4().hex[:8]}"
+            monkeypatch.setenv("LANGFLOW_OBJECT_STORAGE_PREFIX", test_prefix)
+            tags_json = json.dumps({"env": "test-api", "type": "file-upload"})
+            monkeypatch.setenv("LANGFLOW_OBJECT_STORAGE_TAGS", tags_json)
+
+            from langflow.services.manager import service_manager
+
+            service_manager.factories.clear()
+            service_manager.services.clear()  # Clear the services cache
+            app = create_app()
+            return app, db_path, test_prefix
+
+        app, db_path, test_prefix = await asyncio.to_thread(init_app)
+
+        async with (
+            LifespanManager(app, startup_timeout=None, shutdown_timeout=None) as manager,
+            AsyncClient(transport=ASGITransport(app=manager.app), base_url="http://testserver/") as client,
+        ):
+            yield client
+
+        # Cleanup: Delete all test files from S3
+        try:
+            import boto3
+
+            s3 = boto3.client("s3")
+            bucket_name = os.environ.get("LANGFLOW_OBJECT_STORAGE_BUCKET_NAME", "langflow-ci")
+
+            # List and delete all objects with our test prefix
+            try:
+                response = s3.list_objects_v2(Bucket=bucket_name, Prefix=test_prefix)
+                if "Contents" in response:
+                    for obj in response["Contents"]:
+                        s3.delete_object(Bucket=bucket_name, Key=obj["Key"])
+            except Exception:
+                pass  # Ignore cleanup errors
+        except Exception:
+            pass  # Ignore cleanup errors
+
+        monkeypatch.undo()
+        # clear the temp db
+        with suppress(FileNotFoundError):
+            await anyio.Path(db_path).unlink()
+
+
+# Mark all S3 tests as requiring API keys
+pytestmark_s3 = pytest.mark.api_key_required
+
+
+@pytest.mark.api_key_required
+class TestS3FileOperations:
+    """Test file operations with S3 storage backend.
+
+    These tests use actual AWS S3 and verify that file operations work correctly
+    with S3 storage, including the delete bug fix.
+    """
+
+    async def test_s3_upload_file(self, s3_files_client, s3_files_created_api_key):
+        """Test uploading a file to S3 storage."""
+        headers = {"x-api-key": s3_files_created_api_key.api_key}
+
+        response = await s3_files_client.post(
+            "api/v2/files",
+            files={"file": ("s3_test.txt", b"S3 test content")},
+            headers=headers,
+        )
+        assert response.status_code == 201, f"Expected 201, got {response.status_code}: {response.json()}"
+
+        response_json = response.json()
+        assert "id" in response_json
+        assert response_json["name"] == "s3_test"
+
+    async def test_s3_upload_and_download_file(self, s3_files_client, s3_files_created_api_key):
+        """Test uploading and downloading a file with S3 storage."""
+        headers = {"x-api-key": s3_files_created_api_key.api_key}
+
+        # Upload file
+        response = await s3_files_client.post(
+            "api/v2/files",
+            files={"file": ("s3_download_test.txt", b"S3 download content")},
+            headers=headers,
+        )
+        assert response.status_code == 201
+        upload_response = response.json()
+
+        # Download file
+        response = await s3_files_client.get(f"api/v2/files/{upload_response['id']}", headers=headers)
+
+        assert response.status_code == 200
+        assert response.content == b"S3 download content"
+
+    async def test_s3_list_files(self, s3_files_client, s3_files_created_api_key):
+        """Test listing files with S3 storage."""
+        headers = {"x-api-key": s3_files_created_api_key.api_key}
+
+        # Upload a file
+        response = await s3_files_client.post(
+            "api/v2/files",
+            files={"file": ("s3_list_test.txt", b"S3 list content")},
+            headers=headers,
+        )
+        assert response.status_code == 201
+
+        # List files
+        response = await s3_files_client.get("api/v2/files", headers=headers)
+        assert response.status_code == 200
+        files = response.json()
+        assert len(files) >= 1
+        file_names = [f["name"] for f in files]
+        assert "s3_list_test" in file_names
+
+    async def test_s3_delete_file(self, s3_files_client, s3_files_created_api_key):
+        """Test deleting a file from S3 storage (verifies delete bug fix)."""
+        headers = {"x-api-key": s3_files_created_api_key.api_key}
+
+        # Upload a file
+        response = await s3_files_client.post(
+            "api/v2/files",
+            files={"file": ("s3_delete_test.txt", b"S3 delete content")},
+            headers=headers,
+        )
+        assert response.status_code == 201
+        upload_response = response.json()
+
+        # Delete the file
+        response = await s3_files_client.delete(f"api/v2/files/{upload_response['id']}", headers=headers)
+        assert response.status_code == 200
+        assert response.json() == {"detail": "File s3_delete_test deleted successfully"}
+
+        # Verify file is deleted from database
+        response = await s3_files_client.get("api/v2/files", headers=headers)
+        assert response.status_code == 200
+        files = response.json()
+        file_names = [f["name"] for f in files]
+        assert "s3_delete_test" not in file_names
+
+        # Verify file is deleted from S3 (should return 404)
+        response = await s3_files_client.get(f"api/v2/files/{upload_response['id']}", headers=headers)
+        assert response.status_code == 404
+
+    async def test_s3_upload_list_delete_multiple_files(self, s3_files_client, s3_files_created_api_key):
+        """Test uploading, listing, and deleting multiple files with S3 storage."""
+        headers = {"x-api-key": s3_files_created_api_key.api_key}
+
+        # Upload two files
+        response1 = await s3_files_client.post(
+            "api/v2/files",
+            files={"file": ("s3_file1.txt", b"S3 content1")},
+            headers=headers,
+        )
+        assert response1.status_code == 201
+        file1 = response1.json()
+
+        response2 = await s3_files_client.post(
+            "api/v2/files",
+            files={"file": ("s3_file2.txt", b"S3 content2")},
+            headers=headers,
+        )
+        assert response2.status_code == 201
+        file2 = response2.json()
+
+        # List files and validate both are present
+        response = await s3_files_client.get("api/v2/files", headers=headers)
+        assert response.status_code == 200
+        files = response.json()
+        file_names = [f["name"] for f in files]
+        file_ids = [f["id"] for f in files]
+        assert file1["name"] in file_names
+        assert file2["name"] in file_names
+        assert file1["id"] in file_ids
+        assert file2["id"] in file_ids
+
+        # Delete one file
+        response = await s3_files_client.delete(f"api/v2/files/{file1['id']}", headers=headers)
+        assert response.status_code == 200
+
+        # List files again and validate only the other remains
+        response = await s3_files_client.get("api/v2/files", headers=headers)
+        assert response.status_code == 200
+        files = response.json()
+        file_names = [f["name"] for f in files]
+        file_ids = [f["id"] for f in files]
+        assert file1["name"] not in file_names
+        assert file1["id"] not in file_ids
+        assert file2["name"] in file_names
+        assert file2["id"] in file_ids
+
+    async def test_s3_upload_binary_file(self, s3_files_client, s3_files_created_api_key):
+        """Test uploading and downloading binary data with S3 storage."""
+        headers = {"x-api-key": s3_files_created_api_key.api_key}
+
+        # Create binary data
+        binary_data = bytes(range(256))
+
+        # Upload binary file
+        response = await s3_files_client.post(
+            "api/v2/files",
+            files={"file": ("s3_binary.bin", binary_data)},
+            headers=headers,
+        )
+        assert response.status_code == 201
+        upload_response = response.json()
+
+        # Download and verify binary data
+        response = await s3_files_client.get(f"api/v2/files/{upload_response['id']}", headers=headers)
+        assert response.status_code == 200
+        assert response.content == binary_data
+
+    async def test_s3_delete_verifies_s3_cleanup(self, s3_files_client, s3_files_created_api_key):
+        """Test that delete properly cleans up S3 storage (verifies the bug fix)."""
+        headers = {"x-api-key": s3_files_created_api_key.api_key}
+
+        # Upload a file
+        response = await s3_files_client.post(
+            "api/v2/files",
+            files={"file": ("s3_cleanup_test.txt", b"S3 cleanup content")},
+            headers=headers,
+        )
+        assert response.status_code == 201
+        upload_response = response.json()
+
+        # Get the user ID from the response path
+        file_path = upload_response["path"]
+        user_id = file_path.split("/")[0]
+
+        # Delete the file
+        response = await s3_files_client.delete(f"api/v2/files/{upload_response['id']}", headers=headers)
+        assert response.status_code == 200
+
+        # Verify file is actually deleted from S3 by checking directly
+        import boto3
+
+        s3 = boto3.client("s3")
+        bucket_name = os.environ.get("LANGFLOW_OBJECT_STORAGE_BUCKET_NAME", "langflow-ci")
+
+        # Extract file name from path
+        file_name = file_path.split("/")[-1]
+
+        # Build the S3 key using the correct pattern (prefix/user_id/filename)
+        test_prefix = os.environ.get("LANGFLOW_OBJECT_STORAGE_PREFIX")
+        s3_key = f"{test_prefix}/{user_id}/{file_name}"
+
+        # Try to get the object - should raise NoSuchKey
+        try:
+            s3.head_object(Bucket=bucket_name, Key=s3_key)
+            pytest.fail(f"File {s3_key} should have been deleted from S3 but still exists")
+        except s3.exceptions.NoSuchKey:
+            pass  # Expected - file was properly deleted
+        except Exception as e:
+            # Check if it's a 404-related error (different boto3 versions)
+            if "404" not in str(e) and "NoSuchKey" not in str(e):
+                raise

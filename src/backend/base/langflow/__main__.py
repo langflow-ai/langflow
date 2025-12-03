@@ -877,7 +877,6 @@ def api_key(
 
             api_key_create = ApiKeyCreate(name="CLI")
             unmasked_api_key = await create_api_key(session, api_key_create, user_id=superuser.id)
-            await session.commit()
             return unmasked_api_key
 
     unmasked_api_key = asyncio.run(aapi_key())

@@ -85,7 +85,7 @@ dependencies = [
     "langchain-pinecone>=0.2.8,<1.0.0",
     "langchain-mistralai==0.2.3",
     "langchain-chroma>=0.2.6,<1.0.0",
-    "langchain-aws==0.2.33",
+    "langchain-aws>=0.2.33,<1.0.0",
     "langchain-unstructured==0.1.5",
     "langchain-milvus==0.1.7",
     "langchain-mongodb==0.7.0",
@@ -133,6 +133,7 @@ dependencies = [
     "easyocr>=1.7.2; sys_platform != 'darwin' or platform_machine != 'x86_64'",
     "opencv-python>=4.11; sys_platform != 'darwin' or platform_machine != 'x86_64'",
     "pytest-codspeed==4.0.0", # Pinned to avoid python3.13 + intel mac compatibility issues
+    "aioboto3>=15.2.0,<16.0.0",
 ]
 
 [dependency-groups]

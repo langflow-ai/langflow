@@ -11,13 +11,13 @@ from typing import TYPE_CHECKING
 
 import anyio
 import sqlalchemy as sa
-from alembic import command, util
+from alembic import command, script, util
 from alembic.config import Config
-from sqlalchemy import event, exc, inspect
+from sqlalchemy import event, inspect
 from sqlalchemy.dialects import sqlite as dialect_sqlite
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import OperationalError
-from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 from sqlmodel import SQLModel, select, text
 from sqlmodel.ext.asyncio.session import AsyncSession
 from tenacity import retry, stop_after_attempt, wait_fixed
@@ -29,7 +29,7 @@ from langflow.services.database import models
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.database.session import NoopSession
 from langflow.services.database.utils import Result, TableResults
-from langflow.services.deps import get_settings_service
+from langflow.services.deps import get_settings_service, session_scope
 from langflow.services.utils import teardown_superuser
 
 if TYPE_CHECKING:
@@ -62,6 +62,15 @@ class DatabaseService(Service):
         else:
             self.engine = self._create_engine()
 
+        # Create async session maker for efficient session creation
+        # This is the recommended SQLAlchemy 2.0+ pattern
+        # IMPORTANT: Must use SQLModel's AsyncSession (not SQLAlchemy's) for exec() method
+        self.async_session_maker = async_sessionmaker(
+            self.engine,
+            class_=AsyncSession,  # SQLModel's AsyncSession with exec() support
+            expire_on_commit=False,
+        )
+
         alembic_log_file = self.settings_service.settings.alembic_log_file
         # Check if the provided path is absolute, cross-platform.
         if Path(alembic_log_file).is_absolute():
@@ -80,6 +89,13 @@ class DatabaseService(Service):
             self.engine = self._create_engine_with_retry()
         else:
             self.engine = self._create_engine()
+
+        # Recreate async session maker with new engine
+        self.async_session_maker = async_sessionmaker(
+            self.engine,
+            class_=AsyncSession,  # SQLModel's AsyncSession with exec() support
+            expire_on_commit=False,
+        )
 
     def _sanitize_database_url(self):
         """Create the engine for the database."""
@@ -127,12 +143,13 @@ class DatabaseService(Service):
 
         poolclass_key = kwargs.get("poolclass")
         if poolclass_key is not None:
-            pool_class = getattr(sa, poolclass_key, None)
-            if pool_class and isinstance(pool_class(), sa.pool.Pool):
+            pool_class = getattr(sa.pool, poolclass_key, None)
+            if pool_class and issubclass(pool_class, sa.pool.Pool):
                 logger.debug(f"Using poolclass: {poolclass_key}.")
                 kwargs["poolclass"] = pool_class
             else:
                 logger.error(f"Invalid poolclass '{poolclass_key}' specified. Using default pool class.")
+                kwargs.pop("poolclass", None)
 
         return create_async_engine(
             self.database_url,
@@ -184,18 +201,19 @@ class DatabaseService(Service):
                     cursor.close()
 
     @asynccontextmanager
-    async def with_session(self):
+    async def _with_session(self):
+        """Internal method to create a session. DO NOT USE DIRECTLY.
+
+        Use session_scope() for write operations or session_scope_readonly() for read operations.
+        This method does not handle commits - it only provides a raw session.
+        """
         if self.settings_service.settings.use_noop_database:
             yield NoopSession()
         else:
-            async with AsyncSession(self.engine, expire_on_commit=False) as session:
-                # Start of Selection
-                try:
-                    yield session
-                except exc.SQLAlchemyError as db_exc:
-                    await logger.aerror(f"Database error during session scope: {db_exc}")
-                    await session.rollback()
-                    raise
+            # Use async_session_maker - the recommended SQLAlchemy 2.0+ pattern
+            # Provides efficient session creation and proper connection pooling
+            async with self.async_session_maker() as session:
+                yield session
 
     async def assign_orphaned_flows_to_superuser(self) -> None:
         """Assign orphaned flows to the default superuser when auto login is enabled."""
@@ -204,7 +222,9 @@ class DatabaseService(Service):
         if not settings_service.auth_settings.AUTO_LOGIN:
             return
 
-        async with self.with_session() as session:
+        from langflow.services.deps import session_scope
+
+        async with session_scope() as session:
             # Fetch orphaned flows
             stmt = (
                 select(models.Flow)
@@ -242,8 +262,6 @@ class DatabaseService(Service):
                 existing_names.add(flow.name)
                 session.add(flow)
 
-            # Commit changes
-            await session.commit()
             await logger.adebug("Successfully assigned orphaned flows to the default superuser")
 
     @staticmethod
@@ -307,7 +325,7 @@ class DatabaseService(Service):
         return True
 
     async def check_schema_health(self) -> None:
-        async with self.with_session() as session, session.bind.connect() as conn:
+        async with self.engine.begin() as conn:
             await conn.run_sync(self._check_schema_health)
 
     @staticmethod
@@ -316,6 +334,63 @@ class DatabaseService(Service):
         command.ensure_version(alembic_cfg)
         # alembic_cfg.attributes["connection"].commit()
         command.upgrade(alembic_cfg, "head")
+
+    def _check_if_database_ahead(self, alembic_cfg, error_msg: str) -> bool:
+        """Check if database is ahead of code based on error message.
+        
+        If error contains "Can't locate revision", we check if the DB revision
+        exists in the code. If not, the database is ahead.
+        
+        Args:
+            alembic_cfg: Alembic configuration
+            error_msg: Error message from command.check()
+            
+        Returns:
+            True if database appears to be ahead, False otherwise
+        """
+        if "Can't locate revision identified by" not in error_msg:
+            return False
+        
+        try:
+            # Extract revision from error message
+            # Format: "Can't locate revision identified by 'abc123'"
+            match = re.search(r"identified by ['\"]([^'\"]+)['\"]", error_msg)
+            if not match:
+                return False
+            
+            db_revision = match.group(1)
+            
+            # Check if this revision exists in the code
+            script_dir = script.ScriptDirectory.from_config(alembic_cfg)
+            try:
+                script_dir.get_revision(db_revision)
+                # Revision exists in code, so DB is not ahead
+                return False
+            except Exception:
+                # Revision doesn't exist in code - database is ahead
+                code_head = script_dir.get_current_head()
+                logger.warning(
+                    f"Database revision '{db_revision}' is ahead of code's head revision '{code_head}'. "
+                    "Allowing startup assuming backwards-compatible migrations."
+                )
+                return True
+        except Exception as exc:
+            logger.debug(f"Could not determine if database is ahead: {exc}")
+            return False
+    
+    def _handle_database_ahead(self, alembic_cfg, error_msg: str) -> bool:
+        """Handle database ahead scenario by checking and logging.
+        
+        Returns:
+            True if database is ahead and startup should be allowed, False otherwise
+        """
+        if self._check_if_database_ahead(alembic_cfg, error_msg):
+            logger.info(
+                "Database has newer migrations than code. "
+                "Assuming backwards-compatible migrations and allowing startup."
+            )
+            return True
+        return False
 
     def _run_migrations(self, should_initialize_alembic, fix) -> None:
         # First we need to check if alembic has been initialized
@@ -347,10 +422,24 @@ class DatabaseService(Service):
                 buffer.write(f"{datetime.now(tz=timezone.utc).astimezone().isoformat()}: Checking migrations\n")
                 command.check(alembic_cfg)
             except Exception as exc:  # noqa: BLE001
+                error_msg = str(exc)
                 logger.debug(f"Error checking migrations: {exc}")
+                
+                # Check if database is ahead of code (backwards-compatible scenario)
+                if self._handle_database_ahead(alembic_cfg, error_msg):
+                    return  # Skip migration checks and allow startup
+                
+                # Database is behind or there's a different error
                 if isinstance(exc, util.exc.CommandError | util.exc.AutogenerateDiffsDetected):
-                    command.upgrade(alembic_cfg, "head")
-                    time.sleep(3)
+                    # Try to upgrade database to match code
+                    try:
+                        command.upgrade(alembic_cfg, "head")
+                        time.sleep(3)
+                    except Exception as upgrade_exc:
+                        # If upgrade fails, check if DB is ahead (might have been a transient error)
+                        if self._handle_database_ahead(alembic_cfg, str(upgrade_exc)):
+                            return
+                        raise
 
             try:
                 buffer.write(f"{datetime.now(tz=timezone.utc).astimezone()}: Checking migrations\n")
@@ -366,7 +455,7 @@ class DatabaseService(Service):
 
     async def run_migrations(self, *, fix=False) -> None:
         should_initialize_alembic = False
-        async with self.with_session() as session:
+        async with session_scope() as session:
             # If the table does not exist it throws an error
             # so we need to catch it
             try:
@@ -400,7 +489,8 @@ class DatabaseService(Service):
         sql_models = [
             model for model in models.__dict__.values() if isinstance(model, type) and issubclass(model, SQLModel)
         ]
-        async with self.with_session() as session, session.bind.connect() as conn:
+        # Use engine.begin() for proper async connection management with NullPool
+        async with self.engine.begin() as conn:
             return [
                 TableResults(sql_model.__tablename__, await conn.run_sync(self.check_table, sql_model))
                 for sql_model in sql_models
@@ -469,7 +559,7 @@ class DatabaseService(Service):
         await self.create_db_and_tables()
 
     async def create_db_and_tables(self) -> None:
-        async with self.with_session() as session, session.bind.connect() as conn:
+        async with self.engine.begin() as conn:
             await conn.run_sync(self._create_db_and_tables)
 
     async def teardown(self) -> None:
@@ -478,7 +568,7 @@ class DatabaseService(Service):
             settings_service = get_settings_service()
             # remove the default superuser if auto_login is enabled
             # using the SUPERUSER to get the user
-            async with self.with_session() as session:
+            async with session_scope() as session:
                 await teardown_superuser(settings_service, session)
         except Exception:  # noqa: BLE001
             await logger.aexception("Error tearing down database")

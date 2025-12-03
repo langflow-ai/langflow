@@ -267,6 +267,18 @@ class SplitVideoComponent(Component):
 
     def process(self) -> list[Data]:
         """Process the input video and return a list of Data objects containing the clips."""
+        # Check if we're in S3 mode - video processing not supported in cloud
+        from langflow.services.deps import get_settings_service
+
+        settings = get_settings_service().settings
+        if settings.storage_type == "s3":
+            msg = (
+                "Video processing is not supported in S3/cloud mode. "
+                "Video components require local file system access for processing. "
+                "Please use local storage mode or process videos locally before uploading."
+            )
+            raise ValueError(msg)
+
         try:
             # Get the input video path from the previous component
             if not hasattr(self, "videodata") or not isinstance(self.videodata, list) or len(self.videodata) != 1:

@@ -18,6 +18,24 @@ class LocalStorageService(StorageService):
         """Build the full path of a file in the local storage."""
         return str(self.data_dir / flow_id / file_name)
 
+    def resolve_component_path(self, logical_path: str) -> str:
+        """Convert logical path to absolute filesystem path for local storage.
+
+        Args:
+            logical_path: Path in format "flow_id/filename"
+
+        Returns:
+            str: Absolute filesystem path
+        """
+        # Split the logical path into flow_id and filename
+        parts = logical_path.split("/", 1)
+        if len(parts) != 2:
+            # Handle edge case - return as-is if format is unexpected
+            return logical_path
+
+        flow_id, file_name = parts
+        return self.build_full_path(flow_id, file_name)
+
     async def save_file(self, flow_id: str, file_name: str, data: bytes) -> None:
         """Save a file in the local storage.
 

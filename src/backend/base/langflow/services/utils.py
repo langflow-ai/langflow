@@ -17,7 +17,7 @@ from langflow.services.database.utils import initialize_database
 from langflow.services.schema import ServiceType
 from langflow.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
 
-from .deps import get_db_service, get_service, get_settings_service
+from .deps import get_db_service, get_service, get_settings_service, session_scope
 
 if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
@@ -31,7 +31,6 @@ async def get_or_create_super_user(session: AsyncSession, username, password, is
     stmt = select(User).where(User.username == username)
     result = await session.exec(stmt)
     user = result.first()
-
     if user and user.is_superuser:
         return None  # Superuser already exists
 
@@ -51,7 +50,6 @@ async def get_or_create_super_user(session: AsyncSession, username, password, is
                 "base superuser credentials."
             )
             return None
-        logger.debug("User with superuser credentials exists but is not a superuser.")
         return None
 
     if user:
@@ -120,19 +118,17 @@ async def teardown_superuser(settings_service, session: AsyncSession) -> None:
             # if it has logged in, it means the user is using it to login
             if user and user.is_superuser is True and not user.last_login_at:
                 await session.delete(user)
-                await session.commit()
                 await logger.adebug("Default superuser removed successfully.")
 
         except Exception as exc:
             logger.exception(exc)
-            await session.rollback()
             msg = "Could not remove default superuser."
             raise RuntimeError(msg) from exc
 
 
 async def teardown_services() -> None:
     """Teardown all the services."""
-    async with get_db_service().with_session() as session:
+    async with session_scope() as session:
         await teardown_superuser(get_settings_service(), session)
 
     from langflow.services.manager import service_manager
@@ -186,11 +182,9 @@ async def clean_transactions(settings_service: SettingsService, session: AsyncSe
         )
 
         await session.exec(delete_stmt)
-        await session.commit()
         logger.debug("Successfully cleaned up old transactions")
     except (sqlalchemy_exc.SQLAlchemyError, asyncio.TimeoutError) as exc:
         logger.error(f"Error cleaning up transactions: {exc!s}")
-        await session.rollback()
         # Don't re-raise since this is a cleanup task
 
 
@@ -215,11 +209,9 @@ async def clean_vertex_builds(settings_service: SettingsService, session: AsyncS
         )
 
         await session.exec(delete_stmt)
-        await session.commit()
         logger.debug("Successfully cleaned up old vertex builds")
     except (sqlalchemy_exc.SQLAlchemyError, asyncio.TimeoutError) as exc:
         logger.error(f"Error cleaning up vertex builds: {exc!s}")
-        await session.rollback()
         # Don't re-raise since this is a cleanup task
 
 
@@ -235,12 +227,18 @@ async def initialize_services(*, fix_migration: bool = False) -> None:
     await initialize_database(fix_migration=fix_migration)
     db_service = get_db_service()
     await db_service.initialize_alembic_log_file()
-    async with db_service.with_session() as session:
-        settings_service = get_service(ServiceType.SETTINGS_SERVICE)
+    settings_service = get_service(ServiceType.SETTINGS_SERVICE)
+
+    # Create superuser in its own session and commit
+    async with session_scope() as session:
         await setup_superuser(settings_service, session)
+
     try:
         await get_db_service().assign_orphaned_flows_to_superuser()
     except sqlalchemy_exc.IntegrityError as exc:
         await logger.awarning(f"Error assigning orphaned flows to the superuser: {exc!s}")
-    await clean_transactions(settings_service, session)
-    await clean_vertex_builds(settings_service, session)
+
+    # Clean up old data in separate session
+    async with session_scope() as session:
+        await clean_transactions(settings_service, session)
+        await clean_vertex_builds(settings_service, session)
