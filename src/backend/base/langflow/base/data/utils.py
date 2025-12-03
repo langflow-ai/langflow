@@ -171,11 +171,11 @@ async def read_text_file_async(file_path: str) -> str:
     from .storage_utils import parse_storage_path, read_file_bytes
 
     settings = get_settings_service().settings
-    
+
     # Check if this is actually an S3 path (format: "flow_id/filename")
     # If storage is S3 but path is local (absolute path), use local read
     is_s3_path = settings.storage_type == "s3" and parse_storage_path(file_path) is not None
-    
+
     if is_s3_path:
         # Use storage-aware read to get bytes from S3
         raw_data = await read_file_bytes(file_path)
@@ -229,7 +229,7 @@ async def read_docx_file_async(file_path: str) -> str:
     from .storage_utils import parse_storage_path, read_file_bytes
 
     settings = get_settings_service().settings
-    
+
     # Check if this is actually an S3 path (format: "flow_id/filename")
     is_s3_path = settings.storage_type == "s3" and parse_storage_path(file_path) is not None
 
@@ -294,10 +294,10 @@ async def parse_pdf_to_text_async(file_path: str) -> str:
     from .storage_utils import parse_storage_path, read_file_bytes
 
     settings = get_settings_service().settings
-    
+
     # Check if this is actually an S3 path (format: "flow_id/filename")
     is_s3_path = settings.storage_type == "s3" and parse_storage_path(file_path) is not None
-    
+
     if is_s3_path:
         # Use storage-aware read to get bytes from S3
         content = await read_file_bytes(file_path)
@@ -324,7 +324,7 @@ def parse_text_file_to_data(file_path: str, *, silent_errors: bool) -> Data | No
     # S3 paths are in format "flow_id/filename" (relative paths with single slash)
     # Local paths are absolute paths like "/var/folders/..." or "C:\Users\..."
     is_s3_path = settings.storage_type == "s3" and parse_storage_path(file_path) is not None
-    
+
     if is_s3_path:
         # Run the async version in a new event loop
         return asyncio.run(parse_text_file_to_data_async(file_path, silent_errors=silent_errors))
