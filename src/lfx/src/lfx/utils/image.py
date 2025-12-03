@@ -74,6 +74,6 @@ def create_image_content_dict(
     """
     data_url = create_data_url(image_path, mime_type)
 
-    if model_name == "OllamaModel":
-        return {"type": "image_url", "source_type": "url", "image_url": data_url}
-    return {"type": "image", "source_type": "url", "url": data_url}
+    # Standard format for OpenAI, Anthropic, Gemini, and most providers
+    # Format: {"type": "image_url", "image_url": {"url": "data:..."}}
+    return {"type": "image_url", "image_url": {"url": data_url}}
