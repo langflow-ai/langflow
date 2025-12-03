@@ -10,7 +10,7 @@ jobs:
     permissions:
       actions: read
       contents: read
-    steps:
+    steps: 
 
       - name: Print runner labels from context
         run: | 
