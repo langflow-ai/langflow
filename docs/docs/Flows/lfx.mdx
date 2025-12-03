@@ -13,11 +13,12 @@ Running a flow with LFX is similar to running flows with the [`--backend-only` e
 
 Use LFX to share flows with other developers, test flows in different environments, and run flows in production applications without requiring the full Langflow UI or database setup.
 
-LFX includes two commands for executing flows:
+LFX includes three commands for working with flows:
 
 * [`lfx serve`](#serve): This command starts a FastAPI server hosting a Langflow API endpoint with your flow available at `/flows/{flow_id}/run`.
 The flow graph is stored in memory at all times, so there is less overhead for loading the graph from a database.
 * [`lfx run`](#run): This command executes a flow locally and returns the results to `stdout`.
+* [`lfx check`](#check): This command checks if flows have outdated components and updates them (similar to the version check in the UI).
 
 ## Prerequisites
 
@@ -331,3 +332,68 @@ In addition to running flows from JSON files, you can use `lfx run` with Python 
 This approach allows you to create flows directly in Python code without the visual builder.
 
 For a complete example of creating an agent flow programmatically using LFX components, see the [Complete Agent Example on PyPI](https://pypi.org/project/lfx/0.1.13/#complete-agent-example).
+
+## Check and update outdated flow components with `lfx check` {#check}
+
+The `lfx check` command checks if a flow JSON file contains outdated components.
+`lfx check` is similar to the [version check feature](/concepts-components#component-versions) available in the Langflow UI, but can be run from the command line.
+
+To check a flow file for outdated components, run the `lfx check` command.
+The command checks the flow for outdated components and displays information about any components that need to be updated.
+If outdated components are found, the command reports them but does not modify the flow file.
+
+   ```bash
+   uv run lfx check simple-agent-flow.json
+   ```
+
+   Result:
+   ```result
+   Built lfx @ file:///Users/mendonkissling/Documents/GitHub/langflow/src/lfx
+   Uninstalled 29 packages in 342ms
+   Installed 29 packages in 49ms
+
+   Checking flow: simple-agent-flow.json
+   Total nodes: 5
+   Outdated components: 0
+   ✅ All components are up to date!
+   ```
+
+To check and automatically apply safe updates to the flow file, include the `--update` flag with the `lfx check` command.
+
+   ```bash
+   uv run lfx check simple-agent-flow.json --update
+   ```
+
+To check and apply all updates, including breaking changes, include the `--force` flag with the `lfx check` command.
+
+   ```bash
+   uv run lfx check simple-agent-flow.json --update --force
+   ```
+
+To check multiple flow files at once, pass them as arguments to the `lfx check` command.
+
+   ```bash
+   uv run lfx check flow1.json flow2.json flow3.json
+   ```
+
+To check a flow interactively, with prompts for each component update, include the `--interactive` flag with the `lfx check` command:
+
+   ```bash
+   uv run lfx check simple-agent-flow.json --interactive
+   ```
+
+To check a flow and save the updates to a new flow file, include the `--output` flag with a file path to a `.json` file.
+
+   ```bash
+   uv run lfx check simple-agent-flow.json --update --output updated-flow.json
+   ```
+
+### LFX check options
+
+| Option                                         | Description                                                                                      |
+|------------------------------------------------|--------------------------------------------------------------------------------------------------|
+| `--update`                                     | Apply safe updates automatically without prompting.                                              |
+| `--force`                                      | Apply all updates including breaking changes. Use with caution and test thoroughly.            |
+| `--interactive`, `-i`                          | Prompt for each component update individually.                                                   |
+| `--output`, `-o`                               | Output file path for the updated flow (defaults to input file when updates are applied).        |
+| `--verbose`, `-v`                              | Show detailed information about component updates and changes.                                   |
