@@ -1,5 +1,4 @@
 import asyncio
-import contextlib
 import json
 import os
 import platform
@@ -1196,7 +1195,7 @@ class ProjectMCPServer:
         # via .run(), which can only be called once, otherwise an error is raised,
         # we use the lock to prevent race conditions on concurrent requests to prevent such an error
         self._manager_lock = anyio.Lock()
-        self._manager_started = False # whether or not the session manager is running
+        self._manager_started = False  # whether or not the session manager is running
 
         # Register handlers that filter by project
         @self.server.list_tools()
@@ -1258,6 +1257,8 @@ class ProjectMCPServer:
 
 # Cache of project MCP servers
 project_mcp_servers: dict[str, ProjectMCPServer] = {}
+
+
 # Due to the lazy initialization of the project MCP servers'
 # streamable-http session managers, we implement a global
 # task group (AnyIO) manager for the session managers.
@@ -1272,6 +1273,7 @@ class ProjectTaskGroup:
     context manager is entered and exited from the same coroutine,
     otherwise Asyncio will raise a RuntimeError.
     """
+
     def __init__(self):
         self._started = False
         self._start_stop_lock = anyio.Lock()
