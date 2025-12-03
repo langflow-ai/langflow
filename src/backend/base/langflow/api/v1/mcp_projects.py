@@ -1255,8 +1255,8 @@ class ProjectMCPServer:
         """Own the lifecycle of the project's Streamable HTTP session manager."""
         try:
             async with self.session_manager.run():
-                task_status.started()  # Signal ready before setting state
                 self._manager_started = True
+                task_status.started()
                 await anyio.sleep_forever()
         except anyio.get_cancelled_exc_class():
             await logger.adebug(f"Streamable HTTP manager cancelled for project {self.project_id}")
