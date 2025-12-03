@@ -43,7 +43,7 @@ export const LangflowCounts = () => {
           <div className="hit-area-hover group relative items-center rounded-md px-2 py-1 text-muted-foreground flex">
             <FaDiscord className="h-4 w-4" />
             <span className="text-xs font-semibold pl-2">
-              {formatNumber(discordCount || 0)}
+              {formatNumber(discordCount)}
             </span>
           </div>
         </Button>
