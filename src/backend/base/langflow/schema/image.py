@@ -60,7 +60,7 @@ async def get_files(
             continue
 
         file_path = Path(file)
-        
+
         try:
             # Check if this is an absolute local path
             if file_path.is_absolute():
@@ -81,7 +81,7 @@ async def get_files(
                     continue
 
                 file_object = await storage_service.get_file(flow_id=flow_id, file_name=file_name)
-            
+
             if convert_to_base64:
                 file_base64 = base64.b64encode(file_object).decode("utf-8")
                 file_objects.append(file_base64)

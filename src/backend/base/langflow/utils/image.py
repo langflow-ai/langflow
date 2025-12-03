@@ -7,7 +7,7 @@ from pathlib import Path
 
 def convert_image_to_base64(image_path: str | Path) -> str:
     """Convert an image file to a base64 encoded string.
-    
+
     Supports both local absolute paths and storage service paths (flow_id/filename format).
 
     Args:
@@ -44,36 +44,35 @@ def convert_image_to_base64(image_path: str | Path) -> str:
         except OSError as e:
             msg = f"Error reading image file: {e}"
             raise OSError(msg) from e
-    
+
     # Storage service path (format: flow_id/filename or just filename)
     from langflow.services.deps import get_settings_service, get_storage_service
-    
+
     settings = get_settings_service().settings
     storage_service = get_storage_service()
-    
+
     if not storage_service:
         msg = f"Storage service not available for path: {image_path}"
         raise ValueError(msg)
-    
+
     # For local storage, resolve to absolute path
     if settings.storage_type == "local":
         full_path = storage_service.build_full_path(
-            flow_id=str(image_path_obj.parent) if image_path_obj.parent != Path() else "",
-            file_name=image_path_obj.name
+            flow_id=str(image_path_obj.parent) if image_path_obj.parent != Path() else "", file_name=image_path_obj.name
         )
         full_path_obj = Path(full_path)
-        
+
         if not full_path_obj.exists():
             msg = f"Image file not found: {image_path}"
             raise FileNotFoundError(msg)
-        
+
         try:
             with full_path_obj.open("rb") as image_file:
                 return base64.b64encode(image_file.read()).decode("utf-8")
         except OSError as e:
             msg = f"Error reading image file: {e}"
             raise OSError(msg) from e
-    
+
     # For S3 storage, use async get_file
     try:
         # Parse the path
@@ -81,7 +80,7 @@ def convert_image_to_base64(image_path: str | Path) -> str:
             flow_id, file_name = "", image_path_obj.name
         else:
             flow_id, file_name = str(image_path_obj.parent), image_path_obj.name
-        
+
         # Get file from storage service (async operation)
         file_bytes = asyncio.run(storage_service.get_file(flow_id=flow_id, file_name=file_name))
         return base64.b64encode(file_bytes).decode("utf-8")
