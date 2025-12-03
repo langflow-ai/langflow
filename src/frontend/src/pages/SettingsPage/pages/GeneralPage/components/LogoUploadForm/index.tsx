@@ -172,8 +172,8 @@ const LogoUploadForm = () => {
         sourceType: "azureblobstorage",
         fileName: fileName,
         sourceDetails: {
-          containerName: "ai-studio-v2",
-          storageAccount: "autonomizestorageaccount",
+          containerName: process.env.FLEXSTORE_DEFAULT_CONTAINERNAME || "ai-studio-v2",
+          storageAccount: process.env.FLEXSTORE_DEFAULT_STORAGE_ACCOUNT || "autonomizestorageaccount",
         },
       });
 
@@ -259,11 +259,10 @@ const LogoUploadForm = () => {
 
           {/* Upload Area */}
           <div
-            className={`flex flex-col items-center justify-center rounded-lg border-2 border-primary-border hover:border-secondary-border border-dashed p-8 transition-colors ${
-              isDragging
+            className={`flex flex-col items-center justify-center rounded-lg border-2 border-primary-border hover:border-secondary-border border-dashed p-8 transition-colors ${isDragging
                 ? "border-primary bg-primary/5"
                 : "border-border hover:border-primary/50"
-            }`}
+              }`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}

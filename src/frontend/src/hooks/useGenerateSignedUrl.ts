@@ -40,8 +40,8 @@ export const useGenerateSignedUrl = ({
         sourceType: "azureblobstorage",
         fileName: blobPath,
         sourceDetails: {
-          containerName: "ai-studio-v2",
-          storageAccount: "autonomizestorageaccount",
+          containerName: process.env.FLEXSTORE_DEFAULT_CONTAINERNAME || "ai-studio-v2",
+          storageAccount: process.env.FLEXSTORE_DEFAULT_STORAGE_ACCOUNT || "autonomizestorageaccount",
         },
       });
 

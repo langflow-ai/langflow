@@ -12,8 +12,9 @@ interface IUpdateAppConfigPayload {
 }
 
 export const useUpdateAppConfig: useMutationFunctionType<
-  IApplicationConfig,
-  IUpdateAppConfigPayload
+  undefined,
+  IUpdateAppConfigPayload,
+  IApplicationConfig
 > = (options) => {
   const { mutate } = UseRequestProcessor();
 
