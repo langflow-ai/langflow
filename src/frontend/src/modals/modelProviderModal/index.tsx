@@ -10,12 +10,9 @@ import {
 import { useGetEnabledModels } from '@/controllers/API/queries/models/use-get-enabled-models';
 import { usePostGlobalVariables } from '@/controllers/API/queries/variables';
 import useAlertStore from '@/stores/alertStore';
-import ProviderList from '@/pages/SettingsPage/pages/ModelProvidersPage/components/provider-list';
-import {
-  Model,
-  Provider,
-} from '@/pages/SettingsPage/pages/ModelProvidersPage/components/types';
-import { useProviderActions } from '@/pages/SettingsPage/pages/ModelProvidersPage/components/use-provider-actions';
+import ProviderList from '@/modals/modelProviderModal/components/ProviderList';
+import { Model, Provider } from '@/modals/modelProviderModal/components/types';
+import { useProviderActions } from '@/modals/modelProviderModal/components/use-provider-actions';
 import { cn } from '@/utils/utils';
 import ModelProviderActive from './components/ModelProviderActive';
 import ModelProviderEdit from './components/ModelProviderEdit';
@@ -358,8 +355,11 @@ const ModelProviderModal = ({
                   <Button
                     variant="ghost"
                     className="w-full"
-                    disabled={!hasPendingChanges}
-                    onClick={() => setPendingModelChanges({})}
+                    onClick={() => {
+                      setPendingModelChanges({});
+                      setIsEditing(false);
+                      onClose();
+                    }}
                   >
                     Cancel
                   </Button>
@@ -378,7 +378,11 @@ const ModelProviderModal = ({
                     <Button
                       variant="ghost"
                       className="w-full"
-                      onClick={() => setIsEditing(false)}
+                      onClick={() => {
+                        setPendingModelChanges({});
+                        setIsEditing(false);
+                        onClose();
+                      }}
                     >
                       Cancel
                     </Button>

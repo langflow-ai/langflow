@@ -1,14 +1,11 @@
-import Fuse from 'fuse.js';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { mutateTemplate } from '@/CustomNodes/helpers/mutate-template';
 import LoadingTextComponent from '@/components/common/loadingTextComponent';
 import { RECEIVING_INPUT_VALUE } from '@/constants/constants';
 import { PROVIDER_VARIABLE_MAPPING } from '@/constants/providerConstants';
-import { useGetDefaultModel } from '@/controllers/API/queries/models/use-get-default-model';
 import { usePostTemplateValue } from '@/controllers/API/queries/nodes/use-post-template-value';
 import { useGetGlobalVariables } from '@/controllers/API/queries/variables';
 import { useCustomNavigate } from '@/customization/hooks/use-custom-navigate';
-import ApiKeyModal from '@/modals/apiKeyModal';
 import ModelProviderModal from '@/modals/modelProviderModal';
 import useAlertStore from '@/stores/alertStore';
 import useFlowStore from '@/stores/flowStore';
@@ -30,6 +27,7 @@ import {
 import {
   Popover,
   PopoverContent,
+  PopoverContentWithoutPortal,
   PopoverTrigger,
 } from '../../../../ui/popover';
 import type { BaseInputProps } from '../../types';
@@ -529,12 +527,12 @@ export default function ModelInputComponent({
                       />
                       <div className="truncate text-[13px]">{option.name}</div>
 
-                      {isReasoning && (
+                      {/* {isReasoning && (
                         <ForwardedIconComponent
                           name="brain"
                           className="h-4 w-4 shrink-0 text-muted-foreground"
                         />
-                      )}
+                      )} */}
                       <div className="pl-2 ml-auto">
                         <ForwardedIconComponent
                           name="Check"
@@ -559,8 +557,8 @@ export default function ModelInputComponent({
   );
 
   const renderManageProvidersButton = () => (
-    <div className="sticky bottom-0 border-t bg-background">
-      {hasRefreshButton && (
+    <div className="sticky bottom-0 bg-background">
+      {/* {hasRefreshButton && (
         <Button
           className="w-full flex cursor-pointer items-center justify-start gap-2 truncate py-3 text-xs text-muted-foreground px-3 hover:bg-accent group"
           unstyled
@@ -579,8 +577,8 @@ export default function ModelInputComponent({
             />
           </div>
         </Button>
-      )}
-      {externalOptions?.fields?.data?.node && (
+      )} */}
+      {/* {externalOptions?.fields?.data?.node && (
         <Button
           className="w-full flex cursor-pointer items-center justify-start gap-2 truncate py-3 text-xs text-muted-foreground px-3 hover:bg-accent group"
           unstyled
@@ -601,7 +599,7 @@ export default function ModelInputComponent({
             )}
           </div>
         </Button>
-      )}
+      )} */}
 
       <Button
         className="w-full flex cursor-pointer items-center justify-start gap-2 truncate py-3 text-xs text-muted-foreground px-3 hover:bg-accent group"
@@ -625,7 +623,7 @@ export default function ModelInputComponent({
   );
 
   const renderPopoverContent = () => (
-    <PopoverContent
+    <PopoverContentWithoutPortal
       side="bottom"
       avoidCollisions={true}
       className="noflow nowheel nopan nodelete nodrag p-0"
@@ -635,7 +633,7 @@ export default function ModelInputComponent({
         {renderOptionsList()}
         {renderManageProvidersButton()}
       </Command>
-    </PopoverContent>
+    </PopoverContentWithoutPortal>
   );
 
   // Loading state
