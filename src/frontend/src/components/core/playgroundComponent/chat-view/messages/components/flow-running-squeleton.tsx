@@ -1,5 +1,5 @@
 import { TextShimmer } from "@/components/ui/TextShimmer";
-import LogoIcon from "./chat-logo-icon";
+import LogoIcon from "./bot-message-logo";
 
 export default function FlowRunningSqueleton() {
   return (
