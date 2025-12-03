@@ -81,7 +81,7 @@ def convert_image_to_base64(image_path: str | Path) -> str:
             flow_id, file_name = "", image_path_obj.name
         else:
             flow_id, file_name = str(image_path_obj.parent), image_path_obj.name
-        
+
         file_bytes = run_until_complete(coro=storage_service.get_file(flow_id=flow_id, file_name=file_name))
 
         return base64.b64encode(file_bytes).decode("utf-8")
