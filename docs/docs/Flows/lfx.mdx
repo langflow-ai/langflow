@@ -23,9 +23,12 @@ The flow graph is stored in memory at all times, so there is less overhead for l
 
 - Install [Python](https://www.python.org/downloads/release/python-3100/).
 - Install [uv](https://docs.astral.sh/uv/getting-started/installation/).
-- Create or download a [flow JSON file](/concepts-flows).
+- Create or download a [flow JSON file](/concepts-flows). For example, download the Simple Agent flow from the repository:
+  ```bash
+  curl -o simple-agent-flow.json "https://raw.githubusercontent.com/langflow-ai/langflow/main/src/backend/base/langflow/initial_setup/starter_projects/Simple%20Agent.json"
+  ```
 - Create an [OpenAI API key](https://platform.openai.com/api-keys).
-- Create a [Langflow API key](/api-keys-and-authentication).
+- Create a Langflow API key. For LFX, you can [generate a secure token locally](#serve), or create one through the [Langflow server UI or CLI](/api-keys-and-authentication).
 
 ## Install LFX
 
@@ -63,13 +66,19 @@ If you have [installed Langflow OSS version >=1.6](/get-started-installation#ins
    uv pip install lfx
    ```
 
+   To install the latest nightly version of LFX:
+
+   ```bash
+   uv pip install lfx-nightly
+   ```
+
    To run `lfx` commands, continue to [`lfx serve`](#serve) or [`lfx run`](#run).
 </TabItem>
 <TabItem value="uvx" label="Run without installing">
 
 Run LFX without installing it locally using `uvx`.
 
-1. Create a [Langflow API key](/api-keys-and-authentication), and set `LANGFLOW_API_KEY` in the same terminal session as `lfx`:
+1. Create a [Langflow API key](#serve), and set `LANGFLOW_API_KEY` in the same terminal session as `lfx`:
 
    ```bash
    export LANGFLOW_API_KEY="sk..."
@@ -91,15 +100,24 @@ Run LFX without installing it locally using `uvx`.
 
 To serve a flow as a REST API endpoint, set a `LANGFLOW_API_KEY` and run the flow JSON.
 
-<PartialLfxDependencies />
-
 The API key is required for security because `lfx serve` can create a publicly accessible FastAPI server.
-To create a Langflow API key, see [API keys and authentication](/api-keys-and-authentication).
 
 This example uses the **Agent** component's built-in OpenAI model, which requires an OpenAI API key.
 If you want to use a different provider, edit the model provider, model name, and credentials accordingly.
 
-1. Set up your environment variables.
+1. Generate a Langflow API key.
+
+   For LFX, you can generate a secure token locally to use as your `LANGFLOW_API_KEY`:
+
+   ```bash
+   uv run python -c "import secrets; print(secrets.token_urlsafe(32))"
+   ```
+
+   This is different from creating a Langflow API key through the Langflow server UI or CLI, which stores the key in the Langflow database.
+   For LFX, you only need a secure token string to authenticate requests to your LFX server.
+   To create a Langflow API key for use with a Langflow server, see [API keys and authentication](/api-keys-and-authentication).
+
+2. Set up your environment variables.
 
     <Tabs>
     <TabItem value="env-file" label=".env file" default>
@@ -127,7 +145,11 @@ If you want to use a different provider, edit the model provider, model name, an
     </TabItem>
     </Tabs>
 
-2. Start the server with your variable values.
+3. Install dependencies.
+
+   <PartialLfxDependencies />
+
+4. Start the server with your variable values.
 
     <Tabs>
     <TabItem value="env-file" label=".env file" default>
@@ -157,7 +179,7 @@ If you want to use a different provider, edit the model provider, model name, an
 
     </TabItem>
     </Tabs>
-3. The startup process displays a `flow_id` value in the output.
+5. The startup process displays a `flow_id` value in the output.
    Copy the `flow_id` to use in the test API call in the next step.
    In this example, the `flow_id` is `c1dab29d-3364-58ef-8fef-99311d32ee42`.
 
@@ -183,13 +205,13 @@ If you want to use a different provider, edit the model provider, model name, an
      ╰──────────────────────────────────────────────────────────────────────╯
     ```
 
-4. In a new terminal, export your `flow_id` and Langflow API key values as variables:
+6. To send a test request to the server, open a new terminal and export your `flow_id` and Langflow API key values as variables:
     ```bash
     export LANGFLOW_API_KEY="sk..."
     export FLOW_ID="c1dab29d-3364-58ef-8fef-99311d32ee42"
     ```
 
-5. Test the server with an API call to the `/flows/flow_id/run` endpoint:
+7. Test the server with an API call to the `/flows/flow_id/run` endpoint:
 
     ```bash
     curl -X POST http://localhost:8000/flows/$FLOW_ID/run \
@@ -241,16 +263,14 @@ To view the LFX server's API docs and schema, see the `/docs` endpoint at `http:
 | `--log-level`                               | Logging level. One of: `debug`, `info`, `warning`, `error`, `critical`. Default: `warning`.                         |
 | `--port`, `-p`                              | Port to bind the server to. Default: `8000`.                                                                        |
 | `--verbose`, `-v`                           | Show diagnostic output and execution details.                                                                       |
-| `--flow-json`                               | Read inline flow JSON content as a string, e.g. `uv run lfx serve --flow-json '{...}'` where `{...}` is the flow JSON definition. |
-| `--stdin`                                   | Read JSON flow content from `stdin`, e.g. `cat flow.json \| uv run lfx serve --stdin`.                              |
+| `--flow-json`                               | Read inline flow JSON content as a string. For example: `uv run lfx serve --flow-json '{...}'`, where `{...}` is the flow JSON definition. |
+| `--stdin`                                   | Read JSON flow content from `stdin`. For example: `cat flow.json \| uv run lfx serve --stdin`.                              |
 
 ## Run the simple agent flow with `lfx run` {#run}
 
 The `lfx run` command runs a flow from a JSON file without serving it, and the output is sent to `stdout`.
 Input to `lfx run` can be a path to the JSON file, inline JSON passed with `--input-value`, or read from `stdin`.
 No Langflow API key is required.
-
-<PartialLfxDependencies />
 
 This example uses the **Agent** component's built-in OpenAI model, which requires an OpenAI API key.
 If you want to use a different provider, edit the model provider, model name, and credentials accordingly.
@@ -260,12 +280,16 @@ If you want to use a different provider, edit the model provider, model name, an
     export OPENAI_API_KEY="sk-..."
     ```
 
-2. Run the flow from a flow JSON file.
+2. Install dependencies.
+
+   <PartialLfxDependencies />
+
+3. Run the flow from a flow JSON file.
     ```bash
     uv run lfx run simple-agent-flow.json "Hello world"
     ```
 
-    This flow expects a [Message](/data-types#message) input, which is a simple text string. The simple agent flow includes Calculator and URL tools, it can answer questions such as `"What is 15 multiplied by 23?"` or `"Can you fetch information from https://example.com?"`.
+    This flow expects a [Message](/data-types#message) input, which is a simple text string.
 
     If your flow expects multiple structured input fields, you can pass structured JSON with the `--input-value` flag. The field names must match what your flow expects:
     ```bash
@@ -330,4 +354,4 @@ uv run lfx run --flow-json '{"data": {"nodes": [...], "edges": [...]}}' \
 In addition to running flows from JSON files, you can use `lfx run` with Python scripts that define flows programmatically.
 This approach allows you to create flows directly in Python code without the visual builder.
 
-For a complete example of creating an agent flow programmatically using LFX components, see the [Complete Agent Example on PyPI](https://pypi.org/project/lfx/0.1.13/#complete-agent-example).
+For a complete example of creating an agent flow programmatically using LFX components, see the [Complete Agent Example on PyPI](https://pypi.org/project/lfx).
