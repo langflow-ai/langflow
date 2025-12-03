@@ -61,7 +61,12 @@ jobs:
             echo ""
             
             # Create a test file in a persistent location (outside workspace)
-            TEST_FILE="/opt/ephemeral-test-artifact-$(date +%s).txt"
+            # Use /tmp which is writable by the runner user, or /opt/actions-runner if available
+            if [ -w /opt/actions-runner ]; then
+              TEST_FILE="/opt/actions-runner/ephemeral-test-artifact-$(date +%s).txt"
+            else
+              TEST_FILE="/tmp/ephemeral-test-artifact-$(date +%s).txt"
+            fi
             echo "Creating test file: $TEST_FILE"
             echo "Created at: $(date -Iseconds)" > "$TEST_FILE"
             echo "Runner name: ${{ runner.name }}" >> "$TEST_FILE"
@@ -126,8 +131,9 @@ jobs:
             echo ""
             
             # Check for any test files from previous runs
-            echo "Checking for test files in /opt..."
-            TEST_FILES=$(find /opt -name "ephemeral-test-artifact-*.txt" 2>/dev/null || true)
+            # Check both /opt/actions-runner and /tmp for test files
+            echo "Checking for test files from previous runs..."
+            TEST_FILES=$(find /opt/actions-runner /tmp -name "ephemeral-test-artifact-*.txt" 2>/dev/null | head -20 || true)
             
             if [ -n "$TEST_FILES" ]; then
               echo "❌ **FAILED:** Found test files from previous run(s):"
