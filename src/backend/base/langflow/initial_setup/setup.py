@@ -843,7 +843,9 @@ async def update_agentic_flow_files(all_types_dict: dict) -> None:
     await update_flow_files(flows_dir, all_types_dict, "agentic flow")
 
 
-async def create_or_update_agentic_flows(session: AsyncSession, user_id: UUID, all_types_dict: dict | None = None) -> None:
+async def create_or_update_agentic_flows(
+    session: AsyncSession, user_id: UUID, all_types_dict: dict | None = None
+) -> None:
     """Create or update agentic flows in the Langflow Assistant folder for a user.
 
     This function is called on user login to ensure that all agentic flows
@@ -958,15 +960,12 @@ async def create_or_update_agentic_flows(session: AsyncSession, user_id: UUID, a
 
         if flows_created > 0 or flows_updated > 0:
             await session.commit()
-            await logger.adebug(
-                f"Successfully created {flows_created} and updated {flows_updated} agentic flows"
-            )
+            await logger.adebug(f"Successfully created {flows_created} and updated {flows_updated} agentic flows")
         else:
             await logger.adebug("No agentic flows to create or update")
 
     except Exception:  # noqa: BLE001
         await logger.aexception("Error in create_or_update_agentic_flows")
-
 
 
 def _is_valid_uuid(val):
