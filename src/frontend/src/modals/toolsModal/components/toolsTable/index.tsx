@@ -101,21 +101,52 @@ export default function ToolsTable({
       return;
     }
 
+    // Set flag BEFORE any changes
     applyingSelection.current = true;
-    agGrid.current.api.setGridOption("suppressRowClickSelection", true);
 
-    const selectedIds = new Set(selectedRows.map((row) => row.name));
-    agGrid.current.api.forEachNode((node) => {
-      const shouldSelect = selectedIds.has(node.data.name);
-      if (node.isSelected() !== shouldSelect) {
-        node.setSelected(shouldSelect, false);
+    // Use requestAnimationFrame to batch the selection changes
+    requestAnimationFrame(() => {
+      if (!agGrid.current?.api) {
+        applyingSelection.current = false;
+        return;
       }
-    });
 
-    agGrid.current.api.setGridOption("suppressRowClickSelection", false);
-    setTimeout(() => {
-      applyingSelection.current = false;
-    }, 50);
+      const selectedIds = new Set(selectedRows.map((row) => row.name));
+
+      // Use setNodesSelected for batch operation (more efficient and atomic)
+      const nodesToSelect: any[] = [];
+      const nodesToDeselect: any[] = [];
+
+      agGrid.current.api.forEachNode((node) => {
+        const shouldSelect = selectedIds.has(node.data.name);
+        if (node.isSelected() !== shouldSelect) {
+          if (shouldSelect) {
+            nodesToSelect.push(node);
+          } else {
+            nodesToDeselect.push(node);
+          }
+        }
+      });
+
+      // Apply deselections first, then selections using batch operation
+      if (nodesToDeselect.length > 0) {
+        agGrid.current.api.setNodesSelected({
+          nodes: nodesToDeselect,
+          newValue: false,
+        });
+      }
+      if (nodesToSelect.length > 0) {
+        agGrid.current.api.setNodesSelected({
+          nodes: nodesToSelect,
+          newValue: true,
+        });
+      }
+
+      // Use another animation frame to ensure the selection is fully applied before clearing the flag
+      requestAnimationFrame(() => {
+        applyingSelection.current = false;
+      });
+    });
   }, [selectedRows, open]);
 
   useEffect(() => {
@@ -225,11 +256,26 @@ export default function ToolsTable({
     },
   ];
   const handleSelectionChanged = (event) => {
+    // Guard: don't process if modal is closed or we're programmatically applying selection
     if (!open || applyingSelection.current) return;
 
+    // Get the actual selected rows from AG Grid
     const selectedData = event.api.getSelectedRows();
-    editedSelection.current = true;
-    setSelectedRows(selectedData);
+
+    // Only update if we have a real change
+    // Compare by creating a set of names for both
+    const newNames = new Set(selectedData.map((r: any) => r.name));
+    const oldNames = new Set((selectedRows || []).map((r: any) => r.name));
+
+    // Check if selection actually changed
+    const sameSize = newNames.size === oldNames.size;
+    const sameContent =
+      sameSize && Array.from(newNames).every((name) => oldNames.has(name));
+
+    if (!sameContent) {
+      editedSelection.current = true;
+      setSelectedRows(selectedData);
+    }
   };
 
   const handleSidebarInputChange = (
