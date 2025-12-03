@@ -130,6 +130,14 @@ jobs:
             echo "### Step 2: Verifying Clean State"
             echo ""
             
+            # Diagnostic information to understand VM state
+            echo "### VM Diagnostic Information" >> "$GITHUB_STEP_SUMMARY"
+            echo "**Hostname:** $(hostname)" >> "$GITHUB_STEP_SUMMARY"
+            echo "**System Uptime:** $(uptime -p 2>/dev/null || uptime)" >> "$GITHUB_STEP_SUMMARY"
+            echo "**Boot Time:** $(who -b 2>/dev/null | awk '{print $3, $4}' || date -d @$(awk '/btime/ {print $2}' /proc/stat))" >> "$GITHUB_STEP_SUMMARY"
+            echo "**Current Time:** $(date)" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            
             # Check for any test files from previous runs
             # Check both /opt/actions-runner and /tmp for test files
             echo "Checking for test files from previous runs..."
@@ -143,7 +151,30 @@ jobs:
               echo '```' >> "$GITHUB_STEP_SUMMARY"
               echo "$TEST_FILES" >> "$GITHUB_STEP_SUMMARY"
               echo '```' >> "$GITHUB_STEP_SUMMARY"
+              
+              # Show file details for debugging
+              echo "" >> "$GITHUB_STEP_SUMMARY"
+              echo "**File details:**" >> "$GITHUB_STEP_SUMMARY"
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
+              for file in $TEST_FILES; do
+                if [ -f "$file" ]; then
+                  echo "File: $file" >> "$GITHUB_STEP_SUMMARY"
+                  echo "Modified: $(stat -c '%y' "$file" 2>/dev/null || ls -l "$file")" >> "$GITHUB_STEP_SUMMARY"
+                  echo "Contents:" >> "$GITHUB_STEP_SUMMARY"
+                  cat "$file" >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo "(cannot read)" >> "$GITHUB_STEP_SUMMARY"
+                  echo "---" >> "$GITHUB_STEP_SUMMARY"
+                fi
+              done
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
+              
+              echo "" >> "$GITHUB_STEP_SUMMARY"
               echo "❌ **Ephemeral validation FAILED** - Files persist across runs!" >> "$GITHUB_STEP_SUMMARY"
+              echo "" >> "$GITHUB_STEP_SUMMARY"
+              echo "**Possible causes:**" >> "$GITHUB_STEP_SUMMARY"
+              echo "1. VM is not being shut down/recreated (check shutdown script)" >> "$GITHUB_STEP_SUMMARY"
+              echo "2. GCP is using persistent boot disk or snapshots" >> "$GITHUB_STEP_SUMMARY"
+              echo "3. VM instance template includes these files" >> "$GITHUB_STEP_SUMMARY"
+              echo "4. Boot disk is being preserved between VM recreations" >> "$GITHUB_STEP_SUMMARY"
               exit 1
             else
               echo "✅ No test files found from previous runs"
