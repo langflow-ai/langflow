@@ -198,3 +198,9 @@ def has_chat_output(vertices: dict[Vertex, int]):
     from lfx.graph.schema import InterfaceComponentTypes
 
     return any(InterfaceComponentTypes.ChatOutput in vertex.id for vertex in vertices)
+
+
+def has_chat_input(vertices: dict[Vertex, int]):
+    from lfx.graph.schema import InterfaceComponentTypes
+
+    return any(InterfaceComponentTypes.ChatInput in vertex.id for vertex in vertices)

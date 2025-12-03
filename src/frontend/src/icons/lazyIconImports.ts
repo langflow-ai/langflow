@@ -465,6 +465,7 @@ export const lazyIconsMapping = {
     })),
   VertexAI: () =>
     import("@/icons/VertexAI").then((mod) => ({ default: mod.VertexAIIcon })),
+  vLLM: () => import("@/icons/vLLM").then((mod) => ({ default: mod.VllmIcon })),
   WatsonxAI: () =>
     import("@/icons/IBMWatsonx").then((mod) => ({
       default: mod.WatsonxAiIcon,
@@ -480,7 +481,7 @@ export const lazyIconsMapping = {
   Wolfram: () =>
     import("@/icons/Wolfram/Wolfram").then((mod) => ({ default: mod.default })),
   xAI: () => import("@/icons/xAI").then((mod) => ({ default: mod.XAIIcon })),
-  youTube: () =>
+  YouTube: () =>
     import("@/icons/Youtube").then((mod) => ({ default: mod.YoutubeIcon })),
   ZepMemory: () =>
     import("@/icons/ZepMemory").then((mod) => ({ default: mod.ZepMemoryIcon })),

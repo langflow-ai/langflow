@@ -6,32 +6,43 @@ from lfx.base.flow_controls.loop_utils import (
     get_loop_body_vertices,
     validate_data_input,
 )
+from lfx.components.processing.converter import convert_to_data
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import HandleInput
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
+from lfx.schema.message import Message
 from lfx.template.field.base import Output
 
 
 class LoopComponent(Component):
     display_name = "Loop"
     description = (
-        "Iterates over a list of Data objects, outputting one item at a time and aggregating results from loop inputs."
+        "Iterates over a list of Data or Message objects, outputting one item at a time and "
+        "aggregating results from loop inputs. Message objects are automatically converted to "
+        "Data objects for consistent processing."
     )
-    documentation: str = "https://docs.langflow.org/components-logic#loop"
+    documentation: str = "https://docs.langflow.org/loop"
     icon = "infinity"
 
     inputs = [
         HandleInput(
             name="data",
             display_name="Inputs",
-            info="The initial list of Data objects or DataFrame to iterate over.",
+            info="The initial DataFrame to iterate over.",
             input_types=["DataFrame"],
         ),
     ]
 
     outputs = [
-        Output(display_name="Item", name="item", method="item_output", allows_loop=True, group_outputs=True),
+        Output(
+            display_name="Item",
+            name="item",
+            method="item_output",
+            allows_loop=True,
+            loop_types=["Message"],
+            group_outputs=True,
+        ),
         Output(display_name="Done", name="done", method="done_output", group_outputs=True),
     ]
 
@@ -52,6 +63,10 @@ class LoopComponent(Component):
                 f"{self._id}_initialized": True,
             }
         )
+
+    def _convert_message_to_data(self, message: Message) -> Data:
+        """Convert a Message object to a Data object using Type Convert logic."""
+        return convert_to_data(message, auto_parse=False)
 
     def _validate_data(self, data):
         """Validate and return a list of Data objects."""
