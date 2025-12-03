@@ -646,7 +646,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         # Check if we're in ingestion-only mode (no search query)
         has_search_query = bool((self.search_query or "").strip())
         if not has_search_query:
-            logger.debug("🔄 Ingestion-only mode activated: search operations will be skipped")
+            logger.debug("Ingestion-only mode activated: search operations will be skipped")
             logger.debug("Starting ingestion mode...")
 
         logger.warning(f"Embedding: {self.embedding}")
@@ -681,7 +681,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
 
         docs = self.ingest_data or []
         if not docs:
-            logger.debug("✓ Ingestion complete: No documents provided")
+            logger.debug("Ingestion complete: No documents provided")
             return
 
         if not self.embedding:
@@ -812,7 +812,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
 
         dynamic_field_name = get_embedding_field_name(embedding_model)
 
-        logger.info(f"✓ Selected embedding model for ingestion: '{embedding_model}'")
+        logger.info(f"Selected embedding model for ingestion: '{embedding_model}'")
         self.log(f"Using embedding model for ingestion: {embedding_model}")
         self.log(f"Dynamic vector field: {dynamic_field_name}")
 
@@ -981,7 +981,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         self.log(metadatas)
 
         logger.info(
-            f"✓ Ingestion complete: Successfully indexed {len(return_ids)} documents with model '{embedding_model}'"
+            f"Ingestion complete: Successfully indexed {len(return_ids)} documents with model '{embedding_model}'"
         )
         self.log(f"Successfully indexed {len(return_ids)} documents with model {embedding_model}.")
 
@@ -1077,6 +1077,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
             if filter_clauses:
                 agg_query["query"] = {"bool": {"filter": filter_clauses}}
 
+            logger.debug(f"Model detection query: {agg_query}")
             result = client.search(
                 index=self.index_name,
                 body=agg_query,
@@ -1085,14 +1086,25 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
             buckets = result.get("aggregations", {}).get("embedding_models", {}).get("buckets", [])
             models = [b["key"] for b in buckets if b["key"]]
 
+            # Log detailed bucket info for debugging
             logger.info(
                 f"Detected embedding models in corpus: {models}"
                 + (f" (with {len(filter_clauses)} filters)" if filter_clauses else "")
             )
+            if not models:
+                total_hits = result.get("hits", {}).get("total", {})
+                total_count = total_hits.get("value", 0) if isinstance(total_hits, dict) else total_hits
+                logger.warning(
+                    f"No embedding_model values found in index '{self.index_name}'. "
+                    f"Total docs in index: {total_count}. "
+                    f"This may indicate documents were indexed without the embedding_model field."
+                )
         except (OpenSearchException, KeyError, ValueError) as e:
             logger.warning(f"Failed to detect embedding models: {e}")
             # Fallback to current model
-            return [self._get_embedding_model_name()]
+            fallback_model = self._get_embedding_model_name()
+            logger.info(f"Using fallback model: {fallback_model}")
+            return [fallback_model]
         else:
             return models
 
@@ -1243,18 +1255,20 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
             model_id = getattr(emb_obj, "model_id", None)
             model_name = getattr(emb_obj, "model_name", None)
             dimensions = getattr(emb_obj, "dimensions", None)
-            available_models = getattr(emb_obj, "available_models", None)
+            available_models_attr = getattr(emb_obj, "available_models", None)
 
             logger.info(
                 f"Embedding object {idx}: deployment={deployment}, model={model}, "
                 f"model_id={model_id}, model_name={model_name}, dimensions={dimensions}, "
-                f"available_models={available_models}"
+                f"available_models={available_models_attr}"
             )
 
             # If this embedding has available_models dict, map all models to their dedicated instances
-            if available_models and isinstance(available_models, dict):
-                logger.info(f"Embedding object {idx} provides {len(available_models)} models via available_models dict")
-                for model_name_key, dedicated_embedding in available_models.items():
+            if available_models_attr and isinstance(available_models_attr, dict):
+                logger.info(
+                    f"Embedding object {idx} provides {len(available_models_attr)} models via available_models dict"
+                )
+                for model_name_key, dedicated_embedding in available_models_attr.items():
                     if model_name_key and str(model_name_key).strip():
                         model_str = str(model_name_key).strip()
                         if model_str not in embedding_by_model:
@@ -1309,6 +1323,12 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
 
         logger.info(f"Generating embeddings for {len(available_models)} models in index")
         logger.info(f"Available embedding identifiers: {list(embedding_by_model.keys())}")
+        self.log(f"[SEARCH] Models detected in index: {available_models}")
+        self.log(f"[SEARCH] Available embedding identifiers: {list(embedding_by_model.keys())}")
+
+        # Track matching status for debugging
+        matched_models = []
+        unmatched_models = []
 
         for model_name in available_models:
             try:
@@ -1338,18 +1358,34 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
                     # Use the embedding instance directly - no model switching needed!
                     vec = emb_obj.embed_query(q)
                     query_embeddings[model_name] = vec
+                    matched_models.append(model_name)
                     logger.info(f"Generated embedding for model: {model_name} (actual dimensions: {len(vec)})")
+                    self.log(f"[MATCH] Model '{model_name}' - generated {len(vec)}-dim embedding")
                 else:
                     # No matching embedding found for this model
+                    unmatched_models.append(model_name)
                     logger.warning(
                         f"No matching embedding found for model '{model_name}'. "
-                        f"This model will be skipped. Available models: {list(embedding_by_model.keys())}"
+                        f"This model will be skipped. Available identifiers: {list(embedding_by_model.keys())}"
                     )
+                    self.log(f"[NO MATCH] Model '{model_name}' - available: {list(embedding_by_model.keys())}")
             except (RuntimeError, ValueError, ConnectionError, TimeoutError, AttributeError, KeyError) as e:
                 logger.warning(f"Failed to generate embedding for {model_name}: {e}")
+                self.log(f"[ERROR] Embedding generation failed for '{model_name}': {e}")
+
+        # Log summary of model matching
+        logger.info(f"Model matching summary: {len(matched_models)} matched, {len(unmatched_models)} unmatched")
+        self.log(f"[SUMMARY] Model matching: {len(matched_models)} matched, {len(unmatched_models)} unmatched")
+        if unmatched_models:
+            self.log(f"[WARN] Unmatched models in index: {unmatched_models}")
 
         if not query_embeddings:
-            msg = "Failed to generate embeddings for any model"
+            msg = (
+                f"Failed to generate embeddings for any model. "
+                f"Index has models: {available_models}, but no matching embedding objects found. "
+                f"Available embedding identifiers: {list(embedding_by_model.keys())}"
+            )
+            self.log(f"[FAIL] Search failed: {msg}")
             raise ValueError(msg)
 
         index_properties = self._get_index_properties(client)
@@ -1379,6 +1415,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
                     f"Skipping model {model_name}: field '{field_name}' is not mapped as knn_vector. "
                     f"Documents must be indexed with this embedding model before querying."
                 )
+                self.log(f"[SKIP] Field '{selected_field}' not a knn_vector - skipping model '{model_name}'")
                 continue
 
             # Validate vector dimensions match the field dimensions
@@ -1389,6 +1426,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
                     f"Query vector has {vector_dim} dimensions but field '{selected_field}' expects {field_dim}. "
                     f"Skipping this model to prevent search errors."
                 )
+                self.log(f"[DIM MISMATCH] Model '{model_name}': query={vector_dim} vs field={field_dim} - skipping")
                 continue
 
             logger.info(
@@ -1424,6 +1462,11 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
                 "No valid knn_vector fields found for embedding models. "
                 "This may indicate an empty index or missing field mappings. "
                 "Returning empty search results."
+            )
+            self.log(
+                f"[WARN] No valid KNN queries could be built. "
+                f"Query embeddings generated: {list(query_embeddings.keys())}, "
+                f"but no matching knn_vector fields found in index."
             )
             return []
 
@@ -1488,7 +1531,13 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         if isinstance(score_threshold, (int, float)) and score_threshold > 0:
             body["min_score"] = score_threshold
 
-        logger.info(f"Executing multi-model hybrid search with {len(knn_queries_with_candidates)} embedding models")
+        logger.info(
+            f"Executing multi-model hybrid search with {len(knn_queries_with_candidates)} embedding models: "
+            f"{list(query_embeddings.keys())}"
+        )
+        self.log(f"[EXEC] Executing search with {len(knn_queries_with_candidates)} KNN queries, limit={limit}")
+        self.log(f"[EXEC] Embedding models used: {list(query_embeddings.keys())}")
+        self.log(f"[EXEC] KNN fields being queried: {embedding_fields}")
 
         try:
             resp = client.search(index=self.index_name, body=body, params={"terminate_after": 0})
@@ -1542,6 +1591,16 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         hits = resp.get("hits", {}).get("hits", [])
 
         logger.info(f"Found {len(hits)} results")
+        self.log(f"[RESULT] Search complete: {len(hits)} results found")
+
+        if len(hits) == 0:
+            self.log(
+                f"[EMPTY] Debug info: "
+                f"models_in_index={available_models}, "
+                f"matched_models={matched_models}, "
+                f"knn_fields={embedding_fields}, "
+                f"filters={len(filter_clauses)} clauses"
+            )
 
         return [
             {
@@ -1569,6 +1628,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         """
         try:
             # Always build/cache the vector store to ensure ingestion happens
+            logger.info(f"Search query: {self.search_query}")
             if self._cached_vector_store is None:
                 self.build_vector_store()
 
