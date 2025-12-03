@@ -1,14 +1,5 @@
-<<<<<<< HEAD
-
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-
-=======
-
-import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
-
->>>>>>> 166528f555acf5e51ccaeb2e7d4c0401f94ad21e
 
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
@@ -20,24 +11,10 @@ import {
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 import { usePostGlobalVariables } from "@/controllers/API/queries/variables";
 
-<<<<<<< HEAD
-
 import ProviderList from "@/modals/modelProviderModal/components/ProviderList";
 import { Model, Provider } from "@/modals/modelProviderModal/components/types";
 import { useProviderActions } from "@/modals/modelProviderModal/components/use-provider-actions";
 import useAlertStore from "@/stores/alertStore";
-
-=======
-
-import ProviderList from "@/pages/SettingsPage/pages/ModelProvidersPage/components/provider-list";
-import {
-  Model,
-  Provider,
-} from "@/pages/SettingsPage/pages/ModelProvidersPage/components/types";
-import { useProviderActions } from "@/pages/SettingsPage/pages/ModelProvidersPage/components/use-provider-actions";
-import useAlertStore from "@/stores/alertStore";
-
->>>>>>> 166528f555acf5e51ccaeb2e7d4c0401f94ad21e
 
 import { cn } from "@/utils/utils";
 import ModelProviderActive from "./components/ModelProviderActive";
