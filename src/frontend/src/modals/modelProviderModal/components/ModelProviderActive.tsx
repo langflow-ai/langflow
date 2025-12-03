@@ -1,3 +1,4 @@
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
 
 interface ModelProviderActiveProps {
@@ -11,7 +12,13 @@ const ModelProviderActive = ({
 }: ModelProviderActiveProps) => {
   return (
     <div className="flex flex-col p-4 border-t overflow-y-auto h-[178.5px]">
-      <div className="text-[13px] font-medium">Models</div>
+      <div className="text-[13px] font-medium flex items-center gap-1">
+        Models{" "}
+        <ForwardedIconComponent
+          name="info"
+          className="w-4 h-4 text-muted-foreground ml-1"
+        />{" "}
+      </div>
       {activeLLMs.length > 0 && (
         <div className="pt-4">
           <div className="text-[10px] text-muted-foreground">LLM</div>
