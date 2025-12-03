@@ -132,10 +132,7 @@ class ChatOutput(ChatComponent):
         message.sender_name = self.sender_name
         # Preserve session_id from incoming message, or use component/graph session_id
         message.session_id = (
-            self.session_id
-            or existing_session_id
-            or (self.graph.session_id if hasattr(self, "graph") else None)
-            or ""
+            self.session_id or existing_session_id or (self.graph.session_id if hasattr(self, "graph") else None) or ""
         )
         message.context_id = self.context_id
         message.flow_id = self.graph.flow_id if hasattr(self, "graph") else None

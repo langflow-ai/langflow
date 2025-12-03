@@ -201,12 +201,8 @@ class LCAgentComponent(Component):
         if lc_message is not None and hasattr(lc_message, "content") and isinstance(lc_message.content, list):
             # Extract images and text from the text content items
             # Support both "image" (legacy) and "image_url" (standard) types
-            image_dicts = [
-                item for item in lc_message.content if item.get("type") in ("image", "image_url")
-            ]
-            text_content = [
-                item for item in lc_message.content if item.get("type") not in ("image", "image_url")
-            ]
+            image_dicts = [item for item in lc_message.content if item.get("type") in ("image", "image_url")]
+            text_content = [item for item in lc_message.content if item.get("type") not in ("image", "image_url")]
 
             text_strings = [
                 item.get("text", "")
