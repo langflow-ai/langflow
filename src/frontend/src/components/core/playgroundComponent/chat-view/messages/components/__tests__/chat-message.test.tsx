@@ -151,11 +151,10 @@ describe("ChatMessage Component", () => {
 
   it("renders user message correctly", () => {
     render(<ChatMessage {...defaultProps} />);
-
+    expect(screen.getByText("Hello World")).toBeInTheDocument();
     expect(
       screen.getByTestId("chat-message-User-Hello World"),
     ).toBeInTheDocument();
-    expect(screen.getByText("Hello World")).toBeInTheDocument();
   });
 
   it("renders bot message correctly", () => {
@@ -169,7 +168,6 @@ describe("ChatMessage Component", () => {
     };
 
     render(<ChatMessage {...botProps} />);
-
     expect(screen.getByText("Hello World")).toBeInTheDocument();
     expect(
       screen.getByTestId("chat-message-AI-Hello World"),
