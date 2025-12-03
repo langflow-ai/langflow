@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { useThinkingDurationStore } from "../hooks/use-thinking-duration";
 
+const TIMER_UPDATE_INTERVAL_MS = 100;
+
 interface ThinkingMessageProps {
   isThinking: boolean;
   duration: number | null;
@@ -27,7 +29,7 @@ export default function ThinkingMessage({
       if (start) {
         setElapsedTime(Date.now() - start);
       }
-    }, 100);
+    }, TIMER_UPDATE_INTERVAL_MS);
 
     return () => clearInterval(interval);
   }, [isThinking, startTime]);

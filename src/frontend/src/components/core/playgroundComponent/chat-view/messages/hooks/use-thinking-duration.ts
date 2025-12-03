@@ -21,20 +21,23 @@ export const useThinkingDurationStore = create<ThinkingDurationState>(
 
 // Hook to track thinking duration based on isBuilding state
 export function useTrackThinkingDuration(isBuilding: boolean) {
-  const { startTime, setStartTime, setDuration } = useThinkingDurationStore();
+  const { setStartTime, setDuration } = useThinkingDurationStore();
   const wasBuilding = useRef(false);
 
   useEffect(() => {
     if (isBuilding && !wasBuilding.current) {
       // Building just started
       setStartTime(Date.now());
-    } else if (!isBuilding && wasBuilding.current && startTime) {
-      // Building just finished
-      const elapsed = Date.now() - startTime;
-      setDuration(elapsed);
+    } else if (!isBuilding && wasBuilding.current) {
+      // Building just finished - read startTime directly from store to avoid stale closure
+      const currentStartTime = useThinkingDurationStore.getState().startTime;
+      if (currentStartTime) {
+        const elapsed = Date.now() - currentStartTime;
+        setDuration(elapsed);
+      }
     }
     wasBuilding.current = isBuilding;
-  }, [isBuilding, startTime, setStartTime, setDuration]);
+  }, [isBuilding, setStartTime, setDuration]);
 }
 
 // Hook to get the last thinking duration
