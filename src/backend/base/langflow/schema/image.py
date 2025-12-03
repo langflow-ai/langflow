@@ -24,13 +24,8 @@ def get_file_paths(files: list[str | dict]):
     if not files:
         return []
 
-    storage_service = get_storage_service()
     file_paths = []
     for file in files:
-        # Handle dict case
-        if storage_service is None:
-            continue
-
         if not file:  # Skip empty/None files
             continue
 
@@ -44,17 +39,8 @@ def get_file_paths(files: list[str | dict]):
         if not file_path_str:  # Skip empty paths
             continue
 
-        file_path = Path(file_path_str)
-        # Handle edge case where path might be just a filename without parent
-        if file_path.parent == Path():
-            flow_id, file_name = "", file_path.name
-        else:
-            flow_id, file_name = str(file_path.parent), file_path.name
-
-        if not file_name:  # Skip if no filename
-            continue
-
-        file_paths.append(storage_service.build_full_path(flow_id=flow_id, file_name=file_name))
+        # Return paths as-is - they will be resolved when actually reading the file
+        file_paths.append(file_path_str)
     return file_paths
 
 
@@ -63,7 +49,7 @@ async def get_files(
     *,
     convert_to_base64: bool = False,
 ):
-    """Get files from storage service."""
+    """Get files from storage service or local filesystem."""
     if not file_paths:
         return []
 
@@ -74,20 +60,28 @@ async def get_files(
             continue
 
         file_path = Path(file)
-        # Handle edge case where path might be just a filename without parent
-        if file_path.parent == Path():
-            flow_id, file_name = "", file_path.name
-        else:
-            flow_id, file_name = str(file_path.parent), file_path.name
-
-        if not file_name:  # Skip if no filename
-            continue
-
-        if not storage_service:
-            continue
-
+        
         try:
-            file_object = await storage_service.get_file(flow_id=flow_id, file_name=file_name)
+            # Check if this is an absolute local path
+            if file_path.is_absolute():
+                # Read from local filesystem
+                file_object = file_path.read_bytes()
+            else:
+                # Read from storage service
+                # Handle edge case where path might be just a filename without parent
+                if file_path.parent == Path():
+                    flow_id, file_name = "", file_path.name
+                else:
+                    flow_id, file_name = str(file_path.parent), file_path.name
+
+                if not file_name:  # Skip if no filename
+                    continue
+
+                if not storage_service:
+                    continue
+
+                file_object = await storage_service.get_file(flow_id=flow_id, file_name=file_name)
+            
             if convert_to_base64:
                 file_base64 = base64.b64encode(file_object).decode("utf-8")
                 file_objects.append(file_base64)
