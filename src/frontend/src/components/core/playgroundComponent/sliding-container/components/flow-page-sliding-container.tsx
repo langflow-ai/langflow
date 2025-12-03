@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ChatHeader } from "@/components/core/playgroundComponent/chat-view/chat-header";
 import { ChatSidebar } from "@/components/core/playgroundComponent/chat-view/chat-header/components/chat-sidebar";
 import { useSessionManagement } from "@/components/core/playgroundComponent/chat-view/hooks/use-session-management";
+import { Messages } from "@/components/core/playgroundComponent/chat-view/messages";
 import { useSlidingContainerStore } from "../stores/sliding-container-store";
 
 export function FlowPageSlidingContainerContent() {
@@ -45,39 +46,39 @@ export function FlowPageSlidingContainerContent() {
 
   return (
     <div className="h-full w-full bg-background border-l border-transparent shadow-lg flex flex-col relative">
-      <ChatHeader
-        onNewChat={handleNewChat}
-        onSessionSelect={handleSessionSelect}
-        currentSessionId={currentSessionId}
-        currentFlowId={currentFlowId}
-        onToggleFullscreen={
-          isFullscreen ? handleExitFullscreen : () => setIsFullscreen(true)
-        }
-        isFullscreen={isFullscreen}
-        onDeleteSession={handleDeleteSession}
-        onClose={handleClose}
-      />
-      {isFullscreen && sidebarOpen && (
-        <div className="absolute left-0 top-0 z-50 h-full w-1/5 max-w-[280px] border-r border-border bg-background overflow-y-auto">
-          <div className="p-4 pt-[15px]">
-            <ChatSidebar
-              onNewChat={handleNewChat}
-              onSessionSelect={handleSessionSelect}
-              currentSessionId={currentSessionId}
-              onDeleteSession={handleDeleteSession}
+      <div className="flex-1 flex overflow-hidden">
+        {isFullscreen && sidebarOpen && (
+          <div className="w-1/5 max-w-[280px] min-w-[250px] border-r border-border bg-background overflow-y-auto">
+            <div className="p-4 pt-[15px]">
+              <ChatSidebar
+                onNewChat={handleNewChat}
+                onSessionSelect={handleSessionSelect}
+                currentSessionId={currentSessionId}
+                onDeleteSession={handleDeleteSession}
+              />
+            </div>
+          </div>
+        )}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <ChatHeader
+            onNewChat={handleNewChat}
+            onSessionSelect={handleSessionSelect}
+            currentSessionId={currentSessionId}
+            currentFlowId={currentFlowId}
+            onToggleFullscreen={
+              isFullscreen ? handleExitFullscreen : () => setIsFullscreen(true)
+            }
+            isFullscreen={isFullscreen}
+            onDeleteSession={handleDeleteSession}
+            onClose={handleClose}
+          />
+          <div className="flex-1 overflow-auto p-6">
+            <Messages
+              visibleSession={currentSessionId ?? currentFlowId}
+              playgroundPage={true}
             />
           </div>
         </div>
-      )}
-      <div
-        className="flex-1 overflow-auto p-6"
-        style={
-          isFullscreen && sidebarOpen
-            ? { marginLeft: "max(20%, 280px)" }
-            : undefined
-        }
-      >
-        {/* Content will be added here */}
       </div>
     </div>
   );

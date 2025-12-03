@@ -44,8 +44,7 @@ export function ChatHeader({
     <div
       className={cn(
         "flex items-center border-b border-transparent p-4 bg-background relative overflow-visible",
-        isFullscreen && "justify-center",
-        !isFullscreen && "justify-between",
+        isFullscreen ? "justify-between" : "justify-between",
         className,
       )}
     >
@@ -66,13 +65,15 @@ export function ChatHeader({
         </div>
       )}
       {isFullscreen && (
-        <ChatHeaderTitle
-          sessionTitle={sessionTitle}
-          isEditing={isEditing}
-          currentSessionId={currentSessionId}
-          isFullscreen={isFullscreen}
-          onRenameSave={handleRenameSave}
-        />
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <ChatHeaderTitle
+            sessionTitle={sessionTitle}
+            isEditing={isEditing}
+            currentSessionId={currentSessionId}
+            isFullscreen={isFullscreen}
+            onRenameSave={handleRenameSave}
+          />
+        </div>
       )}
       {!isFullscreen && (
         <div className="flex items-center gap-2 flex-1 justify-end">
