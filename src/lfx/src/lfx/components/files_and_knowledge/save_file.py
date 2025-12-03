@@ -581,7 +581,9 @@ class SaveToFileComponent(Component):
         # Create temporary file
         import tempfile
 
-        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", suffix=f".{file_format}", delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", suffix=f".{file_format}", delete=False
+        ) as temp_file:
             temp_file.write(content)
             temp_file_path = temp_file.name
 
@@ -681,7 +683,12 @@ class SaveToFileComponent(Component):
 
         # Create temporary file
         file_path = f"{self.file_name}.{file_format}"
-        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", suffix=f".{file_format}", delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            suffix=f".{file_format}",
+            delete=False,
+        ) as temp_file:
             temp_file.write(content)
             temp_file_path = temp_file.name
 
@@ -693,7 +700,11 @@ class SaveToFileComponent(Component):
             media = MediaFileUpload(temp_file_path, resumable=True)
 
             try:
-                uploaded_file = drive_service.files().create(body=file_metadata, media_body=media, fields="id").execute()
+                uploaded_file = drive_service.files().create(
+                    body=file_metadata,
+                    media_body=media,
+                    fields="id"
+                ).execute()
             except Exception as e:
                 msg = (
                     f"Unable to upload file to Google Drive folder '{self.folder_id}'. "
