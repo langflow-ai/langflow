@@ -66,19 +66,19 @@ const ProviderListItem = ({
             <span className="text-sm font-medium truncate">
               {provider.provider}
             </span>
-            {/* {provider.model_count !== undefined && (
+            {provider.model_count !== undefined && provider.is_enabled && (
               <span
                 className={cn(
-                  "text-xs",
-                  type === "enabled"
-                    ? "text-accent-emerald-foreground"
-                    : "text-muted-foreground",
+                  'text-xs',
+                  type === 'enabled'
+                    ? 'text-accent-emerald-foreground'
+                    : 'text-muted-foreground'
                 )}
               >
-                {provider.model_count}{" "}
-                {provider.model_count === 1 ? "model" : "models"}
+                {provider.model_count}{' '}
+                {provider.model_count === 1 ? 'model' : 'models'}
               </span>
-            )} */}
+            )}
             {/* {defaultModelName && (
               <>
                 <ForwardedIconComponent
