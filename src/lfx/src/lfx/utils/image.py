@@ -57,14 +57,14 @@ def create_data_url(image_path: str | Path, mime_type: str | None = None) -> str
 
 @lru_cache(maxsize=50)
 def create_image_content_dict(
-    image_path: str | Path, mime_type: str | None = None, model_name: str | None = None
+    image_path: str | Path, mime_type: str | None = None, model_name: str | None = None  # noqa: ARG001
 ) -> dict:
     """Create a content dictionary for multimodal inputs from an image file.
 
     Args:
         image_path: Path to the image file
         mime_type: MIME type of the image. If None, will be auto-detected
-        model_name: Optional model parameter to determine content dict structure
+        model_name: Optional model parameter (kept for backward compatibility, no longer used)
 
     Returns:
         Content dictionary with type and image_url fields
