@@ -10,10 +10,9 @@ import {
 } from "@/constants/providerConstants";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 import { usePostGlobalVariables } from "@/controllers/API/queries/variables";
-
+import { useProviderActions } from "@/hooks/use-provider-actions";
 import ProviderList from "@/modals/modelProviderModal/components/ProviderList";
 import { Model, Provider } from "@/modals/modelProviderModal/components/types";
-import { useProviderActions } from "@/modals/modelProviderModal/components/use-provider-actions";
 import useAlertStore from "@/stores/alertStore";
 
 import { cn } from "@/utils/utils";

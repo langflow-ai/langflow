@@ -15,7 +15,7 @@ import {
 
 import useAlertStore from "@/stores/alertStore";
 import { GlobalVariable } from "@/types/global_variables";
-import { DefaultModelData } from "./types";
+import { DefaultModelData } from "../modals/modelProviderModal/components/types";
 
 export const useProviderActions = () => {
   const queryClient = useQueryClient();
