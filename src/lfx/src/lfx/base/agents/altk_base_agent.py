@@ -320,12 +320,8 @@ class ALTKBaseAgentComponent(AgentComponent):
         if hasattr(lc_message, "content") and isinstance(lc_message.content, list):
             # ! Because the input has to be a string, we must pass the images in the chat_history
             # Support both "image" (legacy) and "image_url" (standard) types
-            image_dicts = [
-                item for item in lc_message.content if item.get("type") in ("image", "image_url")
-            ]
-            lc_message.content = [
-                item for item in lc_message.content if item.get("type") not in ("image", "image_url")
-            ]
+            image_dicts = [item for item in lc_message.content if item.get("type") in ("image", "image_url")]
+            lc_message.content = [item for item in lc_message.content if item.get("type") not in ("image", "image_url")]
 
             if "chat_history" not in input_dict:
                 input_dict["chat_history"] = []
