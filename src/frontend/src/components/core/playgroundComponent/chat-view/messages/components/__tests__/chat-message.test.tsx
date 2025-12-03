@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import ChatMessage from "../chat-message";
+import ThinkingMessage from "../thinking-message";
 
 // Mock SVG imports
 jest.mock("@/assets/LangflowLogo.svg?react", () => ({
@@ -17,8 +18,9 @@ jest.mock("react-markdown", () => ({
 jest.mock("remark-gfm", () => ({ __esModule: true, default: () => {} }));
 jest.mock("rehype-mathjax", () => ({ __esModule: true, default: () => {} }));
 
-// Mock content-view to avoid ES module issues
-jest.mock("../content-view", () => ({
+// Mock error-message to avoid ES module issues
+jest.mock("../error-message", () => ({
+  __esModule: true,
   ErrorView: ({ blocks }: { blocks: unknown[] }) => (
     <div data-testid="error-view">Error: {blocks?.length || 0} blocks</div>
   ),
@@ -31,6 +33,20 @@ jest.mock("@/stores/flowStore", () => ({
     isBuilding: false,
     fitViewNode: jest.fn(),
   }),
+}));
+
+// Mock the thinking duration store
+jest.mock("../../hooks/use-thinking-duration", () => ({
+  useThinkingDurationStore: Object.assign(
+    () => ({
+      startTime: Date.now(),
+    }),
+    {
+      getState: () => ({
+        startTime: Date.now(),
+      }),
+    },
+  ),
 }));
 
 jest.mock("@/stores/flowsManagerStore", () => ({
@@ -49,7 +65,9 @@ jest.mock("@/controllers/API/queries/messages", () => ({
 
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
-  default: () => <div data-testid="icon" />,
+  default: ({ name, className }: { name?: string; className?: string }) => (
+    <div data-testid={name ? `icon-${name}` : "icon"} className={className} />
+  ),
   ForwardedIconComponent: () => <div data-testid="forwarded-icon" />,
 }));
 
@@ -133,10 +151,11 @@ describe("ChatMessage Component", () => {
 
   it("renders user message correctly", () => {
     render(<ChatMessage {...defaultProps} />);
-    expect(screen.getByText("Hello World")).toBeInTheDocument();
+
     expect(
       screen.getByTestId("chat-message-User-Hello World"),
     ).toBeInTheDocument();
+    expect(screen.getByText("Hello World")).toBeInTheDocument();
   });
 
   it("renders bot message correctly", () => {
@@ -150,6 +169,7 @@ describe("ChatMessage Component", () => {
     };
 
     render(<ChatMessage {...botProps} />);
+
     expect(screen.getByText("Hello World")).toBeInTheDocument();
     expect(
       screen.getByTestId("chat-message-AI-Hello World"),
@@ -184,5 +204,51 @@ describe("ChatMessage Component", () => {
     render(<ChatMessage {...emptyProps} />);
     // Empty user message with no files should render as BotMessage
     expect(screen.getByTestId("langflow-logo")).toBeInTheDocument();
+  });
+});
+
+describe("ThinkingMessage Component", () => {
+  it("renders thinking state correctly", () => {
+    render(<ThinkingMessage isThinking={true} duration={null} />);
+
+    expect(screen.getByTestId("icon-Brain")).toBeInTheDocument();
+    expect(screen.getByText(/Thinking for/)).toBeInTheDocument();
+  });
+
+  it("renders thought state with duration", () => {
+    render(<ThinkingMessage isThinking={false} duration={5000} />);
+
+    expect(screen.getByTestId("icon-Brain")).toBeInTheDocument();
+    expect(screen.getByText(/Thought for/)).toBeInTheDocument();
+    expect(screen.getByText(/5.0s/)).toBeInTheDocument();
+  });
+
+  it("applies pulse animation when thinking", () => {
+    render(<ThinkingMessage isThinking={true} duration={null} />);
+
+    const icon = screen.getByTestId("icon-Brain");
+    expect(icon.className).toContain("animate-pulse");
+    expect(icon.className).toContain("text-primary");
+  });
+
+  it("applies muted color when not thinking", () => {
+    render(<ThinkingMessage isThinking={false} duration={3000} />);
+
+    const icon = screen.getByTestId("icon-Brain");
+    expect(icon.className).toContain("text-muted-foreground");
+    expect(icon.className).not.toContain("animate-pulse");
+  });
+
+  it("formats time in minutes when duration exceeds 60 seconds", () => {
+    render(<ThinkingMessage isThinking={false} duration={90000} />);
+
+    expect(screen.getByText(/1m 30s/)).toBeInTheDocument();
+  });
+
+  it("shows 0s when duration is null and not thinking", () => {
+    render(<ThinkingMessage isThinking={false} duration={null} />);
+
+    expect(screen.getByText(/Thought for/)).toBeInTheDocument();
+    expect(screen.getByText(/0.0s/)).toBeInTheDocument();
   });
 });
