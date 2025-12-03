@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import useFlowStore from "@/stores/flowStore";
 import type { chatMessagePropsType } from "@/types/components";
 import { BotMessage } from "./bot-message";
-import { ErrorView } from "./content-view";
+import { ErrorView } from "./error-message";
 import { UserMessage } from "./user-message";
 
 export default function ChatMessage({
