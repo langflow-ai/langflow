@@ -875,10 +875,10 @@ async def upsert_flow_from_file(file_content: AnyStr, filename: str, session: As
         folder = await get_or_create_default_folder(session, user_id)
         flow["user_id"] = user_id
         flow["folder_id"] = folder.id
-        flow = Flow.model_validate(flow)
-        flow.updated_at = datetime.now(tz=timezone.utc).astimezone()
+        new_flow = Flow.model_validate(flow)
+        new_flow.updated_at = datetime.now(tz=timezone.utc).astimezone()
 
-        session.add(flow)
+        session.add(new_flow)
 
 
 async def find_existing_flow(session, flow_id, flow_endpoint_name):

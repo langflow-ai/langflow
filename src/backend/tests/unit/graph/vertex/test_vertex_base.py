@@ -19,6 +19,7 @@ def mock_storage_service() -> Mock:
     """Create a mock storage service for testing."""
     storage = Mock(spec=StorageService)
     storage.build_full_path = Mock(return_value="/mocked/full/path")
+    storage.resolve_component_path = Mock(return_value="/mocked/full/path")
     return storage
 
 

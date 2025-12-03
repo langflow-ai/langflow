@@ -250,7 +250,9 @@ async def test_aupdate_message_with_timestamp(created_message):
     assert updated[0].text == "Updated message with timestamp"
 
     # Compare timestamps without timezone info since DB doesn't preserve it
-    assert updated[0].timestamp.replace(tzinfo=None) == new_timestamp.replace(tzinfo=None)
+    updated_ts_naive = updated[0].timestamp.replace(tzinfo=None) if updated[0].timestamp.tzinfo else updated[0].timestamp
+    new_ts_naive = new_timestamp.replace(tzinfo=None) if new_timestamp.tzinfo else new_timestamp
+    assert updated_ts_naive == new_ts_naive
     assert updated[0].id == created_message.id
 
 

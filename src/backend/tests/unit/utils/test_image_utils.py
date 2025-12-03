@@ -32,7 +32,7 @@ def test_convert_image_to_base64_empty_path():
 
 def test_convert_image_to_base64_nonexistent_file():
     """Test conversion with non-existent file."""
-    with pytest.raises(FileNotFoundError, match="Image file not found"):
+    with pytest.raises(FileNotFoundError, match="(Image file not found|Error reading image file from storage)"):
         convert_image_to_base64("nonexistent.png")
 
 

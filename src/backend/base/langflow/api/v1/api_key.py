@@ -71,6 +71,7 @@ async def save_store_api_key(
         current_user.store_api_key = encrypted
         db.add(current_user)
         await db.commit()
+        await db.refresh(current_user)
 
         response.set_cookie(
             "apikey_tkn_lflw",

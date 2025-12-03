@@ -116,7 +116,8 @@ async def reset_password(
         raise HTTPException(status_code=400, detail="You can't use your current password")
     new_password = get_password_hash(user_update.password)
     user.password = new_password
-    session.add(user)
+    await session.commit()
+    await session.refresh(user)
 
     return user
 
