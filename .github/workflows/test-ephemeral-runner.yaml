@@ -1,7 +1,7 @@
 name: 🧪 test invoke ephemeral runner   
 on:
   push:  
-    branches: [test-ephemeral-runner]
+    branches: [test-ephemeral-runner] 
 
 jobs:
   show-runner-info:
