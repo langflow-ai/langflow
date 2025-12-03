@@ -1247,8 +1247,8 @@ class ProjectMCPServer:
         """Own the lifecycle of the project's Streamable HTTP session manager."""
         try:
             async with self.session_manager.run():
-                self._manager_started = True # set flag before unblocking task (ensures waiting requests proceed)
-                task_status.started() # unblock
+                self._manager_started = True  # set flag before unblocking task (ensures waiting requests proceed)
+                task_status.started()  # unblock
                 await anyio.sleep_forever()
         except anyio.get_cancelled_exc_class():
             await logger.adebug(f"Streamable HTTP manager cancelled for project {self.project_id}")
@@ -1311,8 +1311,8 @@ class ProjectTaskGroup:
         async with self._start_stop_lock:
             if not self._started:
                 return
-            try: # https://anyio.readthedocs.io/en/stable/cancellation.html, https://docs.python.org/3/library/asyncio-task.html#asyncio.Task.cancel
-                self._task_group.cancel_scope.cancel() # type: ignore[union-attr]
+            try:  # https://anyio.readthedocs.io/en/stable/cancellation.html, https://docs.python.org/3/library/asyncio-task.html#asyncio.Task.cancel
+                self._task_group.cancel_scope.cancel()  # type: ignore[union-attr]
                 await self._tg_task  # type: ignore[misc]
             except Exception as e:  # noqa: BLE001
                 await logger.aexception(f"Failed to stop project task group: {e}")
