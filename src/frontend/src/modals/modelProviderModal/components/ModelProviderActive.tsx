@@ -1,4 +1,4 @@
-import { Badge } from '@/components/ui/badge';
+import { Badge } from "@/components/ui/badge";
 
 interface ModelProviderActiveProps {
   activeLLMs: string[];
@@ -16,7 +16,7 @@ const ModelProviderActive = ({
         <div className="pt-4">
           <div className="text-[10px] text-muted-foreground">LLM</div>
           <div className="flex flex-row gap-2 mt-2 flex-wrap">
-            {activeLLMs.map(model => (
+            {activeLLMs.map((model) => (
               <Badge
                 key={model}
                 variant="secondaryStatic"
@@ -35,7 +35,7 @@ const ModelProviderActive = ({
             Embeddings
           </div>
           <div className="flex flex-row gap-2 mt-2 flex-wrap">
-            {activeEmbeddings.map(model => (
+            {activeEmbeddings.map((model) => (
               <Badge
                 key={model}
                 variant="secondaryStatic"

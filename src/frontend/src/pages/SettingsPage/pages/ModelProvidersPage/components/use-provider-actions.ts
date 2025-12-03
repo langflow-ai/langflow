@@ -1,18 +1,18 @@
-import { useQueryClient } from '@tanstack/react-query';
-import { useUpdateEnabledModels } from '@/controllers/API/queries/models/use-update-enabled-models';
-import { useSetDefaultModel } from '@/controllers/API/queries/models/use-set-default-model';
-import { useClearDefaultModel } from '@/controllers/API/queries/models/use-clear-default-model';
+import { useQueryClient } from "@tanstack/react-query";
+import { useUpdateEnabledModels } from "@/controllers/API/queries/models/use-update-enabled-models";
+import { useSetDefaultModel } from "@/controllers/API/queries/models/use-set-default-model";
+import { useClearDefaultModel } from "@/controllers/API/queries/models/use-clear-default-model";
 import {
   useDeleteGlobalVariables,
   usePostGlobalVariables,
-} from '@/controllers/API/queries/variables';
+} from "@/controllers/API/queries/variables";
 import {
   PROVIDER_VARIABLE_MAPPING,
   VARIABLE_CATEGORY,
-} from '@/constants/providerConstants';
-import useAlertStore from '@/stores/alertStore';
-import { GlobalVariable } from '@/types/global_variables';
-import { DefaultModelData } from './types';
+} from "@/constants/providerConstants";
+import useAlertStore from "@/stores/alertStore";
+import { GlobalVariable } from "@/types/global_variables";
+import { DefaultModelData } from "./types";
 
 export const useProviderActions = () => {
   const queryClient = useQueryClient();
@@ -21,13 +21,13 @@ export const useProviderActions = () => {
   const { mutate: mutateClearDefaultModel } = useClearDefaultModel();
   const { mutate: mutateDeleteGlobalVariable } = useDeleteGlobalVariables();
   const { mutate: mutateCreateGlobalVariable } = usePostGlobalVariables();
-  const setErrorData = useAlertStore(state => state.setErrorData);
-  const setSuccessData = useAlertStore(state => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
   const handleToggleModel = (
     providerName: string,
     modelName: string,
-    enabled: boolean
+    enabled: boolean,
   ) => {
     mutateUpdateEnabledModels(
       {
@@ -41,26 +41,26 @@ export const useProviderActions = () => {
       },
       {
         onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: ['useGetEnabledModels'] });
+          queryClient.invalidateQueries({ queryKey: ["useGetEnabledModels"] });
           setSuccessData({
             title: `${modelName} ${
-              enabled ? 'enabled' : 'disabled'
+              enabled ? "enabled" : "disabled"
             } successfully`,
           });
         },
         onError: () => {
           setErrorData({
-            title: 'Error updating model',
-            list: ['Failed to update model status'],
+            title: "Error updating model",
+            list: ["Failed to update model status"],
           });
         },
-      }
+      },
     );
   };
 
   const handleBatchToggleModels = (
     updates: Array<{ provider: string; model_id: string; enabled: boolean }>,
-    onSuccess?: () => void
+    onSuccess?: () => void,
   ) => {
     mutateUpdateEnabledModels(
       {
@@ -68,22 +68,22 @@ export const useProviderActions = () => {
       },
       {
         onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: ['useGetEnabledModels'] });
-          const enabledCount = updates.filter(u => u.enabled).length;
-          const disabledCount = updates.filter(u => !u.enabled).length;
+          queryClient.invalidateQueries({ queryKey: ["useGetEnabledModels"] });
+          const enabledCount = updates.filter((u) => u.enabled).length;
+          const disabledCount = updates.filter((u) => !u.enabled).length;
 
-          let message = 'Models updated successfully';
+          let message = "Models updated successfully";
           if (enabledCount > 0 && disabledCount > 0) {
             message = `${enabledCount} model${
-              enabledCount > 1 ? 's' : ''
+              enabledCount > 1 ? "s" : ""
             } enabled, ${disabledCount} disabled`;
           } else if (enabledCount > 0) {
             message = `${enabledCount} model${
-              enabledCount > 1 ? 's' : ''
+              enabledCount > 1 ? "s" : ""
             } enabled successfully`;
           } else if (disabledCount > 0) {
             message = `${disabledCount} model${
-              disabledCount > 1 ? 's' : ''
+              disabledCount > 1 ? "s" : ""
             } disabled successfully`;
           }
 
@@ -94,18 +94,18 @@ export const useProviderActions = () => {
         },
         onError: () => {
           setErrorData({
-            title: 'Error updating models',
-            list: ['Failed to update model status'],
+            title: "Error updating models",
+            list: ["Failed to update model status"],
           });
         },
-      }
+      },
     );
   };
 
   const handleSetDefaultModel = (
     providerName: string,
     modelName: string,
-    modelType: string
+    modelType: string,
   ) => {
     mutateSetDefaultModel(
       {
@@ -115,18 +115,18 @@ export const useProviderActions = () => {
       },
       {
         onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: ['useGetDefaultModel'] });
+          queryClient.invalidateQueries({ queryKey: ["useGetDefaultModel"] });
           setSuccessData({
             title: `${modelName} set as default`,
           });
         },
         onError: () => {
           setErrorData({
-            title: 'Error setting default model',
-            list: ['Failed to set default model'],
+            title: "Error setting default model",
+            list: ["Failed to set default model"],
           });
         },
-      }
+      },
     );
   };
 
@@ -137,18 +137,18 @@ export const useProviderActions = () => {
       },
       {
         onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: ['useGetDefaultModel'] });
+          queryClient.invalidateQueries({ queryKey: ["useGetDefaultModel"] });
           setSuccessData({
-            title: 'Default model cleared',
+            title: "Default model cleared",
           });
         },
         onError: () => {
           setErrorData({
-            title: 'Error clearing default model',
-            list: ['Failed to clear default model'],
+            title: "Error clearing default model",
+            list: ["Failed to clear default model"],
           });
         },
-      }
+      },
     );
   };
 
@@ -158,14 +158,14 @@ export const useProviderActions = () => {
     const variableName = PROVIDER_VARIABLE_MAPPING[providerName];
     if (!variableName) {
       setErrorData({
-        title: 'Error enabling provider',
-        list: ['Provider variable mapping not found'],
+        title: "Error enabling provider",
+        list: ["Provider variable mapping not found"],
       });
       return;
     }
 
     // Default Ollama base URL - this function is currently only used for Ollama
-    const defaultBaseUrl = 'http://localhost:11434';
+    const defaultBaseUrl = "http://localhost:11434";
 
     mutateCreateGlobalVariable(
       {
@@ -183,13 +183,13 @@ export const useProviderActions = () => {
           // The mutation already refetches useGetGlobalVariables in onSettled
           // We need to refetch model providers, enabled models, and flows
           queryClient.invalidateQueries({
-            queryKey: ['useGetModelProviders'],
+            queryKey: ["useGetModelProviders"],
           });
           queryClient.invalidateQueries({
-            queryKey: ['useGetEnabledModels'],
+            queryKey: ["useGetEnabledModels"],
           });
           queryClient.invalidateQueries({
-            queryKey: ['flows'],
+            queryKey: ["flows"],
           });
         },
         onError: (error: unknown) => {
@@ -198,13 +198,13 @@ export const useProviderActions = () => {
               ? error.message
               : (error as { response?: { data?: { detail?: string } } })
                   ?.response?.data?.detail ||
-                'An unexpected error occurred while enabling the provider. Please try again.';
+                "An unexpected error occurred while enabling the provider. Please try again.";
           setErrorData({
-            title: 'Error enabling provider',
+            title: "Error enabling provider",
             list: [errorMessage],
           });
         },
-      }
+      },
     );
   };
 
@@ -213,24 +213,24 @@ export const useProviderActions = () => {
     globalVariables: GlobalVariable[] | undefined,
     defaultModelData: DefaultModelData | undefined,
     defaultEmbeddingModelData: DefaultModelData | undefined,
-    onSuccess?: () => void
+    onSuccess?: () => void,
   ) => {
     if (!globalVariables) return;
 
     const variableName = PROVIDER_VARIABLE_MAPPING[providerName];
     if (!variableName) {
       setErrorData({
-        title: 'Error deleting provider',
-        list: ['Provider variable mapping not found'],
+        title: "Error deleting provider",
+        list: ["Provider variable mapping not found"],
       });
       return;
     }
 
-    const variable = globalVariables.find(v => v.name === variableName);
+    const variable = globalVariables.find((v) => v.name === variableName);
     if (!variable?.id) {
       setErrorData({
-        title: 'Error deleting provider',
-        list: ['API key not found for this provider'],
+        title: "Error deleting provider",
+        list: ["API key not found for this provider"],
       });
       return;
     }
@@ -267,22 +267,22 @@ export const useProviderActions = () => {
                 },
                 onError: () => {
                   setErrorData({
-                    title: 'Error clearing default embedding',
+                    title: "Error clearing default embedding",
                     list: [
-                      'Failed to clear default embedding before deleting provider',
+                      "Failed to clear default embedding before deleting provider",
                     ],
                   });
                 },
-              }
+              },
             );
           },
           onError: () => {
             setErrorData({
-              title: 'Error clearing default model',
-              list: ['Failed to clear default model before deleting provider'],
+              title: "Error clearing default model",
+              list: ["Failed to clear default model before deleting provider"],
             });
           },
-        }
+        },
       );
     } else if (
       shouldClearDefaultModel &&
@@ -300,11 +300,11 @@ export const useProviderActions = () => {
           },
           onError: () => {
             setErrorData({
-              title: 'Error clearing default model',
-              list: ['Failed to clear default model before deleting provider'],
+              title: "Error clearing default model",
+              list: ["Failed to clear default model before deleting provider"],
             });
           },
-        }
+        },
       );
     } else if (
       shouldClearDefaultEmbedding &&
@@ -322,13 +322,13 @@ export const useProviderActions = () => {
           },
           onError: () => {
             setErrorData({
-              title: 'Error clearing default embedding',
+              title: "Error clearing default embedding",
               list: [
-                'Failed to clear default embedding before deleting provider',
+                "Failed to clear default embedding before deleting provider",
               ],
             });
           },
-        }
+        },
       );
     } else {
       // No default model to clear, proceed directly with deletion
@@ -339,7 +339,7 @@ export const useProviderActions = () => {
   const deleteProviderVariable = (
     variableId: string,
     providerName: string,
-    onSuccess?: () => void
+    onSuccess?: () => void,
   ) => {
     mutateDeleteGlobalVariable(
       { id: variableId },
@@ -351,20 +351,20 @@ export const useProviderActions = () => {
           // The mutation already refetches useGetModelProviders in onSettled
           // Just invalidate flows, global variables, and default model
           queryClient.invalidateQueries({
-            queryKey: ['flows'],
+            queryKey: ["flows"],
           });
           queryClient.invalidateQueries({
-            queryKey: ['useGetDefaultModel'],
+            queryKey: ["useGetDefaultModel"],
           });
           onSuccess?.();
         },
         onError: () => {
           setErrorData({
-            title: 'Error deleting provider',
-            list: ['Failed to remove API key'],
+            title: "Error deleting provider",
+            list: ["Failed to remove API key"],
           });
         },
-      }
+      },
     );
   };
 
