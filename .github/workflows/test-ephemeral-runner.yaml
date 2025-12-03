@@ -51,7 +51,7 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Verify Previous Run Artifacts Are Gone (Ephemeral Check)    
+      - name: Verify Previous Run Artifacts Are Gone (Ephemeral Check)     
         run: |
           {
             echo "## 🔍 Ephemeral Validation: Checking for Previous Run Artifacts"
