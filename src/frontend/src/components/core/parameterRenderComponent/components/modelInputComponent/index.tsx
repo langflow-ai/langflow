@@ -326,7 +326,6 @@ export default function ModelInputComponent({
         // Model doesn't exist in options, clear the selection
         setSelectedModel(null);
         setSelectedProvider(null);
-        handleOnNewValue({ value: [] });
       }
     }
   }, [value, options, handleOnNewValue]);
@@ -509,10 +508,6 @@ export default function ModelInputComponent({
                   return null;
                 }
 
-                const isReasoning = option.metadata?.reasoning_models?.includes(
-                  option.name,
-                );
-
                 return (
                   <CommandItem
                     key={option.name}
@@ -531,13 +526,6 @@ export default function ModelInputComponent({
                         className="h-4 w-4 shrink-0 text-primary ml-2"
                       />
                       <div className="truncate text-[13px]">{option.name}</div>
-
-                      {/* {isReasoning && (
-                        <ForwardedIconComponent
-                          name="brain"
-                          className="h-4 w-4 shrink-0 text-muted-foreground"
-                        />
-                      )} */}
                       <div className="pl-2 ml-auto">
                         <ForwardedIconComponent
                           name="Check"
@@ -563,27 +551,7 @@ export default function ModelInputComponent({
 
   const renderManageProvidersButton = () => (
     <div className="sticky bottom-0 bg-background">
-      {/* {hasRefreshButton && (
-        <Button
-          className="w-full flex cursor-pointer items-center justify-start gap-2 truncate py-3 text-xs text-muted-foreground px-3 hover:bg-accent group"
-          unstyled
-          data-testid="refresh-model-list"
-          onClick={() => {
-            handleRefreshButtonPress();
-          }}
-        >
-          <div className="flex items-center gap-2 pl-1 group-hover:text-primary">
-            Refresh list
-            <ForwardedIconComponent
-              name="RefreshCcw"
-              className={cn(
-                "refresh-icon h-3 w-3 text-primary text-muted-foreground group-hover:text-primary",
-              )}
-            />
-          </div>
-        </Button>
-      )} */}
-      {/* {externalOptions?.fields?.data?.node && (
+      {externalOptions?.fields?.data?.node && (
         <Button
           className="w-full flex cursor-pointer items-center justify-start gap-2 truncate py-3 text-xs text-muted-foreground px-3 hover:bg-accent group"
           unstyled
@@ -604,7 +572,7 @@ export default function ModelInputComponent({
             )}
           </div>
         </Button>
-      )} */}
+      )}
 
       <Button
         className="w-full flex cursor-pointer items-center justify-start gap-2 truncate py-3 text-xs text-muted-foreground px-3 hover:bg-accent group"
