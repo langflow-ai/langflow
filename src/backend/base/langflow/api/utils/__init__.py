@@ -68,6 +68,7 @@ __all__ = [
     "get_top_level_vertices",
     # Functions
     "has_api_terms",
+    "is_file_used",
     "parse_exception",
     "parse_value",
     "remove_api_keys",

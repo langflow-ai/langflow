@@ -165,7 +165,13 @@ class TestLocalStorageServiceListOperations:
         listed_files = await local_storage_service.list_files(flow_id)
 
         assert len(listed_files) == 3
-        assert set(listed_files) == set(files)
+        file_names = [f["name"] for f in listed_files]
+        assert set(file_names) == set(files)
+        # Verify all files have size field
+        for file_info in listed_files:
+            assert "name" in file_info
+            assert "size" in file_info
+            assert file_info["size"] == 7  # "content" is 7 bytes
 
     async def test_list_files_with_numeric_flow_id(self, local_storage_service):
         """Test listing files with numeric flow_id (converted to string)."""
@@ -177,7 +183,8 @@ class TestLocalStorageServiceListOperations:
         # List with numeric flow_id
         listed_files = await local_storage_service.list_files(flow_id)
 
-        assert file_name in listed_files
+        file_names = [f["name"] for f in listed_files]
+        assert file_name in file_names
 
     async def test_list_files_async_iteration(self, local_storage_service):
         """Test that list_files uses async iteration correctly (folder_path.iterdir())."""
@@ -193,7 +200,8 @@ class TestLocalStorageServiceListOperations:
 
         # Verify all files are listed (tests async iteration works)
         assert len(listed_files) == 3
-        assert set(listed_files) == set(files)
+        file_names = [f["name"] for f in listed_files]
+        assert set(file_names) == set(files)
 
     async def test_list_files_excludes_directories(self, local_storage_service):
         """Test that list_files only returns files, not directories."""
@@ -210,8 +218,9 @@ class TestLocalStorageServiceListOperations:
         listed_files = await local_storage_service.list_files(flow_id)
 
         # Should only return the file in the root, not the nested one
-        assert file_name in listed_files
-        assert "nested.txt" not in listed_files  # Nested file is in subdirectory
+        file_names = [f["name"] for f in listed_files]
+        assert file_name in file_names
+        assert "nested.txt" not in file_names  # Nested file is in subdirectory
 
 
 @pytest.mark.asyncio
@@ -228,7 +237,8 @@ class TestLocalStorageServiceDeleteOperations:
 
         # Verify it exists
         files = await local_storage_service.list_files(flow_id)
-        assert file_name in files
+        file_names = [f["name"] for f in files]
+        assert file_name in file_names
 
         # Delete file
         await local_storage_service.delete_file(flow_id, file_name)

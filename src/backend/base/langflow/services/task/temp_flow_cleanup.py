@@ -5,7 +5,8 @@ import contextlib
 from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
-from sqlmodel import col, delete, select
+from sqlalchemy import delete
+from sqlmodel import col, select
 
 from langflow.services.database.models.message.model import MessageTable
 from langflow.services.database.models.transactions.model import TransactionTable
@@ -44,7 +45,7 @@ async def cleanup_orphaned_records() -> None:
                     logger.debug(f"Found {len(orphaned_flow_ids)} orphaned flow IDs in {table.__name__}")
 
                     # Delete all orphaned records in a single query
-                    await session.exec(delete(table).where(col(table.flow_id).in_(orphaned_flow_ids)))
+                    await session.exec(delete(table).where(col(table.flow_id).in_(orphaned_flow_ids)))  # type: ignore[arg-type]
 
                     # Clean up any associated storage files
                     storage_service: StorageService = get_storage_service()
@@ -53,9 +54,9 @@ async def cleanup_orphaned_records() -> None:
                             files = await storage_service.list_files(str(flow_id))
                             for file in files:
                                 try:
-                                    await storage_service.delete_file(str(flow_id), file)
+                                    await storage_service.delete_file(str(flow_id), file["name"])
                                 except Exception as exc:  # noqa: BLE001
-                                    logger.error(f"Failed to delete file {file} for flow {flow_id}: {exc!s}")
+                                    logger.error(f"Failed to delete file {file['name']} for flow {flow_id}: {exc!s}")
                             # Delete the flow directory after all files are deleted
                             flow_dir = storage_service.data_dir / str(flow_id)
                             if await flow_dir.exists():

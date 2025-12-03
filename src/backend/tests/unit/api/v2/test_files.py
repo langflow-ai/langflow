@@ -199,7 +199,7 @@ async def test_delete_file(files_client, files_created_api_key):
 
     response = await files_client.delete(f"api/v2/files/{upload_response['id']}", headers=headers)
     assert response.status_code == 200
-    assert response.json() == {"detail": "File test deleted successfully"}
+    assert response.json() == {"detail": "File test deleted successfully", "files_not_deleted": []}
 
 
 async def test_edit_file(files_client, files_created_api_key):
@@ -759,7 +759,7 @@ class TestS3FileOperations:
         # Delete the file
         response = await s3_files_client.delete(f"api/v2/files/{upload_response['id']}", headers=headers)
         assert response.status_code == 200
-        assert response.json() == {"detail": "File s3_delete_test deleted successfully"}
+        assert response.json() == {"detail": "File s3_delete_test deleted successfully", "files_not_deleted": []}
 
         # Verify file is deleted from database
         response = await s3_files_client.get("api/v2/files", headers=headers)
@@ -967,8 +967,11 @@ class TestStorageFailureHandling:
 
         mock_exec_result = MagicMock()
         mock_exec_result.first = MagicMock(return_value=mock_file)
+        mock_exec_flows = MagicMock()
+        mock_exec_flows.all = MagicMock(return_value=[])
+
         mock_session = AsyncMock()
-        mock_session.exec = AsyncMock(return_value=mock_exec_result)
+        mock_session.exec = AsyncMock(side_effect=[mock_exec_result, mock_exec_flows])
         mock_session.delete = AsyncMock()
 
         mock_storage_service = AsyncMock()
@@ -1012,8 +1015,11 @@ class TestStorageFailureHandling:
 
         mock_exec_result = MagicMock()
         mock_exec_result.first = MagicMock(return_value=mock_file)
+        mock_exec_flows = MagicMock()
+        mock_exec_flows.all = MagicMock(return_value=[])
+
         mock_session = AsyncMock()
-        mock_session.exec = AsyncMock(return_value=mock_exec_result)
+        mock_session.exec = AsyncMock(side_effect=[mock_exec_result, mock_exec_flows])
         mock_session.delete = AsyncMock()
 
         mock_storage_service = AsyncMock()
@@ -1061,8 +1067,11 @@ class TestStorageFailureHandling:
 
         mock_exec_result = MagicMock()
         mock_exec_result.all = MagicMock(return_value=mock_files)
+        mock_exec_flows = MagicMock()
+        mock_exec_flows.all = MagicMock(return_value=[])
+
         mock_session = AsyncMock()
-        mock_session.exec = AsyncMock(return_value=mock_exec_result)
+        mock_session.exec = AsyncMock(side_effect=[mock_exec_result, mock_exec_flows])
         mock_session.delete = AsyncMock()
 
         deleted_file_ids = set()
@@ -1088,7 +1097,7 @@ class TestStorageFailureHandling:
 
         assert (
             result["message"]
-            == "2 files deleted successfully, 1 files kept in database due to transient storage errors (can retry)"
+            == "2 files deleted successfully, 1 files kept due to transient storage errors (can retry)"
         )
 
         assert mock_storage_service.delete_file.call_count == 3
@@ -1120,8 +1129,11 @@ class TestStorageFailureHandling:
 
         mock_exec_result = MagicMock()
         mock_exec_result.all = MagicMock(return_value=mock_files)
+        mock_exec_flows = MagicMock()
+        mock_exec_flows.all = MagicMock(return_value=[])
+
         mock_session = AsyncMock()
-        mock_session.exec = AsyncMock(return_value=mock_exec_result)
+        mock_session.exec = AsyncMock(side_effect=[mock_exec_result, mock_exec_flows])
         mock_session.delete = AsyncMock()
 
         mock_storage_service = AsyncMock()
@@ -1156,8 +1168,11 @@ class TestStorageFailureHandling:
 
         mock_exec_result = MagicMock()
         mock_exec_result.all = MagicMock(return_value=mock_files)
+        mock_exec_flows = MagicMock()
+        mock_exec_flows.all = MagicMock(return_value=[])
+
         mock_session = AsyncMock()
-        mock_session.exec = AsyncMock(return_value=mock_exec_result)
+        mock_session.exec = AsyncMock(side_effect=[mock_exec_result, mock_exec_flows])
         mock_session.delete = AsyncMock()
 
         call_count = 0
@@ -1202,8 +1217,11 @@ class TestStorageFailureHandling:
 
         mock_exec_result = MagicMock()
         mock_exec_result.all = MagicMock(return_value=mock_files)
+        mock_exec_flows = MagicMock()
+        mock_exec_flows.all = MagicMock(return_value=[])
+
         mock_session = AsyncMock()
-        mock_session.exec = AsyncMock(return_value=mock_exec_result)
+        mock_session.exec = AsyncMock(side_effect=[mock_exec_result, mock_exec_flows])
         mock_session.delete = AsyncMock()
 
         mock_storage_service = AsyncMock()
@@ -1240,8 +1258,11 @@ class TestStorageFailureHandling:
 
         mock_exec_result = MagicMock()
         mock_exec_result.all = MagicMock(return_value=mock_files)
+        mock_exec_flows = MagicMock()
+        mock_exec_flows.all = MagicMock(return_value=[])
+
         mock_session = AsyncMock()
-        mock_session.exec = AsyncMock(return_value=mock_exec_result)
+        mock_session.exec = AsyncMock(side_effect=[mock_exec_result, mock_exec_flows])
         mock_session.delete = AsyncMock()
 
         call_count = 0
@@ -1265,5 +1286,55 @@ class TestStorageFailureHandling:
 
         assert (
             result["message"]
-            == "2 files deleted successfully, 1 files kept in database due to transient storage errors (can retry)"
+            == "2 files deleted successfully, 1 files kept due to transient storage errors (can retry)"
         )
+
+    async def test_delete_file_in_use(self):
+        """Test that a file in use is not deleted."""
+        from langflow.services.database.models.file.model import File as UserFile
+        from langflow.services.database.models.flow.model import Flow
+
+        user_id = uuid.uuid4()
+        file_id = uuid.uuid4()
+        file_name = "used_file.txt"
+
+        mock_file = UserFile(
+            id=file_id,
+            user_id=user_id,
+            name=file_name,
+            path=f"{user_id}/{file_name}",
+            size=100,
+        )
+
+        # Mock flow using the file
+        mock_flow = MagicMock(spec=Flow)
+        mock_flow.data = {"nodes": [{"data": {"node": {"template": {"file": {"value": file_name}}}}}]}
+
+        mock_current_user = MagicMock()
+        mock_current_user.id = user_id
+
+        mock_exec_file = MagicMock()
+        mock_exec_file.first = MagicMock(return_value=mock_file)
+
+        mock_exec_flows = MagicMock()
+        mock_exec_flows.all = MagicMock(return_value=[mock_flow])
+
+        mock_session = AsyncMock()
+        mock_session.exec = AsyncMock(side_effect=[mock_exec_file, mock_exec_flows])
+        mock_session.delete = AsyncMock()
+
+        mock_storage_service = AsyncMock()
+
+        result = await delete_file(
+            file_id=file_id,
+            current_user=mock_current_user,
+            session=mock_session,
+            storage_service=mock_storage_service,
+        )
+
+        assert result == {
+            "detail": f"File {file_name} is in use and cannot be deleted",
+            "files_not_deleted": [file_name],
+        }
+        mock_storage_service.delete_file.assert_not_called()
+        mock_session.delete.assert_not_called()

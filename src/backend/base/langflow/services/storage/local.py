@@ -124,14 +124,14 @@ class LocalStorageService(StorageService):
                     break
                 yield chunk
 
-    async def list_files(self, flow_id: str) -> list[str]:
+    async def list_files(self, flow_id: str) -> list[dict]:
         """List all files in a specific flow directory.
 
         Args:
             flow_id: The identifier for the flow.
 
         Returns:
-            List of file names in the flow directory.
+            List of file metadata dicts with 'name' and 'size' keys.
         """
         if not isinstance(flow_id, str):
             flow_id = str(flow_id)
@@ -142,7 +142,11 @@ class LocalStorageService(StorageService):
             return []
 
         try:
-            files = [p.name async for p in folder_path.iterdir() if await p.is_file()]
+            files = []
+            async for p in folder_path.iterdir():
+                if await p.is_file():
+                    stat_result = await p.stat()
+                    files.append({"name": p.name, "size": stat_result.st_size})
         except Exception:  # noqa: BLE001
             logger.exception(f"Error listing files in flow {flow_id}")
             return []

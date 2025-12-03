@@ -7,6 +7,7 @@ from datetime import datetime
 from http import HTTPStatus
 from pathlib import Path
 from typing import Annotated
+from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
@@ -17,6 +18,7 @@ from sqlmodel import col, select
 from langflow.api.schemas import UploadFileResponse
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.services.database.models.file.model import File as UserFile
+from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_settings_service, get_storage_service
 from langflow.services.settings.service import SettingsService
 from langflow.services.storage.service import StorageService
@@ -26,6 +28,76 @@ router = APIRouter(tags=["Files"], prefix="/files")
 # Set the static name of the MCP servers file
 MCP_SERVERS_FILE = "_mcp_servers"
 SAMPLE_DATA_DIR = Path(__file__).parent / "sample_data"
+
+# Maximum allowed filename length
+MAX_FILENAME_LENGTH = 255
+# Maximum reasonable extension length
+MAX_EXTENSION_LENGTH = 20
+
+
+def sanitize_filename(filename: str) -> str:
+    """Sanitize a filename to prevent path traversal and other security issues.
+
+    Args:
+        filename: The original filename from user input
+
+    Returns:
+        A sanitized filename safe for storage and headers
+    """
+    if not filename:
+        return "unnamed"
+
+    # Strip any path components to prevent path traversal (e.g., ../../etc/passwd)
+    base_filename = Path(filename).name
+
+    # Replace dangerous characters: control chars, path separators, quotes, etc.
+    # Keep only alphanumeric, spaces, dots, hyphens, underscores, and parentheses
+    safe_filename = re.sub(r"[^\w.\- ()]", "_", base_filename)
+
+    # Remove leading/trailing whitespace and dots (prevent hidden files)
+    safe_filename = safe_filename.strip().strip(".")
+
+    # Ensure we have a valid filename
+    if not safe_filename:
+        return "unnamed"
+
+    # Truncate to max length while preserving extension
+    if len(safe_filename) > MAX_FILENAME_LENGTH:
+        name_part, _, ext = safe_filename.rpartition(".")
+        if ext and len(ext) < MAX_EXTENSION_LENGTH:
+            max_name_len = MAX_FILENAME_LENGTH - len(ext) - 1
+            safe_filename = f"{name_part[:max_name_len]}.{ext}"
+        else:
+            safe_filename = safe_filename[:MAX_FILENAME_LENGTH]
+
+    return safe_filename
+
+
+def sanitize_content_disposition(filename: str) -> str:
+    """Create a safe Content-Disposition header value.
+
+    Uses RFC 5987 encoding for non-ASCII characters and escapes special chars.
+
+    Args:
+        filename: The filename to include in the header
+
+    Returns:
+        A properly formatted Content-Disposition header value
+    """
+    # First sanitize the filename
+    safe_name = sanitize_filename(filename)
+
+    # Check if filename contains non-ASCII or special characters
+    try:
+        safe_name.encode("ascii")
+    except UnicodeEncodeError:
+        # Contains non-ASCII: use RFC 5987 encoding
+        encoded = quote(safe_name, safe="")
+        return f"attachment; filename*=UTF-8''{encoded}"
+    else:
+        # ASCII-safe: use simple quoted format, escape quotes
+        escaped = safe_name.replace("\\", "\\\\").replace('"', '\\"')
+        return f'attachment; filename="{escaped}"'
 
 
 def is_permanent_storage_failure(error: Exception) -> bool:
@@ -103,6 +175,93 @@ async def fetch_file_object(file_id: uuid.UUID, current_user: CurrentActiveUser,
     return file
 
 
+async def get_user_flows(session: DbSession, user_id: uuid.UUID) -> list[Flow]:
+    """Fetch all flows for a user."""
+    stmt = select(Flow).where(Flow.user_id == user_id)
+    return list((await session.exec(stmt)).all())
+
+
+async def is_file_in_use(session: DbSession, user_id: uuid.UUID, file_name: str) -> bool:
+    """Check if a file is used in any of the user's flows."""
+    flows = await get_user_flows(session, user_id)
+    return any(is_file_used(flow.data, file_name) for flow in flows)
+
+
+def is_file_used(flow_data: dict | None, file_name: str) -> bool:
+    """Check if a file is used in the flow."""
+    if not flow_data or "nodes" not in flow_data:
+        return False
+
+    for node in flow_data["nodes"]:
+        node_data = node.get("data", {}).get("node", {})
+        template = node_data.get("template", {})
+        for field in template.values():
+            if isinstance(field, dict) and "value" in field:
+                value = field["value"]
+                if isinstance(value, str) and file_name in value:
+                    return True
+                if isinstance(value, list):
+                    for item in value:
+                        if isinstance(item, str) and file_name in item:
+                            return True
+    return False
+
+
+async def try_delete_from_storage(
+    storage_service: StorageService,
+    flow_id: str,
+    file_name: str,
+) -> tuple[bool, str | None]:
+    """Try to delete a file from storage, handling permanent vs transient failures.
+
+    Returns:
+        Tuple of (can_delete_from_db, error_message).
+        - (True, None) if file was deleted or permanently gone (safe to delete from DB).
+        - (False, error_message) if transient failure occurred (keep in DB for retry).
+    """
+    try:
+        await storage_service.delete_file(flow_id=flow_id, file_name=file_name)
+
+    except Exception as err:  # noqa: BLE001
+        if is_permanent_storage_failure(err):
+            await logger.awarning(
+                "File %s not found in storage (permanent failure), will remove from database: %s",
+                file_name,
+                err,
+            )
+            return True, None
+        await logger.awarning(
+            "Failed to delete file %s from storage (transient error): %s",
+            file_name,
+            err,
+        )
+        return False, str(err)
+    else:
+        return True, None
+
+
+async def delete_from_storage(
+    storage_service: StorageService,
+    flow_id: str,
+    file_name: str,
+) -> bool:
+    """Delete a file from storage, handling permanent vs transient failures.
+
+    Returns:
+        True if file was deleted or permanently gone (safe to delete from DB).
+
+    Raises:
+        HTTPException: On transient failures (user should retry).
+    """
+    can_delete, _error = await try_delete_from_storage(storage_service, flow_id, file_name)
+    if not can_delete:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to delete file from storage. Please try again.",
+        )
+    return True
+
+
 async def save_file_routine(
     file,
     storage_service,
@@ -157,8 +316,8 @@ async def upload_user_file(
 
     # Create a new database record for the uploaded file.
     try:
-        # Enforce unique constraint on name, except for the special _mcp_servers file
-        new_filename = file.filename
+        # Sanitize filename to prevent path traversal and other security issues
+        new_filename = sanitize_filename(file.filename)
         try:
             root_filename, file_extension = new_filename.rsplit(".", 1)
         except ValueError:
@@ -366,92 +525,67 @@ async def delete_files_batch(
 ):
     """Delete multiple files by their IDs."""
     try:
-        # Fetch all files from the DB
         stmt = select(UserFile).where(col(UserFile.id).in_(file_ids), col(UserFile.user_id) == current_user.id)
         results = await session.exec(stmt)
-        files = results.all()
+        files = list(results.all())
 
         if not files:
             raise HTTPException(status_code=404, detail="No files found")
 
-        # Track storage deletion failures
-        storage_failures = []
-        # Track database deletion failures
-        db_failures = []
+        flows = await get_user_flows(session, current_user.id)
+        files_not_deleted: list[str] = []
+        files_to_process: list[UserFile] = []
 
-        # Delete all files from the storage service
         for file in files:
-            # Extract just the filename from the path (strip user_id prefix)
+            if any(is_file_used(flow.data, file.name) for flow in flows):
+                files_not_deleted.append(file.name)
+            else:
+                files_to_process.append(file)
+
+        storage_failures: list[str] = []
+        deleted_files: list[str] = []
+
+        for file in files_to_process:
             file_name = file.path.split("/")[-1]
-            storage_deleted = False
+            can_delete, error = await try_delete_from_storage(storage_service, str(current_user.id), file_name)
 
-            try:
-                await storage_service.delete_file(flow_id=str(current_user.id), file_name=file_name)
-                storage_deleted = True
-            except OSError as err:
-                # Check if this is a "permanent" failure where file/storage is gone
-                # These are safe to delete from DB even if storage deletion failed
-                if is_permanent_storage_failure(err):
-                    # File/storage is permanently gone - safe to delete from DB
-                    await logger.awarning(
-                        "File %s not found in storage (permanent failure), will remove from database: %s",
-                        file_name,
-                        err,
-                    )
-                    storage_deleted = True  # Treat as "deleted" for DB purposes
-                else:
-                    # Transient failure (network, timeout, permissions) - keep in DB for retry
-                    storage_failures.append(f"{file_name}: {err}")
-                    await logger.awarning(
-                        "Failed to delete file %s from storage (transient error, keeping in database for retry): %s",
-                        file_name,
-                        err,
-                    )
+            if can_delete:
+                await session.delete(file)
+                deleted_files.append(file.name)
+            else:
+                storage_failures.append(f"{file_name}: {error}")
 
-            # Only delete from database if storage deletion succeeded OR it was a permanent failure
-            if storage_deleted:
-                try:
-                    await session.delete(file)
-                except OSError as db_error:
-                    # Log database deletion failure but continue processing remaining files
-                    db_failures.append(f"{file_name}: {db_error}")
-                    await logger.aerror(
-                        "Failed to delete file %s from database: %s",
-                        file_name,
-                        db_error,
-                    )
+        await session.commit()
 
-        # If there were storage failures, include them in the response
         if storage_failures:
             await logger.awarning(
-                "Batch delete completed with %d storage failures: %s", len(storage_failures), storage_failures
+                "Batch delete completed with %d storage failures: %s",
+                len(storage_failures),
+                storage_failures,
             )
-        # If there were database failures, log them
-        if db_failures:
-            await logger.aerror("Batch delete completed with %d database failures: %s", len(db_failures), db_failures)
-            # If all database deletions failed, raise an error
-            if len(db_failures) == len(files):
-                raise HTTPException(status_code=500, detail=f"Failed to delete any files from database: {db_failures}")
 
-        # Calculate how many files were actually deleted from database
-        # Files successfully deleted = total - (kept due to transient storage failures) - (DB deletion failures)
-        files_deleted = len(files) - len(storage_failures) - len(db_failures)
-        files_kept = len(storage_failures)  # Files with transient storage failures kept in DB
+        files_deleted = len(deleted_files)
+        files_kept = len(storage_failures)
 
-        # Build response message
-        if files_deleted == len(files):
+        if files_deleted == len(files_to_process) and not files_not_deleted:
             message = f"{files_deleted} files deleted successfully"
-        elif files_deleted > 0:
+        else:
             message = f"{files_deleted} files deleted successfully"
             if files_kept > 0:
-                message += f", {files_kept} files kept in database due to transient storage errors (can retry)"
-        else:
-            message = "No files were deleted from database"
+                message += f", {files_kept} files kept due to transient storage errors (can retry)"
+            if files_not_deleted:
+                message += f", {len(files_not_deleted)} files not deleted because they are in use"
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error deleting files: {e}") from e
 
-    return {"message": message}
+    return {
+        "message": message,
+        "deleted_files": deleted_files,
+        "files_not_deleted": files_not_deleted,
+    }
 
 
 @router.post("/batch/", status_code=HTTPStatus.OK)
@@ -539,6 +673,8 @@ async def read_file_content(file_stream: AsyncIterable[bytes] | bytes, *, decode
             return content.decode("utf-8")
         except UnicodeDecodeError as exc:
             raise HTTPException(status_code=500, detail="Invalid file encoding") from exc
+    except HTTPException:
+        raise
     except ValueError as exc:
         raise HTTPException(status_code=500, detail=f"Error reading file: {exc}") from exc
     except Exception as exc:
@@ -595,7 +731,7 @@ async def download_file(
                 raise HTTPException(status_code=404, detail="File not found")
             byte_stream = byte_stream_generator(file_content)
 
-        # Create the filename with extension
+        # Create the filename with extension and sanitize for Content-Disposition header
         file_extension = Path(file.path).suffix
         filename_with_extension = f"{file.name}{file_extension}"
 
@@ -603,7 +739,7 @@ async def download_file(
         return StreamingResponse(
             byte_stream,
             media_type="application/octet-stream",
-            headers={"Content-Disposition": f'attachment; filename="{filename_with_extension}"'},
+            headers={"Content-Disposition": sanitize_content_disposition(filename_with_extension)},
         )
 
     except HTTPException:
@@ -622,13 +758,28 @@ async def edit_file_name(
     session: DbSession,
 ) -> UploadFileResponse:
     """Edit the name of a file by its ID."""
+    # Validate and sanitize the new name
+    if not name or not name.strip():
+        raise HTTPException(status_code=400, detail="Name cannot be empty")
+
+    sanitized_name = sanitize_filename(name)
+    if sanitized_name != name.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Name contains invalid characters. "
+            "Only alphanumeric, spaces, dots, hyphens, underscores, and parentheses are allowed.",
+        )
+
     try:
         # Fetch the file from the DB
         file = await fetch_file_object(file_id, current_user, session)
 
         # Update the file name
-        file.name = name
+        file.name = sanitized_name
         session.add(file)
+        await session.commit()
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error editing file: {e}") from e
 
@@ -644,64 +795,27 @@ async def delete_file(
 ):
     """Delete a file by its ID."""
     try:
-        # Fetch the file object
         file_to_delete = await fetch_file_object(file_id, current_user, session)
-        if not file_to_delete:
-            raise HTTPException(status_code=404, detail="File not found")
 
-        # Extract just the filename from the path (strip user_id prefix)
+        if await is_file_in_use(session, current_user.id, file_to_delete.name):
+            return {
+                "detail": f"File {file_to_delete.name} is in use and cannot be deleted",
+                "files_not_deleted": [file_to_delete.name],
+            }
+
         file_name = file_to_delete.path.split("/")[-1]
+        await delete_from_storage(storage_service, str(current_user.id), file_name)
 
-        # Delete the file from the storage service first
-        storage_deleted = False
-        try:
-            await storage_service.delete_file(flow_id=str(current_user.id), file_name=file_name)
-            storage_deleted = True
-        except Exception as err:
-            # Check if this is a "permanent" failure where file/storage is gone
-            # These are safe to delete from DB even if storage deletion failed
-            if is_permanent_storage_failure(err):
-                await logger.awarning(
-                    "File %s not found in storage (permanent failure), will remove from database: %s",
-                    file_name,
-                    err,
-                )
-                storage_deleted = True
-            else:
-                # Transient failure (network, timeout, permissions) - keep in DB for retry
-                await logger.awarning(
-                    "Failed to delete file %s from storage (transient error, keeping in database for retry): %s",
-                    file_name,
-                    err,
-                )
-                # Don't delete from DB - user can retry
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"Failed to delete file from storage. Please try again. Error: {err}",
-                ) from err
+        await session.delete(file_to_delete)
+        await session.commit()
 
-        # Only delete from database if storage deletion succeeded OR it was a permanent failure
-        if storage_deleted:
-            try:
-                await session.delete(file_to_delete)
-            except Exception as db_error:
-                await logger.aerror(
-                    "Failed to delete file %s from database: %s",
-                    file_to_delete.name,
-                    db_error,
-                )
-                raise HTTPException(
-                    status_code=500, detail=f"Error deleting file from database: {db_error}"
-                ) from db_error
-
-            return {"detail": f"File {file_to_delete.name} deleted successfully"}
     except HTTPException:
-        # Re-raise HTTPException to avoid being caught by the generic exception handler
         raise
     except Exception as e:
-        # Log and return a generic server error
         await logger.aerror("Error deleting file %s: %s", file_id, e)
         raise HTTPException(status_code=500, detail=f"Error deleting file: {e}") from e
+    else:
+        return {"detail": f"File {file_to_delete.name} deleted successfully", "files_not_deleted": []}
 
 
 @router.delete("")
@@ -713,82 +827,57 @@ async def delete_all_files(
 ):
     """Delete all files for the current user."""
     try:
-        # Fetch all files from the DB
         stmt = select(UserFile).where(UserFile.user_id == current_user.id)
         results = await session.exec(stmt)
-        files = results.all()
+        files = list(results.all())
 
-        storage_failures = []
-        db_failures = []
+        flows = await get_user_flows(session, current_user.id)
+        files_not_deleted: list[str] = []
+        files_to_process: list[UserFile] = []
 
-        # Delete all files from the storage service
         for file in files:
-            # Extract just the filename from the path (strip user_id prefix)
+            if any(is_file_used(flow.data, file.name) for flow in flows):
+                files_not_deleted.append(file.name)
+            else:
+                files_to_process.append(file)
+
+        storage_failures: list[str] = []
+        deleted_files: list[str] = []
+
+        for file in files_to_process:
             file_name = file.path.split("/")[-1]
-            storage_deleted = False
+            can_delete, error = await try_delete_from_storage(storage_service, str(current_user.id), file_name)
 
-            try:
-                await storage_service.delete_file(flow_id=str(current_user.id), file_name=file_name)
-                storage_deleted = True
-            except OSError as err:
-                # Check if this is a "permanent" failure where file/storage is gone
-                # These are safe to delete from DB even if storage deletion failed
-                if is_permanent_storage_failure(err):
-                    # File/storage is permanently gone - safe to delete from DB
-                    await logger.awarning(
-                        "File %s not found in storage, also removing from database: %s",
-                        file_name,
-                        err,
-                    )
-                    storage_deleted = True
-                else:
-                    # Transient failure (network, timeout, permissions) - keep in DB for retry
-                    storage_failures.append(f"{file_name}: {err}")
-                    await logger.awarning(
-                        "Failed to delete file %s from storage (transient error, keeping in database for retry): %s",
-                        file_name,
-                        err,
-                    )
+            if can_delete:
+                await session.delete(file)
+                deleted_files.append(file.name)
+            else:
+                storage_failures.append(f"{file_name}: {error}")
 
-            # Only delete from database if storage deletion succeeded OR it was a permanent failure
-            if storage_deleted:
-                try:
-                    await session.delete(file)
-                except OSError as db_error:
-                    # Log database deletion failure but continue processing remaining files
-                    db_failures.append(f"{file_name}: {db_error}")
-                    await logger.aerror(
-                        "Failed to delete file %s from database: %s",
-                        file_name,
-                        db_error,
-                    )
+        await session.commit()
 
         if storage_failures:
             await logger.awarning(
-                "Batch delete completed with %d storage failures: %s", len(storage_failures), storage_failures
+                "Delete all completed with %d storage failures: %s",
+                len(storage_failures),
+                storage_failures,
             )
 
-        if db_failures:
-            await logger.aerror("Batch delete completed with %d database failures: %s", len(db_failures), db_failures)
-            # If all database deletions failed, raise an error
-            if len(db_failures) == len(files):
-                raise HTTPException(status_code=500, detail=f"Failed to delete any files from database: {db_failures}")
+        files_deleted = len(deleted_files)
+        files_kept = len(storage_failures)
 
-        # Calculate how many files were actually deleted from database
-        # Files successfully deleted = total - (kept due to transient storage failures) - (DB deletion failures)
-        files_deleted = len(files) - len(storage_failures) - len(db_failures)
-        files_kept = len(storage_failures) + len(db_failures)
-
-        if files_deleted == len(files):
+        if files_deleted == len(files_to_process) and not files_not_deleted:
             message = f"All {files_deleted} files deleted successfully"
-        elif files_deleted > 0:
+        else:
             message = f"{files_deleted} files deleted successfully"
             if files_kept > 0:
                 message += f", {files_kept} files failed to delete. See logs for details."
-        else:
-            message = "Failed to delete files. See logs for details."
+            if files_not_deleted:
+                message += f", {len(files_not_deleted)} files not deleted because they are in use"
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error deleting all files: {e}") from e
 
-    return {"message": message}
+    return {"message": message, "files_not_deleted": files_not_deleted}
