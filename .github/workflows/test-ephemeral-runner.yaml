@@ -1,5 +1,5 @@
 # Ephemeral Runner Validation Workflow
-# .
+# ..
 # This workflow validates that the ephemeral runner is truly ephemeral by:
 # 1. Creating test artifacts (files and Docker images) in one run
 # 2. Verifying in subsequent runs that these artifacts are gone
