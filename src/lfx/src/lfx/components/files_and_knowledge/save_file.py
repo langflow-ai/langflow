@@ -700,11 +700,9 @@ class SaveToFileComponent(Component):
             media = MediaFileUpload(temp_file_path, resumable=True)
 
             try:
-                uploaded_file = drive_service.files().create(
-                    body=file_metadata,
-                    media_body=media,
-                    fields="id"
-                ).execute()
+                uploaded_file = (
+                    drive_service.files().create(body=file_metadata, media_body=media, fields="id").execute()
+                )
             except Exception as e:
                 msg = (
                     f"Unable to upload file to Google Drive folder '{self.folder_id}'. "
