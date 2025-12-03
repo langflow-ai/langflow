@@ -14,7 +14,6 @@ import {
   usePublishFlow,
   usePublishFlowMarketplaceAdmin,
   useValidateMarketplaceName,
-  useGetPublishedFlow,
   type PublishCheckResponse,
 } from "@/controllers/API/queries/published-flows";
 import {
@@ -35,6 +34,7 @@ import { ALLOWED_IMAGE_INPUT_EXTENSIONS } from "@/constants/constants";
 import { AgentLogo } from "@/components/AgentLogo";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import type { FlowLatestStatusResponse } from "@/controllers/API/queries/flow-versions";
+import { useGetSampleForPublish } from "@/controllers/API/queries/flow-versions";
 import { cn } from "@/utils/utils";
 import { RiUploadCloud2Fill } from "react-icons/ri";
 import useAuthStore from "@/stores/authStore";
@@ -116,8 +116,8 @@ export default function PublishFlowModal({
     (state) => state.setCurrentFlow
   );
 
-  // Fetch existing published flow details (including input samples) if available
-  const { data: publishedFlowData } = useGetPublishedFlow(publishedFlowId);
+  // Fetch sample data from version_flow_input_sample for pre-populating the form
+  const { data: sampleForPublishData } = useGetSampleForPublish(flowId, version);
 
   // Derived lists for existing sample files and texts grouped by sample record
 
@@ -203,24 +203,10 @@ export default function PublishFlowModal({
           setLogoUrl(null);
         }
 
-        // Pre-populate sample texts from approval submission
-        if (approvalData?.sample_text && approvalData.sample_text.length > 0) {
-          setSampleTexts(approvalData.sample_text);
-        } else {
-          setSampleTexts([""]);
-        }
-
-        // Pre-populate sample files from approval submission
-        if (approvalData?.file_names && approvalData.file_names.length > 0) {
-          setUploadedSampleFiles(
-            approvalData.file_names.map((path) => ({
-              name: path.split("/").pop() || path,
-              path: path,
-            }))
-          );
-        } else {
-          setUploadedSampleFiles([]);
-        }
+        // Note: Sample inputs are now handled by sampleForPublishData useEffect
+        // (version_flow_input_sample is the single source of truth)
+        setSampleTexts([""]);
+        setUploadedSampleFiles([]);
       }
       // Reset logo removal flag and new file state when modal opens
       setLogoRemoved(false);
@@ -236,36 +222,29 @@ export default function PublishFlowModal({
     currentFlow?.description,
   ]);
 
-  // Separate useEffect to handle publishedFlowData loading
+  // Separate useEffect to handle sampleForPublishData loading
   // This ensures sample inputs are set when data becomes available (async)
+  // version_flow_input_sample is the single source of truth for sample inputs
   useEffect(() => {
-    if (open && existingPublishedData?.marketplace_flow_name && publishedFlowData) {
-      console.log("publishedFlowData loaded, setting sample inputs", publishedFlowData);
+    if (open && sampleForPublishData) {
+      console.log("sampleForPublishData loaded, setting sample inputs", sampleForPublishData);
 
-      if (publishedFlowData.input_samples && publishedFlowData.input_samples.length > 0) {
-        // Extract sample texts
-        const allSampleTexts = publishedFlowData.input_samples.flatMap(
-          (sample: any) => sample.sample_text || []
-        );
-        console.log("Setting sample texts:", allSampleTexts);
-        if (allSampleTexts.length > 0) {
-          setSampleTexts(allSampleTexts);
-        }
+      // Always use sampleForPublishData when available (single source of truth)
+      if (sampleForPublishData.sample_text && sampleForPublishData.sample_text.length > 0) {
+        console.log("Setting sample texts:", sampleForPublishData.sample_text);
+        setSampleTexts(sampleForPublishData.sample_text);
+      }
 
-        // Extract sample files
-        const allSampleFiles = publishedFlowData.input_samples.flatMap(
-          (sample: any) => (sample.file_names || []).map((path: string) => ({
-            name: path.split("/").pop() || path,
-            path: path,
-          }))
-        );
-        console.log("Setting sample files:", allSampleFiles);
-        if (allSampleFiles.length > 0) {
-          setUploadedSampleFiles(allSampleFiles);
-        }
+      if (sampleForPublishData.file_names && sampleForPublishData.file_names.length > 0) {
+        const sampleFiles = sampleForPublishData.file_names.map((path: string) => ({
+          name: path.split("/").pop() || path,
+          path: path,
+        }));
+        console.log("Setting sample files:", sampleFiles);
+        setUploadedSampleFiles(sampleFiles);
       }
     }
-  }, [open, existingPublishedData?.marketplace_flow_name, publishedFlowData]);
+  }, [open, sampleForPublishData]);
 
   // Run validation when modal opens
   useEffect(() => {

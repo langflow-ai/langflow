@@ -6,3 +6,4 @@ export * from "./use-get-all-flow-versions";
 export * from "./use-approve-version";
 export * from "./use-reject-version";
 export * from "./use-cancel-submission";
+export * from "./use-get-sample-for-publish";

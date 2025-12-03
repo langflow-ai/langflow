@@ -36,9 +36,9 @@ class PublishedFlowInputSample(PublishedFlowInputSampleBase, table=True):
     )
     
     # Relationships
-    published_flow: Optional["PublishedFlow"] = Relationship(
-        back_populates="input_samples",
-    )
+    # Note: back_populates removed since input_samples relationship was removed from PublishedFlow
+    # This table is deprecated and will be removed in a future migration
+    published_flow: Optional["PublishedFlow"] = Relationship()
     
     __table_args__ = (
         Index("ix_published_flow_input_sample_published_flow_id", "published_flow_id"),

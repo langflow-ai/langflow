@@ -9,14 +9,10 @@ from sqlalchemy import Column, Text, UniqueConstraint, text
 from sqlalchemy import Enum as SQLEnum
 from sqlmodel import JSON, Field, Relationship, SQLModel
 
-# Import the Read schema at runtime to resolve forward references in Pydantic
-from langflow.services.database.models.published_flow_input_sample.model import (
-    PublishedFlowInputSampleRead,
-)
+# Note: PublishedFlowInputSample is deprecated - using VersionFlowInputSample instead
 
 if TYPE_CHECKING:
     from langflow.services.database.models.flow.model import Flow
-    from langflow.services.database.models.published_flow_input_sample.model import PublishedFlowInputSample
     from langflow.services.database.models.published_flow_version.model import PublishedFlowVersion
     from langflow.services.database.models.user.model import User
 
@@ -89,12 +85,7 @@ class PublishedFlow(PublishedFlowBase, table=True):  # type: ignore[call-arg]
             "order_by": "PublishedFlowVersion.published_at.desc()",
         },
     )
-    input_samples: list["PublishedFlowInputSample"] = Relationship(
-        back_populates="published_flow",
-        sa_relationship_kwargs={
-            "cascade": "all, delete-orphan",
-        },
-    )
+    # Note: input_samples relationship removed - using version_flow_input_sample instead
 
     __table_args__ = (UniqueConstraint("flow_cloned_from", name="uq_published_flow_cloned_from"),)
 
@@ -131,7 +122,8 @@ class PublishedFlowRead(PublishedFlowBase):
     flow_icon: str | None = None
     published_by_username: str | None = None
     flow_data: dict | None = None  # Flow data from cloned flow for visualization
-    input_samples: list[PublishedFlowInputSampleRead] | None = None
+    # Note: input_samples removed - fetch from version_flow_input_sample via separate endpoint
+    input_samples: list[dict] | None = None  # Kept for backward compatibility, populated manually
     original_flow_user_id: UUID | None = None  # Creator of the original flow
 
 
@@ -143,5 +135,4 @@ class PublishedFlowUpdate(SQLModel):
     tags: list[str] | None = None
     category: str | None = None
 
-# Rebuild Pydantic models to resolve forward references used in annotations
-PublishedFlowRead.model_rebuild()
+# Note: model_rebuild() no longer needed since PublishedFlowInputSampleRead import was removed

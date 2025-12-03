@@ -6,7 +6,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import cast, func, or_, Text, update
-from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy.orm import joinedload
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -19,10 +19,7 @@ from langflow.services.database.models.published_flow.model import (
     PublishedFlowRead,
     PublishStatusEnum,
 )
-from langflow.services.database.models.published_flow_input_sample.model import (
-    PublishedFlowInputSample,
-    PublishedFlowInputSampleRead,
-)
+# Note: PublishedFlowInputSample is deprecated - using VersionFlowInputSample instead
 from langflow.services.database.models.published_flow_version.model import (
     PublishedFlowVersion,
     PublishedFlowVersionRead,
@@ -258,32 +255,41 @@ async def publish_flow(
 
             session.add(original_flow)
 
-            # Delete existing sample input records before creating new ones
-            existing_samples_query = select(PublishedFlowInputSample).where(
-                PublishedFlowInputSample.published_flow_id == existing.id
-            )
-            existing_samples_result = await session.exec(existing_samples_query)
-            existing_samples = existing_samples_result.all()
-            for sample in existing_samples:
-                await session.delete(sample)
-            
-            # Force flush to ensure samples are deleted before proceeding
-            # This prevents ForeignKeyViolation if PublishedFlow is modified in a way that triggers checks
-            await session.flush()
-
-            # Create PublishedFlowInputSample record if sample data is provided
+            # Handle version_flow_input_sample: Update existing or create new
             if any([payload.storage_account, payload.container_name, payload.file_names, payload.sample_text, payload.sample_output]):
-                input_sample = PublishedFlowInputSample(
-                    published_flow_id=existing.id,
-                    storage_account=payload.storage_account,
-                    container_name=payload.container_name,
-                    file_names=payload.file_names,
-                    sample_text=payload.sample_text,
-                    sample_output=payload.sample_output,
-                    created_at=datetime.now(timezone.utc),
-                    updated_at=datetime.now(timezone.utc),
+                # Check if sample exists for this version
+                existing_sample_query = select(VersionFlowInputSample).where(
+                    VersionFlowInputSample.original_flow_id == flow_id,
+                    VersionFlowInputSample.version == payload.version,
                 )
-                session.add(input_sample)
+                existing_sample_result = await session.exec(existing_sample_query)
+                existing_sample = existing_sample_result.first()
+
+                if existing_sample:
+                    # Update existing sample
+                    existing_sample.storage_account = payload.storage_account
+                    existing_sample.container_name = payload.container_name
+                    existing_sample.file_names = payload.file_names
+                    existing_sample.sample_text = payload.sample_text
+                    existing_sample.sample_output = payload.sample_output
+                    existing_sample.updated_at = datetime.now(timezone.utc)
+                    session.add(existing_sample)
+                else:
+                    # Create new sample
+                    input_sample = VersionFlowInputSample(
+                        flow_version_id=flow_version.id,
+                        original_flow_id=flow_id,
+                        version=payload.version,
+                        storage_account=payload.storage_account,
+                        container_name=payload.container_name,
+                        file_names=payload.file_names,
+                        sample_text=payload.sample_text,
+                        sample_output=payload.sample_output,
+                    )
+                    session.add(input_sample)
+                    await session.flush()
+                    # Update flow_version with sample_id
+                    flow_version.sample_id = input_sample.id
 
             await session.flush()
             await session.commit()
@@ -342,13 +348,8 @@ async def publish_flow(
                 await session.commit()
                 logger.info(f"Updated flow_version {flow_version.id} to Published status")
 
-            # Eager-load input_samples to avoid async lazy-load during Pydantic serialization
-            existing_with_samples_result = await session.exec(
-                select(PublishedFlow)
-                .options(joinedload(PublishedFlow.input_samples))
-                .where(PublishedFlow.id == existing.id)
-            )
-            existing_with_samples = existing_with_samples_result.first() or existing
+            # Refresh published_flow record
+            await session.refresh(existing)
 
             logger.info(f"Re-published flow '{original_flow.name}' (ID: {flow_id}) as version '{payload.version}'")
 
@@ -360,7 +361,7 @@ async def publish_flow(
                 tags=payload.tags or []
             )
 
-            result_data = PublishedFlowRead.model_validate(existing_with_samples, from_attributes=True)
+            result_data = PublishedFlowRead.model_validate(existing, from_attributes=True)
             return result_data
 
         # NEW PUBLISH: Use existing clone from flow_version (created during submit for approval)
@@ -435,19 +436,41 @@ async def publish_flow(
         session.add(published_flow)
         session.add(original_flow)
 
-        # Create PublishedFlowInputSample record if sample data is provided
+        # Handle version_flow_input_sample: Update existing or create new
         if any([payload.storage_account, payload.container_name, payload.file_names, payload.sample_text, payload.sample_output]):
-            input_sample = PublishedFlowInputSample(
-                published_flow_id=published_flow.id,
-                storage_account=payload.storage_account,
-                container_name=payload.container_name,
-                file_names=payload.file_names,
-                sample_text=payload.sample_text,
-                sample_output=payload.sample_output,
-                created_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc),
+            # Check if sample exists for this version
+            existing_sample_query = select(VersionFlowInputSample).where(
+                VersionFlowInputSample.original_flow_id == flow_id,
+                VersionFlowInputSample.version == payload.version,
             )
-            session.add(input_sample)
+            existing_sample_result = await session.exec(existing_sample_query)
+            existing_sample = existing_sample_result.first()
+
+            if existing_sample:
+                # Update existing sample
+                existing_sample.storage_account = payload.storage_account
+                existing_sample.container_name = payload.container_name
+                existing_sample.file_names = payload.file_names
+                existing_sample.sample_text = payload.sample_text
+                existing_sample.sample_output = payload.sample_output
+                existing_sample.updated_at = datetime.now(timezone.utc)
+                session.add(existing_sample)
+            else:
+                # Create new sample
+                input_sample = VersionFlowInputSample(
+                    flow_version_id=flow_version.id,
+                    original_flow_id=flow_id,
+                    version=payload.version,
+                    storage_account=payload.storage_account,
+                    container_name=payload.container_name,
+                    file_names=payload.file_names,
+                    sample_text=payload.sample_text,
+                    sample_output=payload.sample_output,
+                )
+                session.add(input_sample)
+                await session.flush()
+                # Update flow_version with sample_id
+                flow_version.sample_id = input_sample.id
 
         await session.flush()
         await session.commit()
@@ -515,17 +538,12 @@ async def publish_flow(
             tags=payload.tags or []
         )
 
-        # Eager-load input_samples to avoid async lazy-load during Pydantic serialization
-        published_with_samples_result = await session.exec(
-            select(PublishedFlow)
-            .options(joinedload(PublishedFlow.input_samples))
-            .where(PublishedFlow.id == published_flow.id)
-        )
-        published_with_samples = published_with_samples_result.first() or published_flow
+        # Refresh published_flow record
+        await session.refresh(published_flow)
 
-        result_data = PublishedFlowRead.model_validate(published_with_samples, from_attributes=True)
+        result_data = PublishedFlowRead.model_validate(published_flow, from_attributes=True)
         return result_data
-        
+
     except HTTPException:
         # Re-raise HTTP exceptions as-is
         await session.rollback()
@@ -931,32 +949,42 @@ async def publish_flow_marketplace_admin(
             )
             session.add(published_flow)
 
-        # Step 9: Delete existing samples and create new ones if provided
-        # Delete all existing sample input records first
-        existing_samples_query = select(PublishedFlowInputSample).where(
-            PublishedFlowInputSample.published_flow_id == published_flow.id
-        )
-        existing_samples_result = await session.exec(existing_samples_query)
-        existing_samples = existing_samples_result.all()
-        for sample in existing_samples:
-            await session.delete(sample)
-        
-        # Force flush to ensure samples are deleted
-        await session.flush()
-
-        # Create new PublishedFlowInputSample if sample data is provided
+        # Step 9: Handle version_flow_input_sample: Update existing or create new
         if any([payload.storage_account, payload.container_name, payload.file_names, payload.sample_text, payload.sample_output]):
-            input_sample = PublishedFlowInputSample(
-                published_flow_id=published_flow.id,
-                storage_account=payload.storage_account,
-                container_name=payload.container_name,
-                file_names=payload.file_names,
-                sample_text=payload.sample_text,
-                sample_output=payload.sample_output,
-                created_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc),
+            # Check if sample exists for this version
+            existing_sample_query = select(VersionFlowInputSample).where(
+                VersionFlowInputSample.original_flow_id == flow_id,
+                VersionFlowInputSample.version == payload.version,
             )
-            session.add(input_sample)
+            existing_sample_result = await session.exec(existing_sample_query)
+            existing_sample = existing_sample_result.first()
+
+            if existing_sample:
+                # Update existing sample
+                existing_sample.storage_account = payload.storage_account
+                existing_sample.container_name = payload.container_name
+                existing_sample.file_names = payload.file_names
+                existing_sample.sample_text = payload.sample_text
+                existing_sample.sample_output = payload.sample_output
+                existing_sample.updated_at = datetime.now(timezone.utc)
+                session.add(existing_sample)
+            else:
+                # Create new sample
+                input_sample = VersionFlowInputSample(
+                    flow_version_id=flow_version.id,
+                    original_flow_id=flow_id,
+                    version=payload.version,
+                    storage_account=payload.storage_account,
+                    container_name=payload.container_name,
+                    file_names=payload.file_names,
+                    sample_text=payload.sample_text,
+                    sample_output=payload.sample_output,
+                )
+                session.add(input_sample)
+                await session.flush()
+                # Update flow_version with sample_id
+                flow_version.sample_id = input_sample.id
+                session.add(flow_version)
 
         # Step 10: Commit all changes
         await session.flush()
@@ -973,15 +1001,8 @@ async def publish_flow_marketplace_admin(
             tags=payload.tags or []
         )
 
-        # Step 12: Return result with input samples
-        published_with_samples_result = await session.exec(
-            select(PublishedFlow)
-            .options(joinedload(PublishedFlow.input_samples))
-            .where(PublishedFlow.id == published_flow.id)
-        )
-        published_with_samples = published_with_samples_result.first() or published_flow
-
-        result_data = PublishedFlowRead.model_validate(published_with_samples, from_attributes=True)
+        # Step 12: Return result
+        result_data = PublishedFlowRead.model_validate(published_flow, from_attributes=True)
         return result_data
 
     except HTTPException:
@@ -1238,20 +1259,13 @@ async def _list_all_published_flows(
     order: str = "desc",
 ):
     # Base query - apply status filter
+    # Note: input_samples relationship removed - using version_flow_input_sample instead
     if status_filter == "published":
-        query = (
-            select(PublishedFlow)
-            .options(selectinload(PublishedFlow.input_samples))
-            .where(PublishedFlow.status == PublishStatusEnum.PUBLISHED)
-        )
+        query = select(PublishedFlow).where(PublishedFlow.status == PublishStatusEnum.PUBLISHED)
     elif status_filter == "unpublished":
-        query = (
-            select(PublishedFlow)
-            .options(selectinload(PublishedFlow.input_samples))
-            .where(PublishedFlow.status == PublishStatusEnum.UNPUBLISHED)
-        )
+        query = select(PublishedFlow).where(PublishedFlow.status == PublishStatusEnum.UNPUBLISHED)
     else:  # "all" or None - show all flows (default)
-        query = select(PublishedFlow).options(selectinload(PublishedFlow.input_samples))
+        query = select(PublishedFlow)
 
     # Apply search filter on denormalized flow_name and description
     if search:
@@ -1468,9 +1482,9 @@ async def get_published_flow(
     Get single published flow details (public endpoint).
     Returns the flow snapshot and all metadata.
     """
+    # Note: input_samples selectinload removed - using version_flow_input_sample instead
     query = (
         select(PublishedFlow, Flow, User)
-        .options(selectinload(PublishedFlow.input_samples))
         .join(Flow, PublishedFlow.flow_id == Flow.id)
         .join(User, PublishedFlow.published_by == User.id)
         .where(PublishedFlow.id == published_flow_id)
@@ -1490,23 +1504,52 @@ async def get_published_flow(
         original_flow_result = await session.exec(original_flow_query)
         original_flow = original_flow_result.first()
 
-    # Load input samples for this published flow
-    input_samples_query = select(PublishedFlowInputSample).where(
-        PublishedFlowInputSample.published_flow_id == published_flow_id
-    )
-    input_samples_result = await session.exec(input_samples_query)
-    input_samples = input_samples_result.all()
+    # Load input sample from version_flow_input_sample
+    # First try to find sample matching the published version, then fallback to latest
+    input_sample = None
+    if published_flow.flow_cloned_from:
+        # Try to find sample for this specific version first
+        if published_flow.version:
+            version_sample_query = (
+                select(VersionFlowInputSample)
+                .where(
+                    VersionFlowInputSample.original_flow_id == published_flow.flow_cloned_from,
+                    VersionFlowInputSample.version == published_flow.version
+                )
+                .order_by(VersionFlowInputSample.updated_at.desc())
+                .limit(1)
+            )
+            version_sample_result = await session.exec(version_sample_query)
+            input_sample = version_sample_result.first()
+
+        # Fallback to latest sample if no version-specific sample found
+        if not input_sample:
+            input_sample_query = (
+                select(VersionFlowInputSample)
+                .where(VersionFlowInputSample.original_flow_id == published_flow.flow_cloned_from)
+                .order_by(VersionFlowInputSample.updated_at.desc())
+                .limit(1)
+            )
+            input_sample_result = await session.exec(input_sample_query)
+            input_sample = input_sample_result.first()
 
     item = PublishedFlowRead.model_validate(published_flow, from_attributes=True)
     item.flow_name = published_flow.flow_name
     item.flow_icon = published_flow.flow_icon or (flow.icon if flow.icon else None)
-    # item.flow_icon = published_flow.icon if published_flow.icon else None
     item.published_by_username = user.username
     item.flow_data = flow.data if flow.data else {}  # Include flow data from cloned flow
-    item.input_samples = [
-        PublishedFlowInputSampleRead.model_validate(s, from_attributes=True)
-        for s in input_samples
-    ]  # Include input samples as Read schema
+    # Convert VersionFlowInputSample to the expected format
+    if input_sample:
+        item.input_samples = [{
+            "id": str(input_sample.id),
+            "storage_account": input_sample.storage_account,
+            "container_name": input_sample.container_name,
+            "file_names": input_sample.file_names,
+            "sample_text": input_sample.sample_text,
+            "sample_output": input_sample.sample_output,
+        }]
+    else:
+        item.input_samples = []
     item.original_flow_user_id = original_flow.user_id if original_flow else None
 
     return item
@@ -1660,10 +1703,10 @@ async def delete_published_flow(
 
 
 # ---------------------------
-# Input Sample Management
+# Input Sample Management (using version_flow_input_sample)
 # ---------------------------
 
-@router.patch("/input-samples/{sample_id}", response_model=PublishedFlowInputSampleRead, status_code=status.HTTP_200_OK)
+@router.patch("/input-samples/{sample_id}", status_code=status.HTTP_200_OK)
 async def patch_input_sample(
     sample_id: UUID,
     payload: dict,
@@ -1671,7 +1714,7 @@ async def patch_input_sample(
     current_user: CurrentActiveUser,
 ):
     """
-    Update editable fields of a PublishedFlowInputSample.
+    Update editable fields of a VersionFlowInputSample.
 
     Allowed updates:
     - sample_text (list[str])
@@ -1679,14 +1722,14 @@ async def patch_input_sample(
 
     file_names are immutable via PATCH and must be removed via DELETE endpoints.
     """
-    # Fetch sample
-    sample = await session.get(PublishedFlowInputSample, sample_id)
+    # Fetch sample from version_flow_input_sample
+    sample = await session.get(VersionFlowInputSample, sample_id)
     if not sample:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Input sample not found")
 
-    # Permission: only owner of published flow can edit
-    published_flow = await session.get(PublishedFlow, sample.published_flow_id)
-    if not published_flow or published_flow.user_id != current_user.id:
+    # Permission check: verify user owns the original flow
+    original_flow = await session.get(Flow, sample.original_flow_id)
+    if not original_flow or original_flow.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed to edit this input sample")
 
     # Apply updates (only allowed keys)
@@ -1712,7 +1755,14 @@ async def patch_input_sample(
     await session.commit()
     await session.refresh(sample)
 
-    return PublishedFlowInputSampleRead.model_validate(sample, from_attributes=True)
+    return {
+        "id": str(sample.id),
+        "storage_account": sample.storage_account,
+        "container_name": sample.container_name,
+        "file_names": sample.file_names,
+        "sample_text": sample.sample_text,
+        "sample_output": sample.sample_output,
+    }
 
 
 @router.delete("/input-samples/{sample_id}", status_code=status.HTTP_200_OK)
@@ -1722,15 +1772,16 @@ async def delete_input_sample(
     current_user: CurrentActiveUser,
 ):
     """
-    Delete an entire PublishedFlowInputSample record. Only the owner of the published flow can delete.
+    Delete an entire VersionFlowInputSample record. Only the owner of the original flow can delete.
     """
-    sample = await session.get(PublishedFlowInputSample, sample_id)
+    sample = await session.get(VersionFlowInputSample, sample_id)
     if not sample:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Input sample not found")
 
-    published_flow = await session.get(PublishedFlow, sample.published_flow_id)
-    if not published_flow:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Published flow not found")
+    # Permission check: verify user owns the original flow
+    original_flow = await session.get(Flow, sample.original_flow_id)
+    if not original_flow or original_flow.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed to delete this input sample")
 
     await session.delete(sample)
     await session.commit()
@@ -1749,14 +1800,14 @@ async def delete_input_sample_file(
     Remove a single file entry from the input sample's file_names list.
     Matches exact string equality on the stored value.
     """
-    sample = await session.get(PublishedFlowInputSample, sample_id)
+    sample = await session.get(VersionFlowInputSample, sample_id)
     if not sample:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Input sample not found")
 
-    # Permission: allow any authenticated user to modify input samples
-    published_flow = await session.get(PublishedFlow, sample.published_flow_id)
-    if not published_flow:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Published flow not found")
+    # Permission check: verify user owns the original flow
+    original_flow = await session.get(Flow, sample.original_flow_id)
+    if not original_flow or original_flow.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed to modify this input sample")
 
     file_names = sample.file_names or []
     new_files = [f for f in file_names if f != name]
@@ -1769,7 +1820,14 @@ async def delete_input_sample_file(
     await session.commit()
     await session.refresh(sample)
 
-    return PublishedFlowInputSampleRead.model_validate(sample, from_attributes=True)
+    return {
+        "id": str(sample.id),
+        "storage_account": sample.storage_account,
+        "container_name": sample.container_name,
+        "file_names": sample.file_names,
+        "sample_text": sample.sample_text,
+        "sample_output": sample.sample_output,
+    }
 
 
 @router.delete("/input-samples/{sample_id}/text", status_code=status.HTTP_200_OK)
@@ -1778,20 +1836,20 @@ async def delete_input_sample_text(
     session: DbSession,
     current_user: CurrentActiveUser,
     index: int | None = Query(default=None, ge=0, description="Index of the text entry to remove"),
-    value: str | None = Query(default=None, description="Exact text value to remove (first occurrence)"),    
+    value: str | None = Query(default=None, description="Exact text value to remove (first occurrence)"),
 ):
     """
     Remove a text entry from the input sample's sample_text list.
     You can specify either an index or a value; if both are provided, index takes precedence.
     """
-    sample = await session.get(PublishedFlowInputSample, sample_id)
+    sample = await session.get(VersionFlowInputSample, sample_id)
     if not sample:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Input sample not found")
 
-    # Permission: allow any authenticated user to modify input samples
-    published_flow = await session.get(PublishedFlow, sample.published_flow_id)
-    if not published_flow:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Published flow not found")
+    # Permission check: verify user owns the original flow
+    original_flow = await session.get(Flow, sample.original_flow_id)
+    if not original_flow or original_flow.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed to modify this input sample")
 
     texts = sample.sample_text or []
     if not texts:
@@ -1818,4 +1876,11 @@ async def delete_input_sample_text(
     await session.commit()
     await session.refresh(sample)
 
-    return PublishedFlowInputSampleRead.model_validate(sample, from_attributes=True)
+    return {
+        "id": str(sample.id),
+        "storage_account": sample.storage_account,
+        "container_name": sample.container_name,
+        "file_names": sample.file_names,
+        "sample_text": sample.sample_text,
+        "sample_output": sample.sample_output,
+    }

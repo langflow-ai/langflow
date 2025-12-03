@@ -6,7 +6,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, or_
-from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy.orm import joinedload
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -26,8 +26,7 @@ from langflow.services.database.models.version_flow_input_sample.model import (
     VersionFlowInputSample,
     VersionFlowInputSampleRead,
 )
-from langflow.services.database.models.published_flow.model import PublishedFlow
-from langflow.services.database.models.published_flow_input_sample.model import PublishedFlowInputSample
+# Note: PublishedFlowInputSample is deprecated - using VersionFlowInputSample only
 from langflow.services.database.models.user.model import User
 from langflow.services.auth.permissions import can_edit_flow, get_user_roles_from_request
 from langflow.logging import logger
@@ -1199,27 +1198,23 @@ async def get_flow_latest_status(
                 "suggested_version": "1.0.0",
             }
 
-        # Extract sample data if available
-        input_sample = latest_version.input_sample
-        sample_text = input_sample.sample_text if input_sample else None
-        file_names = input_sample.file_names if input_sample else None
+        # Extract sample data - fetch latest from version_flow_input_sample
+        sample_text = None
+        file_names = None
 
-        # Check for PublishedFlow inputs (prioritize these if they exist)
-        # This ensures that if a user updated inputs during publishing, those updates carry forward
-        published_flow_stmt = (
-            select(PublishedFlow)
-            .where(PublishedFlow.flow_cloned_from == flow_id)
-            .options(selectinload(PublishedFlow.input_samples))
+        # Get the latest sample for this original flow
+        latest_sample_stmt = (
+            select(VersionFlowInputSample)
+            .where(VersionFlowInputSample.original_flow_id == flow_id)
+            .order_by(VersionFlowInputSample.updated_at.desc())
+            .limit(1)
         )
-        published_flow_result = await session.exec(published_flow_stmt)
-        published_flow = published_flow_result.first()
+        latest_sample_result = await session.exec(latest_sample_stmt)
+        latest_sample = latest_sample_result.first()
 
-        if published_flow and published_flow.input_samples:
-            # Use published flow inputs as they are the most recent "public" state
-            # We take the first one as we enforce single record per published flow now
-            latest_published_sample = published_flow.input_samples[0]
-            sample_text = latest_published_sample.sample_text
-            file_names = latest_published_sample.file_names
+        if latest_sample:
+            sample_text = latest_sample.sample_text
+            file_names = latest_sample.file_names
 
         return {
             "has_submissions": True,
@@ -1242,4 +1237,82 @@ async def get_flow_latest_status(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to fetch flow status: {str(e)}",
+        )
+
+
+@router.get("/flow/{flow_id}/sample-for-publish")
+async def get_sample_for_publish(
+    flow_id: UUID,
+    session: DbSession,
+    current_user: CurrentActiveUser,
+    version: str | None = Query(None, description="Specific version to fetch sample for"),
+):
+    """
+    Get sample input for pre-populating the publish overlay.
+
+    Logic:
+    - If version specified, try to find matching version entry in version_flow_input_sample
+    - If not found or version not specified, return the latest entry for the original_flow_id
+    - Returns None for sample fields if nothing exists
+
+    This endpoint is used by the publish modal to pre-populate sample inputs.
+    """
+    try:
+        sample = None
+
+        # If version specified, try to find exact match first
+        if version:
+            stmt = (
+                select(VersionFlowInputSample)
+                .where(
+                    VersionFlowInputSample.original_flow_id == flow_id,
+                    VersionFlowInputSample.version == version,
+                )
+                .order_by(VersionFlowInputSample.updated_at.desc())
+                .limit(1)
+            )
+            result = await session.exec(stmt)
+            sample = result.first()
+
+        # If no sample found for specific version, get the latest one
+        if not sample:
+            stmt = (
+                select(VersionFlowInputSample)
+                .where(VersionFlowInputSample.original_flow_id == flow_id)
+                .order_by(VersionFlowInputSample.updated_at.desc())
+                .limit(1)
+            )
+            result = await session.exec(stmt)
+            sample = result.first()
+
+        if not sample:
+            return {
+                "id": None,
+                "flow_version_id": None,
+                "original_flow_id": str(flow_id),
+                "version": version,
+                "storage_account": None,
+                "container_name": None,
+                "file_names": None,
+                "sample_text": None,
+                "sample_output": None,
+            }
+
+        return {
+            "id": str(sample.id),
+            "flow_version_id": str(sample.flow_version_id) if sample.flow_version_id else None,
+            "original_flow_id": str(sample.original_flow_id),
+            "version": sample.version,
+            "storage_account": sample.storage_account,
+            "container_name": sample.container_name,
+            "file_names": sample.file_names,
+            "sample_text": sample.sample_text,
+            "sample_output": sample.sample_output,
+        }
+
+    except Exception as e:
+        logger.error(f"Error fetching sample for publish: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch sample for publish: {str(e)}",
         )
