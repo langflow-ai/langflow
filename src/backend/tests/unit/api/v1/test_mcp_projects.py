@@ -103,7 +103,7 @@ def mock_streamable_http_manager():
         async_cm = AsyncContextManagerMock()
         manager_instance.run = MagicMock(return_value=async_cm)
 
-        async def _fake_handle_request(scope, receive, send): # noqa: ARG001
+        async def _fake_handle_request(scope, receive, send):  # noqa: ARG001
             await send({"type": "http.response.start", "status": 200, "headers": []})
             await send({"type": "http.response.body", "body": b"", "more_body": False})
 
