@@ -689,7 +689,7 @@ export default function Dropdown({
         {options?.length > 0 && renderSearchInput()}
         {renderOptionsList()}
         {!sourceOptions?.fields && hasRefreshButton && (
-          <div className="sticky bottom-0 border-t bg-background">
+          <div className="border-t bg-background">
             <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate rounded-b-md py-3 text-xs font-semibold text-muted-foreground">
               <Button
                 className="w-full"
