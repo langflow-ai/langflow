@@ -581,7 +581,7 @@ class SaveToFileComponent(Component):
         # Create temporary file
         import tempfile
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=f".{file_format}", delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", suffix=f".{file_format}", delete=False) as temp_file:
             temp_file.write(content)
             temp_file_path = temp_file.name
 
@@ -664,9 +664,10 @@ class SaveToFileComponent(Component):
             )
             raise ValueError(msg)
 
-        # Create Google Drive service
+        # Create Google Drive service with appropriate scopes
+        # Use drive scope for folder access, file scope is too restrictive for folder verification
         credentials = service_account.Credentials.from_service_account_info(
-            credentials_dict, scopes=["https://www.googleapis.com/auth/drive.file"]
+            credentials_dict, scopes=["https://www.googleapis.com/auth/drive"]
         )
         drive_service = build("drive", "v3", credentials=credentials)
 
@@ -680,28 +681,27 @@ class SaveToFileComponent(Component):
 
         # Create temporary file
         file_path = f"{self.file_name}.{file_format}"
-        with tempfile.NamedTemporaryFile(mode="w", suffix=f".{file_format}", delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", suffix=f".{file_format}", delete=False) as temp_file:
             temp_file.write(content)
             temp_file_path = temp_file.name
 
         try:
-            # Verify folder exists and is accessible
+            # Upload to Google Drive
+            # Note: We skip explicit folder verification since it requires broader permissions.
+            # If the folder doesn't exist or isn't accessible, the create() call will fail with a clear error.
+            file_metadata = {"name": file_path, "parents": [self.folder_id]}
+            media = MediaFileUpload(temp_file_path, resumable=True)
+
             try:
-                drive_service.files().get(fileId=self.folder_id, fields="id,name").execute()
+                uploaded_file = drive_service.files().create(body=file_metadata, media_body=media, fields="id").execute()
             except Exception as e:
                 msg = (
-                    f"Unable to access Google Drive folder '{self.folder_id}'. "
+                    f"Unable to upload file to Google Drive folder '{self.folder_id}'. "
                     f"Error: {e!s}. "
                     "Please ensure: 1) The folder ID is correct, 2) The folder exists, "
                     "3) The service account has been granted access to this folder."
                 )
                 raise ValueError(msg) from e
-
-            # Upload to Google Drive
-            file_metadata = {"name": file_path, "parents": [self.folder_id]}
-            media = MediaFileUpload(temp_file_path, resumable=True)
-
-            uploaded_file = drive_service.files().create(body=file_metadata, media_body=media, fields="id").execute()
 
             file_id = uploaded_file.get("id")
             file_url = f"https://drive.google.com/file/d/{file_id}/view"
