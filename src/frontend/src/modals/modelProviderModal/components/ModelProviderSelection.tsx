@@ -1,6 +1,15 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Switch } from "@/components/ui/switch";
+
+<<<<<<< HEAD
+
 import { Model } from "@/modals/modelProviderModal/components/types";
+
+=======
+
+import { Model } from "@/pages/SettingsPage/pages/ModelProvidersPage/components/types";
+
+>>>>>>> 166528f555acf5e51ccaeb2e7d4c0401f94ad21e
 
 interface ModelProviderSelectionProps {
   llmModels: Model[];

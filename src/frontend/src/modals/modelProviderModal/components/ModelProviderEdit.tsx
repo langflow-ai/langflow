@@ -1,5 +1,5 @@
-import ForwardedIconComponent from '@/components/common/genericIconComponent';
-import { Input } from '@/components/ui/input';
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { Input } from "@/components/ui/input";
 
 interface ModelProviderEditProps {
   authName: string;
@@ -32,7 +32,7 @@ const ModelProviderEdit = ({
       <Input
         placeholder="Authorization Name"
         value={authName}
-        onChange={e => onAuthNameChange(e.target.value)}
+        onChange={(e) => onAuthNameChange(e.target.value)}
       />
       <div className="text-[13px] -mb-1 font-medium flex items-center gap-1">
         API Key <span className="text-red-500">*</span>
@@ -46,10 +46,10 @@ const ModelProviderEdit = ({
         type="password"
         value={apiKey}
         required
-        onChange={e => onApiKeyChange(e.target.value)}
+        onChange={(e) => onApiKeyChange(e.target.value)}
       />
       <div className="text-muted-foreground text-xs flex items-center gap-1 -mt-1 hover:underline cursor-pointer w-fit">
-        Find your API key{' '}
+        Find your API key{" "}
         <ForwardedIconComponent name="external-link" className="w-4 h-4" />
       </div>
       <div className="text-[13px] -mb-1 font-medium flex items-center gap-1">
@@ -57,12 +57,12 @@ const ModelProviderEdit = ({
         <ForwardedIconComponent
           name="info"
           className="w-4 h-4 text-muted-foreground ml-1"
-        />{' '}
+        />{" "}
       </div>
       <Input
         placeholder="API Base URL (optional)"
         value={apiBase}
-        onChange={e => onApiBaseChange(e.target.value)}
+        onChange={(e) => onApiBaseChange(e.target.value)}
       />
     </div>
   );

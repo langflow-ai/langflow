@@ -1,8 +1,8 @@
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  PROVIDER_VARIABLE_MAPPING,
-  VARIABLE_CATEGORY,
-} from "@/constants/providerConstants";
+
+<<<<<<< HEAD:src/frontend/src/modals/modelProviderModal/components/use-provider-actions.ts
+=======
+
 import { useClearDefaultModel } from "@/controllers/API/queries/models/use-clear-default-model";
 import { useSetDefaultModel } from "@/controllers/API/queries/models/use-set-default-model";
 import { useUpdateEnabledModels } from "@/controllers/API/queries/models/use-update-enabled-models";
@@ -10,6 +10,27 @@ import {
   useDeleteGlobalVariables,
   usePostGlobalVariables,
 } from "@/controllers/API/queries/variables";
+
+>>>>>>> 166528f555acf5e51ccaeb2e7d4c0401f94ad21e:src/frontend/src/pages/SettingsPage/pages/ModelProvidersPage/components/use-provider-actions.ts
+
+import {
+  PROVIDER_VARIABLE_MAPPING,
+  VARIABLE_CATEGORY,
+} from "@/constants/providerConstants";
+
+<<<<<<< HEAD:src/frontend/src/modals/modelProviderModal/components/use-provider-actions.ts
+
+import { useClearDefaultModel } from "@/controllers/API/queries/models/use-clear-default-model";
+import { useSetDefaultModel } from "@/controllers/API/queries/models/use-set-default-model";
+import { useUpdateEnabledModels } from "@/controllers/API/queries/models/use-update-enabled-models";
+import {
+  useDeleteGlobalVariables,
+  usePostGlobalVariables,
+} from "@/controllers/API/queries/variables";
+
+=======
+>>>>>>> 166528f555acf5e51ccaeb2e7d4c0401f94ad21e:src/frontend/src/pages/SettingsPage/pages/ModelProvidersPage/components/use-provider-actions.ts
+
 import useAlertStore from "@/stores/alertStore";
 import { GlobalVariable } from "@/types/global_variables";
 import { DefaultModelData } from "./types";

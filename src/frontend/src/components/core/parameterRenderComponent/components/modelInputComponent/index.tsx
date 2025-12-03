@@ -1,11 +1,32 @@
+<<<<<<< HEAD
+=======
+
+import Fuse from "fuse.js";
+
+>>>>>>> 166528f555acf5e51ccaeb2e7d4c0401f94ad21e
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
 import { RECEIVING_INPUT_VALUE } from "@/constants/constants";
 import { PROVIDER_VARIABLE_MAPPING } from "@/constants/providerConstants";
+
+<<<<<<< HEAD
+
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
+
+=======
+
+import { useGetDefaultModel } from "@/controllers/API/queries/models/use-get-default-model";
+import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
+import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
+import ApiKeyModal from "@/modals/apiKeyModal";
+
+>>>>>>> 166528f555acf5e51ccaeb2e7d4c0401f94ad21e
+
 import ModelProviderModal from "@/modals/modelProviderModal";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
@@ -574,7 +595,7 @@ export default function ModelInputComponent({
             <ForwardedIconComponent
               name="RefreshCcw"
               className={cn(
-                'refresh-icon h-3 w-3 text-primary text-muted-foreground group-hover:text-primary'
+                "refresh-icon h-3 w-3 text-primary text-muted-foreground group-hover:text-primary",
               )}
             />
           </div>
@@ -586,7 +607,7 @@ export default function ModelInputComponent({
           unstyled
           data-testid="external-option-button"
           onClick={() => {
-            handleExternalOptions(externalOptions.fields.data.node.name || '');
+            handleExternalOptions(externalOptions.fields.data.node.name || "");
           }}
         >
           <div className="flex items-center gap-2 pl-1 group-hover:text-primary">
@@ -595,7 +616,7 @@ export default function ModelInputComponent({
               <ForwardedIconComponent
                 name={externalOptions.fields.data.node.icon}
                 className={cn(
-                  'w-4 h-4 text-muted-foreground group-hover:text-primary'
+                  "w-4 h-4 text-muted-foreground group-hover:text-primary",
                 )}
               />
             )}
