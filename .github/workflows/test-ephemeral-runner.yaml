@@ -143,7 +143,7 @@ jobs:
             echo "**Conclusion:** Runner is truly ephemeral - each job runs on a fresh VM instance." >> "$GITHUB_STEP_SUMMARY"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Create Test Artifacts (File and Docker Image)
+      - name: Create Test Artifacts (File and Docker Image) 
         id: create-artifacts
         run: |
           {
