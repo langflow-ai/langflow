@@ -1,22 +1,22 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import ForwardedIconComponent from '@/components/common/genericIconComponent';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader } from '@/components/ui/dialog';
+import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
 import {
   PROVIDER_VARIABLE_MAPPING,
   VARIABLE_CATEGORY,
-} from '@/constants/providerConstants';
-import { useGetEnabledModels } from '@/controllers/API/queries/models/use-get-enabled-models';
-import { usePostGlobalVariables } from '@/controllers/API/queries/variables';
-import useAlertStore from '@/stores/alertStore';
-import ProviderList from '@/modals/modelProviderModal/components/ProviderList';
-import { Model, Provider } from '@/modals/modelProviderModal/components/types';
-import { useProviderActions } from '@/modals/modelProviderModal/components/use-provider-actions';
-import { cn } from '@/utils/utils';
-import ModelProviderActive from './components/ModelProviderActive';
-import ModelProviderEdit from './components/ModelProviderEdit';
-import ModelProviderSelection from './components/ModelProviderSelection';
+} from "@/constants/providerConstants";
+import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
+import { usePostGlobalVariables } from "@/controllers/API/queries/variables";
+import ProviderList from "@/modals/modelProviderModal/components/ProviderList";
+import { Model, Provider } from "@/modals/modelProviderModal/components/types";
+import { useProviderActions } from "@/modals/modelProviderModal/components/use-provider-actions";
+import useAlertStore from "@/stores/alertStore";
+import { cn } from "@/utils/utils";
+import ModelProviderActive from "./components/ModelProviderActive";
+import ModelProviderEdit from "./components/ModelProviderEdit";
+import ModelProviderSelection from "./components/ModelProviderSelection";
 
 interface ModelProviderModalProps {
   open: boolean;
@@ -30,7 +30,7 @@ const ModelProviderModal = ({
   onModelsUpdated,
 }: ModelProviderModalProps) => {
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(
-    null
+    null,
   );
   const { data: enabledModelsData } = useGetEnabledModels();
   const { handleBatchToggleModels } = useProviderActions();
@@ -43,20 +43,20 @@ const ModelProviderModal = ({
   const [hasUpdated, setHasUpdated] = useState(false);
 
   // Form state for provider configuration
-  const [authName, setAuthName] = useState('');
-  const [apiKey, setApiKey] = useState('');
-  const [apiBase, setApiBase] = useState('');
+  const [authName, setAuthName] = useState("");
+  const [apiKey, setApiKey] = useState("");
+  const [apiBase, setApiBase] = useState("");
 
   const queryClient = useQueryClient();
-  const setSuccessData = useAlertStore(state => state.setSuccessData);
-  const setErrorData = useAlertStore(state => state.setErrorData);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
   const { mutate: createGlobalVariable, isPending } = usePostGlobalVariables();
 
   // Reset form and pending changes when provider changes
   useEffect(() => {
-    setAuthName('');
-    setApiKey('');
-    setApiBase('');
+    setAuthName("");
+    setApiKey("");
+    setApiBase("");
     setPendingModelChanges({});
   }, [selectedProvider?.provider]);
 
@@ -67,9 +67,9 @@ const ModelProviderModal = ({
     }
     const llm: Model[] = [];
     const embedding: Model[] = [];
-    selectedProvider.models.forEach(model => {
-      const modelType = model.metadata?.model_type || 'llm';
-      if (modelType === 'embeddings') {
+    selectedProvider.models.forEach((model) => {
+      const modelType = model.metadata?.model_type || "llm";
+      if (modelType === "embeddings") {
         embedding.push(model);
       } else {
         llm.push(model);
@@ -88,7 +88,7 @@ const ModelProviderModal = ({
     // If no explicit value, check if model has default enabled in metadata
     if (isEnabled === undefined) {
       const model = selectedProvider.models?.find(
-        m => m.model_name === modelName
+        (m) => m.model_name === modelName,
       );
       return model?.metadata?.default === true;
     }
@@ -110,13 +110,13 @@ const ModelProviderModal = ({
     const serverEnabled = getServerModelEnabled(modelName);
     // If the new value matches server state, remove from pending
     if (enabled === serverEnabled) {
-      setPendingModelChanges(prev => {
+      setPendingModelChanges((prev) => {
         const next = { ...prev };
         delete next[modelName];
         return next;
       });
     } else {
-      setPendingModelChanges(prev => ({
+      setPendingModelChanges((prev) => ({
         ...prev,
         [modelName]: enabled,
       }));
@@ -133,7 +133,7 @@ const ModelProviderModal = ({
         provider: selectedProvider.provider,
         model_id: modelName,
         enabled,
-      })
+      }),
     );
 
     handleBatchToggleModels(updates, () => setHasUpdated(true));
@@ -144,8 +144,8 @@ const ModelProviderModal = ({
   const hasPendingChanges = Object.keys(pendingModelChanges).length > 0;
 
   const handleProviderSelect = (provider: Provider) => {
-    setSelectedProvider(prev =>
-      prev?.provider === provider.provider ? null : provider
+    setSelectedProvider((prev) =>
+      prev?.provider === provider.provider ? null : provider,
     );
     setIsEditing(!provider.is_enabled);
   };
@@ -157,7 +157,7 @@ const ModelProviderModal = ({
 
     if (!variableName) {
       setErrorData({
-        title: 'Invalid Provider',
+        title: "Invalid Provider",
         list: [`Provider "${selectedProvider.provider}" is not supported.`],
       });
       return;
@@ -178,57 +178,57 @@ const ModelProviderModal = ({
           });
           // Invalidate caches to refresh the UI
           queryClient.invalidateQueries({
-            queryKey: ['useGetModelProviders'],
+            queryKey: ["useGetModelProviders"],
           });
           queryClient.invalidateQueries({
-            queryKey: ['useGetEnabledModels'],
+            queryKey: ["useGetEnabledModels"],
           });
           queryClient.invalidateQueries({
-            queryKey: ['useGetGlobalVariables'],
+            queryKey: ["useGetGlobalVariables"],
           });
           queryClient.invalidateQueries({
-            queryKey: ['useGetDefaultModel'],
+            queryKey: ["useGetDefaultModel"],
           });
           // Force refresh flow data to update node templates with new model options
           queryClient.refetchQueries({
-            queryKey: ['flows'],
+            queryKey: ["flows"],
           });
           // Mark that updates were made (refresh will happen on close)
           setHasUpdated(true);
           // Reset form and switch to model selection view
-          setApiKey('');
-          setAuthName('');
-          setApiBase('');
+          setApiKey("");
+          setAuthName("");
+          setApiBase("");
           // Update local state to reflect enabled status
-          setSelectedProvider(prev =>
-            prev ? { ...prev, is_enabled: true } : null
+          setSelectedProvider((prev) =>
+            prev ? { ...prev, is_enabled: true } : null,
           );
           setIsEditing(false);
         },
         onError: (error: any) => {
           setErrorData({
-            title: 'Error Saving API Key',
+            title: "Error Saving API Key",
             list: [
               error?.response?.data?.detail ||
-                'An unexpected error occurred while saving the API key. Please try again.',
+                "An unexpected error occurred while saving the API key. Please try again.",
             ],
           });
         },
-      }
+      },
     );
   };
 
   // Get list of active models for the editing panel badges
   const numberOfActiveLLMs = useMemo(() => {
     return llmModels
-      .filter(m => isModelEnabled(m.model_name))
-      .map(m => m.model_name);
+      .filter((m) => isModelEnabled(m.model_name))
+      .map((m) => m.model_name);
   }, [llmModels, enabledModelsData, selectedProvider]);
 
   const numberOfActiveEmbeddings = useMemo(() => {
     return embeddingModels
-      .filter(m => isModelEnabled(m.model_name))
-      .map(m => m.model_name);
+      .filter((m) => isModelEnabled(m.model_name))
+      .map((m) => m.model_name);
   }, [embeddingModels, enabledModelsData, selectedProvider]);
 
   // Handle modal close - refresh if updates were made
@@ -240,7 +240,7 @@ const ModelProviderModal = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={isOpen => !isOpen && handleClose()}>
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
       <DialogContent className="flex flex-col overflow-hidden rounded-xl p-0 max-w-[950px] gap-0">
         {/* model provider header */}
         <DialogHeader className="flex w-full border-b px-4 py-3">
@@ -254,8 +254,8 @@ const ModelProviderModal = ({
         <div className="flex flex-row w-full overflow-hidden">
           <div
             className={cn(
-              'flex border-r p-2 flex-col transition-all duration-300 ease-in-out',
-              selectedProvider ? 'w-1/2' : 'w-full'
+              "flex border-r p-2 flex-col transition-all duration-300 ease-in-out",
+              selectedProvider ? "w-1/2" : "w-full",
             )}
           >
             <ProviderList
@@ -267,22 +267,22 @@ const ModelProviderModal = ({
           {/* Model Provider sub header */}
           <div
             className={cn(
-              'flex flex-col gap-1 transition-all duration-300 ease-in-out overflow-hidden',
+              "flex flex-col gap-1 transition-all duration-300 ease-in-out overflow-hidden",
               selectedProvider
-                ? 'w-1/2 opacity-100 translate-x-0'
-                : 'w-0 opacity-0 translate-x-full'
+                ? "w-1/2 opacity-100 translate-x-0"
+                : "w-0 opacity-0 translate-x-full",
             )}
           >
             <div className="flex flex-row items-center gap-1 border-b p-4 min-w-[300px]">
               <ForwardedIconComponent
-                name={selectedProvider?.icon || 'Bot'}
+                name={selectedProvider?.icon || "Bot"}
                 className={cn(
-                  'w-5 h-5 flex-shrink-0 transition-all',
-                  !selectedProvider?.is_enabled && 'grayscale opacity-50'
+                  "w-5 h-5 flex-shrink-0 transition-all",
+                  !selectedProvider?.is_enabled && "grayscale opacity-50",
                 )}
               />
               <span className="text-[13px] font-semibold pl-2 mr-auto">
-                {selectedProvider?.provider || 'Unknown Provider'}
+                {selectedProvider?.provider || "Unknown Provider"}
               </span>
               {selectedProvider?.is_enabled && (
                 <Button
@@ -293,12 +293,12 @@ const ModelProviderModal = ({
                   className=""
                 >
                   <ForwardedIconComponent
-                    name={'Pencil'}
+                    name={"Pencil"}
                     className={cn(
-                      'h-4 w-4 flex-shrink-0 ',
+                      "h-4 w-4 flex-shrink-0 ",
                       !isEditing
-                        ? 'text-primary hover:text-muted-foreground'
-                        : 'text-muted-foreground hover:text-primary'
+                        ? "text-primary hover:text-muted-foreground"
+                        : "text-muted-foreground hover:text-primary",
                     )}
                   />
                 </Button>
@@ -309,10 +309,10 @@ const ModelProviderModal = ({
             <div className="relative overflow-x-hidden min-w-[300px] ">
               <div
                 className={cn(
-                  'flex flex-col p-4 gap-3 transition-all duration-300 ease-in-out min-h-[480px] h-[480px]',
+                  "flex flex-col p-4 gap-3 transition-all duration-300 ease-in-out min-h-[480px] h-[480px]",
                   isEditing
-                    ? 'opacity-0 -translate-x-full absolute inset-0'
-                    : 'opacity-100 translate-x-0'
+                    ? "opacity-0 -translate-x-full absolute inset-0"
+                    : "opacity-100 translate-x-0",
                 )}
               >
                 <ModelProviderSelection
@@ -326,10 +326,10 @@ const ModelProviderModal = ({
               {/* Edit */}
               <div
                 className={cn(
-                  'flex flex-col transition-all duration-300 ease-in-out',
+                  "flex flex-col transition-all duration-300 ease-in-out",
                   isEditing
-                    ? 'opacity-100 translate-x-0'
-                    : 'opacity-0 translate-x-full absolute inset-0'
+                    ? "opacity-100 translate-x-0"
+                    : "opacity-0 translate-x-full absolute inset-0",
                 )}
               >
                 <ModelProviderEdit
@@ -393,7 +393,7 @@ const ModelProviderModal = ({
                     disabled={!apiKey.trim()}
                     onClick={handleConfigureProvider}
                   >
-                    {selectedProvider?.is_enabled ? 'Update' : 'Configure'}
+                    {selectedProvider?.is_enabled ? "Update" : "Configure"}
                   </Button>
                 </>
               )}

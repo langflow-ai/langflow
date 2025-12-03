@@ -1,6 +1,6 @@
-import { useGetModelProviders } from '@/controllers/API/queries/models/use-get-model-providers';
-import { Provider } from './types';
-import ProviderListItem from './ProviderListItem';
+import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
+import ProviderListItem from "./ProviderListItem";
+import { Provider } from "./types";
 
 interface ProviderListProps {
   onProviderSelect?: (provider: Provider) => void;
@@ -24,14 +24,14 @@ const ProviderList = ({
   };
 
   const providers: Provider[] = providersData
-    .filter(provider => {
+    .filter((provider) => {
       // Exclude providers where all models are deprecated and not supported
       const deprecatedCount = provider?.models?.filter(
-        model => model.metadata?.deprecated && model.metadata?.not_supported
+        (model) => model.metadata?.deprecated && model.metadata?.not_supported,
       )?.length;
       return !deprecatedCount;
     })
-    .map(provider => ({
+    .map((provider) => ({
       provider: provider.provider,
       icon: provider.icon,
       is_enabled: provider.is_enabled,
@@ -45,7 +45,7 @@ const ProviderList = ({
 
   return (
     <div className="flex flex-col gap-1">
-      {providers.map(provider => (
+      {providers.map((provider) => (
         <ProviderListItem
           key={provider.provider}
           provider={provider}

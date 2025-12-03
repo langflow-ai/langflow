@@ -1,6 +1,6 @@
-import ForwardedIconComponent from '@/components/common/genericIconComponent';
-import { Switch } from '@/components/ui/switch';
-import { Model } from '@/modals/modelProviderModal/components/types';
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { Switch } from "@/components/ui/switch";
+import { Model } from "@/modals/modelProviderModal/components/types";
 
 interface ModelProviderSelectionProps {
   llmModels: Model[];
@@ -22,7 +22,7 @@ const ModelProviderSelection = ({
           <div className="text-[13px] font-semibold text-muted-foreground">
             LLM
           </div>
-          {llmModels.map(model => {
+          {llmModels.map((model) => {
             const enabled = isModelEnabled(model.model_name);
             return (
               <div
@@ -31,14 +31,14 @@ const ModelProviderSelection = ({
               >
                 <div className="flex flex-row items-center gap-2">
                   <ForwardedIconComponent
-                    name={model.metadata?.icon || 'Bot'}
+                    name={model.metadata?.icon || "Bot"}
                     className="w-5 h-5"
                   />
                   <span className="text-sm">{model.model_name}</span>
                 </div>
                 <Switch
                   checked={enabled}
-                  onCheckedChange={checked =>
+                  onCheckedChange={(checked) =>
                     onModelToggle(model.model_name, checked)
                   }
                 />
@@ -52,7 +52,7 @@ const ModelProviderSelection = ({
           <div className="text-[13px] font-semibold text-muted-foreground pt-2">
             Embedding
           </div>
-          {embeddingModels.map(model => {
+          {embeddingModels.map((model) => {
             const enabled = isModelEnabled(model.model_name);
             return (
               <div
@@ -61,14 +61,14 @@ const ModelProviderSelection = ({
               >
                 <div className="flex flex-row items-center gap-2">
                   <ForwardedIconComponent
-                    name={model.metadata?.icon || 'Bot'}
+                    name={model.metadata?.icon || "Bot"}
                     className="w-5 h-5"
                   />
                   <span className="text-sm">{model.model_name}</span>
                 </div>
                 <Switch
                   checked={enabled}
-                  onCheckedChange={checked =>
+                  onCheckedChange={(checked) =>
                     onModelToggle(model.model_name, checked)
                   }
                 />
