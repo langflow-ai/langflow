@@ -1320,8 +1320,10 @@ class ProjectTaskGroup:
             if not self._started:
                 return
             try:
-                self._task_group.cancel_scope.cancel()
-                await self._tg_task
+                if self._task_group is not None:
+                    self._task_group.cancel_scope.cancel()
+                if self._tg_task is not None:
+                    await self._tg_task
             finally:
                 self._cleanup()
                 await logger.adebug("Project MCP task group stopped")
