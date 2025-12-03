@@ -319,9 +319,9 @@ def update_edges_with_latest_component_versions(project_data):
     # Process each edge in the project
     for edge in project_data_copy.get("edges", []):
         # Extract and parse source and target handles
-        source_handle = edge.get("data", {}).get("sourceHandle")
+        source_handle = edge.get("data", {}).get("sourceHandle") or edge.get("sourceHandle")
         source_handle = scape_json_parse(source_handle)
-        target_handle = edge.get("data", {}).get("targetHandle")
+        target_handle = edge.get("data", {}).get("targetHandle") or edge.get("targetHandle")
         target_handle = scape_json_parse(target_handle)
 
         # Find the corresponding source and target nodes
