@@ -1033,7 +1033,11 @@ def _args_reference_urls(args: Sequence[Any] | None, urls: list[str]) -> bool:
     """Check whether the given args list references any of the provided URLs."""
     if not args or not urls:
         return False
-    return bool({arg for arg in args if isinstance(arg, str)}.intersection(urls))
+    urls_set = set(urls)
+    for arg in args:
+        if isinstance(arg, str) and arg in urls_set:
+            return True
+    return False
 
 
 def config_contains_server_url(config_data: dict, urls: Sequence[str] | str) -> bool:
