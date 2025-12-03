@@ -31,6 +31,7 @@ import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 import { ALLOWED_IMAGE_INPUT_EXTENSIONS } from "@/constants/constants";
 import { AgentLogo } from "@/components/AgentLogo";
 import { RiUploadCloud2Fill } from "react-icons/ri";
+import { envConfig } from "@/config/env";
 
 interface SubmitForApprovalModalProps {
   open: boolean;
@@ -63,8 +64,8 @@ export default function SubmitForApprovalModal({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Sample input state
-  const DEFAULT_STORAGE_ACCOUNT = "autonomizestorageaccount";
-  const DEFAULT_CONTAINER_NAME = "ai-studio-v2";
+  const DEFAULT_STORAGE_ACCOUNT = envConfig.flexstoreDefaultTemporaryStorageAccount;
+  const DEFAULT_CONTAINER_NAME = envConfig.flexstoreDefaultTemporaryStorageContainer;
   const [isUploadingSamples, setIsUploadingSamples] = useState(false);
   const [uploadedSampleFiles, setUploadedSampleFiles] = useState<
     { name: string; path: string }[]
@@ -238,8 +239,8 @@ export default function SubmitForApprovalModal({
         sourceType: "azureblobstorage",
         fileName: fileName,
         sourceDetails: {
-          containerName: "ai-studio-v2",
-          storageAccount: "autonomizestorageaccount",
+          containerName: envConfig.flexstoreDefaultTemporaryStorageContainer,
+          storageAccount: envConfig.flexstoreDefaultTemporaryStorageAccount
         },
       });
 

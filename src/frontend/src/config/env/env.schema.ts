@@ -21,6 +21,8 @@ export const envSchema = z.object({
   // Backend API Configuration
   VITE_BACKEND_URL: validator.url(),
   VITE_API_PREFIX: validator.string().default("/api/v1"),
+  VITE_FLEXSTORE_DEFAULT_TEMPORARY_STORAGE_CONTAINER: validator.string().default(""),
+  VITE_FLEXSTORE_DEFAULT_TEMPORARY_STORAGE_ACCOUNT: validator.string().default(""),
 
   // Proxy Configuration (Development)
   VITE_PROXY_TARGET: validator.optionalUrl(),
@@ -67,7 +69,8 @@ export interface EnvConfig {
   // Backend API Configuration
   backendUrl: string;
   apiPrefix: string;
-
+  flexstoreDefaultTemporaryStorageContainer: string;
+  flexstoreDefaultTemporaryStorageAccount: string;
   // Proxy Configuration (Development)
   proxyTarget?: string;
   port?: string;

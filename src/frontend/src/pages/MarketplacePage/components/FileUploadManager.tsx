@@ -9,7 +9,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Upload, X } from "lucide-react";
 import LoadingIcon from "@/components/ui/loading";
 import {
   usePostReadPresignedUrl,
@@ -17,6 +16,7 @@ import {
   useUploadToBlob,
 } from "@/controllers/API/queries/flexstore";
 import { RiUploadCloud2Fill } from "react-icons/ri";
+import { envConfig } from "@/config/env";
 
 interface FileInputComponent {
   id: string;
@@ -104,11 +104,8 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
           sourceType: "azureblobstorage",
           fileName,
           sourceDetails: {
-            containerName:
-              process.env.FLEXSTORE_DEFAULT_CONTAINERNAME || "ai-studio-v2",
-            storageAccount:
-              process.env.FLEXSTORE_DEFAULT_STORAGE_ACCOUNT ||
-              "autonomizestorageaccount",
+            containerName: envConfig.flexstoreDefaultTemporaryStorageContainer,
+            storageAccount: envConfig.flexstoreDefaultTemporaryStorageAccount
           },
         });
 
@@ -126,11 +123,8 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
           sourceType: "azureblobstorage",
           fileName,
           sourceDetails: {
-            containerName:
-              process.env.FLEXSTORE_DEFAULT_CONTAINERNAME || "ai-studio-v2",
-            storageAccount:
-              process.env.FLEXSTORE_DEFAULT_STORAGE_ACCOUNT ||
-              "autonomizestorageaccount",
+            containerName: envConfig.flexstoreDefaultTemporaryStorageContainer,
+            storageAccount: envConfig.flexstoreDefaultTemporaryStorageAccount
           },
         });
 

@@ -21,6 +21,8 @@ import useAlertStore from "@/stores/alertStore";
 import { AppLogoDisplay } from "@/components/AppLogoDisplay";
 import { UseRequestProcessor } from "@/controllers/API/services/request-processor";
 import { RiUploadCloud2Fill } from "react-icons/ri";
+import { envConfig } from "@/config/env";
+import { env } from "process";
 
 const LogoUploadForm = () => {
   const { logoUrl, setLogoUrl } = useLogoStore();
@@ -172,8 +174,8 @@ const LogoUploadForm = () => {
         sourceType: "azureblobstorage",
         fileName: fileName,
         sourceDetails: {
-          containerName: process.env.FLEXSTORE_DEFAULT_CONTAINERNAME || "ai-studio-v2",
-          storageAccount: process.env.FLEXSTORE_DEFAULT_STORAGE_ACCOUNT || "autonomizestorageaccount",
+          containerName: envConfig.flexstoreDefaultTemporaryStorageContainer,
+          storageAccount: envConfig.flexstoreDefaultTemporaryStorageAccount,
         },
       });
 

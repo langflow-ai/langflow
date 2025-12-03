@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/controllers/API/api";
 import { getBackendUrl } from "@/config/constants";
+import { envConfig } from "@/config/env";
+import { env } from "process";
 
 interface GenerateSignedUrlParams {
   blobPath: string | null;
@@ -35,13 +37,14 @@ export const useGenerateSignedUrl = ({
     queryKey: ["signed-url", blobPath, updatedAt],
     queryFn: async () => {
       if (!blobPath) return null;
+      debugger;
 
       const response = await api.post(`${getBackendUrl()}/api/v1/flexstore/signedurl/read`, {
         sourceType: "azureblobstorage",
         fileName: blobPath,
         sourceDetails: {
-          containerName: process.env.FLEXSTORE_DEFAULT_CONTAINERNAME || "ai-studio-v2",
-          storageAccount: process.env.FLEXSTORE_DEFAULT_STORAGE_ACCOUNT || "autonomizestorageaccount",
+          containerName: envConfig.flexstoreDefaultTemporaryStorageContainer,
+          storageAccount: envConfig.flexstoreDefaultTemporaryStorageAccount,
         },
       });
 

@@ -24,6 +24,8 @@ import NoInputView from "./components/no-input";
 import { VoiceAssistant } from "./components/voice-assistant/voice-assistant";
 import useAutoResizeTextArea from "./hooks/use-auto-resize-text-area";
 import useFocusOnUnlock from "./hooks/use-focus-unlock";
+import { envConfig } from "@/config/env";
+import { env } from "process";
 
 export default function ChatInput({
   sendMessage,
@@ -142,8 +144,8 @@ export default function ChatInput({
           sourceType: "azureblobstorage",
           fileName,
           sourceDetails: {
-            containerName: process.env.FLEXSTORE_DEFAULT_CONTAINERNAME || "ai-studio-v2",
-            storageAccount: process.env.FLEXSTORE_DEFAULT_STORAGE_ACCOUNT || "autonomizestorageaccount"
+            containerName: envConfig.flexstoreDefaultTemporaryStorageContainer,
+            storageAccount: envConfig.flexstoreDefaultTemporaryStorageAccount
           }
         },
         {
@@ -164,8 +166,8 @@ export default function ChatInput({
                       sourceType: "azureblobstorage",
                       fileName,
                       sourceDetails: {
-                        containerName: process.env.FLEXSTORE_DEFAULT_CONTAINERNAME || "ai-studio-v2",
-                        storageAccount: process.env.FLEXSTORE_DEFAULT_STORAGE_ACCOUNT || "autonomizestorageaccount"
+                        containerName: envConfig.flexstoreDefaultTemporaryStorageContainer,
+                        storageAccount: envConfig.flexstoreDefaultTemporaryStorageAccount
                       }
                     },
                     {

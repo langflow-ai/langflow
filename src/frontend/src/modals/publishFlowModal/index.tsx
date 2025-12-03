@@ -39,6 +39,8 @@ import { cn } from "@/utils/utils";
 import { RiUploadCloud2Fill } from "react-icons/ri";
 import useAuthStore from "@/stores/authStore";
 import { USER_ROLES } from "@/types/auth";
+import { envConfig } from "@/config/env";
+import { env } from "process";
 
 interface PublishFlowModalProps {
   open: boolean;
@@ -79,8 +81,8 @@ export default function PublishFlowModal({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Sample input state
-  const DEFAULT_STORAGE_ACCOUNT = process.env.NEXT_PUBLIC_STORAGE_ACCOUNT_NAME || "autonomizestorageaccount";
-  const DEFAULT_CONTAINER_NAME = process.env.NEXT_PUBLIC_STORAGE_CONTAINER_NAME || "ai-studio-v2";
+  const DEFAULT_STORAGE_ACCOUNT = envConfig.flexstoreDefaultTemporaryStorageAccount;
+  const DEFAULT_CONTAINER_NAME = envConfig.flexstoreDefaultTemporaryStorageContainer;
   const [isUploadingSamples, setIsUploadingSamples] = useState(false);
   const [uploadedSampleFiles, setUploadedSampleFiles] = useState<
     { name: string; path: string }[]
@@ -335,8 +337,8 @@ export default function PublishFlowModal({
         sourceType: "azureblobstorage",
         fileName: fileName,
         sourceDetails: {
-          containerName: process.env.FLEXSTORE_DEFAULT_CONTAINERNAME || "ai-studio-v2",
-          storageAccount: process.env.FLEXSTORE_DEFAULT_STORAGE_ACCOUNT || "autonomizestorageaccount",
+          containerName: envConfig.flexstoreDefaultTemporaryStorageContainer,
+          storageAccount: envConfig.flexstoreDefaultTemporaryStorageAccount
         },
       });
 
