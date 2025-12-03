@@ -2,12 +2,16 @@ import { ForwardedIconComponent } from "@/components/common/genericIconComponent
 import { cn } from "@/utils/utils";
 import { Provider } from "./types";
 
-interface ProviderListItemProps {
+export interface ProviderListItemProps {
   provider: Provider;
   isSelected?: boolean;
   onSelect: (provider: Provider) => void;
 }
 
+/**
+ * Single provider row in the provider list.
+ * Shows provider icon, name, model count, and enabled status.
+ */
 const ProviderListItem = ({
   provider,
   isSelected,
@@ -18,6 +22,7 @@ const ProviderListItem = ({
 
   return (
     <div
+      data-testid={`provider-item-${provider.provider}`}
       className={cn(
         "flex items-center justify-between rounded-lg px-2 py-3 transition-colors hover:bg-muted/50",
         hasModels ? "cursor-pointer" : "cursor-not-allowed opacity-60",

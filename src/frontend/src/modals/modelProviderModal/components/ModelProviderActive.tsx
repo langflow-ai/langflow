@@ -1,17 +1,26 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
 
-interface ModelProviderActiveProps {
+export interface ModelProviderActiveProps {
+  /** List of active LLM model names */
   activeLLMs: string[];
+  /** List of active embedding model names */
   activeEmbeddings: string[];
 }
 
+/**
+ * Displays badges for currently active LLM and embedding models.
+ * Shown in the provider edit panel to indicate which models are enabled.
+ */
 const ModelProviderActive = ({
   activeLLMs,
   activeEmbeddings,
 }: ModelProviderActiveProps) => {
   return (
-    <div className="flex flex-col p-4 border-t overflow-y-auto h-[178.5px]">
+    <div
+      className="flex flex-col p-4 border-t overflow-y-auto h-[178.5px]"
+      data-testid="model-provider-active"
+    >
       <div className="text-[13px] font-medium flex items-center gap-1">
         Models{" "}
         <ForwardedIconComponent
@@ -29,6 +38,7 @@ const ModelProviderActive = ({
                 variant="secondaryStatic"
                 size="sq"
                 className="whitespace-nowrap"
+                data-testid={`active-llm-badge-${model}`}
               >
                 {model}
               </Badge>
@@ -48,6 +58,7 @@ const ModelProviderActive = ({
                 variant="secondaryStatic"
                 size="sq"
                 className="whitespace-nowrap"
+                data-testid={`active-embedding-badge-${model}`}
               >
                 {model}
               </Badge>

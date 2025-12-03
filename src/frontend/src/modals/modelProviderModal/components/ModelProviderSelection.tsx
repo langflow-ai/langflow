@@ -3,13 +3,50 @@ import { Switch } from "@/components/ui/switch";
 
 import { Model } from "@/modals/modelProviderModal/components/types";
 
-interface ModelProviderSelectionProps {
+export interface ModelProviderSelectionProps {
   llmModels: Model[];
   embeddingModels: Model[];
   isModelEnabled: (modelName: string) => boolean;
   onModelToggle: (modelName: string, enabled: boolean) => void;
 }
 
+interface ModelRowProps {
+  model: Model;
+  enabled: boolean;
+  onToggle: (modelName: string, enabled: boolean) => void;
+  testIdPrefix: string;
+}
+
+/** Single row displaying a model with its toggle switch */
+const ModelRow = ({
+  model,
+  enabled,
+  onToggle,
+  testIdPrefix,
+}: ModelRowProps) => (
+  <div
+    className="flex flex-row items-center justify-between"
+    data-testid={`${testIdPrefix}-row-${model.model_name}`}
+  >
+    <div className="flex flex-row items-center gap-2">
+      <ForwardedIconComponent
+        name={model.metadata?.icon || "Bot"}
+        className="w-5 h-5"
+      />
+      <span className="text-sm">{model.model_name}</span>
+    </div>
+    <Switch
+      checked={enabled}
+      onCheckedChange={(checked) => onToggle(model.model_name, checked)}
+      data-testid={`${testIdPrefix}-toggle-${model.model_name}`}
+    />
+  </div>
+);
+
+/**
+ * Displays lists of LLM and embedding models with toggle switches.
+ * Allows users to enable/disable individual models for a provider.
+ */
 const ModelProviderSelection = ({
   llmModels,
   embeddingModels,
@@ -17,68 +54,44 @@ const ModelProviderSelection = ({
   onModelToggle,
 }: ModelProviderSelectionProps) => {
   return (
-    <>
+    <div data-testid="model-provider-selection">
       {llmModels.length > 0 && (
-        <>
+        <div data-testid="llm-models-section">
           <div className="text-[13px] font-semibold text-muted-foreground">
             LLM
           </div>
-          {llmModels.map((model) => {
-            const enabled = isModelEnabled(model.model_name);
-            return (
-              <div
+          <div className="flex flex-col gap-2 pt-4">
+            {llmModels.map((model) => (
+              <ModelRow
                 key={model.model_name}
-                className="flex flex-row items-center justify-between"
-              >
-                <div className="flex flex-row items-center gap-2">
-                  <ForwardedIconComponent
-                    name={model.metadata?.icon || "Bot"}
-                    className="w-5 h-5"
-                  />
-                  <span className="text-sm">{model.model_name}</span>
-                </div>
-                <Switch
-                  checked={enabled}
-                  onCheckedChange={(checked) =>
-                    onModelToggle(model.model_name, checked)
-                  }
-                />
-              </div>
-            );
-          })}
-        </>
+                model={model}
+                enabled={isModelEnabled(model.model_name)}
+                onToggle={onModelToggle}
+                testIdPrefix="llm"
+              />
+            ))}
+          </div>
+        </div>
       )}
       {embeddingModels.length > 0 && (
-        <>
-          <div className="text-[13px] font-semibold text-muted-foreground pt-2">
+        <div data-testid="embedding-models-section">
+          <div className="text-[13px] font-semibold text-muted-foreground pt-4">
             Embedding
           </div>
-          {embeddingModels.map((model) => {
-            const enabled = isModelEnabled(model.model_name);
-            return (
-              <div
+          <div className="flex flex-col gap-2 pt-4">
+            {embeddingModels.map((model) => (
+              <ModelRow
                 key={model.model_name}
-                className="flex flex-row items-center justify-between"
-              >
-                <div className="flex flex-row items-center gap-2">
-                  <ForwardedIconComponent
-                    name={model.metadata?.icon || "Bot"}
-                    className="w-5 h-5"
-                  />
-                  <span className="text-sm">{model.model_name}</span>
-                </div>
-                <Switch
-                  checked={enabled}
-                  onCheckedChange={(checked) =>
-                    onModelToggle(model.model_name, checked)
-                  }
-                />
-              </div>
-            );
-          })}
-        </>
+                model={model}
+                enabled={isModelEnabled(model.model_name)}
+                onToggle={onModelToggle}
+                testIdPrefix="embedding"
+              />
+            ))}
+          </div>
+        </div>
       )}
-    </>
+    </div>
   );
 };
 

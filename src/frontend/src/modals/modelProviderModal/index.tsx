@@ -220,18 +220,23 @@ const ModelProviderModal = ({
     );
   };
 
-  // Get list of active models for the editing panel badges
-  const numberOfActiveLLMs = useMemo(() => {
+  // Get names of active models for the editing panel badges
+  const activeLLMNames = useMemo(() => {
     return llmModels
       .filter((m) => isModelEnabled(m.model_name))
       .map((m) => m.model_name);
-  }, [llmModels, enabledModelsData, selectedProvider]);
+  }, [llmModels, enabledModelsData, selectedProvider, pendingModelChanges]);
 
-  const numberOfActiveEmbeddings = useMemo(() => {
+  const activeEmbeddingNames = useMemo(() => {
     return embeddingModels
       .filter((m) => isModelEnabled(m.model_name))
       .map((m) => m.model_name);
-  }, [embeddingModels, enabledModelsData, selectedProvider]);
+  }, [
+    embeddingModels,
+    enabledModelsData,
+    selectedProvider,
+    pendingModelChanges,
+  ]);
 
   // Handle modal close - refresh if updates were made
   const handleClose = () => {
@@ -344,8 +349,8 @@ const ModelProviderModal = ({
                   providerName={selectedProvider?.provider}
                 />
                 <ModelProviderActive
-                  activeLLMs={numberOfActiveLLMs}
-                  activeEmbeddings={numberOfActiveEmbeddings}
+                  activeLLMs={activeLLMNames}
+                  activeEmbeddings={activeEmbeddingNames}
                 />
               </div>
             </div>

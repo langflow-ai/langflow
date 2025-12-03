@@ -1,7 +1,7 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Input } from "@/components/ui/input";
 
-interface ModelProviderEditProps {
+export interface ModelProviderEditProps {
   authName: string;
   onAuthNameChange: (value: string) => void;
   apiKey: string;
@@ -11,6 +11,10 @@ interface ModelProviderEditProps {
   providerName?: string;
 }
 
+/**
+ * Form for configuring provider credentials (API key, base URL).
+ * Used when setting up a new provider or updating existing credentials.
+ */
 const ModelProviderEdit = ({
   authName,
   onAuthNameChange,
@@ -18,10 +22,10 @@ const ModelProviderEdit = ({
   onApiKeyChange,
   apiBase,
   onApiBaseChange,
-  providerName,
+  providerName: _providerName, // Reserved for future provider-specific behavior
 }: ModelProviderEditProps) => {
   return (
-    <div className="flex flex-col gap-4 p-4">
+    <div className="flex flex-col gap-4 p-4" data-testid="model-provider-edit">
       <div className="text-[13px] -mb-1 font-medium flex items-center gap-1">
         Authorization Name
         <ForwardedIconComponent
@@ -33,6 +37,7 @@ const ModelProviderEdit = ({
         placeholder="Authorization Name"
         value={authName}
         onChange={(e) => onAuthNameChange(e.target.value)}
+        data-testid="auth-name-input"
       />
       <div className="text-[13px] -mb-1 font-medium flex items-center gap-1">
         API Key <span className="text-red-500">*</span>
@@ -47,6 +52,7 @@ const ModelProviderEdit = ({
         value={apiKey}
         required
         onChange={(e) => onApiKeyChange(e.target.value)}
+        data-testid="api-key-input"
       />
       <div className="text-muted-foreground text-xs flex items-center gap-1 -mt-1 hover:underline cursor-pointer w-fit">
         Find your API key{" "}
@@ -63,6 +69,7 @@ const ModelProviderEdit = ({
         placeholder="API Base URL (optional)"
         value={apiBase}
         onChange={(e) => onApiBaseChange(e.target.value)}
+        data-testid="api-base-input"
       />
     </div>
   );
