@@ -43,9 +43,10 @@ export default function ChatMessage({
   // Check if message is empty (would show "No input message provided")
   const chatMessage = chat.message ? chat.message.toString() : "";
   const isEmpty = chatMessage.trim() === "";
+  const hasFiles = chat.files && chat.files.length > 0;
 
-  // User messages (but treat empty messages as bot messages)
-  if (chat.isSend && !isEmpty) {
+  // User messages (show if has text OR has files)
+  if (chat.isSend && (!isEmpty || hasFiles)) {
     return (
       <UserMessage
         chat={chat}
