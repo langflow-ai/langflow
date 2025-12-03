@@ -168,10 +168,20 @@ async def read_text_file_async(file_path: str) -> str:
     Returns:
         str: The file content as text
     """
-    from .storage_utils import read_file_bytes
+    from .storage_utils import parse_storage_path, read_file_bytes
 
-    # Use storage-aware read to get bytes
-    raw_data = await read_file_bytes(file_path)
+    settings = get_settings_service().settings
+    
+    # Check if this is actually an S3 path (format: "flow_id/filename")
+    # If storage is S3 but path is local (absolute path), use local read
+    is_s3_path = settings.storage_type == "s3" and parse_storage_path(file_path) is not None
+    
+    if is_s3_path:
+        # Use storage-aware read to get bytes from S3
+        raw_data = await read_file_bytes(file_path)
+    else:
+        # Local file - read directly
+        raw_data = Path(file_path).read_bytes()
 
     # Auto-detect encoding
     result = chardet.detect(raw_data)
@@ -216,12 +226,15 @@ async def read_docx_file_async(file_path: str) -> str:
     """
     from docx import Document
 
-    from .storage_utils import read_file_bytes
+    from .storage_utils import parse_storage_path, read_file_bytes
 
     settings = get_settings_service().settings
+    
+    # Check if this is actually an S3 path (format: "flow_id/filename")
+    is_s3_path = settings.storage_type == "s3" and parse_storage_path(file_path) is not None
 
-    if settings.storage_type == "local":
-        # Local storage - read directly
+    if not is_s3_path:
+        # Local file - read directly
         doc = Document(file_path)
         return "\n\n".join([p.text for p in doc.paragraphs])
 
@@ -278,10 +291,19 @@ async def parse_pdf_to_text_async(file_path: str) -> str:
 
     from pypdf import PdfReader
 
-    from .storage_utils import read_file_bytes
+    from .storage_utils import parse_storage_path, read_file_bytes
 
-    # Use storage-aware read to get bytes
-    content = await read_file_bytes(file_path)
+    settings = get_settings_service().settings
+    
+    # Check if this is actually an S3 path (format: "flow_id/filename")
+    is_s3_path = settings.storage_type == "s3" and parse_storage_path(file_path) is not None
+    
+    if is_s3_path:
+        # Use storage-aware read to get bytes from S3
+        content = await read_file_bytes(file_path)
+    else:
+        # Local file - read directly
+        content = Path(file_path).read_bytes()
 
     # pypdf can read from BytesIO - no temp file needed!
     with BytesIO(content) as f, PdfReader(f) as reader:
@@ -294,10 +316,16 @@ def parse_text_file_to_data(file_path: str, *, silent_errors: bool) -> Data | No
     For S3 storage, this will use async operations to fetch the file.
     For local storage, reads directly from filesystem.
     """
+    from .storage_utils import parse_storage_path
+
     settings = get_settings_service().settings
 
-    # If using S3 storage, we need to use async operations
-    if settings.storage_type == "s3":
+    # If using S3 storage AND the path is in S3 format, use async operations
+    # S3 paths are in format "flow_id/filename" (relative paths with single slash)
+    # Local paths are absolute paths like "/var/folders/..." or "C:\Users\..."
+    is_s3_path = settings.storage_type == "s3" and parse_storage_path(file_path) is not None
+    
+    if is_s3_path:
         # Run the async version in a new event loop
         return asyncio.run(parse_text_file_to_data_async(file_path, silent_errors=silent_errors))
 
