@@ -132,9 +132,16 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
           id.proxy = targetNode.data.node!.template[field]?.proxy;
         }
       }
+      // Check if target is an loop input (allows_loop=true)
+      const targetOutput = targetNode.data.node!.outputs?.find(
+        (output) => output.name === targetHandleObject.name,
+      );
+      const isLoopInput = targetOutput?.allows_loop === true;
+
       if (
-        scapedJSONStringfy(id) !== targetHandle ||
-        (targetNode.data.node?.tool_mode && isToolMode)
+        (scapedJSONStringfy(id) !== targetHandle ||
+          (targetNode.data.node?.tool_mode && isToolMode)) &&
+        !isLoopInput
       ) {
         newEdges = newEdges.filter((e) => e.id !== edge.id);
       }
@@ -168,7 +175,9 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
             dataType: sourceNode.data.type,
           };
 
-          if (scapedJSONStringfy(id) !== sourceHandle) {
+          // Skip edge cleanup for outputs with allows_loop=true
+          const hasAllowsLoop = output?.allows_loop === true;
+          if (scapedJSONStringfy(id) !== sourceHandle && !hasAllowsLoop) {
             newEdges = newEdges.filter((e) => e.id !== edge.id);
           }
         } else {
@@ -415,11 +424,24 @@ export function isValidConnection(
     return null;
   };
 
+  // Check if target is an loop input (loop component)
+  const isLoopInput = !!targetHandleObject.output_types;
+
+  // For loop inputs, check if source types match any of the configured target output_types
+  // (which already includes original type + loop_types from the output configuration)
+  const loopInputTypeCheck =
+    isLoopInput &&
+    (sourceHandleObject.output_types.some((t) =>
+      targetHandleObject.output_types?.includes(t),
+    ) ||
+      targetHandleObject.output_types?.includes(sourceHandleObject.dataType));
   if (
     targetHandleObject.inputTypes?.some(
       (n) => n === sourceHandleObject.dataType,
     ) ||
+    loopInputTypeCheck ||
     (targetHandleObject.output_types &&
+      !loopInputTypeCheck &&
       (targetHandleObject.output_types?.some(
         (n) => n === sourceHandleObject.dataType,
       ) ||
