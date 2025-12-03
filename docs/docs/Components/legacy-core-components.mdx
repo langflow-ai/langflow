@@ -191,25 +191,6 @@ Fields from the `.data` attribute become columns, and the `.text` field (if pres
 </details>
 
 <details>
-<summary>DataFrame to Toolset</summary>
-
-Replace this legacy component with the [**Data Operations** component](/data-operations).
-
-This component converts each row of a DataFrame into a callable tool/action within a toolset. Each row becomes a tool where the action name comes from one column and the content/response comes from another column.
-
-It accepts the following parameters:
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| dataframe | DataFrame | Input parameter. DataFrame where each row will become a tool/action. |
-| tool_name_column | Tool Name Column | Input parameter. Column with tool names. |
-| tool_output_column | Tool Output Column | Input parameter. Column with tool outputs/responses. |
-| tools | Tools | Output parameter. List of tools created from the DataFrame. |
-| message | Message | Output parameter. Message describing the created toolset. |
-
-</details>
-
-<details>
 <summary>Extract Key</summary>
 
 Replace this legacy component with the [**Data Operations** component](/data-operations).
