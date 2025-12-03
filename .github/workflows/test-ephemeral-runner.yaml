@@ -30,10 +30,10 @@ jobs:
       actions: read
       contents: read
     steps:
-      - name: Show Runner Info in Summary 
+      - name: Show Runner Info in Summary
         run: |
           {
-            echo "## 🖥️ Self-Hosted Runner Info" 
+            echo "## 🖥️ Self-Hosted Runner Info"
             echo "---------- "
             echo "GITHUB_RUNNER_NAME   : '${{ runner.name }}'"
             echo "GITHUB_RUNNER_OS     : '${{ runner.os }}'"
@@ -51,13 +51,105 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Verify Previous Run Artifacts Are Gone (Ephemeral Check)
+        run: |
+          {
+            echo "## 🔍 Ephemeral Validation: Checking for Previous Run Artifacts"
+            echo ""
+            echo "### Step 1: Verifying Clean State (Before Creating New Artifacts)"
+            echo ""
+            
+            # Diagnostic information to understand VM state
+            echo "### VM Diagnostic Information" >> "$GITHUB_STEP_SUMMARY"
+            echo "**Hostname:** $(hostname)" >> "$GITHUB_STEP_SUMMARY"
+            echo "**System Uptime:** $(uptime -p 2>/dev/null || uptime)" >> "$GITHUB_STEP_SUMMARY"
+            echo "**Boot Time:** $(who -b 2>/dev/null | awk '{print $3, $4}' || date -d @$(awk '/btime/ {print $2}' /proc/stat))" >> "$GITHUB_STEP_SUMMARY"
+            echo "**Current Time:** $(date)" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            
+            # Check for test files from PREVIOUS runs
+            echo "Checking for test files from previous runs..."
+            PREVIOUS_TEST_FILES=$(find /opt/actions-runner /tmp -name "ephemeral-test-artifact-*.txt" 2>/dev/null | head -20 || true)
+            
+            if [ -n "$PREVIOUS_TEST_FILES" ]; then
+              echo "❌ **FAILED:** Found test files from previous run(s):"
+              echo "$PREVIOUS_TEST_FILES"
+              echo ""
+              echo "**Files from previous runs:**" >> "$GITHUB_STEP_SUMMARY"
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
+              echo "$PREVIOUS_TEST_FILES" >> "$GITHUB_STEP_SUMMARY"
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
+              
+              # Show file details for debugging
+              echo "" >> "$GITHUB_STEP_SUMMARY"
+              echo "**File details:**" >> "$GITHUB_STEP_SUMMARY"
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
+              while IFS= read -r file; do
+                if [ -n "$file" ] && [ -f "$file" ]; then
+                  echo "File: $file" >> "$GITHUB_STEP_SUMMARY"
+                  echo "Modified: $(stat -c '%y' "$file" 2>/dev/null || ls -l "$file")" >> "$GITHUB_STEP_SUMMARY"
+                  echo "Contents:" >> "$GITHUB_STEP_SUMMARY"
+                  cat "$file" >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo "(cannot read)" >> "$GITHUB_STEP_SUMMARY"
+                  echo "---" >> "$GITHUB_STEP_SUMMARY"
+                fi
+              done <<< "$PREVIOUS_TEST_FILES"
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
+              
+              echo "" >> "$GITHUB_STEP_SUMMARY"
+              echo "❌ **Ephemeral validation FAILED** - Files persist across runs!" >> "$GITHUB_STEP_SUMMARY"
+              echo "" >> "$GITHUB_STEP_SUMMARY"
+              echo "**Possible causes:**" >> "$GITHUB_STEP_SUMMARY"
+              echo "1. VM is not being shut down/recreated (check shutdown script)" >> "$GITHUB_STEP_SUMMARY"
+              echo "2. GCP is using persistent boot disk or snapshots" >> "$GITHUB_STEP_SUMMARY"
+              echo "3. VM instance template includes these files" >> "$GITHUB_STEP_SUMMARY"
+              echo "4. Boot disk is being preserved between VM recreations" >> "$GITHUB_STEP_SUMMARY"
+              exit 1
+            else
+              echo "✅ No test files found from previous runs"
+              echo "✅ **File ephemeral check PASSED**" >> "$GITHUB_STEP_SUMMARY"
+            fi
+            
+            # Check for Docker images from PREVIOUS runs
+            echo ""
+            echo "Checking for test Docker images from previous runs..."
+            PREVIOUS_TEST_IMAGES=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "ephemeral-test-image" || true)
+            
+            if [ -n "$PREVIOUS_TEST_IMAGES" ]; then
+              echo "❌ **FAILED:** Found Docker images from previous run(s):"
+              echo "$PREVIOUS_TEST_IMAGES"
+              echo ""
+              echo "**Images from previous runs:**" >> "$GITHUB_STEP_SUMMARY"
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
+              while IFS= read -r image; do
+                if [ -n "$image" ]; then
+                  docker images "$image" >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo "$image (not found)" >> "$GITHUB_STEP_SUMMARY"
+                fi
+              done <<< "$PREVIOUS_TEST_IMAGES"
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
+              echo "❌ **Ephemeral validation FAILED** - Docker images persist across runs!" >> "$GITHUB_STEP_SUMMARY"
+              exit 1
+            else
+              echo "✅ No test Docker images found from previous runs"
+              echo "✅ **Docker image ephemeral check PASSED**" >> "$GITHUB_STEP_SUMMARY"
+            fi
+            
+            echo ""
+            echo "### ✅ Ephemeral Validation Summary"
+            echo ""
+            echo "✅ **All ephemeral checks PASSED**" >> "$GITHUB_STEP_SUMMARY"
+            echo "✅ Files from previous runs: **GONE**" >> "$GITHUB_STEP_SUMMARY"
+            echo "✅ Docker images from previous runs: **GONE**" >> "$GITHUB_STEP_SUMMARY"
+            echo ""
+            echo "**Conclusion:** Runner is truly ephemeral - each job runs on a fresh VM instance." >> "$GITHUB_STEP_SUMMARY"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Create Test Artifacts (File and Docker Image)
         id: create-artifacts
         run: |
           {
             echo "## 🧪 Ephemeral Runner Validation Test"
             echo ""
-            echo "### Step 1: Creating Test Artifacts"
+            echo "### Step 2: Creating Test Artifacts (For Next Run Validation)"
             echo ""
             
             # Create a test file in a persistent location (outside workspace)
@@ -119,94 +211,5 @@ jobs:
             echo ""
             echo "### ✅ Artifacts Created Successfully"
             echo ""
-            echo "**Next run should verify these artifacts are GONE (proving ephemeral behavior)**"
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Verify Previous Run Artifacts Are Gone (Ephemeral Check)
-        run: |
-          {
-            echo "## 🔍 Ephemeral Validation: Checking for Previous Run Artifacts"
-            echo ""
-            echo "### Step 2: Verifying Clean State"
-            echo ""
-            
-            # Diagnostic information to understand VM state
-            echo "### VM Diagnostic Information" >> "$GITHUB_STEP_SUMMARY"
-            echo "**Hostname:** $(hostname)" >> "$GITHUB_STEP_SUMMARY"
-            echo "**System Uptime:** $(uptime -p 2>/dev/null || uptime)" >> "$GITHUB_STEP_SUMMARY"
-            echo "**Boot Time:** $(who -b 2>/dev/null | awk '{print $3, $4}' || date -d @$(awk '/btime/ {print $2}' /proc/stat))" >> "$GITHUB_STEP_SUMMARY"
-            echo "**Current Time:** $(date)" >> "$GITHUB_STEP_SUMMARY"
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-            
-            # Check for any test files from previous runs
-            # Check both /opt/actions-runner and /tmp for test files
-            echo "Checking for test files from previous runs..."
-            TEST_FILES=$(find /opt/actions-runner /tmp -name "ephemeral-test-artifact-*.txt" 2>/dev/null | head -20 || true)
-            
-            if [ -n "$TEST_FILES" ]; then
-              echo "❌ **FAILED:** Found test files from previous run(s):"
-              echo "$TEST_FILES"
-              echo ""
-              echo "**Files found:**" >> "$GITHUB_STEP_SUMMARY"
-              echo '```' >> "$GITHUB_STEP_SUMMARY"
-              echo "$TEST_FILES" >> "$GITHUB_STEP_SUMMARY"
-              echo '```' >> "$GITHUB_STEP_SUMMARY"
-              
-              # Show file details for debugging
-              echo "" >> "$GITHUB_STEP_SUMMARY"
-              echo "**File details:**" >> "$GITHUB_STEP_SUMMARY"
-              echo '```' >> "$GITHUB_STEP_SUMMARY"
-              for file in $TEST_FILES; do
-                if [ -f "$file" ]; then
-                  echo "File: $file" >> "$GITHUB_STEP_SUMMARY"
-                  echo "Modified: $(stat -c '%y' "$file" 2>/dev/null || ls -l "$file")" >> "$GITHUB_STEP_SUMMARY"
-                  echo "Contents:" >> "$GITHUB_STEP_SUMMARY"
-                  cat "$file" >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo "(cannot read)" >> "$GITHUB_STEP_SUMMARY"
-                  echo "---" >> "$GITHUB_STEP_SUMMARY"
-                fi
-              done
-              echo '```' >> "$GITHUB_STEP_SUMMARY"
-              
-              echo "" >> "$GITHUB_STEP_SUMMARY"
-              echo "❌ **Ephemeral validation FAILED** - Files persist across runs!" >> "$GITHUB_STEP_SUMMARY"
-              echo "" >> "$GITHUB_STEP_SUMMARY"
-              echo "**Possible causes:**" >> "$GITHUB_STEP_SUMMARY"
-              echo "1. VM is not being shut down/recreated (check shutdown script)" >> "$GITHUB_STEP_SUMMARY"
-              echo "2. GCP is using persistent boot disk or snapshots" >> "$GITHUB_STEP_SUMMARY"
-              echo "3. VM instance template includes these files" >> "$GITHUB_STEP_SUMMARY"
-              echo "4. Boot disk is being preserved between VM recreations" >> "$GITHUB_STEP_SUMMARY"
-              exit 1
-            else
-              echo "✅ No test files found from previous runs"
-              echo "✅ **File ephemeral check PASSED**" >> "$GITHUB_STEP_SUMMARY"
-            fi
-            
-            # Check for Docker images from previous runs
-            echo ""
-            echo "Checking for test Docker images..."
-            TEST_IMAGES=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "ephemeral-test-image" || true)
-            
-            if [ -n "$TEST_IMAGES" ]; then
-              echo "❌ **FAILED:** Found Docker images from previous run(s):"
-              echo "$TEST_IMAGES"
-              echo ""
-              echo "**Images found:**" >> "$GITHUB_STEP_SUMMARY"
-              echo '```' >> "$GITHUB_STEP_SUMMARY"
-              docker images | grep ephemeral-test-image >> "$GITHUB_STEP_SUMMARY"
-              echo '```' >> "$GITHUB_STEP_SUMMARY"
-              echo "❌ **Ephemeral validation FAILED** - Docker images persist across runs!" >> "$GITHUB_STEP_SUMMARY"
-              exit 1
-            else
-              echo "✅ No test Docker images found from previous runs"
-              echo "✅ **Docker image ephemeral check PASSED**" >> "$GITHUB_STEP_SUMMARY"
-            fi
-            
-            echo ""
-            echo "### ✅ Ephemeral Validation Summary"
-            echo ""
-            echo "✅ **All ephemeral checks PASSED**" >> "$GITHUB_STEP_SUMMARY"
-            echo "✅ Files from previous runs: **GONE**" >> "$GITHUB_STEP_SUMMARY"
-            echo "✅ Docker images from previous runs: **GONE**" >> "$GITHUB_STEP_SUMMARY"
-            echo ""
-            echo "**Conclusion:** Runner is truly ephemeral - each job runs on a fresh VM instance." >> "$GITHUB_STEP_SUMMARY"
+            echo "**These artifacts will be checked in the NEXT run to verify they are gone (proving ephemeral behavior)**"
           } >> "$GITHUB_STEP_SUMMARY"
