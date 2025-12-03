@@ -618,9 +618,21 @@ class BaseFileComponent(Component, ABC):
                     BaseFileComponent.BaseFile(data, Path(path_str), delete_after_processing=delete_after_processing)
                 )
             else:
-                resolved_path = Path(self.resolve_path(path_str))
+                # Check if path looks like a storage path (flow_id/filename format)
+                # If so, use get_full_path to resolve it to the actual storage location
+                if "/" in path_str and not Path(path_str).is_absolute():
+                    try:
+                        resolved_path = Path(self.get_full_path(path_str))
+                        self.log(f"Resolved storage path '{path_str}' to '{resolved_path}'")
+                    except (ValueError, AttributeError) as e:
+                        # Fallback to resolve_path if get_full_path fails
+                        self.log(f"get_full_path failed for '{path_str}': {e}, falling back to resolve_path")
+                        resolved_path = Path(self.resolve_path(path_str))
+                else:
+                    resolved_path = Path(self.resolve_path(path_str))
+
                 if not resolved_path.exists():
-                    msg = f"File or directory not found: {path}"
+                    msg = f"File not found: '{path}' (resolved to: '{resolved_path}'). Please upload the file again."
                     self.log(msg)
                     if not self.silent_errors:
                         raise ValueError(msg)
