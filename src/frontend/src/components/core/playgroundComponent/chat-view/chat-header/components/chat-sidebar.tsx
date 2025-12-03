@@ -72,10 +72,6 @@ export function ChatSidebar({
             className="flex items-center"
             style={{ gap: "var(--space-4, 16px)" }}
           >
-            <ForwardedIconComponent
-              name="List"
-              className="h-[18px] w-[18px] text-ring"
-            />
             <div className="text-mmd font-normal">Sessions</div>
           </div>
           <ShadTooltip styleClasses="z-50" content="New Chat">
