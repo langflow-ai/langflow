@@ -882,6 +882,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
                 is_ibm = (embedding_model and "ibm" in str(embedding_model).lower()) or (
                     selected_embedding and "watsonx" in type(selected_embedding).__name__.lower()
                 )
+                logger.debug(f"Is IBM: {is_ibm}")
                 max_workers = 1 if is_ibm else min(max(len(texts), 1), 8)
 
                 with ThreadPoolExecutor(max_workers=max_workers) as executor:
