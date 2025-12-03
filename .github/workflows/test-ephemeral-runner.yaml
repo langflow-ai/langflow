@@ -1,71 +1,37 @@
-name: 🧪 test invoke ephemeral runner    
+# Ephemeral Runner Validation Workflow
+#
+# This workflow validates that the ephemeral runner is truly ephemeral by:
+# 1. Creating test artifacts (files and Docker images) in one run
+# 2. Verifying in subsequent runs that these artifacts are gone
+#
+# GCP Behavior Explanation:
+# When the runner service stops, /usr/local/bin/runner-exit-shutdown.sh triggers
+# a VM shutdown via kernel sysrq. GCP infrastructure (likely using Instance Templates
+# or Managed Instance Groups) detects the terminated instance and automatically
+# recreates it with the same instance name. This means:
+# - The VM instance NAME stays the same (recreated with same name)
+# - But it's a BRAND NEW VM with a fresh boot disk (ephemeral)
+# - All files, Docker images, and state from the previous run are completely gone
+# - Each job runs on a completely fresh VM instance
+#
+# The "replace" behavior you observe is GCP's auto-healing/recreation mechanism,
+# not a persistent VM being reused.
+
+name: 🧪 test invoke ephemeral runner
 on:
-  push:   
-    branches: [test-ephemeral-runner] 
+  push: 
+    branches: [test-ephemeral-runner]
 
 jobs:
   show-runner-info:
     runs-on: 
-      labels: ["self-hosted", "linux", "ARM64", "langflow-ai-arm64-40gb-ephemeral"] 
+      labels: ["self-hosted", "linux", "ARM64", "langflow-ai-arm64-40gb-ephemeral"]
     permissions:
       actions: read
       contents: read
-    steps: 
-
-      - name: Print runner labels from context
-        run: | 
-      
-      - name: Get runner labels from API 
-        run: |
-          RUNNER_NAME="${{ runner.name }}"  
-          ORG="${{ github.repository_owner }}"
-          REPO="${{ github.repository }}"
-          
-          echo "### Runner Labels from API" >> "$GITHUB_STEP_SUMMARY"
-          echo "Looking for runner: **$RUNNER_NAME**" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          
-          # Try organization-level API first
-          echo "Checking organization runners..." >> "$GITHUB_STEP_SUMMARY"
-          ORG_RESPONSE=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/orgs/$ORG/actions/runners")
-          
-          ORG_RUNNER=$(echo "$ORG_RESPONSE" | jq -r ".runners[]? | select(.name == \"$RUNNER_NAME\")")
-          
-          if [ -n "$ORG_RUNNER" ] && [ "$ORG_RUNNER" != "null" ]; then
-            ORG_LABELS=$(echo "$ORG_RUNNER" | jq -r ".labels[]?.name // empty" | tr '\n' ' ')
-            echo "✅ Found in organization runners" >> "$GITHUB_STEP_SUMMARY"
-            echo "**Labels:** $ORG_LABELS" >> "$GITHUB_STEP_SUMMARY" 
-          else
-            echo "❌ Not found in organization runners" >> "$GITHUB_STEP_SUMMARY" 
-            
-            # Try repository-level API
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo "Checking repository runners..." >> "$GITHUB_STEP_SUMMARY"
-            REPO_RESPONSE=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-              "https://api.github.com/repos/$REPO/actions/runners")
-            
-            REPO_RUNNER=$(echo "$REPO_RESPONSE" | jq -r ".runners[]? | select(.name == \"$RUNNER_NAME\")")
-            
-            if [ -n "$REPO_RUNNER" ] && [ "$REPO_RUNNER" != "null" ]; then
-              REPO_LABELS=$(echo "$REPO_RUNNER" | jq -r ".labels[]?.name // empty" | tr '\n' ' ')
-              echo "✅ Found in repository runners" >> "$GITHUB_STEP_SUMMARY"
-              echo "**Labels:** $REPO_LABELS" >> "$GITHUB_STEP_SUMMARY"
-            else
-              echo "❌ Not found in repository runners either" >> "$GITHUB_STEP_SUMMARY"
-              echo "" >> "$GITHUB_STEP_SUMMARY"
-              echo "⚠️ **Note:** Self-hosted runners should have labels. If labels are missing, check:" >> "$GITHUB_STEP_SUMMARY"
-              echo "- Runner registration and configuration" >> "$GITHUB_STEP_SUMMARY"
-              echo "- API token permissions (needs `actions:read` scope)" >> "$GITHUB_STEP_SUMMARY"
-              echo "- Whether runner is online and visible to the API" >> "$GITHUB_STEP_SUMMARY"
-            fi
-          fi
-          
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "**Workflow-configured labels:** \`self-hosted, linux, ARM64, langflow-ai-arm64-40gb-ephemeral\`" >> "$GITHUB_STEP_SUMMARY"
-          
+    steps:
       - name: Show Runner Info in Summary
-        run: | 
+        run: |
           {
             echo "## 🖥️ Self-Hosted Runner Info"
             echo "---------- "
@@ -83,4 +49,127 @@ jobs:
             echo '```'
             printenv | sort
             echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Create Test Artifacts (File and Docker Image)
+        id: create-artifacts
+        run: |
+          {
+            echo "## 🧪 Ephemeral Runner Validation Test"
+            echo ""
+            echo "### Step 1: Creating Test Artifacts"
+            echo ""
+            
+            # Create a test file in a persistent location (outside workspace)
+            TEST_FILE="/opt/ephemeral-test-artifact-$(date +%s).txt"
+            echo "Creating test file: $TEST_FILE"
+            echo "Created at: $(date -Iseconds)" > "$TEST_FILE"
+            echo "Runner name: ${{ runner.name }}" >> "$TEST_FILE"
+            echo "Hostname: $(hostname)" >> "$TEST_FILE"
+            echo "✅ Test file created: $TEST_FILE"
+            echo "**Test file:** \`$TEST_FILE\`" >> "$GITHUB_STEP_SUMMARY"
+            
+            # Verify file exists
+            if [ -f "$TEST_FILE" ]; then
+              echo "✅ File exists: $(ls -lh "$TEST_FILE")"
+              echo "**File contents:**" >> "$GITHUB_STEP_SUMMARY"
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
+              cat "$TEST_FILE" >> "$GITHUB_STEP_SUMMARY"
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "❌ File creation failed!"
+              exit 1
+            fi
+            
+            # Build a test Docker image
+            TEST_IMAGE="ephemeral-test-image:$(date +%s)"
+            echo ""
+            echo "Building Docker image: $TEST_IMAGE"
+            # Create Dockerfile content using printf to avoid YAML heredoc issues
+            printf 'FROM alpine:latest\nLABEL test.ephemeral="true"\nLABEL test.runner="%s"\nRUN echo "Test image for ephemeral validation" > /test.txt\n' "${{ runner.name }}" > /tmp/Dockerfile.ephemeral-test
+            docker build -t "$TEST_IMAGE" -f /tmp/Dockerfile.ephemeral-test .
+            
+            if [ $? -eq 0 ]; then
+              echo "✅ Docker image built: $TEST_IMAGE"
+              echo "**Docker image:** \`$TEST_IMAGE\`" >> "$GITHUB_STEP_SUMMARY"
+              
+              # List the image
+              echo ""
+              echo "Docker images matching 'ephemeral-test-image':"
+              docker images | grep ephemeral-test-image || echo "No matching images found"
+              echo "" >> "$GITHUB_STEP_SUMMARY"
+              echo "**Docker images:**" >> "$GITHUB_STEP_SUMMARY"
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
+              docker images | grep ephemeral-test-image >> "$GITHUB_STEP_SUMMARY" || echo "No matching images" >> "$GITHUB_STEP_SUMMARY"
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "❌ Docker image build failed!"
+              exit 1
+            fi
+            
+            # Store artifact info for next run verification
+            echo "TEST_FILE=$TEST_FILE" >> $GITHUB_ENV
+            echo "TEST_IMAGE=$TEST_IMAGE" >> $GITHUB_ENV
+            
+            echo ""
+            echo "### ✅ Artifacts Created Successfully"
+            echo ""
+            echo "**Next run should verify these artifacts are GONE (proving ephemeral behavior)**"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Verify Previous Run Artifacts Are Gone (Ephemeral Check)
+        run: |
+          {
+            echo "## 🔍 Ephemeral Validation: Checking for Previous Run Artifacts"
+            echo ""
+            echo "### Step 2: Verifying Clean State"
+            echo ""
+            
+            # Check for any test files from previous runs
+            echo "Checking for test files in /opt..."
+            TEST_FILES=$(find /opt -name "ephemeral-test-artifact-*.txt" 2>/dev/null || true)
+            
+            if [ -n "$TEST_FILES" ]; then
+              echo "❌ **FAILED:** Found test files from previous run(s):"
+              echo "$TEST_FILES"
+              echo ""
+              echo "**Files found:**" >> "$GITHUB_STEP_SUMMARY"
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
+              echo "$TEST_FILES" >> "$GITHUB_STEP_SUMMARY"
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
+              echo "❌ **Ephemeral validation FAILED** - Files persist across runs!" >> "$GITHUB_STEP_SUMMARY"
+              exit 1
+            else
+              echo "✅ No test files found from previous runs"
+              echo "✅ **File ephemeral check PASSED**" >> "$GITHUB_STEP_SUMMARY"
+            fi
+            
+            # Check for Docker images from previous runs
+            echo ""
+            echo "Checking for test Docker images..."
+            TEST_IMAGES=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "ephemeral-test-image" || true)
+            
+            if [ -n "$TEST_IMAGES" ]; then
+              echo "❌ **FAILED:** Found Docker images from previous run(s):"
+              echo "$TEST_IMAGES"
+              echo ""
+              echo "**Images found:**" >> "$GITHUB_STEP_SUMMARY"
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
+              docker images | grep ephemeral-test-image >> "$GITHUB_STEP_SUMMARY"
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
+              echo "❌ **Ephemeral validation FAILED** - Docker images persist across runs!" >> "$GITHUB_STEP_SUMMARY"
+              exit 1
+            else
+              echo "✅ No test Docker images found from previous runs"
+              echo "✅ **Docker image ephemeral check PASSED**" >> "$GITHUB_STEP_SUMMARY"
+            fi
+            
+            echo ""
+            echo "### ✅ Ephemeral Validation Summary"
+            echo ""
+            echo "✅ **All ephemeral checks PASSED**" >> "$GITHUB_STEP_SUMMARY"
+            echo "✅ Files from previous runs: **GONE**" >> "$GITHUB_STEP_SUMMARY"
+            echo "✅ Docker images from previous runs: **GONE**" >> "$GITHUB_STEP_SUMMARY"
+            echo ""
+            echo "**Conclusion:** Runner is truly ephemeral - each job runs on a fresh VM instance." >> "$GITHUB_STEP_SUMMARY"
           } >> "$GITHUB_STEP_SUMMARY"
