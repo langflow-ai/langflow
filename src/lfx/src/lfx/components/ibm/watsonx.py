@@ -197,8 +197,14 @@ class WatsonxAIComponent(LCModelComponent):
             "logit_bias": logit_bias,
         }
 
+        # Pass API key as plain string to avoid SecretStr serialization issues
+        # when model is configured with with_config() or used in batch operations
+        api_key_value = self.api_key
+        if isinstance(api_key_value, SecretStr):
+            api_key_value = api_key_value.get_secret_value()
+
         return ChatWatsonx(
-            apikey=SecretStr(self.api_key).get_secret_value(),
+            apikey=api_key_value,
             url=self.base_url,
             project_id=self.project_id,
             model_id=self.model_name,
