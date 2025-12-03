@@ -1,4 +1,4 @@
-name: 🧪 test invoke ephemeral runner  
+name: 🧪 test invoke ephemeral runner   
 on:
   push:  
     branches: [test-ephemeral-runner] 
