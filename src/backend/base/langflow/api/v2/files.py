@@ -128,6 +128,8 @@ async def upload_user_file(
             existing_mcp_file = await get_file_by_name(mcp_file, current_user, session)
             if existing_mcp_file:
                 await delete_file(existing_mcp_file.id, current_user, session, storage_service)
+                # Flush the session to ensure the deletion is committed before inserting the new record
+                await session.flush()
             unique_filename = new_filename
         else:
             # For normal files, ensure unique name by appending a count if necessary
