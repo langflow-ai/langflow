@@ -3,8 +3,6 @@ import { debounce } from "lodash";
 import { useMemo, useRef, useState } from "react";
 import {
   COLOR_OPTIONS,
-  NOTE_NODE_MAX_HEIGHT,
-  NOTE_NODE_MAX_WIDTH,
   NOTE_NODE_MIN_HEIGHT,
   NOTE_NODE_MIN_WIDTH,
 } from "@/constants/constants";
@@ -89,8 +87,6 @@ function NoteNode({
       <NodeResizer
         minWidth={Math.max(DEFAULT_WIDTH, NOTE_NODE_MIN_WIDTH)}
         minHeight={Math.max(DEFAULT_HEIGHT, NOTE_NODE_MIN_HEIGHT)}
-        maxWidth={NOTE_NODE_MAX_WIDTH}
-        maxHeight={NOTE_NODE_MAX_HEIGHT}
         onResize={(_, params) => {
           const { width, height } = params;
           debouncedResize(width, height);
