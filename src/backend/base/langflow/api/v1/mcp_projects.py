@@ -1041,7 +1041,17 @@ def _args_reference_urls(args: Sequence[Any] | None, urls: list[str]) -> bool:
         return False
     args_set = set(args_strings)
     last_arg = args_strings[-1]
-    return any((url == last_arg) or (url in args_set) for url in urls)
+
+    # If there's only one url, do a fast check up front
+    if len(urls) == 1:
+        url = urls[0]
+        return url == last_arg or url in args_set
+
+    # Use set intersection to avoid repeated linear searches
+    urls_set = set(urls)
+    if last_arg in urls_set:
+        return True
+    return bool(args_set & urls_set)
 
 
 def config_contains_server_url(config_data: dict, urls: Sequence[str] | str) -> bool:
@@ -1051,8 +1061,14 @@ def config_contains_server_url(config_data: dict, urls: Sequence[str] | str) -> 
         return False
 
     mcp_servers = config_data.get("mcpServers", {})
+    # Avoid calling _args_reference_urls if mcp_servers is empty
+    if not mcp_servers:
+        return False
+
     for server_name, server_config in mcp_servers.items():
-        if _args_reference_urls(server_config.get("args", []), normalized_urls):
+        # Directly get server_config.get("args", []) just once per iteration
+        args = server_config.get("args", [])
+        if _args_reference_urls(args, normalized_urls):
             logger.debug("Found matching server URL in server: %s", server_name)
             return True
     return False
