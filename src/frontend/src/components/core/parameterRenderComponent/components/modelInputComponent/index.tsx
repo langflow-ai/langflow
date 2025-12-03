@@ -309,7 +309,8 @@ export default function ModelInputComponent({
       const modelExists = options.some(
         (option) =>
           option.name === currentValue.name &&
-          option.provider === currentValue.provider,
+          option.provider === currentValue.provider &&
+          !currentValue?.metadata?.is_disabled_provider,
       );
 
       if (modelExists) {

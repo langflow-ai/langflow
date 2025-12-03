@@ -372,7 +372,7 @@ const ModelProviderModal = ({
                   </Button>
                   <Button
                     className="w-full"
-                    disabled={!hasPendingChanges}
+                    // disabled={!hasPendingChanges}
                     onClick={applyPendingModelChanges}
                   >
                     Update
@@ -397,7 +397,7 @@ const ModelProviderModal = ({
                   <Button
                     className="w-full"
                     loading={isPending}
-                    disabled={!apiKey.trim()}
+                    // disabled={!apiKey.trim()}
                     onClick={handleConfigureProvider}
                   >
                     {selectedProvider?.is_enabled ? "Update" : "Configure"}
