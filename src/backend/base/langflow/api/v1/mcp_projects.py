@@ -338,7 +338,7 @@ async def _dispatch_project_streamable_http(
         current_project_ctx.reset(project_token)
         current_user_ctx.reset(user_token)
 
-    return Response()
+    return ResponseNoOp(status_code=200)
 
 
 @router.get("/{project_id}/sse", response_class=HTMLResponse)
@@ -434,11 +434,14 @@ async def handle_project_messages(
 
 
 # Streamable HTTP transport
-streamable_http_methods = ["GET", "POST", "DELETE"]
+streamable_http_route_config = {
+    "methods": ["GET", "POST", "DELETE"],
+    "response_class": ResponseNoOp,
+}
 
 
-@router.api_route("/{project_id}/streamable", methods=streamable_http_methods)
-@router.api_route("/{project_id}/streamable/", methods=streamable_http_methods)
+@router.api_route("/{project_id}/streamable", **streamable_http_route_config)
+@router.api_route("/{project_id}/streamable/", **streamable_http_route_config)
 async def handle_project_streamable_http(
     project_id: UUID,
     request: Request,
@@ -1030,12 +1033,7 @@ def _args_reference_urls(args: Sequence[Any] | None, urls: list[str]) -> bool:
     """Check whether the given args list references any of the provided URLs."""
     if not args or not urls:
         return False
-    args_strings = [arg for arg in args if isinstance(arg, str)]
-    if not args_strings:
-        return False
-    args_set = set(args_strings)
-    last_arg = args_strings[-1]
-    return any((url == last_arg) or (url in args_set) for url in urls)
+    return bool({arg for arg in args if isinstance(arg, str)}.intersection(urls))
 
 
 def config_contains_server_url(config_data: dict, urls: Sequence[str] | str) -> bool:
@@ -1249,8 +1247,8 @@ class ProjectMCPServer:
         """Own the lifecycle of the project's Streamable HTTP session manager."""
         try:
             async with self.session_manager.run():
-                self._manager_started = True
-                task_status.started()
+                self._manager_started = True # set flag before unblocking task (ensures waiting requests proceed)
+                task_status.started() # unblock
                 await anyio.sleep_forever()
         except anyio.get_cancelled_exc_class():
             await logger.adebug(f"Streamable HTTP manager cancelled for project {self.project_id}")
@@ -1313,11 +1311,11 @@ class ProjectTaskGroup:
         async with self._start_stop_lock:
             if not self._started:
                 return
-            try:
-                if self._task_group is not None:
-                    self._task_group.cancel_scope.cancel()
-                if self._tg_task is not None:
-                    await self._tg_task
+            try: # https://anyio.readthedocs.io/en/stable/cancellation.html, https://docs.python.org/3/library/asyncio-task.html#asyncio.Task.cancel
+                self._task_group.cancel_scope.cancel() # type: ignore[union-attr]
+                await self._tg_task  # type: ignore[misc]
+            except Exception as e:  # noqa: BLE001
+                await logger.aexception(f"Failed to stop project task group: {e}")
             finally:
                 self._cleanup()
                 await logger.adebug("Project MCP task group stopped")
