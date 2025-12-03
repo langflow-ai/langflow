@@ -838,7 +838,7 @@ async def test_list_project_tools_with_mcp_enabled_filter(
 
 
 async def test_list_project_tools_response_structure(
-    client: AsyncClient, user_test_project, user_test_flow, logged_in_headers
+    client: AsyncClient, user_test_project, logged_in_headers
 ):
     """Test that the list_project_tools endpoint returns the correct MCPProjectResponse structure."""
     response = await client.get(

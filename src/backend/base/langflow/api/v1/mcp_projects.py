@@ -1243,19 +1243,26 @@ class ProjectMCPServer:
         async with self._manager_lock:
             if self._manager_started:
                 return
-            task_group = get_project_task_group()
-            await task_group.start_task(self._run_session_manager)
-            await logger.adebug("Streamable HTTP manager started for project %s", self.project_id)
+            try:
+                task_group = get_project_task_group()
+                await task_group.start_task(self._run_session_manager)
+                await logger.adebug("Streamable HTTP manager started for project %s", self.project_id)
+            except Exception as e:
+                await logger.aexception(f"Failed to start session manager for project {self.project_id}: {e}")
+                raise
 
     async def _run_session_manager(self, *, task_status: TaskStatus[None] = anyio.TASK_STATUS_IGNORED):
         """Own the lifecycle of the project's Streamable HTTP session manager."""
         try:
             async with self.session_manager.run():
+                task_status.started()  # Signal ready before setting state
                 self._manager_started = True
-                task_status.started()
                 await anyio.sleep_forever()
         except anyio.get_cancelled_exc_class():
             await logger.adebug(f"Streamable HTTP manager cancelled for project {self.project_id}")
+        except Exception as e:
+            await logger.aexception(f"Error in session manager for project {self.project_id}: {e}")
+            raise
         finally:
             self._manager_started = False
             await logger.adebug(f"Streamable HTTP manager stopped for project {self.project_id}")
@@ -1364,14 +1371,9 @@ def get_project_mcp_server(project_id: UUID | None) -> ProjectMCPServer:
     return project_mcp_servers[project_id_str]
 
 
-@router.on_event("shutdown")
-async def _shutdown_project_session_managers() -> None:
-    """Ensure all per-project session managers are cleanly stopped."""
-    for server in project_mcp_servers.values():
-        try:
-            await server.stop_session_manager()
-        except Exception as exc:  # noqa: BLE001
-            await logger.awarning(f"Error stopping Streamable HTTP manager for project {server.project_id}: {exc!s}")
+# Note: Shutdown is handled by stop_project_task_group() in main.py lifespan
+# This handler was removed because ProjectMCPServer doesn't have stop_session_manager()
+# Session managers are managed centrally by ProjectTaskGroup
 
 
 async def register_project_with_composer(project: Folder):
