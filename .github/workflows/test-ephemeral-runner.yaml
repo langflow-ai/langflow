@@ -65,7 +65,7 @@ jobs:
             echo "**System Uptime:** $(uptime -p 2>/dev/null || uptime)" >> "$GITHUB_STEP_SUMMARY"
             echo "**Boot Time:** $(who -b 2>/dev/null | awk '{print $3, $4}' || date -d @$(awk '/btime/ {print $2}' /proc/stat))" >> "$GITHUB_STEP_SUMMARY"
             echo "**Current Time:** $(date)" >> "$GITHUB_STEP_SUMMARY"
-            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY" 
             
             # Check for test files from PREVIOUS runs
             echo "Checking for test files from previous runs..."
