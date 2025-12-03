@@ -63,10 +63,78 @@ export const Messages = ({
     (isBuilding || duration) &&
     chatHistory?.[chatHistory.length - 1]?.category !== "error";
 
+  const messagesContent = (
+    <div className="flex flex-col flex-grow place-self-center w-full">
+      {chatHistory &&
+        (isBuilding || chatHistory.length > 0 ? (
+          <>
+            {chatHistory.map((chat, index) => {
+              // Insert thinking message after user message (before bot response)
+              const insertThinkingAfterThis =
+                showThinkingMessage &&
+                index + 1 === thinkingInsertIndex &&
+                thinkingInsertIndex < chatHistory.length;
+
+              return (
+                <Fragment key={`${chat.id}-${index}`}>
+                  <MemoizedChatMessage
+                    chat={chat}
+                    lastMessage={chatHistory.length - 1 === index}
+                    updateChat={updateChat ?? (() => {})}
+                    closeChat={closeChat}
+                    playgroundPage={playgroundPage}
+                  />
+                  {insertThinkingAfterThis && (
+                    <ThinkingMessage
+                      isThinking={isBuilding}
+                      duration={duration}
+                    />
+                  )}
+                </Fragment>
+              );
+            })}
+            {/* If user message is the last message (no bot response yet), show at the end */}
+            {showThinkingMessage &&
+              thinkingInsertIndex >= chatHistory.length && (
+                <ThinkingMessage isThinking={isBuilding} duration={duration} />
+              )}
+          </>
+        ) : (
+          <div className="flex flex-grow w-full flex-col items-center justify-center">
+            <div className="flex flex-col items-center justify-center gap-4 p-8">
+              <LangflowLogo
+                title="Langflow logo"
+                className="h-10 w-10 scale-[1.5]"
+              />
+              <div className="flex flex-col items-center justify-center">
+                <h3 className="mt-2 pb-2 text-2xl font-semibold text-primary">
+                  New chat
+                </h3>
+                <p
+                  className="text-lg text-muted-foreground"
+                  data-testid="new-chat-text"
+                >
+                  <TextEffectPerChar>
+                    Test your flow with a chat prompt
+                  </TextEffectPerChar>
+                </p>
+              </div>
+            </div>
+          </div>
+        ))}
+    </div>
+  );
+
+  // In playground mode, parent already has StickToBottom - just render content
+  if (playgroundPage) {
+    return messagesContent;
+  }
+
+  // In non-playground mode, wrap with StickToBottom
   return (
     <StickToBottom
       className={cn(
-        "flex h-full w-full flex-col rounded-md",
+        "flex w-full flex-col rounded-md",
         visibleSession ? "h-[95%]" : "h-full",
       )}
       resize="smooth"
@@ -74,68 +142,7 @@ export const Messages = ({
       mass={1}
     >
       <StickToBottom.Content className="flex flex-col min-h-full">
-        <div className="flex flex-col flex-grow place-self-center w-full">
-          {chatHistory &&
-            (isBuilding || chatHistory.length > 0 ? (
-              <>
-                {chatHistory.map((chat, index) => {
-                  // Insert thinking message after user message (before bot response)
-                  const insertThinkingAfterThis =
-                    showThinkingMessage &&
-                    index + 1 === thinkingInsertIndex &&
-                    thinkingInsertIndex < chatHistory.length;
-
-                  return (
-                    <Fragment key={`${chat.id}-${index}`}>
-                      <MemoizedChatMessage
-                        chat={chat}
-                        lastMessage={chatHistory.length - 1 === index}
-                        updateChat={updateChat ?? (() => {})}
-                        closeChat={closeChat}
-                        playgroundPage={playgroundPage}
-                      />
-                      {insertThinkingAfterThis && (
-                        <ThinkingMessage
-                          isThinking={isBuilding}
-                          duration={duration}
-                        />
-                      )}
-                    </Fragment>
-                  );
-                })}
-                {/* If user message is the last message (no bot response yet), show at the end */}
-                {showThinkingMessage &&
-                  thinkingInsertIndex >= chatHistory.length && (
-                    <ThinkingMessage
-                      isThinking={isBuilding}
-                      duration={duration}
-                    />
-                  )}
-              </>
-            ) : (
-              <div className="flex flex-grow w-full flex-col items-center justify-center">
-                <div className="flex flex-col items-center justify-center gap-4 p-8">
-                  <LangflowLogo
-                    title="Langflow logo"
-                    className="h-10 w-10 scale-[1.5]"
-                  />
-                  <div className="flex flex-col items-center justify-center">
-                    <h3 className="mt-2 pb-2 text-2xl font-semibold text-primary">
-                      New chat
-                    </h3>
-                    <p
-                      className="text-lg text-muted-foreground"
-                      data-testid="new-chat-text"
-                    >
-                      <TextEffectPerChar>
-                        Test your flow with a chat prompt
-                      </TextEffectPerChar>
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))}
-        </div>
+        {messagesContent}
       </StickToBottom.Content>
     </StickToBottom>
   );

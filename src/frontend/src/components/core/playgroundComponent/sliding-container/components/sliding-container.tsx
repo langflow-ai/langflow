@@ -65,7 +65,8 @@ export function SlidingContainer({
     <div
       ref={containerRef}
       className={cn(
-        "relative h-full overflow-hidden transition-all ease-in-out",
+        "overflow-hidden transition-all ease-in-out",
+        !isFullscreen && "relative h-full",
         isResizing && "select-none",
         className,
       )}
