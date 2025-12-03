@@ -878,7 +878,12 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         while attempts < max_attempts:
             attempts += 1
             try:
-                max_workers = min(max(len(texts), 1), 8)
+                # Restrict concurrency for IBM/Watsonx models to avoid rate limits
+                is_ibm = (embedding_model and "ibm" in str(embedding_model).lower()) or (
+                    selected_embedding and "watsonx" in type(selected_embedding).__name__.lower()
+                )
+                max_workers = 1 if is_ibm else min(max(len(texts), 1), 8)
+
                 with ThreadPoolExecutor(max_workers=max_workers) as executor:
                     futures = {executor.submit(embed_chunk, chunk): idx for idx, chunk in enumerate(texts)}
                     vectors = [None] * len(texts)
