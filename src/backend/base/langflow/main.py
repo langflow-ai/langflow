@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 import re
+import tempfile
 import warnings
 from contextlib import asynccontextmanager
 from http import HTTPStatus
@@ -17,6 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi_pagination import add_pagination
+from filelock import FileLock
 from lfx.interface.utils import setup_llm_caching
 from lfx.log.logger import configure, logger
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
@@ -27,6 +29,7 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from langflow.api import health_check_router, log_router, router
 from langflow.api.v1.mcp_projects import init_mcp_servers
 from langflow.initial_setup.setup import (
+    copy_profile_pictures,
     create_or_update_starter_projects,
     initialize_auto_login_default_superuser,
     load_bundles_from_urls,
@@ -180,6 +183,11 @@ def get_lifespan(*, fix_migration=False, version=None):
             setup_llm_caching()
             await logger.adebug(f"LLM caching setup in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
+            current_time = asyncio.get_event_loop().time()
+            await logger.adebug("Copying profile pictures")
+            await copy_profile_pictures()
+            await logger.adebug(f"Profile pictures copied in {asyncio.get_event_loop().time() - current_time:.2f}s")
+
             if get_settings_service().auth_settings.AUTO_LOGIN:
                 current_time = asyncio.get_event_loop().time()
                 await logger.adebug("Initializing default super user")
@@ -209,9 +217,6 @@ def get_lifespan(*, fix_migration=False, version=None):
             # the initialization work.
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Creating/updating starter projects")
-            import tempfile
-
-            from filelock import FileLock
 
             lock_file = Path(tempfile.gettempdir()) / "langflow_starter_projects.lock"
             lock = FileLock(lock_file, timeout=1)

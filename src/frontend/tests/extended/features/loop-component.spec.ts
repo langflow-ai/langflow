@@ -90,10 +90,6 @@ test(
         targetPosition: { x: 720, y: 400 },
       });
 
-    await page
-      .getByTestId("handle-parsercomponent-shownode-parsed text-right")
-      .click();
-
     const _loopItemInput = await page
       .getByTestId("handle-loopcomponent-shownode-item-left")
       .first()
