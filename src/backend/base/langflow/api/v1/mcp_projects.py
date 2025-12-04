@@ -72,12 +72,6 @@ ALL_INTERFACES_HOST = "0.0.0.0"  # noqa: S104
 
 router = APIRouter(prefix="/mcp/project", tags=["mcp_projects"])
 
-DEFAULT_NOTIFICATION_OPTIONS = NotificationOptions(
-    prompts_changed=True,
-    resources_changed=True,
-    tools_changed=True,
-)
-
 
 async def verify_project_auth(
     db: AsyncSession,
@@ -301,50 +295,19 @@ async def list_project_tools(
     *,
     mcp_enabled: bool = True,
 ) -> Response:
-    """List project MCP tools, or open a Streamable HTTP stream when requested."""
+    """List project MCP tools."""
     metadata = await _build_project_tools_response(project_id, current_user, mcp_enabled=mcp_enabled)
     return JSONResponse(content=metadata.model_dump(mode="json"))
+
+
+########################################################
+# legacy SSE transport routes
+########################################################
 
 
 @router.head("/{project_id}/sse", response_class=HTMLResponse, include_in_schema=False)
 async def im_alive(project_id: str):  # noqa: ARG001
     return Response()
-
-
-@router.head("/{project_id}/streamable", include_in_schema=False)
-async def streamable_health(project_id: UUID):  # noqa: ARG001
-    return Response()
-
-
-async def _dispatch_project_streamable_http(
-    project_id: UUID,
-    request: Request,
-    current_user: User,
-) -> Response:
-    """Common handler for project-specific Streamable HTTP requests."""
-    # Lazily initialize the project's Streamable HTTP manager
-    # to pick up new projects as they are created.
-    project_server = get_project_mcp_server(project_id)
-    await project_server.ensure_session_manager_running()
-
-    user_token = current_user_ctx.set(current_user)
-    project_token = current_project_ctx.set(project_id)
-    variables = extract_global_variables_from_headers(request.headers)
-    request_vars_token = current_request_variables_ctx.set(variables or None)
-
-    try:
-        await project_server.session_manager.handle_request(request.scope, request.receive, request._send)  # noqa: SLF001
-    except HTTPException:
-        raise
-    except Exception as exc:
-        await logger.aexception(f"Error handling Streamable HTTP request for project {project_id}: {exc!s}")
-        raise HTTPException(status_code=500, detail="Internal server error in project MCP transport") from exc
-    finally:
-        current_request_variables_ctx.reset(request_vars_token)
-        current_project_ctx.reset(project_token)
-        current_user_ctx.reset(user_token)
-
-    return ResponseNoOp(status_code=200)
 
 
 @router.get("/{project_id}/sse", response_class=HTMLResponse)
@@ -423,23 +386,59 @@ async def _handle_project_sse_messages(
         current_project_ctx.reset(project_token)
         current_request_variables_ctx.reset(req_vars_token)
 
-
-# legacy SSE transport
-project_messages_methods = ["POST", "DELETE"]
-
-
-@router.api_route("/{project_id}", methods=project_messages_methods)
-@router.api_route("/{project_id}/", methods=project_messages_methods)
+@router.post("/{project_id}")
+@router.post("/{project_id}/")
 async def handle_project_messages(
     project_id: UUID,
     request: Request,
     current_user: Annotated[User, Depends(verify_project_auth_conditional)],
 ):
-    """Handle POST/DELETE messages for a project-specific MCP server."""
+    """Handle POST messages for a project-specific MCP server."""
     return await _handle_project_sse_messages(project_id, request, current_user)
 
 
-# Streamable HTTP transport
+########################################################
+# Streamable HTTP transport routes
+########################################################
+
+
+@router.head("/{project_id}/streamable", include_in_schema=False)
+async def streamable_health(project_id: UUID):  # noqa: ARG001
+    return Response()
+
+
+async def _dispatch_project_streamable_http(
+    project_id: UUID,
+    request: Request,
+    current_user: User,
+) -> Response:
+    """Common handler for project-specific Streamable HTTP requests."""
+    # Lazily initialize the project's Streamable HTTP manager
+    # to pick up new projects as they are created.
+    project_server = get_project_mcp_server(project_id)
+    await project_server.ensure_session_manager_running()
+
+    user_token = current_user_ctx.set(current_user)
+    project_token = current_project_ctx.set(project_id)
+    variables = extract_global_variables_from_headers(request.headers)
+    request_vars_token = current_request_variables_ctx.set(variables or None)
+
+    try:
+        await project_server.session_manager.handle_request(request.scope, request.receive, request._send)  # noqa: SLF001
+    except HTTPException:
+        raise
+    except Exception as exc:
+        await logger.aexception(f"Error handling Streamable HTTP request for project {project_id}: {exc!s}")
+        raise HTTPException(status_code=500, detail="Internal server error in project MCP transport") from exc
+    finally:
+        current_request_variables_ctx.reset(request_vars_token)
+        current_project_ctx.reset(project_token)
+        current_user_ctx.reset(user_token)
+
+    return ResponseNoOp(status_code=200)
+
+
+
 streamable_http_route_config = {
     "methods": ["GET", "POST", "DELETE"],
     "response_class": ResponseNoOp,
