@@ -27,6 +27,20 @@ class AuthSettings(BaseSettings):
     API_KEY_ALGORITHM: str = "HS256"
     API_V1_STR: str = "/api/v1"
 
+    # API Key Source configuration
+    API_KEY_SOURCE: Literal["db", "env"] = Field(
+        default="db",
+        description=(
+            "Controls how API keys are validated. "
+            "'db' validates against database-stored keys (default). "
+            "'env' validates against the LANGFLOW_API_KEY environment variable."
+        ),
+    )
+    API_KEY: str = Field(
+        default="",
+        description="API key used when API_KEY_SOURCE is 'env'. Allows injecting a pre-defined API key via environment variables.",
+    )
+
     AUTO_LOGIN: bool = Field(
         default=True,  # TODO: Set to False in v2.0
         description=(
