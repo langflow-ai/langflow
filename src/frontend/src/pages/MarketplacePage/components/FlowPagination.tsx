@@ -15,7 +15,7 @@ interface FlowPaginationProps {
   onPageSizeChange: (size: number) => void;
 }
 
-const PAGE_SIZE_OPTIONS = [12, 24, 48, 96];
+const PAGE_SIZE_OPTIONS = [20, 40, 60, 80];
 
 export default function FlowPagination({
   currentPage,
