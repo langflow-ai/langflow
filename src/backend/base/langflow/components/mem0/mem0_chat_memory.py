@@ -7,7 +7,13 @@ from langflow.inputs.inputs import DictInput, HandleInput, MessageTextInput, Nes
 from langflow.io import Output
 from langflow.logging.logger import logger
 from langflow.schema.data import Data
+from langflow.utils.validate import check_s3_storage_mode
 
+disabled_in_cloud_msg = (
+    "Mem0 memory is not supported in S3/cloud mode. "
+    "Mem0 memory requires local file system access for persistence. "
+    "Please use local storage mode."
+)
 
 class Mem0MemoryComponent(LCChatMemoryComponent):
     display_name = "Mem0 Chat Memory"
@@ -80,6 +86,7 @@ class Mem0MemoryComponent(LCChatMemoryComponent):
 
     def build_mem0(self) -> Memory:
         """Initializes a Mem0 memory instance based on provided configuration and API keys."""
+        check_s3_storage_mode(disabled_in_cloud_msg) # ensure we're not in S3 storage mode, otherwise raise an error
         if self.openai_api_key:
             os.environ["OPENAI_API_KEY"] = self.openai_api_key
 
@@ -95,6 +102,7 @@ class Mem0MemoryComponent(LCChatMemoryComponent):
 
     def ingest_data(self) -> Memory:
         """Ingests a new message into Mem0 memory and returns the updated memory instance."""
+        check_s3_storage_mode(disabled_in_cloud_msg) # ensure we're not in S3 storage mode, otherwise raise an error
         mem0_memory = self.existing_memory or self.build_mem0()
 
         if not self.ingest_message or not self.user_id:
@@ -115,6 +123,7 @@ class Mem0MemoryComponent(LCChatMemoryComponent):
 
     def build_search_results(self) -> Data:
         """Searches the Mem0 memory for related messages based on the search query and returns the results."""
+        check_s3_storage_mode(disabled_in_cloud_msg) # ensure we're not in S3 storage mode, otherwise raise an error
         mem0_memory = self.ingest_data()
         search_query = self.search_query
         user_id = self.user_id
