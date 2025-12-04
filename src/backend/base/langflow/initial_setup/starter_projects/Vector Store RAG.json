@@ -2843,6 +2843,7 @@
                 "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "file_path_str",
+                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": false,
