@@ -1,12 +1,11 @@
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import { Switch } from "@/components/ui/switch";
+import ForwardedIconComponent from '@/components/common/genericIconComponent';
+import { Switch } from '@/components/ui/switch';
+import { useGetEnabledModels } from '@/controllers/API/queries/models/use-get-enabled-models';
 
-import { Model } from "@/modals/modelProviderModal/components/types";
+import { Model } from '@/modals/modelProviderModal/components/types';
 
 export interface ModelProviderSelectionProps {
-  llmModels: Model[];
-  embeddingModels: Model[];
-  isModelEnabled: (modelName: string) => boolean;
+  availableModels: Model[];
   onModelToggle: (modelName: string, enabled: boolean) => void;
 }
 
@@ -19,25 +18,22 @@ interface ModelRowProps {
 
 /** Single row displaying a model with its toggle switch */
 const ModelRow = ({
+  onToggle,
   model,
   enabled,
-  onToggle,
   testIdPrefix,
 }: ModelRowProps) => (
-  <div
-    className="flex flex-row items-center justify-between"
-    data-testid={`${testIdPrefix}-row-${model.model_name}`}
-  >
+  <div className="flex flex-row items-center justify-between">
     <div className="flex flex-row items-center gap-2">
       <ForwardedIconComponent
-        name={model.metadata?.icon || "Bot"}
+        name={model.metadata?.icon || 'Bot'}
         className="w-5 h-5"
       />
       <span className="text-sm">{model.model_name}</span>
     </div>
     <Switch
       checked={enabled}
-      onCheckedChange={(checked) => onToggle(model.model_name, checked)}
+      onCheckedChange={checked => onToggle(model.model_name, checked)}
       data-testid={`${testIdPrefix}-toggle-${model.model_name}`}
     />
   </div>
@@ -47,25 +43,25 @@ const ModelRow = ({
  * Displays lists of LLM and embedding models with toggle switches.
  * Allows users to enable/disable individual models for a provider.
  */
-const ModelProviderSelection = ({
-  llmModels,
-  embeddingModels,
-  isModelEnabled,
+const ModelSelection = ({
+  availableModels,
   onModelToggle,
 }: ModelProviderSelectionProps) => {
+  const { data: enabledModelsData } = useGetEnabledModels();
+
   return (
     <div data-testid="model-provider-selection">
-      {llmModels.length > 0 && (
+      {availableModels.length > 0 && (
         <div data-testid="llm-models-section">
           <div className="text-[13px] font-semibold text-muted-foreground">
             LLM
           </div>
           <div className="flex flex-col gap-2 pt-4">
-            {llmModels.map((model) => (
+            {availableModels.map(model => (
               <ModelRow
                 key={model.model_name}
                 model={model}
-                enabled={isModelEnabled(model.model_name)}
+                enabled={true}
                 onToggle={onModelToggle}
                 testIdPrefix="llm"
               />
@@ -73,13 +69,13 @@ const ModelProviderSelection = ({
           </div>
         </div>
       )}
-      {embeddingModels.length > 0 && (
+      {/* {embeddingModels.length > 0 && (
         <div data-testid="embedding-models-section">
           <div className="text-[13px] font-semibold text-muted-foreground pt-4">
             Embedding
           </div>
           <div className="flex flex-col gap-2 pt-4">
-            {embeddingModels.map((model) => (
+            {embeddingModels.map(model => (
               <ModelRow
                 key={model.model_name}
                 model={model}
@@ -90,9 +86,9 @@ const ModelProviderSelection = ({
             ))}
           </div>
         </div>
-      )}
+      )} */}
     </div>
   );
 };
 
-export default ModelProviderSelection;
+export default ModelSelection;

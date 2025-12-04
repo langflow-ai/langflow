@@ -1,58 +1,51 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
-import LoadingTextComponent from "@/components/common/loadingTextComponent";
-import { RECEIVING_INPUT_VALUE } from "@/constants/constants";
-import { PROVIDER_VARIABLE_MAPPING } from "@/constants/providerConstants";
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
-import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
-import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
-
-import ModelProviderModal from "@/modals/modelProviderModal";
-import useAlertStore from "@/stores/alertStore";
-import useFlowStore from "@/stores/flowStore";
-import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
-import { useTypesStore } from "@/stores/typesStore";
-import { APIClassType } from "@/types/api";
-import { scapedJSONStringfy } from "@/utils/reactflowUtils";
-import { convertStringToHTML } from "@/utils/stringManipulation";
-import { cn, groupByFamily } from "@/utils/utils";
-import { default as ForwardedIconComponent } from "../../../../common/genericIconComponent";
-import { Button } from "../../../../ui/button";
+import { mutateTemplate } from '@/CustomNodes/helpers/mutate-template';
+import LoadingTextComponent from '@/components/common/loadingTextComponent';
+import { RECEIVING_INPUT_VALUE } from '@/constants/constants';
+import { useGetModelProviders } from '@/controllers/API/queries/models/use-get-model-providers';
+import { usePostTemplateValue } from '@/controllers/API/queries/nodes/use-post-template-value';
+import ModelProviderModal from '@/modals/modelProviderModal';
+import useAlertStore from '@/stores/alertStore';
+import useFlowStore from '@/stores/flowStore';
+import { useTypesStore } from '@/stores/typesStore';
+import type { APIClassType } from '@/types/api';
+import { scapedJSONStringfy } from '@/utils/reactflowUtils';
+import { cn, groupByFamily } from '@/utils/utils';
+import ForwardedIconComponent from '../../../../common/genericIconComponent';
+import { Button } from '../../../../ui/button';
 import {
   Command,
   CommandGroup,
   CommandItem,
   CommandList,
-  CommandSeparator,
-} from "../../../../ui/command";
+} from '../../../../ui/command';
 import {
   Popover,
-  PopoverContent,
   PopoverContentWithoutPortal,
   PopoverTrigger,
-} from "../../../../ui/popover";
-import type { BaseInputProps } from "../../types";
+} from '../../../../ui/popover';
+import type { BaseInputProps } from '../../types';
 
-export type ModelInputComponentType = {
-  options?: {
-    id?: string;
-    name: string;
-    icon: string;
-    provider: string;
-    metadata?: any;
-  }[];
-  placeholder?: string;
-  externalOptions?: any;
-};
-
-export type SelectedModel = {
+/** Represents a single model option in the dropdown */
+export interface ModelOption {
   id?: string;
   name: string;
   icon: string;
   provider: string;
-  metadata?: any;
-};
+  metadata?: Record<string, unknown>;
+}
+
+export interface ModelInputComponentType {
+  /** Available model options to display in the dropdown */
+  options?: ModelOption[];
+  /** Placeholder text shown when no providers are configured */
+  placeholder?: string;
+  /** Configuration for external connection options (e.g., "connect_other_models") */
+  externalOptions?: any;
+}
+
+export type SelectedModel = ModelOption;
 
 export default function ModelInputComponent({
   id,
@@ -60,138 +53,116 @@ export default function ModelInputComponent({
   disabled,
   handleOnNewValue,
   options = [],
-  placeholder = "Setup Provider",
-  helperText,
-  hasRefreshButton,
+  placeholder = 'Setup Provider',
   nodeId,
   nodeClass,
   handleNodeClass,
   externalOptions,
 }: BaseInputProps<any> & ModelInputComponentType): JSX.Element {
-  // Initialize state and refs
+  const { setErrorData } = useAlertStore();
+  const refButton = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
-  const [openApiKeyDialog, setOpenApiKeyDialog] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
   const [refreshOptions, setRefreshOptions] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<SelectedModel | null>(
+    null
+  );
   const [openManageProvidersDialog, setOpenManageProvidersDialog] =
     useState(false);
-  const refButton = useRef<HTMLButtonElement>(null);
-  const { setErrorData } = useAlertStore();
-  const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
-  const [initialValueSet, setInitialValueSet] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<SelectedModel | null>(
-    null,
-  );
 
-  // API hooks
   const postTemplateValue = usePostTemplateValue({
-    parameterId: "model",
-    nodeId: nodeId || "",
+    parameterId: 'model',
+    nodeId: nodeId || '',
     node: (nodeClass as APIClassType) || null,
   });
 
-  const navigate = useCustomNavigate();
+  const modeltype =
+    nodeClass?.template?.model?.model_type === 'language' ? 'llm' : 'embedding';
 
-  useGetGlobalVariables();
+  console.log(nodeClass?.template?.model);
 
-  const globalVariablesEntries = useGlobalVariablesStore(
-    (state) => state.globalVariablesEntries,
+  const { data: providersData = [] } = useGetModelProviders({});
+
+  // Determines if we should show the model selector or the "Setup Provider" button
+  const hasEnabledProviders = useMemo(() => {
+    return providersData?.some(provider => provider.is_enabled);
+  }, [providersData]);
+
+  // Groups models by their provider name for sectioned display in dropdown.
+  // Filters out models from disabled providers.
+  const groupedOptions = useMemo(() => {
+    const grouped: Record<string, ModelOption[]> = {};
+    for (const option of options) {
+      if (option.metadata?.is_disabled_provider) continue;
+      const provider = option.provider || 'Unknown';
+      (grouped[provider] ??= []).push(option);
+    }
+    return grouped;
+  }, [options]);
+
+  // Flattened array of all enabled options for efficient lookups by name
+  const flatOptions = useMemo(
+    () => Object.values(groupedOptions).flat(),
+    [groupedOptions]
   );
 
-  const groupedOptions = useMemo(() => {
-    const groups: Record<string, typeof options> = {};
-
-    options.forEach((option) => {
-      const provider = option.provider || "Other";
-      if (!groups[provider]) {
-        groups[provider] = [];
-      }
-      groups[provider].push(option);
-    });
-
-    const sortedGroups: [string, typeof options][] = Object.entries(groups);
-
-    // Sort providers:
-    // 1. Provider with default model first
-    // 2. Enabled providers next
-    // 3. Alphabetically after that
-    sortedGroups.sort(([a], [b]) => {
-      const aEnabled = globalVariablesEntries?.includes(
-        PROVIDER_VARIABLE_MAPPING[a] || "",
-      );
-      const bEnabled = globalVariablesEntries?.includes(
-        PROVIDER_VARIABLE_MAPPING[b] || "",
-      );
-
-      // Then enabled providers
-      if (aEnabled && !bEnabled) return -1;
-      if (!aEnabled && bEnabled) return 1;
-
-      // Otherwise, sort alphabetically
-      return a.localeCompare(b);
-    });
-
-    return sortedGroups;
-  }, [options, globalVariablesEntries]);
-
-  const hasEnabledProviders = useMemo(() => {
-    if (!globalVariablesEntries) return false;
-    return groupedOptions.some(([provider]) =>
-      globalVariablesEntries.includes(
-        PROVIDER_VARIABLE_MAPPING[provider] || "",
-      ),
+  // Sync local selectedModel state with the external value prop.
+  // This ensures the UI reflects the current value when options change or value is set externally.
+  useEffect(() => {
+    if (!value?.[0]?.name) return;
+    const existingModel = flatOptions.find(
+      option => option.name === value[0].name
     );
-  }, [groupedOptions, globalVariablesEntries]);
+    setSelectedModel(existingModel ?? null);
+  }, [flatOptions, value]);
 
-  // Utility functions
+  /**
+   * Handles model selection from the dropdown.
+   * Constructs a normalized value object and propagates it to the parent.
+   * The value is wrapped in an array to match the expected format.
+   */
   const handleModelSelect = useCallback(
     (modelName: string) => {
-      try {
-        const selectedOption = options.find(
-          (option) => option.name === modelName,
-        );
+      const selectedOption = flatOptions.find(
+        option => option.name === modelName
+      );
+      if (!selectedOption) return;
 
-        if (!selectedOption) {
-          setErrorData({ title: "Model not found" });
-          return;
-        }
+      // Build normalized value - only include id if it exists
+      const newValue = [
+        {
+          ...(selectedOption.id && { id: selectedOption.id }),
+          name: selectedOption.name,
+          icon: selectedOption.icon || 'Bot',
+          provider: selectedOption.provider || 'Unknown',
+          metadata: selectedOption.metadata ?? {},
+        },
+      ];
 
-        const newValue = [
-          {
-            ...(selectedOption.id && { id: selectedOption.id }),
-            name: selectedOption.name,
-            icon: selectedOption.icon || "Bot",
-            provider: selectedOption.provider || "Unknown",
-            metadata: selectedOption.metadata || {},
-          },
-        ];
-
-        handleOnNewValue({ value: newValue });
-        setSelectedProvider(selectedOption.provider || null);
-        setSelectedModel(selectedOption);
-      } catch (error) {
-        setErrorData({ title: "Error selecting model" });
-      }
+      handleOnNewValue({ value: newValue });
+      setSelectedModel(selectedOption);
     },
-    [options, handleOnNewValue, setErrorData],
+    [flatOptions, handleOnNewValue]
   );
 
+  /**
+   * Triggers a refresh of available model options from the backend.
+   * Shows loading state for 2 seconds to provide visual feedback.
+   */
   const handleRefreshButtonPress = useCallback(async () => {
     setRefreshOptions(true);
     setOpen(false);
 
+    // mutateTemplate triggers a backend call to refresh the template options
     await mutateTemplate(
       value,
       nodeId!,
       nodeClass!,
       handleNodeClass!,
       postTemplateValue,
-      setErrorData,
-    )?.then(() => {
-      setTimeout(() => {
-        setRefreshOptions(false);
-      }, 2000);
-    });
+      setErrorData
+    );
+    // Brief delay before hiding loading state for better UX
+    setTimeout(() => setRefreshOptions(false), 2000);
   }, [
     value,
     nodeId,
@@ -201,13 +172,13 @@ export default function ModelInputComponent({
     setErrorData,
   ]);
 
+  //TODO: Look at this logic
   const handleExternalOptions = useCallback(
     async (optionValue: string) => {
       setOpen(false);
 
       // Clear the current selection UI state
       setSelectedModel(null);
-      setSelectedProvider(null);
 
       // Pass the optionValue ("connect_other_models") as both the field value and to mutateTemplate
       // This way the backend knows we're in connection mode
@@ -220,14 +191,14 @@ export default function ModelInputComponent({
         handleNodeClass!,
         postTemplateValue,
         setErrorData,
-        "model",
+        'model',
         () => {
           // Enable connection mode for connect_other_models AFTER mutation completes
           try {
-            if (optionValue === "connect_other_models") {
+            if (optionValue === 'connect_other_models') {
               const store = useFlowStore.getState();
               const node = store.getNode(nodeId!);
-              const templateField = node?.data?.node?.template?.["model"];
+              const templateField = node?.data?.node?.template?.['model'];
               if (!templateField) {
                 return;
               }
@@ -237,18 +208,18 @@ export default function ModelInputComponent({
                   ? templateField.input_types
                   : []) || [];
               const effectiveInputTypes =
-                inputTypes.length > 0 ? inputTypes : ["LanguageModel"];
+                inputTypes.length > 0 ? inputTypes : ['LanguageModel'];
 
               const tooltipTitle: string =
                 (inputTypes && inputTypes.length > 0
-                  ? inputTypes.join("\n")
-                  : templateField.type) || "";
+                  ? inputTypes.join('\n')
+                  : templateField.type) || '';
 
               const myId = scapedJSONStringfy({
                 inputTypes: effectiveInputTypes,
                 type: templateField.type,
                 id: nodeId,
-                fieldName: "model",
+                fieldName: 'model',
                 proxy: templateField.proxy,
               });
 
@@ -256,18 +227,18 @@ export default function ModelInputComponent({
               const grouped = groupByFamily(
                 typesData,
                 (effectiveInputTypes && effectiveInputTypes.length > 0
-                  ? effectiveInputTypes.join("\n")
-                  : tooltipTitle) || "",
+                  ? effectiveInputTypes.join('\n')
+                  : tooltipTitle) || '',
                 true,
-                store.nodes,
+                store.nodes
               );
 
               // Build a pseudo source so compatible target handles (left side) glow
               const pseudoSourceHandle = scapedJSONStringfy({
-                fieldName: "model",
+                fieldName: 'model',
                 id: nodeId,
                 inputTypes: effectiveInputTypes,
-                type: "str",
+                type: 'str',
               });
 
               const filterObj = {
@@ -275,8 +246,8 @@ export default function ModelInputComponent({
                 sourceHandle: undefined,
                 target: nodeId,
                 targetHandle: pseudoSourceHandle,
-                type: "LanguageModel",
-                color: "datatype-fuchsia",
+                type: 'LanguageModel',
+                color: 'datatype-fuchsia',
               } as any;
 
               // Show compatible handles glow
@@ -284,9 +255,9 @@ export default function ModelInputComponent({
               store.setFilterType(filterObj);
             }
           } catch (error) {
-            console.warn("Error setting up connection mode:", error);
+            console.warn('Error setting up connection mode:', error);
           }
-        },
+        }
       );
     },
     [
@@ -296,99 +267,8 @@ export default function ModelInputComponent({
       postTemplateValue,
       setErrorData,
       handleOnNewValue,
-    ],
+    ]
   );
-
-  // Effects
-  // Sync selectedModel state with the value prop
-  useEffect(() => {
-    if (value && Array.isArray(value) && value.length > 0) {
-      const currentValue = value[0];
-
-      // Check if the value exists in the available options
-      const modelExists = options.some(
-        (option) =>
-          option.name === currentValue.name &&
-          option.provider === currentValue.provider &&
-          !currentValue?.metadata?.is_disabled_provider,
-      );
-
-      if (modelExists) {
-        setSelectedModel({
-          id: currentValue.id,
-          name: currentValue.name,
-          icon: currentValue.icon || "Bot",
-          provider: currentValue.provider || "Unknown",
-          metadata: currentValue.metadata || {},
-        });
-        setSelectedProvider(currentValue.provider || null);
-      } else {
-        // Model doesn't exist in options, clear the selection
-        setSelectedModel(null);
-        setSelectedProvider(null);
-      }
-    }
-  }, [value, options, handleOnNewValue]);
-
-  // Set initial value based on default model or first enabled provider
-  useEffect(() => {
-    if (initialValueSet || !options || options.length === 0) return;
-
-    // If value is already set, don't override
-    if (value && Array.isArray(value) && value.length > 0) {
-      setInitialValueSet(true);
-      return;
-    }
-
-    // Don't auto-select if user is explicitly connecting other models (value is the string "connect_other_models")
-    if (value === "connect_other_models") {
-      setInitialValueSet(true);
-      return;
-    }
-
-    let modelToSet: SelectedModel | null = null;
-
-    // If no default model, find the first model in the first enabled provider
-    if (!modelToSet && globalVariablesEntries) {
-      for (const [provider, providerOptions] of groupedOptions) {
-        const isProviderEnabled = globalVariablesEntries.includes(
-          PROVIDER_VARIABLE_MAPPING[provider] || "",
-        );
-        if (isProviderEnabled && providerOptions.length > 0) {
-          const firstModel = providerOptions[0];
-          if (firstModel && !firstModel.metadata?.is_disabled_provider) {
-            modelToSet = firstModel;
-            break;
-          }
-        }
-      }
-    }
-
-    // Set the model if found
-    if (modelToSet) {
-      const newValue = [
-        {
-          ...(modelToSet.id && { id: modelToSet.id }),
-          name: modelToSet.name,
-          icon: modelToSet.icon || "Bot",
-          provider: modelToSet.provider || "Unknown",
-          metadata: modelToSet.metadata || {},
-        },
-      ];
-      handleOnNewValue({ value: newValue });
-      setSelectedProvider(modelToSet.provider || null);
-      setSelectedModel(modelToSet);
-    }
-
-    setInitialValueSet(true);
-  }, [
-    options,
-    globalVariablesEntries,
-    groupedOptions,
-    value,
-    handleOnNewValue,
-    initialValueSet,
-  ]);
 
   const renderLoadingButton = () => (
     <Button
@@ -401,15 +281,15 @@ export default function ModelInputComponent({
     </Button>
   );
 
-  const renderSelectedIcon = () => {
-    return selectedModel && selectedModel?.icon ? (
+  const renderSelectedIcon = () =>
+    selectedModel?.icon ? (
       <ForwardedIconComponent
         name={selectedModel.icon}
         className="h-4 w-4 flex-shrink-0"
       />
     ) : null;
-  };
 
+  // Renders either a "Setup Provider" button (no providers) or the model selector dropdown trigger
   const renderTriggerButton = () =>
     !hasEnabledProviders ? (
       <Button
@@ -419,7 +299,7 @@ export default function ModelInputComponent({
         onClick={() => setOpenManageProvidersDialog(true)}
       >
         <ForwardedIconComponent name="Brain" className="h-4 w-4" />
-        <div className="text-[13px]">{placeholder || "Add Models"}</div>
+        <div className="text-[13px]">{placeholder || 'Setup Provider'}</div>
       </Button>
     ) : (
       <div className="flex w-full flex-col">
@@ -433,166 +313,148 @@ export default function ModelInputComponent({
             aria-expanded={open}
             data-testid={id}
             className={cn(
-              "dropdown-component-false-outline py-2",
-              "no-focus-visible w-full justify-between font-normal disabled:bg-muted disabled:text-muted-foreground",
+              'dropdown-component-false-outline py-2',
+              'no-focus-visible w-full justify-between font-normal disabled:bg-muted disabled:text-muted-foreground'
             )}
           >
             <span
               className="flex w-full items-center gap-2 overflow-hidden"
               data-testid={`value-dropdown-${id}`}
             >
-              {selectedModel && <>{renderSelectedIcon()}</>}
+              {renderSelectedIcon()}
               <span className="truncate">
                 {disabled ? (
                   RECEIVING_INPUT_VALUE
                 ) : (
                   <div
                     className={cn(
-                      "truncate",
-                      !selectedModel?.name && "text-muted-foreground",
+                      'truncate',
+                      !selectedModel?.name && 'text-muted-foreground'
                     )}
                   >
-                    {selectedModel?.name || placeholder}
+                    {selectedModel?.name || 'Select a model'}
                   </div>
                 )}
               </span>
             </span>
             <ForwardedIconComponent
-              name={disabled ? "Lock" : "ChevronsUpDown"}
+              name={disabled ? 'Lock' : 'ChevronsUpDown'}
               className={cn(
-                "ml-2 h-4 w-4 shrink-0 text-foreground",
+                'ml-2 h-4 w-4 shrink-0 text-foreground',
                 disabled
-                  ? "text-placeholder-foreground hover:text-placeholder-foreground"
-                  : "hover:text-foreground",
+                  ? 'text-placeholder-foreground hover:text-placeholder-foreground'
+                  : 'hover:text-foreground'
               )}
             />
           </Button>
         </PopoverTrigger>
-        {helperText && (
-          <span className="pt-2 text-xs text-muted-foreground">
-            {convertStringToHTML(helperText)}
-          </span>
-        )}
       </div>
     );
 
+  const footerButtonClass =
+    'w-full flex cursor-pointer items-center justify-start gap-2 truncate py-3 text-xs text-muted-foreground px-3 hover:bg-accent group';
+
+  const renderFooterButton = (
+    label: string,
+    icon: string,
+    onClick: () => void,
+    testId?: string
+  ) => (
+    <Button
+      className={footerButtonClass}
+      unstyled
+      data-testid={testId}
+      onClick={onClick}
+    >
+      <div className="flex items-center gap-2 pl-1 group-hover:text-primary">
+        {label}
+        <ForwardedIconComponent
+          name={icon}
+          className="w-4 h-4 text-muted-foreground group-hover:text-primary"
+        />
+      </div>
+    </Button>
+  );
+
   const renderOptionsList = () => (
     <CommandList className="max-h-[300px] overflow-y-auto">
-      {groupedOptions.map(([provider, providerOptions]) => {
-        const visibleOptions = providerOptions;
-
-        if (visibleOptions.length === 0) return null;
-
-        // Check if this provider only has disabled provider entries
-        const isDisabledProvider =
-          visibleOptions.length === 1 &&
-          visibleOptions[0]?.metadata?.is_disabled_provider === true;
-        const isProviderEnabled = globalVariablesEntries?.includes(
-          PROVIDER_VARIABLE_MAPPING[provider] || "",
-        );
-
-        // Don't show disabled providers in the dropdown
-        if (!isProviderEnabled) return null;
-
-        // Don't show providers that only have disabled provider entries (no actual models)
-        if (isDisabledProvider) return null;
-
-        return (
-          <CommandGroup className="p-0" key={`${provider}`}>
-            <div className="text-xs font-semibold my-2 ml-4 text-muted-foreground flex items-center justify-between pr-4">
-              <div className="flex items-center">{provider}</div>
-            </div>
-            {!isDisabledProvider &&
-              visibleOptions.map((option) => {
-                if (!option || !option.name) {
-                  return null;
-                }
-
-                return (
-                  <CommandItem
-                    key={option.name}
-                    value={option.name}
-                    onSelect={(currentValue) => {
-                      handleModelSelect(currentValue);
-                      setSearchTerm("");
-                      setOpen(false);
-                    }}
-                    className="w-full items-center rounded-none"
-                    data-testid={`${option.name}-option`}
-                  >
-                    <div className="flex w-full items-center gap-2">
-                      <ForwardedIconComponent
-                        name={option.icon || "Bot"}
-                        className="h-4 w-4 shrink-0 text-primary ml-2"
-                      />
-                      <div className="truncate text-[13px]">{option.name}</div>
-                      <div className="pl-2 ml-auto">
-                        <ForwardedIconComponent
-                          name="Check"
-                          className={cn(
-                            "h-4 w-4 shrink-0 text-primary",
-                            selectedModel?.name === option.name
-                              ? "opacity-100"
-                              : "opacity-0",
-                          )}
-                        />
-                      </div>
-                    </div>
-                  </CommandItem>
-                );
-              })}
-            {provider !== groupedOptions[groupedOptions.length - 1][0] &&
-              visibleOptions.length > 0 && <CommandSeparator />}
-          </CommandGroup>
-        );
-      })}
+      {Object.entries(groupedOptions).map(([provider, models]) => (
+        <CommandGroup className="p-0" key={provider}>
+          <div className="text-xs font-semibold my-2 ml-4 text-muted-foreground flex items-center justify-between pr-4">
+            <div className="flex items-center">{provider}</div>
+          </div>
+          {models.map(data => (
+            <CommandItem
+              key={data.name}
+              value={data.name}
+              onSelect={() => {
+                handleModelSelect(data.name);
+                setOpen(false);
+              }}
+              className="w-full items-center rounded-none"
+              data-testid={`${data.name}-option`}
+            >
+              <div className="flex w-full items-center gap-2">
+                <ForwardedIconComponent
+                  name={data.icon || 'Bot'}
+                  className="h-4 w-4 shrink-0 text-primary ml-2"
+                />
+                <div className="truncate text-[13px]">{data.name}</div>
+                <div className="pl-2 ml-auto">
+                  <ForwardedIconComponent
+                    name="Check"
+                    className={cn(
+                      'h-4 w-4 shrink-0 text-primary',
+                      selectedModel?.name === data.name
+                        ? 'opacity-100'
+                        : 'opacity-0'
+                    )}
+                  />
+                </div>
+              </div>
+            </CommandItem>
+          ))}
+        </CommandGroup>
+      ))}
     </CommandList>
   );
 
   const renderManageProvidersButton = () => (
     <div className="sticky bottom-0 bg-background">
-      {externalOptions?.fields?.data?.node && (
-        <Button
-          className="w-full flex cursor-pointer items-center justify-start gap-2 truncate py-3 text-xs text-muted-foreground px-3 hover:bg-accent group"
-          unstyled
-          data-testid="external-option-button"
-          onClick={() => {
-            handleExternalOptions(externalOptions.fields.data.node.name || "");
-          }}
-        >
-          <div className="flex items-center gap-2 pl-1 group-hover:text-primary">
-            {externalOptions.fields.data.node.display_name}
-            {externalOptions.fields.data.node.icon && (
-              <ForwardedIconComponent
-                name={externalOptions.fields.data.node.icon}
-                className={cn(
-                  "w-4 h-4 text-muted-foreground group-hover:text-primary",
-                )}
-              />
-            )}
-          </div>
-        </Button>
+      {renderFooterButton(
+        'Refresh List',
+        'RefreshCw',
+        handleRefreshButtonPress,
+        'external-option-button'
       )}
 
-      <Button
-        className="w-full flex cursor-pointer items-center justify-start gap-2 truncate py-3 text-xs text-muted-foreground px-3 hover:bg-accent group"
-        unstyled
-        onClick={() => {
-          setOpenManageProvidersDialog(true);
-        }}
-        data-testid="manage-model-providers"
-      >
-        <div className="flex items-center gap-2 pl-1 group-hover:text-primary">
-          Manage Model Providers
-          <ForwardedIconComponent
-            name="Settings"
-            className={cn(
-              "w-4 h-4 text-muted-foreground group-hover:text-primary",
-            )}
-          />
-        </div>
-      </Button>
+      {externalOptions?.fields?.data?.node &&
+        renderFooterButton(
+          externalOptions.fields.data.node.display_name,
+          externalOptions.fields.data.node.icon || 'Box',
+          () =>
+            handleExternalOptions(externalOptions.fields.data.node.name || ''),
+          'external-option-button'
+        )}
+
+      {renderFooterButton(
+        'Manage Model Providers',
+        'Settings',
+        () => setOpenManageProvidersDialog(true),
+        'manage-model-providers'
+      )}
     </div>
+  );
+
+  const renderNoProviders = () => (
+    <CommandList className="max-h-[300px] overflow-y-auto">
+      <CommandItem
+        disabled
+        className="w-full px-4 py-2 text-[13px] text-muted-foreground"
+      >
+        No Models Enabled
+      </CommandItem>
+    </CommandList>
   );
 
   const renderPopoverContent = () => (
@@ -600,36 +462,20 @@ export default function ModelInputComponent({
       side="bottom"
       avoidCollisions={true}
       className="noflow nowheel nopan nodelete nodrag p-0"
-      style={{ minWidth: refButton?.current?.clientWidth ?? "200px" }}
+      style={{ minWidth: refButton?.current?.clientWidth ?? '200px' }}
     >
       <Command className="flex flex-col">
-        {renderOptionsList()}
+        {Object.keys(groupedOptions).length > 0
+          ? renderOptionsList()
+          : renderNoProviders()}
         {renderManageProvidersButton()}
       </Command>
     </PopoverContentWithoutPortal>
   );
 
   // Loading state
-  if ((options.length === 0 && !options) || !options || refreshOptions) {
+  if (!options || options.length === 0 || refreshOptions) {
     return <div className="w-full">{renderLoadingButton()}</div>;
-  }
-
-  // Error state - no options available
-  if (!options || options.length === 0) {
-    return (
-      <div className="w-full">
-        <Button
-          className="dropdown-component-false-outline w-full justify-between py-2 font-normal"
-          variant="primary"
-          size="xs"
-          disabled
-        >
-          <span className="text-muted-foreground text-sm">
-            No models available
-          </span>
-        </Button>
-      </div>
-    );
   }
 
   // Main render
@@ -645,6 +491,7 @@ export default function ModelInputComponent({
           open={openManageProvidersDialog}
           onClose={() => setOpenManageProvidersDialog(false)}
           onModelsUpdated={handleRefreshButtonPress}
+          modeltype={modeltype || 'llm'}
         />
       )}
     </>
