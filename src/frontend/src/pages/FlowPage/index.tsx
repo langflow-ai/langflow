@@ -199,7 +199,10 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
                             ? `calc(100% - ${slidingContainerWidth}px)`
                             : "100%",
                         minWidth: 0,
-                        padding: "0.5rem",
+                        padding:
+                          hasIO && isSlidingContainerOpen
+                            ? "0.5rem 0 0.5rem 0.5rem"
+                            : "0.5rem",
                       }}
                     >
                       <Page setIsLoading={setIsLoading} />
