@@ -256,3 +256,34 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
         )
         result_dicts = result.to_dict("records")
         assert all(row["metadata"]["processing_status"] == "success" for row in result_dicts)
+
+    async def test_with_config_failure_handling(self):
+        """Test that batch run handles models that fail with_config() gracefully."""
+
+        # Create a mock model that raises an error during with_config()
+        class ConfigFailureModel:
+            def with_config(self, *_, **__):
+                msg = "Serialization error: SecretStr cannot be serialized"
+                raise ValueError(msg)
+
+            async def abatch(self, conversations):
+                # Model should still work without config
+                from langchain_core.messages import AIMessage
+
+                return [AIMessage(content=f"Response to: {conv[0]['content']}") for conv in conversations]
+
+        test_df = DataFrame({"text": ["test1", "test2"]})
+        component = BatchRunComponent(
+            model=ConfigFailureModel(),
+            df=test_df,
+            column_name="text",
+            enable_metadata=False,
+        )
+
+        # Should complete successfully despite with_config() failure
+        result = await component.run_batch()
+
+        assert isinstance(result, DataFrame)
+        assert len(result) == 2
+        assert "model_response" in result.columns
+        assert all(isinstance(resp, str) for resp in result["model_response"])
