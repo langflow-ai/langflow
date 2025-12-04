@@ -3,7 +3,6 @@ import {
   getApiSampleHeaders,
   getBaseUrl,
 } from "@/customization/utils/custom-code-samples";
-import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
 import { GetCodeType } from "@/types/tweaks";
 import {
   getAllChatInputNodeIds,
