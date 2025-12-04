@@ -12,7 +12,6 @@ if TYPE_CHECKING:
     from lfx.components.processing.create_list import CreateListComponent
     from lfx.components.processing.data_operations import DataOperationsComponent
     from lfx.components.processing.dataframe_operations import DataFrameOperationsComponent
-    from lfx.components.processing.dataframe_to_toolset import DataFrameToToolsetComponent
     from lfx.components.processing.json_cleaner import JSONCleaner
     from lfx.components.processing.output_parser import OutputParserComponent
     from lfx.components.processing.parse_data import ParseDataComponent
@@ -27,7 +26,6 @@ _dynamic_imports = {
     "CreateListComponent": "create_list",
     "DataOperationsComponent": "data_operations",
     "DataFrameOperationsComponent": "dataframe_operations",
-    "DataFrameToToolsetComponent": "dataframe_to_toolset",
     "JSONCleaner": "json_cleaner",
     "OutputParserComponent": "output_parser",
     "ParseDataComponent": "parse_data",
@@ -41,7 +39,6 @@ __all__ = [
     "CombineTextComponent",
     "CreateListComponent",
     "DataFrameOperationsComponent",
-    "DataFrameToToolsetComponent",
     "DataOperationsComponent",
     "JSONCleaner",
     "MessageStoreComponent",

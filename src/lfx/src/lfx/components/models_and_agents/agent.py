@@ -619,9 +619,11 @@ class AgentComponent(ToolCallingAgentComponent):
                     # Call each component class's update_build_config method
                     # remove the prefix from the field_name
                     if isinstance(field_name, str) and isinstance(prefix, str):
-                        field_name = field_name.replace(prefix, "")
+                        field_name_without_prefix = field_name.replace(prefix, "")
+                    else:
+                        field_name_without_prefix = field_name
                     build_config = await update_component_build_config(
-                        component_class, build_config, field_value, "model_name"
+                        component_class, build_config, field_value, field_name_without_prefix
                     )
         return dotdict({k: v.to_dict() if hasattr(v, "to_dict") else v for k, v in build_config.items()})
 
