@@ -138,29 +138,62 @@ def validate_input(
 
 
 def apply_tweaks(node: dict[str, Any], node_tweaks: dict[str, Any]) -> None:
-    template_data = node.get("data", {}).get("node", {}).get("template")
+    # Get the nested template_data dict efficiently
+    data = node.get("data")
+    if not data:
+        return
+    node_entry = data.get("node")
+    if not node_entry:
+        return
+    template_data = node_entry.get("template")
 
     if not isinstance(template_data, dict):
         logger.warning(f"Template data for node {node.get('id')} should be a dictionary")
         return
 
-    for tweak_name, tweak_value in node_tweaks.items():
-        if tweak_name not in template_data:
+    # Keep local for faster lookups
+    template_data_get = template_data.get
+    template_data_setitem = template_data.__setitem__
+
+    # Hoist constants
+    code_str = "code"
+    nested_dict_str = "NestedDict"
+    mcp_str = "mcp"
+    file_str = "file"
+    file_path_str = "file_path"
+    value_str = "value"
+    type_str = "type"
+
+    tweak_items = node_tweaks.items()
+    # See line profiler: more efficient to avoid repeated dict key checks
+    for tweak_name, tweak_value in tweak_items:
+        entry = template_data_get(tweak_name)
+        if entry is None:
             continue
-        if tweak_name == "code":
+        if tweak_name == code_str:
             logger.warning("Security: Code field cannot be overridden via tweaks.")
             continue
-        if tweak_name in template_data:
-            if template_data[tweak_name]["type"] == "NestedDict":
-                value = validate_and_repair_json(tweak_value)
-                template_data[tweak_name]["value"] = value
-            elif isinstance(tweak_value, dict):
-                for k, v in tweak_value.items():
-                    k_ = "file_path" if template_data[tweak_name]["type"] == "file" else k
-                    template_data[tweak_name][k_] = v
+        field_type = entry.get(type_str, "")
+
+        if field_type == nested_dict_str:
+            # This case is called often, validate_and_repair_json is likely a costly call
+            value = validate_and_repair_json(tweak_value)
+            entry[value_str] = value
+        elif field_type == mcp_str:
+            entry[value_str] = tweak_value
+        elif isinstance(tweak_value, dict):
+            # Avoid redundant lookups
+            setitem = entry.__setitem__
+            if field_type == file_str:
+                for _k, v in tweak_value.items():
+                    setitem(file_path_str, v)
             else:
-                key = "file_path" if template_data[tweak_name]["type"] == "file" else "value"
-                template_data[tweak_name][key] = tweak_value
+                for k, v in tweak_value.items():
+                    setitem(k, v)
+        elif field_type == file_str:
+            entry[file_path_str] = tweak_value
+        else:
+            entry[value_str] = tweak_value
 
 
 def apply_tweaks_on_vertex(vertex: Vertex, node_tweaks: dict[str, Any]) -> None:
