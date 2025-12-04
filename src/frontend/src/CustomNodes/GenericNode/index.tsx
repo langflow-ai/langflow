@@ -93,6 +93,7 @@ function GenericNode({
   const removeDismissedNodes = useFlowStore(
     (state) => state.removeDismissedNodes,
   );
+  const [showMore, setShowMore] = useState(data.showNode);
 
   const dismissedNodesLegacy = useFlowStore(
     (state) => state.dismissedNodesLegacy,
@@ -395,6 +396,7 @@ function GenericNode({
                 ...old,
                 data: { ...old.data, showNode: show },
               }));
+              setShowMore(show);
             }}
             numberOfOutputHandles={shownOutputs.length ?? 0}
             showNode={showNode}
@@ -482,6 +484,11 @@ function GenericNode({
     () => addDismissedNodesLegacy([data.id]),
     [addDismissedNodesLegacy, data.id],
   );
+
+  useEffect(() => {
+    updateNodeInternals(data.id);
+    console.log("updating internals because showNode changed");
+  }, [showMore]);
 
   return (
     <div className={cn(shouldShowUpdateComponent ? "relative -mt-10" : "")}>
