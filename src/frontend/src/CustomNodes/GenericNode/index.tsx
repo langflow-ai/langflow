@@ -483,9 +483,14 @@ function GenericNode({
     [addDismissedNodesLegacy, data.id],
   );
 
+  const node = useFlowStore((state) => {
+    const node = state.nodes.find((n) => n.data.id === data.id);
+    return node;
+  });
+
   useEffect(() => {
     updateNodeInternals(data.id);
-  }, [showNode]);
+  }, [node]);
 
   return (
     <div
