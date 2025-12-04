@@ -277,7 +277,7 @@ class TestCheckKeyFromEnv:
         monkeypatch.setenv("LANGFLOW_API_KEY", "sk-test-env-key")
 
         with patch(
-            "langflow.services.database.models.api_key.crud.get_user_by_username",
+            "langflow.services.database.models.user.crud.get_user_by_username",
             new_callable=AsyncMock,
         ) as mock_get_user:
             mock_get_user.return_value = mock_superuser
@@ -320,7 +320,7 @@ class TestCheckKeyFromEnv:
         monkeypatch.setenv("LANGFLOW_API_KEY", "sk-test-env-key")
 
         with patch(
-            "langflow.services.database.models.api_key.crud.get_user_by_username",
+            "langflow.services.database.models.user.crud.get_user_by_username",
             new_callable=AsyncMock,
         ) as mock_get_user:
             mock_get_user.return_value = None
@@ -337,7 +337,7 @@ class TestCheckKeyFromEnv:
         monkeypatch.setenv("LANGFLOW_API_KEY", "sk-test-env-key")
 
         with patch(
-            "langflow.services.database.models.api_key.crud.get_user_by_username",
+            "langflow.services.database.models.user.crud.get_user_by_username",
             new_callable=AsyncMock,
         ) as mock_get_user:
             mock_get_user.return_value = mock_inactive_user
@@ -379,7 +379,7 @@ class TestCheckKeyFromEnv:
         monkeypatch.setenv("LANGFLOW_API_KEY", special_key)
 
         with patch(
-            "langflow.services.database.models.api_key.crud.get_user_by_username",
+            "langflow.services.database.models.user.crud.get_user_by_username",
             new_callable=AsyncMock,
         ) as mock_get_user:
             mock_get_user.return_value = mock_superuser
@@ -395,7 +395,7 @@ class TestCheckKeyFromEnv:
         monkeypatch.setenv("LANGFLOW_API_KEY", unicode_key)
 
         with patch(
-            "langflow.services.database.models.api_key.crud.get_user_by_username",
+            "langflow.services.database.models.user.crud.get_user_by_username",
             new_callable=AsyncMock,
         ) as mock_get_user:
             mock_get_user.return_value = mock_superuser
@@ -411,7 +411,7 @@ class TestCheckKeyFromEnv:
         monkeypatch.setenv("LANGFLOW_API_KEY", long_key)
 
         with patch(
-            "langflow.services.database.models.api_key.crud.get_user_by_username",
+            "langflow.services.database.models.user.crud.get_user_by_username",
             new_callable=AsyncMock,
         ) as mock_get_user:
             mock_get_user.return_value = mock_superuser
@@ -448,7 +448,7 @@ class TestCheckKeyEdgeCases:
         mock_superuser.username = "admin"
 
         with patch(
-            "langflow.services.database.models.api_key.crud.get_user_by_username",
+            "langflow.services.database.models.user.crud.get_user_by_username",
             new_callable=AsyncMock,
         ) as mock_get_user:
             mock_get_user.return_value = mock_superuser
@@ -511,7 +511,7 @@ class TestCheckKeyIntegration:
                 return_value=mock_settings,
             ),
             patch(
-                "langflow.services.database.models.api_key.crud.get_user_by_username",
+                "langflow.services.database.models.user.crud.get_user_by_username",
                 new_callable=AsyncMock,
             ) as mock_get_user,
         ):
