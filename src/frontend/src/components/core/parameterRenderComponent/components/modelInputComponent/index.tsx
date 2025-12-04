@@ -37,11 +37,8 @@ export interface ModelOption {
 }
 
 export interface ModelInputComponentType {
-  /** Available model options to display in the dropdown */
   options?: ModelOption[];
-  /** Placeholder text shown when no providers are configured */
   placeholder?: string;
-  /** Configuration for external connection options (e.g., "connect_other_models") */
   externalOptions?: any;
 }
 

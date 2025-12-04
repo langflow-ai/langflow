@@ -266,7 +266,11 @@ const ModelProviderModal = ({
             {/* model provider footer */}
             {isEditing && (
               <div className="flex justify-end border-t p-4 min-w-[300px] gap-2">
-                <Button className="w-full" onClick={handleConfigureProvider}>
+                <Button
+                  className="w-full"
+                  onClick={handleConfigureProvider}
+                  loading={isPending}
+                >
                   Configure
                 </Button>
               </div>
