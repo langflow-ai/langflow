@@ -215,6 +215,24 @@ async def stop_streamable_http_manager() -> None:
     await _streamable_http.stop()
 
 
+streamable_http_route_config = { # use for all streamable http routes (except for the health check)
+    "methods": ["GET", "POST", "DELETE"],
+    "response_class": ResponseNoOp,
+}
+
+
+@router.head("/streamable", include_in_schema=False)
+async def streamable_health():
+    return Response()
+
+
+@router.api_route("/streamable", **streamable_http_route_config)
+@router.api_route("/streamable/", **streamable_http_route_config)
+async def handle_streamable_http(request: Request, current_user: CurrentActiveMCPUser):
+    """Streamable HTTP endpoint for MCP clients that support the new transport."""
+    return await _dispatch_streamable_http(request, current_user)
+
+
 async def _dispatch_streamable_http(
     request: Request,
     current_user: CurrentActiveMCPUser,
@@ -240,16 +258,3 @@ async def _dispatch_streamable_http(
         current_user_ctx.reset(context_token)
 
     return ResponseNoOp()
-
-
-streamable_http_route_config = {
-    "methods": ["GET", "POST", "DELETE"],
-    "response_class": ResponseNoOp,
-}
-
-
-@router.api_route("/streamable", **streamable_http_route_config)
-@router.api_route("/streamable/", **streamable_http_route_config)
-async def handle_streamable_http(request: Request, current_user: CurrentActiveMCPUser):
-    """Streamable HTTP endpoint for MCP clients that support the new transport."""
-    return await _dispatch_streamable_http(request, current_user)
