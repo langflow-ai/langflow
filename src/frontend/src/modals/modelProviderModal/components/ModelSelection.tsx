@@ -1,8 +1,8 @@
-import ForwardedIconComponent from '@/components/common/genericIconComponent';
-import { Switch } from '@/components/ui/switch';
-import { useGetEnabledModels } from '@/controllers/API/queries/models/use-get-enabled-models';
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { Switch } from "@/components/ui/switch";
+import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 
-import { Model } from '@/modals/modelProviderModal/components/types';
+import { Model } from "@/modals/modelProviderModal/components/types";
 
 export interface ModelProviderSelectionProps {
   availableModels: Model[];
@@ -26,14 +26,14 @@ const ModelRow = ({
   <div className="flex flex-row items-center justify-between">
     <div className="flex flex-row items-center gap-2">
       <ForwardedIconComponent
-        name={model.metadata?.icon || 'Bot'}
+        name={model.metadata?.icon || "Bot"}
         className="w-5 h-5"
       />
       <span className="text-sm">{model.model_name}</span>
     </div>
     <Switch
       checked={enabled}
-      onCheckedChange={checked => onToggle(model.model_name, checked)}
+      onCheckedChange={(checked) => onToggle(model.model_name, checked)}
       data-testid={`${testIdPrefix}-toggle-${model.model_name}`}
     />
   </div>
@@ -57,7 +57,7 @@ const ModelSelection = ({
             LLM
           </div>
           <div className="flex flex-col gap-2 pt-4">
-            {availableModels.map(model => (
+            {availableModels.map((model) => (
               <ModelRow
                 key={model.model_name}
                 model={model}

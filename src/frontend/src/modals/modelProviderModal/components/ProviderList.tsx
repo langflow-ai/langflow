@@ -1,9 +1,9 @@
-import { useGetModelProviders } from '@/controllers/API/queries/models/use-get-model-providers';
-import ProviderListItem from './ProviderListItem';
-import { Provider } from './types';
+import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
+import ProviderListItem from "./ProviderListItem";
+import { Provider } from "./types";
 
 export interface ProviderListProps {
-  modeltype: 'llm' | 'embedding';
+  modeltype: "llm" | "embedding";
   onProviderSelect?: (provider: Provider) => void;
   selectedProviderName?: string | null;
 }
@@ -32,16 +32,16 @@ const ProviderList = ({
   // Filter out providers that have ANY deprecated + unsupported models
   // A provider with deprecatedCount > 0 is excluded from the list
   const providers: Provider[] = providersData
-    .filter(provider => {
+    .filter((provider) => {
       const deprecatedCount = provider?.models?.filter(
-        model =>
+        (model) =>
           model.metadata?.deprecated &&
           model.metadata?.not_supported &&
-          model.metadata?.model_type === modeltype
+          model.metadata?.model_type === modeltype,
       )?.length;
       return !deprecatedCount;
     })
-    .map(provider => ({
+    .map((provider) => ({
       provider: provider.provider,
       icon: provider.icon,
       is_enabled: provider.is_enabled,
@@ -62,7 +62,7 @@ const ProviderList = ({
 
   return (
     <div className="flex flex-col gap-1" data-testid="provider-list">
-      {providers.map(provider => (
+      {providers.map((provider) => (
         <ProviderListItem
           key={provider.provider}
           provider={provider}
