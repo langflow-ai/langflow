@@ -1,7 +1,8 @@
-"""ExecuteTool component - executes all tool calls from an AI message.
+"""ExecuteTool component - executes tool calls from an AI message.
 
 This component takes an AI message with tool_calls and the available tools,
-finds the matching tools by name, and executes them with the provided arguments.
+executes them, and returns the AI message plus tool results as a DataFrame.
+The WhileLoop handles accumulating these with the existing conversation history.
 """
 
 from __future__ import annotations
@@ -11,23 +12,24 @@ from typing import Any
 from lfx.custom.custom_component.component import Component
 from lfx.io import HandleInput, MessageInput, Output
 from lfx.schema.data import Data
+from lfx.schema.dataframe import DataFrame
 
 
 class ExecuteToolComponent(Component):
-    """Executes all tool calls from an AI message.
+    """Executes tool calls and returns AI message + tool results.
 
     This component:
-    1. Takes an AI message containing tool_calls
+    1. Takes an AI message containing tool_calls (from CallModel)
     2. Finds matching tools from the provided tools list
     3. Executes all tools with their arguments
-    4. Returns results as a list of Data objects
+    4. Returns a DataFrame with the AI message and tool results
 
-    Each result includes the tool call ID so results can be matched back.
-    The first result also includes the original AI message data for FormatResult.
+    The output connects back to WhileLoop, which accumulates these
+    messages with the existing conversation history.
     """
 
     display_name = "Execute Tool"
-    description = "Execute all tool calls from an AI message."
+    description = "Execute tool calls and return AI message with tool results."
     icon = "play"
     category = "agent_blocks"
 
@@ -35,7 +37,7 @@ class ExecuteToolComponent(Component):
         MessageInput(
             name="ai_message",
             display_name="AI Message",
-            info="The AI message containing tool_calls to execute.",
+            info="The AI message containing tool_calls to execute (from CallModel).",
             required=True,
         ),
         HandleInput(
@@ -50,42 +52,74 @@ class ExecuteToolComponent(Component):
 
     outputs = [
         Output(
-            display_name="Tool Results",
-            name="tool_results",
+            display_name="Messages",
+            name="messages",
             method="execute_tools",
         ),
     ]
 
-    async def execute_tools(self) -> list[Data]:
-        """Execute all tool calls and return the results."""
-        if self.ai_message is None:
-            return [Data(data={"error": "No AI message provided"})]
+    async def execute_tools(self) -> DataFrame:
+        """Execute all tool calls and return AI message + tool results."""
+        # Build message rows for just the new messages (AI + tool results)
+        message_rows: list[dict] = []
 
-        # Get tool_calls from message data
+        # Get tool_calls from AI message
         raw_tool_calls = []
-        if hasattr(self.ai_message, "data") and self.ai_message.data:
-            raw_tool_calls = self.ai_message.data.get("tool_calls", [])
+        ai_message_text = ""
+        if self.ai_message is not None:
+            if hasattr(self.ai_message, "data") and self.ai_message.data:
+                raw_tool_calls = self.ai_message.data.get("tool_calls", [])
+            ai_message_text = self.ai_message.text or ""
 
         if not raw_tool_calls:
-            return [Data(data={"error": "No tool calls found in AI message"})]
+            self.log("No tool calls found in AI message")
+            return DataFrame(message_rows)
 
-        # Get available tools
+        # Add the AI message row (with tool_calls)
+        ai_row = {
+            "text": ai_message_text,
+            "sender": "Machine",
+            "sender_name": "AI",
+            "tool_calls": raw_tool_calls,
+            "has_tool_calls": True,
+            "tool_call_id": None,
+            "is_tool_result": False,
+        }
+        message_rows.append(ai_row)
+
+        # Get available tools and execute
         tools = self.tools if isinstance(self.tools, list) else [self.tools]
         tools_by_name = {getattr(t, "name", ""): t for t in tools}
 
-        results = []
+        tool_count = 0
         for tc in raw_tool_calls:
             result = await self._execute_single_tool_call(tc, tools_by_name)
-            results.append(result)
 
-        # Include AI message data in the first result for FormatResult to use
-        if results:
-            results[0].data["ai_message_text"] = self.ai_message.text or ""
-            results[0].data["ai_message_tool_calls"] = raw_tool_calls
+            # Extract tool info
+            tool_call_id = result.data.get("tool_call_id", "")
+            tool_name = result.data.get("tool_name", "unknown")
 
-        tool_names = [r.data.get("tool_name", "unknown") for r in results]
-        self.log(f"Executed {len(results)} tool(s): {', '.join(tool_names)}")
-        return results
+            # Format result content
+            if "error" in result.data:
+                content = f"Error: {result.data['error']}"
+            else:
+                content = self._format_result_content(result.data.get("result", ""))
+
+            # Add tool result row
+            tool_row = {
+                "text": content,
+                "sender": "Tool",
+                "sender_name": tool_name,
+                "tool_calls": None,
+                "has_tool_calls": False,
+                "tool_call_id": tool_call_id,
+                "is_tool_result": True,
+            }
+            message_rows.append(tool_row)
+            tool_count += 1
+
+        self.log(f"Executed {tool_count} tool(s)")
+        return DataFrame(message_rows)
 
     async def _execute_single_tool_call(self, tc: Any, tools_by_name: dict) -> Data:
         """Execute a single tool call."""
@@ -173,3 +207,17 @@ class ExecuteToolComponent(Component):
 
         msg = f"Tool {tool} is not executable"
         raise TypeError(msg)
+
+    def _format_result_content(self, result: Any) -> str:
+        """Format a tool result as a string."""
+        if isinstance(result, str):
+            return result
+        if isinstance(result, dict):
+            import json
+
+            return json.dumps(result, indent=2)
+        if isinstance(result, list):
+            import json
+
+            return json.dumps(result, indent=2)
+        return str(result)

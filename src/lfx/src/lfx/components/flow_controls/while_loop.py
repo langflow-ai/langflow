@@ -1,13 +1,12 @@
-"""WhileLoop component - manages iteration for agent loops.
+"""WhileLoop component - manages iteration and state accumulation for agent loops.
 
 This component manages the iteration cycle for agent workflows.
-It passes data to the loop body and continues until max_iterations or
-the loop body stops producing output.
+It accumulates messages across iterations, building up the conversation history.
 
 Flow pattern:
-ChatInput → WhileLoop → CallModel → [Tool Calls] → ExecuteTool → FormatResult
-                ↑                                                      ↓
-                +------------------------------------------------------+
+ChatInput → WhileLoop → CallModel → [Tool Calls] → ExecuteTool
+                ↑                                        ↓
+                +----------------------------------------+
                          ↓ (CallModel ai_message - done)
                     ChatOutput
 """
@@ -25,12 +24,12 @@ from lfx.template.field.base import Output
 
 
 class WhileLoopComponent(Component):
-    """Manages iteration for agent loops.
+    """Manages iteration and state accumulation for agent loops.
 
     This component enables visual agent loops by:
     1. Passing initial input to the loop body (CallModel)
-    2. Continuing iterations until max_iterations or loop body stops
-    3. Enforcing max_iterations as a safety limit
+    2. Accumulating new messages from each iteration with existing state
+    3. Continuing iterations until max_iterations or loop body stops
 
     The loop stops when:
     - max_iterations is reached
@@ -38,7 +37,7 @@ class WhileLoopComponent(Component):
     """
 
     display_name = "While Loop"
-    description = "Manages iteration for agent loops. Connect to CallModel."
+    description = "Manages iteration and state accumulation for agent loops."
     icon = "repeat"
 
     inputs = [
@@ -64,7 +63,7 @@ class WhileLoopComponent(Component):
             method="loop_output",
             allows_loop=True,
             loop_types=["DataFrame"],
-            info="Connect to CallModel. Outputs DataFrame for each iteration.",
+            info="Connect to CallModel. Outputs accumulated DataFrame for each iteration.",
         ),
     ]
 
@@ -99,15 +98,15 @@ class WhileLoopComponent(Component):
             return DataFrame([msg_data])
         return DataFrame([Data(text=str(value))])
 
-    def _get_loop_feedback(self) -> Any | None:
+    def _get_loop_feedback(self) -> DataFrame | None:
         """Get the feedback value from the loop connection if available.
 
-        When FormatResult connects to the 'loop' output (allows_loop=True),
+        When ExecuteTool connects to the 'loop' output (allows_loop=True),
         the graph resolves the source vertex's result and passes it directly
-        to _attributes["loop"]. This happens after FormatResult has been built.
+        to _attributes["loop"]. This happens after ExecuteTool has been built.
 
         Returns:
-            The feedback DataFrame from FormatResult, or None if not available.
+            The feedback DataFrame from ExecuteTool, or None if not available.
         """
         # Check if there's a loop feedback value in _attributes
         loop_value = self._attributes.get("loop")
@@ -116,7 +115,7 @@ class WhileLoopComponent(Component):
             return None
 
         # The graph resolves the source vertex's result, so loop_value
-        # is already the DataFrame (or other value) from FormatResult
+        # is already the DataFrame (or other value) from ExecuteTool
         if isinstance(loop_value, DataFrame):
             return loop_value
 
@@ -126,25 +125,58 @@ class WhileLoopComponent(Component):
             if loop_value.built and loop_value.results:
                 for result in loop_value.results.values():
                     if result is not None:
-                        return result
+                        return self._to_dataframe(result)
             if loop_value.built and loop_value.built_object is not None:
-                return loop_value.built_object
+                return self._to_dataframe(loop_value.built_object)
 
         return None
 
+    def _get_accumulated_state(self) -> DataFrame | None:
+        """Get the accumulated state from previous iterations.
+
+        This is stored in _attributes["_accumulated_state"] and persists
+        across iterations within the same graph execution.
+        """
+        return self._attributes.get("_accumulated_state")
+
+    def _set_accumulated_state(self, state: DataFrame) -> None:
+        """Set the accumulated state for subsequent iterations."""
+        self._attributes["_accumulated_state"] = state
+
     def loop_output(self) -> DataFrame:
-        """Output the input value as DataFrame to the loop body.
+        """Output the accumulated messages to the loop body.
 
         On first iteration: uses input_value (from ChatInput)
-        On subsequent iterations: uses loop feedback (from FormatResult)
+        On subsequent iterations: accumulates loop feedback with existing state
 
         The feedback is connected to the 'loop' output which has allows_loop=True.
-        When FormatResult builds, its result is available via the loop vertex.
+        When ExecuteTool builds, its result (new messages) is available via feedback.
+        We accumulate these with our existing state.
         """
-        # Check for loop feedback first (subsequent iterations)
+        # Check for loop feedback (subsequent iterations)
         feedback = self._get_loop_feedback()
-        if feedback is not None:
-            return self._to_dataframe(feedback)
 
-        # First iteration: use input_value
-        return self._to_dataframe(self.input_value)
+        if feedback is not None:
+            # Get existing accumulated state
+            accumulated = self._get_accumulated_state()
+
+            if accumulated is not None:
+                # Accumulate: existing state + new messages from ExecuteTool
+                # Use add_rows to maintain DataFrame type
+                feedback_rows = feedback.to_dict(orient="records")
+                new_state = accumulated.add_rows(feedback_rows)
+            else:
+                # First feedback but no accumulated state yet - shouldn't happen normally
+                # but handle gracefully by using feedback as the new state
+                initial = self._to_dataframe(self.input_value)
+                feedback_rows = feedback.to_dict(orient="records")
+                new_state = initial.add_rows(feedback_rows)
+
+            # Store the new accumulated state
+            self._set_accumulated_state(new_state)
+            return new_state
+
+        # First iteration: use input_value and initialize accumulated state
+        initial_state = self._to_dataframe(self.input_value)
+        self._set_accumulated_state(initial_state)
+        return initial_state
