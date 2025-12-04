@@ -310,10 +310,9 @@ class TestInitializeDatabaseWithRollback:
         mock_db_service.check_schema_health = AsyncMock()
 
         # First call raises overlapping error, second succeeds
-        mock_db_service.run_migrations = AsyncMock(side_effect=[
-            CommandError("overlaps with other requested revisions"),
-            None
-        ])
+        mock_db_service.run_migrations = AsyncMock(
+            side_effect=[CommandError("overlaps with other requested revisions"), None]
+        )
 
         mock_session = Mock()
         mock_session.exec = AsyncMock()
@@ -394,5 +393,6 @@ class TestRevisionExtractionRegex:
         error_msg = "Can't locate revision abc123"
         match = re.search(r"identified by ['\"]([^'\"]+)['\"]", error_msg)
         assert match is None
+
 
 # Made with Bob
