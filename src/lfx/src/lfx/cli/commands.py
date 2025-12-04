@@ -304,12 +304,14 @@ async def serve_command(
 
         # Start the server
         try:
-            uvicorn.run(
+            config = uvicorn.Config(
                 serve_app,
                 host=host,
                 port=port,
                 log_level=log_level,
             )
+            server = uvicorn.Server(config)
+            await server.serve()
         except KeyboardInterrupt:
             verbose_print("\n👋 Server stopped")
             raise typer.Exit(0) from None
