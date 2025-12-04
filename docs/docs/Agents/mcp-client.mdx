@@ -96,9 +96,6 @@ To leverage flows-as-tools, use the **MCP Tools** component to connect to a proj
 
 | Name | Type | Description |
 |------|------|-------------|
-| command | String | Input parameter. Stdio mode only. The MCP server startup command. Default: `uvx mcp-sse-shim@latest`. |
-| sse_url | String | Input parameter. HTTP/SSE mode only. The URL for an MCP server. Supports both streamable HTTP and SSE protocols. Default for Langflow Desktop: `http://localhost:7868/`. Default for other installations: `http://localhost:7860/api/v1/mcp/project/PROJECT_ID/streamable` or `http://localhost:7860/api/v1/mcp/streamable` |
-| tools | List[Tool] | Output parameter. [`Tool`](/data-types#tool) object containing a list of tools exposed by the MCP server. |
 | mcp_server | String | Input parameter. The MCP server to connect to. Select from previously configured servers or add a new one. |
 | tool | String | Input parameter. The specific tool to execute from the connected MCP server. Leave blank to allow access to all tools. |
 | use_cache | Boolean | Input parameter. Enable caching of MCP server and tools to improve performance. Default: `false`. |
