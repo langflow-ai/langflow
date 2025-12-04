@@ -1,15 +1,13 @@
 import { useEffect, useState } from "react";
 
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
+import { getBaseUrl } from "@/customization/utils/urls";
 import { createFileUpload } from "@/helpers/create-file-upload";
 import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 import useAlertStore from "@/stores/alertStore";
 import IconComponent from "../../../../../components/common/genericIconComponent";
 import { Button } from "../../../../../components/ui/button";
-import {
-  ALLOWED_IMAGE_INPUT_EXTENSIONS,
-  BASE_URL_API,
-} from "../../../../../constants/constants";
+import { ALLOWED_IMAGE_INPUT_EXTENSIONS } from "../../../../../constants/constants";
 import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
 import type { IOFileInputProps } from "../../../../../types/components";
 
@@ -33,7 +31,7 @@ export default function IOFileInput({ field, updateValue }: IOFileInputProps) {
     if (field) {
       const fileName = field.split("/")[1];
       const flowFileId = currentFlowId.toString();
-      setImage(`${BASE_URL_API}files/images/${flowFileId}/${fileName}`);
+      setImage(`${getBaseUrl()}files/images/${flowFileId}/${fileName}`);
     }
   }, []);
 
