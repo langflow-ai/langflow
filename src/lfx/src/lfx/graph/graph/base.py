@@ -1519,7 +1519,10 @@ class Graph:
         try:
             params = ""
             should_build = False
-            if not vertex.frozen:
+            # Loop components must always build, even when frozen,
+            # because they need to iterate through their data
+            is_loop_component = vertex.display_name == "Loop" or vertex.is_loop
+            if not vertex.frozen or is_loop_component:
                 should_build = True
             else:
                 # Check the cache for the vertex

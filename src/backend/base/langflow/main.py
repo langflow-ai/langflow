@@ -29,6 +29,7 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from langflow.api import health_check_router, log_router, router
 from langflow.api.v1.mcp_projects import init_mcp_servers
 from langflow.initial_setup.setup import (
+    copy_profile_pictures,
     create_or_update_starter_projects,
     initialize_auto_login_default_superuser,
     load_bundles_from_urls,
@@ -135,18 +136,8 @@ def warn_about_future_cors_changes(settings):
 
     if using_defaults:
         logger.warning(
-            "DEPRECATION NOTICE: Starting in v2.0, CORS will be more restrictive by default. "
-            "Current behavior allows all origins (*) with credentials enabled. "
-            "Consider setting LANGFLOW_CORS_ORIGINS for production deployments. "
-            "See documentation for secure CORS configuration."
-        )
-
-    # Additional warning for potentially insecure configuration
-    if settings.cors_origins == "*" and settings.cors_allow_credentials:
-        logger.warning(
-            "SECURITY NOTICE: Current CORS configuration allows all origins with credentials. "
-            "In v2.0, credentials will be automatically disabled when using wildcard origins. "
-            "Specify exact origins in LANGFLOW_CORS_ORIGINS to use credentials securely."
+            "CORS: Using permissive defaults (all origins + credentials). "
+            "Set LANGFLOW_CORS_ORIGINS for production. Stricter defaults in v2.0."
         )
 
 
@@ -181,6 +172,11 @@ def get_lifespan(*, fix_migration=False, version=None):
             await logger.adebug("Setting up LLM caching")
             setup_llm_caching()
             await logger.adebug(f"LLM caching setup in {asyncio.get_event_loop().time() - current_time:.2f}s")
+
+            current_time = asyncio.get_event_loop().time()
+            await logger.adebug("Copying profile pictures")
+            await copy_profile_pictures()
+            await logger.adebug(f"Profile pictures copied in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             if get_settings_service().auth_settings.AUTO_LOGIN:
                 current_time = asyncio.get_event_loop().time()
