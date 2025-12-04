@@ -483,12 +483,19 @@ function GenericNode({
     [addDismissedNodesLegacy, data.id],
   );
 
+  useEffect(() => {
+    updateNodeInternals(data.id);
+  }, [showNode]);
+
   return (
-    <div className={cn(shouldShowUpdateComponent ? "relative -mt-10" : "")}>
+    <div
+      className={cn(shouldShowUpdateComponent ? "relative -mt-10" : "")}
+      data-testid="generic-node-wrapper"
+      style={showNode ? { width: "320px" } : { width: "192px" }}
+    >
       <div
         className={cn(
           borderColor,
-          showNode ? "w-80" : `w-48`,
           "generic-node-div group/node relative rounded-xl border shadow-sm hover:shadow-md",
           !hasOutputs && "pb-4",
         )}
