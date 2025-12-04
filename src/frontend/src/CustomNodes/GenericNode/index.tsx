@@ -110,9 +110,7 @@ function GenericNode({
     [dismissedNodesLegacy, data.id],
   );
 
-  // const showNode = data.showNode ?? true;
-
-  const [showNode, setShowNode] = useState(data.showNode ?? true);
+  const showNode = data.showNode ?? true;
 
   const getValidationStatus = useCallback((data) => {
     setValidationStatus(data);
@@ -397,7 +395,6 @@ function GenericNode({
                 ...old,
                 data: { ...old.data, showNode: show },
               }));
-              setShowNode(show);
             }}
             numberOfOutputHandles={shownOutputs.length ?? 0}
             showNode={showNode}
@@ -487,11 +484,8 @@ function GenericNode({
   );
 
   useEffect(() => {
-    setTimeout(() => {
-      updateNodeInternals(data.id);
-      console.log("here");
-    }, 1000);
-  }, [showNode]);
+    updateNodeInternals(data.id);
+  }, [showNode, updateNodeInternals]);
 
   return (
     <div className={cn(shouldShowUpdateComponent ? "relative -mt-10" : "")}>
