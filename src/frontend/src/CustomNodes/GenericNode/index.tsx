@@ -1,4 +1,5 @@
 import { useUpdateNodeInternals } from "@xyflow/react";
+import { console } from "inspector/promises";
 import { cloneDeep } from "lodash";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
@@ -486,7 +487,10 @@ function GenericNode({
   );
 
   useEffect(() => {
-    updateNodeInternals(data.id);
+    setTimeout(() => {
+      updateNodeInternals(data.id);
+      console.log(data.id, "after");
+    }, 100);
     console.log(data.id);
 
     console.log("updating internals because showNode changed");
