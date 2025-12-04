@@ -1,73 +1,76 @@
+import { useMemo } from 'react';
+
 import { useGetModelProviders } from '@/controllers/API/queries/models/use-get-model-providers';
+
 import ProviderListItem from './ProviderListItem';
 import { Provider } from './types';
+import LoadingTextComponent from '@/components/common/loadingTextComponent';
+
+// Supported model types for filtering providers
+type ModelType = 'llm' | 'embeddings';
 
 export interface ProviderListProps {
-  modeltype: 'llm' | 'embedding';
+  modelType: ModelType;
   onProviderSelect?: (provider: Provider) => void;
   selectedProviderName?: string | null;
 }
 
-/**
- * Fetches and displays the list of available model providers.
- * Filters out providers with only deprecated/unsupported models.
- */
 const ProviderList = ({
-  modeltype,
+  modelType,
   onProviderSelect,
   selectedProviderName,
 }: ProviderListProps) => {
   const {
-    data: providersData = [],
+    data: rawProviders = [],
     isLoading,
     isFetching,
   } = useGetModelProviders({});
 
-  const handleProviderClick = (provider: Provider) => {
-    if (provider.model_count && provider.model_count > 0) {
-      onProviderSelect?.(provider);
-    }
+  const filteredProviders: Provider[] = useMemo(() => {
+    return rawProviders
+      .map(provider => {
+        const matchingModels =
+          provider?.models?.filter(
+            model => model?.metadata?.model_type === modelType
+          ) || [];
+
+        return {
+          provider: provider.provider,
+          icon: provider.icon,
+          is_enabled: provider.is_enabled,
+          model_count: matchingModels.length,
+          models: matchingModels,
+        };
+      })
+      .filter(provider => provider.model_count > 0);
+  }, [rawProviders, modelType]);
+
+  const handleProviderSelect = (provider: Provider) => {
+    onProviderSelect?.(provider);
   };
 
-  // Filter out providers that have ANY deprecated + unsupported models
-  // A provider with deprecatedCount > 0 is excluded from the list
-  const providers: Provider[] = providersData
-    .filter(provider => {
-      const deprecatedCount = provider?.models?.filter(
-        model =>
-          model.metadata?.deprecated &&
-          model.metadata?.not_supported &&
-          model.metadata?.model_type === modeltype
-      )?.length;
-      return !deprecatedCount;
-    })
-    .map(provider => ({
-      provider: provider.provider,
-      icon: provider.icon,
-      is_enabled: provider.is_enabled,
-      model_count: provider.models?.length || 0,
-      models: provider.models || [],
-    }));
+  const isLoadingProviders =
+    isLoading || (isFetching && filteredProviders.length === 0);
 
-  if (isLoading || (isFetching && providers.length === 0)) {
+  if (isLoadingProviders) {
     return (
       <div
-        className="text-muted-foreground"
+        className="text-muted-foreground px-4 py-2"
         data-testid="provider-list-loading"
       >
-        Loading providers...
+        <LoadingTextComponent text="Loading providers" />
       </div>
     );
   }
 
   return (
     <div className="flex flex-col gap-1" data-testid="provider-list">
-      {providers.map(provider => (
+      {filteredProviders.map(provider => (
         <ProviderListItem
           key={provider.provider}
           provider={provider}
           isSelected={selectedProviderName === provider.provider}
-          onSelect={handleProviderClick}
+          onSelect={handleProviderSelect}
         />
       ))}
     </div>

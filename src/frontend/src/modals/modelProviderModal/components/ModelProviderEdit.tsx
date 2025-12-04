@@ -1,5 +1,6 @@
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import { Input } from "@/components/ui/input";
+import ForwardedIconComponent from '@/components/common/genericIconComponent';
+import { Input } from '@/components/ui/input';
+import { PROVIDER_VARIABLE_MAPPING } from '@/constants/providerConstants';
 
 export interface ModelProviderEditProps {
   authName: string;
@@ -8,7 +9,7 @@ export interface ModelProviderEditProps {
   onApiKeyChange: (value: string) => void;
   apiBase: string;
   onApiBaseChange: (value: string) => void;
-  providerName?: string;
+  providerName: string;
 }
 
 /**
@@ -22,7 +23,7 @@ const ModelProviderEdit = ({
   onApiKeyChange,
   apiBase,
   onApiBaseChange,
-  providerName: _providerName, // Reserved for future provider-specific behavior
+  providerName, // Reserved for future provider-specific behavior
 }: ModelProviderEditProps) => {
   return (
     <div className="flex flex-col gap-4 p-4" data-testid="model-provider-edit">
@@ -35,8 +36,9 @@ const ModelProviderEdit = ({
       </div>
       <Input
         placeholder="Authorization Name"
-        value={authName}
-        onChange={(e) => onAuthNameChange(e.target.value)}
+        value={PROVIDER_VARIABLE_MAPPING[providerName]}
+        disabled
+        onChange={e => onAuthNameChange(e.target.value)}
         data-testid="auth-name-input"
       />
       <div className="text-[13px] -mb-1 font-medium flex items-center gap-1">
@@ -51,11 +53,11 @@ const ModelProviderEdit = ({
         type="password"
         value={apiKey}
         required
-        onChange={(e) => onApiKeyChange(e.target.value)}
+        onChange={e => onApiKeyChange(e.target.value)}
         data-testid="api-key-input"
       />
       <div className="text-muted-foreground text-xs flex items-center gap-1 -mt-1 hover:underline cursor-pointer w-fit">
-        Find your API key{" "}
+        Find your API key{' '}
         <ForwardedIconComponent name="external-link" className="w-4 h-4" />
       </div>
       <div className="text-[13px] -mb-1 font-medium flex items-center gap-1">
@@ -63,12 +65,12 @@ const ModelProviderEdit = ({
         <ForwardedIconComponent
           name="info"
           className="w-4 h-4 text-muted-foreground ml-1"
-        />{" "}
+        />{' '}
       </div>
       <Input
         placeholder="API Base URL (optional)"
         value={apiBase}
-        onChange={(e) => onApiBaseChange(e.target.value)}
+        onChange={e => onApiBaseChange(e.target.value)}
         data-testid="api-base-input"
       />
     </div>

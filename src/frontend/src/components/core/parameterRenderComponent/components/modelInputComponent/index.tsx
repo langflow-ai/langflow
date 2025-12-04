@@ -76,9 +76,9 @@ export default function ModelInputComponent({
   });
 
   const modeltype =
-    nodeClass?.template?.model?.model_type === 'language' ? 'llm' : 'embedding';
-
-  console.log(nodeClass?.template?.model);
+    nodeClass?.template?.model?.model_type === 'language'
+      ? 'llm'
+      : 'embeddings';
 
   const { data: providersData = [] } = useGetModelProviders({});
 
@@ -490,7 +490,6 @@ export default function ModelInputComponent({
         <ModelProviderModal
           open={openManageProvidersDialog}
           onClose={() => setOpenManageProvidersDialog(false)}
-          onModelsUpdated={handleRefreshButtonPress}
           modeltype={modeltype || 'llm'}
         />
       )}

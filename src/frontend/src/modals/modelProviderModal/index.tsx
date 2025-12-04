@@ -9,6 +9,7 @@ import {
   VARIABLE_CATEGORY,
 } from '@/constants/providerConstants';
 import { useGetEnabledModels } from '@/controllers/API/queries/models/use-get-enabled-models';
+import { useUpdateEnabledModels } from '@/controllers/API/queries/models/use-update-enabled-models';
 import { usePostGlobalVariables } from '@/controllers/API/queries/variables';
 import ProviderList from '@/modals/modelProviderModal/components/ProviderList';
 import { Model, Provider } from '@/modals/modelProviderModal/components/types';
@@ -21,20 +22,17 @@ import ModelSelection from './components/ModelSelection';
 interface ModelProviderModalProps {
   open: boolean;
   onClose: () => void;
-  modeltype: 'llm' | 'embedding';
-  onModelsUpdated?: () => void;
+  modeltype: 'llm' | 'embeddings';
 }
 
 const ModelProviderModal = ({
   open,
   onClose,
   modeltype,
-  onModelsUpdated,
 }: ModelProviderModalProps) => {
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(
     null
   );
-  const { data: enabledModelsData } = useGetEnabledModels();
 
   const [isEditing, setIsEditing] = useState(true);
   const [authName, setAuthName] = useState('');
@@ -45,6 +43,7 @@ const ModelProviderModal = ({
   const setSuccessData = useAlertStore(state => state.setSuccessData);
   const setErrorData = useAlertStore(state => state.setErrorData);
   const { mutate: createGlobalVariable, isPending } = usePostGlobalVariables();
+  const { mutate: updateEnabledModels } = useUpdateEnabledModels();
 
   // Reset form and pending changes when provider changes
   useEffect(() => {
@@ -53,12 +52,26 @@ const ModelProviderModal = ({
     setApiBase('');
   }, [selectedProvider?.provider]);
 
-  // Store toggle changes locally without applying immediately
+  // Update enabled models when toggled
   const handleModelToggle = (modelName: string, enabled: boolean) => {
-    // setPendingModelChanges(prev => ({
-    //   ...prev,
-    //   [modelName]: enabled,
-    // }));
+    if (!selectedProvider?.provider) return;
+
+    updateEnabledModels(
+      {
+        updates: [
+          {
+            provider: selectedProvider.provider,
+            model_id: modelName,
+            enabled,
+          },
+        ],
+      },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ['useGetEnabledModels'] });
+        },
+      }
+    );
   };
 
   const handleProviderSelect = (provider: Provider) => {
@@ -160,7 +173,7 @@ const ModelProviderModal = ({
             )}
           >
             <ProviderList
-              modeltype={modeltype}
+              modelType={modeltype}
               onProviderSelect={handleProviderSelect}
               selectedProviderName={selectedProvider?.provider ?? null}
             />
@@ -218,15 +231,17 @@ const ModelProviderModal = ({
                 )}
               >
                 <ModelSelection
+                  modelType={modeltype}
                   availableModels={selectedProvider?.models || []}
                   onModelToggle={handleModelToggle}
+                  providerName={selectedProvider?.provider}
                 />
               </div>
 
               {/* Edit */}
               <div
                 className={cn(
-                  'flex flex-col transition-all duration-300 ease-in-out',
+                  'flex flex-col transition-all duration-300 ease-in-out h-[403px]',
                   isEditing
                     ? 'opacity-100 translate-x-0'
                     : 'opacity-0 translate-x-full absolute inset-0'

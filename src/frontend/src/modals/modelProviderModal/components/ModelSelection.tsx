@@ -7,6 +7,8 @@ import { Model } from '@/modals/modelProviderModal/components/types';
 export interface ModelProviderSelectionProps {
   availableModels: Model[];
   onModelToggle: (modelName: string, enabled: boolean) => void;
+  modelType: 'llm' | 'embeddings';
+  providerName?: string;
 }
 
 interface ModelRowProps {
@@ -44,49 +46,40 @@ const ModelRow = ({
  * Allows users to enable/disable individual models for a provider.
  */
 const ModelSelection = ({
+  modelType = 'llm',
   availableModels,
   onModelToggle,
+  providerName,
 }: ModelProviderSelectionProps) => {
   const { data: enabledModelsData } = useGetEnabledModels();
+
+  console.log({ enabledModelsData });
+
+  const isModelEnabled = (modelName: string): boolean => {
+    if (!providerName || !enabledModelsData?.enabled_models) return false;
+    return enabledModelsData.enabled_models[providerName]?.[modelName] ?? false;
+  };
 
   return (
     <div data-testid="model-provider-selection">
       {availableModels.length > 0 && (
         <div data-testid="llm-models-section">
           <div className="text-[13px] font-semibold text-muted-foreground">
-            LLM
+            {modelType === 'llm' ? 'LLM' : 'Embeddings'}
           </div>
           <div className="flex flex-col gap-2 pt-4">
             {availableModels.map(model => (
               <ModelRow
                 key={model.model_name}
                 model={model}
-                enabled={true}
+                enabled={isModelEnabled(model.model_name)}
                 onToggle={onModelToggle}
-                testIdPrefix="llm"
+                testIdPrefix={modelType}
               />
             ))}
           </div>
         </div>
       )}
-      {/* {embeddingModels.length > 0 && (
-        <div data-testid="embedding-models-section">
-          <div className="text-[13px] font-semibold text-muted-foreground pt-4">
-            Embedding
-          </div>
-          <div className="flex flex-col gap-2 pt-4">
-            {embeddingModels.map(model => (
-              <ModelRow
-                key={model.model_name}
-                model={model}
-                enabled={isModelEnabled(model.model_name)}
-                onToggle={onModelToggle}
-                testIdPrefix="embedding"
-              />
-            ))}
-          </div>
-        </div>
-      )} */}
     </div>
   );
 };
