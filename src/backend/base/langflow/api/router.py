@@ -82,8 +82,16 @@ router_v1.include_router(voice_mode_router)
 router_v2.include_router(files_router_v2)
 router_v2.include_router(mcp_router_v2)
 
+from langflow.services.deps import get_settings_service
+
+try:
+    settings = get_settings_service().settings
+    api_prefix = settings.api_prefix
+except Exception:
+    api_prefix = "/api"
+
 router = APIRouter(
-    prefix="/api",
+    prefix=api_prefix,
 )
 router.include_router(router_v1)
 router.include_router(router_v2)

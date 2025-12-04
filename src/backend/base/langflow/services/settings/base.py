@@ -228,6 +228,13 @@ class Settings(BaseSettings):
     """The host on which Langflow will run."""
     port: int = 7860
     """The port on which Langflow will run."""
+    
+    # Routing Configuration
+    api_prefix: str = ""
+    """The prefix for API routes (e.g., /api)."""
+    frontend_base_path: str = ""
+    """The base path for the frontend (e.g., /ai-studio)."""
+    
     workers: int = 1
     """The number of workers to run."""
     log_level: str = "critical"
