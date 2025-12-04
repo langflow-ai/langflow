@@ -105,15 +105,48 @@ export default function ModelInputComponent({
     [groupedOptions],
   );
 
-  // Sync local selectedModel state with the external value prop.
-  // This ensures the UI reflects the current value when options change or value is set externally.
+  // Sync local selectedModel state with the external value prop and available options.
+  // Handles three cases: no available models (clear selection), current value exists in options (keep it),
+  // or current value is invalid/missing (select first available model).
   useEffect(() => {
-    if (!value?.[0]?.name) return;
-    const existingModel = flatOptions.find(
-      (option) => option.name === value[0].name,
-    );
-    setSelectedModel(existingModel ?? null);
-  }, [flatOptions, value]);
+    const availableOptions = flatOptions;
+    const currentName = value?.[0]?.name;
+
+    // No available models: clear selection/value
+    if (!availableOptions || availableOptions.length === 0) {
+      if (value && value.length) {
+        handleOnNewValue({ value: [] });
+      }
+      setSelectedModel(null);
+      return;
+    }
+
+    // If current value exists in refreshed options, keep it
+    if (currentName) {
+      const existingModel = availableOptions.find(
+        (option) => option.name === currentName,
+      );
+      if (existingModel) {
+        setSelectedModel(existingModel);
+        return;
+      }
+    }
+
+    // Otherwise select the first available model
+    const firstOption = availableOptions[0];
+    const newValue = [
+      {
+        ...(firstOption.id && { id: firstOption.id }),
+        name: firstOption.name,
+        icon: firstOption.icon || "Bot",
+        provider: firstOption.provider || "Unknown",
+        metadata: firstOption.metadata ?? {},
+      },
+    ];
+
+    handleOnNewValue({ value: newValue });
+    setSelectedModel(firstOption);
+  }, [flatOptions, value, handleOnNewValue]);
 
   /**
    * Handles model selection from the dropdown.
@@ -171,6 +204,11 @@ export default function ModelInputComponent({
     postTemplateValue,
     setErrorData,
   ]);
+
+  const handleManageProvidersDialogClose = useCallback(() => {
+    setOpenManageProvidersDialog(false);
+    handleRefreshButtonPress();
+  }, [handleRefreshButtonPress]);
 
   //TODO: Look at this logic
   const handleExternalOptions = useCallback(
@@ -489,7 +527,7 @@ export default function ModelInputComponent({
       {openManageProvidersDialog && (
         <ModelProviderModal
           open={openManageProvidersDialog}
-          onClose={() => setOpenManageProvidersDialog(false)}
+          onClose={handleManageProvidersDialogClose}
           modeltype={modeltype || "llm"}
         />
       )}

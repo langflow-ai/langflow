@@ -53,8 +53,6 @@ const ModelSelection = ({
 }: ModelProviderSelectionProps) => {
   const { data: enabledModelsData } = useGetEnabledModels();
 
-  console.log({ enabledModelsData });
-
   const isModelEnabled = (modelName: string): boolean => {
     if (!providerName || !enabledModelsData?.enabled_models) return false;
     return enabledModelsData.enabled_models[providerName]?.[modelName] ?? false;
