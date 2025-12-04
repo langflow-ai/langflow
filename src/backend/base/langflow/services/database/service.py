@@ -344,9 +344,10 @@ class DatabaseService(Service):
 
     def _check_if_database_ahead(self, alembic_cfg, error_msg: str) -> bool:
         """Check if database is ahead of code based on error message.
-        
+
         If error contains "Can't locate revision", we check if the DB revision
-        exists in the code. If not, the database is ahead.
+        exists in the code. If not, the database is ahead (we assume. This isn't
+        foolproof) 
         
         Args:
             alembic_cfg: Alembic configuration
