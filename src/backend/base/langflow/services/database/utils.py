@@ -39,19 +39,27 @@ async def initialize_database(*, fix_migration: bool = False) -> None:
     try:
         await database_service.run_migrations(fix=fix_migration)
     except CommandError as exc:
-        # if "overlaps with other requested revisions" or "Can't locate revision identified by"
-        # are not in the exception, we can't handle it
-        if "overlaps with other requested revisions" not in str(
-            exc
-        ) and "Can't locate revision identified by" not in str(exc):
-            raise
-        # This means there's wrong revision in the DB
-        # We need to delete the alembic_version table
-        # and run the migrations again
-        logger.warning("Wrong revision in DB, deleting alembic_version table and running migrations again")
-        async with session_getter(database_service) as session:
-            await session.exec(text("DROP TABLE alembic_version"))
-        await database_service.run_migrations(fix=fix_migration)
+        error_msg = str(exc)
+
+        # Check if database is ahead (backwards-compatible scenario)
+        # This is a fallback in case the error propagates up from run_migrations
+        if "Can't locate revision identified by" in error_msg:
+            logger.info(
+                "Database revision ahead of code detected. "
+                "Assuming backwards-compatible migrations and allowing startup."
+            )
+            return
+
+        # Handle overlapping revisions (corrupted alembic_version table)
+        if "overlaps with other requested revisions" in error_msg:
+            logger.warning("Overlapping revisions in DB, deleting alembic_version table and running migrations again")
+            async with session_getter(database_service) as session:
+                await session.exec(text("DROP TABLE alembic_version"))
+            await database_service.run_migrations(fix=fix_migration)
+            return
+
+        # Unhandled CommandError - re-raise
+        raise
     except Exception as exc:
         # if the exception involves tables already existing
         # we can ignore it
