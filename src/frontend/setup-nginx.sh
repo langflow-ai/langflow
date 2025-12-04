@@ -9,6 +9,11 @@ echo "INFO: Starting AI Studio Frontend with runtime environment injection"
 echo "INFO: Generating runtime environment configuration..."
 /usr/share/nginx/html/env.sh
 
+# Replace base path in index.html
+if [ -n "${VITE_APP_PATH}" ]; then
+    echo "INFO: Replacing base path with ${VITE_APP_PATH}"
+    sed -i "s|/__APP_BASE_PATH__/|${VITE_APP_PATH}|g" /usr/share/nginx/html/index.html
+fi
 # Validate that required environment variables are set
 if [ -z "${VITE_BACKEND_URL:-}" ]; then
     echo "WARNING: VITE_BACKEND_URL not set, using default from .env.example"
