@@ -64,8 +64,10 @@ export default function SubmitForApprovalModal({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Sample input state
-  const DEFAULT_STORAGE_ACCOUNT = envConfig.flexstoreDefaultTemporaryStorageAccount;
-  const DEFAULT_CONTAINER_NAME = envConfig.flexstoreDefaultTemporaryStorageContainer;
+  const DEFAULT_STORAGE_ACCOUNT =
+    envConfig.flexstoreDefaultTemporaryStorageAccount;
+  const DEFAULT_CONTAINER_NAME =
+    envConfig.flexstoreDefaultTemporaryStorageContainer;
   const [isUploadingSamples, setIsUploadingSamples] = useState(false);
   const [uploadedSampleFiles, setUploadedSampleFiles] = useState<
     { name: string; path: string }[]
@@ -240,7 +242,7 @@ export default function SubmitForApprovalModal({
         fileName: fileName,
         sourceDetails: {
           containerName: envConfig.flexstoreDefaultTemporaryStorageContainer,
-          storageAccount: envConfig.flexstoreDefaultTemporaryStorageAccount
+          storageAccount: envConfig.flexstoreDefaultTemporaryStorageAccount,
         },
       });
 
@@ -459,33 +461,35 @@ export default function SubmitForApprovalModal({
             </p>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="version">
-              Version <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="version"
-              placeholder="1.0.0"
-              value={version}
-              readOnly
-              className="bg-muted cursor-not-allowed"
-            />
-            <p className="text-xs text-muted-foreground">
-              Auto-generated version (e.g., 1.0.0, 1.0.1)
-            </p>
-          </div>
+          <div className="flex gap-4">
+            <div className="space-y-2 flex-[2]">
+              <Label htmlFor="version">
+                Version <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="version"
+                placeholder="1.0.0"
+                value={version}
+                onChange={(e) => setVersion(e.target.value)}
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                Semantic versioning recommended (e.g., 1.0.0, 1.2.3)
+              </p>
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="tags">Tags (Optional)</Label>
-            <MultiSelect
-              options={MARKETPLACE_TAGS}
-              selected={tags}
-              onChange={setTags}
-              placeholder="Select tags..."
-            />
-            <p className="text-xs text-muted-foreground">
-              Select one or more tags to categorize your agent
-            </p>
+            <div className="space-y-2 flex-[3]">
+              <Label htmlFor="tags">Tags (Optional)</Label>
+              <MultiSelect
+                options={MARKETPLACE_TAGS}
+                selected={tags}
+                onChange={setTags}
+                placeholder="Select tags..."
+              />
+              <p className="text-xs text-muted-foreground">
+                Select one or more tags to categorize your agent
+              </p>
+            </div>
           </div>
 
           <div className="space-y-2">
