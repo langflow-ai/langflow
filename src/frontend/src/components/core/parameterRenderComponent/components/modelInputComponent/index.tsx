@@ -109,6 +109,11 @@ export default function ModelInputComponent({
   // Handles three cases: no available models (clear selection), current value exists in options (keep it),
   // or current value is invalid/missing (select first available model).
   useEffect(() => {
+    // Skip auto-selection when in connection mode (value is "connect_other_models" string)
+    if (value === "connect_other_models") {
+      return;
+    }
+
     const availableOptions = flatOptions;
     const currentName = value?.[0]?.name;
 
