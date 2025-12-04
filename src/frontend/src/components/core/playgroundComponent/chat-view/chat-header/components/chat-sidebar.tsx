@@ -1,9 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { useGetSessionsFromFlowQuery } from "@/controllers/API/queries/messages/use-get-sessions-from-flow";
 import { useGetFlowId } from "../../hooks/use-get-flow-id";
+import { SessionLogsModal } from "./session-logs-modal";
 import { SessionSelector } from "./session-selector";
 
 interface ChatSidebarProps {
@@ -23,6 +24,7 @@ export function ChatSidebar({
   const { data: sessionsData, isLoading } = useGetSessionsFromFlowQuery({
     id: currentFlowId,
   });
+  const [logsModalSession, setLogsModalSession] = useState<string | null>(null);
 
   // Use sessions directly from query
   // Ensure currentFlowId (Default Session) is always in the list
@@ -104,12 +106,7 @@ export function ChatSidebar({
               toggleVisibility={() => handleSessionClick(session)}
               isVisible={visibleSession === session}
               updateVisibleSession={handleSessionClick}
-              inspectSession={() => {
-                // TODO: Implement session inspection
-              }}
-              setActiveSession={() => {
-                // TODO: Implement active session
-              }}
+              inspectSession={(sessionId) => setLogsModalSession(sessionId)}
               selectedView={undefined}
               setSelectedView={() => {}}
               playgroundPage={true}
@@ -117,6 +114,14 @@ export function ChatSidebar({
           ))}
         </div>
       )}
+
+      {/* Session Logs Modal */}
+      <SessionLogsModal
+        sessionId={logsModalSession ?? ""}
+        flowId={currentFlowId}
+        open={!!logsModalSession}
+        setOpen={(open) => !open && setLogsModalSession(null)}
+      />
     </div>
   );
 }

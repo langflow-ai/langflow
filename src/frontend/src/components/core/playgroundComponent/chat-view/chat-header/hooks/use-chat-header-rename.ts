@@ -58,8 +58,10 @@ export function useChatHeaderRename({
             if (isNoMessagesError(error) && onSessionSelect) {
               renameSession(currentSessionId, trimmedNewId);
               onSessionSelect(trimmedNewId);
+            } else {
+              // For other errors, keep the old session ID and log the error
+              console.error("Failed to rename session:", error);
             }
-            // For other errors, keep the old session ID (don't update)
           },
         },
       );
