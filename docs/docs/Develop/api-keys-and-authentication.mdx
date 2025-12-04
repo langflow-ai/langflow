@@ -27,8 +27,7 @@ You can use Langflow API keys to interact with Langflow programmatically.
 
 By default, most Langflow API endpoints, such as `/v1/run/$FLOW_ID`, require authentication with a Langflow API key.
 
-By default, Langflow validates API keys against keys stored in the database.
-However, you can configure Langflow to validate API keys against an environment variable instead.
+Langflow validates API keys against keys stored in the database, but you can configure Langflow to validate API keys against an environment variable instead.
 For more information, see [`LANGFLOW_API_KEY_SOURCE`](#langflow-api-key-source).
 
 To require API key authentication for flow webhook endpoints, use the [`LANGFLOW_WEBHOOK_AUTH_ENABLE`](/webhook#require-authentication-for-webhooks) environment variable.
@@ -290,37 +289,31 @@ For more information, see [Start a Langflow server with authentication enabled](
 
 ### LANGFLOW_API_KEY_SOURCE {#langflow-api-key-source}
 
-This variable controls how Langflow validates API keys passed in the `x-api-key` header or query parameter.
+This variable controls how Langflow validates API keys.
 
 | Value | Description |
 |-------|-------------|
 | `db` (default) | Validates API keys against [Langflow API keys](#langflow-api-keys) stored in the database. This is the standard behavior where users create and manage API keys through the Langflow UI or CLI. |
 | `env` | Validates API keys against the `LANGFLOW_API_KEY` environment variable. Useful for Kubernetes deployments, CI/CD pipelines, or any environment where you want to inject a pre-defined API key without database configuration. |
 
-```text
-LANGFLOW_API_KEY_SOURCE=db
-```
+By default, Langflow validates the `x-api-key` header against the Langflow database with `LANGFLOW_API_KEY_SOURCE=db`.
+When using database-based validation, you can create multiple keys with per-user permissions, track usage, and manage keys through the Langflow UI or CLI.
 
-#### Use environment-based API key validation {#env-based-api-key}
+When `LANGFLOW_API_KEY_SOURCE=env`, Langflow validates the `x-api-key` header against the value of the `LANGFLOW_API_KEY` environment variable.
+This means Langflow runs securely in stateless environments, such as with LFX or Kubernetes secrets.
 
-When `LANGFLOW_API_KEY_SOURCE=env`, Langflow validates the `x-api-key` header against the value of the `LANGFLOW_API_KEY` environment variable instead of checking the database.
-
-This mode is ideal for:
-
-* **Kubernetes deployments**: Inject API keys through Kubernetes Secrets without needing to create database entries.
-* **CI/CD pipelines**: Use a fixed API key for automated testing and deployment workflows.
-* **Containerized environments**: Pre-configure authentication without post-deployment setup.
-* **Single-key scenarios**: When you need a simple, centralized API key managed through infrastructure configuration.
+When `LANGFLOW_API_KEY_SOURCE=env`, only a single API key can be used for the deployment. All authenticated requests use the same API key, and successful authentication grants superuser privileges.
+This mode is designed for single-tenant deployments or automated systems, not multi-user environments where different users need different access levels. To rotate your keys, update the environment variable and restart the Langflow server.
 
 To enable environment-based API key validation:
 
-1. Set the API key source to `env`:
+1. In the Langflow `.env` file, set the API key source to `env`:
 
     ```text
     LANGFLOW_API_KEY_SOURCE=env
     ```
 
-2. Set the API key value:
+2. In the Langflow `.env` file, set the API key value:
 
     ```text
     LANGFLOW_API_KEY=your-secure-api-key
@@ -330,21 +323,18 @@ To enable environment-based API key validation:
 
     ```shell
     curl -X POST \
-      "http://$LANGFLOW_SERVER_ADDRESS/api/v1/run/$FLOW_ID?stream=false" \
+      "http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID?stream=false" \
       -H "Content-Type: application/json" \
-      -H "x-api-key: your-secure-api-key" \
+      -H "x-api-key: LANGFLOW_API_KEY" \
       -d '{"inputs": {"text":""}, "tweaks": {}}'
     ```
 
-:::warning
-When using `LANGFLOW_API_KEY_SOURCE=env`, all authenticated requests use the same API key, and successful authentication grants superuser privileges.
-This mode is designed for single-tenant deployments or automated systems, not multi-user environments where different users need different access levels.
-:::
+    Replace `LANGFLOW_SERVER_ADDRESS`, `FLOW_ID`, and `LANGFLOW_API_KEY` with the values from your deployment.
 
 <details>
 <summary>Kubernetes deployment example</summary>
 
-The following example shows how to configure environment-based API key validation in a Kubernetes deployment using a Secret:
+To configure an environment-based API key in a Kubernetes Secret, do the following:
 
 1. Create a Kubernetes Secret with your API key:
 
@@ -355,10 +345,12 @@ The following example shows how to configure environment-based API key validatio
       name: langflow-api-key
     type: Opaque
     stringData:
-      api-key: "your-secure-api-key"
+      api-key: "YOUR_API_KEY"
     ```
 
-2. Reference the Secret in your Langflow deployment:
+    Replace `YOUR_API_KEY` with the `LANGFLOW_API_KEY` value from the Langflow `.env` file.
+
+2. Reference the `langflow-api-key` Secret in your Kubernetes deployment:
 
     ```yaml
     apiVersion: apps/v1
@@ -386,38 +378,30 @@ The following example shows how to configure environment-based API key validatio
 <details>
 <summary>Docker Compose example</summary>
 
-The following example shows how to configure environment-based API key validation with Docker Compose:
+To configure an environment-based API key in Docker Compose, do the following:
 
-```yaml
-services:
-  langflow:
-    image: langflowai/langflow:latest
-    environment:
-      - LANGFLOW_API_KEY_SOURCE=env
-      - LANGFLOW_API_KEY=${LANGFLOW_API_KEY}
-    ports:
-      - "7860:7860"
-```
+1. Set the API key in your Langflow `.env` file.
 
-Then set the API key in your `.env` file or environment:
+    ```text
+    LANGFLOW_API_KEY=your-secure-api-key
+    ```
 
-```text
-LANGFLOW_API_KEY=your-secure-api-key
-```
+    Replace `YOUR_API_KEY` with your actual Langflow API key value.
+
+2. Create or update your `docker-compose.yml` file to set `LANGFLOW_API_KEY_SOURCE=env` and reference the `LANGFLOW_API_KEY`.
+
+    ```yaml
+    services:
+      langflow:
+        image: langflowai/langflow:latest
+        environment:
+          - LANGFLOW_API_KEY_SOURCE=env
+          - LANGFLOW_API_KEY=${LANGFLOW_API_KEY}
+        ports:
+          - "7860:7860"
+    ```
 
 </details>
-
-#### Database vs. environment API key validation
-
-| Feature | `LANGFLOW_API_KEY_SOURCE=db` | `LANGFLOW_API_KEY_SOURCE=env` |
-|---------|------------------------------|-------------------------------|
-| Key storage | Langflow database | Environment variable |
-| Key management | Langflow UI or CLI | Infrastructure configuration |
-| Multiple keys | Yes | No (single key) |
-| Per-user keys | Yes | No (superuser access) |
-| Usage tracking | Yes (`total_uses`, `last_used_at`) | No |
-| Key rotation | Through Langflow UI/CLI | Update environment variable and restart |
-| Best for | Multi-user environments | Automated systems, Kubernetes, CI/CD |
 
 ### LANGFLOW_CORS_* {#cors-configuration-for-authentication}
 
