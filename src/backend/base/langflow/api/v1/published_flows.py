@@ -11,7 +11,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, DbSession
-from langflow.interface.components import get_and_cache_all_types_dict
+# from langflow.interface.components import get_and_cache_all_types_dict  # Disabled - used by vector DB storage
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.published_flow.model import (
     PublishedFlow,
@@ -32,8 +32,8 @@ from langflow.services.auth.permissions import can_edit_flow, get_user_roles_fro
 from langflow.services.database.models.version_flow_input_sample.model import VersionFlowInputSample
 from langflow.services.auth.utils import get_user_info_from_auth_token, require_marketplace_admin
 from langflow.services.deps import get_settings_service
-from langflow.services.vector_database import VectorDatabaseService
-from langflow.spec_flow_builder.yaml_exporter import FlowToYamlConverter
+# from langflow.services.vector_database import VectorDatabaseService  # Disabled - may use in future
+# from langflow.spec_flow_builder.yaml_exporter import FlowToYamlConverter  # Disabled - used by vector DB storage
 from langflow.logging import logger
 from langflow.api.v1.flows import clone_flow_for_marketplace
 from langflow.initial_setup.setup import get_or_create_marketplace_agent_folder
@@ -41,72 +41,73 @@ from langflow.initial_setup.setup import get_or_create_marketplace_agent_folder
 router = APIRouter(prefix="/published-flows", tags=["Published Flows"])
 
 
-async def _store_flow_in_vector_db(
-    flow: Flow,
-    marketplace_name: str,
-    description: str,
-    tags: list[str],
-) -> None:
-    """
-    Store flow YAML in vector database for semantic search.
-
-    This is a non-blocking operation - failures are logged but don't affect publishing.
-
-    Args:
-        flow: The cloned flow to store
-        marketplace_name: Name used in marketplace
-        description: Flow description
-        tags: Tags for categorization
-    """
-    try:
-        logger.info(f"Storing flow {flow.id} in vector database")
-
-        # Step 1: Get component catalog
-        settings_service = get_settings_service()
-        all_components = await get_and_cache_all_types_dict(settings_service)
-
-        # Step 2: Convert flow to YAML
-        converter = FlowToYamlConverter(all_components)
-        flow_data = {
-            "id": str(flow.id),
-            "name": marketplace_name,
-            "description": description or "",
-            "data": flow.data,
-        }
-        yaml_content = await converter.convert_flow_to_yaml(flow_data)
-
-        # Step 3: Extract component types from flow data
-        component_types = []
-        if flow.data and "nodes" in flow.data:
-            for node in flow.data["nodes"]:
-                node_data = node.get("data", {})
-                node_info = node_data.get("node", {})
-                display_name = node_info.get("display_name", "")
-                if display_name:
-                    component_types.append(display_name)
-
-        # Remove duplicates
-        component_types = list(set(component_types))
-
-        # Step 4: Store in vector DB
-        vector_service = VectorDatabaseService()
-        success = vector_service.store_flow(
-            flow_id=str(flow.id),
-            flow_name=marketplace_name,
-            yaml_content=yaml_content,
-            description=description or "",
-            components=component_types,
-            tags=tags or []
-        )
-
-        if success:
-            logger.info(f"Successfully stored flow {flow.id} in vector database")
-        else:
-            logger.warning(f"Vector DB storage returned False for flow {flow.id}")
-
-    except Exception as e:
-        # Log error but don't fail the publish operation
-        logger.error(f"Failed to store flow {flow.id} in vector database: {e}", exc_info=True)
+# Vector DB storage disabled - may use in future
+# async def _store_flow_in_vector_db(
+#     flow: Flow,
+#     marketplace_name: str,
+#     description: str,
+#     tags: list[str],
+# ) -> None:
+#     """
+#     Store flow YAML in vector database for semantic search.
+#
+#     This is a non-blocking operation - failures are logged but don't affect publishing.
+#
+#     Args:
+#         flow: The cloned flow to store
+#         marketplace_name: Name used in marketplace
+#         description: Flow description
+#         tags: Tags for categorization
+#     """
+#     try:
+#         logger.info(f"Storing flow {flow.id} in vector database")
+#
+#         # Step 1: Get component catalog
+#         settings_service = get_settings_service()
+#         all_components = await get_and_cache_all_types_dict(settings_service)
+#
+#         # Step 2: Convert flow to YAML
+#         converter = FlowToYamlConverter(all_components)
+#         flow_data = {
+#             "id": str(flow.id),
+#             "name": marketplace_name,
+#             "description": description or "",
+#             "data": flow.data,
+#         }
+#         yaml_content = await converter.convert_flow_to_yaml(flow_data)
+#
+#         # Step 3: Extract component types from flow data
+#         component_types = []
+#         if flow.data and "nodes" in flow.data:
+#             for node in flow.data["nodes"]:
+#                 node_data = node.get("data", {})
+#                 node_info = node_data.get("node", {})
+#                 display_name = node_info.get("display_name", "")
+#                 if display_name:
+#                     component_types.append(display_name)
+#
+#         # Remove duplicates
+#         component_types = list(set(component_types))
+#
+#         # Step 4: Store in vector DB
+#         vector_service = VectorDatabaseService()
+#         success = vector_service.store_flow(
+#             flow_id=str(flow.id),
+#             flow_name=marketplace_name,
+#             yaml_content=yaml_content,
+#             description=description or "",
+#             components=component_types,
+#             tags=tags or []
+#         )
+#
+#         if success:
+#             logger.info(f"Successfully stored flow {flow.id} in vector database")
+#         else:
+#             logger.warning(f"Vector DB storage returned False for flow {flow.id}")
+#
+#     except Exception as e:
+#         # Log error but don't fail the publish operation
+#         logger.error(f"Failed to store flow {flow.id} in vector database: {e}", exc_info=True)
 
 
 @router.post("/publish/{flow_id}", response_model=PublishedFlowRead, status_code=status.HTTP_201_CREATED)
@@ -353,13 +354,13 @@ async def publish_flow(
 
             logger.info(f"Re-published flow '{original_flow.name}' (ID: {flow_id}) as version '{payload.version}'")
 
-            # Store in vector database (non-blocking)
-            await _store_flow_in_vector_db(
-                flow=new_cloned_flow,
-                marketplace_name=marketplace_name,
-                description=payload.description or original_flow.description or "",
-                tags=payload.tags or []
-            )
+            # Vector DB storage disabled - may use in future
+            # await _store_flow_in_vector_db(
+            #     flow=new_cloned_flow,
+            #     marketplace_name=marketplace_name,
+            #     description=payload.description or original_flow.description or "",
+            #     tags=payload.tags or []
+            # )
 
             result_data = PublishedFlowRead.model_validate(existing, from_attributes=True)
             return result_data
@@ -530,13 +531,13 @@ async def publish_flow(
 
         logger.info(f"Published flow as '{marketplace_name}' version '{payload.version}' (Original ID: {flow_id})")
 
-        # Store in vector database (non-blocking)
-        await _store_flow_in_vector_db(
-            flow=cloned_flow,
-            marketplace_name=marketplace_name,
-            description=payload.description or original_flow.description or "",
-            tags=payload.tags or []
-        )
+        # Vector DB storage disabled - may use in future
+        # await _store_flow_in_vector_db(
+        #     flow=cloned_flow,
+        #     marketplace_name=marketplace_name,
+        #     description=payload.description or original_flow.description or "",
+        #     tags=payload.tags or []
+        # )
 
         # Refresh published_flow record
         await session.refresh(published_flow)
@@ -993,13 +994,13 @@ async def publish_flow_marketplace_admin(
 
         logger.info(f"Marketplace Admin published flow {flow_id} as '{marketplace_name}' version '{payload.version}'")
 
-        # Step 11: Store in vector database (non-blocking)
-        await _store_flow_in_vector_db(
-            flow=cloned_flow,
-            marketplace_name=marketplace_name,
-            description=payload.description or original_flow.description or "",
-            tags=payload.tags or []
-        )
+        # Step 11: Vector DB storage disabled - may use in future
+        # await _store_flow_in_vector_db(
+        #     flow=cloned_flow,
+        #     marketplace_name=marketplace_name,
+        #     description=payload.description or original_flow.description or "",
+        #     tags=payload.tags or []
+        # )
 
         # Step 12: Return result
         result_data = PublishedFlowRead.model_validate(published_flow, from_attributes=True)
