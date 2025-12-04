@@ -496,6 +496,7 @@ function GenericNode({
     <div
       className={cn(shouldShowUpdateComponent ? "relative -mt-10" : "")}
       data-testid="generic-node-wrapper"
+      style={node?.data.showNode ? { width: "320px" } : { width: "192px" }}
     >
       <div
         className={cn(
