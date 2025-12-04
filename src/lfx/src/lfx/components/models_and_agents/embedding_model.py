@@ -76,6 +76,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             value=IBM_WATSONX_URLS[0],
             show=False,
             real_time_refresh=True,
+            combobox=True,
         ),
         DropdownInput(
             name="model",
