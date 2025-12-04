@@ -34,4 +34,6 @@ export type UtilityStoreType = {
   setDefaultFolderName: (defaultFolderName: string) => void;
   hideGettingStartedProgress: boolean;
   setHideGettingStartedProgress: (hideGettingStartedProgress: boolean) => void;
+  awaitingBotResponse: boolean;
+  setAwaitingBotResponse: (awaiting: boolean) => void;
 };

@@ -57,4 +57,7 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   hideGettingStartedProgress: false,
   setHideGettingStartedProgress: (hideGettingStartedProgress: boolean) =>
     set({ hideGettingStartedProgress }),
+  awaitingBotResponse: false,
+  setAwaitingBotResponse: (awaiting: boolean) =>
+    set({ awaitingBotResponse: awaiting }),
 }));

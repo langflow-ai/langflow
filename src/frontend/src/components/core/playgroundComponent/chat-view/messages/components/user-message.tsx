@@ -29,6 +29,7 @@ export const UserMessage = memo(
     }
 
     const isEmpty = decodedMessage?.trim() === "";
+    const hasFiles = chat.files && chat.files.length > 0;
     const { mutate: updateMessageMutation } = useUpdateMessage();
 
     const handleEditMessage = (message: string) => {
@@ -141,16 +142,19 @@ export const UserMessage = memo(
                     />
                   ) : (
                     <>
-                      <div
-                        className={cn(
-                          "w-full items-baseline whitespace-pre-wrap break-words text-sm font-normal",
-                          isEmpty ? "text-muted-foreground" : "text-primary",
-                        )}
-                        data-testid={`chat-message-${chat.sender_name}-${chatMessage}`}
-                      >
-                        {isEmpty ? EMPTY_INPUT_SEND_MESSAGE : decodedMessage}
-                        {editedFlag}
-                      </div>
+                      {/* Only show text section if there's content or no files */}
+                      {(!isEmpty || !hasFiles) && (
+                        <div
+                          className={cn(
+                            "w-full items-baseline whitespace-pre-wrap break-words text-sm font-normal",
+                            isEmpty ? "text-muted-foreground" : "text-primary",
+                          )}
+                          data-testid={`chat-message-${chat.sender_name}-${chatMessage}`}
+                        >
+                          {isEmpty ? EMPTY_INPUT_SEND_MESSAGE : decodedMessage}
+                          {editedFlag}
+                        </div>
+                      )}
                     </>
                   )}
                   {chat.files && (

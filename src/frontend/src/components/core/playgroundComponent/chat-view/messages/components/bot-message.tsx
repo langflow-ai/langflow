@@ -1,4 +1,4 @@
-import { memo, useState } from "react";
+import { memo, useCallback, useRef, useState } from "react";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import IconComponent, {
   ForwardedIconComponent,
@@ -9,8 +9,10 @@ import { CustomMarkdownField } from "@/customization/components/custom-markdown-
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { useUtilityStore } from "@/stores/utilityStore";
 import type { chatMessagePropsType } from "@/types/components";
 import { cn } from "@/utils/utils";
+import { useTypingEffect } from "../hooks/use-typing-effect";
 import { convertFiles } from "../utils/convert-files";
 import EditMessageField from "./edit-message-field";
 import { EditMessageButton } from "./message-options";
@@ -21,6 +23,12 @@ export const BotMessage = memo(
     const [editMessage, setEditMessage] = useState(false);
     const isBuilding = useFlowStore((state) => state.isBuilding);
     const flow_id = useFlowsManagerStore((state) => state.currentFlowId);
+    const awaitingBotResponse = useUtilityStore(
+      (state) => state.awaitingBotResponse,
+    );
+    const setAwaitingBotResponse = useUtilityStore(
+      (state) => state.setAwaitingBotResponse,
+    );
 
     const isAudioMessage = chat.category === "audio";
     const chatMessage = chat.message ? chat.message.toString() : "";
@@ -33,6 +41,26 @@ export const BotMessage = memo(
     }
 
     const isEmpty = decodedMessage?.trim() === "";
+
+    // Capture at mount time whether this message should animate
+    // This is true if we were awaiting a bot response when this message appeared
+    const willAnimateRef = useRef(awaitingBotResponse && lastMessage);
+
+    // Can start typing when: build is done + has content
+    const canStart = !isBuilding && decodedMessage !== "";
+
+    const handleTypingComplete = useCallback(() => {
+      setAwaitingBotResponse(false);
+    }, [setAwaitingBotResponse]);
+
+    const { displayedText, isTyping } = useTypingEffect({
+      text: decodedMessage,
+      willAnimate: willAnimateRef.current,
+      canStart,
+      speed: 3,
+      interval: 30,
+      onComplete: handleTypingComplete,
+    });
     const { mutate: updateMessageMutation } = useUpdateMessage();
 
     const handleEditMessage = (message: string) => {
@@ -163,7 +191,7 @@ export const BotMessage = memo(
                             className="h-8 w-8 animate-pulse"
                           />
                         ) : (
-                          <div className="min-h-8 w-full">
+                          <div className="w-full">
                             {editMessage ? (
                               <EditMessageField
                                 key={`edit-message-${chat.id}`}
@@ -172,13 +200,18 @@ export const BotMessage = memo(
                                 onCancel={() => setEditMessage(false)}
                               />
                             ) : (
-                              <CustomMarkdownField
-                                isAudioMessage={isAudioMessage}
-                                chat={chat}
-                                isEmpty={isEmpty}
-                                chatMessage={chatMessage}
-                                editedFlag={editedFlag}
-                              />
+                              <>
+                                <CustomMarkdownField
+                                  isAudioMessage={isAudioMessage}
+                                  chat={chat}
+                                  isEmpty={isEmpty && !isTyping}
+                                  chatMessage={displayedText}
+                                  editedFlag={!isTyping ? editedFlag : null}
+                                />
+                                {isTyping && (
+                                  <span className="inline-block w-1 h-4 bg-foreground animate-pulse ml-0.5 align-middle" />
+                                )}
+                              </>
                             )}
                           </div>
                         )}
