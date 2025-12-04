@@ -144,8 +144,8 @@ jobs:
           cache-dependency-glob: "uv.lock"
           python-version: "3.13"
           prune-cache: false
-      - name: Clear uv cache
-        run: uv cache clean
+      - name: Regenerate lockfile for Python 3.13
+        run: uv lock --upgrade
       - name: Install the project
         run: uv sync --directory src/backend/base
       - name: Check for dependency incompatibility
@@ -216,8 +216,8 @@ jobs:
           cache-dependency-glob: "uv.lock"
           python-version: "3.13"
           prune-cache: false
-      - name: Clear uv cache
-        run: uv cache clean
+      - name: Regenerate lockfile for Python 3.13
+        run: uv lock --upgrade
       - name: Install the project
         run: uv sync
       - name: Check for dependency incompatibility
