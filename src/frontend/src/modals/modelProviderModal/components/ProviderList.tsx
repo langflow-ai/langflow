@@ -1,13 +1,11 @@
-import { useMemo } from 'react';
-
-import { useGetModelProviders } from '@/controllers/API/queries/models/use-get-model-providers';
-
-import ProviderListItem from './ProviderListItem';
-import { Provider } from './types';
-import LoadingTextComponent from '@/components/common/loadingTextComponent';
+import { useMemo } from "react";
+import LoadingTextComponent from "@/components/common/loadingTextComponent";
+import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
+import ProviderListItem from "./ProviderListItem";
+import { Provider } from "./types";
 
 // Supported model types for filtering providers
-type ModelType = 'llm' | 'embeddings';
+type ModelType = "llm" | "embeddings";
 
 export interface ProviderListProps {
   modelType: ModelType;
@@ -28,10 +26,10 @@ const ProviderList = ({
 
   const filteredProviders: Provider[] = useMemo(() => {
     return rawProviders
-      .map(provider => {
+      .map((provider) => {
         const matchingModels =
           provider?.models?.filter(
-            model => model?.metadata?.model_type === modelType
+            (model) => model?.metadata?.model_type === modelType,
           ) || [];
 
         return {
@@ -42,7 +40,7 @@ const ProviderList = ({
           models: matchingModels,
         };
       })
-      .filter(provider => provider.model_count > 0);
+      .filter((provider) => provider.model_count > 0);
   }, [rawProviders, modelType]);
 
   const handleProviderSelect = (provider: Provider) => {
@@ -65,7 +63,7 @@ const ProviderList = ({
 
   return (
     <div className="flex flex-col gap-1" data-testid="provider-list">
-      {filteredProviders.map(provider => (
+      {filteredProviders.map((provider) => (
         <ProviderListItem
           key={provider.provider}
           provider={provider}
