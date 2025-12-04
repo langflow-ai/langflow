@@ -61,9 +61,8 @@ export const SessionRename = ({ sessionId, onSave }: SessionRenameProps) => {
     if (e.key === "Enter") {
       e.preventDefault();
       e.stopPropagation();
-      // Blur the input to trigger save
+      // Blur the input to trigger save (handleBlur will call handleSave)
       e.currentTarget.blur();
-      handleSave(e.currentTarget.value);
     } else if (e.key === "Escape") {
       e.preventDefault();
       e.stopPropagation();
@@ -79,8 +78,7 @@ export const SessionRename = ({ sessionId, onSave }: SessionRenameProps) => {
       ref={inputRef}
       defaultValue={sessionId}
       autoFocus
-      className="h-8 text-sm border-none p-0 w-full"
-      style={{ fontFamily: "Inter" }}
+      className="h-8 text-sm border-none p-0 w-full font-sans"
       onBlur={handleBlur}
       onKeyDown={handleKeyDown}
     />
