@@ -257,8 +257,6 @@ postgresql = [
 override-dependencies = [
     # temporary force a newer python-pptx
     "python-pptx>=1.0.2",
-    # Force backports-strenum to only apply on Python < 3.11
-    "backports-strenum; python_version < '3.11'",
 ]
 
 [project.scripts]
