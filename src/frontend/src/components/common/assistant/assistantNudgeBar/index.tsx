@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useGetSystemMessageGenQuery } from "@/controllers/API/queries/assistant";
+import { useGetNextSuggestedComponentQuery } from "@/controllers/API/queries/assistant/use-suggest-next-component";
 import { useGetFlowId } from "@/modals/IOModal/hooks/useGetFlowId";
 import useAssistantManagerStore from "@/stores/assistantManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
@@ -122,7 +123,18 @@ export const AssistantNudges: React.FC<AssistantNudgesProps> = ({
   const [elapsedTime, setElapsedTime] = useState(0);
   const [generatePromptClicked, setGeneratePromptClicked] = useState(false);
 
-  const { isFetching, refetch: prompt } = useGetSystemMessageGenQuery({
+  const { isFetching: isFetchingPrompt, refetch: prompt } =
+    useGetSystemMessageGenQuery({
+      compId: selectedCompData?.id,
+      flowId,
+      fieldName: selectedCompData?.fieldName,
+      inputValue: userInput,
+    });
+
+  const {
+    isFetching: isFetchingNextSuggestComponents,
+    refetch: suggestedComponents,
+  } = useGetNextSuggestedComponentQuery({
     compId: selectedCompData?.id,
     flowId,
     fieldName: selectedCompData?.fieldName,
@@ -132,12 +144,12 @@ export const AssistantNudges: React.FC<AssistantNudgesProps> = ({
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
 
-    if (isFetching) {
+    if (isFetchingPrompt) {
       setElapsedTime(0);
       interval = setInterval(() => {
         setElapsedTime((prev) => prev + 1);
       }, 1000);
-    } else if (!isFetching) {
+    } else if (!isFetchingPrompt) {
       // Cleanup when done
       clearInterval(interval!);
     }
@@ -145,7 +157,14 @@ export const AssistantNudges: React.FC<AssistantNudgesProps> = ({
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isFetching]);
+  }, [isFetchingPrompt]);
+
+  useEffect(() => {
+    const result = async () => {
+      suggestedComponents();
+    };
+    console.log("__________________________result", result());
+  }, []);
 
   const onGenButtonClick = async () => {
     switch (type) {
