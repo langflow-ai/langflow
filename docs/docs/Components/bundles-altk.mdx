@@ -1,0 +1,41 @@
+---
+title: ALTK
+slug: /bundles-altk
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+:::tip
+The ALTK contains features called _components_. These are different from Langflow components. All components within ALTK are available through Langflow's **ALTK Agent** component.
+:::
+
+The **ALTK Agent** implements components from the [Agent Lifecycle Toolkit](https://github.com/AgentToolkit/agent-lifecycle-toolkit). ALTK features can be enabled or disabled independently.
+
+* **Pre-tool validation**: Validates tool calls before execution to check for appropriateness and correctness using the [SPARC](https://agenttoolkit.github.io/agent-lifecycle-toolkit/concepts/components/sparc/) reflection component. This validation prevents agents from executing invalid tool calls.
+
+* **Post-tool JSON processing**: Processes large JSON tool responses by generating Python code on the fly to extract relevant data. This helps reduce context size and improves the agent's ability to work with large tool responses, especially when dealing with APIs that return extensive JSON data. The component outputs a [Message](/data-types#message) containing the agent's response, which is passed to the next component in the flow instead of the full JSON data that isn't needed.
+
+For more information, see the [Agent Lifecycle Toolkit documentation](https://agenttoolkit.github.io/agent-lifecycle-toolkit/).
+
+For an example of the ALTK component in Langflow, see the video tutorial [ALTK in Langflow: Reliably handle JSON responses in your AI agent](https://www.youtube.com/watch?v=YNwPBK_KxXY).
+
+### ALTK Agent parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| agent_llm | Dropdown | Input parameter. The model provider the agent uses to generate responses. |
+| enable_tool_validation | Boolean | Input parameter. If enabled, tool calls are validated using SPARC before execution to check for appropriateness and correctness. Default: `true`. |
+| enable_post_tool_reflection | Boolean | Input parameter. If enabled, tool outputs are automatically processed through JSON processing when the output is JSON and exceeds the size threshold. Default: `true`. |
+| response_processing_size_threshold | Integer | Input parameter. Tool output is post-processed only if the response length exceeds this character threshold. Default: `100`. Advanced parameter. |
+| tools | List[Tool] | Input parameter. The list of tools available to the agent. |
+| system_prompt | String | Input parameter. The system prompt to provide context to the agent. |
+| input_value | String | Input parameter. The user's input to the agent. |
+| memory | Memory | Input parameter. The memory for the agent to use for context persistence. |
+| max_iterations | Integer | Input parameter. The maximum number of iterations to allow the agent to execute. |
+| verbose | Boolean | Input parameter. This determines whether to print out the agent's intermediate steps. |
+| handle_parsing_errors | Boolean | Input parameter. This determines whether to handle parsing errors in the agent. |
