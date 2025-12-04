@@ -231,7 +231,7 @@ If Claude for Desktop doesn't use your server's tools correctly, try explicitly 
           "command": "PATH_TO_UVX",
           "args": [
             "mcp-proxy",
-            "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/sse"
+            "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/streamable"
           ]
         }
       }
@@ -250,7 +250,7 @@ If Claude for Desktop doesn't use your server's tools correctly, try explicitly 
             "-y",
             "supergateway",
             "--sse",
-            "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/sse"
+            "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/streamable"
           ]
         }
       }
@@ -267,7 +267,8 @@ This is a known issue when using MCP Tools with browser navigation actions, such
 This issue occurs because the MCP server runs from a Python process, which prevents it from opening browser windows in WSL or Windows.
 
 To work around this issue, use the standalone MCP server approach documented in the [Playwright MCP repository](https://github.com/microsoft/playwright-mcp?tab=readme-ov-file#standalone-mcp-server).
-After the server is up and running, you can add it as an SSE server in Langflow.
+After the server is up and running, you can add it as an HTTP/SSE server in Langflow.
+
 For other browser navigation tools, see the provider's documentation for specific troubleshooting guidance.
 
 ### "No tools or prompts connected" on MCP servers in mixed Windows/WSL environments
