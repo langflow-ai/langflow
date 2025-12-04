@@ -487,6 +487,8 @@ function GenericNode({
 
   useEffect(() => {
     updateNodeInternals(data.id);
+    console.log(data.id);
+
     console.log("updating internals because showNode changed");
   }, [showMore]);
 
