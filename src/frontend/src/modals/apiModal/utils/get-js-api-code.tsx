@@ -1,11 +1,12 @@
-import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
+import {
+  formatJsHeadersForInline,
+  getApiSampleHeaders,
+  getBaseUrl,
+} from "@/customization/utils/custom-code-samples";
 import {
   getAllChatInputNodeIds,
   getAllFileNodeIds,
-  getChatInputNodeId,
-  getFileNodeId,
   getNonFileTypeTweaks,
-  hasChatInputFiles,
   hasFileTweaks,
 } from "./detect-file-tweaks";
 
@@ -21,8 +22,7 @@ export function getNewJsApiCode({
   processedPayload: any;
   shouldDisplayApiKey: boolean;
 }): string {
-  const { protocol, host } = customGetHostProtocol();
-  const baseUrl = `${protocol}//${host}`;
+  const baseUrl = getBaseUrl();
 
   // Parse URL for robust hostname/port extraction
   const parsedUrl = new URL(baseUrl);
@@ -51,7 +51,7 @@ const apiKey = 'YOUR_API_KEY_HERE';
         'Content-Type': 'application/json',
         "x-api-key": apiKey
     },`
-      : "";
+      : getApiSampleHeaders("javascript");
 
     return `${authSection}const payload = ${payloadString};
 payload.session_id = crypto.randomUUID();
@@ -110,9 +110,10 @@ const authHeaders = { 'x-api-key': apiKey };`
             path: \`/api/v1/files/upload/\${FLOW_ID}\`,
             method: 'POST',
             headers: {
+
                 'Content-Type': \`multipart/form-data; boundary=\${chatBoundary${
                   index + 1
-                }}\`,
+                }}\`,${formatJsHeadersForInline()}
                 'Content-Length': chatPayload${index + 1}.length,
                 ...authHeaders
             }
@@ -159,7 +160,7 @@ const authHeaders = { 'x-api-key': apiKey };`
                 'Content-Type': \`multipart/form-data; boundary=\${fileBoundary${
                   index + 1
                 }}\`,
-                'Content-Length': filePayload${index + 1}.length,
+                'Content-Length': filePayload${index + 1}.length,${formatJsHeadersForInline()}
                 ...authHeaders
             }
         };
@@ -289,7 +290,7 @@ ${allTweaks}
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Content-Length': Buffer.byteLength(executePayload),
+                'Content-Length': Buffer.byteLength(executePayload),${formatJsHeadersForInline()}
                 ...authHeaders
             }
         };
