@@ -45,7 +45,6 @@ export default function ToolsTable({
   const [sidebarName, setSidebarName] = useState<string>("");
   const [sidebarDescription, setSidebarDescription] = useState<string>("");
 
-  const editedSelection = useRef<boolean>(false);
   const applyingSelection = useRef<boolean>(false);
   const previousRowsCount = useRef<number>(0);
   const skipSelectionReapply = useRef<number>(0);
@@ -68,7 +67,6 @@ export default function ToolsTable({
     setData(initialData);
     const filter = initialData.filter((row) => row.status === true);
     setSelectedRows(filter);
-    editedSelection.current = false;
   }, [open]);
 
   useEffect(() => {
@@ -95,16 +93,15 @@ export default function ToolsTable({
   useEffect(() => {
     if (!agGrid.current?.api || !selectedRows || !open) return;
 
-    // Don't re-apply selection if we're just editing data fields (slug/description)
+    // Skip if editing data fields (slug/description)
     if (skipSelectionReapply.current > 0) {
       skipSelectionReapply.current--;
       return;
     }
 
-    // Set flag BEFORE any changes
     applyingSelection.current = true;
 
-    // Use requestAnimationFrame to batch the selection changes
+    // Batch selection changes to prevent race conditions
     requestAnimationFrame(() => {
       if (!agGrid.current?.api) {
         applyingSelection.current = false;
@@ -112,37 +109,24 @@ export default function ToolsTable({
       }
 
       const selectedIds = new Set(selectedRows.map((row) => row.name));
-
-      // Use setNodesSelected for batch operation (more efficient and atomic)
       const nodesToSelect: any[] = [];
       const nodesToDeselect: any[] = [];
 
       agGrid.current.api.forEachNode((node) => {
         const shouldSelect = selectedIds.has(node.data.name);
         if (node.isSelected() !== shouldSelect) {
-          if (shouldSelect) {
-            nodesToSelect.push(node);
-          } else {
-            nodesToDeselect.push(node);
-          }
+          (shouldSelect ? nodesToSelect : nodesToDeselect).push(node);
         }
       });
 
-      // Apply deselections first, then selections using batch operation
+      // Batch updates prevent events from firing during programmatic changes
       if (nodesToDeselect.length > 0) {
-        agGrid.current.api.setNodesSelected({
-          nodes: nodesToDeselect,
-          newValue: false,
-        });
+        agGrid.current.api.setNodesSelected({ nodes: nodesToDeselect, newValue: false });
       }
       if (nodesToSelect.length > 0) {
-        agGrid.current.api.setNodesSelected({
-          nodes: nodesToSelect,
-          newValue: true,
-        });
+        agGrid.current.api.setNodesSelected({ nodes: nodesToSelect, newValue: true });
       }
 
-      // Use another animation frame to ensure the selection is fully applied before clearing the flag
       requestAnimationFrame(() => {
         applyingSelection.current = false;
       });
@@ -256,24 +240,19 @@ export default function ToolsTable({
     },
   ];
   const handleSelectionChanged = (event) => {
-    // Guard: don't process if modal is closed or we're programmatically applying selection
+    // Skip if modal closed or we're programmatically applying selection
     if (!open || applyingSelection.current) return;
 
-    // Get the actual selected rows from AG Grid
     const selectedData = event.api.getSelectedRows();
 
-    // Only update if we have a real change
-    // Compare by creating a set of names for both
+    // Only update state if selection actually changed (prevents circular updates)
     const newNames = new Set(selectedData.map((r: any) => r.name));
     const oldNames = new Set((selectedRows || []).map((r: any) => r.name));
-
-    // Check if selection actually changed
-    const sameSize = newNames.size === oldNames.size;
     const sameContent =
-      sameSize && Array.from(newNames).every((name) => oldNames.has(name));
+      newNames.size === oldNames.size &&
+      Array.from(newNames).every((name) => oldNames.has(name));
 
     if (!sameContent) {
-      editedSelection.current = true;
       setSelectedRows(selectedData);
     }
   };
