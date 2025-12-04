@@ -80,7 +80,7 @@ export default function MarketplacePage() {
     getStoredValue(STORAGE_KEYS.PAGE_INDEX, 1)
   );
   const [pageSize, setPageSize] = useState(() =>
-    getStoredValue(STORAGE_KEYS.PAGE_SIZE, 12)
+    getStoredValue(STORAGE_KEYS.PAGE_SIZE, 20)
   );
   const [tagFilter, setTagFilter] = useState<string | "all">(() =>
     getStoredValue(STORAGE_KEYS.TAG_FILTER, "all")

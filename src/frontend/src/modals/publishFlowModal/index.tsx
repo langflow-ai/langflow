@@ -623,11 +623,11 @@ export default function PublishFlowModal({
                 id="version"
                 placeholder="1.0.0"
                 value={version}
-                onChange={(e) => setVersion(e.target.value)}
-                required
+                readOnly
+                className="bg-muted cursor-not-allowed"
               />
               <p className="text-xs text-muted-foreground">
-                Semantic versioning recommended (e.g., 1.0.0, 1.2.3)
+                Auto-generated version (e.g., 1.0.0, 1.0.1)
               </p>
             </div>
 

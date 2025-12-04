@@ -33,8 +33,6 @@ import KnowledgePage from "./pages/MainPage/pages/knowledgePage";
 import CollectionPage from "./pages/MainPage/pages/main-page";
 import SettingsPage from "./pages/SettingsPage";
 import AgentBuilderPage from "./pages/AgentBuilderPage";
-import AgentMarketplacePage from "./pages/AgentMarketplacePage";
-import AgentMarketplaceDetailPage from "./pages/AgentMarketplacePage/DetailPage";
 import MarketplacePage from "./pages/MarketplacePage";
 import MarketplaceDetailPage from "./pages/MarketplacePage/DetailPage";
 import ApiKeysPage from "./pages/SettingsPage/pages/ApiKeysPage";
@@ -111,10 +109,6 @@ const router = createBrowserRouter(
                     element={<AgentBuilderPage key="agent-builder" />}
                   />
                   <Route
-                    path="agent-marketplace/"
-                    element={<AgentMarketplacePage />}
-                  />
-                  <Route
                     path="flows/"
                     element={<HomePage key="flows" type="flows" />}
                   />
@@ -174,10 +168,6 @@ const router = createBrowserRouter(
                     {CustomRoutesStore()}
                   </Route>
                 </Route>
-                <Route
-                  path="agent-marketplace/detail/:flowId"
-                  element={<AgentMarketplaceDetailPage />}
-                />
                 {/* <Route path="settings" element={<SettingsPage />}>
                   <Route
                     index
