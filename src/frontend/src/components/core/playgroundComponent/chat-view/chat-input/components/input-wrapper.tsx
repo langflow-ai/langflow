@@ -21,8 +21,6 @@ interface InputWrapperProps {
   fileInputRef: React.RefObject<HTMLInputElement>;
   handleFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   handleButtonClick: () => void;
-  currentFlowId: string;
-  playgroundPage: boolean;
   audioRecordingState: AudioRecordingState;
   onStartRecording: () => void;
   onStopRecording: () => void;
@@ -42,8 +40,6 @@ const InputWrapper = ({
   fileInputRef,
   handleFileChange,
   handleButtonClick,
-  currentFlowId,
-  playgroundPage,
   audioRecordingState,
   onStartRecording,
   onStopRecording,

@@ -31,7 +31,6 @@ export default function ChatInput({
   files,
   setFiles,
   isDragging,
-  playgroundPage,
   sendMessage,
 }: ChatInputProps): JSX.Element {
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
@@ -248,8 +247,6 @@ export default function ChatInput({
           fileInputRef={fileInputRef}
           handleFileChange={handleFileChange}
           handleButtonClick={handleButtonClick}
-          currentFlowId={currentFlowId}
-          playgroundPage={!!playgroundPage}
           audioRecordingState={audioRecordingState}
           onStartRecording={startRecording}
           onStopRecording={stopRecording}

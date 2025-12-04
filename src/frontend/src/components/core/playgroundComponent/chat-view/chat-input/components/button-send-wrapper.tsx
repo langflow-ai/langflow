@@ -1,16 +1,10 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
-import Loading from "@/components/ui/loading";
-import { Case } from "@/shared/components/caseComponent";
-import useFlowStore from "@/stores/flowStore";
 import type { FilePreviewType } from "@/types/components";
 import { cn } from "@/utils/utils";
 
 const BUTTON_STATES = {
   NO_INPUT: "bg-high-indigo text-background",
-  HAS_CHAT_VALUE: "text-primary",
-  SHOW_STOP:
-    "bg-muted hover:bg-secondary-hover dark:hover:bg-input text-foreground cursor-pointer",
   DEFAULT:
     "bg-primary text-primary-foreground hover:bg-primary-hover hover:text-secondary",
 };
@@ -28,17 +22,10 @@ const ButtonSendWrapper = ({
   chatValue,
   files,
 }: ButtonSendWrapperProps) => {
-  const stopBuilding = useFlowStore((state) => state.stopBuilding);
-  const isBuilding = useFlowStore((state) => state.isBuilding);
-
-  const showStopButton = isBuilding || files.some((file) => file.loading);
-  const showSendButton =
-    !(isBuilding || files.some((file) => file.loading)) && !noInput;
+  const isLoading = files.some((file) => file.loading);
 
   const getButtonState = () => {
-    if (showStopButton) return BUTTON_STATES.SHOW_STOP;
     if (noInput) return BUTTON_STATES.NO_INPUT;
-    if (chatValue) return BUTTON_STATES.DEFAULT;
     return BUTTON_STATES.DEFAULT;
   };
 
@@ -46,12 +33,15 @@ const ButtonSendWrapper = ({
 
   const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
-    if (showStopButton && isBuilding) {
-      stopBuilding();
-    } else if (!showStopButton) {
+    if (!isLoading) {
       send();
     }
   };
+
+  // Don't render if noInput is true
+  if (noInput) {
+    return null;
+  }
 
   return (
     <Button
@@ -60,21 +50,13 @@ const ButtonSendWrapper = ({
         "h-7 w-7 px-0 flex items-center justify-center",
       )}
       onClick={handleClick}
+      disabled={isLoading}
       unstyled
-      data-testid={showStopButton ? "button-stop" : "button-send"}
+      data-testid="button-send"
     >
-      <Case condition={showStopButton}>
-        <div className="flex items-center gap-2 rounded-md text-sm font-medium">
-          Stop
-          <Loading className="h-4 w-4" />
-        </div>
-      </Case>
-
-      <Case condition={showSendButton}>
-        <div className="flex h-fit w-fit items-center gap-2 text-sm font-medium">
-          <ForwardedIconComponent name="ArrowUp" className="h-4 w-4" />
-        </div>
-      </Case>
+      <div className="flex h-fit w-fit items-center gap-2 text-sm font-medium">
+        <ForwardedIconComponent name="ArrowUp" className="h-4 w-4" />
+      </div>
     </Button>
   );
 };
