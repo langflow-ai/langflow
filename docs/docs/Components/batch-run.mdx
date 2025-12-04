@@ -17,7 +17,7 @@ The output contains the following columns:
 * `batch_index`: The 0-indexed processing order for all rows in the `DataFrame`
 * `metadata` (optional): Additional information about the processing
 
-### Use the Batch Run component in a flow
+## Use the Batch Run component in a flow
 
 If you pass the **Batch Run** output to a [**Parser** component](/parser), you can use variables in the parsing template to reference these keys, such as `{text_input}` and `{model_response}`.
 This is demonstrated in the following example.
@@ -49,7 +49,7 @@ For example, `Create a business card for each name.`
 
     You can also connect a **Chat Output** component to the **Parser** component if you want to see the output in the **Playground**.
 
-### Batch Run parameters
+## Batch Run parameters
 
 <PartialParams />
 
