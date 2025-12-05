@@ -16,7 +16,6 @@ if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
 
 
-
 class StorageService(Service):
     """Storage service for langflow."""
 
