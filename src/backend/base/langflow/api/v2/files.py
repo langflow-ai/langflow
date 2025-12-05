@@ -583,17 +583,18 @@ async def download_file(
                 raise HTTPException(status_code=404, detail="File not found")
             return await read_file_content(file_content, decode=True)
 
-        # For streaming, use the appropriate method based on storage type
-        if hasattr(storage_service, "get_file_stream"):
-            # S3 storage - use streaming method
-            file_stream = storage_service.get_file_stream(flow_id=str(current_user.id), file_name=file_name)
-            byte_stream = file_stream
-        else:
-            # Local storage - get file and convert to stream
-            file_content = await storage_service.get_file(flow_id=str(current_user.id), file_name=file_name)
-            if file_content is None:
-                raise HTTPException(status_code=404, detail="File not found")
-            byte_stream = byte_stream_generator(file_content)
+        # Check file exists before streaming (to catch errors before response headers are sent)
+        # This is important because once StreamingResponse starts, we can't change the status code
+        try:
+            # Try to get file size to verify it exists
+            await storage_service.get_file_size(flow_id=str(current_user.id), file_name=file_name)
+        except FileNotFoundError as e:
+            raise HTTPException(status_code=404, detail=f"File not found: {e}") from e
+
+        # Use streaming method from storage service (works for both S3 and local)
+        # Wrap the async generator in byte_stream_generator to ensure proper iteration
+        file_stream = storage_service.get_file_stream(flow_id=str(current_user.id), file_name=file_name)
+        byte_stream = byte_stream_generator(file_stream)
 
         # Create the filename with extension
         file_extension = Path(file.path).suffix

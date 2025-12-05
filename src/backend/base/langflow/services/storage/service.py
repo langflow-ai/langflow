@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
+from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING
 
 import anyio
@@ -37,6 +38,23 @@ class StorageService(Service):
 
     @abstractmethod
     async def get_file(self, flow_id: str, file_name: str) -> bytes:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_file_stream(self, flow_id: str, file_name: str, chunk_size: int = 8192) -> AsyncIterator[bytes]:
+        """Retrieve a file as a stream of chunks.
+
+        Args:
+            flow_id: The flow/user identifier for namespacing
+            file_name: The name of the file to retrieve
+            chunk_size: Size of chunks to yield (default: 8192 bytes)
+
+        Yields:
+            bytes: Chunks of the file content
+
+        Raises:
+            FileNotFoundError: If the file does not exist
+        """
         raise NotImplementedError
 
     @abstractmethod
