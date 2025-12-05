@@ -1,40 +1,12 @@
 ---
-title: Helpers
-slug: /components-helpers
+title: Message History
+slug: /message-history
 ---
 
 import Icon from "@site/src/components/icon";
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
-
-Helper components provide utility functions to help manage data and perform simple tasks in your flow.
-
-## Calculator
-
-The **Calculator** component performs basic arithmetic operations on mathematical expressions.
-It supports addition, subtraction, multiplication, division, and exponentiation operations.
-
-For an example of using this component in a flow, see the [**Python Interpreter** component](/components-processing#python-interpreter).
-
-### Calculator parameters
-
-| Name | Type | Description |
-|------|------|-------------|
-| expression | String | Input parameter. The arithmetic expression to evaluate, such as `4*4*(33/22)+12-20`. |
-| result | Data | Output parameter. The calculation result as a [`Data` object](/data-types) containing the evaluated expression. |
-
-## Current Date
-
-The **Current Date** component returns the current date and time in a selected timezone. This component provides a flexible way to obtain timezone-specific date and time information within a Langflow pipeline.
-
-### Current Date parameters
-
-| Name | Type | Description |
-|------|------|-------------|
-| timezone | String | Input parameter. The timezone for the current date and time. |
-| current_date | String | Output parameter. The resulting current date and time in the selected timezone. |
-
-## Message History
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
 The **Message History** component provides combined chat history and message storage functionality.
 It can store and retrieve chat messages from either [Langflow storage](/memory) _or_ a dedicated chat memory database like Mem0 or Redis.
@@ -52,7 +24,7 @@ Use the **Message History** component for the following use cases:
 For more information, see [Store chat memory](/memory#store-chat-memory).
 :::
 
-### Use the Message History component in a flow
+## Use the Message History component in a flow
 
 The **Message History** component has two modes, depending on where you want to use it in your flow:
 
@@ -175,9 +147,7 @@ Other options include the [**Mem0 Chat Memory** component](/bundles-mem0) and [*
 </TabItem>
 </Tabs>
 
-### Message History parameters
-
-import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+## Message History parameters
 
 <PartialParams />
 
@@ -211,7 +181,7 @@ The available parameters depend on whether the component is in **Retrieve** or *
 </TabItem>
 </Tabs>
 
-### Message History output
+## Message History output
 
 Memories can be retrieved in one of two formats:
 
@@ -222,24 +192,3 @@ This is the typical output format used to pass memories _as chat messages_ to an
 Useful for cases where you need to retrieve memories in a tabular format rather than as chat messages.
 
 You can set the output type near the component's output port.
-
-## Legacy Helper components
-
-import PartialLegacy from '@site/docs/_partial-legacy.mdx';
-
-<PartialLegacy />
-
-The following Helper components are in legacy status:
-
-* **Message Store**: Replaced by the [**Message History** component](#message-history)
-* **Create List**: Replace with [Processing components](/components-processing)
-* **ID Generator**: Replace with a component that executes arbitrary code to generate an ID or embed an ID generator script your application code (external to your Langflow flows).
-* **Output Parser**: Replace with the [**Structured Output** component](/components-processing#structured-output) and [**Parser** component](/components-processing#parser).
-The components you need depend on the data types and complexity of the parsing task.
-
-    The **Output Parser** component transformed the output of a language model into comma-separated values (CSV) format, such as `["item1", "item2", "item3"]`, using LangChain's `CommaSeparatedListOutputParser`.
-    The **Structured Output** component is a good alternative for this component because it also formats LLM responses with support for custom schemas and more complex parsing.
-
-    **Parsing** components only provide formatting instructions and parsing functionality.
-    _They don't include prompts._
-    You must connect parsers to **Prompt Template** components to create prompts that LLMs can use.

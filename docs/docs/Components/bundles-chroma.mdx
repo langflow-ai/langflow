@@ -39,7 +39,7 @@ The following example flow uses one **Chroma DB** component for both reads and w
 
 ![ChromaDB receiving split text](/img/component-chroma-db.png)
 
-* When writing, it splits `Data` from a [**URL** component](/components-data#url) into chunks, computes embeddings with attached **Embedding Model** component, and then loads the chunks and embeddings into the Chroma vector store.
+* When writing, it splits `Data` from a [**URL** component](/url) into chunks, computes embeddings with attached **Embedding Model** component, and then loads the chunks and embeddings into the Chroma vector store.
 To trigger writes, click <Icon name="Play" aria-hidden="true"/> **Run component** on the **Chroma DB** component.
 
 * When reading, it uses chat input to perform a similarity search on the vector store, and then print the search results to the chat.

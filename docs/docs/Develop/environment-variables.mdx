@@ -456,12 +456,15 @@ The following environment variables set base Langflow server configuration, such
 | `LANGFLOW_SSL_KEY_FILE` | String | Not set | Path to the SSL key file for enabling HTTPS on the Langflow web server. This is separate from [database SSL connections](/configuration-custom-database#connect-langflow-to-a-local-postgresql-database). |
 | `LANGFLOW_DEACTIVATE_TRACING` | Boolean | `False` | Deactivate tracing functionality. |
 | `LANGFLOW_CELERY_ENABLED` | Boolean | `False` | Enable Celery for distributed task processing. |
+| `LANGFLOW_ALEMBIC_LOG_TO_STDOUT` | Boolean | `False` | Whether to log Alembic database migration output to stdout instead of a log file. If `true`, Alembic logs to `stdout` and the default log file is ignored. |
 
 For more information about deploying Langflow servers, see [Langflow deployment overview](/deployment-overview).
 
 ### Storage
 
-See [Memory management options](/memory) and [Manage files](/concepts-file-management).
+For file storage environment variables, see [File storage environment variables](/concepts-file-management#file-storage-environment-variables).
+
+For database environment variables, including PostgreSQL configuration, see [Memory management options](/memory#configure-external-memory).
 
 ### Telemetry
 

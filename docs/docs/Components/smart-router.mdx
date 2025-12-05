@@ -1,0 +1,33 @@
+---
+title: Smart Router
+slug: /smart-router
+---
+
+import Icon from "@site/src/components/icon";
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialDevModeWindows from '@site/docs/_partial-dev-mode-windows.mdx';
+
+The **Smart Router** component is an LLM-powered variation of the [**If-Else** component](/if-else).
+Instead of string matching, the **Smart Router** uses a connected [**Language Model** component](/components-models) to categorize and route incoming messages.
+
+You can use the **Smart Router** component anywhere you would use the **If-Else** component.
+For an example, create [If-Else component example flow](/if-else#use-the-if-else-component-in-a-flow), then replace the **If-Else** component with a **Smart Router** component.
+Instead of a regex, use the **Routes** table to define the outputs for your messages.
+Finally, connect a **Language Model** component to provide the sorting intelligence.
+
+## Smart Router parameters
+
+<PartialParams />
+
+| Name                | Type     | Description                                                       |
+|---------------------|----------|-------------------------------------------------------------------|
+| llm                 | [LanguageModel](/data-types#languagemodel) | Input parameter. The language model to use for categorization. Required. |
+| input_text          | String   | Input parameter. The primary text input for categorization. Required. |
+| routes              | Table    | Input parameter. Table defining categories and optional output values. Each row should have a route/category name and optionally a custom output value. Required. |
+| message             | Message  | Input parameter. Optional override message that replaces both the Input and Output Value for all routes when filled. Advanced. |
+| enable_else_output  | Boolean  | Input parameter. Include an Else output for cases that don't match any route. Default: false. |
+| custom_prompt       | String   | Input parameter. Additional instructions for LLM-based categorization. Use `{input_text}` for the input text and `{routes}` for the available categories. |
+| default_result      | Message  | Output parameter. The Else output. Only available when `enable_else_output` is `true`. Otherwise, output is produced and routed according to the `routes` parameter. |
+
