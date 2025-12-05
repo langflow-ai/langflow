@@ -71,14 +71,33 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
 
     setCurrentUploadComponentId(componentId);
     fileInputRef.current.accept =
-      ".json,.png,.pdf,application/json,image/png,application/pdf";
+      ".json,.png,.pdf,.mp3,.wav,.m4a,.ogg,.webm,application/json,image/png,application/pdf,audio/*";
     fileInputRef.current.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
 
       // Validate file type
-      const allowedTypes = ["application/json", "image/png", "application/pdf"];
-      const allowedExtensions = [".json", ".png", ".pdf"];
+      // Validate file type
+      const allowedTypes = [
+        "application/json",
+        "image/png",
+        "application/pdf",
+        "audio/mpeg",
+        "audio/wav",
+        "audio/x-m4a",
+        "audio/ogg",
+        "audio/webm",
+      ];
+      const allowedExtensions = [
+        ".json",
+        ".png",
+        ".pdf",
+        ".mp3",
+        ".wav",
+        ".m4a",
+        ".ogg",
+        ".webm",
+      ];
       const fileExtension = "." + file.name.split(".").pop()?.toLowerCase();
 
       if (
@@ -86,7 +105,7 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
         !allowedExtensions.includes(fileExtension)
       ) {
         onError(
-          "Invalid file type. Only JSON, PNG, and PDF files are accepted."
+          "Invalid file type. Only JSON, PNG, PDF, and Audio files are accepted."
         );
         setCurrentUploadComponentId(null);
         if (fileInputRef.current) {
@@ -152,8 +171,7 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
       } catch (error) {
         console.error("File upload failed:", error);
         onError(
-          `File upload failed: ${
-            error instanceof Error ? error.message : "Unknown error"
+          `File upload failed: ${error instanceof Error ? error.message : "Unknown error"
           }`
         );
         setUploadProgress({});
@@ -205,7 +223,7 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
                     className={`flex flex-col h-auto !py-10 mt-2 w-full cursor-pointer items-center justify-center gap-2 rounded-lg hover:bg-transparent border-2 border-primary-border hover:border-secondary-border border-dashed p-8 transition-colors `}
                   >
                     {isUploading &&
-                    currentUploadComponentId === component.id ? (
+                      currentUploadComponentId === component.id ? (
                       <LoadingIcon className="h!h-14 !w-14" />
                     ) : (
                       <RiUploadCloud2Fill className="!h-14 !w-14 text-secondary-font opacity-70" />
@@ -215,7 +233,7 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
                         Upload File
                       </span>
                       <span className="text-[11px] text-secondary-font italic opacity-70 block">
-                        Accepted file types: JSON, PNG, PDF
+                        Accepted file types: JSON, PNG, PDF, Audio
                       </span>
                     </p>
                   </Button>

@@ -17,7 +17,7 @@ const UploadFileButton = ({
     <ShadTooltip
       styleClasses="z-50"
       side="right"
-      content="Attach file (png, jpg, jpeg, gif, pdf)"
+      content="Attach file (png, jpg, jpeg, gif, pdf, audio)"
     >
       <div>
         <input
@@ -25,16 +25,15 @@ const UploadFileButton = ({
           type="file"
           ref={fileInputRef}
           style={{ display: "none" }}
-          accept="image/png,image/jpeg,image/jpg,image/gif,application/pdf"
+          accept="image/png,image/jpeg,image/jpg,image/gif,application/pdf,audio/*,.mp3,.wav,.m4a,.ogg,.webm"
           onChange={handleFileChange}
         />
         <Button
           disabled={isBuilding}
-          className={`btn-playground-actions ${
-            isBuilding
+          className={`btn-playground-actions ${isBuilding
               ? "cursor-not-allowed"
               : "text-muted-foreground hover:text-primary"
-          }`}
+            }`}
           onClick={handleClick}
           unstyled
         >
