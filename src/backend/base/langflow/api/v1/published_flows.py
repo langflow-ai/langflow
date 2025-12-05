@@ -1589,9 +1589,9 @@ async def validate_marketplace_name(
     if not marketplace_name:
         return {"exists": False, "available": True}
 
-    # Step 1: Check if name exists in published flows (marketplace)
+    # Step 1: Check if name exists in published flows (marketplace) - case insensitive
     published_query = select(PublishedFlow).where(
-        PublishedFlow.flow_name == marketplace_name,
+        func.lower(PublishedFlow.flow_name) == func.lower(marketplace_name),
         PublishedFlow.status == PublishStatusEnum.PUBLISHED,
     )
 
@@ -1617,8 +1617,9 @@ async def validate_marketplace_name(
     if folder_id:
         try:
             folder_uuid = UUID(folder_id)
+            # Case insensitive comparison for folder-scoped check
             flow_query = select(Flow).where(
-                Flow.name == marketplace_name,
+                func.lower(Flow.name) == func.lower(marketplace_name),
                 Flow.folder_id == folder_uuid,  # Folder-scoped check
             )
 
