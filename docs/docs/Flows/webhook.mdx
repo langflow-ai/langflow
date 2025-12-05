@@ -92,7 +92,28 @@ To learn about triggering flows with payloads from external applications, see th
 
 By default, webhooks run as the flow owner without authentication (`LANGFLOW_WEBHOOK_AUTH_ENABLE=False`).
 
-If you want to require API key authentication for webhooks, set `LANGFLOW_WEBHOOK_AUTH_ENABLE=True`.
+To require API key authentication for webhooks, in your Langflow `.env` file, set `LANGFLOW_WEBHOOK_AUTH_ENABLE=True`.
+
+When webhook authentication is enabled, you must provide a Langflow API key with each webhook request.
+
+To include the API key with a request as an HTTP header:
+```bash
+curl -X POST "http://LANGFLOW_SERVER_ADDRESS/api/v1/webhook/FLOW_ID" \
+    -H "Content-Type: application/json" \
+    -H "x-api-key: LANGFLOW_API_KEY" \
+    -d '{"id": "12345", "name": "alex", "email": "alex@email.com"}'
+```
+
+To include the API key with a request as a query parameter:
+```bash
+curl -X POST "http://LANGFLOW_SERVER_ADDRESS/api/v1/webhook/FLOW_ID?x-api-key=LANGFLOW_API_KEY" \
+    -H "Content-Type: application/json" \
+    -d '{"id": "12345", "name": "alex", "email": "alex@email.com"}'
+```
+
+Replace `LANGFLOW_SERVER_ADDRESS`, `FLOW_ID`, and `LANGFLOW_API_KEY` with values from your deployment.
+
+For more information, see [API keys and authentication](/api-keys-and-authentication).
 
 ## Troubleshoot flows with Webhook components
 
