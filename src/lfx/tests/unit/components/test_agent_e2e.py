@@ -57,6 +57,14 @@ class FakeToolCallingLLM(BaseChatModel):
         """Return self - tools are ignored since responses are predefined."""
         return self
 
+    def with_config(
+        self,
+        config: dict,  # noqa: ARG002
+        **kwargs: Any,  # noqa: ARG002
+    ) -> "FakeToolCallingLLM":
+        """Return self with config (no-op for fake LLM)."""
+        return self
+
     @property
     def _llm_type(self) -> str:
         return "fake-tool-calling-llm"
