@@ -42,7 +42,7 @@ class StorageService(Service):
         raise NotImplementedError
 
     @abstractmethod
-    async def get_file_stream(self, flow_id: str, file_name: str, chunk_size: int = 8192) -> AsyncIterator[bytes]:
+    def get_file_stream(self, flow_id: str, file_name: str, chunk_size: int = 8192) -> AsyncIterator[bytes]:
         """Retrieve a file as a stream of chunks.
 
         Args:

@@ -591,7 +591,7 @@ async def download_file(
             raise HTTPException(status_code=404, detail=f"File not found: {e}") from e
 
         # Wrap the async generator in byte_stream_generator to ensure proper iteration
-        file_stream = await storage_service.get_file_stream(flow_id=str(current_user.id), file_name=file_name)
+        file_stream = storage_service.get_file_stream(flow_id=str(current_user.id), file_name=file_name)
         byte_stream = byte_stream_generator(file_stream)
 
         # Create the filename with extension
