@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useGetDownloadFileMutation } from "@/controllers/API/queries/files";
+import { getBaseUrl } from "@/customization/utils/urls";
 import { ForwardedIconComponent } from "../../../../../../components/common/genericIconComponent";
-import { BASE_URL_API } from "../../../../../../constants/constants";
 import type { fileCardPropsType } from "../../../../../../types/components";
 import formatFileName from "../utils/format-file-name";
 import getClasses from "../utils/get-classes";
@@ -29,7 +29,7 @@ export default function FileCard({
 
   const fileWrapperClasses = getClasses(isHovered);
 
-  const imgSrc = `${BASE_URL_API}files/images/${path}`;
+  const imgSrc = `${getBaseUrl()}files/images/${path}`;
 
   if (showFile) {
     if (imgTypes.has(fileType)) {

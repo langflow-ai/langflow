@@ -69,18 +69,9 @@ export default function AppHeader(): JSX.Element {
           className="mr-1 flex h-8 w-8 items-center"
           data-testid="icon-ChevronLeft"
         >
-          {ENABLE_DATASTAX_LANGFLOW ? (
-            <DataStaxLogo className="fill-black dark:fill-[white]" />
-          ) : (
-            <LangflowLogo className="h-5 w-5" />
-          )}
+          <LangflowLogo className="h-5 w-5" />
         </Button>
-        {ENABLE_DATASTAX_LANGFLOW && (
-          <>
-            <CustomOrgSelector />
-            <CustomProductSelector />
-          </>
-        )}
+        <CustomOrgSelector />
       </div>
 
       {/* Middle Section */}
