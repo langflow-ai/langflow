@@ -133,10 +133,10 @@ class TestValidateMcpServerForProject:
         self, active_user, test_project, created_api_key, client: AsyncClient
     ):
         """Test validation when server exists and project ID matches."""
-        sse_url = f"{client.base_url}/api/v1/mcp/project/{test_project.id}/sse"
+        streamable_http_url = f"{client.base_url}/api/v1/mcp/project/{test_project.id}/streamable"
         server_config = {
             "command": "uvx",
-            "args": ["mcp-proxy", sse_url],
+            "args": ["mcp-proxy", "--transport", "streamablehttp", streamable_http_url],
         }
 
         # Create MCP server via API
@@ -171,11 +171,11 @@ class TestValidateMcpServerForProject:
         """Test validation when server exists but project ID doesn't match."""
         other_project_id = uuid4()
         server_name = "lf-test_project"
-        sse_url = f"{client.base_url}/api/v1/mcp/project/{other_project_id}/sse"
+        streamable_http_url = f"{client.base_url}/api/v1/mcp/project/{other_project_id}/streamable"
 
         server_config = {
             "command": "uvx",
-            "args": ["mcp-proxy", sse_url],
+            "args": ["mcp-proxy", "--transport", "streamablehttp", streamable_http_url],
         }
 
         # Create MCP server with different project ID via API
@@ -211,11 +211,11 @@ class TestValidateMcpServerForProject:
         """Test different conflict messages for different operations."""
         other_project_id = uuid4()
         server_name = "lf-test_project"
-        sse_url = f"{client.base_url}/api/v1/mcp/project/{other_project_id}/sse"
+        streamable_http_url = f"{client.base_url}/api/v1/mcp/project/{other_project_id}/streamable"
 
         server_config = {
             "command": "uvx",
-            "args": ["mcp-proxy", sse_url],
+            "args": ["mcp-proxy", "--transport", "streamablehttp", streamable_http_url],
         }
 
         # Create MCP server with different project ID via API
@@ -461,8 +461,14 @@ class TestMultiUserMCPServerAccess:
     ):
         """Verify that users cannot access or modify each other's MCP servers,even if they have the same name."""
         server_name = f"shared-server-name-{uuid4()}"
-        config_one = {"command": "uvx", "args": ["mcp-proxy", f"url-one-{uuid4()}"]}
-        config_two = {"command": "uvx", "args": ["mcp-proxy", f"url-two-{uuid4()}"]}
+        config_one = {
+            "command": "uvx",
+            "args": ["mcp-proxy", "--transport", "streamablehttp", f"url-one-{uuid4()}"],
+        }
+        config_two = {
+            "command": "uvx",
+            "args": ["mcp-proxy", "--transport", "streamablehttp", f"url-two-{uuid4()}"],
+        }
 
         # User One creates a server
         response = await client.post(
@@ -492,7 +498,10 @@ class TestMultiUserMCPServerAccess:
         assert response_two.json() == config_two
 
         # User One updates their server
-        updated_config_one = {"command": "uvx", "args": ["mcp-proxy", f"updated-url-one-{uuid4()}"]}
+        updated_config_one = {
+            "command": "uvx",
+            "args": ["mcp-proxy", "--transport", "streamablehttp", f"updated-url-one-{uuid4()}"],
+        }
         response = await client.patch(
             f"/api/v2/mcp/servers/{server_name}",
             json=updated_config_one,

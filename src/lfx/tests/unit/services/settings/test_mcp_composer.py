@@ -191,7 +191,8 @@ class TestPortChangeHandling:
             "process": mock_process,
             "host": "localhost",
             "port": old_port,
-            "sse_url": "http://test",
+            "streamable_http_url": "http://test",
+            "legacy_sse_url": "http://test/sse",
             "auth_config": {
                 "auth_type": "oauth",
                 "oauth_host": "localhost",
@@ -228,7 +229,7 @@ class TestPortChangeHandling:
             with contextlib.suppress(Exception):
                 await mcp_service._do_start_project_composer(
                     project_id=project_id,
-                    sse_url="http://test",
+                    streamable_http_url="http://test",
                     auth_config=new_auth_config,
                     max_retries=1,
                     max_startup_checks=1,
@@ -274,7 +275,7 @@ class TestPortChangeHandling:
             ):
                 await mcp_service._do_start_project_composer(
                     project_id=project_id,
-                    sse_url="http://test",
+                    streamable_http_url="http://test",
                     auth_config=auth_config,
                     max_retries=1,
                     max_startup_checks=1,
@@ -311,7 +312,7 @@ class TestPortChangeHandling:
             with pytest.raises(MCPComposerPortError) as exc_info:
                 await mcp_service._do_start_project_composer(
                     project_id=project_id,
-                    sse_url="http://test",
+                    streamable_http_url="http://test",
                     auth_config=auth_config,
                     max_retries=1,
                     max_startup_checks=1,

@@ -460,5 +460,16 @@ class MCPProjectResponse(BaseModel):
     auth_settings: AuthSettings | None = None
 
 
+class ComposerUrlResponse(BaseModel):
+    """Response model for MCP Composer connection details."""
+
+    project_id: str
+    uses_composer: bool
+    streamable_http_url: str | None = None
+    legacy_sse_url: str | None = None
+    error_message: str | None = None
+
+
 class MCPInstallRequest(BaseModel):
     client: str
+    transport: Literal["sse", "streamablehttp"] | None = None

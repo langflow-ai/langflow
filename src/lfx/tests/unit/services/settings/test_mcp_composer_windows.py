@@ -224,7 +224,7 @@ class TestWindowsTempFileHandling:
                         project_id=project_id,
                         host="localhost",
                         port=port,
-                        sse_url="http://test",
+                        streamable_http_url="http://test",
                         auth_config=auth_config,
                         max_startup_checks=1,
                         startup_delay=0.1,
@@ -315,7 +315,7 @@ class TestWindowsTempFileHandling:
                                 project_id=project_id,
                                 host="localhost",
                                 port=port,
-                                sse_url="http://test",
+                                streamable_http_url="http://test",
                                 auth_config=auth_config,
                                 max_startup_checks=2,
                                 startup_delay=0.1,
@@ -361,7 +361,7 @@ class TestWindowsTempFileHandling:
                         project_id=project_id,
                         host="localhost",
                         port=port,
-                        sse_url="http://test",
+                        streamable_http_url="http://test",
                         auth_config=auth_config,
                         max_startup_checks=1,
                         startup_delay=0.1,
@@ -416,7 +416,7 @@ class TestIncreasedStartupTimeout:
                     with contextlib.suppress(Exception):
                         await mcp_service._do_start_project_composer(
                             project_id=project_id,
-                            sse_url="http://test",
+                            streamable_http_url="http://test",
                             auth_config=auth_config,
                             max_retries=3,
                         )
@@ -511,7 +511,7 @@ class TestRetryRobustness:
                     # Should succeed on second attempt despite zombie cleanup failure
                     await mcp_service._do_start_project_composer(
                         project_id=project_id,
-                        sse_url="http://test",
+                        streamable_http_url="http://test",
                         auth_config=auth_config,
                         max_retries=2,
                         max_startup_checks=1,

@@ -44,3 +44,12 @@ export type MCPServerType = {
   env?: Record<string, string>;
   headers?: Record<string, string>;
 };
+
+export type ComposerUrlResponseType = {
+  project_id: string;
+  uses_composer: boolean;
+  streamable_http_url?: string;
+  legacy_sse_url?: string;
+  sse_url?: string;
+  error_message?: string;
+};
