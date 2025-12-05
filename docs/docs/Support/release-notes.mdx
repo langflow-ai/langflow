@@ -54,11 +54,12 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
 ### New features and enhancements
 
-- Support for streamable HTTP protocol for MCP clients
+- Support for streamable HTTP protocol for MCP clients and servers
 
-    When using Langflow as an MCP client, you can now connect to MCP servers with [streamable HTTP transport](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports#streamable-http).
+    Langflow now supports [streamable HTTP transport](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports#streamable-http) for both MCP clients and servers.
+    When using Langflow as an [MCP client](/mcp-client), you can connect to MCP servers with streamable HTTP transport.
+    When using Langflow as an [MCP server](/mcp-server), clients can connect using streamable HTTP transport.
     SSE transport is still supported as a fallback for backwards compatibility.
-    Streamable HTTP transport support for Langflow as an MCP server is planned for a future release.
 
 - Webhook authentication
 
