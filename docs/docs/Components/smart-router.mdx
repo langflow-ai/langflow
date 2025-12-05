@@ -16,12 +16,7 @@ You can use the **Smart Router** component anywhere you would use the **If-Else*
 For an example, create the [If-Else component example flow](/if-else#use-the-if-else-component-in-a-flow), then replace the **If-Else** component with a **Smart Router** component.
 Instead of a regex, use the **Routes** table to define the outputs for your messages.
 
-The **Routes** table defines the categories for routing. Each row contains three fields:
-
-- **Route Name**: The category name used for both the output port name and LLM matching. This is required.
-- **Route Description**: Optional description that helps the LLM understand when to use this category. The description is included in the prompt sent to the LLM.
-- **Route Message**: Optional custom message to send when this route matches. If left empty, the original input text is passed through.
-
+The **Routes** table defines the categories for routing.
 For example, a routes table for sentiment analysis might look like this:
 
 | Route Name | Route Description | Route Message |
