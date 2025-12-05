@@ -1,7 +1,10 @@
-export const BASENAME = "";
+export const BASENAME =
+  typeof window !== "undefined" && (window as any)._env_?.BASENAME
+    ? (window as any)._env_.BASENAME
+    : "/__APP_BASE_PATH__/";
 export const PORT = 3000;
 export const PROXY_TARGET = "http://localhost:7860";
-export const VITE_PROXY_TARGET= "http://localhost:7860";
+export const VITE_PROXY_TARGET = "http://localhost:7860";
 export const API_ROUTES = ["^/api/v1/", "^/api/v2/", "/health"];
 export const BASE_URL_API = "/api/v1/";
 export const BASE_URL_API_V2 = "/api/v2/";

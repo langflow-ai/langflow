@@ -139,11 +139,75 @@ def warn_about_future_cors_changes(settings):
         )
 
 
+def replace_base_path(static_dir: Path, base_path: str):
+    """Replace the base path in static files."""
+    if not base_path:
+        return
+
+    # Normalize base_path
+    if not base_path.startswith("/"):
+        base_path = "/" + base_path
+    if not base_path.endswith("/"):
+        base_path = base_path + "/"
+    
+    # Remove trailing slash for asset replacement (/__APP_BASE_PATH__ -> /ai-studio)
+    base_path_no_slash = base_path.rstrip("/")
+    placeholder = "/__APP_BASE_PATH__"
+    
+    logger.info(f"Replacing base path in static files: {placeholder} -> {base_path_no_slash}")
+
+    # Update index.html
+    index_path = static_dir / "index.html"
+    if index_path.exists():
+        try:
+            content = index_path.read_text()
+            # Replace base href
+            if '<base href="/" />' in content:
+                content = content.replace('<base href="/" />', f'<base href="{base_path}" />')
+            
+            # Replace placeholder in content
+            content = content.replace(placeholder, base_path_no_slash)
+            index_path.write_text(content)
+        except Exception as e:
+            logger.error(f"Failed to update index.html: {e}")
+
+    # Update env-config.js
+    env_config_path = static_dir / "env-config.js"
+    try:
+        env_content = f'window._env_ = {{ BASENAME: "{base_path_no_slash}" }};'
+        env_config_path.write_text(env_content)
+    except Exception as e:
+        logger.error(f"Failed to update env-config.js: {e}")
+
+    # Update assets (JS/CSS)
+    for root, dirs, files in os.walk(static_dir):
+        for file in files:
+            if file.endswith((".js", ".css", ".html")) and file != "index.html":
+                file_path = Path(root) / file
+                try:
+                    content = file_path.read_text()
+                    if placeholder in content:
+                        content = content.replace(placeholder, base_path_no_slash)
+                        file_path.write_text(content)
+                except Exception:
+                    pass
+
+
 def get_lifespan(*, fix_migration=False, version=None):
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
         telemetry_service = get_telemetry_service()
         configure()
+        
+        # Handle frontend base path replacement
+        try:
+            settings = get_settings_service().settings
+            if settings.frontend_base_path:
+                static_dir = Path(__file__).parent / "frontend"
+                if static_dir.exists():
+                    replace_base_path(static_dir, settings.frontend_base_path)
+        except Exception as e:
+            logger.error(f"Error replacing base path: {e}")
 
         # Startup message
         if version:
