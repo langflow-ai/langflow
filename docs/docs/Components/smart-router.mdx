@@ -26,7 +26,7 @@ For example, a routes table for sentiment analysis might look like this:
 | Neutral | Questions, requests for information, or neutral statements | Thank you for your inquiry! |
 
 This component creates ports for the **Positive**, **Negative**, and **Neutral** routes.
-When the LLM categorizes the input text, it routes to the matching category's output port.
+When the LLM categorizes the input text, it routes to the matching category's output port by route name.
 For the Positive and Negative routes, the original input text is passed through.
 For the Neutral route, the `"Thank you for your inquiry!"` route message is sent instead of the input text.
 
