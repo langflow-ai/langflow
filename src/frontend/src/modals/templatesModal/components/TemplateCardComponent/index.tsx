@@ -27,7 +27,7 @@ export default function TemplateCardComponent({
   return (
     <div
       data-testid={`template-${convertTestName(example.name)}`}
-      className="group grid grid-cols-[auto_1fr] gap-2 cursor-pointer rounded-lg p-3 bg-background-surface border border-accent"
+      className="group grid grid-cols-[auto_1fr] gap-2 cursor-pointer rounded-lg p-3 bg-background-surface border border-accent min-h-[94px]"
       tabIndex={0}
       onKeyDown={handleKeyDown}
       onClick={onClick}
