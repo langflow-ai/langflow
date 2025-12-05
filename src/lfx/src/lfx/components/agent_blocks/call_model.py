@@ -15,17 +15,26 @@ ChatInput → WhileLoop → CallModel → [Tool Calls] → ExecuteTool → Forma
 
 from __future__ import annotations
 
-import math
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage
+from langchain_core.messages import AIMessage, AIMessageChunk, BaseMessage, HumanMessage, SystemMessage
 
+if TYPE_CHECKING:
+    from langchain_core.callbacks import BaseCallbackHandler
+
+from lfx.base.agents.message_utils import (
+    convert_to_lc_messages,
+    extract_content_blocks_from_dataframe,
+    extract_message_id_from_dataframe,
+    sanitize_tool_calls,
+)
 from lfx.base.models.language_model_mixin import LanguageModelMixin
 from lfx.custom.custom_component.component import Component
 from lfx.io import HandleInput, MultilineInput, Output
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.dotdict import dotdict  # noqa: TC001
 from lfx.schema.message import Message
+from lfx.utils.constants import MESSAGE_SENDER_AI
 
 
 class CallModelComponent(LanguageModelMixin, Component):
@@ -106,77 +115,37 @@ class CallModelComponent(LanguageModelMixin, Component):
     ) -> dotdict:
         return await self.update_llm_provider_config(build_config, field_value, field_name)
 
+    def _get_callbacks(self) -> list[BaseCallbackHandler]:
+        """Get all callbacks for LLM invocation.
+
+        Returns LangChain callbacks from tracing service.
+        """
+        return self.get_langchain_callbacks()
+
     def _pre_run_setup(self):
         """Clear cached result before each run to ensure fresh LLM call in cycles."""
         super()._pre_run_setup()
         self._cached_result = None
 
     def _convert_to_lc_messages(self, messages: list[Message] | DataFrame) -> list[BaseMessage]:
-        """Convert Langflow Messages or DataFrame to LangChain BaseMessages."""
-        lc_messages: list[BaseMessage] = []
+        """Convert Langflow Messages or DataFrame to LangChain BaseMessages.
 
-        # Handle DataFrame input
-        if isinstance(messages, DataFrame):
-            for _, row in messages.iterrows():
-                sender = row.get("sender", "User")
-                text = row.get("text", "")
-                is_tool_result = row.get("is_tool_result")
-                tool_call_id = row.get("tool_call_id", "")
-                tool_calls = row.get("tool_calls")
-
-                # Check explicitly for True (nan from DataFrame is truthy but not True)
-                if is_tool_result is True:
-                    # Tool result message
-                    lc_messages.append(ToolMessage(content=text, tool_call_id=tool_call_id or ""))
-                elif sender == "Machine":
-                    # AI message - may have tool_calls
-                    ai_msg = AIMessage(content=text)
-                    # Check for valid tool_calls (not None and not NaN from DataFrame)
-                    is_nan = isinstance(tool_calls, float) and math.isnan(tool_calls)
-                    if tool_calls is not None and not is_nan:
-                        ai_msg.tool_calls = tool_calls
-                    lc_messages.append(ai_msg)
-                elif sender == "System":
-                    lc_messages.append(SystemMessage(content=text))
-                else:
-                    # User or unknown -> HumanMessage
-                    lc_messages.append(HumanMessage(content=text))
-            return lc_messages
-
-        # Handle list of Message objects (or strings)
-        for msg in messages:
-            # Handle string inputs (e.g., from ChatInput)
-            if isinstance(msg, str):
-                lc_messages.append(HumanMessage(content=msg))
-                continue
-
-            is_tool_result = msg.data.get("is_tool_result", False) if msg.data else False
-            tool_call_id = msg.data.get("tool_call_id", "") if msg.data else ""
-            tool_calls = msg.data.get("tool_calls") if msg.data else None
-
-            if is_tool_result:
-                lc_messages.append(ToolMessage(content=msg.text or "", tool_call_id=tool_call_id or ""))
-            elif msg.sender == "Machine":
-                ai_msg = AIMessage(content=msg.text or "")
-                if tool_calls:
-                    ai_msg.tool_calls = tool_calls
-                lc_messages.append(ai_msg)
-            elif msg.sender == "System":
-                lc_messages.append(SystemMessage(content=msg.text or ""))
-            else:
-                # User or unknown -> HumanMessage
-                lc_messages.append(HumanMessage(content=msg.text or ""))
-
-        return lc_messages
+        Delegates to the convert_to_lc_messages function in message_utils.
+        """
+        return convert_to_lc_messages(messages)
 
     async def _call_model_internal(self) -> Message:
-        """Internal method to call the language model. Caches result for both outputs."""
+        """Internal method to call the language model with streaming support.
+
+        Uses the same streaming pattern as LCModelComponent: pass the async stream
+        to send_message which handles token streaming via _stream_message.
+        """
         # Check if we already have a cached result
         if hasattr(self, "_cached_result") and self._cached_result is not None:
             return self._cached_result
 
         # Build the LLM using the mixin
-        llm = self.build_llm()
+        runnable = self.build_llm()
 
         lc_messages: list[BaseMessage] = []
 
@@ -202,27 +171,109 @@ class CallModelComponent(LanguageModelMixin, Component):
         if self.tools:
             tools = self.tools if isinstance(self.tools, list) else [self.tools]
             if tools:
-                llm = llm.bind_tools(tools)
+                runnable = runnable.bind_tools(tools)
 
-        # Invoke the model
-        response: AIMessage = await llm.ainvoke(lc_messages)
-
-        # Convert response to Langflow Message
-        result = Message(
-            text=response.content if isinstance(response.content, str) else str(response.content),
-            sender="Machine",
-            sender_name="AI",
+        # Configure runnable with callbacks for tracing (exactly like LCModelComponent)
+        runnable = runnable.with_config(
+            {
+                "run_name": self.display_name,
+                "callbacks": self._get_callbacks(),
+            }
         )
 
+        # Get session_id for the message (exactly like LCModelComponent)
+        if hasattr(self, "graph") and self.graph:
+            session_id = self.graph.session_id
+        elif hasattr(self, "_session_id"):
+            session_id = self._session_id
+        else:
+            session_id = None
+
+        # Check for existing message ID and content_blocks from previous iteration (passed via DataFrame)
+        # This allows us to continue updating the same message in the UI and preserve tool steps
+        existing_message_id = None
+        existing_content_blocks = None
+        if self.messages is not None and isinstance(self.messages, DataFrame) and not self.messages.empty:
+            existing_message_id = extract_message_id_from_dataframe(self.messages)
+            existing_content_blocks = extract_content_blocks_from_dataframe(self.messages)
+
+        # Use closure to capture tool_calls while streaming
+        # Tool calls come incrementally during streaming and need to be aggregated
+        # AIMessageChunk supports __add__ for merging, but AIMessage (from non-streaming fallback) doesn't
+        aggregated_chunk: AIMessage | None = None
+
+        async def stream_and_capture():
+            """Stream chunks to frontend while capturing tool_calls."""
+            nonlocal aggregated_chunk
+            async for chunk in runnable.astream(lc_messages):
+                # Aggregate chunks to get complete tool_calls at the end
+                # Only AIMessageChunk supports proper + aggregation
+                # AIMessage + AIMessage returns ChatPromptTemplate (wrong type)
+                if aggregated_chunk is None:
+                    aggregated_chunk = chunk
+                elif isinstance(aggregated_chunk, AIMessageChunk) and isinstance(chunk, AIMessageChunk):
+                    # Safe to add AIMessageChunk objects
+                    aggregated_chunk = aggregated_chunk + chunk
+                elif hasattr(chunk, "tool_calls") and chunk.tool_calls:
+                    # For non-chunk messages, keep the one with tool_calls
+                    aggregated_chunk = chunk
+                yield chunk
+
+        # Create message with the async stream as text (exactly like LCModelComponent._handle_stream)
+        # If we have existing content_blocks from a previous iteration (tool execution steps),
+        # preserve them so the UI continues to show the agent's previous steps
+        model_message = Message(
+            text=stream_and_capture(),
+            sender=MESSAGE_SENDER_AI,
+            sender_name="AI",
+            properties={"icon": "Bot", "state": "partial"},
+            session_id=session_id,
+            content_blocks=existing_content_blocks if existing_content_blocks else [],
+        )
+
+        # If we have an existing message ID from a previous iteration, reuse it
+        # This ensures all updates go to the same message in the UI
+        if existing_message_id is not None:
+            model_message.id = existing_message_id
+
+        # send_message handles streaming via _stream_message -> _process_chunk -> on_token
+        result = await self.send_message(model_message)
+
+        # If send_message didn't consume the stream (no event_manager), we need to consume it
+        # This can happen in tests or when running without event streaming
+        if hasattr(result.text, "__anext__"):
+            full_text = ""
+            async for chunk in result.text:
+                if aggregated_chunk is None:
+                    aggregated_chunk = chunk
+                elif isinstance(aggregated_chunk, AIMessageChunk) and isinstance(chunk, AIMessageChunk):
+                    aggregated_chunk = aggregated_chunk + chunk
+                elif hasattr(chunk, "tool_calls") and chunk.tool_calls:
+                    aggregated_chunk = chunk
+                if hasattr(chunk, "content"):
+                    full_text += chunk.content or ""
+            result.text = full_text
+
+        # Get tool_calls from the aggregated chunk (properly merged)
+        # Use sanitize_tool_calls to filter out incomplete tool_calls from streaming
+        captured_tool_calls = []
+        if aggregated_chunk is not None and hasattr(aggregated_chunk, "tool_calls") and aggregated_chunk.tool_calls:
+            captured_tool_calls = sanitize_tool_calls(aggregated_chunk.tool_calls)
+
+        # Build AI response with captured tool_calls
+        ai_response = AIMessage(content=result.text or "")
+        if captured_tool_calls:
+            ai_response.tool_calls = captured_tool_calls
+
         # Store tool_calls in the message data if present
-        if hasattr(response, "tool_calls") and response.tool_calls:
-            result.data["tool_calls"] = response.tool_calls
+        if captured_tool_calls:
+            result.data["tool_calls"] = captured_tool_calls
             result.data["has_tool_calls"] = True
         else:
             result.data["has_tool_calls"] = False
 
         # Store the original AIMessage for downstream processing
-        result.data["ai_message"] = response
+        result.data["ai_message"] = ai_response
 
         log_truncate_len = 100
         self.log(
@@ -269,6 +320,11 @@ class CallModelComponent(LanguageModelMixin, Component):
             self.stop("tool_calls")
             self.graph.exclude_branch_conditionally(self._vertex.id, output_name="tool_calls")
             return Message(text="")
+
+        # Pass stream_events flag to ExecuteTool
+        # CallModel knows if it's connected to ChatOutput (ai_message output goes to ChatOutput)
+        # ExecuteTool should show events if this agent flow ends at a ChatOutput
+        result.data["should_stream_events"] = self.is_connected_to_chat_output()
 
         # Continue loop - stop the ai_message branch
         self.stop("ai_message")
