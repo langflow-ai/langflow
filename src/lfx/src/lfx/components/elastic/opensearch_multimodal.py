@@ -938,9 +938,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         if is_ibm:
             # Sequential processing with inter-request delay for IBM models
             inter_request_delay = 0.6  # ~1.67 req/s, safely under 2 req/s limit
-            logger.info(
-                f"Using sequential processing for IBM model with {inter_request_delay}s delay between requests"
-            )
+            logger.info(f"Using sequential processing for IBM model with {inter_request_delay}s delay between requests")
 
             for idx, chunk in enumerate(texts):
                 if idx > 0:
