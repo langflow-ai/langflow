@@ -155,10 +155,11 @@ class ServiceManager:
                         factories.append(obj())
                         break
 
-            except Exception as exc:  # noqa: BLE001
-                logger.debug(
-                    f"Could not initialize services. Please check your settings. Error in {name}.", exc_info=exc
-                )
+            except Exception:  # noqa: BLE001, S110
+                # This is expected during initial service discovery - some services
+                # may not have factories yet or depend on settings service being ready first
+                # Intentionally suppressed to avoid startup noise - not an error condition
+                pass
 
         return factories
 

@@ -159,7 +159,6 @@ def set_var_for_macos_issue() -> None:
         os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
         # https://stackoverflow.com/questions/75747888/uwsgi-segmentation-fault-with-flask-python-app-behind-nginx-after-running-for-2 # noqa: E501
         os.environ["no_proxy"] = "*"  # to avoid error with gunicorn
-        logger.debug("Set OBJC_DISABLE_INITIALIZE_FORK_SAFETY to YES to avoid error")
 
 
 def wait_for_server_ready(host, port, protocol) -> None:
