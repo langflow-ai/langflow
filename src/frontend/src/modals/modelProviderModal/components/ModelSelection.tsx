@@ -7,8 +7,9 @@ import { Model } from "@/modals/modelProviderModal/components/types";
 export interface ModelProviderSelectionProps {
   availableModels: Model[];
   onModelToggle: (modelName: string, enabled: boolean) => void;
-  modelType: "llm" | "embeddings";
+  modelType: "llm" | "embeddings" | "all";
   providerName?: string;
+  isEnabledModel?: boolean;
 }
 
 interface ModelRowProps {
@@ -16,6 +17,7 @@ interface ModelRowProps {
   enabled: boolean;
   onToggle: (modelName: string, enabled: boolean) => void;
   testIdPrefix: string;
+  isEnabledModel?: boolean;
 }
 
 /** Single row displaying a model with its toggle switch */
@@ -24,8 +26,9 @@ const ModelRow = ({
   model,
   enabled,
   testIdPrefix,
+  isEnabledModel,
 }: ModelRowProps) => (
-  <div className="flex flex-row items-center justify-between">
+  <div className="flex flex-row items-center justify-between h-[24px]">
     <div className="flex flex-row items-center gap-2">
       <ForwardedIconComponent
         name={model.metadata?.icon || "Bot"}
@@ -33,11 +36,13 @@ const ModelRow = ({
       />
       <span className="text-sm">{model.model_name}</span>
     </div>
-    <Switch
-      checked={enabled}
-      onCheckedChange={(checked) => onToggle(model.model_name, checked)}
-      data-testid={`${testIdPrefix}-toggle-${model.model_name}`}
-    />
+    {isEnabledModel && (
+      <Switch
+        checked={enabled}
+        onCheckedChange={(checked) => onToggle(model.model_name, checked)}
+        data-testid={`${testIdPrefix}-toggle-${model.model_name}`}
+      />
+    )}
   </div>
 );
 
@@ -50,6 +55,7 @@ const ModelSelection = ({
   availableModels,
   onModelToggle,
   providerName,
+  isEnabledModel,
 }: ModelProviderSelectionProps) => {
   const { data: enabledModelsData } = useGetEnabledModels();
 
@@ -58,25 +64,55 @@ const ModelSelection = ({
     return enabledModelsData.enabled_models[providerName]?.[modelName] ?? false;
   };
 
-  return (
-    <div data-testid="model-provider-selection">
-      {availableModels.length > 0 && (
-        <div data-testid="llm-models-section">
-          <div className="text-[13px] font-semibold text-muted-foreground">
-            {modelType === "llm" ? "LLM" : "Embeddings"}
-          </div>
-          <div className="flex flex-col gap-2 pt-4">
-            {availableModels.map((model) => (
-              <ModelRow
-                key={model.model_name}
-                model={model}
-                enabled={isModelEnabled(model.model_name)}
-                onToggle={onModelToggle}
-                testIdPrefix={modelType}
-              />
-            ))}
-          </div>
+  const llmModels = availableModels.filter(
+    (model) => model.metadata?.model_type === "llm",
+  );
+  const embeddingModels = availableModels.filter(
+    (model) => model.metadata?.model_type === "embeddings",
+  );
+
+  const renderModelSection = (
+    title: string,
+    models: Model[],
+    testIdPrefix: string,
+  ) => {
+    if (models.length === 0) return null;
+    return (
+      <div data-testid={`${testIdPrefix}-models-section`}>
+        <div className="text-[13px] font-semibold text-muted-foreground">
+          {title}
         </div>
+        <div className="flex flex-col gap-2 pt-4">
+          {models.map((model) => (
+            <ModelRow
+              key={model.model_name}
+              model={model}
+              enabled={isModelEnabled(model.model_name)}
+              onToggle={onModelToggle}
+              testIdPrefix={testIdPrefix}
+              isEnabledModel={isEnabledModel}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div data-testid="model-provider-selection" className="flex flex-col gap-6">
+      {modelType === "all" ? (
+        <>
+          {renderModelSection("LLM Models", llmModels, "llm")}
+          {renderModelSection(
+            "Embedding Models",
+            embeddingModels,
+            "embeddings",
+          )}
+        </>
+      ) : modelType === "llm" ? (
+        renderModelSection("LLM Models", llmModels, "llm")
+      ) : (
+        renderModelSection("Embedding Models", embeddingModels, "embeddings")
       )}
     </div>
   );

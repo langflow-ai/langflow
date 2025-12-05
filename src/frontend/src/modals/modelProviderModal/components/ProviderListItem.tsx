@@ -1,4 +1,5 @@
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/utils/utils";
 import { Provider } from "./types";
 
@@ -6,12 +7,14 @@ export interface ProviderListItemProps {
   provider: Provider;
   isSelected?: boolean;
   onSelect: (provider: Provider) => void;
+  showIcon?: boolean;
 }
 
 const ProviderListItem = ({
   provider,
   isSelected,
   onSelect,
+  showIcon,
 }: ProviderListItemProps) => {
   const hasModels = provider.model_count && provider.model_count > 0;
   const isEnabled = provider.is_enabled;
@@ -35,21 +38,35 @@ const ProviderListItem = ({
           )}
         />
         <div className="flex min-w-0 flex-1 items-center gap-3">
-          <span className="truncate text-sm font-medium">
+          <span
+            className={cn(
+              "truncate text-sm font-medium",
+              !isEnabled && "text-muted-foreground",
+            )}
+          >
             {provider.provider}
           </span>
           {provider.model_count !== undefined && isEnabled && (
-            <span className="text-xs text-accent-emerald-foreground">
+            <Badge
+              variant={isSelected ? "secondary" : "secondaryStatic"}
+              className="text-xs whitespace-nowrap mr-2"
+              size="sq"
+            >
               {provider.model_count}{" "}
               {provider.model_count === 1 ? "model" : "models"}
-            </span>
+            </Badge>
           )}
         </div>
       </div>
-      <ForwardedIconComponent
-        name={isEnabled ? "ellipsis" : "Plus"}
-        className="h-4 w-4"
-      />
+      {!showIcon && (
+        <ForwardedIconComponent
+          name={isEnabled ? "check" : "Plus"}
+          className={cn(
+            "h-4 w-4",
+            !isEnabled ? "text-muted-foreground" : "text-status-green",
+          )}
+        />
+      )}
     </div>
   );
 };

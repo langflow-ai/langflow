@@ -175,6 +175,18 @@ async def update_variable(
         msg = "Variable service is not an instance of DatabaseVariableService"
         raise TypeError(msg)
     try:
+        # Get existing variable to check if it's a model provider credential
+        existing_variable = await variable_service.get_variable_by_id(
+            user_id=current_user.id, variable_id=variable_id, session=session
+        )
+
+        # Validate API key if updating a model provider variable
+        if existing_variable.name in model_provider_variable_mapping.values() and variable.value:
+            try:
+                validate_model_provider_key(existing_variable.name, variable.value)
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e)) from e
+
         return await variable_service.update_variable_fields(
             user_id=current_user.id,
             variable_id=variable_id,
@@ -185,6 +197,8 @@ async def update_variable(
         raise HTTPException(status_code=404, detail="Variable not found") from e
 
     except Exception as e:
+        if isinstance(e, HTTPException):
+            raise
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 

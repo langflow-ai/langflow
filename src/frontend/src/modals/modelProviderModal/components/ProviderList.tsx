@@ -5,7 +5,7 @@ import ProviderListItem from "./ProviderListItem";
 import { Provider } from "./types";
 
 // Supported model types for filtering providers
-type ModelType = "llm" | "embeddings";
+type ModelType = "llm" | "embeddings" | "all";
 
 export interface ProviderListProps {
   modelType: ModelType;
@@ -28,8 +28,10 @@ const ProviderList = ({
     return rawProviders
       .map((provider) => {
         const matchingModels =
-          provider?.models?.filter(
-            (model) => model?.metadata?.model_type === modelType,
+          provider?.models?.filter((model) =>
+            modelType === "all"
+              ? true
+              : model?.metadata?.model_type === modelType,
           ) || [];
 
         return {
@@ -67,6 +69,7 @@ const ProviderList = ({
         <ProviderListItem
           key={provider.provider}
           provider={provider}
+          showIcon={selectedProviderName !== null}
           isSelected={selectedProviderName === provider.provider}
           onSelect={handleProviderSelect}
         />
