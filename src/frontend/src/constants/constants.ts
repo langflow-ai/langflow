@@ -954,7 +954,7 @@ export const MAX_BATCH_SIZE = 50;
 export const MODAL_CLASSES =
   "nopan nodelete nodrag  noflow fixed inset-0 bottom-0 left-0 right-0 top-0 z-50 overflow-auto bg-black/50 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0";
 
-export const ALLOWED_IMAGE_INPUT_EXTENSIONS = ["png", "jpg", "jpeg", "pdf"];
+export const ALLOWED_IMAGE_INPUT_EXTENSIONS = ["png", "jpg", "jpeg", "pdf", "mp3", "wav", "m4a", "ogg", "webm"];
 
 export const componentsToIgnoreUpdate = ["CustomComponent"];
 
