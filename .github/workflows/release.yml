@@ -217,6 +217,8 @@ jobs:
           python-version: "3.13"
           prune-cache: false
       - name: Install the project
+        run: uv lock --upgrade-package agent-lifecycle-toolkit --python 3.13
+      - name: Install the project
         run: uv sync
       - name: Check for dependency incompatibility
         run: uv pip check

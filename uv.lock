@@ -5740,7 +5740,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "agent-lifecycle-toolkit", specifier = "~=0.4.4" },
+    { name = "agent-lifecycle-toolkit", specifier = "~=0.4.5" },
     { name = "aioboto3", specifier = ">=15.2.0,<16.0.0" },
     { name = "aiofile", specifier = ">=3.9.0,<4.0.0" },
     { name = "aiosqlite", specifier = "==0.21.0" },
