@@ -190,7 +190,9 @@ async def aadd_messagetables(messages: list[MessageTable], session: AsyncSession
     try:
         try:
             for message in messages:
-                session.add(message)
+                result = session.add(message)
+                if asyncio.iscoroutine(result):
+                    await result
             await session.commit()
             # This is a hack.
             # We are doing this because build_public_tmp causes the CancelledError to be raised
