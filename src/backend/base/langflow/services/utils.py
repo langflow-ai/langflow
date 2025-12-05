@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from functools import lru_cache
 from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
@@ -138,6 +139,7 @@ async def teardown_services() -> None:
     await service_manager.teardown()
 
 
+@lru_cache(maxsize=1)
 def initialize_settings_service() -> None:
     """Initialize the settings manager."""
     from lfx.services.settings import factory as settings_factory
