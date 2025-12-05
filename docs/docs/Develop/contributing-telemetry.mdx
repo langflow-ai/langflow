@@ -54,8 +54,10 @@ This telemetry event is sent once when the telemetry service starts.
 
 This telemetry event is sent to track registered email addresses. The event is triggered in two cases:
 
-1. Every time a new email address is registered via the POST `/api/v2/registration/` endpoint.
-2. Once at **Langflow Desktop** startup, if an email address has been previously registered.
+* Every time a new email address is registered via the POST `/api/v2/registration/` endpoint.
+* Once at **Langflow Desktop** startup if an email address was previously registered.
+
+This telemetry event includes the following information:
 
 - **Email**: The registered email address, which helps track user registrations and understand the user base.
 - **ClientType**: Indicates the client type, which can be "desktop" or "oss".
