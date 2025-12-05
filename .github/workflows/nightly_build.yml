@@ -226,7 +226,6 @@ jobs:
       nightly_tag_base: ${{ needs.create-nightly-tag.outputs.base_tag }}
       # When triggered by schedule, inputs.push_to_registry is not set, so default to true
       # When triggered manually, use the provided value (default is also true)
-      push_to_registry: ${{ github.event_name == 'schedule' || inputs.push_to_registry != false }}
     secrets: inherit
 
   slack-notification:
