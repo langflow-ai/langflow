@@ -187,7 +187,7 @@ def test_serve_command_json_file():
         # Mock the necessary dependencies
         with (
             patch("lfx.cli.commands.load_graph_from_path") as mock_load,
-            patch("lfx.cli.commands.uvicorn.run") as mock_uvicorn,
+            patch("lfx.cli.commands.uvicorn.Server.serve", new=AsyncMock(return_value=None)) as mock_uvicorn,
             patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
         ):
             import typer
@@ -245,7 +245,7 @@ def test_serve_command_inline_json():
 
     with (
         patch("lfx.cli.commands.load_graph_from_path") as mock_load,
-        patch("lfx.cli.commands.uvicorn.run") as mock_uvicorn,
+        patch("lfx.cli.commands.uvicorn.Server.serve", new=AsyncMock(return_value=None)) as mock_uvicorn,
         patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
     ):
         import typer
