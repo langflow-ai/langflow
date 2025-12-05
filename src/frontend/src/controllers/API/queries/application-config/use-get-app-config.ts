@@ -1,8 +1,8 @@
 import type { useQueryFunctionType } from "@/types/api";
 import { api } from "../../api";
-import { getURL } from "../../helpers/constants";
+import { getURL, URLs } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
-import { getBackendUrl } from "@/config/constants";
+
 
 export interface IApplicationConfig {
   id: string;
@@ -23,7 +23,7 @@ export const useGetAppConfig: useQueryFunctionType<
 
   const getAppConfigFn = async () => {
     return await api.get<IApplicationConfig>(
-      `${getBackendUrl()}/api/v1/application-config/${params.key}`
+      getURL("APPLICATION_CONFIG", { key: params.key })
     );
   };
 
