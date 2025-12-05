@@ -14,6 +14,7 @@ interface PillProps {
 }
 
 const Pill: React.FC<PillProps> = ({ nudge, setNudgesOpen }) => {
+  console.log("_______________nudge", nudge);
   const { templates } = useTypesStore();
   const addComponent = useAddComponent();
   const { selectedCompData } = useAssistantManagerStore();

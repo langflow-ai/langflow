@@ -24,92 +24,91 @@ export const AssistantNudges: React.FC<AssistantNudgesProps> = ({
   setNudgesOpen,
   handleOnNewValue,
 }) => {
-  const getComponentNudges = {
-    nudges: [
-      {
-        id: "addChatInput",
-        display_text: "Connect a Chat Input",
-        description:
-          "Adds a Chat Input component to your flow if one does not exist and connects it to this node.",
-        type: "connect_component",
-        trigger: {
-          action: "connect_component",
-          componentId: "ChatInput",
-        },
-        ui: {
-          icon: "messages-square",
-          variant_type: "pill",
-          variant_size: "small",
-        },
-      },
-      {
-        id: "addPromptTemplate",
-        display_text: "Connect a Prompt Template",
-        description:
-          "Adds a Prompt Template component to your flow if one does not exist and connects it to this node.",
-        type: "connect_component",
-        trigger: {
-          action: "connect_component",
-          componentId: "Prompt Template",
-        },
-        ui: {
-          icon: "braces",
-          variant_type: "pill",
-          variant_size: "small",
-        },
-      },
-      {
-        id: "exploreTemplates",
-        display_text: "Explore Templates",
-        description:
-          "Jumpstart your project with pre-built Langflow templates.",
-        type: "route",
-        trigger: {
-          action: "navigate",
-          payload: { path: "/templates" },
-        },
-        ui: {
-          icon: "layout-template",
-          variant_type: "pill",
-          variant_size: "small",
-        },
-      },
-      {
-        id: "docsNudge",
-        display_text: "Read Langflow Docs",
-        description:
-          "Learn about nodes, connections, and advanced flow building.",
-        type: "button_preview",
-        trigger: {
-          action: "navigate",
-          payload: { path: "https://docs.langflow.org" },
-        },
-        ui: {
-          icon: "book-open",
-          variant_type: "pill",
-          variant_size: "small",
-        },
-      },
-      {
-        id: "feedbackPrompt",
-        display_text: "Share Feedback",
-        description:
-          "Have ideas or issues with your Langflow experience? Let's improve together.",
-        type: "chat_input",
-        trigger: {
-          action: "send_message",
-          payload: {
-            text: "I'd like to share feedback about my Langflow experience.",
-          },
-        },
-        ui: {
-          icon: "message-square",
-          variant_type: "pill",
-          variant_size: "small",
-        },
-      },
-    ],
-  };
+  //   nudges: [
+  //     {
+  //       id: "addChatInput",
+  //       display_text: "Connect a Chat Input",
+  //       description:
+  //         "Adds a Chat Input component to your flow if one does not exist and connects it to this node.",
+  //       type: "connect_component",
+  //       trigger: {
+  //         action: "connect_component",
+  //         componentId: "ChatInput",
+  //       },
+  //       ui: {
+  //         icon: "messages-square",
+  //         variant_type: "pill",
+  //         variant_size: "small",
+  //       },
+  //     },
+  //     {
+  //       id: "addPromptTemplate",
+  //       display_text: "Connect a Prompt Template",
+  //       description:
+  //         "Adds a Prompt Template component to your flow if one does not exist and connects it to this node.",
+  //       type: "connect_component",
+  //       trigger: {
+  //         action: "connect_component",
+  //         componentId: "Prompt Template",
+  //       },
+  //       ui: {
+  //         icon: "braces",
+  //         variant_type: "pill",
+  //         variant_size: "small",
+  //       },
+  //     },
+  //     {
+  //       id: "exploreTemplates",
+  //       display_text: "Explore Templates",
+  //       description:
+  //         "Jumpstart your project with pre-built Langflow templates.",
+  //       type: "route",
+  //       trigger: {
+  //         action: "navigate",
+  //         payload: { path: "/templates" },
+  //       },
+  //       ui: {
+  //         icon: "layout-template",
+  //         variant_type: "pill",
+  //         variant_size: "small",
+  //       },
+  //     },
+  //     {
+  //       id: "docsNudge",
+  //       display_text: "Read Langflow Docs",
+  //       description:
+  //         "Learn about nodes, connections, and advanced flow building.",
+  //       type: "button_preview",
+  //       trigger: {
+  //         action: "navigate",
+  //         payload: { path: "https://docs.langflow.org" },
+  //       },
+  //       ui: {
+  //         icon: "book-open",
+  //         variant_type: "pill",
+  //         variant_size: "small",
+  //       },
+  //     },
+  //     {
+  //       id: "feedbackPrompt",
+  //       display_text: "Share Feedback",
+  //       description:
+  //         "Have ideas or issues with your Langflow experience? Let's improve together.",
+  //       type: "chat_input",
+  //       trigger: {
+  //         action: "send_message",
+  //         payload: {
+  //           text: "I'd like to share feedback about my Langflow experience.",
+  //         },
+  //       },
+  //       ui: {
+  //         icon: "message-square",
+  //         variant_type: "pill",
+  //         variant_size: "small",
+  //       },
+  //     },
+  //   ],
+  // };
   const flowId = useGetFlowId();
   const { folderId } = useParams();
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
@@ -117,6 +116,8 @@ export const AssistantNudges: React.FC<AssistantNudgesProps> = ({
   const [selectedMode, setSelectedMode] = useState("PROMPT");
   const [userInput, setUserInput] = useState("");
   const [promptOutput, setPromptOutput] = useState("Generate a Prompt");
+  const [nudegsLoading, setNudgesLoading] = useState(true);
+  const [componentNudges, setComponentNudges] = useState(null);
   const { selectedCompData } = useAssistantManagerStore();
 
   // timer
@@ -161,9 +162,15 @@ export const AssistantNudges: React.FC<AssistantNudgesProps> = ({
 
   useEffect(() => {
     const result = async () => {
-      suggestedComponents();
+      setNudgesLoading(true);
+      return await suggestedComponents();
     };
-    console.log("__________________________result", result());
+    result().then((nudges) => {
+      setComponentNudges(
+        JSON.parse(nudges.data.data.outputs[0].outputs[0].messages[0].message),
+      );
+      setNudgesLoading(false);
+    });
   }, []);
 
   const onGenButtonClick = async () => {
@@ -258,11 +265,12 @@ export const AssistantNudges: React.FC<AssistantNudgesProps> = ({
                 className="min-h-[25px] font-mono text-mmd"
                 placeholder="Component Mode"
               />
-              {getComponentNudges.nudges.map((nudge) => {
-                return (
-                  <Pill nudge={nudge} setNudgesOpen={setNudgesOpen}></Pill>
-                );
-              })}
+              {!nudegsLoading &&
+                componentNudges?.nudges.map((nudge) => {
+                  return (
+                    <Pill nudge={nudge} setNudgesOpen={setNudgesOpen}></Pill>
+                  );
+                })}
             </div>
           </TabsContent>
         </div>
