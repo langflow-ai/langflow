@@ -881,10 +881,8 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         def is_other_retryable_error(exception: Exception) -> bool:
             """Check if exception is retryable but not a rate limit error."""
             # Retry on most exceptions except for specific non-retryable ones
-            if is_rate_limit_error(exception):
-                return False
             # Add other non-retryable exceptions here if needed
-            return True
+            return not is_rate_limit_error(exception)
 
         # Create retry decorator for rate limit errors (longer backoff)
         retry_on_rate_limit = retry(
@@ -959,13 +957,6 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
                 for future in as_completed(futures):
                     idx = futures[future]
                     vectors[idx] = future.result()
-
-        if vectors is None:
-            raise RuntimeError(
-                f"Embedding generation failed for {embedding_model}: {last_exception}"
-                if last_exception
-                else f"Embedding generation failed for {embedding_model}"
-            )
 
         if not vectors:
             self.log(f"No vectors generated from documents for model {embedding_model}.")
