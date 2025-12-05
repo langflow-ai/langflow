@@ -330,6 +330,19 @@ class ALTKBaseAgentComponent(AgentComponent):
             else:
                 input_dict["chat_history"] = [HumanMessage(content=[image_dict]) for image_dict in image_dicts]
         input_dict["input"] = input_text
+
+        # Copied from agent.py
+        # Final safety check: ensure input is never empty (prevents Anthropic API errors)
+        current_input = input_dict.get("input", "")
+        if isinstance(current_input, list):
+            current_input = " ".join(map(str, current_input))
+        elif not isinstance(current_input, str):
+            current_input = str(current_input)
+        if not current_input.strip():
+            input_dict["input"] = "Continue the conversation."
+        else:
+            input_dict["input"] = current_input
+
         if hasattr(self, "graph"):
             session_id = self.graph.session_id
         elif hasattr(self, "_session_id"):
