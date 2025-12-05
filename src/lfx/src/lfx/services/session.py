@@ -24,7 +24,7 @@ class NoopSession:
 
     bind = NoopBind()
 
-    async def add(self, *args, **kwargs):
+    def add(self, *args, **kwargs):
         pass
 
     async def commit(self):
@@ -67,6 +67,9 @@ class NoopSession:
 
             def one_or_none(self):
                 return None
+
+            def __iter__(self):
+                return iter([])
 
         return _NoopResult()
 
