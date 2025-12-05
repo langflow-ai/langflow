@@ -105,7 +105,6 @@ class Vertex:
         self.use_result = False
         self.build_times: list[float] = []
         self.state = VertexStates.ACTIVE
-        self.log_transaction_tasks: set[asyncio.Task] = set()
         self.output_names: list[str] = [
             output["name"] for output in self.outputs if isinstance(output, dict) and "name" in output
         ]
@@ -535,7 +534,7 @@ class Vertex:
         target: Vertex | None = None,
         error=None,
     ) -> None:
-        """Log a transaction asynchronously with proper task handling and cancellation.
+        """Log a transaction asynchronously.
 
         Args:
             flow_id: The ID of the flow
@@ -544,15 +543,10 @@ class Vertex:
             target: Optional target vertex
             error: Optional error information
         """
-        if self.log_transaction_tasks:
-            # Safely await and remove completed tasks
-            task = self.log_transaction_tasks.pop()
-            await task
-
-            # Create and track new task
-        task = asyncio.create_task(log_transaction(flow_id, source, status, target, error))
-        self.log_transaction_tasks.add(task)
-        task.add_done_callback(self.log_transaction_tasks.discard)
+        try:
+            await log_transaction(flow_id, source, status, target, error)
+        except Exception as exc:  # noqa: BLE001
+            logger.debug(f"Error logging transaction: {exc!s}")
 
     async def _get_result(
         self,
@@ -657,6 +651,12 @@ class Vertex:
         except Exception as exc:
             tb = traceback.format_exc()
             await logger.aexception(exc)
+            # Log transaction error
+            flow_id = self.graph.flow_id
+            if flow_id:
+                await self._log_transaction_async(
+                    str(flow_id), source=self, target=None, status="error", error=str(exc)
+                )
             msg = f"Error building Component {self.display_name}: \n\n{exc}"
             raise ComponentBuildError(msg, tb) from exc
 
@@ -771,6 +771,11 @@ class Vertex:
                     self.steps_ran.append(step)
 
             self.finalize_build()
+
+            # Log transaction after successful build
+            flow_id = self.graph.flow_id
+            if flow_id:
+                await self._log_transaction_async(str(flow_id), source=self, target=None, status="success")
 
         return await self.get_requester_result(requester)
 
