@@ -4,7 +4,6 @@ import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 from langflow.utils.mcp_cleanup import (
     _kill_mcp_processes,
     _terminate_child_mcp_processes,
@@ -63,11 +62,13 @@ class TestCleanupMcpSessions:
 
     async def test_cleanup_handles_import_error(self):
         """Test cleanup handles import errors gracefully."""
-        with patch.dict("sys.modules", {"lfx.base.mcp.util": None}):
-            with patch("langflow.utils.mcp_cleanup._kill_mcp_processes", new_callable=AsyncMock) as mock_kill:
-                # Should not raise, should silently continue
-                await cleanup_mcp_sessions()
-                mock_kill.assert_called_once()
+        with (
+            patch.dict("sys.modules", {"lfx.base.mcp.util": None}),
+            patch("langflow.utils.mcp_cleanup._kill_mcp_processes", new_callable=AsyncMock) as mock_kill,
+        ):
+            # Should not raise, should silently continue
+            await cleanup_mcp_sessions()
+            mock_kill.assert_called_once()
 
     async def test_cleanup_handles_exception_in_session_manager(self):
         """Test cleanup handles exceptions from session manager gracefully."""
@@ -193,7 +194,7 @@ class TestTerminateChildMcpProcesses:
         mock_psutil = MagicMock()
 
         mock_mcp_proc = MagicMock()
-        mock_mcp_proc.cmdline.return_value = ["python", "mcp-server-filesystem", "/tmp"]
+        mock_mcp_proc.cmdline.return_value = ["python", "mcp-server-filesystem", "/tmp"]  # noqa: S108
         mock_mcp_proc.terminate = MagicMock()
         mock_mcp_proc.wait = MagicMock()
 
@@ -245,7 +246,7 @@ class TestTerminateOrphanedMcpProcesses:
         mock_orphan_mcp.info = {
             "pid": 12345,
             "ppid": 1,
-            "cmdline": ["python", "mcp-server-filesystem", "/tmp"],
+            "cmdline": ["python", "mcp-server-filesystem", "/tmp"],  # noqa: S108
         }
 
         # Non-orphaned MCP process
@@ -253,7 +254,7 @@ class TestTerminateOrphanedMcpProcesses:
         mock_non_orphan.info = {
             "pid": 12346,
             "ppid": 1000,
-            "cmdline": ["python", "mcp-server-filesystem", "/tmp"],
+            "cmdline": ["python", "mcp-server-filesystem", "/tmp"],  # noqa: S108
         }
 
         # Orphaned non-MCP process
@@ -310,10 +311,10 @@ class TestTerminateOrphanedMcpProcesses:
         mock_psutil = MagicMock()
 
         mock_proc = MagicMock()
-        mock_proc.info = property(lambda self: (_ for _ in ()).throw(mock_psutil.AccessDenied))
+        mock_proc.info = property(lambda _: (_ for _ in ()).throw(mock_psutil.AccessDenied))
 
         # Make info raise AccessDenied
-        type(mock_proc).info = property(lambda self: (_ for _ in ()).throw(mock_psutil.AccessDenied))
+        type(mock_proc).info = property(lambda _: (_ for _ in ()).throw(mock_psutil.AccessDenied))
 
         mock_psutil.process_iter.return_value = [mock_proc]
         mock_psutil.NoSuchProcess = type("NoSuchProcess", (Exception,), {})
@@ -337,7 +338,7 @@ class TestTryTerminateMcpProcess:
         mock_psutil.TimeoutExpired = Exception
 
         mock_proc = MagicMock()
-        mock_proc.cmdline.return_value = ["python", "mcp-server-filesystem", "/tmp"]
+        mock_proc.cmdline.return_value = ["python", "mcp-server-filesystem", "/tmp"]  # noqa: S108
         mock_proc.terminate = MagicMock()
         mock_proc.wait = MagicMock()
 

@@ -8,6 +8,7 @@ Works on macOS and Linux only.
 
 from __future__ import annotations
 
+import contextlib
 import sys
 from typing import TYPE_CHECKING
 
@@ -23,7 +24,7 @@ async def cleanup_mcp_sessions() -> None:
     This function should be called at the very beginning of the shutdown sequence
     to ensure MCP subprocesses are killed even if shutdown is interrupted.
     """
-    try:
+    with contextlib.suppress(Exception):
         from lfx.base.mcp.util import MCPSessionManager
         from lfx.services.cache.utils import CACHE_MISS
 
@@ -35,14 +36,9 @@ async def cleanup_mcp_sessions() -> None:
         if session_manager is not CACHE_MISS and isinstance(session_manager, MCPSessionManager):
             await session_manager.cleanup_all()
 
-    except Exception:  # noqa: BLE001
-        pass  # Silently ignore errors during shutdown
-
     # Fallback: Kill any MCP server processes (Unix only)
-    try:
+    with contextlib.suppress(Exception):
         await _kill_mcp_processes()
-    except Exception:  # noqa: BLE001
-        pass  # Silently ignore errors during shutdown
 
 
 async def _kill_mcp_processes() -> None:
@@ -61,15 +57,12 @@ async def _kill_mcp_processes() -> None:
     except ImportError:
         return
 
-    try:
+    with contextlib.suppress(Exception):
         killed_count = await _terminate_child_mcp_processes(psutil)
         killed_count += await _terminate_orphaned_mcp_processes(psutil)
 
         if killed_count > 0:
             await logger.ainfo(f"Killed {killed_count} MCP processes")
-
-    except Exception:  # noqa: BLE001
-        pass  # Silently ignore errors during shutdown
 
 
 async def _terminate_child_mcp_processes(psutil: psutil_type) -> int:
@@ -126,7 +119,7 @@ async def _try_terminate_mcp_process(proc: psutil_type.Process, psutil: psutil_t
         except psutil.TimeoutExpired:
             proc.kill()
 
-        return True
-
     except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
         return False
+    else:
+        return True
