@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING
 
 from aiofile import async_open
@@ -11,6 +10,8 @@ from langflow.logging.logger import logger
 from langflow.services.storage.service import StorageService
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
     from langflow.services.session.service import SessionService
     from langflow.services.settings.service import SettingsService
 
