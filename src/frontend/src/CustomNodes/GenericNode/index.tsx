@@ -483,9 +483,14 @@ function GenericNode({
     [addDismissedNodesLegacy, data.id],
   );
 
+  // Subscribe to node from store to trigger re-renders on showNode changes
+  const node = useFlowStore((state) => {
+    return state.nodes.find((n) => n.data.id === data.id);
+  });
+
   useEffect(() => {
     updateNodeInternals(data.id);
-  }, [showNode, updateNodeInternals]);
+  }, [node?.data.showNode, data.id, updateNodeInternals]);
 
   return (
     <div className={cn(shouldShowUpdateComponent ? "relative -mt-10" : "")}>
