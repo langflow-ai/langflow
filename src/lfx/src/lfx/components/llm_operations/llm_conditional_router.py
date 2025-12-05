@@ -1,7 +1,21 @@
 from typing import Any
 
+from lfx.base.models.unified_models import (
+    get_language_model_options,
+    get_llm,
+    update_model_options_in_build_config,
+)
 from lfx.custom import Component
-from lfx.io import BoolInput, HandleInput, MessageInput, MessageTextInput, MultilineInput, Output, TableInput
+from lfx.io import (
+    BoolInput,
+    MessageInput,
+    MessageTextInput,
+    ModelInput,
+    MultilineInput,
+    Output,
+    SecretStrInput,
+    TableInput,
+)
 from lfx.schema.message import Message
 from lfx.schema.table import EditMode
 
@@ -17,12 +31,19 @@ class SmartRouterComponent(Component):
         self._matched_category = None
 
     inputs = [
-        HandleInput(
-            name="llm",
+        ModelInput(
+            name="model",
             display_name="Language Model",
-            info="LLM to use for categorization.",
-            input_types=["LanguageModel"],
+            info="Select your model provider",
+            real_time_refresh=True,
             required=True,
+        ),
+        SecretStrInput(
+            name="api_key",
+            display_name="API Key",
+            info="Model Provider API key",
+            real_time_refresh=True,
+            advanced=True,
         ),
         MessageTextInput(
             name="input_text",
@@ -111,6 +132,17 @@ class SmartRouterComponent(Component):
 
     outputs: list[Output] = []
 
+    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
+        """Dynamically update build config with user-filtered model options."""
+        return update_model_options_in_build_config(
+            component=self,
+            build_config=build_config,
+            cache_key_prefix="language_model_options",
+            get_options_func=get_language_model_options,
+            field_name=field_name,
+            field_value=field_value,
+        )
+
     def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:
         """Create a dynamic output for each category in the categories table."""
         if field_name in {"routes", "enable_else_output"}:
@@ -153,7 +185,7 @@ class SmartRouterComponent(Component):
 
         # Find the matching category using LLM-based categorization
         matched_category = None
-        llm = getattr(self, "llm", None)
+        llm = get_llm(model=self.model, user_id=self.user_id, api_key=self.api_key)
 
         if llm and categories:
             # Create prompt for categorization
@@ -315,7 +347,7 @@ class SmartRouterComponent(Component):
 
         # Check if any category matches using LLM categorization
         has_match = False
-        llm = getattr(self, "llm", None)
+        llm = get_llm(model=self.model, user_id=self.user_id, api_key=self.api_key)
 
         if llm and categories:
             try:

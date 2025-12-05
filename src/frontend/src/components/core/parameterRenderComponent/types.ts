@@ -135,7 +135,6 @@ export type QueryComponentType = {
 
 export type InputGlobalComponentType = {
   load_from_db: boolean | undefined;
-  allowCustomValue: boolean | undefined;
   password: boolean | undefined;
   display_name: string;
 };

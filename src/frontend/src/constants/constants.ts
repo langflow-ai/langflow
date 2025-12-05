@@ -988,3 +988,13 @@ export const DESKTOP_URL = "https://www.langflow.org/desktop";
 export const BUG_REPORT_URL = "https://github.com/langflow-ai/langflow/issues";
 
 export const UUID_PARSING_ERROR = "uuid_parsing";
+
+// Variable categories
+export const CATEGORY_GLOBAL = "Global";
+export const CATEGORY_LLM = "LLM";
+export const CATEGORY_SETTINGS = "Settings";
+export const VALID_CATEGORIES = [
+  CATEGORY_GLOBAL,
+  CATEGORY_LLM,
+  CATEGORY_SETTINGS,
+] as const;
