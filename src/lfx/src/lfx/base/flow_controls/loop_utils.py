@@ -15,28 +15,37 @@ def get_loop_body_vertices(
     vertex: "Vertex",
     graph: "Graph",
     get_incoming_edge_by_target_param_fn,
+    loop_output_name: str = "item",
+    feedback_input_name: str | None = None,
 ) -> set[str]:
     """Get all vertex IDs that are part of the loop body.
 
-    Uses BFS to traverse from the loop's item output to the vertex
-    that feeds back to the loop's item input, then includes all
+    Uses BFS to traverse from the loop's output to the vertex
+    that feeds back to the loop's input, then includes all
     predecessors of vertices in the loop body.
 
     Args:
         vertex: The loop component's vertex
         graph: The graph containing the loop
         get_incoming_edge_by_target_param_fn: Function to get incoming edge by target param
+        loop_output_name: Name of the output that starts the loop body
+            (default: "item" for Loop, use "loop" for WhileLoop)
+        feedback_input_name: Name of the input that receives feedback
+            (default: same as loop_output_name)
 
     Returns:
         Set of vertex IDs that form the loop body
     """
-    # Find where the loop body starts (edges from item output)
-    start_edges = [e for e in vertex.outgoing_edges if e.source_handle.name == "item"]
+    if feedback_input_name is None:
+        feedback_input_name = loop_output_name
+
+    # Find where the loop body starts (edges from loop output)
+    start_edges = [e for e in vertex.outgoing_edges if e.source_handle.name == loop_output_name]
     if not start_edges:
         return set()
 
-    # Find where it ends (vertex feeding back to item input)
-    end_vertex_id = get_incoming_edge_by_target_param_fn("item")
+    # Find where it ends (vertex feeding back to loop input)
+    end_vertex_id = get_incoming_edge_by_target_param_fn(feedback_input_name)
     if not end_vertex_id:
         return set()
 
@@ -88,31 +97,35 @@ def get_loop_body_vertices(
     return loop_body
 
 
-def get_loop_body_start_vertex(vertex: "Vertex") -> str | None:
-    """Get the first vertex in the loop body (connected to loop's item output).
+def get_loop_body_start_vertex(vertex: "Vertex", loop_output_name: str = "item") -> str | None:
+    """Get the first vertex in the loop body (connected to loop's output).
 
     Args:
         vertex: The loop component's vertex
+        loop_output_name: Name of the output that starts the loop body
+            (default: "item" for Loop, use "loop" for WhileLoop)
 
     Returns:
         The vertex ID of the first vertex in the loop body, or None if not found
     """
-    start_edges = [e for e in vertex.outgoing_edges if e.source_handle.name == "item"]
+    start_edges = [e for e in vertex.outgoing_edges if e.source_handle.name == loop_output_name]
     if start_edges:
         return start_edges[0].target_id
     return None
 
 
-def get_loop_body_start_edge(vertex: "Vertex"):
-    """Get the edge connecting loop's item output to the first vertex in loop body.
+def get_loop_body_start_edge(vertex: "Vertex", loop_output_name: str = "item"):
+    """Get the edge connecting loop's output to the first vertex in loop body.
 
     Args:
         vertex: The loop component's vertex
+        loop_output_name: Name of the output that starts the loop body
+            (default: "item" for Loop, use "loop" for WhileLoop)
 
     Returns:
         The edge object, or None if not found
     """
-    start_edges = [e for e in vertex.outgoing_edges if e.source_handle.name == "item"]
+    start_edges = [e for e in vertex.outgoing_edges if e.source_handle.name == loop_output_name]
     if start_edges:
         return start_edges[0]
     return None
