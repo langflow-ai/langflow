@@ -1,7 +1,181 @@
 import base64
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from langflow.utils.image import convert_image_to_base64, create_data_url, create_image_content_dict
+
+
+# S3 Storage Tests for Image Utilities
+
+
+@pytest.fixture
+def mock_s3_storage_service():
+    """Mock S3 storage service for testing."""
+    mock_service = AsyncMock()
+    mock_service.get_file = AsyncMock()
+    return mock_service
+
+
+@pytest.fixture
+def sample_image_bytes():
+    """Sample image bytes for S3 testing."""
+    return base64.b64decode(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg=="
+    )
+
+
+def test_convert_image_to_base64_s3_storage(sample_image_bytes, mock_s3_storage_service):
+    """Test converting image from S3 storage to base64."""
+    # Mock the storage service to return image bytes
+    mock_s3_storage_service.get_file.return_value = sample_image_bytes
+
+    with patch("langflow.utils.image.get_settings_service") as mock_settings, patch(
+        "langflow.base.data.storage_utils.get_storage_service", return_value=mock_s3_storage_service
+    ), patch("langflow.base.data.storage_utils.get_settings_service") as mock_settings2:
+        # Configure settings to use S3
+        mock_settings_obj = MagicMock()
+        mock_settings_obj.settings.storage_type = "s3"
+        mock_settings.return_value = mock_settings_obj
+        mock_settings2.return_value = mock_settings_obj
+
+        # Test with S3 path format: flow_id/filename
+        image_path = "test-flow-123/test_image.png"
+        base64_str = convert_image_to_base64(image_path)
+
+        # Verify the result
+        assert isinstance(base64_str, str)
+        assert base64.b64decode(base64_str) == sample_image_bytes
+
+        # Verify storage service was called correctly
+        mock_s3_storage_service.get_file.assert_called_once_with("test-flow-123", "test_image.png")
+
+
+def test_convert_image_to_base64_s3_storage_error(mock_s3_storage_service):
+    """Test error handling when S3 storage fails."""
+    # Mock the storage service to raise an error
+    mock_s3_storage_service.get_file.side_effect = FileNotFoundError("File not found in S3")
+
+    with patch("langflow.utils.image.get_settings_service") as mock_settings, patch(
+        "langflow.base.data.storage_utils.get_storage_service", return_value=mock_s3_storage_service
+    ), patch("langflow.base.data.storage_utils.get_settings_service") as mock_settings2:
+        # Configure settings to use S3
+        mock_settings_obj = MagicMock()
+        mock_settings_obj.settings.storage_type = "s3"
+        mock_settings.return_value = mock_settings_obj
+        mock_settings2.return_value = mock_settings_obj
+
+        # Test with S3 path format
+        image_path = "test-flow-123/nonexistent.png"
+
+        with pytest.raises(FileNotFoundError, match="Error reading image file from storage"):
+            convert_image_to_base64(image_path)
+
+
+def test_create_data_url_s3_storage(sample_image_bytes, mock_s3_storage_service):
+    """Test creating data URL from S3 storage."""
+    mock_s3_storage_service.get_file.return_value = sample_image_bytes
+
+    with patch("langflow.utils.image.get_settings_service") as mock_settings, patch(
+        "langflow.base.data.storage_utils.get_storage_service", return_value=mock_s3_storage_service
+    ), patch("langflow.base.data.storage_utils.get_settings_service") as mock_settings2:
+        # Configure settings to use S3
+        mock_settings_obj = MagicMock()
+        mock_settings_obj.settings.storage_type = "s3"
+        mock_settings.return_value = mock_settings_obj
+        mock_settings2.return_value = mock_settings_obj
+
+        # Test with S3 path
+        image_path = "test-flow-123/test_image.png"
+        data_url = create_data_url(image_path)
+
+        # Verify the result
+        assert data_url.startswith("data:image/png;base64,")
+        base64_part = data_url.split(",")[1]
+        assert base64.b64decode(base64_part) == sample_image_bytes
+
+
+def test_create_image_content_dict_s3_storage(sample_image_bytes, mock_s3_storage_service):
+    """Test creating image content dict from S3 storage."""
+    mock_s3_storage_service.get_file.return_value = sample_image_bytes
+
+    with patch("langflow.utils.image.get_settings_service") as mock_settings, patch(
+        "langflow.base.data.storage_utils.get_storage_service", return_value=mock_s3_storage_service
+    ), patch("langflow.base.data.storage_utils.get_settings_service") as mock_settings2:
+        # Configure settings to use S3
+        mock_settings_obj = MagicMock()
+        mock_settings_obj.settings.storage_type = "s3"
+        mock_settings.return_value = mock_settings_obj
+        mock_settings2.return_value = mock_settings_obj
+
+        # Test with S3 path
+        image_path = "test-flow-123/test_image.jpg"
+        content_dict = create_image_content_dict(image_path)
+
+        # Verify the structure
+        assert content_dict["type"] == "image_url"
+        assert "image_url" in content_dict
+        assert "url" in content_dict["image_url"]
+        assert content_dict["image_url"]["url"].startswith("data:image/jpeg;base64,")
+
+        # Verify the base64 content
+        base64_part = content_dict["image_url"]["url"].split(",")[1]
+        assert base64.b64decode(base64_part) == sample_image_bytes
+
+
+def test_s3_path_parsing_variations(sample_image_bytes, mock_s3_storage_service):
+    """Test various S3 path formats."""
+    mock_s3_storage_service.get_file.return_value = sample_image_bytes
+
+    with patch("langflow.utils.image.get_settings_service") as mock_settings, patch(
+        "langflow.base.data.storage_utils.get_storage_service", return_value=mock_s3_storage_service
+    ), patch("langflow.base.data.storage_utils.get_settings_service") as mock_settings2:
+        # Configure settings to use S3
+        mock_settings_obj = MagicMock()
+        mock_settings_obj.settings.storage_type = "s3"
+        mock_settings.return_value = mock_settings_obj
+        mock_settings2.return_value = mock_settings_obj
+
+        # Test different path formats
+        test_cases = [
+            ("flow-123/image.png", "flow-123", "image.png"),
+            ("user-abc/subfolder/image.jpg", "user-abc/subfolder", "image.jpg"),
+            ("simple-flow/test.webp", "simple-flow", "test.webp"),
+        ]
+
+        for path, expected_flow_id, expected_filename in test_cases:
+            mock_s3_storage_service.get_file.reset_mock()
+            base64_str = convert_image_to_base64(path)
+            assert isinstance(base64_str, str)
+
+
+def test_image_utils_integration_with_storage_service(sample_image_bytes, mock_s3_storage_service):
+    """Test that image utils properly integrate with storage service."""
+    mock_s3_storage_service.get_file.return_value = sample_image_bytes
+
+    with patch("langflow.utils.image.get_settings_service") as mock_settings, patch(
+        "langflow.base.data.storage_utils.get_storage_service", return_value=mock_s3_storage_service
+    ), patch("langflow.base.data.storage_utils.get_settings_service") as mock_settings2:
+        # Configure settings to use S3
+        mock_settings_obj = MagicMock()
+        mock_settings_obj.settings.storage_type = "s3"
+        mock_settings.return_value = mock_settings_obj
+        mock_settings2.return_value = mock_settings_obj
+
+        # Test the full workflow: S3 -> base64 -> data URL -> content dict
+        image_path = "test-flow/image.png"
+
+        # Step 1: Convert to base64
+        base64_str = convert_image_to_base64(image_path)
+        assert isinstance(base64_str, str)
+
+        # Step 2: Create data URL
+        data_url = create_data_url(image_path)
+        assert data_url.startswith("data:image/png;base64,")
+
+        # Step 3: Create content dict
+        content_dict = create_image_content_dict(image_path)
+        assert content_dict["type"] == "image_url"
+        assert content_dict["image_url"]["url"] == data_url
 
 
 @pytest.fixture
@@ -32,7 +206,7 @@ def test_convert_image_to_base64_empty_path():
 
 def test_convert_image_to_base64_nonexistent_file():
     """Test conversion with non-existent file."""
-    with pytest.raises(FileNotFoundError, match="Image file not found"):
+    with pytest.raises(FileNotFoundError, match="Error reading image file from storage"):
         convert_image_to_base64("nonexistent.png")
 
 

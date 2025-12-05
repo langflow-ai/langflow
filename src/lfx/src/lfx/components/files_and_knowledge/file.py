@@ -21,7 +21,7 @@ from tempfile import NamedTemporaryFile
 from typing import Any
 
 from lfx.base.data.base_file import BaseFileComponent
-from lfx.base.data.storage_utils import parse_storage_path, validate_image_content_type
+from lfx.base.data.storage_utils import validate_image_content_type
 from lfx.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_file_to_data
 from lfx.inputs.inputs import DropdownInput, MessageTextInput, StrInput
 from lfx.io import BoolInput, FileInput, IntInput, Output
@@ -445,20 +445,19 @@ class FileComponent(BaseFileComponent):
             tuple[str, bool]: (local_path, should_delete) where should_delete indicates
                               if this is a temporary file that should be cleaned up
         """
-        settings = get_settings_service().settings
-        if settings.storage_type == "local":
+        # If it's an absolute path (local file), return it directly
+        if Path(file_path).is_absolute():
             return file_path, False
 
-        # S3 storage - download to temp file
-        parsed = parse_storage_path(file_path)
-        if not parsed:
-            msg = f"Invalid S3 path format: {file_path}. Expected 'flow_id/filename'"
-            raise ValueError(msg)
+        # Otherwise, treat it as an S3 key and download it
+        from lfx.services.storage.service import StorageService
 
         storage_service = get_storage_service()
-        flow_id, filename = parsed
+        parsed = StorageService.parse_storage_path(file_path)
+        if not parsed:
+            raise ValueError(f"Invalid storage path: {file_path}")
 
-        # Get file content from S3
+        flow_id, filename = parsed
         content = await storage_service.get_file(flow_id, filename)
 
         suffix = Path(filename).suffix

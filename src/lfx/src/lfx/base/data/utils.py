@@ -12,9 +12,8 @@ import yaml
 from defusedxml import ElementTree
 from pypdf import PdfReader
 
-from lfx.base.data.storage_utils import read_file_bytes
 from lfx.schema.data import Data
-from lfx.services.deps import get_settings_service
+from lfx.services.deps import get_settings_service, get_storage_service
 from lfx.utils.async_helpers import run_until_complete
 
 # Types of files that can be read simply by file.read()
@@ -172,10 +171,11 @@ async def read_text_file_async(file_path: str) -> str:
     Returns:
         str: The file content as text
     """
-    from .storage_utils import read_file_bytes
-
-    # Use storage-aware read to get bytes
-    raw_data = await read_file_bytes(file_path)
+    storage_service = get_storage_service()
+    if storage_service is None:
+        msg = "Storage service not initialized"
+        raise RuntimeError(msg)
+    raw_data = await storage_service.read_file_bytes_from_path(file_path)
 
     # Auto-detect encoding
     result = chardet.detect(raw_data)
@@ -220,9 +220,11 @@ async def read_docx_file_async(file_path: str) -> str:
     """
     from docx import Document
 
-    from .storage_utils import read_file_bytes
-
     settings = get_settings_service().settings
+    storage_service = get_storage_service()
+    if storage_service is None:
+        msg = "Storage service not initialized"
+        raise RuntimeError(msg)
 
     if settings.storage_type == "local":
         # Local storage - read directly
@@ -230,7 +232,7 @@ async def read_docx_file_async(file_path: str) -> str:
         return "\n\n".join([p.text for p in doc.paragraphs])
 
     # S3 storage - need temp file for python-docx (doesn't support BytesIO)
-    content = await read_file_bytes(file_path)
+    content = await storage_service.read_file_bytes_from_path(file_path)
 
     # Create temp file with .docx extension
     # Extract filename from path for suffix
@@ -265,7 +267,12 @@ async def parse_pdf_to_text_async(file_path: str) -> str:
     Returns:
         str: Extracted text from all pages
     """
-    content = await read_file_bytes(file_path)
+    storage_service = get_storage_service()
+    if storage_service is None:
+        msg = "Storage service not initialized"
+        raise RuntimeError(msg)
+    content = await storage_service.read_file_bytes_from_path(file_path)
+
     with BytesIO(content) as f, PdfReader(f) as reader:
         return "\n\n".join([page.extract_text() for page in reader.pages])
 

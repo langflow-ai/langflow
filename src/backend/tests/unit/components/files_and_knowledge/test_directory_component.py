@@ -85,7 +85,19 @@ class TestDirectoryComponent(ComponentTestBaseWithoutClient):
             silent_errors=silent_errors,
         )
 
-    def test_directory_without_mocks(self):
+    @patch("lfx.base.data.utils.get_storage_service")
+    def test_directory_without_mocks(self, mock_get_storage):
+        # Mock storage service with read_file_bytes_from_path method
+        mock_storage = Mock()
+        
+        async def mock_read_file_bytes(file_path):
+            # Read from actual filesystem for this test
+            from pathlib import Path
+            return Path(file_path).read_bytes()
+        
+        mock_storage.read_file_bytes_from_path = mock_read_file_bytes
+        mock_get_storage.return_value = mock_storage
+        
         directory_component = DirectoryComponent()
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -125,8 +137,20 @@ class TestDirectoryComponent(ComponentTestBaseWithoutClient):
         docs_files = list(docs_path.glob("*.md")) + list(docs_path.glob("*.json"))
         assert len(results) == len(docs_files)
 
-    def test_directory_as_dataframe(self):
+    @patch("lfx.base.data.utils.get_storage_service")
+    def test_directory_as_dataframe(self, mock_get_storage):
         """Test DirectoryComponent's as_dataframe method."""
+        # Mock storage service with read_file_bytes_from_path method
+        mock_storage = Mock()
+        
+        async def mock_read_file_bytes(file_path):
+            # Read from actual filesystem for this test
+            from pathlib import Path
+            return Path(file_path).read_bytes()
+        
+        mock_storage.read_file_bytes_from_path = mock_read_file_bytes
+        mock_get_storage.return_value = mock_storage
+        
         directory_component = DirectoryComponent()
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -180,8 +204,20 @@ class TestDirectoryComponent(ComponentTestBaseWithoutClient):
             missing_paths = [path for path in expected_paths if not any(path in fp for fp in file_paths)]
             assert not missing_paths, f"Missing expected file paths in DataFrame: {missing_paths}"
 
-    def test_directory_with_depth(self):
+    @patch("lfx.base.data.utils.get_storage_service")
+    def test_directory_with_depth(self, mock_get_storage):
         """Test DirectoryComponent with different depth settings."""
+        # Mock storage service with read_file_bytes_from_path method
+        mock_storage = Mock()
+        
+        async def mock_read_file_bytes(file_path):
+            # Read from actual filesystem for this test
+            from pathlib import Path
+            return Path(file_path).read_bytes()
+        
+        mock_storage.read_file_bytes_from_path = mock_read_file_bytes
+        mock_get_storage.return_value = mock_storage
+        
         directory_component = DirectoryComponent()
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -239,8 +275,20 @@ class TestDirectoryComponent(ComponentTestBaseWithoutClient):
             (["txt", "json"], 2),
         ],
     )
-    def test_directory_with_types(self, file_types, expected_count):
+    @patch("lfx.base.data.utils.get_storage_service")
+    def test_directory_with_types(self, mock_get_storage, file_types, expected_count):
         """Test DirectoryComponent with different file type filters (parameterized)."""
+        # Mock storage service with read_file_bytes_from_path method
+        mock_storage = Mock()
+        
+        async def mock_read_file_bytes(file_path):
+            # Read from actual filesystem for this test
+            from pathlib import Path
+            return Path(file_path).read_bytes()
+        
+        mock_storage.read_file_bytes_from_path = mock_read_file_bytes
+        mock_get_storage.return_value = mock_storage
+        
         directory_component = DirectoryComponent()
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -294,8 +342,20 @@ class TestDirectoryComponent(ComponentTestBaseWithoutClient):
             assert "Invalid file types specified: ['exe']" in str(exc_info.value)
             assert "Valid types are:" in str(exc_info.value)
 
-    def test_directory_with_hidden_files(self):
+    @patch("lfx.base.data.utils.get_storage_service")
+    def test_directory_with_hidden_files(self, mock_get_storage):
         """Test DirectoryComponent with hidden files."""
+        # Mock storage service with read_file_bytes_from_path method
+        mock_storage = Mock()
+        
+        async def mock_read_file_bytes(file_path):
+            # Read from actual filesystem for this test
+            from pathlib import Path
+            return Path(file_path).read_bytes()
+        
+        mock_storage.read_file_bytes_from_path = mock_read_file_bytes
+        mock_get_storage.return_value = mock_storage
+        
         directory_component = DirectoryComponent()
 
         with tempfile.TemporaryDirectory() as temp_dir:

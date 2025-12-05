@@ -32,6 +32,14 @@ class FakeStorageService:  # Minimal stub for storage interactions
     async def delete_file(self, flow_id: str, file_name: str):
         self._store.pop(f"{flow_id}/{file_name}", None)
 
+    async def read_file_bytes_from_path(self, file_path: str, resolve_path=None):
+        """Mock implementation of read_file_bytes_from_path."""
+        return self._store.get(file_path, b"")
+
+    async def get_file_size_from_path(self, file_path: str, resolve_path=None):
+        """Mock implementation of get_file_size_from_path."""
+        return len(self._store.get(file_path, b""))
+
 
 class FakeResult:  # Helper for Session.exec return
     def __init__(self, rows):

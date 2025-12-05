@@ -3,7 +3,6 @@ import tempfile
 from pathlib import Path
 
 from lfx.base.agents.agent import LCAgentComponent
-from lfx.base.data.storage_utils import read_file_bytes
 from lfx.field_typing import AgentExecutor
 from lfx.inputs.inputs import (
     DictInput,
@@ -149,6 +148,7 @@ class CSVAgentComponent(LCAgentComponent):
         """
         file_path = self._path()
         settings = get_settings_service().settings
+        sto
 
         # If using S3 storage, download the file to temp
         if settings.storage_type == "s3":

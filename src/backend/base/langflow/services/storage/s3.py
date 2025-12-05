@@ -316,6 +316,127 @@ class S3StorageService(StorageService):
         else:
             return file_size
 
+    async def read_file_bytes(self, file_path: str, resolve_path: Any = None) -> bytes:
+        """Read file bytes from S3.
+
+        Args:
+            file_path: Path in format "flow_id/filename"
+            resolve_path: Not used for S3 (kept for interface compatibility)
+
+        Returns:
+            bytes: The file content
+
+        Raises:
+            FileNotFoundError: If the file doesn't exist
+        """
+        # Parse the path to extract flow_id and file_name
+        parts = file_path.split("/", 1)
+        if len(parts) != 2:
+            msg = f"Invalid S3 path format: {file_path}. Expected 'flow_id/filename'"
+            raise ValueError(msg)
+
+        flow_id, file_name = parts
+
+    async def read_file_bytes_from_path(self, file_path: str, resolve_path=None) -> bytes:
+        """Read file bytes from S3 using a file path.
+        
+        This is a convenience wrapper around read_file_bytes for consistency.
+
+        Args:
+            file_path: Path in format "flow_id/filename"
+            resolve_path: Not used for S3 (kept for interface compatibility)
+
+        Returns:
+            bytes: The file content
+
+        Raises:
+            FileNotFoundError: If the file doesn't exist
+            ValueError: If the file_path format is invalid
+        """
+        return await self.read_file_bytes(file_path, resolve_path)
+
+    async def get_file_size_from_path(self, file_path: str, resolve_path=None) -> int:
+        """Get the size of a file from S3 using a file path.
+
+        Args:
+            file_path: Path in format "flow_id/filename"
+            resolve_path: Not used for S3 (kept for interface compatibility)
+
+        Returns:
+            int: Size of the file in bytes
+
+        Raises:
+            FileNotFoundError: If the file doesn't exist
+            ValueError: If the file_path format is invalid
+        """
+        # Parse the path using the static method from base class
+        parsed = self.parse_storage_path(file_path)
+        if not parsed:
+            msg = f"Invalid S3 path format: {file_path}. Expected 'flow_id/filename'"
+            raise ValueError(msg)
+        
+        flow_id, file_name = parsed
+        return await self.get_file_size(flow_id, file_name)
+        return await self.get_file(flow_id, file_name)
+
+    async def read_file_text(
+        self,
+        file_path: str,
+        encoding: str = "utf-8",
+        resolve_path: Any = None,
+        newline: str | None = None,
+    ) -> str:
+        """Read file text from S3.
+
+        Args:
+            file_path: Path in format "flow_id/filename"
+            encoding: Text encoding to use
+            resolve_path: Not used for S3 (kept for interface compatibility)
+            newline: Not used for S3 (kept for interface compatibility)
+
+        Returns:
+            str: The file content as text
+
+        Raises:
+            FileNotFoundError: If the file doesn't exist
+        """
+        file_bytes = await self.read_file_bytes(file_path)
+        return file_bytes.decode(encoding)
+
+    async def file_exists(self, file_path: str) -> bool:
+        """Check if a file exists in S3.
+
+        Args:
+            file_path: Path in format "flow_id/filename"
+
+        Returns:
+            bool: True if the file exists
+
+        Raises:
+            ValueError: If the path format is invalid
+        """
+        # Parse the path to extract flow_id and file_name
+        parts = file_path.split("/", 1)
+        if len(parts) != 2:
+            msg = f"Invalid S3 path format: {file_path}. Expected 'flow_id/filename'"
+            raise ValueError(msg)
+
+        flow_id, file_name = parts
+        key = self.build_full_path(flow_id, file_name)
+
+        try:
+            async with self._get_client() as s3_client:
+                await s3_client.head_object(Bucket=self.bucket_name, Key=key)
+            return True
+        except Exception as e:
+            if hasattr(e, "response") and e.response.get("Error", {}).get("Code") in ["NoSuchKey", "404"]:
+                return False
+            # For other errors, log and return False
+            logger.exception(f"Error checking if file exists: {file_path}")
+            return False
+
+            return file_size
+
     async def teardown(self) -> None:
         """Perform any cleanup operations when the service is being torn down.
 

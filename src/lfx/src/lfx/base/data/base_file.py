@@ -11,13 +11,12 @@ from zipfile import ZipFile, is_zipfile
 import orjson
 import pandas as pd
 
-from lfx.base.data.storage_utils import get_file_size, read_file_bytes
 from lfx.custom.custom_component.component import Component
 from lfx.io import BoolInput, FileInput, HandleInput, Output, StrInput
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
-from lfx.services.deps import get_settings_service
+from lfx.services.deps import get_settings_service, get_storage_service
 from lfx.utils.async_helpers import run_until_complete
 from lfx.utils.helpers import build_content_type_from_extension
 
@@ -259,21 +258,14 @@ class BaseFileComponent(Component, ABC):
         file_path_obj = Path(file_path)
         filename = file_path_obj.name
 
-        settings = get_settings_service().settings
+        storage_service = get_storage_service()
 
-        # Get file size - use storage service for S3, filesystem for local
-        if settings.storage_type == "s3":
-            try:
-                file_size = get_file_size(file_path)
-            except (FileNotFoundError, ValueError):
-                # If we can't get file size, set to 0 or omit
-                file_size = 0
-        else:
-            try:
-                file_size_stat = file_path_obj.stat()
-                file_size = file_size_stat.st_size
-            except OSError:
-                file_size = 0
+        # Get file size using storage service helper
+        try:
+            file_size = run_until_complete(storage_service.get_file_size_from_path(file_path))
+        except (FileNotFoundError, ValueError, OSError):
+            # If we can't get file size, set to 0 or omit
+            file_size = 0
 
         # Basic file metadata
         metadata["filename"] = filename
@@ -362,12 +354,12 @@ class BaseFileComponent(Component, ABC):
         # Get file extension in lowercase
         ext = Path(file_path).suffix.lower()
 
-        settings = get_settings_service().settings
+        storage_service = get_storage_service()
 
         # For S3 storage, download file bytes first
+        settings = get_settings_service().settings
         if settings.storage_type == "s3":
-            # Download file content from S3
-            content = run_until_complete(read_file_bytes(file_path))
+            content = run_until_complete(storage_service.read_file_bytes_from_path(file_path))
 
             # Map file extensions to pandas read functions that support BytesIO
             if ext == ".csv":

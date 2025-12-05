@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from aiofile import async_open
@@ -10,6 +11,8 @@ from langflow.logging.logger import logger
 from langflow.services.storage.service import StorageService
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from langflow.services.session.service import SessionService
     from langflow.services.settings.service import SettingsService
 
@@ -194,6 +197,121 @@ class LocalStorageService(StorageService):
         else:
             return file_size_stat.st_size
 
+    async def read_file_bytes(self, file_path: str, resolve_path: Callable[[str], str] | None = None) -> bytes:
+        """Read file bytes from local filesystem.
+
+        Args:
+            file_path: Path to the file (can be flow_id/filename or absolute path)
+            resolve_path: Optional function to resolve relative paths to absolute paths
+
+        Returns:
+            bytes: The file content
+
+        Raises:
+            FileNotFoundError: If the file doesn't exist
+        """
+        # For local storage, resolve path if resolver provided
+        if resolve_path:
+            file_path = resolve_path(file_path)
+
+        path_obj = Path(file_path)
+        if not path_obj.exists():
+            msg = f"File not found: {file_path}"
+            raise FileNotFoundError(msg)
+
+
+    async def read_file_bytes_from_path(self, file_path: str, resolve_path=None) -> bytes:
+        """Read file bytes from local storage using a file path.
+        
+        This is a convenience wrapper around read_file_bytes for consistency.
+
+        Args:
+            file_path: Path to the file (can be absolute or relative)
+            resolve_path: Optional function to resolve relative paths to absolute paths
+
+        Returns:
+            bytes: The file content
+
+        Raises:
+            FileNotFoundError: If the file doesn't exist
+        """
+        return await self.read_file_bytes(file_path, resolve_path)
+
+    async def get_file_size_from_path(self, file_path: str, resolve_path=None) -> int:
+        """Get the size of a file from local storage using a file path.
+
+        Args:
+            file_path: Path to the file (can be absolute or relative)
+            resolve_path: Optional function to resolve relative paths to absolute paths
+
+        Returns:
+            int: Size of the file in bytes
+
+        Raises:
+            FileNotFoundError: If the file doesn't exist
+        """
+        from pathlib import Path
+
+        # Resolve path if needed
+        if resolve_path:
+            file_path = resolve_path(file_path)
+        
+        path_obj = Path(file_path)
+        if not path_obj.exists():
+            msg = f"File not found: {file_path}"
+            raise FileNotFoundError(msg)
+        
+        return path_obj.stat().st_size
+        return path_obj.read_bytes()
+
+    async def read_file_text(
+        self,
+        file_path: str,
+        encoding: str = "utf-8",
+        resolve_path: Callable[[str], str] | None = None,
+        newline: str | None = None,
+    ) -> str:
+        """Read file text from local filesystem.
+
+        Args:
+            file_path: Path to the file
+            encoding: Text encoding to use
+            resolve_path: Optional function to resolve relative paths
+            newline: Newline mode (None for default, "" for universal newlines)
+
+        Returns:
+            str: The file content as text
+
+        Raises:
+            FileNotFoundError: If the file doesn't exist
+        """
+        # For local storage, resolve path if resolver provided
+        if resolve_path:
+            file_path = resolve_path(file_path)
+
+        path_obj = Path(file_path)
+        if not path_obj.exists():
+            msg = f"File not found: {file_path}"
+            raise FileNotFoundError(msg)
+
+        if newline is not None:
+            with path_obj.open(newline=newline, encoding=encoding) as f:  # noqa: ASYNC230
+                return f.read()
+        return path_obj.read_text(encoding=encoding)
+
+    async def file_exists(self, file_path: str) -> bool:
+        """Check if a file exists in local filesystem.
+
+        Args:
+            file_path: Path to the file (absolute path)
+
+        Returns:
+            bool: True if the file exists
+        """
+        path_obj = Path(file_path)
+        return path_obj.exists()
+
     async def teardown(self) -> None:
         """Perform any cleanup operations when the service is being torn down."""
-        # No specific teardown actions required for local
+        # No specific teardown actions required for local storage
+        pass

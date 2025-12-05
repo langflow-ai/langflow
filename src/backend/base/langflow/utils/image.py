@@ -3,12 +3,17 @@ import mimetypes
 from functools import lru_cache
 from pathlib import Path
 
+from langflow.services.deps import get_storage_service
+from lfx.utils.async_helpers import run_until_complete
+
 
 def convert_image_to_base64(image_path: str | Path) -> str:
     """Convert an image file to a base64 encoded string.
 
+    Supports both local absolute paths and storage service paths (flow_id/filename format).
+
     Args:
-        image_path (str | Path): Path to the image file.
+        image_path (str | Path): Path to the image file (local absolute path or storage service path).
 
     Returns:
         str: Base64 encoded string representation of the image.
@@ -22,22 +27,39 @@ def convert_image_to_base64(image_path: str | Path) -> str:
         msg = "Image path cannot be empty"
         raise ValueError(msg)
 
-    image_path = Path(image_path)
+    image_path_obj = Path(image_path)
 
-    if not image_path.exists():
-        msg = f"Image file not found: {image_path}"
-        raise FileNotFoundError(msg)
+    # Check if this is an absolute local path
+    if image_path_obj.is_absolute():
+        # Local file path
+        if not image_path_obj.exists():
+            msg = f"Image file not found: {image_path}"
+            raise FileNotFoundError(msg)
 
-    if not image_path.is_file():
-        msg = f"Path is not a file: {image_path}"
+        if not image_path_obj.is_file():
+            msg = f"Path is not a file: {image_path}"
+            raise ValueError(msg)
+
+        try:
+            with image_path_obj.open("rb") as image_file:
+                return base64.b64encode(image_file.read()).decode("utf-8")
+        except OSError as e:
+            msg = f"Error reading image file: {e}"
+            raise OSError(msg) from e
+
+    # Storage service path (format: flow_id/filename or just filename)
+    storage_service = get_storage_service()
+    if not storage_service:
+        msg = f"Storage service not available for path: {image_path}"
         raise ValueError(msg)
 
     try:
-        with image_path.open("rb") as image_file:
-            return base64.b64encode(image_file.read()).decode("utf-8")
-    except OSError as e:
-        msg = f"Error reading image file: {e}"
-        raise OSError(msg) from e
+        # Use the storage service directly
+        file_bytes = run_until_complete(storage_service.read_file_bytes(str(image_path)))
+        return base64.b64encode(file_bytes).decode("utf-8")
+    except Exception as e:
+        msg = f"Error reading image file from storage: {e}"
+        raise FileNotFoundError(msg) from e
 
 
 def create_data_url(image_path: str | Path, mime_type: str | None = None) -> str:

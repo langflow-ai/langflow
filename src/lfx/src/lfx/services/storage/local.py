@@ -180,6 +180,50 @@ class LocalStorageService(StorageService):
         else:
             return file_size_stat.st_size
 
+    async def read_file_bytes_from_path(self, file_path: str, resolve_path=None) -> bytes:
+        """Read file bytes from local storage using a file path.
+
+        Args:
+            file_path: Path to the file (can be absolute or relative)
+            resolve_path: Optional function to resolve relative paths to absolute paths
+
+        Returns:
+            bytes: The file content
+
+        Raises:
+            FileNotFoundError: If the file doesn't exist
+        """
+        from pathlib import Path
+
+        # Resolve path if needed
+        if resolve_path:
+            file_path = resolve_path(file_path)
+        
+        # Read directly from filesystem
+        return Path(file_path).read_bytes()
+
+    async def get_file_size_from_path(self, file_path: str, resolve_path=None) -> int:
+        """Get the size of a file from local storage using a file path.
+
+        Args:
+            file_path: Path to the file (can be absolute or relative)
+            resolve_path: Optional function to resolve relative paths to absolute paths
+
+        Returns:
+            int: Size of the file in bytes
+
+        Raises:
+            FileNotFoundError: If the file doesn't exist
+        """
+        from pathlib import Path
+
+        # Resolve path if needed
+        if resolve_path:
+            file_path = resolve_path(file_path)
+        
+        # Get size from filesystem
+        return Path(file_path).stat().st_size
+
     async def teardown(self) -> None:
         """Perform any cleanup operations when the service is being torn down."""
         # No specific teardown actions required for local
