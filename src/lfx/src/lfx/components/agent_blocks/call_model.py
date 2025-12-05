@@ -29,8 +29,9 @@ from lfx.base.agents.message_utils import (
     sanitize_tool_calls,
 )
 from lfx.base.models.language_model_mixin import LanguageModelMixin
+from lfx.components.agent_blocks.think_tool import ThinkToolComponent
 from lfx.custom.custom_component.component import Component
-from lfx.io import HandleInput, MultilineInput, Output
+from lfx.io import BoolInput, HandleInput, MultilineInput, Output
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.dotdict import dotdict  # noqa: TC001
 from lfx.schema.message import Message
@@ -90,6 +91,13 @@ class CallModelComponent(LanguageModelMixin, Component):
             input_types=["Tool"],
             is_list=True,
             required=False,
+        ),
+        BoolInput(
+            name="include_think_tool",
+            display_name="Include Think Tool",
+            info="Add a 'think' tool that lets the model reason step-by-step before responding.",
+            value=False,
+            advanced=True,
         ),
     ]
 
@@ -167,11 +175,19 @@ class CallModelComponent(LanguageModelMixin, Component):
                 # Try to convert to string
                 lc_messages.append(HumanMessage(content=str(self.input_value)))
 
-        # Bind tools if provided
+        # Collect tools to bind
+        tools_to_bind = []
         if self.tools:
-            tools = self.tools if isinstance(self.tools, list) else [self.tools]
-            if tools:
-                runnable = runnable.bind_tools(tools)
+            tools_to_bind = self.tools if isinstance(self.tools, list) else [self.tools]
+
+        # Add think tool if enabled
+        if getattr(self, "include_think_tool", False):
+            think_tool_component = ThinkToolComponent()
+            tools_to_bind.append(think_tool_component.build_tool())
+
+        # Bind tools if any
+        if tools_to_bind:
+            runnable = runnable.bind_tools(tools_to_bind)
 
         # Configure runnable with callbacks for tracing (exactly like LCModelComponent)
         runnable = runnable.with_config(
