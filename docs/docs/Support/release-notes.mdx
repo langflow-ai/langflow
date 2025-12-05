@@ -72,6 +72,10 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
     Added SSRF (Server-Side Request Forgery) protection to the [**API Request** component](/api-request). HTTP redirects are disabled by default to prevent SSRF bypass attacks. To enable SSRF protection, set `LANGFLOW_SSRF_PROTECTION_ENABLED=TRUE`. Configure allowed hosts with `LANGFLOW_SSRF_ALLOWED_HOSTS`. Flows that relied on automatic redirects will need to enable it manually.
 
+- Email registration in Langflow Desktop
+
+    Langflow Desktop now includes an email registration screen at startup. The registered email address helps track user registrations and understand the user base. For more information, see [Telemetry](/contributing-telemetry#email).
+
 - Changes to read/write file components
 
     The **Save File** component was renamed to **Write File**, and it can now save to S3 and Google Drive.
