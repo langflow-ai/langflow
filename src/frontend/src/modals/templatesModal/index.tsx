@@ -7,6 +7,7 @@ import { MARKETPLACE_TAGS } from "@/constants/marketplace-tags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
 import useAddFlow from "@/hooks/flows/use-add-flow";
+// import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { Category } from "@/types/templates/types";
 import type { newFlowModalPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
@@ -23,6 +24,8 @@ export default function TemplatesModal({
   const navigate = useCustomNavigate();
   const { folderId } = useParams();
 
+  // const examples = useFlowsManagerStore((state) => state.examples);
+
   // Define categories and their items
   const categories: Category[] = [
     {
@@ -32,14 +35,16 @@ export default function TemplatesModal({
         { title: "All templates", icon: "LayoutPanelTop", id: "all-templates" },
       ],
     },
-    {
-      title: "Use Cases",
-      items: MARKETPLACE_TAGS.map((tag) => ({
-        title: tag.title,
-        icon: tag.icon,
-        id: tag.id,
-      })),
-    },
+    // {
+    //   title: "Use Cases",
+    //   items: MARKETPLACE_TAGS.filter((tag) =>
+    //     examples.some((example) => example.tags?.includes(tag.id))
+    //   ).map((tag) => ({
+    //     title: tag.title,
+    //     icon: tag.icon,
+    //     id: tag.id,
+    //   })),
+    // },
   ];
 
   const useCaseIds =
