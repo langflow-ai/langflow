@@ -24,7 +24,7 @@ class NoopSession:
 
     bind = NoopBind()
 
-    def add(self, *args, **kwargs):
+    async def add(self, *args, **kwargs):
         pass
 
     async def commit(self):
