@@ -46,7 +46,8 @@ COPY ./src/backend/base/pyproject.toml /app/src/backend/base/pyproject.toml
 COPY ./src/lfx/README.md /app/src/lfx/README.md
 COPY ./src/lfx/pyproject.toml /app/src/lfx/pyproject.toml
 
-RUN --mount=type=cache,target=/root/.cache/uv \
+RUN --mount=type=tmpfs,target=/root/.cache/uv \
+    --mount=type=tmpfs,target=/root/.cache/pip \
     RUSTFLAGS='--cfg reqwest_unstable' \
     uv sync --frozen --no-install-project --no-editable --extra postgresql
 
@@ -62,7 +63,8 @@ RUN --mount=type=cache,target=/root/.npm \
 
 WORKDIR /app
 
-RUN --mount=type=cache,target=/root/.cache/uv \
+RUN --mount=type=tmpfs,target=/root/.cache/uv \
+    --mount=type=tmpfs,target=/root/.cache/pip \
     RUSTFLAGS='--cfg reqwest_unstable' \
     uv sync --frozen --no-editable --extra postgresql
 
