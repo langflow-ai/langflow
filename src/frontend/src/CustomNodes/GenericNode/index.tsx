@@ -490,6 +490,7 @@ function GenericNode({
 
   useEffect(() => {
     updateNodeInternals(data.id);
+    console.log("Heere");
   }, [node?.data.showNode, data.id, updateNodeInternals]);
 
   return (
