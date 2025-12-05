@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from functools import lru_cache
 from typing import TYPE_CHECKING
 
 from langflow.services.schema import ServiceType
@@ -50,6 +51,7 @@ def get_service(service_type: ServiceType, default=None):
     return service_manager.get(service_type, default)
 
 
+@lru_cache(maxsize=1)
 def get_telemetry_service() -> TelemetryService:
     """Retrieves the TelemetryService instance from the service manager.
 
