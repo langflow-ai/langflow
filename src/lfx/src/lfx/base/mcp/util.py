@@ -23,6 +23,7 @@ from pydantic import BaseModel
 from lfx.log.logger import logger
 from lfx.schema.json_schema import create_input_schema_from_json_schema
 from lfx.services.deps import get_settings_service
+from lfx.utils.async_helpers import run_until_complete
 
 HTTP_ERROR_STATUS_CODE = httpx_codes.BAD_REQUEST  # HTTP status code for client errors
 
@@ -498,8 +499,7 @@ def create_tool_func(tool_name: str, arg_schema: type[BaseModel], client) -> Cal
         try:
             arguments = validated.model_dump()
             _post_process_arguments(arg_schema, arguments)
-            loop = asyncio.get_event_loop()
-            return loop.run_until_complete(client.run_tool(tool_name, arguments=arguments))
+            return run_until_complete(client.run_tool(tool_name, arguments=arguments))
         except Exception as e:
             logger.error(f"Tool '{tool_name}' execution failed: {e}")
             # Re-raise with more context

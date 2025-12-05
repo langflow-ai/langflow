@@ -433,12 +433,18 @@ test(
 
     await page.locator('input[data-ref="eInput"]').nth(7).click();
 
+    await page.waitForTimeout(500);
+
     // Check if the bulk actions toolbar appears
     const selectedCountTextDelete = await page.getByText("2 selected");
     await expect(selectedCountTextDelete).toBeVisible();
 
+    await page.waitForTimeout(500);
+
     const deleteButton = await page.getByTestId("bulk-delete-btn");
     await expect(deleteButton).toBeVisible();
+
+    await page.waitForTimeout(500);
 
     // Test delete functionality
     await deleteButton.click();
