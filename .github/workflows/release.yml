@@ -216,8 +216,6 @@ jobs:
           cache-dependency-glob: "uv.lock"
           python-version: "3.13"
           prune-cache: false
-      - name: upgrade altk
-        run: uv lock --upgrade-package agent-lifecycle-toolkit
       - name: Install the project
         run: uv sync
       - name: Check for dependency incompatibility

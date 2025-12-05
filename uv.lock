@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.10, <3.14"
 resolution-markers = [
     "python_full_version >= '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
@@ -51,7 +51,7 @@ wheels = [
 
 [[package]]
 name = "agent-lifecycle-toolkit"
-version = "0.4.4"
+version = "0.4.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "genson" },
@@ -77,9 +77,9 @@ dependencies = [
     { name = "trl" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/61/78/a8361e3fe77498da678e5555d9191a30448b288327f979eb34c5b06ab4bc/agent_lifecycle_toolkit-0.4.4.tar.gz", hash = "sha256:abc89cc6ffcabfcf2da88124df1e8a8cbafdd225355603906cf9be8ce97e7a6b", size = 7044767, upload-time = "2025-12-01T17:38:09.343Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/32/dd/84bf40269773de020953960db45240ed4ebeff1f4e54711a1a3409af7ce5/agent_lifecycle_toolkit-0.4.5.tar.gz", hash = "sha256:914275174119decb78f2790ebfb24972819ea834669dd56ccf7f29b26ed12331", size = 7044674, upload-time = "2025-12-02T20:10:16.991Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/eb/8e/c6ab3eef642842f81418b6130ed2aaa992aa3846811fe42fa50b07c57c4a/agent_lifecycle_toolkit-0.4.4-py3-none-any.whl", hash = "sha256:f8c1b16ec9c4c6a1ade8f2481ef3d8cc957f11fa57c56cba05b80e9e9bb99cb8", size = 200854, upload-time = "2025-12-01T17:38:07.49Z" },
+    { url = "https://files.pythonhosted.org/packages/02/f3/e5b1b374c5dbfb5da81141102debfb2b6c9f7b75d2e8e3d0e76effa82477/agent_lifecycle_toolkit-0.4.5-py3-none-any.whl", hash = "sha256:1861f4a6a59cd989c00c827c95368b09ca76a4df3c324a537f90b51ed3dda440", size = 200853, upload-time = "2025-12-02T20:10:13.948Z" },
 ]
 
 [[package]]
