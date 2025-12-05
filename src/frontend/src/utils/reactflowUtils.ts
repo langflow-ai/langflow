@@ -164,8 +164,10 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
         // For regular components (single output or dropdown selection), use selected_output
         // or fallback to finding by name.
         const output = hasGroupOutputs
-          ? sourceNode.data.node!.outputs?.find((output) => output.name === name)
-          : sourceNode.data.node!.outputs?.find(
+          ? sourceNode.data.node!.outputs?.find(
+              (output) => output.name === name,
+            )
+          : (sourceNode.data.node!.outputs?.find(
               (output) => output.name === sourceNode.data.selected_output,
             ) ??
             sourceNode.data.node!.outputs?.find(
@@ -175,7 +177,7 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
                     (output) => !output.group_outputs,
                   )?.length ?? 0) <= 1) &&
                 output.name === name,
-            );
+            ));
 
         if (output) {
           const outputTypes =
