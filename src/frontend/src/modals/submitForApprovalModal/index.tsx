@@ -15,6 +15,7 @@ import {
   useGetFlowLatestStatus,
 } from "@/controllers/API/queries/flow-versions";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
+import { useValidateMarketplaceName } from "@/controllers/API/queries/published-flows/use-validate-marketplace-name";
 import { incrementPatchVersion } from "@/utils/versionUtils";
 import {
   usePostUploadPresignedUrl,
@@ -26,12 +27,13 @@ import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { validateFlowForPublish } from "@/utils/flowValidation";
 import type { AllNodeType, EdgeType } from "@/types/flow";
 import { MARKETPLACE_TAGS } from "@/constants/marketplace-tags";
-import { X } from "lucide-react";
+import { AlertCircle, X } from "lucide-react";
 import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 import { ALLOWED_IMAGE_INPUT_EXTENSIONS } from "@/constants/constants";
 import { AgentLogo } from "@/components/AgentLogo";
 import { RiUploadCloud2Fill } from "react-icons/ri";
 import { envConfig } from "@/config/env";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 
 interface SubmitForApprovalModalProps {
   open: boolean;
@@ -73,6 +75,9 @@ export default function SubmitForApprovalModal({
   const sampleFilesInputRef = useRef<HTMLInputElement>(null);
   const [sampleTexts, setSampleTexts] = useState<string[]>([""]);
 
+  // Debounced title for name validation
+  const debouncedTitle = useDebouncedValue(title, 500);
+
   const { mutate: submitFlow, isPending } = useSubmitFlowForApproval();
   const { data: latestStatus } = useGetFlowLatestStatus(flowId);
   const { mutateAsync: getUploadUrl } = usePostUploadPresignedUrl();
@@ -82,6 +87,16 @@ export default function SubmitForApprovalModal({
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const currentFlow = useFlowStore((state) => state.currentFlow);
   const { mutateAsync: getFlow } = useGetFlow();
+
+  // Name validation hook - validates against marketplace
+  const { data: nameValidation, isLoading: isValidatingName } =
+    useValidateMarketplaceName({
+      marketplaceName: debouncedTitle,
+      excludeFlowId: flowId,
+      folderId: currentFlow?.folder_id,
+      enabled: open && debouncedTitle.trim().length > 0,
+    });
+
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
   const setCurrentFlowInFlowStore = useFlowStore(
     (state) => state.setCurrentFlow
@@ -457,6 +472,12 @@ export default function SubmitForApprovalModal({
             <p className="text-xs text-muted-foreground">
               Title for the agent submission
             </p>
+            {nameValidation && !nameValidation.available && (
+              <div className="flex items-start gap-2 text-sm text-error">
+                <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <span>{nameValidation.message}</span>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -736,6 +757,8 @@ export default function SubmitForApprovalModal({
               isPending ||
               isUploadingLogo ||
               isUploadingSamples ||
+              isValidatingName ||
+              (nameValidation && !nameValidation.available) ||
               validationErrors.length > 0
             }
           >
