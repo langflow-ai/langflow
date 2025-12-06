@@ -14,8 +14,10 @@ from datetime import datetime, timezone
 from functools import partial
 from itertools import chain
 from typing import TYPE_CHECKING, Any, cast
-from ag_ui.core import RunStartedEvent, RunFinishedEvent, RunAgentInput
 
+from ag_ui.core import RunFinishedEvent, RunStartedEvent
+
+from lfx.events.observability.lifecycle_events import observable
 from lfx.exceptions.component import ComponentBuildError
 from lfx.graph.edge.base import CycleEdge, Edge
 from lfx.graph.graph.constants import Finish, lazy_load_vertex_dict
@@ -41,7 +43,6 @@ from lfx.schema.schema import INPUT_FIELD_NAME, InputType, OutputValue
 from lfx.services.cache.utils import CacheMiss
 from lfx.services.deps import get_chat_service, get_tracing_service
 from lfx.utils.async_helpers import run_until_complete
-from lfx.events.observability.lifecycle_events import observable
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable
@@ -143,7 +144,6 @@ class Graph:
         if (start is not None and end is None) or (start is None and end is not None):
             msg = "You must provide both input and output components"
             raise ValueError(msg)
-        
 
     @property
     def lock(self):
@@ -1426,6 +1426,7 @@ class Graph:
 
             async def set_cache_func(*args, **kwargs) -> bool:  # noqa: ARG001
                 return True
+
         vertex_build_result = await self.build_vertex(
             vertex_id=vertex_id,
             user_id=user_id,
@@ -2300,29 +2301,21 @@ class Graph:
             result |= {vertex_id: {"successors": sucessors, "predecessors": predecessors}}
         return result
 
-    def raw_event_metrics(self, optional_fields: dict | None = None) -> dict: # noqa: ARG002
+    def raw_event_metrics(self, optional_fields: dict | None = None) -> dict:
         if optional_fields is None:
             optional_fields = {}
         import time
+
         return {"timestamp": time.time(), **optional_fields}
 
-    def before_callback_event(self, *args, **kwargs) -> RunStartedEvent: # noqa: ARG002
+    def before_callback_event(self, *args, **kwargs) -> RunStartedEvent:  # noqa: ARG002
         metrics = {}
-        if hasattr(self, 'raw_event_metrics'):
+        if hasattr(self, "raw_event_metrics"):
             metrics = self.raw_event_metrics({"total_components": len(self.vertices)})
-        return RunStartedEvent(
-            run_id=self._run_id,
-            thread_id=self.flow_id,
-            raw_event = metrics
-        )
-    
-    def after_callback_event(self, result: Any = None, *args, **kwargs) -> RunFinishedEvent: # noqa: ARG002
+        return RunStartedEvent(run_id=self._run_id, thread_id=self.flow_id, raw_event=metrics)
+
+    def after_callback_event(self, result: Any = None, *args, **kwargs) -> RunFinishedEvent:  # noqa: ARG002
         metrics = {}
-        if hasattr(self, 'raw_event_metrics'):
+        if hasattr(self, "raw_event_metrics"):
             metrics = self.raw_event_metrics({"total_components": len(self.vertices)})
-        return RunFinishedEvent(
-            run_id=self._run_id,
-            thread_id=self.flow_id,
-            result=None,
-            raw_event = metrics
-        )
+        return RunFinishedEvent(run_id=self._run_id, thread_id=self.flow_id, result=None, raw_event=metrics)

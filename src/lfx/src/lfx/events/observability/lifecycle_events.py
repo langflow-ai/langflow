@@ -1,16 +1,16 @@
 import functools
-from lfx.events.event_manager import EventManager
-from typing import Callable, Awaitable
-from ag_ui.encoder import EventEncoder
-from lfx.log.logger import logger
-
+from collections.abc import Awaitable, Callable
 from typing import Any
+
+from ag_ui.encoder import EventEncoder
+
+from lfx.log.logger import logger
 
 AsyncMethod = Callable[..., Awaitable[Any]]
 
+
 def observable(observed_method: AsyncMethod) -> AsyncMethod:
-    """
-    Decorator to make an async method observable by emitting lifecycle events.
+    """Decorator to make an async method observable by emitting lifecycle events.
 
     Decorated classes are expected to implement specific methods to emit AGUI events:
     - `before_callback_event(*args, **kwargs)`: Called before the decorated method executes.
@@ -52,7 +52,7 @@ def observable(observed_method: AsyncMethod) -> AsyncMethod:
     """
 
     async def check_event_manager(self, **kwargs):
-        if 'event_manager' not in kwargs or kwargs['event_manager'] is None:
+        if "event_manager" not in kwargs or kwargs["event_manager"] is None:
             await logger.awarning(
                 f"EventManager not available/provided, skipping observable event publishing "
                 f"from {self.__class__.__name__}"
@@ -63,29 +63,29 @@ def observable(observed_method: AsyncMethod) -> AsyncMethod:
     async def before_callback(self, *args, **kwargs):
         if not await check_event_manager(self, **kwargs):
             return
-        
-        if hasattr(self, 'before_callback_event'):
+
+        if hasattr(self, "before_callback_event"):
             event_payload = self.before_callback_event(*args, **kwargs)
             encoder = EventEncoder()
             event_payload = encoder.encode(event_payload)
             # TODO: Publish event
         else:
             await logger.awarning(
-                f"before_callback_event not implemented for {self.__class__.__name__}. "
-                f"Skipping event publishing.")
+                f"before_callback_event not implemented for {self.__class__.__name__}. Skipping event publishing."
+            )
 
     async def after_callback(self, res: Any | None = None, *args, **kwargs):
         if not await check_event_manager(self, **kwargs):
             return
-        if hasattr(self, 'after_callback_event'):
+        if hasattr(self, "after_callback_event"):
             event_payload = self.after_callback_event(res, *args, **kwargs)
             encoder = EventEncoder()
             event_payload = encoder.encode(event_payload)
             # TODO: Publish event
         else:
             await logger.awarning(
-                f"after_callback_event not implemented for {self.__class__.__name__}. "
-                f"Skipping event publishing.")
+                f"after_callback_event not implemented for {self.__class__.__name__}. Skipping event publishing."
+            )
 
     @functools.wraps(observed_method)
     async def wrapper(self, *args, **kwargs):
@@ -103,4 +103,5 @@ def observable(observed_method: AsyncMethod) -> AsyncMethod:
                 # TODO: Publish error event
             raise e
         return result
+
     return wrapper
