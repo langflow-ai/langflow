@@ -199,9 +199,6 @@ body {
 }
 
 /* Discord */
-.header-discord-link {
-  margin-right: 0.5rem;
-}
 
 .header-discord-link:hover {
   opacity: 0.6;
@@ -223,6 +220,35 @@ body {
   display: flex;
   background: url("/logos/discordLight.svg");
   background-size: contain;
+}
+
+/* Help */
+.header-help-link:hover {
+  opacity: 0.6;
+}
+
+.header-help-link::before {
+  content: "";
+  width: 24px;
+  height: 24px;
+  display: flex;
+  background: url("/logos/circle-question-mark-light.svg");
+  background-size: contain;
+}
+
+[data-theme="dark"] .header-help-link::before {
+  content: "";
+  width: 24px;
+  height: 24px;
+  display: flex;
+  background: url("/logos/circle-question-mark-dark.svg");
+  background-size: contain;
+}
+
+.header-help-link::after,
+.header-help-link svg,
+.header-help-link .icon-external-link {
+  display: none !important;
 }
 
 /* Images */
