@@ -204,7 +204,8 @@ def _setup_auth_dependency_overrides(app):
 
         # Check if user exists in Langflow's database using the actual user ID
         if user_id:
-            stmt = select(User).where(User.id == user_id)
+            # Check by ID or username to handle cases where ID might not match but username does
+            stmt = select(User).where((User.id == user_id) | (User.username == username))
         else:
             stmt = select(User).where(User.username == username)
         existing_user = (await db.exec(stmt)).first()
