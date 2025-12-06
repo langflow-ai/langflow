@@ -81,7 +81,7 @@ async def handle_list_resources(project_id=None):
     """
     resources = []
     resource_uris = set()  # Track URIs to avoid duplicates
-    
+
     try:
         storage_service = get_storage_service()
         settings_service = get_settings_service()
@@ -107,7 +107,7 @@ async def handle_list_resources(project_id=None):
             for flow in flows:
                 if flow.user_id:
                     user_ids.add(flow.user_id)
-                
+
                 if flow.id:
                     try:
                         # List flow-specific files
@@ -116,11 +116,11 @@ async def handle_list_resources(project_id=None):
                             # URL encode the filename
                             safe_filename = quote(file_name)
                             uri = f"{base_url}/api/v1/files/{flow.id}/{safe_filename}"
-                            
+
                             # Skip if already added
                             if uri in resource_uris:
                                 continue
-                            
+
                             resource = types.Resource(
                                 uri=uri,
                                 name=file_name,
@@ -137,7 +137,7 @@ async def handle_list_resources(project_id=None):
             # Query user-uploaded files for all flow owners
             if user_ids:
                 from sqlmodel import col
-                
+
                 user_files_query = select(File).where(col(File.user_id).in_(user_ids))
                 user_files_result = await session.exec(user_files_query)
                 user_files = user_files_result.all()
@@ -145,14 +145,14 @@ async def handle_list_resources(project_id=None):
                 for user_file in user_files:
                     # Create URI using file ID (v2 endpoint)
                     uri = f"{base_url}/api/v2/files/{user_file.id}"
-                    
+
                     # Skip if already added
                     if uri in resource_uris:
                         continue
-                    
+
                     # Extract filename from path (format: user_id/filename)
                     file_name = user_file.path.split("/")[-1] if "/" in user_file.path else user_file.path
-                    
+
                     resource = types.Resource(
                         uri=uri,
                         name=file_name,
