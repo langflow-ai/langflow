@@ -80,6 +80,8 @@ async def handle_list_resources(project_id=None):
         project_id: Optional project ID to filter resources by project
     """
     resources = []
+    resource_uris = set()  # Track URIs to avoid duplicates
+    
     try:
         storage_service = get_storage_service()
         settings_service = get_settings_service()
@@ -91,29 +93,75 @@ async def handle_list_resources(project_id=None):
         base_url = f"http://{host}:{port}".rstrip("/")
 
         async with session_scope() as session:
+            # Import File model for user-uploaded files
+            from langflow.services.database.models.file.model import File
+
             # Build query based on whether project_id is provided
             flows_query = select(Flow).where(Flow.folder_id == project_id) if project_id else select(Flow)
 
             flows = (await session.exec(flows_query)).all()
 
+            # Track user IDs to query user files
+            user_ids = set()
+
             for flow in flows:
+                if flow.user_id:
+                    user_ids.add(flow.user_id)
+                
                 if flow.id:
                     try:
+                        # List flow-specific files
                         files = await storage_service.list_files(flow_id=str(flow.id))
                         for file_name in files:
                             # URL encode the filename
                             safe_filename = quote(file_name)
+                            uri = f"{base_url}/api/v1/files/{flow.id}/{safe_filename}"
+                            
+                            # Skip if already added
+                            if uri in resource_uris:
+                                continue
+                            
                             resource = types.Resource(
-                                uri=f"{base_url}/api/v1/files/{flow.id}/{safe_filename}",
+                                uri=uri,
                                 name=file_name,
                                 description=f"File in flow: {flow.name}",
                                 mimeType=build_content_type_from_extension(file_name),
                             )
                             resources.append(resource)
+                            resource_uris.add(uri)
                     except FileNotFoundError as e:
                         msg = f"Error listing files for flow {flow.id}: {e}"
                         await logger.adebug(msg)
                         continue
+
+            # Query user-uploaded files for all flow owners
+            if user_ids:
+                from sqlmodel import col
+                
+                user_files_query = select(File).where(col(File.user_id).in_(user_ids))
+                user_files_result = await session.exec(user_files_query)
+                user_files = user_files_result.all()
+
+                for user_file in user_files:
+                    # Create URI using file ID (v2 endpoint)
+                    uri = f"{base_url}/api/v2/files/{user_file.id}"
+                    
+                    # Skip if already added
+                    if uri in resource_uris:
+                        continue
+                    
+                    # Extract filename from path (format: user_id/filename)
+                    file_name = user_file.path.split("/")[-1] if "/" in user_file.path else user_file.path
+                    
+                    resource = types.Resource(
+                        uri=uri,
+                        name=file_name,
+                        description=f"User file: {user_file.name}",
+                        mimeType=build_content_type_from_extension(file_name),
+                    )
+                    resources.append(resource)
+                    resource_uris.add(uri)
+
     except Exception as e:
         msg = f"Error in listing resources: {e!s}"
         await logger.aexception(msg)
