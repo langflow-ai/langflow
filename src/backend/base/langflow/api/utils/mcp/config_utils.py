@@ -204,9 +204,9 @@ async def get_url_by_os(host: str, port: int, url: str) -> str:
     return url
 
 
-async def get_project_sse_url(project_id: UUID) -> str:
-    """Generate the SSE URL for a project, including WSL handling."""
-    # Get settings service to build the SSE URL
+async def _get_project_base_url_components() -> tuple[str, int]:
+    """Return normalized host and port for building MCP URLs."""
+    # Get settings service to build the URL
     settings_service = get_settings_service()
     server_host = getattr(settings_service.settings, "host", "localhost")
     # Use the runtime-detected port if available, otherwise fall back to configured port
@@ -219,11 +219,22 @@ async def get_project_sse_url(project_id: UUID) -> str:
     # For MCP clients, always use localhost instead of 0.0.0.0
     # 0.0.0.0 is a bind address, not a connect address
     host = "localhost" if server_host == ALL_INTERFACES_HOST else server_host
-    port = server_port
+    return host, server_port
 
+
+async def get_project_streamable_http_url(project_id: UUID) -> str:
+    """Generate the Streamable HTTP endpoint for a project (no /sse suffix)."""
+    host, port = await _get_project_base_url_components()
+    base_url = f"http://{host}:{port}".rstrip("/")
+    project_url = f"{base_url}/api/v1/mcp/project/{project_id}"
+    return await get_url_by_os(host, port, project_url)
+
+
+async def get_project_sse_url(project_id: UUID) -> str:
+    """Generate the legacy SSE URL for a project, including WSL handling."""
+    host, port = await _get_project_base_url_components()
     base_url = f"http://{host}:{port}".rstrip("/")
     project_sse_url = f"{base_url}/api/v1/mcp/project/{project_id}/sse"
-
     return await get_url_by_os(host, port, project_sse_url)
 
 
@@ -344,18 +355,20 @@ async def auto_configure_starter_projects_mcp(session):
                 api_key_name = f"MCP Project {DEFAULT_FOLDER_NAME} - {user.username}"
                 unmasked_api_key = await create_api_key(session, ApiKeyCreate(name=api_key_name), user.id)
 
-                # Build SSE URL for THIS USER'S starter folder (unique ID per user)
-                sse_url = await get_project_sse_url(user_starter_folder.id)
+                # Build Streamable HTTP URL for THIS USER'S starter folder (unique ID per user)
+                streamable_http_url = await get_project_streamable_http_url(user_starter_folder.id)
 
                 # Prepare server config (similar to new project creation)
                 if default_auth.get("auth_type", "none") == "apikey":
                     command = "uvx"
                     args = [
                         "mcp-proxy",
+                        "--transport",
+                        "streamablehttp",
                         "--headers",
                         "x-api-key",
                         unmasked_api_key.api_key,
-                        sse_url,
+                        streamable_http_url,
                     ]
                 elif default_auth.get("auth_type", "none") == "oauth":
                     msg = "OAuth authentication is not yet implemented for MCP server creation during project creation."
@@ -366,7 +379,9 @@ async def auto_configure_starter_projects_mcp(session):
                     command = "uvx"
                     args = [
                         "mcp-proxy",
-                        sse_url,
+                        "--transport",
+                        "streamablehttp",
+                        streamable_http_url,
                     ]
                 server_config = {"command": command, "args": args}
 
