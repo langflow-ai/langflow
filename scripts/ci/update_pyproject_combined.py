@@ -18,32 +18,34 @@ def main():
     """Universal update script that handles both base and main updates in a single run.
 
     Usage:
-    update_pyproject_combined.py main <main_tag> <base_tag> <lfx_tag>
+    update_pyproject_combined.py main <main_tag> <base_tag> [lfx_tag]
+
+    If lfx_tag is not provided, the lfx dependency will not be changed.
     """
-    arg_count = 5
-    if len(sys.argv) != arg_count:
+    if len(sys.argv) < 4:
         print("Usage:")
-        print("  update_pyproject_combined.py main <main_tag> <base_tag> <lfx_tag>")
+        print("  update_pyproject_combined.py main <main_tag> <base_tag> [lfx_tag]")
         sys.exit(1)
 
     mode = sys.argv[1]
     if mode != "main":
         print("Only 'main' mode is supported")
-        print("Usage: update_pyproject_combined.py main <main_tag> <base_tag> <lfx_tag>")
+        print("Usage: update_pyproject_combined.py main <main_tag> <base_tag> [lfx_tag]")
         sys.exit(1)
 
     main_tag = sys.argv[2]
     base_tag = sys.argv[3]
-    lfx_tag = sys.argv[4]
+    lfx_tag = sys.argv[4] if len(sys.argv) > 4 else None
 
     # First handle base package updates
     update_pyproject_name("src/backend/base/pyproject.toml", "langflow-base-nightly")
     update_name_uv_dep("pyproject.toml", "langflow-base-nightly")
     update_pyproject_version("src/backend/base/pyproject.toml", base_tag)
 
-    # Update LFX dependency in langflow-base
-    lfx_version = lfx_tag.lstrip("v")
-    update_lfx_dep_in_base("src/backend/base/pyproject.toml", lfx_version)
+    # Update LFX dependency in langflow-base (only if lfx_tag is provided)
+    if lfx_tag:
+        lfx_version = lfx_tag.lstrip("v")
+        update_lfx_dep_in_base("src/backend/base/pyproject.toml", lfx_version)
 
     # Then handle main package updates
     update_pyproject_name("pyproject.toml", "langflow-nightly")
