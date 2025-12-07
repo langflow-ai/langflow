@@ -49,6 +49,22 @@ class StorageService(Service):
         """
         raise NotImplementedError
 
+    def parse_file_path(self, full_path: str) -> tuple[str, str]:
+        """Parse a full storage path to extract flow_id and file_name.
+
+        This reverses the build_full_path operation.
+
+        Args:
+            full_path: Full path as returned by build_full_path
+
+        Returns:
+            tuple[str, str]: A tuple of (flow_id, file_name)
+
+        Raises:
+            ValueError: If the path format is invalid or doesn't match expected structure
+        """
+        raise NotImplementedError
+
     def resolve_component_path(self, logical_path: str) -> str:
         """Convert a logical path to a format that components can use directly.
 

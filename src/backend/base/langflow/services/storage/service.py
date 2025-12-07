@@ -28,6 +28,21 @@ class StorageService(Service):
     def build_full_path(self, flow_id: str, file_name: str) -> str:
         raise NotImplementedError
 
+    @abstractmethod
+    def parse_file_path(self, full_path: str) -> tuple[str, str]:
+        """Parse a full storage path to extract flow_id and file_name.
+
+        Args:
+            full_path: Full path as returned by build_full_path
+
+        Returns:
+            tuple[str, str]: A tuple of (flow_id, file_name)
+
+        Raises:
+            ValueError: If the path format is invalid or doesn't match expected structure
+        """
+        raise NotImplementedError
+
     def set_ready(self) -> None:
         self.ready = True
 
