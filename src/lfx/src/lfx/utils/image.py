@@ -6,8 +6,8 @@ import base64
 from functools import lru_cache
 from pathlib import Path
 
-from lfx.services.deps import get_storage_service
 from lfx.log import logger
+from lfx.services.deps import get_storage_service
 from lfx.utils.async_helpers import run_until_complete
 from lfx.utils.helpers import get_mime_type
 
@@ -27,18 +27,18 @@ def convert_image_to_base64(image_path: str | Path) -> str:
         FileNotFoundError: If the image file doesn't exist
     """
     image_path = Path(image_path)
-    
+
     storage_service = get_storage_service()
     if storage_service:
-            flow_id, file_name = storage_service.parse_file_path(str(image_path))
-            try:
-                file_content = run_until_complete(
-                    storage_service.get_file(flow_id=flow_id, file_name=file_name)  # type: ignore[call-arg]
-                )
-                return base64.b64encode(file_content).decode("utf-8")
-            except Exception as e: # noqa: BLE001
-                logger.error(f"Error reading image file: {e}")
-                raise e
+        flow_id, file_name = storage_service.parse_file_path(str(image_path))
+        try:
+            file_content = run_until_complete(
+                storage_service.get_file(flow_id=flow_id, file_name=file_name)  # type: ignore[call-arg]
+            )
+            return base64.b64encode(file_content).decode("utf-8")
+        except Exception as e:
+            logger.error(f"Error reading image file: {e}")
+            raise e
 
     # Fall back to local file access
     if not image_path.exists():

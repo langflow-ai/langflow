@@ -93,13 +93,13 @@ class S3StorageService(StorageService):
         # Remove prefix if present (but don't require it)
         path_without_prefix = full_path
         if self.prefix and full_path.startswith(self.prefix):
-            path_without_prefix = full_path[len(self.prefix):]
-        
+            path_without_prefix = full_path[len(self.prefix) :]
+
         # Split from the right to get the filename
         # Everything before the last "/" is the flow_id
         if "/" not in path_without_prefix:
             return "", path_without_prefix
-        
+
         # Use rsplit to split from the right, limiting to 1 split
         flow_id, file_name = path_without_prefix.rsplit("/", 1)
         return flow_id, file_name

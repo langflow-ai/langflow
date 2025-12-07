@@ -74,17 +74,17 @@ class LocalStorageService(StorageService):
             ("user_123", "image.png")
         """
         data_dir_str = str(self.data_dir)
-        
+
         # Remove data_dir if present (but don't require it)
         path_without_prefix = full_path
         if full_path.startswith(data_dir_str):
-            path_without_prefix = full_path[len(data_dir_str):].lstrip("/")
-        
+            path_without_prefix = full_path[len(data_dir_str) :].lstrip("/")
+
         # Split from the right to get the filename
         # Everything before the last "/" is the flow_id
         if "/" not in path_without_prefix:
             return "", path_without_prefix
-        
+
         # Use rsplit to split from the right, limiting to 1 split
         flow_id, file_name = path_without_prefix.rsplit("/", 1)
         return flow_id, file_name
