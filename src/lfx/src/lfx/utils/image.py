@@ -38,7 +38,7 @@ def convert_image_to_base64(image_path: str | Path) -> str:
             return base64.b64encode(file_content).decode("utf-8")
         except Exception as e:
             logger.error(f"Error reading image file: {e}")
-            raise e
+            raise
 
     # Fall back to local file access
     if not image_path.exists():
