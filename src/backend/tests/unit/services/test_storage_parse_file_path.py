@@ -1,8 +1,6 @@
 """Tests for storage service parse_file_path method."""
 
-import pytest
 from unittest.mock import Mock
-from pathlib import Path
 
 from langflow.services.storage.local import LocalStorageService
 from langflow.services.storage.s3 import S3StorageService
@@ -17,9 +15,9 @@ class TestLocalStorageParseFilePath:
         mock_session = Mock()
         mock_settings = Mock()
         mock_settings.settings.config_dir = "/data"
-        
+
         service = LocalStorageService(mock_session, mock_settings)
-        
+
         # Test with full path including data_dir
         flow_id, file_name = service.parse_file_path("/data/user_123/image.png")
         assert flow_id == "user_123"
@@ -30,9 +28,9 @@ class TestLocalStorageParseFilePath:
         mock_session = Mock()
         mock_settings = Mock()
         mock_settings.settings.config_dir = "/data"
-        
+
         service = LocalStorageService(mock_session, mock_settings)
-        
+
         # Test with relative path (no data_dir)
         flow_id, file_name = service.parse_file_path("user_123/image.png")
         assert flow_id == "user_123"
@@ -43,9 +41,9 @@ class TestLocalStorageParseFilePath:
         mock_session = Mock()
         mock_settings = Mock()
         mock_settings.settings.config_dir = "/data"
-        
+
         service = LocalStorageService(mock_session, mock_settings)
-        
+
         # Test with nested flow_id
         flow_id, file_name = service.parse_file_path("/data/bucket/user_123/image.png")
         assert flow_id == "bucket/user_123"
@@ -56,9 +54,9 @@ class TestLocalStorageParseFilePath:
         mock_session = Mock()
         mock_settings = Mock()
         mock_settings.settings.config_dir = "/data"
-        
+
         service = LocalStorageService(mock_session, mock_settings)
-        
+
         # Test with just filename
         flow_id, file_name = service.parse_file_path("image.png")
         assert flow_id == ""
@@ -77,9 +75,9 @@ class TestS3StorageParseFilePath:
         mock_settings.settings.object_storage_bucket_name = "test-bucket"
         mock_settings.settings.object_storage_prefix = "files/"
         mock_settings.settings.object_storage_tags = {}
-        
+
         service = S3StorageService(mock_session, mock_settings)
-        
+
         # Test with full path including prefix
         flow_id, file_name = service.parse_file_path("files/user_123/image.png")
         assert flow_id == "user_123"
@@ -93,9 +91,9 @@ class TestS3StorageParseFilePath:
         mock_settings.settings.object_storage_bucket_name = "test-bucket"
         mock_settings.settings.object_storage_prefix = "files/"
         mock_settings.settings.object_storage_tags = {}
-        
+
         service = S3StorageService(mock_session, mock_settings)
-        
+
         # Test with relative path (no prefix)
         flow_id, file_name = service.parse_file_path("user_123/image.png")
         assert flow_id == "user_123"
@@ -109,9 +107,9 @@ class TestS3StorageParseFilePath:
         mock_settings.settings.object_storage_bucket_name = "test-bucket"
         mock_settings.settings.object_storage_prefix = "files-test-1/"
         mock_settings.settings.object_storage_tags = {}
-        
+
         service = S3StorageService(mock_session, mock_settings)
-        
+
         # Test with nested flow_id (real-world example from logs)
         flow_id, file_name = service.parse_file_path(
             "files-test-1/afffa27a-a9f0-4511-b1a9-7e6cb2b3df05/2025-12-07_14-47-29_langflow_pid_mem_usage.png"
@@ -127,9 +125,9 @@ class TestS3StorageParseFilePath:
         mock_settings.settings.object_storage_bucket_name = "test-bucket"
         mock_settings.settings.object_storage_prefix = "files-test-1/"
         mock_settings.settings.object_storage_tags = {}
-        
+
         service = S3StorageService(mock_session, mock_settings)
-        
+
         # Test without prefix (as seen in error logs)
         flow_id, file_name = service.parse_file_path(
             "afffa27a-a9f0-4511-b1a9-7e6cb2b3df05/2025-12-07_14-47-29_langflow_pid_mem_usage.png"
@@ -145,9 +143,9 @@ class TestS3StorageParseFilePath:
         mock_settings.settings.object_storage_bucket_name = "test-bucket"
         mock_settings.settings.object_storage_prefix = "files/"
         mock_settings.settings.object_storage_tags = {}
-        
+
         service = S3StorageService(mock_session, mock_settings)
-        
+
         # Test with just filename
         flow_id, file_name = service.parse_file_path("image.png")
         assert flow_id == ""
@@ -161,9 +159,9 @@ class TestS3StorageParseFilePath:
         mock_settings.settings.object_storage_bucket_name = "test-bucket"
         mock_settings.settings.object_storage_prefix = ""
         mock_settings.settings.object_storage_tags = {}
-        
+
         service = S3StorageService(mock_session, mock_settings)
-        
+
         # Test with no prefix configured
         flow_id, file_name = service.parse_file_path("user_123/image.png")
         assert flow_id == "user_123"
@@ -178,13 +176,13 @@ class TestParseFilePathRoundTrip:
         mock_session = Mock()
         mock_settings = Mock()
         mock_settings.settings.config_dir = "/data"
-        
+
         service = LocalStorageService(mock_session, mock_settings)
-        
+
         # Build a path
         full_path = service.build_full_path("user_123", "image.png")
         assert full_path == "/data/user_123/image.png"
-        
+
         # Parse it back
         flow_id, file_name = service.parse_file_path(full_path)
         assert flow_id == "user_123"
@@ -198,13 +196,13 @@ class TestParseFilePathRoundTrip:
         mock_settings.settings.object_storage_bucket_name = "test-bucket"
         mock_settings.settings.object_storage_prefix = "files/"
         mock_settings.settings.object_storage_tags = {}
-        
+
         service = S3StorageService(mock_session, mock_settings)
-        
+
         # Build a path
         full_path = service.build_full_path("user_123", "image.png")
         assert full_path == "files/user_123/image.png"
-        
+
         # Parse it back
         flow_id, file_name = service.parse_file_path(full_path)
         assert flow_id == "user_123"
@@ -218,16 +216,18 @@ class TestParseFilePathRoundTrip:
         mock_settings.settings.object_storage_bucket_name = "test-bucket"
         mock_settings.settings.object_storage_prefix = "files-test-1/"
         mock_settings.settings.object_storage_tags = {}
-        
+
         service = S3StorageService(mock_session, mock_settings)
-        
+
         # Build a path with nested flow_id
         full_path = service.build_full_path(
-            "afffa27a-a9f0-4511-b1a9-7e6cb2b3df05",
-            "2025-12-07_14-47-29_langflow_pid_mem_usage.png"
+            "afffa27a-a9f0-4511-b1a9-7e6cb2b3df05", "2025-12-07_14-47-29_langflow_pid_mem_usage.png"
         )
-        assert full_path == "files-test-1/afffa27a-a9f0-4511-b1a9-7e6cb2b3df05/2025-12-07_14-47-29_langflow_pid_mem_usage.png"
-        
+        assert (
+            full_path
+            == "files-test-1/afffa27a-a9f0-4511-b1a9-7e6cb2b3df05/2025-12-07_14-47-29_langflow_pid_mem_usage.png"
+        )
+
         # Parse it back
         flow_id, file_name = service.parse_file_path(full_path)
         assert flow_id == "afffa27a-a9f0-4511-b1a9-7e6cb2b3df05"
