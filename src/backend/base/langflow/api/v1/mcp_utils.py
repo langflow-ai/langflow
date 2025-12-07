@@ -183,25 +183,25 @@ async def handle_read_resource(uri: str) -> bytes:
         if len(path_parts) >= 4 and path_parts[0] == "api" and path_parts[1] == "v2" and path_parts[2] == "files":
             # v2 URI format: /api/v2/files/{file_id}
             from uuid import UUID
-            
+
             file_id_str = path_parts[3]
-            
+
             # Convert string to UUID object
             try:
                 file_id = UUID(file_id_str)
             except ValueError as e:
                 msg = f"Invalid file ID format: {file_id_str}"
                 raise ValueError(msg) from e
-            
+
             # Query the File table to get file information
             from langflow.services.database.models.file.model import File
-            
+
             async with session_scope() as session:
                 user_file = await session.get(File, file_id)
                 if not user_file:
                     msg = f"File with ID {file_id} not found"
                     raise ValueError(msg)
-                
+
                 # Extract flow_id and filename from path (format: user_id/filename)
                 if "/" in user_file.path:
                     flow_id, filename = user_file.path.split("/", 1)
@@ -209,19 +209,19 @@ async def handle_read_resource(uri: str) -> bytes:
                     # Fallback: use user_id as flow_id
                     flow_id = str(user_file.user_id)
                     filename = user_file.path
-            
+
             storage_service = get_storage_service()
             content = await storage_service.get_file(flow_id=flow_id, file_name=filename)
-            
+
             if not content:
                 msg = f"File {filename} not found in storage for user {flow_id}"
                 raise ValueError(msg)
-            
+
             # Ensure content is base64 encoded
             if isinstance(content, str):
                 content = content.encode()
             return base64.b64encode(content)
-        
+
         # v1 URI format: /api/v1/files/{flow_id}/{filename}
         # The flow_id and filename should be the last two parts
         two = 2
