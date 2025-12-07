@@ -328,7 +328,7 @@ ifdef main
 endif
 
 build_langflow_base:
-	cd src/backend/base && uv build --no-sources $(args)
+	cd src/backend/base && uv build $(args)
 
 build_langflow_backup:
 	uv lock && uv build
