@@ -520,7 +520,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.123.0"
+                    "version": "0.123.9"
                   },
                   {
                     "name": "lfx",
@@ -1891,7 +1891,7 @@
                   },
                   {
                     "name": "ibm_watsonx_ai",
-                    "version": "1.4.7"
+                    "version": "1.4.9"
                   },
                   {
                     "name": "langchain_openai",
