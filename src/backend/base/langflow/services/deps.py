@@ -8,6 +8,7 @@ from langflow.services.schema import ServiceType
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
+    from lfx.services.settings.service import SettingsService
     from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.services.cache.service import AsyncBaseCacheService, CacheService
@@ -22,7 +23,6 @@ if TYPE_CHECKING:
     from langflow.services.telemetry.service import TelemetryService
     from langflow.services.tracing.service import TracingService
     from langflow.services.variable.service import VariableService
-    from lfx.services.settings.service import SettingsService
 
 
 def get_service(service_type: ServiceType, default=None):
