@@ -60,7 +60,6 @@ const ModelProviderModal = ({
     queryClient.invalidateQueries({ queryKey: ["useGetModelProviders"] });
     queryClient.invalidateQueries({ queryKey: ["useGetEnabledModels"] });
     queryClient.invalidateQueries({ queryKey: ["useGetGlobalVariables"] });
-    queryClient.invalidateQueries({ queryKey: ["useGetDefaultModel"] });
     queryClient.refetchQueries({ queryKey: ["flows"] });
   };
 

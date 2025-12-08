@@ -26,6 +26,7 @@ export const ModelProviderCount = () => {
         size="sm"
         className="hit-area-hover flex items-center gap-2 rounded-md p-1 text-muted-foreground"
         onClick={() => setOpen((cur) => !cur)}
+        data-testid="model-provider-count-button"
       >
         <ForwardedIconComponent name="BrainCog" className="w-5 h-5" />
         <div className="text-sm">Models</div>
@@ -33,6 +34,7 @@ export const ModelProviderCount = () => {
           variant="secondaryStatic"
           size="sq"
           className={cn(" h-6", enabledCount > 10 && "w-6")}
+          data-testid="model-provider-count-badge"
         >
           {enabledCount}
         </Badge>
