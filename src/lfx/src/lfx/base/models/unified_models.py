@@ -330,7 +330,9 @@ def validate_model_provider_key(variable_name: str, api_key: str) -> None:
         return
 
 
-def get_language_model_options(user_id: UUID | str | None = None) -> list[dict[str, Any]]:
+def get_language_model_options(
+    user_id: UUID | str | None = None, *, tool_calling: bool | None = None
+) -> list[dict[str, Any]]:
     """Return a list of available language model providers with their configuration.
 
     This function uses get_unified_models_detailed() which respects the enabled/disabled
@@ -338,13 +340,25 @@ def get_language_model_options(user_id: UUID | str | None = None) -> list[dict[s
 
     Args:
         user_id: Optional user ID to filter by user-specific enabled/disabled models
+        tool_calling: If True, only return models that support tool calling.
+                     If False, only return models that don't support tool calling.
+                     If None (default), return all models regardless of tool calling support.
     """
     # Get all LLM models (excluding embeddings, deprecated, and unsupported by default)
-    all_models = get_unified_models_detailed(
-        model_type="llm",
-        include_deprecated=False,
-        include_unsupported=False,
-    )
+    # Apply tool_calling filter if specified
+    if tool_calling is not None:
+        all_models = get_unified_models_detailed(
+            model_type="llm",
+            include_deprecated=False,
+            include_unsupported=False,
+            tool_calling=tool_calling,
+        )
+    else:
+        all_models = get_unified_models_detailed(
+            model_type="llm",
+            include_deprecated=False,
+            include_unsupported=False,
+        )
 
     # Get disabled and explicitly enabled models for this user if user_id is provided
     disabled_models = set()
