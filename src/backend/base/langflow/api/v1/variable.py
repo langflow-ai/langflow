@@ -195,7 +195,8 @@ async def update_variable(
         )
     except NoResultFound as e:
         raise HTTPException(status_code=404, detail="Variable not found") from e
-
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail="Variable not found") from e
     except Exception as e:
         if isinstance(e, HTTPException):
             raise
