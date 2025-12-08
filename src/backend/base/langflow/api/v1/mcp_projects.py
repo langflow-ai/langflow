@@ -386,6 +386,7 @@ async def _handle_project_sse_messages(
         current_project_ctx.reset(project_token)
         current_request_variables_ctx.reset(req_vars_token)
 
+
 @router.post("/{project_id}")
 @router.post("/{project_id}/")
 async def handle_project_messages(
@@ -436,7 +437,6 @@ async def _dispatch_project_streamable_http(
         current_user_ctx.reset(user_token)
 
     return ResponseNoOp(status_code=200)
-
 
 
 streamable_http_route_config = {
