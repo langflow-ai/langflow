@@ -7,8 +7,10 @@ import types
 from collections.abc import AsyncIterator, Callable, Iterator, Mapping
 from enum import Enum
 from typing import TYPE_CHECKING, Any
-from ag_ui.core import StepStartedEvent, StepFinishedEvent
 
+from ag_ui.core import StepFinishedEvent, StepStartedEvent
+
+from lfx.events.observability.lifecycle_events import observable
 from lfx.exceptions.component import ComponentBuildError
 from lfx.graph.schema import INPUT_COMPONENTS, OUTPUT_COMPONENTS, InterfaceComponentTypes, ResultData
 from lfx.graph.utils import UnbuiltObject, UnbuiltResult, log_transaction
@@ -22,7 +24,6 @@ from lfx.schema.message import Message
 from lfx.schema.schema import INPUT_FIELD_NAME, OutputValue, build_output_logs
 from lfx.utils.schemas import ChatOutputResponse
 from lfx.utils.util import sync_to_async
-from lfx.events.observability.lifecycle_events import observable
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -170,11 +171,10 @@ class Vertex:
         # If the Vertex.type is a power component
         # then we need to return the built object
         # instead of the result dict
-        """
-        Return the vertex's effective built result transformed for callers.
-        
+        """Return the vertex's effective built result transformed for callers.
+
         If this vertex represents an interface/component that produced a concrete built object, the built object (or its `content` attribute for model-like objects) is returned. If the built object is a string it will be promoted to the built result. If no concrete result is available, an empty dict is returned. Otherwise, if the stored built result is a dict it is returned as-is; non-dict results are wrapped in a dict under the key `"result"`.
-        
+
         Returns:
             dict | Any: The effective result for consumers — either a dict of outputs, an empty dict when unbuilt, or a wrapped non-dict value (or the raw built object/model content for interface components).
         """
@@ -194,12 +194,10 @@ class Vertex:
         return self.built_result if isinstance(self.built_result, dict) else {"result": self.built_result}
 
     def set_artifacts(self) -> None:
-        """
-        Placeholder hook to update this vertex's artifacts after a build.
-        
+        """Placeholder hook to update this vertex's artifacts after a build.
+
         Intended to be overridden by subclasses or implemented to extract and assign artifacts produced during the component build; currently a no-op.
         """
-        pass
 
     @property
     def edges(self) -> list[CycleEdge]:
@@ -391,9 +389,8 @@ class Vertex:
         self.updated_raw_params = True
 
     def instantiate_component(self, user_id=None) -> None:
-        """
-        Ensure the vertex has an associated component instance by creating and attaching one if missing.
-        
+        """Ensure the vertex has an associated component instance by creating and attaching one if missing.
+
         Parameters:
             user_id (Optional[str]): Identifier of the user requesting instantiation; forwarded to the component loader and may influence permission/context during creation.
         """
@@ -402,7 +399,7 @@ class Vertex:
                 user_id=user_id,
                 vertex=self,
             )
-    
+
     @observable
     async def _build(
         self,
@@ -410,13 +407,12 @@ class Vertex:
         user_id=None,
         event_manager: EventManager | None = None,
     ) -> None:
-        """
-        Perform the vertex build: resolve dependent vertices, instantiate or reuse a custom component, obtain build results, validate the built object, and mark the vertex as built.
-        
+        """Perform the vertex build: resolve dependent vertices, instantiate or reuse a custom component, obtain build results, validate the built object, and mark the vertex as built.
+
         Parameters:
             fallback_to_env_vars (bool): If True, allow parameter values to be resolved from environment variables when not provided.
             user_id (Optional[str]): Identifier of the user performing the build, used when instantiating components.
-        
+
         Raises:
             ValueError: If the vertex's base type is not found.
         """
@@ -850,9 +846,8 @@ class Vertex:
         return "Built successfully ✨" if self.built_object is not None else "Failed to build 😵‍💫"
 
     def apply_on_outputs(self, func: Callable[[Any], Any]) -> None:
-        """
-        Apply a function to each output provided by the vertex's component.
-        
+        """Apply a function to each output provided by the vertex's component.
+
         Parameters:
             func (Callable[[Any], Any]): Function to invoke for each output value; return values are ignored.
         """
@@ -862,61 +857,48 @@ class Vertex:
         [func(output) for output in self.custom_component.get_outputs_map().values()]
 
     # AGUI/AG UI Event Streaming Callbacks/Methods - (Optional, see Observable decorator)
-    def raw_event_metrics(self, optional_fields: dict | None) -> dict: # noqa: ARG002
-        """
-        Builds an AGUI-compatible metrics payload containing a timestamp and any provided additional fields.
-        
+    def raw_event_metrics(self, optional_fields: dict | None) -> dict:
+        """Builds an AGUI-compatible metrics payload containing a timestamp and any provided additional fields.
+
         Parameters:
             optional_fields (dict | None): Additional key/value pairs to include in the payload. If None, no extra fields are added.
-        
+
         Returns:
             dict: A metrics dictionary with a "timestamp" (seconds since the epoch) merged with the provided optional fields.
         """
-
         if optional_fields is None:
             optional_fields = {}
         import time
+
         return {"timestamp": time.time(), **optional_fields}
 
-    def before_callback_event(self, *args, **kwargs) -> StepStartedEvent: # noqa: ARG002
-        """
-        Create an AGUI-compatible StepStartedEvent for this vertex.
-        
+    def before_callback_event(self, *args, **kwargs) -> StepStartedEvent:  # noqa: ARG002
+        """Create an AGUI-compatible StepStartedEvent for this vertex.
+
         If the vertex exposes `raw_event_metrics`, its output is included under the `raw_event["langflow"]` key with `component_id` set to this vertex's id.
-        
+
         Returns:
             StepStartedEvent: event with `step_name` set to the vertex's display name and `raw_event` containing the assembled metrics.
         """
         metrics = {}
-        if hasattr(self, 'raw_event_metrics'):
+        if hasattr(self, "raw_event_metrics"):
             metrics = self.raw_event_metrics({"component_id": self.id})
-        
-        return StepStartedEvent(
-            step_name=self.display_name,
-            raw_event={
-                "langflow": metrics
-            }
-        )
 
-    def after_callback_event(self, result, *args, **kwargs) -> StepFinishedEvent: # noqa: ARG002
-        """
-        Create an AGUI-compatible StepFinishedEvent for this vertex.
-        
+        return StepStartedEvent(step_name=self.display_name, raw_event={"langflow": metrics})
+
+    def after_callback_event(self, result, *args, **kwargs) -> StepFinishedEvent:  # noqa: ARG002
+        """Create an AGUI-compatible StepFinishedEvent for this vertex.
+
         Parameters:
             result: The final result produced by the step (may be unused by this method).
             *args: Additional positional arguments (ignored).
             **kwargs: Additional keyword arguments (ignored).
-        
+
         Returns:
             StepFinishedEvent: Event with `step_name` set to the vertex display name and `raw_event`
             containing a `langflow` entry with metrics (including `component_id`).
         """
         metrics = {}
-        if hasattr(self, 'raw_event_metrics'):
+        if hasattr(self, "raw_event_metrics"):
             metrics = self.raw_event_metrics({"component_id": self.id})
-        return StepFinishedEvent(
-            step_name=self.display_name,
-            raw_event={
-                "langflow": metrics
-            }
-        )
+        return StepFinishedEvent(step_name=self.display_name, raw_event={"langflow": metrics})
