@@ -361,7 +361,7 @@ class TestPortChangeHandling:
             )
 
         mock_start.assert_awaited()
-        _, _, _, _, _, _, _, kwargs = mock_start.call_args
+        kwargs = mock_start.call_args.kwargs
         assert kwargs["legacy_sse_url"] == legacy_url
         assert mcp_service.project_composers[project_id]["legacy_sse_url"] == legacy_url
         assert (
@@ -405,5 +405,5 @@ class TestPortChangeHandling:
             )
 
         mock_start.assert_awaited()
-        _, _, _, _, _, _, _, kwargs = mock_start.call_args
+        kwargs = mock_start.call_args.kwargs
         assert kwargs["legacy_sse_url"] == f"{streamable_url}/sse"
