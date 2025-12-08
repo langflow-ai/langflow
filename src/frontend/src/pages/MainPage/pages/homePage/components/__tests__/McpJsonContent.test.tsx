@@ -153,7 +153,7 @@ describe("McpJsonContent", () => {
 
   it("renders with selected platform", () => {
     render(<McpJsonContent {...defaultProps} selectedPlatform="windows" />);
-    expect(screen.getByTestId("tabs")).toBeInTheDocument();
+    expect(screen.getAllByTestId("tabs").length).toBeGreaterThanOrEqual(2);
   });
 
   it("renders with dark mode", () => {

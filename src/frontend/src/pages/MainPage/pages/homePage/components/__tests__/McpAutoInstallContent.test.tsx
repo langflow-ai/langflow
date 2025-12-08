@@ -124,7 +124,7 @@ describe("McpAutoInstallContent", () => {
 
       const buttons = screen.getAllByRole("button");
       fireEvent.click(buttons[0]);
-      expect(mockInstall).toHaveBeenCalledWith("cursor", "Cursor");
+      expect(mockInstall).toHaveBeenCalledWith("cursor", "Cursor", undefined);
     } finally {
       autoInstallers[0].transport = originalTransport;
     }
