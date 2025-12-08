@@ -50,6 +50,16 @@ class LCAgentComponent(Component):
             info="Should the Agent fix errors when reading user input for better processing?",
         ),
         BoolInput(name="verbose", display_name="Verbose", value=True, advanced=True),
+        BoolInput(
+            name="stream_tool_updates",
+            display_name="Stream Tool Updates",
+            value=False,
+            advanced=True,
+            info=(
+                "Show tool invocations in real-time as they happen. "
+                "Enabling increases database writes but provides immediate visibility."
+            ),
+        ),
         IntInput(
             name="max_iterations",
             display_name="Max Iterations",
@@ -270,6 +280,7 @@ class LCAgentComponent(Component):
                 agent_message,
                 cast("SendMessageFunctionType", self.send_message),
                 on_token_callback,
+                stream_tool_updates=self.stream_tool_updates,
             )
         except ExceptionWithMessageError as e:
             if hasattr(e, "agent_message") and hasattr(e.agent_message, "id"):
