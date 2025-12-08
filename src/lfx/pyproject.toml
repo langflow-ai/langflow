@@ -39,6 +39,7 @@ dependencies = [
     "loguru>=0.7.3",
     "langchain~=0.3.23",
     "validators>=0.34.0",
+    "databricks-sql-connector>=2.0.0"
 ]
 
 [project.scripts]

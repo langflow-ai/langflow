@@ -102,6 +102,10 @@ export const lazyIconsMapping = {
     import("@/icons/CrewAI").then((mod) => ({ default: mod.CrewAiIcon })),
   Cursor: () =>
     import("@/icons/Cursor").then((mod) => ({ default: mod.CursorIcon })),
+  DataBricks: () =>
+    import("@/icons/DataBricks").then((mod) => ({
+      default: mod.DataBricksIcon,
+    })),
   DeepSeek: () =>
     import("@/icons/DeepSeek").then((mod) => ({ default: mod.DeepSeekIcon })),
   Docling: () =>

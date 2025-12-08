@@ -4,6 +4,7 @@ import { lazy } from "react";
 import { FaApple, FaDiscord, FaGithub } from "react-icons/fa";
 import { ENABLE_KNOWLEDGE_BASES } from "@/customization/feature-flags";
 import { BotMessageSquareIcon } from "@/icons/BotMessageSquare";
+import { eagerIconsMapping } from "@/icons/eagerIconImports";
 import { fontAwesomeIcons, isFontAwesomeIcon } from "@/icons/fontAwesomeIcons";
 import { GradientSave } from "@/icons/GradientSparkles";
 
@@ -272,6 +273,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "DeepSeek", name: "deepseek", icon: "DeepSeek" },
   { display_name: "Docling", name: "docling", icon: "Docling" },
   { display_name: "DuckDuckGo", name: "duckduckgo", icon: "DuckDuckGo" },
+  { display_name: "DataBricks", name: "data_bricks", icon: "DataBricks" },
   { display_name: "Elastic", name: "elastic", icon: "ElasticsearchStore" },
   { display_name: "Exa", name: "exa", icon: "Exa" },
   { display_name: "FAISS", name: "FAISS", icon: "FAISS" },
@@ -425,6 +427,9 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   ChevronsUpDownIcon: "ChevronsUpDown",
   ClearMessageHistory: "FileClock",
   CohereEmbeddings: "Cohere",
+  DataBricks: "DataBricks",
+  DataBricksModel: "DataBricks",
+  DataBricksQuery: "DataBricks",
   Discord: "FaDiscord",
   ElasticsearchStore: "ElasticsearchStore",
   EverNoteLoader: "Evernote",
@@ -517,6 +522,8 @@ const iconMappingsPromise = import("../icons/lazyIconImports").then(
 );
 
 export const eagerLoadedIconsMap = {
+  // Eager loaded icons from eagerIconImports
+  ...eagerIconsMapping,
   // Custom icons
   GradientSave: GradientSave,
   BotMessageSquareIcon: BotMessageSquareIcon,
@@ -542,6 +549,18 @@ export const getNodeIcon = async (name: string) => {
     return iconCache.get(name);
   }
   const iconName = nodeIconToDisplayIconMap[name];
+
+  // Debug logging for DataBricks icon
+  if (name === "DataBricks" || iconName === "DataBricks") {
+    console.log("[Icon Debug] Looking up DataBricks icon:", {
+      name,
+      iconName,
+      inEagerMap: !!eagerLoadedIconsMap["DataBricks"],
+      eagerMapKeys: Object.keys(eagerLoadedIconsMap).filter(
+        (k) => k.includes("DataBricks") || k.includes("databricks"),
+      ),
+    });
+  }
 
   if (eagerLoadedIconsMap[iconName || name]) {
     return cacheAndReturn(eagerLoadedIconsMap[iconName || name]);
