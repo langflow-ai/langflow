@@ -124,12 +124,7 @@ async def get_files(
         if not file:  # Skip empty file paths
             continue
 
-        file_path = Path(file)
-        # Handle edge case where path might be just a filename without parent
-        if file_path.parent == Path():
-            flow_id, file_name = "", file_path.name
-        else:
-            flow_id, file_name = str(file_path.parent), file_path.name
+        flow_id, file_name = storage_service.parse_file_path(file)
 
         if not file_name:  # Skip if no filename
             continue
