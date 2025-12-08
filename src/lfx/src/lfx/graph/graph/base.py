@@ -70,12 +70,28 @@ class Graph:
         log_config: LogConfig | None = None,
         context: dict[str, Any] | None = None,
     ) -> None:
-        """Initializes a new Graph instance.
-
-        If both start and end components are provided, the graph is initialized and prepared for execution.
-        If only one is provided, a ValueError is raised. The context must be a dictionary if specified,
-        otherwise a TypeError is raised. Internal data structures for vertices, edges, state management,
-        run management, and tracing are set up during initialization.
+        """
+        Create a new Graph instance and initialize its internal execution state.
+        
+        Parameters:
+            start (Component | None): Optional start component for the graph; when provided together with `end`
+                the graph is added and prepared for execution.
+            end (Component | None): Optional end component for the graph; must be provided together with `start`.
+            flow_id (str | None): Optional identifier for the flow.
+            flow_name (str | None): Optional human-readable flow name.
+            description (str | None): Optional flow description.
+            user_id (str | None): Optional user identifier used when instantiating components.
+            log_config (LogConfig | None): Optional logging configuration; if provided, logging is configured.
+            context (dict[str, Any] | None): Optional execution context; must be a dictionary if provided.
+        
+        Raises:
+            TypeError: If `context` is provided and is not a dict.
+            ValueError: If exactly one of `start` or `end` is provided.
+        
+        Notes:
+            - When both `start` and `end` are provided the graph will be wired and prepared (prepare is called).
+            - The constructor initializes internal structures used for vertices, edges, run management, caching,
+              tracing, and snapshotting.
         """
         if log_config:
             configure(**log_config)
@@ -147,7 +163,14 @@ class Graph:
 
     @property
     def lock(self):
-        """Lazy initialization of asyncio.Lock to avoid event loop binding issues."""
+        """
+        Provide a lazily-initialized asyncio Lock.
+        
+        Initializes the lock on first access to avoid binding it to an event loop at object construction.
+        
+        Returns:
+            lock (asyncio.Lock): The lock instance created on first access and reused thereafter.
+        """
         if self._lock is None:
             self._lock = asyncio.Lock()
         return self._lock
@@ -711,11 +734,16 @@ class Graph:
                 self._is_state_vertices.append(vertex.id)
 
     def _set_inputs(self, input_components: list[str], inputs: dict[str, str], input_type: InputType | None) -> None:
-        """Updates input vertices' parameters with the provided inputs, filtering by component list and input type.
-
-        Only vertices whose IDs or display names match the specified input components and whose IDs contain
-        the input type (unless input type is 'any' or None) are updated. Raises a ValueError if a specified
-        vertex is not found.
+        """
+        Update input vertices' raw parameters from the provided inputs, filtering which vertices are updated by a list of component identifiers and an optional input type.
+        
+        Parameters:
+            input_components (list[str]): Vertex IDs or display names to target; if empty, all input vertices are considered.
+            inputs (dict[str, str]): Mapping of input field names to values to set on each matched input vertex.
+            input_type (InputType | None): If `None` or `"any"`, do not filter by type; otherwise only update vertices whose ID contains this type (case-insensitive).
+        
+        Raises:
+            ValueError: If a referenced input vertex cannot be found.
         """
         for vertex_id in self._is_input_vertices:
             vertex = self.get_vertex(vertex_id)
@@ -744,20 +772,25 @@ class Graph:
         fallback_to_env_vars: bool,
         event_manager: EventManager | None = None,
     ) -> list[ResultData | None]:
-        """Runs the graph with the given inputs.
-
-        Args:
-            inputs (Dict[str, str]): The input values for the graph.
-            input_components (list[str]): The components to run for the inputs.
-            input_type: (Optional[InputType]): The input type.
-            outputs (list[str]): The outputs to retrieve from the graph.
-            stream (bool): Whether to stream the results or not.
-            session_id (str): The session ID for the graph.
-            fallback_to_env_vars (bool): Whether to fallback to environment variables.
-            event_manager (EventManager | None): The event manager for the graph.
-
+        """
+        Execute the graph using the provided inputs and return the results collected from output vertices.
+        
+        Parameters:
+            inputs (dict[str, str]): Map of input field names to string values used to populate graph inputs.
+            input_components (list[str]): IDs of components that should receive the inputs; empty list means no specific mapping.
+            input_type (InputType | None): Optional type hint for the provided inputs.
+            outputs (list[str]): List of output component IDs or display names to collect results from; empty list collects all output vertices.
+            stream (bool): If True, streaming outputs may be left as generators; if False, streaming generators will be consumed to produce final results.
+            session_id (str): Session identifier to attach to vertices that accept session-scoped parameters.
+            fallback_to_env_vars (bool): If True, allow components to read missing inputs from environment variables where supported.
+            event_manager (EventManager | None): Optional event manager used during processing for lifecycle or observability hooks.
+        
         Returns:
-            List[Optional["ResultData"]]: The outputs of the graph.
+            list[ResultData | None]: A list of results corresponding to output vertices; each element is a vertex result (`ResultData`) or `None` if a vertex produced no result.
+        
+        Raises:
+            TypeError: If an expected input value is not a string.
+            ValueError: If provided component lists are invalid, a referenced vertex is missing, or graph processing fails.
         """
         if input_components and not isinstance(input_components, list):
             msg = f"Invalid components value: {input_components}. Expected list"
@@ -1403,6 +1436,19 @@ class Graph:
         user_id: str | None = None,
         event_manager: EventManager | None = None,
     ):
+        """
+        Advance the graph execution by building the next scheduled vertex and update run state.
+        
+        Parameters:
+            inputs (InputValueRequest | None): Optional input values for the vertex being built.
+            files (list[str] | None): Optional list of file paths to provide to the vertex build.
+            user_id (str | None): Optional identifier of the user initiating the step.
+            event_manager (EventManager | None): Optional event manager used during vertex build.
+        
+        Returns:
+            VertexBuildResult: Result of building the next vertex when a vertex was processed.
+            Finish: A sentinel `Finish` instance when the run queue is empty and execution is complete.
+        """
         if not self._prepared:
             msg = "Graph not prepared. Call prepare() first."
             raise ValueError(msg)
@@ -1425,6 +1471,12 @@ class Graph:
                 return None
 
             async def set_cache_func(*args, **kwargs) -> bool:  # noqa: ARG001
+                """
+                No-op fallback cache setter that accepts any arguments and always reports success.
+                
+                Returns:
+                    `true` indicating the cache operation was accepted.
+                """
                 return True
         vertex_build_result = await self.build_vertex(
             vertex_id=vertex_id,
@@ -2291,7 +2343,14 @@ class Graph:
         return predecessor_map, successor_map
 
     def __to_dict(self) -> dict[str, dict[str, list[str]]]:
-        """Converts the graph to a dictionary."""
+        """
+        Produce a mapping of each vertex ID to its successor and predecessor vertex ID lists.
+        
+        Returns:
+            dict[str, dict[str, list[str]]]: A dictionary where each key is a vertex ID and each value is a dict with two keys:
+                - "successors": list of successor vertex IDs
+                - "predecessors": list of predecessor vertex IDs
+        """
         result: dict = {}
         for vertex in self.vertices:
             vertex_id = vertex.id
@@ -2301,12 +2360,29 @@ class Graph:
         return result
 
     def raw_event_metrics(self, optional_fields: dict | None = None) -> dict: # noqa: ARG002
+        """
+        Create a timestamped metrics payload merged with any provided fields.
+        
+        Parameters:
+            optional_fields (dict | None): Additional key-value metrics to include in the payload.
+        
+        Returns:
+            dict: A dictionary containing a "timestamp" key with the current POSIX time in seconds and the merged optional fields.
+        """
         if optional_fields is None:
             optional_fields = {}
         import time
         return {"timestamp": time.time(), **optional_fields}
 
     def before_callback_event(self, *args, **kwargs) -> RunStartedEvent: # noqa: ARG002
+        """
+        Create a RunStartedEvent populated with the graph's run and flow identifiers and optional raw metrics.
+        
+        If the Graph exposes `raw_event_metrics`, its output is included in the event's `raw_event` (it will include `total_components` keyed to the count of vertices). 
+        
+        Returns:
+            RunStartedEvent: Event with `run_id` set to the graph's `_run_id`, `thread_id` set to `flow_id`, and `raw_event` containing any metrics.
+        """
         metrics = {}
         if hasattr(self, 'raw_event_metrics'):
             metrics = self.raw_event_metrics({"total_components": len(self.vertices)})
@@ -2317,6 +2393,17 @@ class Graph:
         )
     
     def after_callback_event(self, result: Any = None, *args, **kwargs) -> RunFinishedEvent: # noqa: ARG002
+        """
+        Create a RunFinishedEvent representing the end of the current run.
+        
+        Parameters:
+            result (Any): Final run result (currently unused when constructing the event).
+            *args: Ignored.
+            **kwargs: Ignored.
+        
+        Returns:
+            RunFinishedEvent: Event containing `run_id`, `thread_id` (flow_id), `result` set to `None`, and optional `raw_event` metrics including `total_components` when available.
+        """
         metrics = {}
         if hasattr(self, 'raw_event_metrics'):
             metrics = self.raw_event_metrics({"total_components": len(self.vertices)})

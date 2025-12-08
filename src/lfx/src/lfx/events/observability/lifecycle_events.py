@@ -10,48 +10,29 @@ AsyncMethod = Callable[..., Awaitable[Any]]
 
 def observable(observed_method: AsyncMethod) -> AsyncMethod:
     """
-    Decorator to make an async method observable by emitting lifecycle events.
-
-    Decorated classes are expected to implement specific methods to emit AGUI events:
-    - `before_callback_event(*args, **kwargs)`: Called before the decorated method executes.
-      It should return a dictionary representing the event payload.
-    - `after_callback_event(result, *args, **kwargs)`: Called after the decorated method
-      successfully completes. It should return a dictionary representing the event payload.
-      The `result` of the decorated method is passed as the first argument.
-    - `error_callback_event(exception, *args, **kwargs)`: (Optional) Called if the decorated
-      method raises an exception. It should return a dictionary representing the error event payload.
-      The `exception` is passed as the first argument.
-
-    If these methods are implemented, the decorator will call them to generate event payloads.
-    If an implementation is missing, the corresponding event publishing will be skipped without error.
-
-    Payloads returned by these methods can include custom metrics by placing them
-    under the 'langflow' key within the 'raw_events' dictionary.
-
-    Example:
-        class MyClass:
-            display_name = "My Observable Class"
-
-            def before_callback_event(self, *args, **kwargs):
-                return {"event_name": "my_method_started", "data": {"input_args": args}}
-
-            async def my_method(self, event_manager: EventManager, data: str):
-                # ... method logic ...
-                return "processed_data"
-
-            def after_callback_event(self, result, *args, **kwargs):
-                return {"event_name": "my_method_completed", "data": {"output": result}}
-
-            def error_callback_event(self, exception, *args, **kwargs):
-                return {"event_name": "my_method_failed", "error": str(exception)}
-
-        @observable
-        async def my_observable_method(self, event_manager: EventManager, data: str):
-            # ... method logic ...
-            pass
+    Make an async method emit lifecycle events by invoking optional callback hooks on the hosting instance.
+    
+    The hosting class may implement the following optional hooks to produce event payloads:
+    - before_callback_event(*args, **kwargs) -> dict: called before the decorated method runs.
+    - after_callback_event(result, *args, **kwargs) -> dict: called after the decorated method completes successfully.
+    - error_callback_event(exception, *args, **kwargs) -> dict: called if the decorated method raises an exception.
+    
+    If a hook is implemented, its returned dictionary will be encoded via EventEncoder and prepared for publishing; if a hook is absent, the corresponding event is skipped. Payloads may include custom metrics under the 'langflow' key inside a 'raw_events' dictionary.
+    
+    Returns:
+        The wrapped async function that preserves the original method's behavior while invoking lifecycle hooks when available.
     """
 
     async def check_event_manager(self, **kwargs):
+        """
+        Check whether an EventManager instance is present in the provided keyword arguments.
+        
+        Parameters:
+            kwargs: Expects an 'event_manager' key whose value is the EventManager used for publishing lifecycle events.
+        
+        Returns:
+            `True` if 'event_manager' exists in kwargs and is not None, `False` otherwise.
+        """
         if 'event_manager' not in kwargs or kwargs['event_manager'] is None:
             await logger.awarning(
                 f"EventManager not available/provided, skipping observable event publishing "
@@ -61,6 +42,14 @@ def observable(observed_method: AsyncMethod) -> AsyncMethod:
         return True
 
     async def before_callback(self, *args, **kwargs):
+        """
+        Invoke the instance's pre-execution lifecycle hook to produce and encode an event payload.
+        
+        Checks for a valid `event_manager` in `kwargs`; if absent the function returns without action.
+        If the hosting instance implements `before_callback_event(*args, **kwargs)`, calls it to obtain a payload,
+        encodes the payload with EventEncoder (and prepares it for publishing). If the hook is not implemented,
+        logs a warning and skips publishing.
+        """
         if not await check_event_manager(self, **kwargs):
             return
         
@@ -75,6 +64,14 @@ def observable(observed_method: AsyncMethod) -> AsyncMethod:
                 f"Skipping event publishing.")
 
     async def after_callback(self, res: Any | None = None, *args, **kwargs):    # noqa: ARG002
+        """
+        Invoke the instance's after_callback_event to produce and encode a post-execution event payload when an EventManager is provided.
+        
+        Parameters:
+            res (Any | None): The result produced by the observed method; forwarded to `after_callback_event`.
+            *args: Positional arguments forwarded to `after_callback_event`.
+            **kwargs: Keyword arguments forwarded to `after_callback_event`. May include `event_manager` required to publish events; if no valid `event_manager` is present, the function returns without encoding or publishing.
+        """
         if not await check_event_manager(self, **kwargs):
             return
         if hasattr(self, 'after_callback_event'):
@@ -89,6 +86,17 @@ def observable(observed_method: AsyncMethod) -> AsyncMethod:
 
     @functools.wraps(observed_method)
     async def wrapper(self, *args, **kwargs):    # noqa: ARG002
+        """
+        Wraps the observed async method to emit lifecycle events before execution, after successful completion, and on error.
+        
+        Calls the hosting instance's before_callback and after_callback helpers to produce and encode event payloads when available; if an exception occurs, encodes an error payload using the instance's error_callback_event when present, then re-raises the exception.
+        
+        Returns:
+            The value returned by the wrapped observed method.
+        
+        Raises:
+            Exception: Propagates any exception raised by the observed method after encoding the error event (if available).
+        """
         await before_callback(self, *args, **kwargs)
         result = None
         try:
