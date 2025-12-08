@@ -27,7 +27,23 @@ class StorageService(Service):
         self.data_dir: anyio.Path = anyio.Path(settings_service.settings.config_dir)
         self.set_ready()
 
+    @abstractmethod
     def build_full_path(self, flow_id: str, file_name: str) -> str:
+        raise NotImplementedError
+
+    @abstractmethod
+    def parse_file_path(self, full_path: str) -> tuple[str, str]:
+        """Parse a full storage path to extract flow_id and file_name.
+
+        Args:
+            full_path: Full path as returned by build_full_path
+
+        Returns:
+            tuple[str, str]: A tuple of (flow_id, file_name)
+
+        Raises:
+            ValueError: If the path format is invalid or doesn't match expected structure
+        """
         raise NotImplementedError
 
     def set_ready(self) -> None:
@@ -70,5 +86,6 @@ class StorageService(Service):
     async def delete_file(self, flow_id: str, file_name: str) -> None:
         raise NotImplementedError
 
+    @abstractmethod
     async def teardown(self) -> None:
         raise NotImplementedError

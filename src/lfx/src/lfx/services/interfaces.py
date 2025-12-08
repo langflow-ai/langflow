@@ -41,6 +41,11 @@ class StorageServiceProtocol(Protocol):
         """Build the full path of a file in the storage."""
         ...
 
+    @abstractmethod
+    def parse_file_path(self, full_path: str) -> tuple[str, str]:
+        """Parse a full storage path to extract flow_id and file_name."""
+        ...
+
 
 class SettingsServiceProtocol(Protocol):
     """Protocol for settings service."""

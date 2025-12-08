@@ -37,6 +37,7 @@ class StorageService(Service):
         self.data_dir: anyio.Path = anyio.Path(settings_service.settings.config_dir)
         self.set_ready()
 
+    @abstractmethod
     def build_full_path(self, flow_id: str, file_name: str) -> str:
         """Build the full path/key for a file.
 
@@ -49,6 +50,24 @@ class StorageService(Service):
         """
         raise NotImplementedError
 
+    @abstractmethod
+    def parse_file_path(self, full_path: str) -> tuple[str, str]:
+        """Parse a full storage path to extract flow_id and file_name.
+
+        This reverses the build_full_path operation.
+
+        Args:
+            full_path: Full path as returned by build_full_path
+
+        Returns:
+            tuple[str, str]: A tuple of (flow_id, file_name)
+
+        Raises:
+            ValueError: If the path format is invalid or doesn't match expected structure
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     def resolve_component_path(self, logical_path: str) -> str:
         """Convert a logical path to a format that components can use directly.
 
