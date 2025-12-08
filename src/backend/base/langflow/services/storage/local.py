@@ -37,6 +37,11 @@ class LocalStorageService(StorageService):
         super().__init__(session_service, settings_service)
         # Base class already sets self.data_dir as anyio.Path from settings_service.settings.config_dir
 
+        # Base class already sets self.data_dir as anyio.Path from settings_service.settings.config_dir
+
+        # Precompute str version for performance
+        self._data_dir_str = str(self.data_dir)
+
     def resolve_component_path(self, logical_path: str) -> str:
         """Convert logical path to absolute filesystem path for local storage.
 
@@ -74,21 +79,26 @@ class LocalStorageService(StorageService):
             >>> parse_file_path("user_123/image.png")  # without data_dir
             ("user_123", "image.png")
         """
-        data_dir_str = str(self.data_dir)
+        # Use precomputed str(self.data_dir)
+        data_dir_str = self._data_dir_str
 
         # Remove data_dir if present (but don't require it)
-        path_without_prefix = full_path
+        # Avoid unnecessary assignment unless the prefix is present
         if full_path.startswith(data_dir_str):
-            path_without_prefix = full_path[len(data_dir_str) :].lstrip("/")
+            path_without_prefix = full_path[len(data_dir_str) :]
+            # Fastest way to lstrip possible slash separators
+            # .lstrip is already most optimal
+            path_without_prefix = path_without_prefix.lstrip("/")
+        else:
+            path_without_prefix = full_path
 
-        # Split from the right to get the filename
-        # Everything before the last "/" is the flow_id
-        if "/" not in path_without_prefix:
+        # Check for "/" in path once, avoid scanning again in rsplit
+        slash_index = path_without_prefix.rfind("/")
+        if slash_index == -1:
             return "", path_without_prefix
 
-        # Use rsplit to split from the right, limiting to 1 split
-        flow_id, file_name = path_without_prefix.rsplit("/", 1)
-        return flow_id, file_name
+        # Avoid rsplit, use slicing for optimal splits
+        return (path_without_prefix[:slash_index], path_without_prefix[slash_index + 1 :])
 
     async def save_file(self, flow_id: str, file_name: str, data: bytes, *, append: bool = False) -> None:
         """Save a file in the local storage.
