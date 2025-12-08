@@ -135,36 +135,41 @@ class BatchRunComponent(Component):
 
     async def run_batch(self) -> DataFrame:
         """Process each row in df[column_name] with the language model asynchronously."""
-        # Extract model configuration
-        model_selection = self.model[0]
-        model_name = model_selection.get("name")
-        provider = model_selection.get("provider")
-        metadata = model_selection.get("metadata", {})
+        # Check if model is already an instance (for testing) or needs to be instantiated
+        if isinstance(self.model, list):
+            # Extract model configuration
+            model_selection = self.model[0]
+            model_name = model_selection.get("name")
+            provider = model_selection.get("provider")
+            metadata = model_selection.get("metadata", {})
 
-        # Get model class and parameters from metadata
-        model_class = get_model_classes().get(metadata.get("model_class"))
-        if model_class is None:
-            msg = f"No model class defined for {model_name}"
-            raise ValueError(msg)
+            # Get model class and parameters from metadata
+            model_class = get_model_classes().get(metadata.get("model_class"))
+            if model_class is None:
+                msg = f"No model class defined for {model_name}"
+                raise ValueError(msg)
 
-        api_key_param = metadata.get("api_key_param", "api_key")
-        model_name_param = metadata.get("model_name_param", "model")
+            api_key_param = metadata.get("api_key_param", "api_key")
+            model_name_param = metadata.get("model_name_param", "model")
 
-        # Get API key from global variables
-        from lfx.base.models.unified_models import get_api_key_for_provider
+            # Get API key from global variables
+            from lfx.base.models.unified_models import get_api_key_for_provider
 
-        api_key = get_api_key_for_provider(self.user_id, provider, self.api_key)
+            api_key = get_api_key_for_provider(self.user_id, provider, self.api_key)
 
-        if not api_key and provider != "Ollama":
-            msg = f"{provider} API key is required. Please configure it globally."
-            raise ValueError(msg)
+            if not api_key and provider != "Ollama":
+                msg = f"{provider} API key is required. Please configure it globally."
+                raise ValueError(msg)
 
-        # Instantiate the model
-        kwargs = {
-            model_name_param: model_name,
-            api_key_param: api_key,
-        }
-        model: Runnable = model_class(**kwargs)
+            # Instantiate the model
+            kwargs = {
+                model_name_param: model_name,
+                api_key_param: api_key,
+            }
+            model: Runnable = model_class(**kwargs)
+        else:
+            # Model is already an instance (typically in tests)
+            model = self.model
 
         system_msg = self.system_message or ""
         df: DataFrame = self.df
