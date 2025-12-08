@@ -1199,11 +1199,13 @@
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "llm",
+                "override_skip": false,
                 "placeholder": "",
                 "required": true,
                 "show": true,
                 "title_case": false,
                 "trace_as_metadata": true,
+                "track_in_telemetry": false,
                 "type": "other",
                 "value": ""
               },
