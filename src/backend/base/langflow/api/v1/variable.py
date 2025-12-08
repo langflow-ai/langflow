@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 from uuid import UUID
@@ -120,8 +121,9 @@ async def create_variable(
     # Check if the variable is a reserved model provider variable
     if variable.name in model_provider_variable_mapping.values():
         # Validate that the key actually works using the Language Model Service
+        # Run validation off the event loop to avoid blocking
         try:
-            validate_model_provider_key(variable.name, variable.value)
+            await asyncio.to_thread(validate_model_provider_key, variable.name, variable.value)
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e)) from e
 
@@ -182,8 +184,9 @@ async def update_variable(
 
         # Validate API key if updating a model provider variable
         if existing_variable.name in model_provider_variable_mapping.values() and variable.value:
+            # Run validation off the event loop to avoid blocking
             try:
-                validate_model_provider_key(existing_variable.name, variable.value)
+                await asyncio.to_thread(validate_model_provider_key, existing_variable.name, variable.value)
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e)) from e
 
