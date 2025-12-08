@@ -8,26 +8,21 @@ from langflow.services.schema import ServiceType
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
+    from lfx.services.settings.service import SettingsService
     from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.services.cache.service import AsyncBaseCacheService, CacheService
     from langflow.services.chat.service import ChatService
     from langflow.services.database.service import DatabaseService
+    from langflow.services.job_queue.service import JobQueueService
     from langflow.services.session.service import SessionService
     from langflow.services.state.service import StateService
+    from langflow.services.storage.service import StorageService
     from langflow.services.store.service import StoreService
     from langflow.services.task.service import TaskService
+    from langflow.services.telemetry.service import TelemetryService
     from langflow.services.tracing.service import TracingService
     from langflow.services.variable.service import VariableService
-
-# These imports MUST be outside TYPE_CHECKING because FastAPI uses eval_str=True
-# to evaluate type annotations, and these types are used as return types for
-# dependency functions that FastAPI evaluates at module load time.
-from lfx.services.settings.service import SettingsService
-
-from langflow.services.job_queue.service import JobQueueService
-from langflow.services.storage.service import StorageService
-from langflow.services.telemetry.service import TelemetryService
 
 
 def get_service(service_type: ServiceType, default=None):
