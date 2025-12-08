@@ -531,7 +531,6 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "height": 234,
         "id": "ChatInput-8l9oz",
         "measured": {
           "height": 234,
@@ -546,8 +545,7 @@
           "y": 463.6977510207854
         },
         "selected": false,
-        "type": "genericNode",
-        "width": 320
+        "type": "genericNode"
       },
       {
         "data": {
@@ -716,7 +714,6 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "height": 433,
         "id": "Prompt-ML5XQ",
         "measured": {
           "height": 433,
@@ -731,8 +728,7 @@
           "y": 640.5656416923846
         },
         "selected": false,
-        "type": "genericNode",
-        "width": 320
+        "type": "genericNode"
       },
       {
         "data": {
@@ -954,8 +950,7 @@
           "y": 1350.7871623588553
         },
         "selected": false,
-        "type": "genericNode",
-        "width": 320
+        "type": "genericNode"
       },
       {
         "data": {
@@ -1294,7 +1289,6 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "height": 234,
         "id": "ChatOutput-g0Phk",
         "measured": {
           "height": 234,
@@ -1309,8 +1303,7 @@
           "y": 810.6079786425926
         },
         "selected": false,
-        "type": "genericNode",
-        "width": 320
+        "type": "genericNode"
       },
       {
         "data": {
@@ -1806,7 +1799,6 @@
           "type": "OpenAIEmbeddings"
         },
         "dragging": false,
-        "height": 320,
         "id": "OpenAIEmbeddings-jsaKm",
         "measured": {
           "height": 320,
@@ -1821,8 +1813,7 @@
           "y": 739.6327999745448
         },
         "selected": false,
-        "type": "genericNode",
-        "width": 320
+        "type": "genericNode"
       },
       {
         "data": {
@@ -2370,8 +2361,7 @@
           "y": 1866.483269483266
         },
         "selected": false,
-        "type": "genericNode",
-        "width": 320
+        "type": "genericNode"
       },
       {
         "data": {
