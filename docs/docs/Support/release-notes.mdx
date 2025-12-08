@@ -62,7 +62,11 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
 - Webhook authentication
 
-    Added the `LANGFLOW_WEBHOOK_AUTH_ENABLE` environment variable for authenticating requests to the [`/webhook` endpoint](/api-flows-run#webhook-run-flow). When `LANGFLOW_WEBHOOK_AUTH_ENABLE=TRUE`, webhook endpoints require API key authentication and validate that the authenticated user owns the flow being executed. When `FALSE`, no Langflow API key is required and all requests to the webhook endpoint are treated as being sent by the flow owner.
+    Added the `LANGFLOW_WEBHOOK_AUTH_ENABLE` environment variable for authenticating requests to the [`/webhook` endpoint](/api-flows-run#webhook-run-flow). When `LANGFLOW_WEBHOOK_AUTH_ENABLE=TRUE`, webhook endpoints require API key authentication and validate that the authenticated user owns the flow being executed. When `FALSE`, no Langflow API key is required and all requests to the webhook endpoint are treated as being sent by the flow owner. For more information, see [Trigger flows with webhooks](/webhook).
+
+- Configurable API key validation
+
+    Added the `LANGFLOW_API_KEY_SOURCE` environment variable to control how Langflow validates API keys. When set to `db`, Langflow validates API keys against keys stored in the database. When set to `env`, Langflow validates API keys against the `LANGFLOW_API_KEY` environment variable. For more information, see [API keys and authentication](/api-keys-and-authentication#langflow-api-key-source).
 
 - SSRF protection
 
@@ -75,7 +79,7 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 - Changes to read/write file components
 
     The **Save File** component was renamed to **Write File**, and it can now save to S3 and Google Drive.
-    The **Read File** component was renamed to **Read File**.
+    The **File** component was renamed to **Read File**.
     Both components support **Tool Mode**.
 
 - New integrations, bundles, and components:
@@ -100,6 +104,8 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
   New [**ALTK** bundle](/bundles-altk)
 
   New [**CometAPI** bundle](/bundles-cometapi)
+
+  New [**CUGA** bundle](/bundles-cuga)
 
   The **LLM Router** component is now called the [**LLM Selector** component](/llm-selector).
 

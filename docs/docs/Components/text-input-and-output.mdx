@@ -18,7 +18,7 @@ These components don't support full conversational interactions.
 
 Passing chat-like metadata to a **Text Input and Output** component doesn't change the component's behavior; the result is still a simple text string.
 
-### Text Input
+## Text Input
 
 The **Text Input** component accepts a text string input that is passed to other components as [`Message` data](/data-types) containing only the provided input text string in the `text` attribute.
 
@@ -27,7 +27,7 @@ This can be entered directly into the component or passed as `Message` data from
 
 Initial input _shouldn't_ be provided as a complete `Message` object because the **Text Input** component constructs the `Message` object that is then passed to other components in the flow.
 
-### Text Output
+## Text Output
 
 The **Text Output** component ingests [`Message` data](/data-types#message) from other components, emitting only the `text` attribute in a simplified `Message` object.
 

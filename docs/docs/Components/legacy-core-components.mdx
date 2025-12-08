@@ -166,7 +166,6 @@ This component concatenates two text inputs into a single text chunk using a spe
 <summary>Create Data</summary>
 
 Replace this legacy component with the [**Dynamic Create Data** component](/dynamic-create-data).
-
 This component dynamically creates a `Data` object with a specified number of fields and a text key.
 
 It accepts the following parameters:
@@ -180,15 +179,6 @@ It accepts the following parameters:
 </details>
 
 <details>
-<summary>Extract Key</summary>
-
-Replace this legacy component with the [**Data Operations** component](/data-operations).
-
-This component extracts a specific key from a `Data` object and returns the value associated with that key.
-
-</details>
-
-<details>
 <summary>Data to DataFrame/Data to Message</summary>
 
 Replace these legacy components with newer Processing components, such as the [**Data Operations** component](/data-operations) and [**Type Convert** component](/type-convert).
@@ -197,6 +187,15 @@ These components converted one or more `Data` objects into a `DataFrame` or `Mes
 
 For the **Data to DataFrame** component, each `Data` object corresponds to one row in the resulting `DataFrame`.
 Fields from the `.data` attribute become columns, and the `.text` field (if present) is placed in a `text` column.
+
+</details>
+
+<details>
+<summary>Extract Key</summary>
+
+Replace this legacy component with the [**Data Operations** component](/data-operations).
+
+This component extracts a specific key from a `Data` object and returns the value associated with that key.
 
 </details>
 

@@ -8,6 +8,7 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 import PartialDevModeWindows from '@site/docs/_partial-dev-mode-windows.mdx';
+import PartialDockerDoclingDeps from '@site/docs/_partial-docker-docling-deps.mdx';
 
 In Langflow version 1.7.0, this component was renamed from **File** to **Read File**.
 
@@ -17,7 +18,7 @@ It supports multiple file types, provides parameters for parallel processing and
 You can add files to the **Read File** component in the visual editor or at runtime, and you can upload multiple files at once.
 For more information about uploading files and working with files in flows, see [File management](/concepts-file-management) and [Create a chatbot that can ingest files](/chat-with-files).
 
-### File type and size limits
+## File type and size limits
 
 By default, the maximum file size is 1024 MB.
 To modify this value, change the `LANGFLOW_MAX_FILE_SIZE_UPLOAD` [environment variable](/environment-variables).
@@ -60,7 +61,7 @@ For images, see [Upload images](/concepts-file-management#upload-images).
 
 For videos, see the **Twelve Labs** and **YouTube** <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components).
 
-### File parameters
+## File parameters
 
 <PartialParams />
 
@@ -76,7 +77,7 @@ For videos, see the **Twelve Labs** and **YouTube** <Icon name="Blocks" aria-hid
 | concurrency_multithreading | Processing Concurrency | Input parameter. The number of files to process concurrently if multiple files are uploaded. Default is 1. Values greater than 1 enable parallel processing for 2 or more files. Ignored for single-file uploads and advanced parsing. |
 | advanced_parser | Advanced Parser | Input parameter. If `true`, enables [advanced parsing](#advanced-parsing). Only available for single-file uploads of compatible file types. Default: Disabled (`false`). |
 
-### Advanced parsing
+## Advanced parsing
 
 Starting in Langflow version 1.6, the **Read File** component supports advanced document parsing using the [Docling](https://docling-project.github.io/docling/) library for supported file types.
 
@@ -89,6 +90,8 @@ To use advanced parsing, do the following:
     * **Install Docling dependency on macOS Intel (x86_64)**: The Docling dependency isn't installed by default for macOS Intel (x86_64). Use the [Docling installation guide](https://docling-project.github.io/docling/installation/) to install the Docling dependency.
 
         For all other operating systems, the Docling dependency is installed by default.
+
+    <PartialDockerDoclingDeps />
 
     * **Enable Developer Mode for Windows**:
     <PartialDevModeWindows />
@@ -122,7 +125,7 @@ To use advanced parsing, do the following:
     For additional Docling features, including other components and OCR parsers, use the [**Docling** bundle](/bundles-docling).
     :::
 
-### File output
+## File output
 
 The output of the **Read File** component depends on the number of files loaded and whether advanced parsing is enabled.
 If multiple options are available, you can set the output type near the component's output port.
