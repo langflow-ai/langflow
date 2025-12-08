@@ -1006,7 +1006,7 @@ async def test_agent_streaming_preserves_message_id():
 @pytest.mark.asyncio
 async def test_handle_on_tool_start_with_stream_tool_updates_true():
     """Test handle_on_tool_start with stream_tool_updates=True sends immediate DB updates."""
-    send_message = AsyncMock(side_effect=lambda message, _skip_db_update=False: message)
+    send_message = AsyncMock(side_effect=lambda message, **_kwargs: message)
     tool_blocks_map = {}
     agent_message = Message(
         sender=MESSAGE_SENDER_AI,
@@ -1037,7 +1037,7 @@ async def test_handle_on_tool_start_with_stream_tool_updates_true():
 @pytest.mark.asyncio
 async def test_handle_on_tool_start_with_stream_tool_updates_false():
     """Test handle_on_tool_start with stream_tool_updates=False skips immediate DB updates."""
-    send_message = AsyncMock(side_effect=lambda message, _skip_db_update=False: message)
+    send_message = AsyncMock(side_effect=lambda message, **_kwargs: message)
     tool_blocks_map = {}
     agent_message = Message(
         sender=MESSAGE_SENDER_AI,
@@ -1068,7 +1068,7 @@ async def test_handle_on_tool_start_with_stream_tool_updates_false():
 @pytest.mark.asyncio
 async def test_handle_on_tool_start_keyword_only_parameter():
     """Test that stream_tool_updates must be passed as keyword argument."""
-    send_message = AsyncMock(side_effect=lambda message, _skip_db_update=False: message)
+    send_message = AsyncMock(side_effect=lambda message, **_kwargs: message)
     tool_blocks_map = {}
     agent_message = Message(
         sender=MESSAGE_SENDER_AI,
@@ -1092,7 +1092,7 @@ async def test_handle_on_tool_start_keyword_only_parameter():
 @pytest.mark.asyncio
 async def test_handle_on_tool_end_with_stream_tool_updates():
     """Test handle_on_tool_end respects stream_tool_updates parameter."""
-    send_message = AsyncMock(side_effect=lambda message, _skip_db_update=False: message)
+    send_message = AsyncMock(side_effect=lambda message, **_kwargs: message)
     tool_blocks_map = {}
     agent_message = Message(
         sender=MESSAGE_SENDER_AI,
@@ -1132,7 +1132,7 @@ async def test_handle_on_tool_end_with_stream_tool_updates():
 @pytest.mark.asyncio
 async def test_handle_on_tool_error_with_stream_tool_updates():
     """Test handle_on_tool_error respects stream_tool_updates parameter."""
-    send_message = AsyncMock(side_effect=lambda message, _skip_db_update=False: message)
+    send_message = AsyncMock(side_effect=lambda message, **_kwargs: message)
     tool_blocks_map = {}
     agent_message = Message(
         sender=MESSAGE_SENDER_AI,
@@ -1177,7 +1177,7 @@ async def test_handle_on_tool_error_with_stream_tool_updates():
 @pytest.mark.asyncio
 async def test_process_agent_events_with_stream_tool_updates():
     """Test process_agent_events passes stream_tool_updates to tool handlers."""
-    send_message = AsyncMock(side_effect=lambda message, _skip_db_update=False: message)
+    send_message = AsyncMock(side_effect=lambda message, **_kwargs: message)
 
     agent_message = Message(
         sender=MESSAGE_SENDER_AI,
