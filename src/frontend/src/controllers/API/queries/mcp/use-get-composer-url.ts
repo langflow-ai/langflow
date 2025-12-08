@@ -1,14 +1,8 @@
 import type { useQueryFunctionType } from "@/types/api";
+import type { ComposerUrlResponseType } from "@/types/mcp";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
-
-interface ComposerUrlResponse {
-  project_id: string;
-  sse_url: string;
-  uses_composer: boolean;
-  error_message?: string;
-}
 
 type UseGetProjectComposerUrlParams = {
   projectId: string;
@@ -16,11 +10,11 @@ type UseGetProjectComposerUrlParams = {
 
 export const useGetProjectComposerUrl: useQueryFunctionType<
   UseGetProjectComposerUrlParams,
-  ComposerUrlResponse
+  ComposerUrlResponseType
 > = ({ projectId }, options) => {
   const { query } = UseRequestProcessor();
 
-  const responseFn = async (): Promise<ComposerUrlResponse> => {
+  const responseFn = async (): Promise<ComposerUrlResponseType> => {
     try {
       const response = await api.get(
         `${getURL("MCP")}/${projectId}/composer-url`,

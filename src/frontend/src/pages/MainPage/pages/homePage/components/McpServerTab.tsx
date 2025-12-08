@@ -8,6 +8,7 @@ import { useCustomIsLocalConnection } from "@/customization/hooks/use-custom-is-
 import useTheme from "@/customization/hooks/use-custom-theme";
 import AuthModal from "@/modals/authModal";
 
+import type { MCPTransport } from "@/controllers/API/queries/mcp/use-patch-install-mcp";
 import { useFolderStore } from "@/stores/foldersStore";
 import { cn, getOS } from "@/utils/utils";
 import { useMcpServer } from "../hooks/useMcpServer";
@@ -31,6 +32,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   const [selectedMode, setSelectedMode] = useState<string>(
     isLocalConnection ? "Auto install" : "JSON",
   );
+  const [selectedTransport, setSelectedTransport] =
+    useState<MCPTransport>("streamablehttp");
   const {
     flowsMCPData,
     currentAuthSettings,
@@ -54,7 +57,12 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
     hasAuthentication,
     isAuthApiKey,
     hasOAuthError,
-  } = useMcpServer({ projectId, folderName, selectedPlatform });
+  } = useMcpServer({
+    projectId,
+    folderName,
+    selectedPlatform,
+    selectedTransport,
+  });
 
   return (
     <div>
@@ -139,6 +147,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
               <McpJsonContent
                 selectedPlatform={selectedPlatform}
                 setSelectedPlatform={setSelectedPlatform}
+                selectedTransport={selectedTransport}
+                setSelectedTransport={setSelectedTransport}
                 isDarkMode={isDarkMode}
                 isCopied={isCopied}
                 copyToClipboard={copyToClipboard}
