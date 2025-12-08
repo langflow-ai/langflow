@@ -41,6 +41,58 @@ class ComposioBaseComponent(Component):
 
     default_tools_limit: int = 5
 
+    # Reserved attribute names that conflict with Component base class
+    RESERVED_ATTRIBUTES: set[str] = {
+        # Core component attributes
+        "name",
+        "description",
+        "status",
+        "display_name",
+        "icon",
+        "priority",
+        "code",
+        "inputs",
+        "outputs",
+        "selected_output",
+        # Properties and methods
+        "trace_type",
+        "trace_name",
+        "function",
+        "repr_value",
+        "field_config",
+        "field_order",
+        "frozen",
+        "build_parameters",
+        "cache",
+        "tools_metadata",
+        "vertex",
+        # User and session attributes
+        "user_id",  # Already handled separately but included for completeness
+        "session_id",
+        "flow_id",
+        "flow_name",
+        "context",
+        # Common method names
+        "build",
+        "run",
+        "stop",
+        "start",
+        "validate",
+        "get_function",
+        "set_attributes",
+        # Additional common conflicts
+        "id",
+        "type",
+        "value",
+        "metadata",
+        "logs",
+        "results",
+        "artifacts",
+        "parameters",
+        "template",
+        "config",
+    }
+
     _base_inputs = [
         MessageTextInput(
             name="entity_id",
@@ -623,13 +675,9 @@ class ComposioBaseComponent(Component):
                                 attachment_related_found = True
                                 continue  # Skip individual attachment fields
 
-                            # Handle conflicting field names - rename user_id to avoid conflicts with entity_id
-                            if clean_field == "user_id":
-                                clean_field = f"{self.app_name}_user_id"
-
-                            # Handle reserved attribute name conflicts (e.g., 'status', 'name')
+                            # Handle reserved attribute name conflicts
                             # Prefix with app name to prevent clashes with component attributes
-                            if clean_field in {"status", "name"}:
+                            if clean_field in self.RESERVED_ATTRIBUTES:
                                 clean_field = f"{self.app_name}_{clean_field}"
 
                             action_fields.append(clean_field)
@@ -795,28 +843,16 @@ class ComposioBaseComponent(Component):
                     # Don't add individual attachment sub-fields to the schema
                     continue
 
-                # Handle conflicting field names - rename user_id to avoid conflicts with entity_id
-                if clean_field_name == "user_id":
-                    clean_field_name = f"{self.app_name}_user_id"
+                # Handle reserved attribute name conflicts
+                if clean_field_name in self.RESERVED_ATTRIBUTES:
+                    original_name = clean_field_name
+                    clean_field_name = f"{self.app_name}_{clean_field_name}"
                     # Update the field schema description to reflect the name change
                     field_schema_copy = field_schema.copy()
+                    original_description = field_schema.get("description", "")
                     field_schema_copy["description"] = (
-                        f"User ID for {self.app_name.title()}: " + field_schema["description"]
-                    )
-                elif clean_field_name == "status":
-                    clean_field_name = f"{self.app_name}_status"
-                    # Update the field schema description to reflect the name change
-                    field_schema_copy = field_schema.copy()
-                    field_schema_copy["description"] = f"Status for {self.app_name.title()}: " + field_schema.get(
-                        "description", ""
-                    )
-                elif clean_field_name == "name":
-                    clean_field_name = f"{self.app_name}_name"
-                    # Update the field schema description to reflect the name change
-                    field_schema_copy = field_schema.copy()
-                    field_schema_copy["description"] = f"Name for {self.app_name.title()}: " + field_schema.get(
-                        "description", ""
-                    )
+                        f"{original_name.replace('_', ' ').title()} for {self.app_name.title()}: {original_description}"
+                    ).strip()
                 else:
                     # Use the original field schema for all other fields
                     field_schema_copy = field_schema
@@ -842,12 +878,8 @@ class ComposioBaseComponent(Component):
                 cleaned_required = []
                 for field in flat_schema["required"]:
                     base = field.replace("[0]", "")
-                    if base == "user_id":
-                        cleaned_required.append(f"{self.app_name}_user_id")
-                    elif base == "status":
-                        cleaned_required.append(f"{self.app_name}_status")
-                    elif base == "name":
-                        cleaned_required.append(f"{self.app_name}_name")
+                    if base in self.RESERVED_ATTRIBUTES:
+                        cleaned_required.append(f"{self.app_name}_{base}")
                     else:
                         cleaned_required.append(base)
                 flat_schema["required"] = cleaned_required
@@ -943,9 +975,10 @@ class ComposioBaseComponent(Component):
                                 inp.advanced = True
 
                             # Skip entity_id being mapped to user_id parameter
-                            if inp.name == "user_id" and getattr(self, "entity_id", None) == getattr(
-                                inp, "value", None
-                            ):
+                            # Check both original name and renamed version
+                            if inp.name in {"user_id", f"{self.app_name}_user_id"} and getattr(
+                                self, "entity_id", None
+                            ) == getattr(inp, "value", None):
                                 continue
 
                             processed_inputs.append(inp)
@@ -2422,12 +2455,11 @@ class ComposioBaseComponent(Component):
 
                 # Handle renamed fields - map back to original names for API execution
                 final_field_name = field
-                if field.endswith("_user_id") and field.startswith(self.app_name):
-                    final_field_name = "user_id"
-                elif field == f"{self.app_name}_status":
-                    final_field_name = "status"
-                elif field == f"{self.app_name}_name":
-                    final_field_name = "name"
+                # Check if this is a renamed reserved attribute
+                if field.startswith(f"{self.app_name}_"):
+                    potential_original = field[len(self.app_name) + 1 :]  # Remove app_name prefix
+                    if potential_original in self.RESERVED_ATTRIBUTES:
+                        final_field_name = potential_original
 
                 arguments[final_field_name] = value
 
@@ -2538,7 +2570,7 @@ class ComposioBaseComponent(Component):
                 build_config[fname]["value"] = "" if fname not in self._bool_variables else False
         # Hide any other visible, non-protected fields that look like parameters
         protected = {
-            "code",
+            # Component control fields
             "entity_id",
             "api_key",
             "auth_link",
@@ -2570,6 +2602,11 @@ class ComposioBaseComponent(Component):
             "instance_url",
             "tenant_id",
         }
+        # Add all reserved Component attributes to protected set
+        protected.update(self.RESERVED_ATTRIBUTES)
+        # Also add the renamed versions (with app_name prefix) to protected set
+        for attr in self.RESERVED_ATTRIBUTES:
+            protected.add(f"{self.app_name}_{attr}")
         # Add all dynamic auth fields to protected set
         protected.update(self._auth_dynamic_fields)
         # Also protect any auth fields discovered across all instances
