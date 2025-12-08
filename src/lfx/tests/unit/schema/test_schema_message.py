@@ -92,9 +92,10 @@ def test_message_with_single_image(sample_image):
     assert len(lc_message.content) == 2  # text + image
     assert lc_message.content[0]["type"] == "text"
     assert lc_message.content[0]["text"] == text
-    assert lc_message.content[1]["type"] == "image"
-    assert lc_message.content[1]["source_type"] == "url"
-    assert lc_message.content[1]["url"].startswith("data:image/")
+    assert lc_message.content[1]["type"] == "image_url"
+    assert "image_url" in lc_message.content[1]
+    assert "url" in lc_message.content[1]["image_url"]
+    assert lc_message.content[1]["image_url"]["url"].startswith("data:image/")
 
     # Verify the message object has files
     assert message.files == [file_path]
@@ -127,8 +128,8 @@ def test_message_with_multiple_images(sample_image, langflow_cache_dir):
     assert len(lc_message.content) == 3  # text + 2 images
     assert lc_message.content[0]["type"] == "text"
     assert lc_message.content[0]["text"] == text
-    assert lc_message.content[1]["type"] == "image"
-    assert lc_message.content[2]["type"] == "image"
+    assert lc_message.content[1]["type"] == "image_url"
+    assert lc_message.content[2]["type"] == "image_url"
 
     # Verify the message object has the files
     assert len(message.files) == 2
