@@ -41,7 +41,7 @@ export const ModelProviderCount = () => {
         <ModelProviderModal
           open={open}
           onClose={() => setOpen(false)}
-          modeltype="all"
+          modelType="all"
         />
       )}
     </>

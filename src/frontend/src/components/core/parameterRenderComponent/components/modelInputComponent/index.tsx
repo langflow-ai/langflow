@@ -72,7 +72,7 @@ export default function ModelInputComponent({
     node: (nodeClass as APIClassType) || null,
   });
 
-  const modeltype =
+  const modelType =
     nodeClass?.template?.model?.model_type === "language"
       ? "llm"
       : "embeddings";
@@ -212,7 +212,6 @@ export default function ModelInputComponent({
     handleRefreshButtonPress();
   }, [handleRefreshButtonPress]);
 
-  //TODO: Look at this logic
   const handleExternalOptions = useCallback(
     async (optionValue: string) => {
       setOpen(false);
@@ -530,7 +529,7 @@ export default function ModelInputComponent({
         <ModelProviderModal
           open={openManageProvidersDialog}
           onClose={handleManageProvidersDialogClose}
-          modeltype={modeltype || "llm"}
+          modelType={modelType || "llm"}
         />
       )}
     </>

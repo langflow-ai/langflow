@@ -1,6 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -9,7 +8,6 @@ import {
   PROVIDER_VARIABLE_MAPPING,
   VARIABLE_CATEGORY,
 } from "@/constants/providerConstants";
-import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 import { useUpdateEnabledModels } from "@/controllers/API/queries/models/use-update-enabled-models";
 import {
   useGetGlobalVariables,
@@ -18,57 +16,62 @@ import {
 } from "@/controllers/API/queries/variables";
 import { useDebounce } from "@/hooks/use-debounce";
 import ProviderList from "@/modals/modelProviderModal/components/ProviderList";
-import { Model, Provider } from "@/modals/modelProviderModal/components/types";
+import { Provider } from "@/modals/modelProviderModal/components/types";
 import useAlertStore from "@/stores/alertStore";
 import { cn } from "@/utils/utils";
-import ModelProviderEdit from "./components/ModelProviderEdit";
 import ModelSelection from "./components/ModelSelection";
 
 interface ModelProviderModalProps {
   open: boolean;
   onClose: () => void;
-  modeltype: "llm" | "embeddings" | "all";
+  modelType: "llm" | "embeddings" | "all";
 }
 
 const ModelProviderModal = ({
   open,
   onClose,
-  modeltype,
+  modelType,
 }: ModelProviderModalProps) => {
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(
     null,
   );
-
-  const [isEditing, setIsEditing] = useState(false);
-  const [authName, setAuthName] = useState("");
   const [apiKey, setApiKey] = useState("");
-  const [apiBase, setApiBase] = useState("");
   const [validationFailed, setValidationFailed] = useState(false);
+  // Track if API key change came from user typing (vs programmatic reset)
+  // Used to prevent auto-save from triggering when we clear the input after success
+  const isUserInputRef = useRef(false);
 
   const queryClient = useQueryClient();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
+
   const { mutate: createGlobalVariable, isPending: isCreating } =
     usePostGlobalVariables();
   const { mutate: updateGlobalVariable, isPending: isUpdating } =
     usePatchGlobalVariables();
   const { data: globalVariables = [] } = useGetGlobalVariables();
-
-  const isPending = isCreating || isUpdating;
   const { mutate: updateEnabledModels } = useUpdateEnabledModels();
 
-  // Track if change came from user input
-  const isUserInputRef = useRef(false);
+  const isPending = isCreating || isUpdating;
 
-  // Reset form and pending changes when provider changes
+  // Invalidate all provider-related caches after successful create/update
+  // This ensures the UI reflects the latest state across all components
+  const invalidateProviderQueries = () => {
+    queryClient.invalidateQueries({ queryKey: ["useGetModelProviders"] });
+    queryClient.invalidateQueries({ queryKey: ["useGetEnabledModels"] });
+    queryClient.invalidateQueries({ queryKey: ["useGetGlobalVariables"] });
+    queryClient.invalidateQueries({ queryKey: ["useGetDefaultModel"] });
+    queryClient.refetchQueries({ queryKey: ["flows"] });
+  };
+
+  // Reset form when provider changes
   useEffect(() => {
-    setAuthName("");
     setApiKey("");
-    setApiBase("");
     setValidationFailed(false);
   }, [selectedProvider?.provider]);
 
-  // Debounced auto-configure when API key changes from user input
+  // Auto-save API key after user stops typing for 800ms
+  // The debounce prevents API calls on every keystroke
   const debouncedConfigureProvider = useDebounce(() => {
     if (apiKey.trim() && selectedProvider && isUserInputRef.current) {
       handleConfigureProvider();
@@ -76,6 +79,7 @@ const ModelProviderModal = ({
     }
   }, 800);
 
+  // Trigger debounced save when apiKey changes from user input
   useEffect(() => {
     if (apiKey.trim() && isUserInputRef.current) {
       debouncedConfigureProvider();
@@ -104,23 +108,26 @@ const ModelProviderModal = ({
     );
   };
 
+  // Toggle provider selection - clicking same provider deselects it
   const handleProviderSelect = (provider: Provider) => {
     setSelectedProvider((prev) =>
       prev?.provider === provider.provider ? null : provider,
     );
-    setIsEditing(!provider.is_enabled);
   };
 
+  // Some providers (e.g., Ollama) don't require API keys - they just need activation
   const requiresApiKey = useMemo(() => {
     if (!selectedProvider) return true;
     return !NO_API_KEY_PROVIDERS.includes(selectedProvider.provider);
   }, [selectedProvider]);
 
+  // Activate providers that don't need API keys (e.g., Ollama)
+  // Creates/updates a global variable with a placeholder URL to mark provider as enabled
   const handleActivateNoApiKeyProvider = () => {
     if (!selectedProvider) return;
 
+    // Map provider name to its corresponding global variable name
     const variableName = PROVIDER_VARIABLE_MAPPING[selectedProvider.provider];
-
     if (!variableName) {
       setErrorData({
         title: "Invalid Provider",
@@ -129,43 +136,37 @@ const ModelProviderModal = ({
       return;
     }
 
+    // Check if provider was previously configured (variable exists)
     const existingVariable = globalVariables.find(
-      (variable) => variable.name === variableName,
+      (v) => v.name === variableName,
     );
 
-    const onSuccessHandler = () => {
-      setSuccessData({
-        title: `${selectedProvider.provider} Activated`,
-      });
-      queryClient.invalidateQueries({ queryKey: ["useGetModelProviders"] });
-      queryClient.invalidateQueries({ queryKey: ["useGetEnabledModels"] });
-      queryClient.invalidateQueries({ queryKey: ["useGetGlobalVariables"] });
-      queryClient.invalidateQueries({ queryKey: ["useGetDefaultModel"] });
-      queryClient.refetchQueries({ queryKey: ["flows"] });
+    // Ollama default endpoint - used as placeholder to mark provider as active
+    const placeholderValue = "http://localhost:11434";
+
+    const onSuccess = () => {
+      setSuccessData({ title: `${selectedProvider.provider} Activated` });
+      invalidateProviderQueries();
       setSelectedProvider((prev) =>
         prev ? { ...prev, is_enabled: true } : null,
       );
-      setIsEditing(false);
     };
 
-    // For providers without API keys, we use a placeholder value
-    const placeholderValue = "http://localhost:11434";
+    const onError = (error: any) => {
+      setErrorData({
+        title: "Error Activating Provider",
+        list: [
+          error?.response?.data?.detail ||
+            "An unexpected error occurred. Please try again.",
+        ],
+      });
+    };
 
+    // Update existing variable or create new one
     if (existingVariable) {
       updateGlobalVariable(
         { id: existingVariable.id, value: placeholderValue },
-        {
-          onSuccess: onSuccessHandler,
-          onError: (error: any) => {
-            setErrorData({
-              title: "Error Activating Provider",
-              list: [
-                error?.response?.data?.detail ||
-                  "An unexpected error occurred. Please try again.",
-              ],
-            });
-          },
-        },
+        { onSuccess, onError },
       );
     } else {
       createGlobalVariable(
@@ -176,27 +177,16 @@ const ModelProviderModal = ({
           category: VARIABLE_CATEGORY.GLOBAL,
           default_fields: [],
         },
-        {
-          onSuccess: onSuccessHandler,
-          onError: (error: any) => {
-            setErrorData({
-              title: "Error Activating Provider",
-              list: [
-                error?.response?.data?.detail ||
-                  "An unexpected error occurred. Please try again.",
-              ],
-            });
-          },
-        },
+        { onSuccess, onError },
       );
     }
   };
 
+  // Save API key for providers that require authentication (e.g., OpenAI, Anthropic)
   const handleConfigureProvider = () => {
     if (!selectedProvider || !apiKey.trim()) return;
 
     const variableName = PROVIDER_VARIABLE_MAPPING[selectedProvider.provider];
-
     if (!variableName) {
       setErrorData({
         title: "Invalid Provider",
@@ -205,70 +195,39 @@ const ModelProviderModal = ({
       return;
     }
 
-    // Check if variable already exists (provider is enabled)
+    // Check if provider was previously configured - determines update vs create
     const existingVariable = globalVariables.find(
-      (variable) => variable.name === variableName,
+      (v) => v.name === variableName,
     );
 
-    const onSuccessHandler = () => {
-      setSuccessData({
-        title: `${selectedProvider.provider} API Key Saved`,
-      });
-      // Invalidate caches to refresh the UI
-      queryClient.invalidateQueries({
-        queryKey: ["useGetModelProviders"],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["useGetEnabledModels"],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["useGetGlobalVariables"],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["useGetDefaultModel"],
-      });
-      // Force refresh flow data to update node templates with new model options
-      queryClient.refetchQueries({
-        queryKey: ["flows"],
-      });
-
-      // Reset form and switch to model selection view
+    const onSuccess = () => {
+      setSuccessData({ title: `${selectedProvider.provider} API Key Saved` });
+      invalidateProviderQueries();
       setApiKey("");
-      setAuthName("");
-      setApiBase("");
-      // Update local state to reflect enabled status
       setSelectedProvider((prev) =>
         prev ? { ...prev, is_enabled: true } : null,
       );
-      setIsEditing(false);
+    };
+
+    const onError = (error: any) => {
+      setValidationFailed(true);
+      setErrorData({
+        title: existingVariable
+          ? "Error Updating API Key"
+          : "Error Saving API Key",
+        list: [
+          error?.response?.data?.detail ||
+            "An unexpected error occurred. Please try again.",
+        ],
+      });
     };
 
     if (existingVariable) {
-      // Update existing variable
-      const oldApiKey = apiKey; // Store for potential rollback
       updateGlobalVariable(
-        {
-          id: existingVariable.id,
-          value: apiKey,
-        },
-        {
-          onSuccess: onSuccessHandler,
-          onError: (error: any) => {
-            // Revert to old API key on failure
-            setApiKey(oldApiKey);
-            setValidationFailed(true);
-            setErrorData({
-              title: "Error Updating API Key",
-              list: [
-                error?.response?.data?.detail ||
-                  "An unexpected error occurred while updating the API key. Please try again.",
-              ],
-            });
-          },
-        },
+        { id: existingVariable.id, value: apiKey },
+        { onSuccess, onError },
       );
     } else {
-      // Create new variable
       createGlobalVariable(
         {
           name: variableName,
@@ -277,40 +236,20 @@ const ModelProviderModal = ({
           category: VARIABLE_CATEGORY.GLOBAL,
           default_fields: [],
         },
-        {
-          onSuccess: onSuccessHandler,
-          onError: (error: any) => {
-            setValidationFailed(true);
-            setErrorData({
-              title: "Error Saving API Key",
-              list: [
-                error?.response?.data?.detail ||
-                  "An unexpected error occurred while saving the API key. Please try again.",
-              ],
-            });
-          },
-        },
+        { onSuccess, onError },
       );
     }
   };
 
-  // Handle modal close - refresh if updates were made
-  const handleClose = () => {
-    onClose();
-  };
-
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DialogContent className="flex flex-col overflow-hidden rounded-xl p-0 max-w-[768px] h-[560px] gap-0">
-        {/* model provider header */}
         <DialogHeader className="flex w-full border-b px-4 py-3">
           <div className="flex justify-start items-center gap-3">
-            {/* <ForwardedIconComponent name="Brain" className="w-5 h-5" /> */}
-            <div className="text-[13px] font-semibold ">Model providers</div>
+            <div className="text-[13px] font-semibold">Model providers</div>
           </div>
         </DialogHeader>
 
-        {/* model provider list */}
         <div className="flex flex-row w-full overflow-hidden">
           <div
             className={cn(
@@ -319,13 +258,12 @@ const ModelProviderModal = ({
             )}
           >
             <ProviderList
-              modelType={modeltype}
+              modelType={modelType}
               onProviderSelect={handleProviderSelect}
               selectedProviderName={selectedProvider?.provider ?? null}
             />
           </div>
 
-          {/* Model Provider sub header */}
           <div
             className={cn(
               "flex flex-col gap-1 transition-all duration-300 ease-in-out overflow-hidden",
@@ -334,16 +272,8 @@ const ModelProviderModal = ({
                 : "w-0 opacity-0 translate-x-full",
             )}
           >
-            {" "}
             <div className="flex flex-col gap-1 p-4">
               <div className="flex flex-row gap-1 min-w-[300px]">
-                {/* <ForwardedIconComponent
-                  name={selectedProvider?.icon || 'Bot'}
-                  className={cn(
-                    'w-5 h-5 flex-shrink-0 transition-all',
-                    !selectedProvider?.is_enabled && 'grayscale opacity-50'
-                  )}
-                /> */}
                 <span className="text-[13px] font-semibold mr-auto">
                   {selectedProvider?.provider || "Unknown Provider"}
                   {requiresApiKey && " API Key"}
@@ -352,7 +282,7 @@ const ModelProviderModal = ({
                   )}
                 </span>
               </div>
-              <span className="text-[13px] text-muted-foreground  pt-1 pb-2">
+              <span className="text-[13px] text-muted-foreground pt-1 pb-2">
                 {requiresApiKey ? (
                   <>
                     Add your{" "}
@@ -377,6 +307,7 @@ const ModelProviderModal = ({
                     setValidationFailed(false);
                     setApiKey(e.target.value);
                   }}
+                  // Show loading spinner while saving, X on error, checkmark when configured
                   endIcon={
                     isPending
                       ? "LoaderCircle"
@@ -407,77 +338,18 @@ const ModelProviderModal = ({
                 </Button>
               )}
             </div>
-            {/* {selectedProvider?.is_enabled && (
-                <Button
-                  variant="menu"
-                  size="icon"
-                  unstyled
-                  onClick={() => setIsEditing(!isEditing)}
-                  className=""
-                >
-                  <ForwardedIconComponent
-                    name={'Pencil'}
-                    className={cn(
-                      'h-4 w-4 flex-shrink-0 ',
-                      !isEditing
-                        ? 'text-primary hover:text-muted-foreground'
-                        : 'text-muted-foreground hover:text-primary'
-                    )}
-                  />
-                </Button>
-              )} */}
-            {/* model provider selection */}
-            <div className="overflow-x-hidden ">
-              <div
-                className={cn(
-                  "flex flex-col px-4 pb-4 gap-3 transition-all duration-300 ease-in-out",
-                )}
-              >
+
+            <div className="overflow-x-hidden">
+              <div className="flex flex-col px-4 pb-4 gap-3 transition-all duration-300 ease-in-out">
                 <ModelSelection
-                  modelType={modeltype}
+                  modelType={modelType}
                   availableModels={selectedProvider?.models || []}
                   onModelToggle={handleModelToggle}
                   providerName={selectedProvider?.provider}
                   isEnabledModel={selectedProvider?.is_enabled}
                 />
               </div>
-
-              {/* Edit */}
-              {/* <div
-                className={cn(
-                  'flex flex-col transition-all duration-300 ease-in-out h-[403px]',
-                  isEditing
-                    ? 'opacity-100 translate-x-0'
-                    : 'opacity-0 translate-x-full absolute inset-0'
-                )}
-              >
-                <ModelProviderEdit
-                  authName={authName}
-                  onAuthNameChange={setAuthName}
-                  apiKey={apiKey}
-                  onApiKeyChange={setApiKey}
-                  apiBase={apiBase}
-                  onApiBaseChange={setApiBase}
-                  providerName={selectedProvider?.provider}
-                />
-                <ModelProviderActive
-                  activeLLMs={activeLLMNames}
-                  activeEmbeddings={activeEmbeddingNames}
-                />
-              </div> */}
             </div>
-            {/* model provider footer */}
-            {/* {isEditing && (
-              <div className="flex justify-end border-t p-4 min-w-[300px] gap-2">
-                <Button
-                  className="w-full"
-                  onClick={handleConfigureProvider}
-                  loading={isPending}
-                >
-                  Configure
-                </Button>
-              </div>
-            )} */}
           </div>
         </div>
       </DialogContent>
