@@ -11,11 +11,21 @@ class MockEventManager:
     """Mock for lfx.events.event_manager.EventManager."""
     def __init__(self):
         # We'll use AsyncMock for publish
+        """
+        Initialize the mock event manager with an asynchronous `publish` method.
+        
+        Sets `self.publish` to an AsyncMock so tests can await and assert calls to the publish coroutine.
+        """
         self.publish = AsyncMock()
 
 class MockLogger:
     """Mock for lfx.log.logger.logger."""
     def __init__(self):
+        """
+        Create a mock logger exposing awaitable `awarning` and `aerror` callables.
+        
+        The constructor initializes `awarning` and `aerror` as AsyncMock instances that can be awaited like asynchronous warning and error logging methods.
+        """
         self.awarning = AsyncMock()
         self.aerror = AsyncMock()
 
@@ -23,7 +33,15 @@ class MockLogger:
 
 @pytest.fixture
 def mock_dependencies():
-    """Provides mocked instances of external dependencies and patches them."""
+    """
+    Create and patch mocked external dependencies for tests.
+    
+    Yields:
+        dict: A mapping with keys:
+            - "event_manager": MockEventManager instance used to simulate event publishing.
+            - "logger": MockLogger instance with async warning/error helpers.
+            - "encoder_cls": A mock EventEncoder class whose instances provide an `encode` method that returns a dict with `encoded` and `original_event` keys.
+    """
     
     # 1. Logger Mock
     mock_logger_instance = MockLogger()
@@ -50,7 +68,16 @@ def mock_dependencies():
 
 @pytest.fixture(autouse=True)
 def reset_mocks(mock_dependencies):
-    """Resets the state of the mocks before each test."""
+    """
+    Reset mock objects used by tests to a clean state.
+    
+    Parameters:
+        mock_dependencies (dict): Mapping of mocked test dependencies created by the fixture.
+            Expected keys:
+            - "logger": object with `awarning` and `aerror` AsyncMock attributes.
+            - "encoder_cls": mock class whose instantiation should be reset.
+            - "event_manager": object with `publish` AsyncMock attribute.
+    """
     # Ensure all mocks are reset before test execution
     mock_dependencies["logger"].awarning.reset_mock()
     mock_dependencies["logger"].aerror.reset_mock()
@@ -64,22 +91,79 @@ class TestClassWithCallbacks:
     display_name = "ObservableTest"
     
     def before_callback_event(self, *args, **kwargs):
+        """
+        Construct the payload for a 'start' lifecycle observable event.
+        
+        Parameters:
+            *args: Positional arguments passed to the observed method; only the count is used.
+            **kwargs: Keyword arguments passed to the observed method; only the set of keys is used.
+        
+        Returns:
+            dict: Payload containing:
+                - `lifecycle` (str): fixed value "start".
+                - `args_len` (int): number of positional arguments.
+                - `kw_keys` (list[str]): list of keyword argument names.
+        """
         return {"lifecycle": "start", "args_len": len(args), "kw_keys": list(kwargs.keys())}
     
     def after_callback_event(self, result: Any, *args, **kwargs):   # noqa: ARG002
+        """
+        Produce an event payload for the post-execution lifecycle including the call result and the names of keyword arguments.
+        
+        Parameters:
+            result: The value returned by the observed function.
+            *args: Positional arguments passed to the observed function (ignored).
+            **kwargs: Keyword arguments passed to the observed function; their keys are captured.
+        
+        Returns:
+            dict: A mapping containing:
+                - `lifecycle`: the string `"end"`.
+                - `result`: the provided `result` value.
+                - `kw_keys`: list of keyword argument names present in `kwargs`.
+        """
         return {"lifecycle": "end", "result": result, "kw_keys": list(kwargs.keys())}
     
     def error_callback_event(self, exception: Exception, *args, **kwargs): # noqa: ARG002
+        """
+        Builds an error lifecycle payload describing an exception.
+        
+        Parameters:
+            exception (Exception): The exception that occurred.
+            *args: Positional arguments passed to the original call (ignored in the payload).
+            **kwargs: Keyword arguments passed to the original call; their keys are included in the payload.
+        
+        Returns:
+            dict: A payload with the following keys:
+                - `lifecycle`: the string "error".
+                - `error`: the exception message (`str(exception)`).
+                - `error_type`: the exception class name.
+                - `kw_keys`: list of keyword argument names present in `kwargs`.
+        """
         return {"lifecycle": "error", "error": str(exception), "error_type": type(exception).__name__, "kw_keys": list(kwargs.keys())}
     
     # Mock observable method
     @observable
     async def run_success(self, event_manager: MockEventManager, data: str) -> str: # noqa: ARG002
+        """
+        Produce a processed string by prefixing the input with "Processed:".
+        
+        Parameters:
+        	data (str): Input payload to be processed.
+        
+        Returns:
+        	processed (str): The resulting string in the form "Processed:<data>".
+        """
         await asyncio.sleep(0.001)
         return f"Processed:{data}"
 
     @observable
     async def run_exception(self, event_manager: MockEventManager, data: str) -> str: # noqa: ARG002
+        """
+        Simulates asynchronous work then raises a ValueError to trigger error handling.
+        
+        Raises:
+            ValueError: Always raised to simulate a failure during execution.
+        """
         await asyncio.sleep(0.001)
         err_msg = 'Simulated failure'
         raise ValueError()
@@ -89,6 +173,15 @@ class TestClassWithoutCallbacks:
     
     @observable
     async def run_success(self, event_manager: MockEventManager, data: str) -> str: # noqa: ARG002
+        """
+        Produce a processed string by prefixing the input with "Processed:".
+        
+        Parameters:
+        	data (str): Input payload to be processed.
+        
+        Returns:
+        	processed (str): The resulting string in the form "Processed:<data>".
+        """
         await asyncio.sleep(0.001)
         return f"Processed:{data}"
 
@@ -97,6 +190,13 @@ class TestClassWithoutCallbacks:
 # Use pytest.mark.asyncio for running async functions
 @pytest.mark.asyncio
 async def test_successful_run_with_callbacks(mock_dependencies):
+    """
+    Verify that when an observable-decorated method with lifecycle callbacks completes successfully, the encoder is invoked for BOTH the BEFORE and AFTER events with correct payloads and no warnings/errors are logged.
+    
+    Parameters:
+        mock_dependencies (dict): Fixture providing mocks: `logger` (with `awarning`/`aerror`), `event_manager`, `encoder_cls` (mocked encoder class whose `return_value` is the encoder instance with an `encode` method).
+    
+    """
     instance = TestClassWithCallbacks()
     data = "test_data"
     
@@ -137,6 +237,20 @@ async def test_successful_run_with_callbacks(mock_dependencies):
 
 @pytest.mark.asyncio
 async def test_exception_run_with_callbacks(mock_dependencies):
+    """
+    Verify that when an observable-wrapped method raises an exception, the decorator logs the error, encodes both the start and error lifecycle events, and re-raises the exception.
+    
+    Asserts:
+    - A ValueError is raised by the wrapped method.
+    - logger.aerror was called once with the message "Exception in TestClassWithCallbacks: ".
+    - The EventEncoder class was instantiated twice and its instance `encode` was called twice.
+    - The first encoded payload has `lifecycle` == 'start'.
+    - The second encoded payload has `lifecycle` == 'error', `error` == '', and `error_type` == 'ValueError'.
+    - No warning logs were emitted via logger.awarning.
+    
+    Parameters:
+        mock_dependencies (dict): Fixture-provided mocks; expected keys include "logger", "event_manager", and "encoder_cls".
+    """
     instance = TestClassWithCallbacks()
     
     event_manager = mock_dependencies["event_manager"]
