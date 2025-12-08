@@ -10,6 +10,8 @@ from langflow.logging.logger import logger
 from langflow.services.storage.service import StorageService
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
     from langflow.services.session.service import SessionService
     from langflow.services.settings.service import SettingsService
 
@@ -55,6 +57,38 @@ class LocalStorageService(StorageService):
     def build_full_path(self, flow_id: str, file_name: str) -> str:
         """Build the full path of a file in the local storage."""
         return str(self.data_dir / flow_id / file_name)
+
+    def parse_file_path(self, full_path: str) -> tuple[str, str]:
+        """Parse a full local storage path to extract flow_id and file_name.
+
+        Args:
+            full_path: Filesystem path, may or may not include data_dir
+                e.g., "/data/user_123/image.png" or "user_123/image.png"
+
+        Returns:
+            tuple[str, str]: A tuple of (flow_id, file_name)
+
+        Examples:
+            >>> parse_file_path("/data/user_123/image.png")  # with data_dir
+            ("user_123", "image.png")
+            >>> parse_file_path("user_123/image.png")  # without data_dir
+            ("user_123", "image.png")
+        """
+        data_dir_str = str(self.data_dir)
+
+        # Remove data_dir if present (but don't require it)
+        path_without_prefix = full_path
+        if full_path.startswith(data_dir_str):
+            path_without_prefix = full_path[len(data_dir_str) :].lstrip("/")
+
+        # Split from the right to get the filename
+        # Everything before the last "/" is the flow_id
+        if "/" not in path_without_prefix:
+            return "", path_without_prefix
+
+        # Use rsplit to split from the right, limiting to 1 split
+        flow_id, file_name = path_without_prefix.rsplit("/", 1)
+        return flow_id, file_name
 
     async def save_file(self, flow_id: str, file_name: str, data: bytes, *, append: bool = False) -> None:
         """Save a file in the local storage.
@@ -109,7 +143,7 @@ class LocalStorageService(StorageService):
         logger.debug(f"File {file_name} retrieved successfully from flow {flow_id}.")
         return content
 
-    async def get_file_stream(self, flow_id: str, file_name: str, chunk_size: int = 8192):
+    async def get_file_stream(self, flow_id: str, file_name: str, chunk_size: int = 8192) -> AsyncIterator[bytes]:
         """Retrieve a file from storage as a stream."""
         file_path = self.data_dir / flow_id / file_name
         if not await file_path.exists():
