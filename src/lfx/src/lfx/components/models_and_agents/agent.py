@@ -438,7 +438,7 @@ class AgentComponent(ToolCallingAgentComponent):
         # Agents require tool calling, so filter for only tool-calling capable models
         def get_tool_calling_model_options(user_id=None):
             return get_language_model_options(user_id=user_id, tool_calling=True)
-        
+
         build_config = update_model_options_in_build_config(
             component=self,
             build_config=dict(build_config),
