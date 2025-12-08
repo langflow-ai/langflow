@@ -1771,6 +1771,7 @@
                 "options": [
                   "Anthropic",
                   "Google Generative AI",
+                  "Helicone",
                   "OpenAI",
                   "IBM watsonx.ai",
                   "Ollama"
@@ -2525,6 +2526,7 @@
                 "options": [
                   "Anthropic",
                   "Google Generative AI",
+                  "Helicone",
                   "OpenAI",
                   "IBM watsonx.ai",
                   "Ollama"
@@ -3279,6 +3281,7 @@
                 "options": [
                   "Anthropic",
                   "Google Generative AI",
+                  "Helicone",
                   "OpenAI",
                   "IBM watsonx.ai",
                   "Ollama"
