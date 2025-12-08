@@ -10,6 +10,8 @@ from langflow.logging.logger import logger
 from langflow.services.storage.service import StorageService
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
     from langflow.services.session.service import SessionService
     from langflow.services.settings.service import SettingsService
 
@@ -109,7 +111,7 @@ class LocalStorageService(StorageService):
         logger.debug(f"File {file_name} retrieved successfully from flow {flow_id}.")
         return content
 
-    async def get_file_stream(self, flow_id: str, file_name: str, chunk_size: int = 8192):
+    async def get_file_stream(self, flow_id: str, file_name: str, chunk_size: int = 8192) -> AsyncIterator[bytes]:
         """Retrieve a file from storage as a stream."""
         file_path = self.data_dir / flow_id / file_name
         if not await file_path.exists():
