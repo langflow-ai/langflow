@@ -27,4 +27,5 @@ def __getattr__(attr_name: str) -> Any:
 def __dir__() -> list[str]:
     """Return the directory of available attributes."""
     from lfx.components import models_and_agents
+
     return dir(models_and_agents)
