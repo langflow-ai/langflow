@@ -40,7 +40,7 @@ class ATModelComponent(LCToolComponent):
             "tolstoy-identification": "https://tolstoy-v2.modelhub.sprint.autonomize.dev/v1/models/identification:predict",
             # Add common SRF model names that might be used
             "clinical-extraction": "https://solution.uat.genesis.autonomize.ai/genesis-platform/modelhub-bff/modelhub/api/v1/client/1/copilot/68db7fb4816140e17622484f/model-card/clinical-llm/infer",
-            "clinical-notes-classifier": "https://solution.uat.genesis.autonomize.ai/genesis-platform/modelhub-bff/modelhub/api/v1/client/1/copilot/68db7fb4816140e17622484f/model-card/clinical-note-classifier/infer",
+            "clinical-notes-classifier": "https://solution.uat.genesis.autonomize.ai/genesis-platform/modelhub-bff/modelhub/api/v1/client/1/copilot/68db7fb4816140e17622484f/model-card/clinical-note-classifier-model/infer",
             "extraction": "https://tolstoy-v2.modelhub.sprint.autonomize.dev/v1/models/extraction:predict",
             "identification": "https://tolstoy-v2.modelhub.sprint.autonomize.dev/v1/models/identification:predict",
             "srf-extraction": "https://tolstoy-v2.modelhub.sprint.autonomize.dev/v1/models/extraction:predict",
