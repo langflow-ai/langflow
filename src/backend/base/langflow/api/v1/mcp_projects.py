@@ -1458,6 +1458,7 @@ async def init_mcp_servers():
                             f"authentication because MCP Composer is disabled"
                         )
 
+                    get_project_sse(project.id)
                     get_project_mcp_server(project.id)
                     await logger.adebug(f"Initialized MCP server for project: {project.name} ({project.id})")
 

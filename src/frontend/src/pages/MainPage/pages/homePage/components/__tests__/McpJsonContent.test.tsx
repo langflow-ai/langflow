@@ -46,45 +46,62 @@ jest.mock("@/components/ui/button", () => ({
 jest.mock("@/components/ui/tabs-button", () => {
   const React = require("react");
 
-  // Store the onValueChange callback for each Tabs instance
-  let currentOnValueChange: ((v: string) => void) | null = null;
+  const cloneChildrenWith = (
+    children: React.ReactNode,
+    extraProps: Record<string, unknown>,
+  ) =>
+    React.Children.map(children, (child) =>
+      React.isValidElement(child)
+        ? React.cloneElement(child, extraProps)
+        : child,
+    );
+
+  const Tabs = ({
+    children,
+    onValueChange,
+  }: {
+    children: React.ReactNode;
+    onValueChange: (v: string) => void;
+  }) => (
+    <div data-testid="tabs">
+      {cloneChildrenWith(children, { __onValueChange: onValueChange })}
+    </div>
+  );
+
+  const TabsList = ({
+    children,
+    __onValueChange,
+  }: {
+    children: React.ReactNode;
+    __onValueChange?: (v: string) => void;
+  }) => <div>{cloneChildrenWith(children, { __onValueChange })}</div>;
+
+  const TabsTrigger = ({
+    children,
+    value,
+    onClick,
+    __onValueChange,
+  }: {
+    children: React.ReactNode;
+    value: string;
+    onClick?: () => void;
+    __onValueChange?: (v: string) => void;
+  }) => (
+    <button
+      data-testid={`tab-${value}`}
+      onClick={() => {
+        onClick?.();
+        __onValueChange?.(value);
+      }}
+    >
+      {children}
+    </button>
+  );
 
   return {
-    Tabs: ({
-      children,
-      onValueChange,
-    }: {
-      children: React.ReactNode;
-      onValueChange: (v: string) => void;
-    }) => {
-      // Store the callback in a closure that TabsTrigger can access
-      currentOnValueChange = onValueChange;
-      return <div data-testid="tabs">{children}</div>;
-    },
-    TabsList: ({ children }: { children: React.ReactNode }) => (
-      <div>{children}</div>
-    ),
-    TabsTrigger: ({
-      children,
-      value,
-      onClick,
-    }: {
-      children: React.ReactNode;
-      value: string;
-      onClick?: () => void;
-    }) => (
-      <button
-        data-testid={`tab-${value}`}
-        onClick={() => {
-          onClick?.();
-          if (currentOnValueChange) {
-            currentOnValueChange(value);
-          }
-        }}
-      >
-        {children}
-      </button>
-    ),
+    Tabs,
+    TabsList,
+    TabsTrigger,
   };
 });
 
@@ -107,6 +124,10 @@ const defaultProps = {
   isGeneratingApiKey: false,
   generateApiKey: jest.fn(),
 };
+
+beforeEach(() => {
+  jest.clearAllMocks();
+});
 
 describe("McpJsonContent", () => {
   it("renders JSON content", () => {
@@ -132,8 +153,7 @@ describe("McpJsonContent", () => {
 
   it("renders with selected platform", () => {
     render(<McpJsonContent {...defaultProps} selectedPlatform="windows" />);
-    // There are multiple tabs elements (platform and transport), so check for both
-    expect(screen.getAllByTestId("tabs")).toHaveLength(2);
+    expect(screen.getByTestId("tabs")).toBeInTheDocument();
   });
 
   it("renders with dark mode", () => {
@@ -161,6 +181,18 @@ describe("McpJsonContent", () => {
     const icon = screen.getByTestId("icon-check");
     expect(icon).toBeInTheDocument();
     expect(icon).toHaveTextContent("Check");
+  });
+
+  it("invokes setSelectedPlatform when platform tab clicked", () => {
+    const setSelectedPlatform = jest.fn();
+    render(
+      <McpJsonContent
+        {...defaultProps}
+        setSelectedPlatform={setSelectedPlatform}
+      />,
+    );
+    fireEvent.click(screen.getByTestId("tab-windows"));
+    expect(setSelectedPlatform).toHaveBeenCalledWith("windows");
   });
 
   it("invokes setSelectedTransport when transport tab clicked", () => {

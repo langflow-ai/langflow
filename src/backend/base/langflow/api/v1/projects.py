@@ -23,6 +23,7 @@ from langflow.api.utils.mcp.config_utils import validate_mcp_server_for_project
 from langflow.api.v1.auth_helpers import handle_auth_settings_update
 from langflow.api.v1.flows import create_flows
 from langflow.api.v1.mcp_projects import (
+    get_project_sse_url,  # noqa: F401
     get_project_streamable_http_url,
     register_project_with_composer,
 )
