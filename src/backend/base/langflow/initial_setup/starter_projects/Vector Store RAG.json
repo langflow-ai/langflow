@@ -935,7 +935,6 @@
           "type": "SplitText"
         },
         "dragging": false,
-        "height": 475,
         "id": "SplitText-4s7Dt",
         "measured": {
           "height": 475,
@@ -2346,7 +2345,6 @@
           "type": "OpenAIEmbeddings"
         },
         "dragging": false,
-        "height": 320,
         "id": "OpenAIEmbeddings-U8tZg",
         "measured": {
           "height": 320,
