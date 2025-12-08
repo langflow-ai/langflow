@@ -29,7 +29,8 @@ class FileHashGeneratorComponent(Component):
         MultilineInput(
             name="file_data",
             display_name="File Path",
-            info="File path or URL to be hashed.",    
+            info="File path or URL to be hashed.",
+            tool_mode=True,
         ),
         DropdownInput(
             name="hash_mode",
@@ -51,35 +52,35 @@ class FileHashGeneratorComponent(Component):
 
     def _is_url(self, path: str) -> bool:
         """Check if path is a URL."""
-        return path.startswith(('http://', 'https://'))
+        return path.startswith(("http://", "https://"))
 
     def _get_filename_from_url(self, url: str) -> str:
         """Extract filename from URL."""
         parsed = urlparse(url)
         path = parsed.path
-        
+
         # Get the last part of the path
-        filename = path.split('/')[-1]
-        
+        filename = path.split("/")[-1]
+
         # Remove query parameters from filename if present
-        if '?' in filename:
-            filename = filename.split('?')[0]
-        
+        if "?" in filename:
+            filename = filename.split("?")[0]
+
         # If no valid filename, create one from URL hash
-        if not filename or '.' not in filename:
+        if not filename or "." not in filename:
             url_hash = hashlib.md5(url.encode()).hexdigest()[:8]
             filename = f"file_{url_hash}"
-        
+
         return filename
 
     def hash_url_string(self, url: str) -> str:
         """
         Generate MD5 hash of URL string (not content).
         Fast method for URL-based deduplication.
-        
+
         Args:
             url: The URL string to hash
-            
+
         Returns:
             MD5 hash as hex string
         """
@@ -90,13 +91,13 @@ class FileHashGeneratorComponent(Component):
         Generate MD5 hash of file content.
         For URLs: downloads temporarily and hashes content.
         For local files: hashes content directly.
-        
+
         Args:
             file_path: Path to file or URL
-            
+
         Returns:
             MD5 hash as hex string
-            
+
         Raises:
             FileNotFoundError: If local file doesn't exist
             requests.RequestException: If URL download fails
@@ -111,44 +112,44 @@ class FileHashGeneratorComponent(Component):
     def _hash_local_file(self, file_path: str) -> str:
         """Hash local file content."""
         path_obj = Path(file_path)
-        
+
         if not path_obj.exists():
             raise FileNotFoundError(f"File not found: {file_path}")
-        
+
         if not path_obj.is_file():
             raise ValueError(f"Not a file: {file_path}")
-        
+
         md5_hash = hashlib.md5()
-        
-        with open(path_obj, 'rb') as f:
-            for chunk in iter(lambda: f.read(8192), b''):
+
+        with open(path_obj, "rb") as f:
+            for chunk in iter(lambda: f.read(8192), b""):
                 md5_hash.update(chunk)
-        
+
         return md5_hash.hexdigest()
 
     def _hash_url_content(self, url: str) -> str:
         """Download URL content and hash it."""
         md5_hash = hashlib.md5()
-        
+
         logger.info(f"Downloading file from URL to generate content hash...")
-        
+
         # Stream download to avoid loading entire file into memory
         with requests.get(url, stream=True, timeout=30) as response:
             response.raise_for_status()
-            
+
             for chunk in response.iter_content(chunk_size=8192):
                 if chunk:
                     md5_hash.update(chunk)
-        
+
         return md5_hash.hexdigest()
 
     def generate_hash(self) -> Data:
         """
         Generate MD5 hash for the provided file path/URL.
-        
+
         Returns:
             Data object containing hash information
-            
+
         Raises:
             ValueError: If no valid file path is provided
         """
@@ -163,7 +164,7 @@ class FileHashGeneratorComponent(Component):
 
         try:
             is_url = self._is_url(file_path)
-            
+
             # Generate hash based on mode
             if self.hash_mode == "url" and is_url:
                 # Fast mode: hash URL string only
@@ -173,7 +174,7 @@ class FileHashGeneratorComponent(Component):
                 # Content mode: hash actual file content
                 file_hash = self.hash_file_content(file_path)
                 hash_type = "file_content"
-            
+
             # Extract filename
             if is_url:
                 file_name = self._get_filename_from_url(file_path)
@@ -181,53 +182,61 @@ class FileHashGeneratorComponent(Component):
             else:
                 file_name = Path(file_path).name
                 source_type = "local"
-            
+
             result = {
-                'file_path': file_path,
-                'file_name': file_name,
-                'hash': file_hash,
-                'hash_type': hash_type,
-                'source_type': source_type,
-                'status': 'success'
+                "file_path": file_path,
+                "file_name": file_name,
+                "hash": file_hash,
+                "hash_type": hash_type,
+                "source_type": source_type,
+                "status": "success",
             }
-            
+
             logger.info(f"Generated {hash_type} hash for {file_name}: {file_hash}")
             self.status = f"Hash generated: {file_hash[:16]}..."
-            
+
             return Data(data=result)
-            
+
         except FileNotFoundError as e:
             logger.error(f"File not found: {file_path}")
             error_result = {
-                'file_path': file_path,
-                'file_name': self._get_filename_from_url(file_path) if self._is_url(file_path) else Path(file_path).name,
-                'hash': None,
-                'status': 'error',
-                'error': f"File not found: {e}"
+                "file_path": file_path,
+                "file_name": (
+                    self._get_filename_from_url(file_path)
+                    if self._is_url(file_path)
+                    else Path(file_path).name
+                ),
+                "hash": None,
+                "status": "error",
+                "error": f"File not found: {e}",
             }
             self.status = "Error: File not found"
             return Data(data=error_result)
-            
+
         except requests.RequestException as e:
             logger.error(f"Error downloading URL {file_path}: {e}")
             error_result = {
-                'file_path': file_path,
-                'file_name': self._get_filename_from_url(file_path),
-                'hash': None,
-                'status': 'error',
-                'error': f"Download failed: {e}"
+                "file_path": file_path,
+                "file_name": self._get_filename_from_url(file_path),
+                "hash": None,
+                "status": "error",
+                "error": f"Download failed: {e}",
             }
             self.status = "Error: Download failed"
             return Data(data=error_result)
-            
+
         except Exception as e:
             logger.error(f"Error processing {file_path}: {e}")
             error_result = {
-                'file_path': file_path,
-                'file_name': self._get_filename_from_url(file_path) if self._is_url(file_path) else Path(file_path).name,
-                'hash': None,
-                'status': 'error',
-                'error': str(e)
+                "file_path": file_path,
+                "file_name": (
+                    self._get_filename_from_url(file_path)
+                    if self._is_url(file_path)
+                    else Path(file_path).name
+                ),
+                "hash": None,
+                "status": "error",
+                "error": str(e),
             }
             self.status = f"Error: {str(e)}"
             return Data(data=error_result)
