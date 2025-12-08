@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from functools import lru_cache
 from typing import TYPE_CHECKING
 
 from langflow.services.schema import ServiceType
@@ -42,16 +43,19 @@ def get_service(service_type: ServiceType, default=None):
         Any: The service instance.
 
     """
-    from lfx.services.manager import get_service_manager
+    service_manager = _get_service_manager()
 
-    service_manager = get_service_manager()
-
-    if not service_manager.are_factories_registered():
+    if not _is_factory_registered():
+        # ! This is a workaround to ensure that the service manager is initialized
+        # ! Not optimal, but it works for now
         # ! This is a workaround to ensure that the service manager is initialized
         # ! Not optimal, but it works for now
         from langflow.services.manager import ServiceManager
 
-        service_manager.register_factories(ServiceManager.get_factories())
+        factories = ServiceManager.get_factories()
+        service_manager.register_factories(factories)
+        # Invalidate cache so that are_factories_registered() is updated
+        _is_factory_registered.cache_clear()
     return service_manager.get(service_type, default)
 
 
@@ -182,9 +186,7 @@ def get_cache_service() -> CacheService | AsyncBaseCacheService:
     Returns:
         The cache service instance.
     """
-    from langflow.services.cache.factory import CacheServiceFactory
-
-    return get_service(ServiceType.CACHE_SERVICE, CacheServiceFactory())
+    return get_service(ServiceType.CACHE_SERVICE, _get_cache_service_factory())
 
 
 def get_shared_component_cache_service() -> CacheService:
@@ -244,3 +246,23 @@ def get_queue_service() -> JobQueueService:
     from langflow.services.job_queue.factory import JobQueueServiceFactory
 
     return get_service(ServiceType.JOB_QUEUE_SERVICE, JobQueueServiceFactory())
+
+
+@lru_cache(maxsize=1)
+def _get_service_manager():
+    from lfx.services.manager import get_service_manager
+
+    return get_service_manager()
+
+
+@lru_cache(maxsize=1)
+def _is_factory_registered():
+    service_manager = _get_service_manager()
+    return service_manager.are_factories_registered()
+
+
+@lru_cache(maxsize=1)
+def _get_cache_service_factory():
+    from langflow.services.cache.factory import CacheServiceFactory
+
+    return CacheServiceFactory()
