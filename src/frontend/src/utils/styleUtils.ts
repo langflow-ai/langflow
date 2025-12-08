@@ -277,6 +277,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Gmail", name: "gmail", icon: "Gmail" },
   { display_name: "Google", name: "google", icon: "Google" },
   { display_name: "Groq", name: "groq", icon: "Groq" },
+  { display_name: "Helicone", name: "helicone", icon: "Helicone" },
   {
     display_name: "Home Assistant",
     name: "homeassistant",
