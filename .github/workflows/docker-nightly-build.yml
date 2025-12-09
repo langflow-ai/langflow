@@ -26,6 +26,7 @@ on:
         type: choice
         options:
           - nightly-main
+          - nightly-main-ep
           - nightly-base
           - nightly-main-all
       ref:
@@ -54,7 +55,6 @@ jobs:
             runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
     runs-on: ${{ matrix.runner }}
     steps:
-
       - name: Check out the code
         uses: actions/checkout@v6
         with:
@@ -148,7 +148,6 @@ jobs:
             runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
     runs-on: ${{ matrix.runner }}
     steps:
-
       - name: Check out the code
         uses: actions/checkout@v6
         with:
@@ -229,6 +228,98 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  build-nightly-ep:
+    name: Build Nightly Main EP Package
+    if: ${{ inputs.release_type == 'nightly-main-ep' }}
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: [Langflow-runner]
+          - arch: arm64
+            runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Setup Environment
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.13"
+          prune-cache: false
+
+      - name: Get version for tagging
+        id: version
+        run: |
+          echo "Extracting main version from pyproject.toml"
+          version=$(uv tree 2>/dev/null | grep '^langflow' | grep -v '^langflow-base' | cut -d' ' -f2 | sed 's/^v//')
+
+          # Verify nightly tag format
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.dev[0-9]+$ ]]; then
+            echo "Main version format is incorrect. Must be in the format (e.g.) v1.5.1.dev36"
+            exit 1
+          fi
+
+          echo "Using version: $version"
+          echo version=$version >> $GITHUB_OUTPUT
+
+      - name: Set nightly tags
+        id: tags
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          echo "docker_tags=langflowai/langflow-nightly-ep:${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
+          echo "ghcr_tags=ghcr.io/langflow-ai/langflow-nightly-ep:${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
+
+      - name: Docker cleanup
+        run: |
+          docker system prune -af --volumes || true
+          docker buildx prune -af || true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.TEMP_GHCR_TOKEN}}
+
+      - name: Build and push to Docker Hub
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: ${{ inputs.push_to_registry }}
+          file: ./docker/build_and_push_ep.Dockerfile
+          tags: ${{ steps.tags.outputs.docker_tags }}
+          platforms: linux/${{ matrix.arch }}
+          provenance: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push to GitHub Container Registry
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: ${{ inputs.push_to_registry }}
+          file: ./docker/build_and_push_ep.Dockerfile
+          tags: ${{ steps.tags.outputs.ghcr_tags }}
+          platforms: linux/${{ matrix.arch }}
+          provenance: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
   build-nightly-main-all:
     name: Build Nightly Main All Package
     if: ${{ inputs.release_type == 'nightly-main-all' }}
@@ -241,7 +332,6 @@ jobs:
             runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
     runs-on: ${{ matrix.runner }}
     steps:
-
       - name: Check out the code
         uses: actions/checkout@v6
         with:
