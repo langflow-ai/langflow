@@ -398,9 +398,9 @@ jobs:
     name: Call Docker Build Workflow for Langflow with Entrypoint
     if: ${{ always() && inputs.build_docker_ep }}
     needs: [build-nightly-main, call_docker_build_main]
-    uses: ./.github/workflows/docker-nightly-build.yml
+    uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.nightly_tag_main }}
-      release_type: nightly-main-ep
+      release_type: main-ep
       push_to_registry: ${{ inputs.push_to_registry }}
     secrets: inherit
