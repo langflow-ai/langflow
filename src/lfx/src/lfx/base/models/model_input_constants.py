@@ -263,6 +263,21 @@ except ImportError:
     pass
 
 try:
+    from lfx.components.BurnCloud.burncloud import BurnCloudModel
+
+    burncloud_inputs = get_filtered_inputs(BurnCloudModel)
+    MODEL_PROVIDERS_DICT["BurnCloud"] = {
+        "fields": create_input_fields_dict(burncloud_inputs, ""),
+        "inputs": burncloud_inputs,
+        "prefix": "",
+        "component_class": BurnCloudModel(),
+        "icon": BurnCloudModel.icon,
+        "is_active": True,
+    }
+except ImportError:
+    pass
+
+try:
     from lfx.components.nvidia.nvidia import NVIDIAModelComponent
 
     nvidia_inputs, nvidia_fields = _get_nvidia_inputs_and_fields()
@@ -373,6 +388,13 @@ MODEL_DYNAMIC_UPDATE_FIELDS = [
 
 MODELS_METADATA = {name: {"icon": prov["icon"]} for name, prov in ACTIVE_MODEL_PROVIDERS_DICT.items()}
 
-MODEL_PROVIDERS_LIST = ["Anthropic", "Google Generative AI", "OpenAI", "IBM watsonx.ai", "Ollama"]
+MODEL_PROVIDERS_LIST = [
+    "Anthropic",
+    "BurnCloud",
+    "Google Generative AI",
+    "OpenAI",
+    "IBM watsonx.ai",
+    "Ollama",
+]
 
 MODEL_OPTIONS_METADATA = [MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST if key in MODELS_METADATA]

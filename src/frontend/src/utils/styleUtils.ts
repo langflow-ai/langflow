@@ -252,6 +252,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Azure", name: "azure", icon: "Azure" },
   { display_name: "Baidu", name: "baidu", icon: "BaiduQianfan" },
   { display_name: "Bing", name: "bing", icon: "Bing" },
+  { display_name: "BurnCloud", name: "BurnCloud", icon: "BurnCloud" },
   { display_name: "Cassandra", name: "cassandra", icon: "Cassandra" },
   { display_name: "Chroma", name: "chroma", icon: "Chroma" },
   { display_name: "ClickHouse", name: "clickhouse", icon: "Clickhouse" },
