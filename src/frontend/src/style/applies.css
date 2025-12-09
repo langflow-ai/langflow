@@ -1287,6 +1287,13 @@
   }
 }
 
+@layer components {
+  /* text-sm--medium */
+  .text-sm--medium {
+    @apply font-sans not-italic text-[13px] font-medium leading-4;
+  }
+}
+
 /* Gradient background */
 .text-container {
   width: 100%;

@@ -13,6 +13,8 @@ class ModelMetadata(TypedDict, total=False):
     preview: bool  # Whether model is in preview/beta (defaults to False)
     not_supported: bool  # Whether model is not supported or deprecated (defaults to False)
     deprecated: bool  # Whether model is deprecated (defaults to False)
+    default: bool  # Whether model is a default/recommended option (defaults to False)
+    model_type: str  # Type of model (defaults to "llm" or "embeddings")
 
 
 def create_model_metadata(
@@ -26,6 +28,8 @@ def create_model_metadata(
     preview: bool = False,
     not_supported: bool = False,
     deprecated: bool = False,
+    default: bool = False,
+    model_type: str = "llm",
 ) -> ModelMetadata:
     """Helper function to create ModelMetadata with explicit defaults."""
     return ModelMetadata(
@@ -38,4 +42,6 @@ def create_model_metadata(
         preview=preview,
         not_supported=not_supported,
         deprecated=deprecated,
+        default=default,
+        model_type=model_type,
     )

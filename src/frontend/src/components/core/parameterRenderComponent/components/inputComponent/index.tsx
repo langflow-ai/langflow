@@ -43,7 +43,6 @@ export default function InputComponent({
   commandWidth,
   blockAddNewGlobalVariable = false,
   hasRefreshButton = false,
-  allowCustomValue = true,
 }: InputComponentType): JSX.Element {
   const [pwdVisible, setPwdVisible] = useState(false);
   const [cursor, setCursor] = useState<number | null>(null);
@@ -167,7 +166,6 @@ export default function InputComponent({
               commandWidth={commandWidth}
               blockAddNewGlobalVariable={blockAddNewGlobalVariable}
               hasRefreshButton={hasRefreshButton}
-              allowCustomValue={allowCustomValue}
             />
           )}
         </>

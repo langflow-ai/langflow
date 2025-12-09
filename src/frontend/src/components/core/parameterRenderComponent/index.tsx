@@ -1,5 +1,6 @@
 import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import CodeAreaComponent from "@/components/core/parameterRenderComponent/components/codeAreaComponent";
+import ModelInputComponent from "@/components/core/parameterRenderComponent/components/modelInputComponent";
 import SliderComponent from "@/components/core/parameterRenderComponent/components/sliderComponent";
 import TableNodeComponent from "@/components/core/parameterRenderComponent/components/TableNodeComponent";
 import TabComponent from "@/components/core/parameterRenderComponent/components/tabComponent";
@@ -53,6 +54,7 @@ export function ParameterRenderComponent({
   isToolMode?: boolean;
   nodeInformationMetadata?: NodeInfoType;
 }) {
+  // no-op
   const id = (
     templateData.type +
     "_" +
@@ -72,7 +74,7 @@ export function ParameterRenderComponent({
       nodeId,
       helperText: templateData?.helper_text,
       readonly: templateData.readonly,
-      placeholder,
+      placeholder: placeholder || templateData?.placeholder,
       isToolMode,
       nodeInformationMetadata,
       hasRefreshButton: templateData.refresh_button,
@@ -289,6 +291,15 @@ export function ParameterRenderComponent({
             editNode={editNode}
             disabled={disabled}
             value={templateValue}
+          />
+        );
+      case "model":
+        return (
+          <ModelInputComponent
+            {...baseInputProps}
+            options={templateData?.options || []}
+            placeholder={templateData?.placeholder}
+            externalOptions={templateData?.external_options}
           />
         );
       default:

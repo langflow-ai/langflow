@@ -364,9 +364,7 @@ class TestPortChangeHandling:
         kwargs = mock_start.call_args.kwargs
         assert kwargs["legacy_sse_url"] == legacy_url
         assert mcp_service.project_composers[project_id]["legacy_sse_url"] == legacy_url
-        assert (
-            mcp_service.project_composers[project_id]["streamable_http_url"] == streamable_url
-        )
+        assert mcp_service.project_composers[project_id]["streamable_http_url"] == streamable_url
 
     @pytest.mark.asyncio
     async def test_legacy_sse_url_defaults_when_not_provided(self, mcp_service):
