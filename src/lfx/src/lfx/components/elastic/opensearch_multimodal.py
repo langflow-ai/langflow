@@ -7,16 +7,25 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
-from lfx.inputs.inputs import DataInput, DictInput
 from opensearchpy import OpenSearch, helpers
 from opensearchpy.exceptions import OpenSearchException, RequestError
 
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.base.vectorstores.vector_store_connection_decorator import vector_store_connection
-from lfx.io import BoolInput, DropdownInput, HandleInput, IntInput, MultilineInput, SecretStrInput, StrInput, TableInput
+from lfx.inputs.inputs import DictInput
+from lfx.io import (
+    BoolInput,
+    DropdownInput,
+    HandleInput,
+    IntInput,
+    MultilineInput,
+    Output,
+    SecretStrInput,
+    StrInput,
+    TableInput,
+)
 from lfx.log import logger
 from lfx.schema.data import Data
-from lfx.io import HandleInput, Output, QueryInput
 
 
 def normalize_model_name(model_name: str) -> str:
@@ -327,7 +336,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
                 "Disable for self-signed certificates in development environments."
             ),
         ),
-        DictInput(name="query", display_name="Query", input_types=["Data"], is_list=False,tool_mode=True),
+        DictInput(name="query", display_name="Query", input_types=["Data"], is_list=False, tool_mode=True),
     ]
     outputs = [
         Output(
