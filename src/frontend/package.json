@@ -131,7 +131,7 @@
     "@storybook/addon-links": "^10.1.0",
     "@storybook/react": "^10.1.0",
     "@storybook/react-vite": "^10.1.0",
-    "@modelcontextprotocol/server-everything": "^0.6.2",
+    "@modelcontextprotocol/server-everything": "^2025.11.25",
     "@playwright/test": "^1.56.0",
     "@swc/cli": "^0.5.2",
     "@swc/core": "^1.6.1",
