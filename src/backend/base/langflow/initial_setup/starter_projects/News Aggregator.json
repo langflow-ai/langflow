@@ -1974,7 +1974,7 @@
                   },
                   {
                     "name": "google",
-                    "version": "0.8.5"
+                    "version": "1.52.0"
                   },
                   {
                     "name": "googleapiclient",
