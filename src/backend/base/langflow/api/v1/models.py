@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+from functools import lru_cache
 from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query
@@ -41,12 +42,7 @@ def get_provider_from_variable_name(variable_name: str) -> str | None:
     Returns:
         The provider name (e.g., "OpenAI") or None if not a model provider variable
     """
-    provider_mapping = get_model_provider_variable_mapping()
-    # Reverse the mapping to get provider from variable name
-    for provider, var_name in provider_mapping.items():
-        if var_name == variable_name:
-            return provider
-    return None
+    return _reverse_provider_mapping().get(variable_name)
 
 
 def get_model_names_for_provider(provider: str) -> set[str]:
@@ -754,3 +750,8 @@ async def clear_default_model(
         ) from e
 
     return {"default_model": None}
+
+
+@lru_cache(maxsize=1)
+def _reverse_provider_mapping() -> dict[str, str]:
+    return {var_name: provider for provider, var_name in get_model_provider_variable_mapping().items()}
