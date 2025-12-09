@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { ChatHeader } from "@/components/core/playgroundComponent/chat-view/chat-header";
 import { ChatSidebar } from "@/components/core/playgroundComponent/chat-view/chat-header/components/chat-sidebar";
 import { useSessionManagement } from "@/components/core/playgroundComponent/chat-view/hooks/use-session-management";
-import { AnimatedConditional } from "@/components/ui/animated-close";
 import { useSlidingContainerStore } from "../stores/sliding-container-store";
 
 export function FlowPageSlidingContainerContent() {
@@ -58,11 +57,8 @@ export function FlowPageSlidingContainerContent() {
         onDeleteSession={handleDeleteSession}
         onClose={handleClose}
       />
-      <AnimatedConditional
-        className="absolute left-0 top-0 z-50 h-full flex shrink-0"
-        isOpen={isFullscreen && sidebarOpen}
-      >
-        <div className="w-1/5 max-w-[280px] min-w-[250px] border-r border-border bg-background overflow-y-auto">
+      {isFullscreen && sidebarOpen && (
+        <div className="absolute left-0 top-0 z-50 h-full w-1/5 max-w-[280px] border-r border-border bg-background overflow-y-auto">
           <div className="p-4 pt-[15px]">
             <ChatSidebar
               onNewChat={handleNewChat}
@@ -72,7 +68,7 @@ export function FlowPageSlidingContainerContent() {
             />
           </div>
         </div>
-      </AnimatedConditional>
+      )}
       <div
         className="flex-1 overflow-auto p-6"
         style={
