@@ -215,7 +215,7 @@ async def stop_streamable_http_manager() -> None:
     await _streamable_http.stop()
 
 
-streamable_http_route_config = { # use for all streamable http routes (except for the health check)
+streamable_http_route_config = {  # use for all streamable http routes (except for the health check)
     "methods": ["GET", "POST", "DELETE"],
     "response_class": ResponseNoOp,
 }

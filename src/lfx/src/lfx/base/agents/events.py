@@ -189,6 +189,8 @@ async def handle_on_tool_start(
     tool_blocks_map: dict[str, ToolContent],
     send_message_callback: SendMessageFunctionType,
     start_time: float,
+    *,
+    stream_tool_updates: bool = False,
 ) -> tuple[Message, float]:
     tool_name = event["name"]
     tool_input = event["data"].get("input")
@@ -217,7 +219,7 @@ async def handle_on_tool_start(
     tool_blocks_map[tool_key] = tool_content
     agent_message.content_blocks[0].contents.append(tool_content)
 
-    agent_message = await send_message_callback(message=agent_message, skip_db_update=True)
+    agent_message = await send_message_callback(message=agent_message, skip_db_update=not stream_tool_updates)
     if agent_message.content_blocks and agent_message.content_blocks[0].contents:
         tool_blocks_map[tool_key] = agent_message.content_blocks[0].contents[-1]
     return agent_message, new_start_time
@@ -229,6 +231,8 @@ async def handle_on_tool_end(
     tool_blocks_map: dict[str, ToolContent],
     send_message_callback: SendMessageFunctionType,
     start_time: float,
+    *,
+    stream_tool_updates: bool = False,
 ) -> tuple[Message, float]:
     run_id = event.get("run_id", "")
     tool_name = event.get("name", "")
@@ -237,7 +241,7 @@ async def handle_on_tool_end(
 
     if tool_content and isinstance(tool_content, ToolContent):
         # Call send_message_callback first to get the updated message structure
-        agent_message = await send_message_callback(message=agent_message, skip_db_update=True)
+        agent_message = await send_message_callback(message=agent_message, skip_db_update=not stream_tool_updates)
         new_start_time = perf_counter()
 
         # Now find and update the tool content in the current message
@@ -275,6 +279,8 @@ async def handle_on_tool_error(
     tool_blocks_map: dict[str, ToolContent],
     send_message_callback: SendMessageFunctionType,
     start_time: float,
+    *,
+    stream_tool_updates: bool = False,
 ) -> tuple[Message, float]:
     run_id = event.get("run_id", "")
     tool_name = event.get("name", "")
@@ -285,7 +291,7 @@ async def handle_on_tool_error(
         tool_content.error = event["data"].get("error", "Unknown error")
         tool_content.duration = _calculate_duration(start_time)
         tool_content.header = {"title": f"Error using **{tool_content.name}**", "icon": "Hammer"}
-        agent_message = await send_message_callback(message=agent_message, skip_db_update=True)
+        agent_message = await send_message_callback(message=agent_message, skip_db_update=not stream_tool_updates)
         start_time = perf_counter()
     return agent_message, start_time
 
@@ -335,9 +341,11 @@ class ToolEventHandler(Protocol):
         self,
         event: dict[str, Any],
         agent_message: Message,
-        tool_blocks_map: dict[str, ContentBlock],
+        tool_blocks_map: dict[str, ToolContent],
         send_message_callback: SendMessageFunctionType,
         start_time: float,
+        *,
+        stream_tool_updates: bool = False,
     ) -> tuple[Message, float]: ...
 
 
@@ -377,8 +385,19 @@ async def process_agent_events(
     agent_message: Message,
     send_message_callback: SendMessageFunctionType,
     send_token_callback: OnTokenFunctionType | None = None,
+    *,
+    stream_tool_updates: bool = False,
 ) -> Message:
-    """Process agent events and return the final output."""
+    """Process agent events and return the final output.
+
+    Args:
+        agent_executor: The async iterator of agent events
+        agent_message: The message to update with agent output
+        send_message_callback: Callback to send message updates
+        send_token_callback: Optional callback for streaming tokens
+        stream_tool_updates: If True, tool updates are sent immediately (more DB writes).
+                           If False (default), tool updates are batched until completion (fewer DB writes).
+    """
     if isinstance(agent_message.properties, dict):
         agent_message.properties.update({"icon": "Bot", "state": "partial"})
     else:
@@ -398,9 +417,14 @@ async def process_agent_events(
         async for event in agent_executor:
             if event["event"] in TOOL_EVENT_HANDLERS:
                 tool_handler = TOOL_EVENT_HANDLERS[event["event"]]
-                # Use skip_db_update=True during streaming to avoid DB round-trips
+                # Control DB updates based on stream_tool_updates setting
                 agent_message, start_time = await tool_handler(
-                    event, agent_message, tool_blocks_map, send_message_callback, start_time
+                    event,
+                    agent_message,
+                    tool_blocks_map,
+                    send_message_callback,
+                    start_time,
+                    stream_tool_updates=stream_tool_updates,
                 )
             elif event["event"] in CHAIN_EVENT_HANDLERS:
                 chain_handler = CHAIN_EVENT_HANDLERS[event["event"]]
