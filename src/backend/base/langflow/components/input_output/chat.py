@@ -24,6 +24,11 @@ class ChatInput(ChatComponent):
     name = "ChatInput"
     minimized = True
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # Initialize _artifacts attribute to fix the missing get_artifacts method issue
+        self._artifacts = {}
+
     inputs = [
         MultilineInput(
             name="input_value",
@@ -73,6 +78,10 @@ class ChatInput(ChatComponent):
     outputs = [
         Output(display_name="Chat Message", name="message", method="message_response"),
     ]
+
+    def get_artifacts(self) -> dict:
+        """Return artifacts dictionary for framework compatibility."""
+        return getattr(self, "_artifacts", {})
 
     async def message_response(self) -> Message:
         # Ensure files is a list and filter out empty/None values
