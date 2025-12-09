@@ -266,6 +266,24 @@ make test
 make format
 ```
 
+## Docker Images
+
+The LFX Dockerfile supports toggling Docling and OCR-heavy dependencies. Pass the `INCLUDE_DOCLING` build argument to keep or remove them:
+
+```bash
+# Build a lean image without Docling
+docker build -f src/lfx/docker/Dockerfile \
+  --build-arg INCLUDE_DOCLING=false \
+  -t lfx-nodoc .
+
+# Build with full Docling support (default)
+docker build -f src/lfx/docker/Dockerfile \
+  --build-arg INCLUDE_DOCLING=true \
+  -t lfx-docling .
+```
+
+When Docling is excluded the advanced parsing components remain available but will raise helpful errors if used, keeping the image small for lightweight deployments.
+
 ## License
 
 MIT License. See [LICENSE](../../LICENSE) for details.
