@@ -7,12 +7,12 @@ which is responsible for processing and managing parameters in vertices.
 from unittest.mock import Mock
 
 import pytest
+from ag_ui.core import StepFinishedEvent, StepStartedEvent
+from lfx.components.input_output import ChatInput
 from lfx.graph.edge.base import Edge
 from lfx.graph.vertex.base import ParameterHandler, Vertex
 from lfx.services.storage.service import StorageService
 from lfx.utils.util import unescape_string
-from ag_ui.core import StepStartedEvent, StepFinishedEvent
-from lfx.components.input_output import ChatInput
 
 
 @pytest.fixture
@@ -368,7 +368,6 @@ def test_vertex_raw_event_metrics():
     # Assert custom field is present
     assert "custom_field" in metrics
     assert metrics["custom_field"] == "custom_value"
-
 
 
 def test_vertex_raw_event_metrics_no_optional_fields():
