@@ -7,6 +7,7 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
+from lfx.inputs.inputs import DataInput, DictInput
 from opensearchpy import OpenSearch, helpers
 from opensearchpy.exceptions import OpenSearchException, RequestError
 
@@ -15,6 +16,7 @@ from lfx.base.vectorstores.vector_store_connection_decorator import vector_store
 from lfx.io import BoolInput, DropdownInput, HandleInput, IntInput, MultilineInput, SecretStrInput, StrInput, TableInput
 from lfx.log import logger
 from lfx.schema.data import Data
+from lfx.io import HandleInput, Output, QueryInput
 
 
 def normalize_model_name(model_name: str) -> str:
@@ -325,7 +327,42 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
                 "Disable for self-signed certificates in development environments."
             ),
         ),
+        DictInput(name="query", display_name="Query", input_types=["Data"], is_list=False,tool_mode=True),
     ]
+    outputs = [
+        Output(
+            display_name="Search Results",
+            name="search_results",
+            method="search_documents",
+        ),
+        Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
+        Output(display_name="Raw Search", name="raw_search", method="raw_search"),
+    ]
+
+    def raw_search(self, query: dict[str, Any]) -> Data:
+        """Execute a raw OpenSearch query against the target index.
+
+        Args:
+            query (dict[str, Any]): The OpenSearch query DSL dictionary.
+
+        Returns:
+            Data: Search results as a Data object.
+
+        Raises:
+            ValueError: If 'query' is not a valid OpenSearch query (must be a non-empty dict).
+        """
+        if query is None:
+            query = self.query
+        if not isinstance(query, dict) or not query:
+            msg = "Query must be a non-empty dictionary representing an OpenSearch query (DSL)."
+            raise ValueError(msg)
+        client = self.build_client()
+        resp = client.search(
+            index=self.index_name,
+            body=query,
+            params={"terminate_after": 0},
+        )
+        return Data(**resp)
 
     def _get_embedding_model_name(self, embedding_obj=None) -> str:
         """Get the embedding model name from component config or embedding object.
