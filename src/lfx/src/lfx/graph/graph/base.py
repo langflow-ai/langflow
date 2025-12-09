@@ -710,11 +710,18 @@ class Graph:
                 self._is_state_vertices.append(vertex.id)
 
     def _set_inputs(self, input_components: list[str], inputs: dict[str, str], input_type: InputType | None) -> None:
-        """Updates input vertices' parameters with the provided inputs, filtering by component list and input type.
-
-        Only vertices whose IDs or display names match the specified input components and whose IDs contain
-        the input type (unless input type is 'any' or None) are updated. Raises a ValueError if a specified
-        vertex is not found.
+        """
+        Update parameters of input vertices that match the specified components and input type.
+        
+        Only vertices listed in `self._is_input_vertices` are considered. If `input_components` is provided, a vertex is updated only if its id or display_name appears in that list; if `input_components` is empty, all input vertices are considered. If `input_type` is provided and not equal to the string `"any"`, a vertex is updated only if `input_type` appears in the vertex's id (case-insensitive). Updated parameters replace existing values.
+        
+        Parameters:
+            input_components (list[str]): Component ids or display names to restrict which input vertices to update. An empty list means all input vertices.
+            inputs (dict[str, str]): Mapping of input parameter names to values to apply to matching vertices.
+            input_type (InputType | None): Optional type filter; when not `None` and not `"any"`, only vertices whose id contains this type (case-insensitive) are updated.
+        
+        Raises:
+            ValueError: If a vertex id listed in `self._is_input_vertices` cannot be found.
         """
         for vertex_id in self._is_input_vertices:
             vertex = self.get_vertex(vertex_id)
@@ -743,20 +750,17 @@ class Graph:
         fallback_to_env_vars: bool,
         event_manager: EventManager | None = None,
     ) -> list[ResultData | None]:
-        """Runs the graph with the given inputs.
-
-        Args:
-            inputs (Dict[str, str]): The input values for the graph.
-            input_components (list[str]): The components to run for the inputs.
-            input_type: (Optional[InputType]): The input type.
-            outputs (list[str]): The outputs to retrieve from the graph.
-            stream (bool): Whether to stream the results or not.
-            session_id (str): The session ID for the graph.
-            fallback_to_env_vars (bool): Whether to fallback to environment variables.
-            event_manager (EventManager | None): The event manager for the graph.
-
+        """
+        Execute the graph with the provided inputs and collect requested outputs.
+        
+        Runs a single graph execution: applies input values, tags vertices with the session ID, optionally stores the graph in the chat cache, executes the processing pipeline, finalizes tracing, and gathers results from output vertices or explicitly requested outputs.
+        
         Returns:
-            List[Optional["ResultData"]]: The outputs of the graph.
+            A list containing each collected vertex result in execution order; entries correspond to outputs produced by output vertices or those named in `outputs`.
+        
+        Raises:
+            TypeError: If the primary input value is not a string.
+            ValueError: If `input_components` is not a list, if a required vertex cannot be found, or if an error occurs during graph processing.
         """
         if input_components and not isinstance(input_components, list):
             msg = f"Invalid components value: {input_components}. Expected list"
@@ -2291,7 +2295,16 @@ class Graph:
         return predecessor_map, successor_map
 
     def __to_dict(self) -> dict[str, dict[str, list[str]]]:
-        """Converts the graph to a dictionary."""
+        """
+        Return a mapping of each vertex id to its predecessor and successor vertex id lists.
+        
+        Produces a dictionary where each key is a vertex id and the value is a dict with two keys:
+        "successors" — list of ids of all successor vertices reachable from that vertex;
+        "predecessors" — list of ids of immediate predecessor vertices for that vertex.
+        
+        Returns:
+            graph_map (dict[str, dict[str, list[str]]]): Mapping of vertex id -> {"successors": [...], "predecessors": [...]}.
+        """
         result: dict = {}
         for vertex in self.vertices:
             vertex_id = vertex.id
@@ -2301,6 +2314,15 @@ class Graph:
         return result
 
     def raw_event_metrics(self, optional_fields: dict | None = None) -> dict:  # noqa: ARG002
+        """
+        Create a timestamped metrics dictionary and merge in any provided optional fields.
+        
+        Parameters:
+            optional_fields (dict | None): Additional key-value pairs to include in the metrics. If omitted, no extra fields are added.
+        
+        Returns:
+            dict: A dictionary containing a numeric `timestamp` (seconds since the epoch) plus any keys from `optional_fields`.
+        """
         if optional_fields is None:
             optional_fields = {}
         import time
@@ -2308,12 +2330,31 @@ class Graph:
         return {"timestamp": time.time(), **optional_fields}
 
     def before_callback_event(self, *args, **kwargs) -> RunStartedEvent:  # noqa: ARG002
+        """
+        Create a RunStartedEvent capturing the current run id, flow id, and optional raw metrics.
+        
+        If the Graph implements `raw_event_metrics`, that method is called with `{"total_components": <number>}` and its result is included as the event's `raw_event`; otherwise `raw_event` is an empty dict.
+        
+        Returns:
+            RunStartedEvent: Event containing `run_id`, `thread_id` (flow id), and `raw_event` metrics.
+        """
         metrics = {}
         if hasattr(self, "raw_event_metrics"):
             metrics = self.raw_event_metrics({"total_components": len(self.vertices)})
         return RunStartedEvent(run_id=self._run_id, thread_id=self.flow_id, raw_event=metrics)
 
     def after_callback_event(self, result: Any = None, *args, **kwargs) -> RunFinishedEvent:  # noqa: ARG002
+        """
+        Create a RunFinishedEvent for the current run, attaching run identifiers and optional metrics.
+        
+        Parameters:
+            result (Any): Final result of the run (ignored when constructing the event).
+            *args: Ignored.
+            **kwargs: Ignored.
+        
+        Returns:
+            RunFinishedEvent: Event populated with the graph's run_id, flow_id as thread_id, `result` set to None, and `raw_event` metrics (includes `total_components` when available).
+        """
         metrics = {}
         if hasattr(self, "raw_event_metrics"):
             metrics = self.raw_event_metrics({"total_components": len(self.vertices)})

@@ -13,6 +13,11 @@ class MockEventManager:
 
     def __init__(self):
         # We'll use AsyncMock for publish
+        """
+        Create a mock event manager with an asynchronous `publish` method.
+        
+        Initializes the instance by assigning `self.publish` to an `AsyncMock` so tests can await and assert calls to event publishing.
+        """
         self.publish = AsyncMock()
 
 
@@ -20,6 +25,13 @@ class MockLogger:
     """Mock for lfx.log.logger.logger."""
 
     def __init__(self):
+        """
+        Initialize a mock logger with asynchronous warning and error callables.
+        
+        Creates two async-capable attributes used in tests:
+        - `awarning`: mock for async warning calls.
+        - `aerror`: mock for async error calls.
+        """
         self.awarning = AsyncMock()
         self.aerror = AsyncMock()
 
@@ -29,7 +41,17 @@ class MockLogger:
 
 @pytest.fixture
 def mock_dependencies():
-    """Provides mocked instances of external dependencies and patches them."""
+    """
+    Create and patch test doubles for the logger, event manager, and event encoder used by lifecycle_events.
+    
+    Patches lfx.events.observability.lifecycle_events.logger with a MockLogger instance and patches EventEncoder with a mock class that returns an encoder whose `encode` method returns {"encoded": True, "original_event": payload}. Yields a dictionary containing the prepared mocks:
+    
+    Yields:
+        dict: A mapping with keys:
+            - event_manager: MockEventManager instance used to simulate publishing.
+            - logger: MockLogger instance with async warning/error methods.
+            - encoder_cls: MagicMock that returns the mock encoder instance when called.
+    """
 
     # 1. Logger Mock
     mock_logger_instance = MockLogger()
@@ -73,12 +95,54 @@ class TestClassWithCallbacks:
     display_name = "ObservableTest"
 
     def before_callback_event(self, *args, **kwargs):
+        """
+        Builds a payload describing a "start" lifecycle event for the observable method.
+        
+        Parameters:
+            *args: Positional arguments passed to the observable method.
+            **kwargs: Keyword arguments passed to the observable method.
+        
+        Returns:
+            dict: Payload with keys:
+                - "lifecycle": "start"
+                - "args_len": number of positional arguments
+                - "kw_keys": list of keyword argument names
+        """
         return {"lifecycle": "start", "args_len": len(args), "kw_keys": list(kwargs.keys())}
 
     def after_callback_event(self, result: Any, *args, **kwargs):  # noqa: ARG002
+        """
+        Create the "end" lifecycle event payload containing the method result and the names of keyword arguments.
+        
+        Parameters:
+            result: The value returned by the wrapped method.
+            *args: Positional arguments passed to the wrapped method (ignored in payload).
+            **kwargs: Keyword arguments passed to the wrapped method; their keys are recorded.
+        
+        Returns:
+            dict: Payload with keys:
+                - "lifecycle": "end"
+                - "result": the provided `result`
+                - "kw_keys": list of keyword argument names from `kwargs`
+        """
         return {"lifecycle": "end", "result": result, "kw_keys": list(kwargs.keys())}
 
     def error_callback_event(self, exception: Exception, *args, **kwargs):  # noqa: ARG002
+        """
+        Builds an "error" lifecycle payload from an exception and the provided keyword arguments.
+        
+        Parameters:
+            exception (Exception): The exception to extract message and type from.
+            *args: Ignored positional arguments.
+            **kwargs: Keyword arguments whose keys will be included in the payload.
+        
+        Returns:
+            dict: Payload with keys:
+                - `lifecycle`: the string "error".
+                - `error`: the exception message (string).
+                - `error_type`: the exception class name (string).
+                - `kw_keys`: list of keys from `kwargs`.
+        """
         return {
             "lifecycle": "error",
             "error": str(exception),
@@ -89,11 +153,23 @@ class TestClassWithCallbacks:
     # Mock observable method
     @observable
     async def run_success(self, event_manager: MockEventManager, data: str) -> str:  # noqa: ARG002
+        """
+        Process input data and return it prefixed with "Processed:".
+        
+        Returns:
+            result (str): The input `data` formatted as "Processed:{data}".
+        """
         await asyncio.sleep(0.001)
         return f"Processed:{data}"
 
     @observable
     async def run_exception(self, event_manager: MockEventManager, data: str) -> str:  # noqa: ARG002
+        """
+        Test helper that sleeps briefly then raises a ValueError.
+        
+        Raises:
+            ValueError: Always raised after the brief delay.
+        """
         await asyncio.sleep(0.001)
         raise ValueError()
 
@@ -103,6 +179,12 @@ class TestClassWithoutCallbacks:
 
     @observable
     async def run_success(self, event_manager: MockEventManager, data: str) -> str:  # noqa: ARG002
+        """
+        Process input data and return it prefixed with "Processed:".
+        
+        Returns:
+            result (str): The input `data` formatted as "Processed:{data}".
+        """
         await asyncio.sleep(0.001)
         return f"Processed:{data}"
 
@@ -192,6 +274,16 @@ async def test_exception_run_with_callbacks(mock_dependencies):
 
 @pytest.mark.asyncio
 async def test_run_without_event_manager(mock_dependencies):
+    """
+    Run TestClassWithCallbacks.run_success with no EventManager and verify behavior.
+    
+    Parameters:
+        mock_dependencies (dict): Fixture-provided mocks including 'logger', 'event_manager', and 'encoder_cls'.
+    
+    Details:
+        - Calls run_success with event_manager set to None and verifies the method returns the expected processed string.
+        - Verifies the logger.awarning was called twice with a message indicating the EventManager is not available.
+    """
     instance = TestClassWithCallbacks()
     data = "no_manager"
 
@@ -210,6 +302,11 @@ async def test_run_without_event_manager(mock_dependencies):
 
 @pytest.mark.asyncio
 async def test_run_without_callbacks(mock_dependencies):
+    """
+    Verify behavior when an observable-decorated method is called on a class that does not implement lifecycle callbacks.
+    
+    Checks that the method returns its expected result, that two warning messages are logged for the missing `before_callback_event` and `after_callback_event` callbacks, and that no error logs are emitted.
+    """
     instance = TestClassWithoutCallbacks()
     data = "no_callbacks"
 
