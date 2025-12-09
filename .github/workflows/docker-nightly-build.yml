@@ -228,7 +228,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  build-nightly-ep:
+  build-nightly-main-ep:
     name: Build Nightly Main EP Package
     if: ${{ inputs.release_type == 'nightly-main-ep' }}
     strategy:
@@ -414,9 +414,15 @@ jobs:
 
   create-nightly-manifest:
     name: Create Multi-Arch Nightly Manifest
-    needs: [build-nightly-base, build-nightly-main, build-nightly-main-all]
+    needs:
+      [
+        build-nightly-base,
+        build-nightly-main,
+        build-nightly-main-all,
+        build-nightly-main-ep,
+      ]
     runs-on: ubuntu-latest
-    if: ${{ always() && inputs.push_to_registry && (needs.build-nightly-base.result == 'success' || needs.build-nightly-main.result == 'success' || needs.build-nightly-main-all.result == 'success') }}
+    if: ${{ always() && inputs.push_to_registry && (needs.build-nightly-base.result == 'success' || needs.build-nightly-main.result == 'success' || needs.build-nightly-main-all.result == 'success' || needs.build-nightly-main-ep.result == 'success') }}
     steps:
       - name: Setup Environment
         uses: astral-sh/setup-uv@v6
@@ -458,6 +464,11 @@ jobs:
               echo "ghcr_arch_base=ghcr.io/langflow-ai/langflow-nightly:${version}" >> $GITHUB_OUTPUT
               ;;
             "nightly-main-all")
+              echo "final_tags=langflowai/langflow-nightly-ep:${version},langflowai/langflow-nightly-ep:latest,ghcr.io/langflow-ai/langflow-nightly-ep:${version},ghcr.io/langflow-ai/langflow-nightly-ep:latest" >> $GITHUB_OUTPUT
+              echo "arch_base=langflowai/langflow-nightly-ep:${version}" >> $GITHUB_OUTPUT
+              echo "ghcr_arch_base=ghcr.io/langflow-ai/langflow-nightly-ep:${version}" >> $GITHUB_OUTPUT
+              ;;
+            "nightly-main-ep")
               echo "final_tags=langflowai/langflow-nightly-all:${version},langflowai/langflow-nightly-all:latest,ghcr.io/langflow-ai/langflow-nightly-all:${version},ghcr.io/langflow-ai/langflow-nightly-all:latest" >> $GITHUB_OUTPUT
               echo "arch_base=langflowai/langflow-nightly-all:${version}" >> $GITHUB_OUTPUT
               echo "ghcr_arch_base=ghcr.io/langflow-ai/langflow-nightly-all:${version}" >> $GITHUB_OUTPUT
