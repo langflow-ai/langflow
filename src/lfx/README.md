@@ -267,22 +267,21 @@ make format
 ```
 
 ## Docker Images
-
-The LFX Dockerfile supports toggling Docling and OCR-heavy dependencies. Pass the `INCLUDE_DOCLING` build argument to keep or remove them:
+The LFX Dockerfile builds all dependencies except Docling and OCR-heavy dependencies.
 
 ```bash
+# build uv.lock from src/lfx/pyproject.toml
+cd src/lfx
+uv sync
+
+# back to project root
+cd ../../
+
 # Build a lean image without Docling
 docker build -f src/lfx/docker/Dockerfile \
-  --build-arg INCLUDE_DOCLING=false \
-  -t lfx-nodoc .
-
-# Build with full Docling support (default)
-docker build -f src/lfx/docker/Dockerfile \
-  --build-arg INCLUDE_DOCLING=true \
-  -t lfx-docling .
+  -t lfx .
 ```
 
-When Docling is excluded the advanced parsing components remain available but will raise helpful errors if used, keeping the image small for lightweight deployments.
 
 ## License
 

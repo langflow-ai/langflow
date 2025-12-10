@@ -1,10 +1,6 @@
 # syntax=docker/dockerfile:1
 # Keep this syntax directive! It's used to enable Docker BuildKit
 
-# Toggle Docling and heavyweight OCR deps inside the virtualenv.
-# Default keeps the image slim by stripping them after install.
-ARG INCLUDE_DOCLING=false
-
 ################################
 # BUILDER
 # Used to build LFX and create our virtual environment
@@ -49,28 +45,12 @@ COPY src/lfx/src /app/src/lfx/src
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --no-editable --package lfx
 
-# Remove Docling + OCR extras when not requested to keep the image leaner
-RUN if [ "$INCLUDE_DOCLING" = "false" ]; then \
-        .venv/bin/python -m pip uninstall -y \
-            docling \
-            docling-core \
-            docling-parse \
-            docling-ibm-models \
-            langchain-docling \
-            rapidocr-onnxruntime \
-            tesserocr \
-            easyocr \
-            ocrmac \
-            mlx \
-            mlx-vlm || true; \
-    fi
 
 ################################
 # RUNTIME
 # Setup user, utilities and copy the virtual environment only
 ################################
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS runtime
-ARG INCLUDE_DOCLING
 
 # Create a non-root user
 # -D: Don't assign a password
