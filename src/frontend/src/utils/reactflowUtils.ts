@@ -2217,13 +2217,13 @@ export function checkHasToolMode(template: APITemplateType): boolean {
   if (!template) return false;
 
   const templateKeys = Object.keys(template);
-  
+
   // System/metadata fields that are not actual input fields
-  const systemFields = ['code', 'is_refresh', 'tools_metadata'];
-  
+  const systemFields = ["code", "is_refresh", "tools_metadata"];
+
   // Count only fields that are actual inputs (not internal, not system fields)
   const inputFields = templateKeys.filter(
-    key => !key.startsWith('_') && !systemFields.includes(key)
+    (key) => !key.startsWith("_") && !systemFields.includes(key),
   );
 
   // Check if the template has no input fields
@@ -2237,7 +2237,7 @@ export function checkHasToolMode(template: APITemplateType): boolean {
   const hasToolModeFields = Object.values(template).some((field) =>
     Boolean(field.tool_mode),
   );
-  
+
   // Check if the component is already in tool mode
   // This occurs when the template has tools_metadata field
   const isInToolMode = Boolean(template.tools_metadata);
