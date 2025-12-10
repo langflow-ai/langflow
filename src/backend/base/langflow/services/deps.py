@@ -29,6 +29,12 @@ from langflow.services.job_queue.service import JobQueueService  # noqa: TC001
 from langflow.services.storage.service import StorageService  # noqa: TC001
 from langflow.services.telemetry.service import TelemetryService  # noqa: TC001
 
+_service_manager = None
+
+_factories_registered = False
+
+_cache_service_factory_instance = None
+
 
 def get_service(service_type: ServiceType, default=None):
     """Retrieves the service instance for the given service type.
@@ -42,17 +48,25 @@ def get_service(service_type: ServiceType, default=None):
         Any: The service instance.
 
     """
-    from lfx.services.manager import get_service_manager
+    global _service_manager, _factories_registered
 
-    service_manager = get_service_manager()
+    # Import and cache get_service_manager once for efficiency
+    if _service_manager is None:
+        from lfx.services.manager import get_service_manager
 
-    if not service_manager.are_factories_registered():
+        _service_manager = get_service_manager()
+
+    if not _factories_registered and not _service_manager.are_factories_registered():
+        # ! This is a workaround to ensure that the service manager is initialized
+        # ! Not optimal, but it works for now
         # ! This is a workaround to ensure that the service manager is initialized
         # ! Not optimal, but it works for now
         from langflow.services.manager import ServiceManager
 
-        service_manager.register_factories(ServiceManager.get_factories())
-    return service_manager.get(service_type, default)
+        _service_manager.register_factories(ServiceManager.get_factories())
+        _factories_registered = True
+
+    return _service_manager.get(service_type, default)
 
 
 def get_telemetry_service() -> TelemetryService:
@@ -182,9 +196,12 @@ def get_cache_service() -> CacheService | AsyncBaseCacheService:
     Returns:
         The cache service instance.
     """
-    from langflow.services.cache.factory import CacheServiceFactory
+    global _cache_service_factory_instance
+    if _cache_service_factory_instance is None:
+        from langflow.services.cache.factory import CacheServiceFactory
 
-    return get_service(ServiceType.CACHE_SERVICE, CacheServiceFactory())
+        _cache_service_factory_instance = CacheServiceFactory()
+    return get_service(ServiceType.CACHE_SERVICE, _cache_service_factory_instance)
 
 
 def get_shared_component_cache_service() -> CacheService:
