@@ -352,9 +352,9 @@ To make environment variables available to GUI apps on macOS, you need to use `l
          <string>/bin/sh</string>
          <string>-c</string>
           <string>
-            launchctl setenv LANGFLOW_CONFIG_DIR /Users/your_user/custom/config &&
-            launchctl setenv LANGFLOW_PORT 7860 &&
-            launchctl setenv LANGFLOW_HOST localhost &&
+            launchctl setenv LANGFLOW_CONFIG_DIR /Users/your_user/custom/config ;
+            launchctl setenv LANGFLOW_PORT 7860 ;
+            launchctl setenv LANGFLOW_HOST localhost ;
             launchctl setenv ARIZE_API_KEY ak-...
           </string>
        </array>
@@ -366,7 +366,7 @@ To make environment variables available to GUI apps on macOS, you need to use `l
 4. Load the file with `launchctl`:
 
     ```bash
-    launchctl load ~/Library/LaunchAgents/dev.langflow.env.plist
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/dev.langflow.env.plist
     ```
 
 </TabItem>
