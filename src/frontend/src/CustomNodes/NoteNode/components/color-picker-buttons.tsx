@@ -46,7 +46,7 @@ export const ColorPickerButtons = memo(
 
     return (
       <div className="flex flex-row items-center gap-3">
-        +{/* Preset color options */}
+        {/* Preset color options */}
         {Object.entries(COLOR_OPTIONS).map(([colorKey, colorValue]) => (
           <Button
             key={colorKey}
