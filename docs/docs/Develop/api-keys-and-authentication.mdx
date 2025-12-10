@@ -449,6 +449,20 @@ SSRF protection prevents requests to internal or private network resources, such
 | `LANGFLOW_SSRF_PROTECTION_ENABLED` | Boolean | `False` | Enable SSRF protection for the **API Request** component. When enabled, the component blocks requests to private IP addresses. When disabled, requests are not blocked. |
 | `LANGFLOW_SSRF_ALLOWED_HOSTS` | List[String] | Not set | A comma-separated list of allowed hosts, IP addresses, or CIDR ranges that can bypass SSRF protection checks. For example: `192.168.1.0/24,10.0.0.5,*.internal.company.local`.|
 
+### LANGFLOW_WEBHOOK_AUTH_ENABLE {#langflow-webhook-auth-enable}
+
+This variable controls whether API key authentication is required for webhook endpoints.
+
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_WEBHOOK_AUTH_ENABLE` | Boolean | `False` | When `True`, webhook endpoints require API key authentication and validate that the authenticated user owns the flow being executed. When `False`, no Langflow API key is required and all requests to the webhook endpoint are treated as being sent by the flow owner. |
+
+By default, webhooks run as the flow owner without authentication with `LANGFLOW_WEBHOOK_AUTH_ENABLE=False`.
+
+To require API key authentication for webhooks, in your Langflow `.env` file, set `LANGFLOW_WEBHOOK_AUTH_ENABLE=True`.
+
+When webhook authentication is enabled, you must provide a Langflow API key with each webhook request as an HTTP header or query parameter. For more information, see [Require authentication for webhooks](/webhook#require-authentication-for-webhooks).
+
 ## Start a Langflow server with authentication enabled
 
 This section shows you how to use the [authentication environment variables](/api-keys-and-authentication#authentication-environment-variables) to deploy a Langflow server with authentication enabled.
