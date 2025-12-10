@@ -23,11 +23,11 @@ if TYPE_CHECKING:
 # These imports MUST be outside TYPE_CHECKING because FastAPI uses eval_str=True
 # to evaluate type annotations, and these types are used as return types for
 # dependency functions that FastAPI evaluates at module load time.
-from lfx.services.settings.service import SettingsService
+from lfx.services.settings.service import SettingsService  # noqa: TC002
 
-from langflow.services.job_queue.service import JobQueueService
-from langflow.services.storage.service import StorageService
-from langflow.services.telemetry.service import TelemetryService
+from langflow.services.job_queue.service import JobQueueService  # noqa: TC001
+from langflow.services.storage.service import StorageService  # noqa: TC001
+from langflow.services.telemetry.service import TelemetryService  # noqa: TC001
 
 
 def get_service(service_type: ServiceType, default=None):
