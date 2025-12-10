@@ -1,9 +1,15 @@
+import io
+import json
+import zipfile
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
 from fastapi import status
 from httpx import AsyncClient
+from langflow.initial_setup.constants import STARTER_FOLDER_NAME
+from langflow.services.database.models.flow.model import Flow, FlowCreate
+from langflow.services.deps import session_scope
 
 CYRILLIC_NAME = "Новый проект"
 CYRILLIC_DESC = "Описание проекта с кириллицей"  # noqa: RUF001
@@ -1538,3 +1544,80 @@ class TestReadProjectBugFix:
             assert "not found" in result["detail"].lower(), (
                 f"Error message should mention 'not found' for params: {params}"
             )
+
+
+async def test_download_file_starter_project(client: AsyncClient, logged_in_headers, active_user, json_flow):
+    """Test downloading a starter project with 3 starter flows."""
+    # Create a starter project for the user (since download_file requires user ownership)
+    project_payload = {
+        "name": STARTER_FOLDER_NAME,
+        "description": "Starter projects to help you get started in Langflow.",
+        "flows_list": [],
+        "components_list": [],
+    }
+    create_response = await client.post("api/v1/projects/", json=project_payload, headers=logged_in_headers)
+    assert create_response.status_code == status.HTTP_201_CREATED
+    starter_project = create_response.json()
+    starter_project_id = starter_project["id"]
+
+    # Create 3 starter flows in the starter project
+    flow_data = json.loads(json_flow)
+    flows_created = []
+    async with session_scope() as session:
+        for i in range(3):
+            flow_create = FlowCreate(
+                name=f"Starter Flow {i+1}",
+                description=f"Test starter flow {i+1}",
+                data=flow_data.get("data", {}),
+                folder_id=starter_project_id,
+                user_id=active_user.id,
+            )
+            flow = Flow.model_validate(flow_create, from_attributes=True)
+            session.add(flow)
+            flows_created.append(flow)
+
+        await session.flush()
+        # Refresh to get IDs
+        for flow in flows_created:
+            await session.refresh(flow)
+        await session.commit()
+
+    # Download the starter project
+    response = await client.get(
+        f"api/v1/projects/download/{starter_project_id}",
+        headers=logged_in_headers,
+    )
+
+    # Verify response
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert response.headers["Content-Type"] == "application/x-zip-compressed"
+    assert "attachment" in response.headers["Content-Disposition"]
+    assert "filename" in response.headers["Content-Disposition"]
+    # The filename is URL-encoded in the header, so check for the project name
+    content_disposition = response.headers["Content-Disposition"]
+    assert (
+        STARTER_FOLDER_NAME.replace(" ", "%20") in content_disposition
+        or STARTER_FOLDER_NAME.replace(" ", "_") in content_disposition
+    )
+
+    # Verify zip file contents
+    zip_content = response.content
+    with zipfile.ZipFile(io.BytesIO(zip_content), "r") as zip_file:
+        file_names = zip_file.namelist()
+        # Should have 3 flow files
+        assert len(file_names) == 3, f"Expected 3 files in zip, got {len(file_names)}: {file_names}"
+
+        # Verify each flow file exists and contains valid JSON
+        for i in range(3):
+            expected_filename = f"Starter Flow {i+1}.json"
+            assert expected_filename in file_names, f"Expected {expected_filename} in zip file"
+
+            # Read and verify flow content
+            flow_content = zip_file.read(expected_filename)
+            flow_json = json.loads(flow_content)
+            assert flow_json["name"] == f"Starter Flow {i+1}"
+            assert flow_json["description"] == f"Test starter flow {i+1}"
+
+    # Clean up: delete the project (which will cascade delete flows)
+    delete_response = await client.delete(f"api/v1/projects/{starter_project_id}", headers=logged_in_headers)
+    assert delete_response.status_code == status.HTTP_204_NO_CONTENT
