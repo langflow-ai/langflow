@@ -327,7 +327,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
                 "Disable for self-signed certificates in development environments."
             ),
         ),
-        DictInput(name="query", display_name="Query", input_types=["Data"], is_list=False,tool_mode=True),
+        # DictInput(name="query", display_name="Query", input_types=["Data"], is_list=False,tool_mode=True),
     ]
     outputs = [
         Output(
@@ -339,7 +339,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         Output(display_name="Raw Search", name="raw_search", method="raw_search"),
     ]
 
-    def raw_search(self, query: dict[str, Any]) -> Data:
+    def raw_search(self, query: str | None = None) -> Data:
         """Execute a raw OpenSearch query against the target index.
 
         Args:
@@ -351,11 +351,8 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         Raises:
             ValueError: If 'query' is not a valid OpenSearch query (must be a non-empty dict).
         """
-        if query is None:
-            query = self.query
-        if not isinstance(query, dict) or not query:
-            msg = "Query must be a non-empty dictionary representing an OpenSearch query (DSL)."
-            raise ValueError(msg)
+        if isinstance(query, str):
+            query = json.loads(query)
         client = self.build_client()
         resp = client.search(
             index=self.index_name,
