@@ -1,4 +1,4 @@
-from typing import cast, List
+from typing import cast, List, Any, Optional
 from lfx.io import MessageTextInput
 from langflow.inputs import MultilineInput, DropdownInput
 from lfx.inputs.inputs import BoolInput, ModelInput
@@ -108,27 +108,66 @@ class PoliciesComponent(Component):
         )
         return gen_result
 
-    def wrap_tools(self, tools:List[Tool], guard_gen_result: ToolGuardsCodeGenerationResult) -> List[Tool]:
-        if self.enabled:
-            return tools #FIXME
-        return tools
-    
     async def build_guards(self) -> List[Tool]:
         assert self.policies, "🔒️ToolGuard: policies cannot be empty!"
 
         self.log(f"🔒️ToolGuard: starting building toolguards...", name="info")
         self.log(f"🔒️ToolGuard: policies document: {self.policies}", name="info")
-        self.log(f"🔒️ToolGuard: input tools: {self.tools}", name="info")
-
         self.log(f"🔒️ToolGuard: model provider: {self.model_provider}, using model: <model name>", name="info")
-
-        # if self.enabled:
-        #     specs = await self._build_guard_specs()
-        #     guards = await self._build_guards(specs)
-        #
-        #     guarded_tools = self.wrap_tools(self.tools, guards)
-        #     return guarded_tools
+        self.log(f"🔒️ToolGuard: input tools: {self.tools}", name="info")
 
         self.log(f"🔒️ToolGuard: please review the generated guard code at ...", name="info")
 
+        if self.enabled:
+            # specs = await self._build_guard_specs()
+            # guards = await self._build_guards(specs)
+            guards = None
+            guarded_tools = [WrappedTool(tool, self.tools, self.guard_code_path) for tool in self.tools]
+            return guarded_tools # type: ignore
+
         return self.tools
+
+
+from langchain_core.runnables import RunnableConfig
+from langchain_core.callbacks import CallbackManagerForToolRun
+class WrappedTool(Tool):
+    def __init__(self, tool: Tool, all_tools: List[Tool], tg_dir:str):
+        super().__init__(name=tool.name, func=tool.func, description=tool.description)
+        self._wrapped = tool
+        self._tool_invoker = LangchainToolInvoker(all_tools)
+        self._tg_dir = tg_dir
+
+    @property
+    def args(self) -> dict:
+        return self._wrapped.args
+
+    def _run(
+        self,
+        args: Any,
+        config: RunnableConfig,
+        run_manager: Optional[CallbackManagerForToolRun] = None,
+        **kwargs: Any,
+    ) -> Any:
+        with load_toolguards(self._tg_dir) as toolguard:
+            from rt_toolguard.data_types import PolicyViolationException  # type: ignore
+            try:
+                toolguard.check_toolcall(self.name, args=args, delegate=self._tool_invoker)
+                return self._wrapped._run(args = args, config=config, run_manager=run_manager, **kwargs)
+            except PolicyViolationException as ex:
+                return f"Error: {ex.message}"
+
+    async def _arun(
+        self,
+        args: Any,
+        config: RunnableConfig,
+        run_manager: Optional[CallbackManagerForToolRun] = None,
+        **kwargs: Any,
+    ) -> Any:
+        print(f"args={args}")
+        with load_toolguards(self._tg_dir) as toolguard:
+            from rt_toolguard.data_types import PolicyViolationException   # type: ignore
+            try:
+                toolguard.check_toolcall(self.name, *args, delegate=self._tool_invoker)
+                return await self._wrapped._arun(*args, config=config, run_manager=run_manager, **kwargs)
+            except PolicyViolationException as ex:
+                return f"Error: {ex.message}"
