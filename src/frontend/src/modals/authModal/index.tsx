@@ -46,7 +46,10 @@ const AuthModal = ({
     oauthPort: authSettings?.oauth_port || "",
     oauthServerUrl: authSettings?.oauth_server_url || "",
     // Use oauth_callback_url if available, fallback to oauth_callback_path for backwards compatibility
-    oauthCallbackUrl: authSettings?.oauth_callback_url || authSettings?.oauth_callback_path || "",
+    oauthCallbackUrl:
+      authSettings?.oauth_callback_url ||
+      authSettings?.oauth_callback_path ||
+      "",
     oauthClientId: authSettings?.oauth_client_id || "",
     oauthClientSecret: authSettings?.oauth_client_secret || "",
     oauthAuthUrl: authSettings?.oauth_auth_url || "",
@@ -64,7 +67,10 @@ const AuthModal = ({
         oauthPort: authSettings.oauth_port || "",
         oauthServerUrl: authSettings.oauth_server_url || "",
         // Use oauth_callback_url if available, fallback to oauth_callback_path for backwards compatibility
-        oauthCallbackUrl: authSettings.oauth_callback_url || authSettings.oauth_callback_path || "",
+        oauthCallbackUrl:
+          authSettings.oauth_callback_url ||
+          authSettings.oauth_callback_path ||
+          "",
         oauthClientId: authSettings.oauth_client_id || "",
         oauthClientSecret: authSettings.oauth_client_secret || "",
         oauthAuthUrl: authSettings.oauth_auth_url || "",
