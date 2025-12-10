@@ -29,6 +29,7 @@ _convert_field_type_to_type: dict[FieldTypes, type] = {
     FieldTypes.OTHER: str,
     FieldTypes.TAB: str,
     FieldTypes.QUERY: str,
+    FieldTypes.CHECKBOX: str,
 }
 
 

@@ -309,6 +309,17 @@ class ParameterHandler:
                 else:
                     msg = f"Invalid value type {type(val)} for field {field_name}"
                     raise ValueError(msg)
+            case "checkbox":
+                # Checkbox returns a list of selected option strings
+                match val:
+                    case list():
+                        params[field_name] = [unescape_string(v) if isinstance(v, str) else v for v in val]
+                    case str():
+                        # Single string value, convert to list
+                        params[field_name] = [unescape_string(val)]
+                    case _:
+                        # Default to empty list if None or invalid
+                        params[field_name] = []
             case _:
                 if val:
                     params[field_name] = val

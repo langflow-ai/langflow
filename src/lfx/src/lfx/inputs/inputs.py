@@ -713,6 +713,40 @@ class MultiselectInput(BaseInputMixin, ListableInputMixin, DropDownMixin, Metada
         return v
 
 
+class CheckboxInput(BaseInputMixin, ListableInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeMixin):
+    """Represents a checkbox input field.
+
+    This class represents a checkbox input field that displays a list of checkboxes in the UI.
+    The selected checkboxes are passed as an array of strings.
+
+    Attributes:
+        field_type (SerializableFieldTypes): The field type of the input. Defaults to FieldTypes.CHECKBOX.
+        options (list[str]): List of checkbox options to display. Default is an empty list.
+        value (list[str]): The selected checkbox values as a list of strings. Default is an empty list.
+    """
+
+    field_type: SerializableFieldTypes = FieldTypes.CHECKBOX
+    options: list[str] = Field(default_factory=list)
+    value: list[str] = Field(default_factory=list)
+    is_list: bool = Field(default=True, serialization_alias="list")
+    track_in_telemetry: CoalesceBool = True  # Safe predefined choices
+
+    @field_validator("value")
+    @classmethod
+    def validate_value(cls, v: Any, _info):
+        """Validates that the value is a list of strings."""
+        if v is None:
+            return []
+        if not isinstance(v, list):
+            msg = f"CheckboxInput value must be a list. Value: '{v}'"
+            raise ValueError(msg)  # noqa: TRY004
+        for item in v:
+            if not isinstance(item, str):
+                msg = f"CheckboxInput value must be a list of strings. Item: '{item}' is not a string"
+                raise ValueError(msg)  # noqa: TRY004
+        return v
+
+
 class FileInput(BaseInputMixin, ListableInputMixin, FileMixin, MetadataTraceMixin, ToolModeMixin):
     """Represents a file field.
 
@@ -775,6 +809,7 @@ InputTypes: TypeAlias = (
     | DictInput
     | DropdownInput
     | MultiselectInput
+    | CheckboxInput
     | SortableListInput
     | ConnectionInput
     | FileInput

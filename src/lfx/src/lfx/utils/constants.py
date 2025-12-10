@@ -83,6 +83,7 @@ DIRECT_TYPES = [
     "tools",
     "mcp",
     "model",
+    "checkbox",
 ]
 
 

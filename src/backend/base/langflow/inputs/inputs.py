@@ -8,6 +8,7 @@ All input classes have been migrated to lfx and this file serves as a compatibil
 from lfx.inputs.inputs import (
     AuthInput,
     BoolInput,
+    CheckboxInput,
     CodeInput,
     DataFrameInput,
     DataInput,
@@ -43,6 +44,7 @@ from lfx.inputs.inputs import (
 __all__ = [
     "AuthInput",
     "BoolInput",
+    "CheckboxInput",
     "CodeInput",
     "DataFrameInput",
     "DataInput",

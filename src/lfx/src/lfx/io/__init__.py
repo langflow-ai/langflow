@@ -1,5 +1,6 @@
 from lfx.inputs import (
     BoolInput,
+    CheckboxInput,
     CodeInput,
     DataFrameInput,
     DataInput,
@@ -32,6 +33,7 @@ from lfx.template import Output
 
 __all__ = [
     "BoolInput",
+    "CheckboxInput",
     "CodeInput",
     "DataFrameInput",
     "DataInput",

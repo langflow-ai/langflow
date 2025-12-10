@@ -1,6 +1,7 @@
 from .inputs import (
     AuthInput,
     BoolInput,
+    CheckboxInput,
     CodeInput,
     ConnectionInput,
     DataFrameInput,
@@ -36,6 +37,7 @@ from .inputs import (
 __all__ = [
     "AuthInput",
     "BoolInput",
+    "CheckboxInput",
     "CodeInput",
     "ConnectionInput",
     "DataFrameInput",

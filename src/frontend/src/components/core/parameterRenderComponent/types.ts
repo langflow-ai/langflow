@@ -143,6 +143,10 @@ export type MultiselectComponentType = {
   combobox?: boolean;
 };
 
+export type CheckboxComponentType = {
+  options: string[];
+};
+
 export type TabComponentType = {
   options: string[];
 };
