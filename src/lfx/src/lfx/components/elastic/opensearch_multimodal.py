@@ -368,6 +368,21 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
             body=query,
             params={"terminate_after": 0},
         )
+        # Remove any _source keys whose value is a list of floats (embedding vectors)
+        def is_vector(val):
+            # Accepts if it's a list of numbers (float or int) and has reasonable vector length (>3)
+            return (
+                isinstance(val, list) and len(val) > 3 and all(isinstance(x, (float, int)) for x in val)
+            )
+
+        if "hits" in resp and "hits" in resp["hits"]:
+            for hit in resp["hits"]["hits"]:
+                source = hit.get("_source")
+                if isinstance(source, dict):
+                    keys_to_remove = [k for k, v in source.items() if is_vector(v)]
+                    for k in keys_to_remove:
+                        source.pop(k)
+        logger.info(f"Raw search response (all embedding vectors removed): {resp}")
         return Data(**resp)
 
     def _get_embedding_model_name(self, embedding_obj=None) -> str:
