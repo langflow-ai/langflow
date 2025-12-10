@@ -20,7 +20,7 @@ def _build_server_config(base_url: str, project_id, transport: str):
     """Return URL and server config for a given transport."""
     suffix = "streamable" if transport == "streamable" else "sse"
     url = f"{base_url}/api/v1/mcp/project/{project_id}/{suffix}"
-    if transport == "streamable": # noqa: SIM108
+    if transport == "streamable":  # noqa: SIM108
         args = ["mcp-proxy", "--transport", "streamablehttp", url]
     else:
         args = ["mcp-proxy", url]
