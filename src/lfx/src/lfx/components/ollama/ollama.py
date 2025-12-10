@@ -284,6 +284,10 @@ class ChatOllamaComponent(LCModelComponent):
         inputs: list | dict = messages or {}
         lf_message = None
         try:
+            # TODO: Depreciated Feature to be removed in upcoming release
+            if hasattr(self, "output_parser") and self.output_parser is not None:
+                runnable |= self.output_parser
+
             runnable = runnable.with_config(
                 {
                     "run_name": self.display_name,
@@ -300,7 +304,7 @@ class ChatOllamaComponent(LCModelComponent):
                 status_message = self.build_status_message(message)
                 self.status = status_message
             elif isinstance(result, dict):
-                result = json.dumps(message, indent=4)
+                result = json.dumps(result, indent=4)
                 self.status = result
             else:
                 self.status = result
