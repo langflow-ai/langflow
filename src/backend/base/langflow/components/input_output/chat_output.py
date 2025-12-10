@@ -27,6 +27,11 @@ class ChatOutput(ChatComponent):
     name = "ChatOutput"
     minimized = True
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # Initialize _artifacts attribute to fix the missing get_artifacts method issue
+        self._artifacts = {}
+
     inputs = [
         HandleInput(
             name="input_value",
@@ -78,6 +83,10 @@ class ChatOutput(ChatComponent):
             method="message_response",
         ),
     ]
+
+    def get_artifacts(self) -> dict:
+        """Return artifacts dictionary for framework compatibility."""
+        return getattr(self, "_artifacts", {})
 
     def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:
         source_dict = {}
