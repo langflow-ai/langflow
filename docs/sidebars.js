@@ -379,6 +379,7 @@ module.exports = {
             "Components/bundles-cloudflare",
             "Components/bundles-cohere",
             "Components/bundles-cometapi",
+            "Components/bundles-composio",
             "Components/bundles-couchbase",
             "Components/bundles-cuga",
             "Components/bundles-datastax",
