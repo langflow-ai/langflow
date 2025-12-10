@@ -136,18 +136,8 @@ def warn_about_future_cors_changes(settings):
 
     if using_defaults:
         logger.warning(
-            "DEPRECATION NOTICE: Starting in v2.0, CORS will be more restrictive by default. "
-            "Current behavior allows all origins (*) with credentials enabled. "
-            "Consider setting LANGFLOW_CORS_ORIGINS for production deployments. "
-            "See documentation for secure CORS configuration."
-        )
-
-    # Additional warning for potentially insecure configuration
-    if settings.cors_origins == "*" and settings.cors_allow_credentials:
-        logger.warning(
-            "SECURITY NOTICE: Current CORS configuration allows all origins with credentials. "
-            "In v2.0, credentials will be automatically disabled when using wildcard origins. "
-            "Specify exact origins in LANGFLOW_CORS_ORIGINS to use credentials securely."
+            "CORS: Using permissive defaults (all origins + credentials). "
+            "Set LANGFLOW_CORS_ORIGINS for production. Stricter defaults in v2.0."
         )
 
 
@@ -313,8 +303,14 @@ def get_lifespan(*, fix_migration=False, version=None):
             # Allows the server to start first to avoid race conditions with MCP Server startup
             mcp_init_task = asyncio.create_task(delayed_init_mcp_servers())
 
-            yield
+            # v1 and project MCP server context managers
+            from langflow.api.v1.mcp import start_streamable_http_manager
+            from langflow.api.v1.mcp_projects import start_project_task_group
 
+            await start_streamable_http_manager()
+            await start_project_task_group()
+
+            yield
         except asyncio.CancelledError:
             await logger.adebug("Lifespan received cancellation signal")
         except Exception as exc:
@@ -344,6 +340,20 @@ def get_lifespan(*, fix_migration=False, version=None):
 
                 # Step 1: Cancelling Background Tasks
                 with shutdown_progress.step(1):
+                    from langflow.api.v1.mcp import stop_streamable_http_manager
+                    from langflow.api.v1.mcp_projects import stop_project_task_group
+
+                    # Shutdown MCP project servers
+                    try:
+                        await stop_project_task_group()
+                    except Exception as e:  # noqa: BLE001
+                        await logger.aerror(f"Failed to stop MCP Project servers: {e}")
+                    # Close MCP server streamable-http session manager .run() context manager
+                    try:
+                        await stop_streamable_http_manager()
+                    except Exception as e:  # noqa: BLE001
+                        await logger.aerror(f"Failed to stop MCP server streamable-http session manager: {e}")
+                    # Cancel background tasks
                     tasks_to_cancel = []
                     if sync_flows_from_fs_task:
                         sync_flows_from_fs_task.cancel()

@@ -379,6 +379,7 @@ module.exports = {
             "Components/bundles-cloudflare",
             "Components/bundles-cohere",
             "Components/bundles-cometapi",
+            "Components/bundles-composio",
             "Components/bundles-couchbase",
             "Components/bundles-cuga",
             "Components/bundles-datastax",
@@ -508,17 +509,6 @@ module.exports = {
     },
     {
       type: "category",
-      label: "Release notes",
-      items: [
-        {
-          type: "doc",
-          id: "Support/release-notes",
-          label: "Release notes",
-        },
-      ],
-    },
-    {
-      type: "category",
       label: "Support",
       items: [
         {
@@ -535,6 +525,11 @@ module.exports = {
           type: "doc",
           id: "Support/luna-for-langflow",
           label: "IBM Elite Support for Langflow",
+        },
+        {
+          type: "doc",
+          id: "Support/release-notes",
+          label: "Release notes",
         },
       ],
     },
