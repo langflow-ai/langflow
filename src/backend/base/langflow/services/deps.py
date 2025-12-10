@@ -176,7 +176,7 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
         yield session
 
 
-def get_cache_service() -> Union[CacheService, AsyncBaseCacheService]:
+def get_cache_service() -> Union[CacheService, AsyncBaseCacheService]:  # noqa: UP007
     """Retrieves the cache service from the service manager.
 
     Returns:
