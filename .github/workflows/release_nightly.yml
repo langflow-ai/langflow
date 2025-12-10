@@ -163,7 +163,7 @@ jobs:
         run: |
           rm -rf src/backend/base/dist
           rm -rf dist
-          make build base=true args="--wheel"
+          make build base=true args="--no-sources --wheel"
 
       - name: Test Langflow Base CLI
         run: |

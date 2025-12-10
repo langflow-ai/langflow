@@ -227,7 +227,8 @@ jobs:
       - name: Check if pre-release
         if: inputs.pre_release
         run: |
-          version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//')
+          version="${{ inputs.release_tag }}"
+          echo "$version"
           if [[ "${version}" =~ ^([0-9]+\.)?([0-9]+\.)?[0-9]+((a|b|rc|dev|post)([0-9]+))$ ]]; then
             echo "Pre-release version detected. Continuing with the release."
           else
