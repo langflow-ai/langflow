@@ -17,7 +17,7 @@ from toolguard.data_types import MeleaSessionData
 from toolguard.runtime import LangchainToolInvoker
 
 
-MODEL_PROVIDERS_LIST = ["azure", "Anthropic", "OpenAI"]
+MODEL_PROVIDERS_LIST = ["Anthropic", "OpenAI"]
 MODEL = "gpt-4o-2024-08-06"
 STEP1 = "Step_1"
 STEP2 = "Step_2"
@@ -33,7 +33,7 @@ class PoliciesComponent(Component):
 
     inputs = [
         BoolInput(
-            name="enabled", # type: ignore
+            name="enabled",
             display_name="Enable ToolGuard Execution",
             info="If true, invokes ToolGuard code prior to tool execution, ensuring that tool-related policies are enforced.",
             value=True,
@@ -51,14 +51,6 @@ class PoliciesComponent(Component):
             # show_if={"enable_tool_guard": True},
             advanced=True,
         ),
-        MessageTextInput(
-            name="model",
-            display_name="Model",
-            info="",
-            # show_if={"enable_tool_guard": True},
-            advanced=True,
-            value="gpt-4o-2024-08-06"
-        ),
         DropdownInput(
             name="model_provider",
             display_name="Model Provider",
@@ -75,7 +67,7 @@ class PoliciesComponent(Component):
             display_name="API Key",
             info="Model Provider API key",
             placeholder="model provider API key",
-            # required=True,
+            required=True,
             #real_time_refresh=True,
             advanced=False,
         ),
@@ -93,7 +85,9 @@ class PoliciesComponent(Component):
     ]
 
     async def _build_guard_specs(self) ->List[ToolGuardSpec]:
-        llm = LitellmModel(self.model, self.llm_provider)
+        model = "gpt-4o-2024-08-06" #FIXME
+        llm_provider = "azure" #FIXME
+        llm = LitellmModel(model, llm_provider)
 
         toolguard_step1_dir = join(self.guard_code_path, STEP1)
         specs = await generate_guard_specs(
@@ -127,33 +121,18 @@ class PoliciesComponent(Component):
         if self.enabled:
             # specs = await self._build_guard_specs()
             # guards = await self._build_guards(specs)
-            self.guard_code_path = "/Users/davidboaz/Documents/GitHub/ToolGuardAgent/output/step2_claude4sonnet"
+            guards = None
             guarded_tools = [WrappedTool(tool, self.tools, self.guard_code_path) for tool in self.tools]
-            print(f"tool0={type(guarded_tools[0])}")
             return guarded_tools # type: ignore
-        
+
         return self.tools
 
 
 from langchain_core.runnables import RunnableConfig
 from langchain_core.callbacks import CallbackManagerForToolRun
 class WrappedTool(Tool):
-    _wrapped: Tool
-    _tool_invoker : IToolInvoker
-    _tg_dir: str
-
     def __init__(self, tool: Tool, all_tools: List[Tool], tg_dir:str):
-        super().__init__(
-            name=tool.name,
-            description=tool.description,
-            args_schema=getattr(tool, "args_schema", None),
-            return_direct=getattr(tool, "return_direct", False),
-            func=self._run,
-            coroutine=self._arun,
-            tags=tool.tags,
-            metadata=tool.metadata,
-            verbose=True
-        )
+        super().__init__(name=tool.name, func=tool.func, description=tool.description)
         self._wrapped = tool
         self._tool_invoker = LangchainToolInvoker(all_tools)
         self._tg_dir = tg_dir
@@ -161,36 +140,6 @@ class WrappedTool(Tool):
     @property
     def args(self) -> dict:
         return self._wrapped.args
-
-    def _call_wrapped_sync(self, args, config, run_manager, **kwargs):
-        if getattr(self._wrapped, "args_schema", None):
-            return self._wrapped._run(
-                **args,
-                config=config,
-                run_manager=run_manager,
-                **kwargs,
-            )
-        return self._wrapped._run(
-            args,
-            config=config,
-            run_manager=run_manager,
-            **kwargs,
-        )
-        
-    async def _call_wrapped_async(self, args, config, run_manager, **kwargs):
-        if getattr(self._wrapped, "args_schema", None):
-            return await self._wrapped._arun(
-                **args,
-                config=config,
-                run_manager=run_manager,
-                **kwargs,
-            )
-        return await self._wrapped._arun(
-            args,
-            config=config,
-            run_manager=run_manager,
-            **kwargs,
-        )
 
     def _run(
         self,
@@ -203,7 +152,7 @@ class WrappedTool(Tool):
             from rt_toolguard.data_types import PolicyViolationException  # type: ignore
             try:
                 toolguard.check_toolcall(self.name, args=args, delegate=self._tool_invoker)
-                return self._call_wrapped_sync(args, config=config, run_manager=run_manager, **kwargs)
+                return self._wrapped._run(args = args, config=config, run_manager=run_manager, **kwargs)
             except PolicyViolationException as ex:
                 return f"Error: {ex.message}"
 
@@ -214,13 +163,11 @@ class WrappedTool(Tool):
         run_manager: Optional[CallbackManagerForToolRun] = None,
         **kwargs: Any,
     ) -> Any:
-        print(f"tool={self.name}, args={args}, config={config}, kwargs={kwargs}")
+        print(f"args={args}")
         with load_toolguards(self._tg_dir) as toolguard:
             from rt_toolguard.data_types import PolicyViolationException   # type: ignore
             try:
-                toolguard.check_toolcall(self.name, args=args, delegate=self._tool_invoker)
-                return await self._call_wrapped_async(args, config=config, run_manager=run_manager, **kwargs)
+                toolguard.check_toolcall(self.name, *args, delegate=self._tool_invoker)
+                return await self._wrapped._arun(*args, config=config, run_manager=run_manager, **kwargs)
             except PolicyViolationException as ex:
                 return f"Error: {ex.message}"
-            except Exception as ex:
-                logger.exception("Unhandled exception in WrappedTool._arun", exc_info=ex)
