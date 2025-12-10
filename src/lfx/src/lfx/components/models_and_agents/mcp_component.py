@@ -614,7 +614,7 @@ class MCPToolsComponent(ComponentWithCache):
                 if isinstance(parsed, dict):
                     return parsed
                 # Wrap non-dict parsed values in a dictionary
-                return {"text": text, "parsed_value": parsed, "type": "text"}
+                return {"text": text, "parsed_value": parsed, "type": "text"}  # noqa: TRY300
             except json.JSONDecodeError:
                 return item_dict
         return item_dict

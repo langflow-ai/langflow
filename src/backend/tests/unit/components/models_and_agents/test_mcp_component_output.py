@@ -113,7 +113,7 @@ class TestMCPComponentOutputProcessing:
         assert isinstance(result, DataFrame)
 
         # Verify all items in DataFrame are dictionaries
-        for idx, row in result.iterrows():
+        for _idx, row in result.iterrows():
             # Each row should be a valid Series (which can be converted to dict)
             assert row is not None
 
