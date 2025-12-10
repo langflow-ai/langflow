@@ -29,6 +29,8 @@ from langflow.services.job_queue.service import JobQueueService  # noqa: TC001
 from langflow.services.storage.service import StorageService  # noqa: TC001
 from langflow.services.telemetry.service import TelemetryService  # noqa: TC001
 
+_service_manager_cache = None
+
 
 def get_service(service_type: ServiceType, default=None):
     """Retrieves the service instance for the given service type.
@@ -42,17 +44,26 @@ def get_service(service_type: ServiceType, default=None):
         Any: The service instance.
 
     """
-    from lfx.services.manager import get_service_manager
+    global _service_manager_cache
 
-    service_manager = get_service_manager()
+    if _service_manager_cache is None:
+        from lfx.services.manager import get_service_manager
 
-    if not service_manager.are_factories_registered():
-        # ! This is a workaround to ensure that the service manager is initialized
-        # ! Not optimal, but it works for now
+        _service_manager_cache = get_service_manager()
+
+        if not _service_manager_cache.are_factories_registered():
+            # ! This is a workaround to ensure that the service manager is initialized
+            # ! Not optimal, but it works for now
+            from langflow.services.manager import ServiceManager
+
+            _service_manager_cache.register_factories(ServiceManager.get_factories())
+    # Make sure factories are registered even when using cache
+    elif not _service_manager_cache.are_factories_registered():
         from langflow.services.manager import ServiceManager
 
-        service_manager.register_factories(ServiceManager.get_factories())
-    return service_manager.get(service_type, default)
+        _service_manager_cache.register_factories(ServiceManager.get_factories())
+
+    return _service_manager_cache.get(service_type, default)
 
 
 def get_telemetry_service() -> TelemetryService:
@@ -184,7 +195,10 @@ def get_cache_service() -> Union[CacheService, AsyncBaseCacheService]:  # noqa: 
     """
     from langflow.services.cache.factory import CacheServiceFactory
 
-    return get_service(ServiceType.CACHE_SERVICE, CacheServiceFactory())
+    # Instantiate the factory only once, it's always the same
+    if not hasattr(get_cache_service, "_cache_factory"):
+        get_cache_service._cache_factory = CacheServiceFactory()
+    return get_service(ServiceType.CACHE_SERVICE, get_cache_service._cache_factory)
 
 
 def get_shared_component_cache_service() -> CacheService:
