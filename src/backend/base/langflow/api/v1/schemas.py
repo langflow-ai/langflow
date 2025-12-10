@@ -435,7 +435,7 @@ class AuthSettings(BaseModel):
     oauth_mcp_scope: str | None = None
     oauth_provider_scope: str | None = None
 
-    def model_post_init(self, __context) -> None:
+    def model_post_init(self, __context, /) -> None:
         """Normalize oauth_callback_path to oauth_callback_url for backwards compatibility."""
         # If oauth_callback_url is not set but oauth_callback_path is, use the path value
         if self.oauth_callback_url is None and self.oauth_callback_path is not None:
