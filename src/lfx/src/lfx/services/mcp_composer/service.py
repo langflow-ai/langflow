@@ -1302,8 +1302,9 @@ class MCPComposerService(Service):
                 }
 
                 # Backwards compatibility: if oauth_callback_url not set, try oauth_callback_path
-                if ("oauth_callback_url" not in auth_config or not auth_config.get("oauth_callback_url")) and \
-                   ("oauth_callback_path" in auth_config and auth_config.get("oauth_callback_path")):
+                if ("oauth_callback_url" not in auth_config or not auth_config.get("oauth_callback_url")) and (
+                    "oauth_callback_path" in auth_config and auth_config.get("oauth_callback_path")
+                ):
                     auth_config["oauth_callback_url"] = auth_config["oauth_callback_path"]
 
                 # Add environment variables as command line arguments
