@@ -1566,8 +1566,8 @@ async def test_download_file_starter_project(client: AsyncClient, logged_in_head
     async with session_scope() as session:
         for i in range(3):
             flow_create = FlowCreate(
-                name=f"Starter Flow {i+1}",
-                description=f"Test starter flow {i+1}",
+                name=f"Starter Flow {i + 1}",
+                description=f"Test starter flow {i + 1}",
                 data=flow_data.get("data", {}),
                 folder_id=starter_project_id,
                 user_id=active_user.id,
@@ -1609,14 +1609,14 @@ async def test_download_file_starter_project(client: AsyncClient, logged_in_head
 
         # Verify each flow file exists and contains valid JSON
         for i in range(3):
-            expected_filename = f"Starter Flow {i+1}.json"
+            expected_filename = f"Starter Flow {i + 1}.json"
             assert expected_filename in file_names, f"Expected {expected_filename} in zip file"
 
             # Read and verify flow content
             flow_content = zip_file.read(expected_filename)
             flow_json = json.loads(flow_content)
-            assert flow_json["name"] == f"Starter Flow {i+1}"
-            assert flow_json["description"] == f"Test starter flow {i+1}"
+            assert flow_json["name"] == f"Starter Flow {i + 1}"
+            assert flow_json["description"] == f"Test starter flow {i + 1}"
 
     # Clean up: delete the project (which will cascade delete flows)
     delete_response = await client.delete(f"api/v1/projects/{starter_project_id}", headers=logged_in_headers)

@@ -184,7 +184,9 @@ def get_cache_service() -> CacheService | AsyncBaseCacheService:
     """
     from langflow.services.cache.factory import CacheServiceFactory
 
-    return get_service(ServiceType.CACHE_SERVICE, CacheServiceFactory())
+    if not hasattr(get_cache_service, "_cache_service_factory"):
+        get_cache_service._cache_service_factory = CacheServiceFactory()
+    return get_service(ServiceType.CACHE_SERVICE, get_cache_service._cache_service_factory)
 
 
 def get_shared_component_cache_service() -> CacheService:
