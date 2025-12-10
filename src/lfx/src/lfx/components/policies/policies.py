@@ -1,3 +1,4 @@
+import traceback
 from typing import Any, Optional, Union, cast, List, override
 from cohere import ToolCall
 from lfx.io import MessageTextInput
@@ -85,14 +86,12 @@ class PoliciesComponent(Component):
     async def build_guards(self) -> List[Tool]:
         assert self.policies, "🔒️ToolGuard: Policies cannot be empty!"
 
-        # logger.info(f"🔒️ToolGuard: Building guards for {self.policies}")
-        # logger.info(f"🔒️ToolGuard: Using the following tools {self.tools}")
-
         if self.enabled:
             # specs = await self._build_guard_specs()
             # guards = await self._build_guards(specs)
-            guards = None
+            self.guard_code_path = "/Users/davidboaz/Documents/GitHub/ToolGuardAgent/output/step2_claude4sonnet"
             guarded_tools = [WrappedTool(tool, self.tools, self.guard_code_path) for tool in self.tools]
+            print(f"tool0={guarded_tools[0]}")
             return guarded_tools # type: ignore
         
         return self.tools
@@ -100,8 +99,22 @@ class PoliciesComponent(Component):
 from langchain_core.runnables import RunnableConfig
 from langchain_core.callbacks import CallbackManagerForToolRun
 class WrappedTool(Tool):
+    _wrapped: Tool
+    _tool_invoker : IToolInvoker
+    _tg_dir: str
+
     def __init__(self, tool: Tool, all_tools: List[Tool], tg_dir:str):
-        super().__init__(name=tool.name, func=tool.func, description=tool.description)
+        super().__init__(
+            name=tool.name,
+            description=tool.description,
+            args_schema=getattr(tool, "args_schema", None),
+            return_direct=getattr(tool, "return_direct", False),
+            func=self._run,
+            coroutine=self._arun,
+            tags=tool.tags,
+            metadata=tool.metadata,
+            verbose=True
+        )
         self._wrapped = tool
         self._tool_invoker = LangchainToolInvoker(all_tools)
         self._tg_dir = tg_dir
@@ -109,6 +122,36 @@ class WrappedTool(Tool):
     @property
     def args(self) -> dict:
         return self._wrapped.args
+
+    def _call_wrapped_sync(self, args, config, run_manager, **kwargs):
+        if getattr(self._wrapped, "args_schema", None):
+            return self._wrapped._run(
+                **args,
+                config=config,
+                run_manager=run_manager,
+                **kwargs,
+            )
+        return self._wrapped._run(
+            args,
+            config=config,
+            run_manager=run_manager,
+            **kwargs,
+        )
+        
+    async def _call_wrapped_async(self, args, config, run_manager, **kwargs):
+        if getattr(self._wrapped, "args_schema", None):
+            return await self._wrapped._arun(
+                **args,
+                config=config,
+                run_manager=run_manager,
+                **kwargs,
+            )
+        return await self._wrapped._arun(
+            args,
+            config=config,
+            run_manager=run_manager,
+            **kwargs,
+        )
 
     def _run(
         self,
@@ -121,7 +164,7 @@ class WrappedTool(Tool):
             from rt_toolguard.data_types import PolicyViolationException
             try:
                 toolguard.check_toolcall(self.name, args=args, delegate=self._tool_invoker)
-                return self._wrapped._run(args = args, config=config, run_manager=run_manager, **kwargs)
+                return self._call_wrapped_sync(args, config=config, run_manager=run_manager, **kwargs)
             except PolicyViolationException as ex:
                 return f"Error: {ex.message}"
 
@@ -132,11 +175,13 @@ class WrappedTool(Tool):
         run_manager: Optional[CallbackManagerForToolRun] = None,
         **kwargs: Any,
     ) -> Any:
-        print(f"args={args}")
+        print(f"tool={self.name}, args={args}, config={config}, kwargs={kwargs}")
         with load_toolguards(self._tg_dir) as toolguard:
             from rt_toolguard.data_types import PolicyViolationException
             try:
-                toolguard.check_toolcall(self.name, *args, delegate=self._tool_invoker)
-                return await self._wrapped._arun(*args, config=config, run_manager=run_manager, **kwargs)
+                toolguard.check_toolcall(self.name, args=args, delegate=self._tool_invoker)
+                return await self._call_wrapped_async(args, config=config, run_manager=run_manager, **kwargs)
             except PolicyViolationException as ex:
                 return f"Error: {ex.message}"
+            except Exception as ex:
+                logger.exception("Unhandled exception in WrappedTool._arun", exc_info=ex)
