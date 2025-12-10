@@ -504,17 +504,6 @@ module.exports = {
     },
     {
       type: "category",
-      label: "Release notes",
-      items: [
-        {
-          type: "doc",
-          id: "Support/release-notes",
-          label: "Release notes",
-        },
-      ],
-    },
-    {
-      type: "category",
       label: "Support",
       items: [
         {
@@ -533,6 +522,11 @@ module.exports = {
           label: "IBM Elite Support for Langflow",
         },
       ],
+    },
+    {
+      type: "doc",
+      id: "Support/release-notes",
+      label: "Release notes",
     },
     {
       type: "html",
