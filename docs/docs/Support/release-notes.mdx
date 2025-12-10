@@ -58,19 +58,28 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
     Langflow Executor (LFX) is a new command-line tool for serving and running flows statelessly from JSON files without requiring the full Langflow UI or database setup. Use `lfx serve` to create lightweight REST API endpoints from your flows, or `lfx run` to execute flows locally and get results immediately. For more information, see [Run flows with Langflow Executor (LFX)](/lfx-stateless-flows).
 
-- Support for streamable HTTP protocol for MCP clients
+- Support for streamable HTTP transport for MCP clients and servers
 
-    When using Langflow as an MCP client, you can now connect to MCP servers with [streamable HTTP transport](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports#streamable-http).
+    Langflow now supports [streamable HTTP transport](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports#streamable-http) for both MCP clients and servers.
+    When using Langflow as an [MCP client](/mcp-client), you can connect to MCP servers with streamable HTTP transport.
+    When using Langflow as an [MCP server](/mcp-server), clients can connect using streamable HTTP transport.
     SSE transport is still supported as a fallback for backwards compatibility.
-    Streamable HTTP transport support for Langflow as an MCP server is planned for a future release.
 
 - Webhook authentication
 
-    Added the `LANGFLOW_WEBHOOK_AUTH_ENABLE` environment variable for authenticating requests to the [`/webhook` endpoint](/api-flows-run#webhook-run-flow). When `LANGFLOW_WEBHOOK_AUTH_ENABLE=TRUE`, webhook endpoints require API key authentication and validate that the authenticated user owns the flow being executed. When `FALSE`, no Langflow API key is required and all requests to the webhook endpoint are treated as being sent by the flow owner.
+    Added the `LANGFLOW_WEBHOOK_AUTH_ENABLE` environment variable for authenticating requests to the [`/webhook` endpoint](/api-flows-run#webhook-run-flow). When `LANGFLOW_WEBHOOK_AUTH_ENABLE=TRUE`, webhook endpoints require API key authentication and validate that the authenticated user owns the flow being executed. When `FALSE`, no Langflow API key is required and all requests to the webhook endpoint are treated as being sent by the flow owner. For more information, see [Trigger flows with webhooks](/webhook).
+
+- Configurable API key validation
+
+    Added the `LANGFLOW_API_KEY_SOURCE` environment variable to control how Langflow validates API keys. When set to `db`, Langflow validates API keys against keys stored in the database. When set to `env`, Langflow validates API keys against the `LANGFLOW_API_KEY` environment variable. For more information, see [API keys and authentication](/api-keys-and-authentication#langflow-api-key-source).
 
 - SSRF protection
 
     Added SSRF (Server-Side Request Forgery) protection to the [**API Request** component](/api-request). HTTP redirects are disabled by default to prevent SSRF bypass attacks. To enable SSRF protection, set `LANGFLOW_SSRF_PROTECTION_ENABLED=TRUE`. Configure allowed hosts with `LANGFLOW_SSRF_ALLOWED_HOSTS`. Flows that relied on automatic redirects will need to enable it manually.
+
+- Email registration in Langflow Desktop
+
+    Langflow Desktop now includes an email registration screen at startup. The registered email address helps track user registrations and understand the user base. For more information, see [Telemetry](/contributing-telemetry#email).
 
 - Changes to read/write file components
 
@@ -106,8 +115,6 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
   The **LLM Router** component is now called the [**LLM Selector** component](/llm-selector).
 
   The [**Web Search** component](/web-search) now consolidates Web Search, News Search, and RSS Reader into a single component with tabs for different search modes. You can search the web using DuckDuckGo, search Google News, or read RSS feeds—all from one component. The separate **News Search** and **RSS Reader** components have been removed.
-
-### Deprecations
 
 ## 1.6.0
 

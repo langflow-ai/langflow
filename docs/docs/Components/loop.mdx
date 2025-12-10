@@ -9,7 +9,7 @@ import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 The **Loop** component iterates over a list of input by passing individual items to other components attached at the **Item** output port until there are no items left to process.
 Then, the **Loop** component passes the aggregated result of all looping to the component connected to the **Done** port.
 
-### The looping process
+## The looping process
 
 The **Loop** component is like a miniature flow within your flow.
 Here's a breakdown of the looping process:
@@ -49,7 +49,7 @@ done = aggregate_results()  # Compile all returned items
 print(done)                 # Send the aggregated results from the Done port to another component
 ```
 
-### Loop example
+## Loop example
 
 In the follow example, the **Loop** component iterates over a CSV file until there are no rows left to process.
 In this case, the **Item** port passes each row to a **Type Convert** component to convert the row into a `Message` object, passes the `Message` to a **Structured Output** component to be processed into structured data that is then passed back to the **Loop** component's **Looping** port.
@@ -61,7 +61,7 @@ After processing all rows, the **Loop** component loads the aggregated list of s
 For more examples of the **Loop** component, try the **Research Translation Loop** template in Langflow, or see the video tutorial [Mastering the Loop Component & Agentic RAG in Langflow](https://www.youtube.com/watch?v=9Wx7WODSKTo).
 :::
 
-### Conditional looping
+## Conditional looping
 
 The [**If-Else** component](/if-else) isn't compatible with the **Loop** component.
 If you need conditional loop events, redesign your flow to process conditions before the loop.
