@@ -11,12 +11,16 @@ ARG INCLUDE_DOCLING=false
 ################################
 
 # Use an Alpine-based Python image with uv pre-installed
-FROM ghcr.io/astral-sh/uv:python3.12-alpine AS builder
-ARG INCLUDE_DOCLING
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS builder
 
-# Install build dependencies needed for some Python packages on Alpine
-RUN apk add --no-cache build-base libaio-dev linux-headers
-
+# ARG TARGETARCH
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        build-essential \
+        libaio-dev \
+        linux-headers-generic \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 
 # Enable bytecode compilation
@@ -65,7 +69,7 @@ RUN if [ "$INCLUDE_DOCLING" = "false" ]; then \
 # RUNTIME
 # Setup user, utilities and copy the virtual environment only
 ################################
-FROM python:3.12-alpine AS runtime
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS runtime
 ARG INCLUDE_DOCLING
 
 # Create a non-root user
@@ -74,7 +78,7 @@ ARG INCLUDE_DOCLING
 # -G: Add to group (root)
 # -h: Set home directory
 # -s: Set shell
-RUN adduser -D -u 1000 -G root -h /app/data -s /sbin/nologin lfx
+RUN useradd --uid 1000 --gid 0 --home-dir /app/data --shell /sbin/nologin lfx
 
 # Copy the virtual environment from the builder stage
 COPY --from=builder --chown=1000 /app/.venv /app/.venv
