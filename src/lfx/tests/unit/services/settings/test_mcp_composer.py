@@ -191,7 +191,8 @@ class TestPortChangeHandling:
             "process": mock_process,
             "host": "localhost",
             "port": old_port,
-            "sse_url": "http://test",
+            "streamable_http_url": "http://test",
+            "legacy_sse_url": "http://test/sse",
             "auth_config": {
                 "auth_type": "oauth",
                 "oauth_host": "localhost",
@@ -228,7 +229,7 @@ class TestPortChangeHandling:
             with contextlib.suppress(Exception):
                 await mcp_service._do_start_project_composer(
                     project_id=project_id,
-                    sse_url="http://test",
+                    streamable_http_url="http://test",
                     auth_config=new_auth_config,
                     max_retries=1,
                     max_startup_checks=1,
@@ -274,7 +275,7 @@ class TestPortChangeHandling:
             ):
                 await mcp_service._do_start_project_composer(
                     project_id=project_id,
-                    sse_url="http://test",
+                    streamable_http_url="http://test",
                     auth_config=auth_config,
                     max_retries=1,
                     max_startup_checks=1,
@@ -311,7 +312,7 @@ class TestPortChangeHandling:
             with pytest.raises(MCPComposerPortError) as exc_info:
                 await mcp_service._do_start_project_composer(
                     project_id=project_id,
-                    sse_url="http://test",
+                    streamable_http_url="http://test",
                     auth_config=auth_config,
                     max_retries=1,
                     max_startup_checks=1,
@@ -320,3 +321,87 @@ class TestPortChangeHandling:
 
             # New security message: won't kill unknown processes
             assert "already in use by another application" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_legacy_sse_url_preserved_in_composer_state(self, mcp_service):
+        """Ensure legacy SSE URLs are passed through to the composer process and stored."""
+        project_id = "legacy-project"
+        auth_config = {
+            "auth_type": "oauth",
+            "oauth_host": "localhost",
+            "oauth_port": "9100",
+            "oauth_server_url": "http://localhost:9100",
+            "oauth_client_id": "legacy",
+            "oauth_client_secret": "secret",
+            "oauth_auth_url": "http://auth",
+            "oauth_token_url": "http://token",
+        }
+        legacy_url = "http://test/legacy-sse"
+        streamable_url = "http://test/streamable"
+
+        mcp_service._start_locks[project_id] = asyncio.Lock()
+
+        mock_process = MagicMock(pid=4321)
+        with (
+            patch.object(mcp_service, "_is_port_available", return_value=True),
+            patch.object(
+                mcp_service,
+                "_start_project_composer_process",
+                new=AsyncMock(return_value=mock_process),
+            ) as mock_start,
+        ):
+            await mcp_service._do_start_project_composer(
+                project_id=project_id,
+                streamable_http_url=streamable_url,
+                auth_config=auth_config,
+                max_retries=1,
+                max_startup_checks=1,
+                startup_delay=0.1,
+                legacy_sse_url=legacy_url,
+            )
+
+        mock_start.assert_awaited()
+        kwargs = mock_start.call_args.kwargs
+        assert kwargs["legacy_sse_url"] == legacy_url
+        assert mcp_service.project_composers[project_id]["legacy_sse_url"] == legacy_url
+        assert mcp_service.project_composers[project_id]["streamable_http_url"] == streamable_url
+
+    @pytest.mark.asyncio
+    async def test_legacy_sse_url_defaults_when_not_provided(self, mcp_service):
+        """Verify that a default SSE URL is derived when none is supplied."""
+        project_id = "legacy-default"
+        streamable_url = "http://test/default"
+        auth_config = {
+            "auth_type": "oauth",
+            "oauth_host": "localhost",
+            "oauth_port": "9200",
+            "oauth_server_url": "http://localhost:9200",
+            "oauth_client_id": "legacy",
+            "oauth_client_secret": "secret",
+            "oauth_auth_url": "http://auth",
+            "oauth_token_url": "http://token",
+        }
+
+        mcp_service._start_locks[project_id] = asyncio.Lock()
+
+        mock_process = MagicMock(pid=9876)
+        with (
+            patch.object(mcp_service, "_is_port_available", return_value=True),
+            patch.object(
+                mcp_service,
+                "_start_project_composer_process",
+                new=AsyncMock(return_value=mock_process),
+            ) as mock_start,
+        ):
+            await mcp_service._do_start_project_composer(
+                project_id=project_id,
+                streamable_http_url=streamable_url,
+                auth_config=auth_config,
+                max_retries=1,
+                max_startup_checks=1,
+                startup_delay=0.1,
+            )
+
+        mock_start.assert_awaited()
+        kwargs = mock_start.call_args.kwargs
+        assert kwargs["legacy_sse_url"] == f"{streamable_url}/sse"
