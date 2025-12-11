@@ -47,6 +47,7 @@ We appreciate your efforts in helping us maintain a secure platform and look for
 Langflow versions `1.6.0` through `1.6.3` have a critical bug where environment variables from `.env` files are not being read. This affects all deployments using environment variables for configuration, including security settings.
 
 **Potential security impact:**
+
 - Environment variables from `.env` files are not read.
 - Security configurations like `AUTO_LOGIN=false` may not be applied, potentially allowing users to log in as the default superuser.
 - Database credentials, API keys, and other sensitive configuration may not be loaded.
@@ -91,10 +92,12 @@ The `langflow superuser` CLI command can present a privilege escalation risk if 
 #### Security Measures
 
 1. **Authentication Required in Production**
+
    - When `LANGFLOW_AUTO_LOGIN=false`, superuser creation requires authentication
    - Use `--auth-token` parameter with a valid superuser API key or JWT token
 
 2. **Disable CLI Superuser Creation**
+
    - Set `LANGFLOW_ENABLE_SUPERUSER_CLI=false` to disable the command entirely
    - Strongly recommended for production environments
 
@@ -112,4 +115,86 @@ export LANGFLOW_SUPERUSER="<your-superuser-username>"
 export LANGFLOW_SUPERUSER_PASSWORD="<your-superuser-password>"
 export LANGFLOW_DATABASE_URL="<your-production-database-url>" # e.g. "postgresql+psycopg://langflow:secure_pass@db.internal:5432/langflow"
 export LANGFLOW_SECRET_KEY="your-strong-random-secret-key"
+```
+
+## Secret Key Rotation
+
+The `LANGFLOW_SECRET_KEY` is used for:
+
+- **JWT signing**: Access tokens, refresh tokens
+- **Fernet encryption**: Stored credentials, encrypted variables, MCP auth settings
+
+User passwords use bcrypt and are **not affected** by key rotation.
+
+### Running the Migration
+
+```bash
+# Stop Langflow first, then:
+
+# Preview what will be migrated
+uv run python scripts/migrate_secret_key.py --dry-run
+
+# Run the migration
+uv run python scripts/migrate_secret_key.py
+
+# Start Langflow
+```
+
+The script will:
+
+1. Read your current secret key from the config directory
+2. Generate a new secret key
+3. Backup the old key to `<config-dir>/secret_key.backup.<timestamp>`
+4. Re-encrypt all sensitive data in the database
+5. Save the new key to `<config-dir>/secret_key`
+
+### Config Directory Location
+
+The default config directory varies by platform:
+
+- **macOS**: `~/Library/Caches/langflow`
+- **Linux**: `~/.cache/langflow`
+- **Windows**: `C:\Users\<user>\AppData\Local\langflow\langflow\Cache`
+
+Override with `LANGFLOW_CONFIG_DIR` environment variable or `--config-dir` flag.
+
+### CLI Options
+
+```
+python scripts/migrate_secret_key.py --help
+
+Options:
+  --dry-run          Preview changes without modifying anything
+  --config-dir PATH  Langflow config directory (default: platform-specific)
+  --database-url URL Database connection URL (default: sqlite in config dir)
+  --old-key KEY      Current secret key (default: read from config dir)
+  --new-key KEY      New secret key (default: auto-generated)
+```
+
+### What Gets Migrated
+
+| Location               | Data                             | Notes            |
+| ---------------------- | -------------------------------- | ---------------- |
+| `user.store_api_key`   | Langflow Store API key           | Fernet encrypted |
+| `variable.value`       | All variable values              | Fernet encrypted |
+| `folder.auth_settings` | MCP oauth_client_secret, api_key | Fernet encrypted |
+
+### What Gets Invalidated
+
+Even with migration, these cannot be preserved:
+
+- **Active sessions**: Users must log in again (JWT tokens are invalidated)
+
+### Recovery
+
+If something goes wrong, restore from backup:
+
+```bash
+# Find the backup (adjust path for your platform)
+ls <config-dir>/secret_key.backup.*
+
+# Restore the old key
+cp <config-dir>/secret_key.backup.YYYYMMDD_HHMMSS <config-dir>/secret_key
+
+# Restart Langflow
 ```
