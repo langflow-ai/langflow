@@ -41,9 +41,9 @@ class PoliciesComponent(Component):
         TabInput(
             name="build_mode",
             display_name="ToolGuard Build Mode",
-            options=["execute", "run"],
-            info="Indicates whether to invoke buildtime (execute), or use a cached code (run)",
-            value="execute",
+            options=["build", "use cache"],
+            info="Indicates whether to invoke buildtime (build), or use a cached code (use cache)",
+            value="build",
             real_time_refresh=True,
             tool_mode=True,
         ),
@@ -128,13 +128,13 @@ class PoliciesComponent(Component):
         self.log(f"🔒️ToolGuard: please review the generated guard code at ...", name="info")
 
         if self.enabled:
-            build_mode = getattr(self, "build_mode", "execute")
-            if build_mode == "execute":  # run buildtime steps
+            build_mode = getattr(self, "build_mode", "build")
+            if build_mode == "build":  # run buildtime steps
                 self.log(f"🔒️ToolGuard: execution (build) mode", name="info")
                 # specs  = await self._build_guard_specs()
                 # guards = await self._build_guards(specs)
                 pass
-            else:  # build_mode == "run"
+            else:  # build_mode == "use cache"
                 self.log(f"🔒️ToolGuard: run mode (cached code from path)", name="info")
                 # make sure self.guard_code_path contains the path to pre-built guards
                 #assert self.guard_code_path, "🔒️ToolGuard: guard path should be a valid code path!"
