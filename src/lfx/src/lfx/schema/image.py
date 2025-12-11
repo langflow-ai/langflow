@@ -7,6 +7,7 @@ from platformdirs import user_cache_dir
 from pydantic import BaseModel
 
 from lfx.services.deps import get_storage_service
+from lfx.utils.image import create_image_content_dict
 
 IMAGE_ENDPOINT = "/files/images/"
 
@@ -162,12 +163,23 @@ class Image(BaseModel):
         msg = "Image path is not set."
         raise ValueError(msg)
 
-    def to_content_dict(self):
-        """Convert image to content dictionary."""
-        return {
-            "type": "image_url",
-            "image_url": self.to_base64(),
-        }
+    def to_content_dict(self, flow_id: str | None = None):
+        """Convert image to content dictionary.
+        
+        Args:
+            flow_id: Optional flow ID to prepend to the path if it doesn't contain one
+        """
+        if not self.path:
+            msg = "Image path is not set."
+            raise ValueError(msg)
+        
+        # If the path doesn't contain a "/" and we have a flow_id, prepend it
+        image_path = self.path
+        if flow_id and "/" not in self.path:
+            image_path = f"{flow_id}/{self.path}"
+        
+        # Use the utility function that properly handles the conversion
+        return create_image_content_dict(image_path, None, None)
 
     def get_url(self) -> str:
         """Get the URL for the image."""
