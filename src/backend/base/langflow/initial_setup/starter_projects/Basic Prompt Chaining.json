@@ -22,9 +22,9 @@
         },
         "id": "reactflow__edge-ChatInput-B7vXKmessage-Prompt-RcCgDtool_placeholder",
         "source": "ChatInput-B7vXK",
-        "sourceHandle": "message",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-B7vXKœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-RcCgD",
-        "targetHandle": "tool_placeholder",
+        "targetHandle": "{œfieldNameœ: œtool_placeholderœ, œidœ: œPrompt-RcCgDœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}",
         "type": "default"
       },
       {
@@ -48,9 +48,9 @@
         },
         "id": "reactflow__edge-Prompt-RcCgDprompt-Prompt-gxyFutool_placeholder",
         "source": "Prompt-RcCgD",
-        "sourceHandle": "prompt",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-RcCgDœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-gxyFu",
-        "targetHandle": "tool_placeholder",
+        "targetHandle": "{œfieldNameœ: œtool_placeholderœ, œidœ: œPrompt-gxyFuœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}",
         "type": "default"
       },
       {
@@ -74,9 +74,9 @@
         },
         "id": "reactflow__edge-Prompt-gxyFuprompt-Prompt-7PuDHtool_placeholder",
         "source": "Prompt-gxyFu",
-        "sourceHandle": "prompt",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-gxyFuœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-7PuDH",
-        "targetHandle": "tool_placeholder",
+        "targetHandle": "{œfieldNameœ: œtool_placeholderœ, œidœ: œPrompt-7PuDHœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}",
         "type": "default"
       },
       {
@@ -102,9 +102,9 @@
         },
         "id": "reactflow__edge-Prompt-7PuDHprompt-ChatOutput-mc2Rzinput_value",
         "source": "Prompt-7PuDH",
-        "sourceHandle": "prompt",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-7PuDHœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-mc2Rz",
-        "targetHandle": "input_value",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-mc2Rzœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}",
         "type": "default"
       }
     ],
