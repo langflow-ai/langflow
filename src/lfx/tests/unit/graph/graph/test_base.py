@@ -224,9 +224,7 @@ def test_get_terminal_nodes_linear_chain():
     terminal_nodes = graph.get_terminal_nodes()
 
     # Only the last node should be terminal
-    assert terminal_nodes == ["node_d"], (
-        f"Expected only ['node_d'] to be terminal, got {terminal_nodes}"
-    )
+    assert terminal_nodes == ["node_d"], f"Expected only ['node_d'] to be terminal, got {terminal_nodes}"
 
 
 def test_get_terminal_nodes_empty_graph():
