@@ -137,7 +137,7 @@ async def handle_sse(request: Request, current_user: CurrentActiveMCPUser):
 
 
 @router.post("/")
-async def handle_messages(request: Request):
+async def handle_messages(request: Request, current_user: CurrentActiveMCPUser):
     try:
         await sse.handle_post_message(request.scope, request.receive, request._send)  # noqa: SLF001
     except (BrokenResourceError, BrokenPipeError) as e:

@@ -24,7 +24,10 @@ async def post_validate_code(code: Code, _current_user: CurrentActiveUser) -> Co
 
 
 @router.post("/prompt", status_code=200)
-async def post_validate_prompt(prompt_request: ValidatePromptRequest) -> PromptValidationResponse:
+async def post_validate_prompt(
+    prompt_request: ValidatePromptRequest,
+    _current_user: CurrentActiveUser,
+) -> PromptValidationResponse:
     try:
         if not prompt_request.frontend_node:
             return PromptValidationResponse(
