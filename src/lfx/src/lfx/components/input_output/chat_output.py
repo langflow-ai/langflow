@@ -22,7 +22,7 @@ from lfx.utils.constants import (
 class ChatOutput(ChatComponent):
     display_name = "Chat Output"
     description = "Display a chat message in the Playground."
-    documentation: str = "https://docs.langflow.org/components-io#chat-output"
+    documentation: str = "https://docs.langflow.org/chat-input-and-output"
     icon = "MessagesSquare"
     name = "ChatOutput"
     minimized = True
@@ -117,23 +117,29 @@ class ChatOutput(ChatComponent):
         source, _, display_name, source_id = self.get_properties_from_source_component()
 
         # Create or use existing Message object
-        if isinstance(self.input_value, Message):
+        if isinstance(self.input_value, Message) and not self.is_connected_to_chat_input():
             message = self.input_value
             # Update message properties
             message.text = text
+            # Preserve existing session_id from the incoming message if it exists
+            existing_session_id = message.session_id
         else:
             message = Message(text=text)
+            existing_session_id = None
 
         # Set message properties
         message.sender = self.sender
         message.sender_name = self.sender_name
-        message.session_id = self.session_id
+        # Preserve session_id from incoming message, or use component/graph session_id
+        message.session_id = (
+            self.session_id or existing_session_id or (self.graph.session_id if hasattr(self, "graph") else None) or ""
+        )
         message.context_id = self.context_id
         message.flow_id = self.graph.flow_id if hasattr(self, "graph") else None
         message.properties.source = self._build_source(source_id, display_name, source)
 
         # Store message if needed
-        if self.session_id and self.should_store_message:
+        if message.session_id and self.should_store_message:
             stored_message = await self.send_message(message)
             self.message.value = stored_message
             message = stored_message

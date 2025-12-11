@@ -65,7 +65,7 @@ jobs:
       lfx_tag: ${{ steps.generate_lfx_tag.outputs.lfx_tag }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           persist-credentials: true
       - name: "Setup Environment"
@@ -128,7 +128,6 @@ jobs:
 
           uv lock
           cd src/backend/base && uv lock && cd ../../..
-          cd src/lfx && uv lock && cd ../..
 
           git add pyproject.toml src/backend/base/pyproject.toml src/lfx/pyproject.toml uv.lock src/backend/base/uv.lock
           git commit -m "Update version and project name"
@@ -147,7 +146,7 @@ jobs:
           # TODO: notify on failure
 
       - name: Checkout main nightly tag
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ steps.generate_main_tag.outputs.main_tag }}
 

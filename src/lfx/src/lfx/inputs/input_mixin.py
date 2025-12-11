@@ -37,6 +37,7 @@ class FieldTypes(str, Enum):
     QUERY = "query"
     TOOLS = "tools"
     MCP = "mcp"
+    MODEL = "model"
 
 
 SerializableFieldTypes = Annotated[FieldTypes, PlainSerializer(lambda v: v.value, return_type=str)]
@@ -60,6 +61,9 @@ class BaseInputMixin(CrossModuleModel, validate_assignment=True):  # type: ignor
     )
 
     field_type: SerializableFieldTypes = Field(default=FieldTypes.TEXT, alias="type")
+
+    override_skip: bool = False
+    """Specifies if the field should never be skipped. Defaults to False."""
 
     required: bool = False
     """Specifies if the field is required. Defaults to False."""
@@ -131,6 +135,59 @@ class BaseInputMixin(CrossModuleModel, validate_assignment=True):  # type: ignor
             dump["type"] = dump.pop("field_type")
         dump["_input_type"] = self.__class__.__name__
         return dump
+
+
+class ModelInputMixin(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+    """Mixin for model input fields."""
+    model_name: str | None = None
+    """Name of the model to be used in the input."""
+    model_type: str | None = "language"
+    """Type of model: 'language' or 'embedding'. Defaults to 'language'."""
+    model_options: list[dict[str, Any]] | None = Field(
+        default=None,
+        validation_alias="options",
+        serialization_alias="options",
+    )
+    """List of model options with name, icon, category, provider, and metadata."""
+    temperature: float | None = None
+    """Temperature parameter for model generation."""
+    max_tokens: int | None = None
+    """Maximum tokens for model generation."""
+    limit: int | None = None
+    """Limit for the number of options to display."""
+    external_options: dict[str, Any] | None = None
+    """Dictionary of external options to display below the dropdown options (e.g., 'Connect other models')."""
+
+    @field_validator("model_options", mode="before")
+    @classmethod
+    def normalize_model_options(cls, v):
+        """Convert simple list of model names to list of dicts format.
+
+        Allows passing ['gpt-4o', 'gpt-4o-mini'] which gets converted to:
+        [{'name': 'gpt-4o', ...}, {'name': 'gpt-4o-mini', ...}]
+        """
+        if v is None or not isinstance(v, list):
+            return v
+
+        # If already in dict format, return as-is
+        if all(isinstance(item, dict) for item in v):
+            return v
+
+        # If it's a list of strings, convert to dict format
+        if all(isinstance(item, str) for item in v):
+            # Avoid circular import by importing the module directly (not through package __init__)
+            try:
+                from lfx.base.models.unified_models import normalize_model_names_to_dicts
+
+                return normalize_model_names_to_dicts(v)
+            except Exception:  # noqa: BLE001
+                # Fallback if import or normalization fails
+                # This can happen during module initialization or in test environments
+                return [{"name": item} for item in v]
+
+        # Mixed list or unexpected format, return as-is
+        return v
 
 
 class ToolModeMixin(BaseModel):
@@ -305,6 +362,10 @@ class TabMixin(BaseModel):
 
 class MultilineMixin(BaseModel):
     multiline: CoalesceBool = True
+
+
+class AIMixin(BaseModel):
+    ai_enabled: CoalesceBool = False
 
 
 class LinkMixin(BaseModel):

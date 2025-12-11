@@ -14,8 +14,9 @@ import useAlertStore from "@/stores/alertStore";
 import getUnavailableFields from "@/stores/globalVariablesStore/utils/get-unavailable-fields";
 import { useTypesStore } from "@/stores/typesStore";
 import type { ResponseErrorDetailAPI } from "@/types/api";
-import type { GlobalVariable } from "@/types/global_variables";
+import type { GlobalVariable, TAB_TYPES } from "@/types/global_variables";
 import InputComponent from "../parameterRenderComponent/components/inputComponent";
+import { assignTab } from "./utils/assign-tab";
 import sortByName from "./utils/sort-by-name";
 
 //TODO IMPLEMENT FORM LOGIC
@@ -39,7 +40,9 @@ export default function GlobalVariableModal({
 }): JSX.Element {
   const [key, setKey] = useState(initialData?.name ?? "");
   const [value, setValue] = useState(initialData?.value ?? "");
-  const [type, setType] = useState(initialData?.type ?? "Credential");
+  const [type, setType] = useState<TAB_TYPES>(
+    initialData?.type ?? "Credential",
+  );
   const [fields, setFields] = useState<string[]>(
     initialData?.default_fields ?? [],
   );
@@ -74,11 +77,15 @@ export default function GlobalVariableModal({
 
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
+  const handleOnValueCHange = (value: string) => {
+    setType(assignTab(value));
+  };
+
   function handleSaveVariable() {
     const data: {
       name: string;
       value: string;
-      type?: string;
+      type?: TAB_TYPES;
       default_fields?: string[];
     } = {
       name: key,
@@ -92,7 +99,7 @@ export default function GlobalVariableModal({
         const { name } = res;
         setKey("");
         setValue("");
-        setType("");
+        setType("Credential");
         setFields([]);
         setOpen(false);
 
@@ -156,7 +163,7 @@ export default function GlobalVariableModal({
             <Label>Type*</Label>
             <Tabs
               defaultValue={type}
-              onValueChange={setType}
+              onValueChange={handleOnValueCHange}
               className="w-full"
             >
               <TabsList className="grid w-full grid-cols-2">

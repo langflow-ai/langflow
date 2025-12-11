@@ -58,7 +58,7 @@ jobs:
         shell: bash
     steps:
       - name: Check out the code at a specific ref
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.nightly_tag_main }}
           persist-credentials: true
@@ -124,7 +124,7 @@ jobs:
       skipped: ${{ steps.verify.outputs.skipped }}
     steps:
       - name: Check out the code at a specific ref
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.nightly_tag_main }}
           persist-credentials: true
@@ -163,7 +163,7 @@ jobs:
         run: |
           rm -rf src/backend/base/dist
           rm -rf dist
-          make build base=true args="--wheel"
+          make build base=true args="--no-sources --wheel"
 
       - name: Test Langflow Base CLI
         run: |
@@ -205,7 +205,7 @@ jobs:
         shell: bash
     steps:
       - name: Check out the code at a specific ref
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.nightly_tag_main}}
           persist-credentials: true
@@ -283,7 +283,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out the code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.nightly_tag_main }}
           persist-credentials: true
@@ -311,7 +311,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.nightly_tag_main }}
           persist-credentials: true
@@ -339,7 +339,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.nightly_tag_main }}
           persist-credentials: true
