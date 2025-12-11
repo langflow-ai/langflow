@@ -1,4 +1,3 @@
-import os
 from typing import Any
 from uuid import uuid4
 
@@ -63,8 +62,8 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         return {
             "_type": "Cuga",
             "add_current_date_tool": True,
-            "agent_llm": MockLanguageModel(),
-            "policies": "You are a helpful assistant.",
+            "model": MockLanguageModel(),
+            "instructions": "You are a helpful assistant.",
             "input_value": "",
             "n_messages": 100,
             "browser_enabled": False,
@@ -75,47 +74,33 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         }
 
     async def test_build_config_update(self, component_class, default_kwargs):
-        """Test that build configuration updates correctly for different providers.
+        """Test that build configuration updates correctly for different model selections.
 
         This test verifies that the component's build configuration is properly
-        updated when switching between different model providers (OpenAI, Custom).
+        updated when selecting different models using the unified model system.
         """
         component = await self.component_setup(component_class, default_kwargs)
         frontend_node = component.to_frontend_node()
         build_config = frontend_node["data"]["node"]["template"]
 
-        # Test updating build config for OpenAI
-        component.set(agent_llm="OpenAI")
-        updated_config = await component.update_build_config(build_config, "OpenAI", "agent_llm")
-        assert "agent_llm" in updated_config
-        assert updated_config["agent_llm"]["value"] == "OpenAI"
-        assert isinstance(updated_config["agent_llm"]["options"], list)
-        assert len(updated_config["agent_llm"]["options"]) > 0
-        assert all(provider in updated_config["agent_llm"]["options"] for provider in ["OpenAI", "Custom"])
-        assert "Custom" in updated_config["agent_llm"]["options"]
+        # Test that model field exists and has proper structure
+        assert "model" in build_config
+        model_config = build_config["model"]
+        assert "input_types" in model_config
+        assert "LanguageModel" in model_config["input_types"]
 
-        # Verify model_name field is populated for OpenAI
-        assert "model_name" in updated_config
-        model_name_dict = updated_config["model_name"]
-        assert isinstance(model_name_dict["options"], list)
-        assert len(model_name_dict["options"]) > 0  # OpenAI should have available models
-        assert "gpt-4o" in model_name_dict["options"]
+        # Test updating build config with a model selection (list of model dicts)
+        test_model_value = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
+        updated_config = await component.update_build_config(build_config, test_model_value, "model")
 
-        # Test Anthropic
-        # TBD: Add test for Anthropic currently cuga does not support Anthropic
+        assert "model" in updated_config
+        # When a model is selected, options should be populated
+        assert isinstance(updated_config["model"].get("options"), list)
 
-        # Test updating build config for Custom
-        updated_config = await component.update_build_config(build_config, "Custom", "agent_llm")
-        assert "agent_llm" in updated_config
-        assert updated_config["agent_llm"]["value"] == "Custom"
-        assert isinstance(updated_config["agent_llm"]["options"], list)
-        assert len(updated_config["agent_llm"]["options"]) > 0
-        assert all(provider in updated_config["agent_llm"]["options"] for provider in ["OpenAI", "Custom"])
-        assert "Custom" in updated_config["agent_llm"]["options"]
-        assert updated_config["agent_llm"]["input_types"] == ["LanguageModel"]
-
-        # Verify model_name field is cleared for Custom
-        assert "model_name" not in updated_config
+        # Test updating build config with "connect_other_models" (should restore input types)
+        updated_config = await component.update_build_config(build_config, "connect_other_models", "model")
+        assert "model" in updated_config
+        assert "LanguageModel" in updated_config["model"]["input_types"]
 
     async def test_cuga_component_initialization(self, component_class, default_kwargs):
         """Test that Cuga component initializes correctly with filtered inputs.
@@ -142,9 +127,9 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         frontend_node = component.to_frontend_node()
         build_config = frontend_node["data"]["node"]["template"]
 
-        # Verify other expected fields are present
-        assert "agent_llm" in build_config
-        assert "policies" in build_config
+        # Verify expected fields are present (using new field name 'model')
+        assert "model" in build_config
+        assert "instructions" in build_config
         assert "add_current_date_tool" in build_config
         assert "browser_enabled" in build_config
         assert "web_apps" in build_config
@@ -160,7 +145,7 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         input_names = [inp.name for inp in component.inputs if hasattr(inp, "name")]
 
         # Test for new fields specific to Cuga
-        assert "policies" in input_names
+        assert "instructions" in input_names
         assert "n_messages" in input_names
         assert "browser_enabled" in input_names
         assert "web_apps" in input_names
@@ -169,7 +154,7 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         assert "decomposition_strategy" in input_names
 
         # Verify default values
-        assert hasattr(component, "policies")
+        assert hasattr(component, "instructions")
         assert hasattr(component, "n_messages")
         assert hasattr(component, "browser_enabled")
         assert hasattr(component, "web_apps")
@@ -209,6 +194,32 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
 
         component.decomposition_strategy = "flexible"
         assert component.decomposition_strategy == "flexible"
+
+    async def test_advanced_fields_configuration(self, component_class, default_kwargs):
+        """Test that browser and cuga lite fields are properly configured as advanced.
+
+        This test verifies that browser_enabled, web_apps, lite_mode, and
+        lite_mode_tool_threshold fields are all set to advanced.
+        """
+        component = await self.component_setup(component_class, default_kwargs)
+
+        # Find all the advanced fields we want to test
+        field_checks = {
+            "browser_enabled": False,
+            "web_apps": False,
+            "lite_mode": False,
+            "lite_mode_tool_threshold": False,
+        }
+
+        for inp in component.inputs:
+            if hasattr(inp, "name") and inp.name in field_checks:
+                field_checks[inp.name] = inp.advanced
+
+        # Assert all fields are set to advanced
+        assert field_checks["browser_enabled"] is True, "browser_enabled should be advanced"
+        assert field_checks["web_apps"] is True, "web_apps should be advanced"
+        assert field_checks["lite_mode"] is True, "lite_mode should be advanced"
+        assert field_checks["lite_mode_tool_threshold"] is True, "lite_mode_tool_threshold should be advanced"
 
     async def test_memory_inputs_advanced_setting(self, component_class, default_kwargs):
         """Test that memory inputs are properly set to advanced.
@@ -276,21 +287,29 @@ class TestCugaComponentWithClient(ComponentTestBaseWithClient):
         Requires:
             OPENAI_API_KEY environment variable
         """
-        # Now you can access the environment variables
-        api_key = os.getenv("OPENAI_API_KEY")
+        from tests.api_keys import get_openai_api_key
+
+        api_key = get_openai_api_key()
         tools = [CalculatorToolComponent().build_tool()]  # Use the Calculator component as a tool
         input_value = "What is 2 + 2?"
 
-        temperature = 0.1
-
-        # Initialize the CugaComponent with mocked inputs
+        # Initialize the CugaComponent with unified model format
         cuga = CugaComponent(
             tools=tools,
             input_value=input_value,
             api_key=api_key,
-            model_name="gpt-4o",
-            agent_llm="OpenAI",
-            temperature=temperature,
+            model=[
+                {
+                    "name": "gpt-4o",
+                    "provider": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                        "model_class": "ChatOpenAI",
+                        "model_name_param": "model",
+                        "api_key_param": "api_key",  # pragma: allowlist secret
+                    },
+                }
+            ],
             _session_id=str(uuid4()),
         )
 
@@ -309,8 +328,9 @@ class TestCugaComponentWithClient(ComponentTestBaseWithClient):
         Requires:
             OPENAI_API_KEY environment variable
         """
-        # Mock inputs
-        api_key = os.getenv("OPENAI_API_KEY")
+        from tests.api_keys import get_openai_api_key
+
+        api_key = get_openai_api_key()
         input_value = "What is 2 + 2?"
 
         # Test only key OpenAI models to avoid timeout and complexity
@@ -319,14 +339,24 @@ class TestCugaComponentWithClient(ComponentTestBaseWithClient):
 
         for model_name in key_models:
             try:
-                # Initialize the CugaComponent with mocked inputs
+                # Initialize the CugaComponent with unified model format
                 tools = [CalculatorToolComponent().build_tool()]  # Use the Calculator component as a tool
                 cuga = CugaComponent(
                     tools=tools,
                     input_value=input_value,
                     api_key=api_key,
-                    model_name=model_name,
-                    agent_llm="OpenAI",
+                    model=[
+                        {
+                            "name": model_name,
+                            "provider": "OpenAI",
+                            "icon": "OpenAI",
+                            "metadata": {
+                                "model_class": "ChatOpenAI",
+                                "model_name_param": "model",
+                                "api_key_param": "api_key",  # pragma: allowlist secret
+                            },
+                        }
+                    ],
                     _session_id=str(uuid4()),
                 )
 
@@ -340,25 +370,37 @@ class TestCugaComponentWithClient(ComponentTestBaseWithClient):
 
     @pytest.mark.api_key_required
     @pytest.mark.no_blockbuster
-    async def test_cuga_with_policies(self):
-        """Test Cuga with custom policies.
+    async def test_cuga_with_instructions(self):
+        """Test Cuga with custom instructions.
 
         This integration test verifies that the CugaComponent can apply
-        custom policies to modify its behavior during execution.
+        custom instructions to modify its behavior during execution.
 
         Requires:
             OPENAI_API_KEY environment variable
         """
-        api_key = os.getenv("OPENAI_API_KEY")
+        from tests.api_keys import get_openai_api_key
+
+        api_key = get_openai_api_key()
         input_value = "What is 2 + 2?"
-        policies = "## Answer\n\nYou must always respond with enthusiasm and use exclamation marks!"
+        instructions = "## Answer\n\nYou must always respond with enthusiasm and use exclamation marks!"
         tools = [CalculatorToolComponent().build_tool()]
         cuga = CugaComponent(
             input_value=input_value,
             api_key=api_key,
-            model_name="gpt-4o",
-            agent_llm="OpenAI",
-            policies=policies,
+            model=[
+                {
+                    "name": "gpt-4o",
+                    "provider": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                        "model_class": "ChatOpenAI",
+                        "model_name_param": "model",
+                        "api_key_param": "api_key",  # pragma: allowlist secret
+                    },
+                }
+            ],
+            instructions=instructions,
             tools=tools,
             _session_id=str(uuid4()),
         )

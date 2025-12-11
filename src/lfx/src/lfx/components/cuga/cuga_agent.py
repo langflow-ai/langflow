@@ -8,24 +8,22 @@ from typing import TYPE_CHECKING, Any, cast
 from langchain_core.agents import AgentFinish
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.tools import StructuredTool
+from loguru import logger
 
 from lfx.base.agents.agent import LCToolsAgentComponent
-from lfx.base.models.model_input_constants import (
-    ALL_PROVIDER_FIELDS,
-    MODEL_DYNAMIC_UPDATE_FIELDS,
-    MODEL_PROVIDERS,
-    MODEL_PROVIDERS_DICT,
-    MODELS_METADATA,
-)
 from lfx.base.models.model_utils import get_model_name
+from lfx.base.models.unified_models import (
+    get_language_model_options,
+    get_llm,
+    update_model_options_in_build_config,
+)
 from lfx.components.helpers import CurrentDateComponent
 from lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
 from lfx.components.models_and_agents.memory import MemoryComponent
 from lfx.custom.custom_component.component import _get_component_toolkit
-from lfx.custom.utils import update_component_build_config
 from lfx.field_typing import Tool
-from lfx.io import BoolInput, DropdownInput, IntInput, MultilineInput, Output
-from lfx.log.logger import logger
+from lfx.inputs.inputs import BoolInput, DropdownInput, ModelInput, SecretStrInput
+from lfx.io import IntInput, MultilineInput, Output
 from lfx.schema.dotdict import dotdict
 from lfx.schema.message import Message
 
@@ -46,14 +44,11 @@ def set_advanced_true(component_input):
     return component_input
 
 
-MODEL_PROVIDERS_LIST = ["OpenAI"]
-
-
 class CugaComponent(ToolCallingAgentComponent):
     """Cuga Agent Component for advanced AI task execution.
 
     The Cuga component is an advanced AI agent that can execute complex tasks using
-    various tools and browser automation. It supports custom policies, web applications,
+    various tools and browser automation. It supports custom instructions, web applications,
     and API interactions.
 
     Attributes:
@@ -65,7 +60,7 @@ class CugaComponent(ToolCallingAgentComponent):
     """
 
     display_name: str = "Cuga"
-    description: str = "Define the Cuga agent's policies, then assign it a task."
+    description: str = "Define the Cuga agent's instructions, then assign it a task."
     documentation: str = "https://docs.langflow.org/bundles-cuga"
     icon = "bot"
     name = "Cuga"
@@ -73,22 +68,25 @@ class CugaComponent(ToolCallingAgentComponent):
     memory_inputs = [set_advanced_true(component_input) for component_input in MemoryComponent().inputs]
 
     inputs = [
-        DropdownInput(
-            name="agent_llm",
-            display_name="Model Provider",
-            info="The provider of the language model that the agent will use to generate responses.",
-            options=[*MODEL_PROVIDERS_LIST, "Custom"],
-            value="OpenAI",
+        ModelInput(
+            name="model",
+            display_name="Language Model",
+            info="Select your model provider",
             real_time_refresh=True,
-            input_types=[],
-            options_metadata=[MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST] + [{"icon": "brain"}],
+            required=True,
         ),
-        *MODEL_PROVIDERS_DICT["OpenAI"]["inputs"],
+        SecretStrInput(
+            name="api_key",
+            display_name="API Key",
+            info="Model Provider API key",
+            real_time_refresh=True,
+            advanced=True,
+        ),
         MultilineInput(
-            name="policies",
-            display_name="Policies",
+            name="instructions",
+            display_name="Instructions",
             info=(
-                "Custom instructions or policies for the agent to adhere to during its operation.\n"
+                "Custom instructions for the agent to adhere to during its operation.\n"
                 "Example:\n"
                 "## Plan\n"
                 "< planning instructions e.g. which tools and when to use>\n"
@@ -117,16 +115,16 @@ class CugaComponent(ToolCallingAgentComponent):
         BoolInput(
             name="lite_mode",
             display_name="Enable CugaLite",
-            info="Enable CugaLite for simple API tasks (faster execution).",
+            info="Faster reasoning for simple tasks. Enable CugaLite for simple API tasks.",
             value=True,
-            advanced=False,
+            advanced=True,
         ),
         IntInput(
             name="lite_mode_tool_threshold",
             display_name="CugaLite Tool Threshold",
             info="Route to CugaLite if app has fewer than this many tools.",
             value=25,
-            advanced=False,
+            advanced=True,
         ),
         DropdownInput(
             name="decomposition_strategy",
@@ -142,17 +140,17 @@ class CugaComponent(ToolCallingAgentComponent):
             display_name="Enable Browser",
             info="Toggle to enable a built-in browser tool for web scraping and searching.",
             value=False,
-            advanced=False,
+            advanced=True,
         ),
         MultilineInput(
             name="web_apps",
             display_name="Web applications",
             info=(
-                "Define a list of web applications that cuga will open when enable browser is true. "
+                "Cuga will automatically start this web application when Enable Browser is true. "
                 "Currently only supports one web application. Example: https://example.com"
             ),
             value="",
-            advanced=False,
+            advanced=True,
         ),
     ]
     outputs = [
@@ -211,7 +209,6 @@ class CugaComponent(ToolCallingAgentComponent):
                 settings.advanced_features.mode = "api"
 
             from cuga.backend.activity_tracker.tracker import ActivityTracker
-            from cuga.backend.cuga_graph.nodes.api.variables_manager.manager import VariablesManager
             from cuga.backend.cuga_graph.utils.agent_loop import StreamEvent
             from cuga.backend.cuga_graph.utils.controller import (
                 AgentRunner as CugaAgent,
@@ -222,13 +219,10 @@ class CugaComponent(ToolCallingAgentComponent):
             from cuga.backend.llm.models import LLMManager
             from cuga.configurations.instructions_manager import InstructionsManager
 
-            var_manager = VariablesManager()
-
             # Reset var_manager if this is the first message in history
             logger.debug(f"[CUGA] Checking history_messages: count={len(history_messages) if history_messages else 0}")
             if not history_messages or len(history_messages) == 0:
                 logger.debug("[CUGA] First message in history detected, resetting var_manager")
-                var_manager.reset()
             else:
                 logger.debug(f"[CUGA] Continuing conversation with {len(history_messages)} previous messages")
 
@@ -236,12 +230,14 @@ class CugaComponent(ToolCallingAgentComponent):
             llm_manager.set_llm(llm)
             instructions_manager = InstructionsManager()
 
-            policies_to_use = self.policies or ""
-            logger.debug(f"[CUGA] policies are: {policies_to_use}")
-            instructions_manager.set_instructions_from_one_file(policies_to_use)
+            instructions_to_use = self.instructions or ""
+            logger.debug(f"[CUGA] instructions are: {instructions_to_use}")
+            instructions_manager.set_instructions_from_one_file(instructions_to_use)
             tracker = ActivityTracker()
             tracker.set_tools(tools)
-            cuga_agent = CugaAgent(browser_enabled=self.browser_enabled)
+            thread_id = self.graph.session_id
+            logger.debug(f"[CUGA] Using thread_id (session_id): {thread_id}")
+            cuga_agent = CugaAgent(browser_enabled=self.browser_enabled, thread_id=thread_id)
             if self.browser_enabled:
                 await cuga_agent.initialize_freemode_env(start_url=self.web_apps.strip(), interface_mode="browser_only")
             else:
@@ -257,13 +253,20 @@ class CugaComponent(ToolCallingAgentComponent):
             logger.debug(f"[CUGA] Processing input: {current_input}")
             try:
                 # Convert history to LangChain format for the event
+                logger.debug(f"[CUGA] Converting {len(history_messages)} history messages to LangChain format")
                 lc_messages = []
-                for msg in history_messages:
+                for i, msg in enumerate(history_messages):
+                    msg_text = getattr(msg, "text", "N/A")[:50] if hasattr(msg, "text") else "N/A"
+                    logger.debug(
+                        f"[CUGA] Message {i}: type={type(msg)}, sender={getattr(msg, 'sender', 'N/A')}, "
+                        f"text={msg_text}..."
+                    )
                     if hasattr(msg, "sender") and msg.sender == "Human":
                         lc_messages.append(HumanMessage(content=msg.text))
                     else:
                         lc_messages.append(AIMessage(content=msg.text))
 
+                logger.debug(f"[CUGA] Converted to {len(lc_messages)} LangChain messages")
                 await asyncio.sleep(0.5)
 
                 # 2. Build final response
@@ -274,7 +277,9 @@ class CugaComponent(ToolCallingAgentComponent):
                 last_event: StreamEvent | None = None
                 tool_run_id: str | None = None
                 # 3. Chain end event with AgentFinish
-                async for event in cuga_agent.run_task_generic_yield(eval_mode=False, goal=current_input):
+                async for event in cuga_agent.run_task_generic_yield(
+                    eval_mode=False, goal=current_input, chat_messages=lc_messages
+                ):
                     logger.debug(f"[CUGA] recieved event {event}")
                     if last_event is not None and tool_run_id is not None:
                         logger.debug(f"[CUGA] last event {last_event}")
@@ -350,12 +355,12 @@ class CugaComponent(ToolCallingAgentComponent):
             raise ValueError(msg)
 
         try:
-            llm_model, self.chat_history, self.tools = await self.get_agent_requirements()
-
-            # Create agent message for event processing
             from lfx.schema.content_block import ContentBlock
             from lfx.schema.message import MESSAGE_SENDER_AI
 
+            llm_model, self.chat_history, self.tools = await self.get_agent_requirements()
+
+            # Create agent message for event processing
             agent_message = Message(
                 sender=MESSAGE_SENDER_AI,
                 sender_name="Cuga",
@@ -368,7 +373,7 @@ class CugaComponent(ToolCallingAgentComponent):
             # This ensures streaming works even when not connected to ChatOutput
             if not self.is_connected_to_chat_output():
                 # When not connected to ChatOutput, assign ID upfront for streaming support
-                agent_message.data["id"] = str(uuid.uuid4())
+                agent_message.data["id"] = uuid.uuid4()
 
             # Get input text
             input_text = self.input_value.text if hasattr(self.input_value, "text") else str(self.input_value)
@@ -476,9 +481,14 @@ class CugaComponent(ToolCallingAgentComponent):
         """
         logger.debug("[CUGA] Retrieving chat history messages.")
         logger.debug(f"[CUGA] Session ID: {self.graph.session_id}")
+        logger.debug(f"[CUGA] n_messages: {self.n_messages}")
+        logger.debug(f"[CUGA] input_value: {self.input_value}")
+        logger.debug(f"[CUGA] input_value type: {type(self.input_value)}")
+        logger.debug(f"[CUGA] input_value id: {getattr(self.input_value, 'id', None)}")
+
         messages = (
             await MemoryComponent(**self.get_base_args())
-            .set(session_id=self.graph.session_id, order="Ascending", n_messages=self.n_messages)
+            .set(session_id=str(self.graph.session_id), order="Ascending", n_messages=self.n_messages)
             .retrieve_messages()
         )
         logger.debug(f"[CUGA] Retrieved {len(messages)} messages from memory")
@@ -499,84 +509,29 @@ class CugaComponent(ToolCallingAgentComponent):
             ValueError: If the model provider is invalid or model initialization fails
         """
         logger.debug("[CUGA] Getting language model for the agent.")
-        logger.debug(f"[CUGA] Requested LLM provider: {self.agent_llm}")
-
-        if not isinstance(self.agent_llm, str):
-            logger.debug("[CUGA] Agent LLM is already a model instance.")
-            return self.agent_llm, None
+        logger.debug(f"[CUGA] Requested LLM model: {self.model}")
 
         try:
-            provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)
-            if not provider_info:
-                msg = f"Invalid model provider: {self.agent_llm}"
+            llm_model = get_llm(
+                model=self.model,
+                user_id=self.user_id,
+                api_key=getattr(self, "api_key", None),
+            )
+            if llm_model is None:
+                msg = "No language model selected. Please choose a model to proceed."
                 raise ValueError(msg)
 
-            component_class = provider_info.get("component_class")
-            display_name = component_class.display_name
-            inputs = provider_info.get("inputs")
-            prefix = provider_info.get("prefix", "")
-            logger.debug(f"[CUGA] Successfully built LLM model from provider: {self.agent_llm}")
-            return self._build_llm_model(component_class, inputs, prefix), display_name
+            display_name = None
+            if isinstance(self.model, list) and len(self.model) > 0:
+                display_name = self.model[0].get("name")
 
+            logger.debug(f"[CUGA] Successfully built LLM model: {display_name}")
         except (AttributeError, ValueError, TypeError, RuntimeError) as e:
-            await logger.aerror(f"[CUGA] Error building {self.agent_llm} language model: {e!s}")
+            logger.error(f"[CUGA] Error building language model: {e!s}")
             msg = f"Failed to initialize language model: {e!s}"
             raise ValueError(msg) from e
-
-    def _build_llm_model(self, component, inputs, prefix=""):
-        """Build LLM model with parameters.
-
-        This method constructs a language model instance using the provided component
-        class and input parameters.
-
-        Args:
-            component: The LLM component class to instantiate
-            inputs: List of input field definitions
-            prefix: Optional prefix for parameter names
-
-        Returns:
-            The configured LLM model instance
-        """
-        model_kwargs = {}
-        for input_ in inputs:
-            if hasattr(self, f"{prefix}{input_.name}"):
-                model_kwargs[input_.name] = getattr(self, f"{prefix}{input_.name}")
-        return component.set(**model_kwargs).build_model()
-
-    def set_component_params(self, component):
-        """Set component parameters based on provider.
-
-        This method configures component parameters according to the selected
-        model provider's requirements.
-
-        Args:
-            component: The component to configure
-
-        Returns:
-            The configured component
-        """
-        provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)
-        if provider_info:
-            inputs = provider_info.get("inputs")
-            prefix = provider_info.get("prefix")
-            model_kwargs = {}
-            for input_ in inputs:
-                if hasattr(self, f"{prefix}{input_.name}"):
-                    model_kwargs[input_.name] = getattr(self, f"{prefix}{input_.name}")
-            return component.set(**model_kwargs)
-        return component
-
-    def delete_fields(self, build_config: dotdict, fields: dict | list[str]) -> None:
-        """Delete specified fields from build_config.
-
-        This method removes unwanted fields from the build configuration.
-
-        Args:
-            build_config: The build configuration dictionary
-            fields: Fields to remove (can be dict or list of strings)
-        """
-        for field in fields:
-            build_config.pop(field, None)
+        else:
+            return llm_model, display_name
 
     def update_input_types(self, build_config: dotdict) -> dotdict:
         """Update input types for all fields in build_config.
@@ -599,7 +554,10 @@ class CugaComponent(ToolCallingAgentComponent):
         return build_config
 
     async def update_build_config(
-        self, build_config: dotdict, field_value: str, field_name: str | None = None
+        self,
+        build_config: dotdict,
+        field_value: list[dict],
+        field_name: str | None = None,
     ) -> dotdict:
         """Update build configuration based on field changes.
 
@@ -617,56 +575,25 @@ class CugaComponent(ToolCallingAgentComponent):
         Raises:
             ValueError: If required keys are missing from the configuration
         """
-        if field_name in ("agent_llm",):
-            build_config["agent_llm"]["value"] = field_value
-            provider_info = MODEL_PROVIDERS_DICT.get(field_value)
-            if provider_info:
-                component_class = provider_info.get("component_class")
-                if component_class and hasattr(component_class, "update_build_config"):
-                    build_config = await update_component_build_config(
-                        component_class, build_config, field_value, "model_name"
-                    )
 
-            provider_configs: dict[str, tuple[dict, list[dict]]] = {
-                provider: (
-                    MODEL_PROVIDERS_DICT[provider]["fields"],
-                    [
-                        MODEL_PROVIDERS_DICT[other_provider]["fields"]
-                        for other_provider in MODEL_PROVIDERS_DICT
-                        if other_provider != provider
-                    ],
-                )
-                for provider in MODEL_PROVIDERS_DICT
-            }
-            if field_value in provider_configs:
-                fields_to_add, fields_to_delete = provider_configs[field_value]
+        # Update model options with caching (for all field changes)
+        # Agents require tool calling, so filter for only tool-calling capable models
+        def get_tool_calling_model_options(user_id=None):
+            return get_language_model_options(user_id=user_id, tool_calling=True)
 
-                # Delete fields from other providers
-                for fields in fields_to_delete:
-                    self.delete_fields(build_config, fields)
+        build_config = update_model_options_in_build_config(
+            component=self,
+            build_config=dict(build_config),
+            cache_key_prefix="language_model_options_tool_calling",
+            get_options_func=get_tool_calling_model_options,
+            field_name=field_name,
+            field_value=field_value,
+        )
+        build_config = dotdict(build_config)
 
-                # Add provider-specific fields
-                if field_value == "OpenAI" and not any(field in build_config for field in fields_to_add):
-                    build_config.update(fields_to_add)
-                else:
-                    build_config.update(fields_to_add)
-                build_config["agent_llm"]["input_types"] = []
-            elif field_value == "Custom":
-                # Delete all provider fields
-                self.delete_fields(build_config, ALL_PROVIDER_FIELDS)
-                # Update with custom component
-                custom_component = DropdownInput(
-                    name="agent_llm",
-                    display_name="Language Model",
-                    options=[*sorted(MODEL_PROVIDERS), "Custom"],
-                    value="Custom",
-                    real_time_refresh=True,
-                    input_types=["LanguageModel"],
-                    options_metadata=[MODELS_METADATA[key] for key in sorted(MODELS_METADATA.keys())]
-                    + [{"icon": "brain"}],
-                )
-                build_config.update({"agent_llm": custom_component.to_dict()})
-
+        # Iterate over all providers
+        if field_name == "model":
+            self.log(str(field_value))
             # Update input types for all fields
             build_config = self.update_input_types(build_config)
 
@@ -674,11 +601,11 @@ class CugaComponent(ToolCallingAgentComponent):
             default_keys = [
                 "code",
                 "_type",
-                "agent_llm",
+                "model",
                 "tools",
                 "input_value",
                 "add_current_date_tool",
-                "policies",
+                "instructions",
                 "agent_description",
                 "max_iterations",
                 "handle_parsing_errors",
@@ -689,22 +616,6 @@ class CugaComponent(ToolCallingAgentComponent):
                 msg = f"Missing required keys in build_config: {missing_keys}"
                 raise ValueError(msg)
 
-        if (
-            isinstance(self.agent_llm, str)
-            and self.agent_llm in MODEL_PROVIDERS_DICT
-            and field_name in MODEL_DYNAMIC_UPDATE_FIELDS
-        ):
-            provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)
-            if provider_info:
-                component_class = provider_info.get("component_class")
-                component_class = self.set_component_params(component_class)
-                prefix = provider_info.get("prefix")
-                if component_class and hasattr(component_class, "update_build_config"):
-                    if isinstance(field_name, str) and isinstance(prefix, str):
-                        field_name = field_name.replace(prefix, "")
-                    build_config = await update_component_build_config(
-                        component_class, build_config, field_value, "model_name"
-                    )
         return dotdict({k: v.to_dict() if hasattr(v, "to_dict") else v for k, v in build_config.items()})
 
     async def _get_tools(self) -> list[Tool]:
