@@ -31,7 +31,8 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         """Dynamically update build config with user-filtered model options."""
-        return update_model_options_in_build_config(
+        # Update model options
+        build_config = update_model_options_in_build_config(
             component=self,
             build_config=build_config,
             cache_key_prefix="embedding_model_options",
@@ -39,6 +40,23 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             field_name=field_name,
             field_value=field_value,
         )
+
+        # Show/hide provider-specific fields based on selected model
+        if field_name == "model" and isinstance(field_value, list) and len(field_value) > 0:
+            selected_model = field_value[0]
+            provider = selected_model.get("provider", "")
+
+            # Show/hide watsonx fields
+            is_watsonx = provider == "IBM WatsonX"
+            build_config["base_url_ibm_watsonx"]["show"] = is_watsonx
+            build_config["project_id"]["show"] = is_watsonx
+            build_config["truncate_input_tokens"]["show"] = is_watsonx
+            build_config["input_text"]["show"] = is_watsonx
+            if is_watsonx:
+                build_config["base_url_ibm_watsonx"]["required"] = True
+                build_config["project_id"]["required"] = True
+
+        return build_config
 
     inputs = [
         ModelInput(

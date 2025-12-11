@@ -834,7 +834,17 @@ def normalize_model_names_to_dicts(model_names: list[str] | str) -> list[dict[st
     return result
 
 
-def get_llm(model, user_id: UUID | str | None, api_key=None, temperature=None, *, stream=False) -> Any:
+def get_llm(
+    model,
+    user_id: UUID | str | None,
+    api_key=None,
+    temperature=None,
+    *,
+    stream=False,
+    watsonx_url=None,
+    watsonx_project_id=None,
+    ollama_base_url=None,
+) -> Any:
     # Check if model is already a BaseLanguageModel instance (from a connection)
     try:
         from langchain_core.language_models import BaseLanguageModel
@@ -894,6 +904,27 @@ def get_llm(model, user_id: UUID | str | None, api_key=None, temperature=None, *
 
     if temperature is not None:
         kwargs["temperature"] = temperature
+
+    # Add provider-specific parameters
+    if provider == "IBM WatsonX":
+        # For watsonx, we need url and project_id
+        if watsonx_url:
+            url_param = metadata.get("url_param", "url")
+            kwargs[url_param] = watsonx_url
+        else:
+            msg = "IBM WatsonX requires a watsonx API endpoint (url). Please provide it in the component."
+            raise ValueError(msg)
+
+        if watsonx_project_id:
+            project_id_param = metadata.get("project_id_param", "project_id")
+            kwargs[project_id_param] = watsonx_project_id
+        else:
+            msg = "IBM WatsonX requires a project ID. Please provide it in the component."
+            raise ValueError(msg)
+    elif provider == "Ollama" and ollama_base_url:
+        # For Ollama, handle custom base_url
+        base_url_param = metadata.get("base_url_param", "base_url")
+        kwargs[base_url_param] = ollama_base_url
 
     return model_class(**kwargs)
 
