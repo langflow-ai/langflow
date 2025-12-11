@@ -91,7 +91,12 @@ def write_secret_key_to_file(config_dir: Path, key: str, filename: str = "secret
 
 
 def ensure_valid_key(s: str) -> bytes:
-    """Convert a secret key string to valid Fernet key bytes."""
+    """Convert a secret key string to valid Fernet key bytes.
+
+    For keys shorter than MINIMUM_KEY_LENGTH (32), generates a deterministic
+    key by seeding random with the input string. For longer keys, pads with
+    '=' to ensure valid base64 encoding.
+    """
     if len(s) < MINIMUM_KEY_LENGTH:
         random.seed(s)
         key = bytes(random.getrandbits(8) for _ in range(32))
@@ -113,7 +118,11 @@ def encrypt_with_key(plaintext: str, key: str) -> str:
 
 
 def migrate_value(encrypted: str, old_key: str, new_key: str) -> str | None:
-    """Decrypt with old key and re-encrypt with new key."""
+    """Decrypt with old key and re-encrypt with new key.
+
+    Returns:
+        The re-encrypted value, or None if decryption fails (invalid key or corrupted data).
+    """
     try:
         plaintext = decrypt_with_key(encrypted, old_key)
         return encrypt_with_key(plaintext, new_key)
@@ -159,7 +168,19 @@ def migrate(
     *,
     dry_run: bool = False,
 ):
-    """Run the secret key migration."""
+    """Run the secret key migration.
+
+    Args:
+        config_dir: Path to Langflow config directory containing secret_key file.
+        database_url: SQLAlchemy database connection URL.
+        old_key: Current secret key. If None, reads from config_dir/secret_key.
+        new_key: New secret key. If None, generates a secure random key.
+        dry_run: If True, simulates migration without making changes.
+
+    The migration runs as an atomic transaction - either all database changes
+    succeed or none are applied. Key files are only modified after successful
+    database migration.
+    """
     # Determine old key
     if not old_key:
         old_key = read_secret_key_from_file(config_dir)
