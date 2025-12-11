@@ -160,7 +160,10 @@ def migrate(
     # Determine new key
     if not new_key:
         new_key = secrets.token_urlsafe(32)
-        print(f"Generated new secret key: {new_key[:8]}...{new_key[-4:]}")
+        print(f"Generated new secret key: {new_key}")
+    else:
+        print(f"Using provided new key: {new_key}")
+    print("  (Save this key - you'll need it if the migration fails after database commit)")
 
     if old_key == new_key:
         print("Error: Old and new secret keys are the same")
