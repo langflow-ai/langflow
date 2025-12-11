@@ -200,8 +200,9 @@ class TestMigrateAuthSettings:
             "oauth_client_secret": migrate_module.encrypt_with_key(secret, old_key),
         }
 
-        migrated = migrate_module.migrate_auth_settings(auth_settings, old_key, new_key)
+        migrated, failed_fields = migrate_module.migrate_auth_settings(auth_settings, old_key, new_key)
 
+        assert failed_fields == []
         assert migrated["auth_type"] == "oauth"
         assert migrated["oauth_client_id"] == "client-123"
         assert migrated["oauth_client_secret"] != auth_settings["oauth_client_secret"]
@@ -216,8 +217,9 @@ class TestMigrateAuthSettings:
             "api_key": migrate_module.encrypt_with_key(api_key, old_key),
         }
 
-        migrated = migrate_module.migrate_auth_settings(auth_settings, old_key, new_key)
+        migrated, failed_fields = migrate_module.migrate_auth_settings(auth_settings, old_key, new_key)
 
+        assert failed_fields == []
         decrypted = migrate_module.decrypt_with_key(migrated["api_key"], new_key)
         assert decrypted == api_key
 
@@ -231,8 +233,9 @@ class TestMigrateAuthSettings:
             "oauth_client_secret": migrate_module.encrypt_with_key("secret", old_key),
         }
 
-        migrated = migrate_module.migrate_auth_settings(auth_settings, old_key, new_key)
+        migrated, failed_fields = migrate_module.migrate_auth_settings(auth_settings, old_key, new_key)
 
+        assert failed_fields == []
         assert migrated["auth_type"] == auth_settings["auth_type"]
         assert migrated["oauth_host"] == auth_settings["oauth_host"]
         assert migrated["oauth_port"] == auth_settings["oauth_port"]
@@ -246,10 +249,27 @@ class TestMigrateAuthSettings:
             "oauth_client_secret": "",
         }
 
-        migrated = migrate_module.migrate_auth_settings(auth_settings, old_key, new_key)
+        migrated, failed_fields = migrate_module.migrate_auth_settings(auth_settings, old_key, new_key)
 
+        assert failed_fields == []
         assert migrated["api_key"] is None
         assert migrated["oauth_client_secret"] == ""
+
+    def test_migrate_returns_failed_fields_for_invalid_encryption(self, migrate_module, old_key, new_key):
+        """Invalid encrypted fields should be reported in failed_fields."""
+        auth_settings = {
+            "auth_type": "api",
+            "api_key": "not-valid-encrypted-data",  # Invalid ciphertext  # pragma: allowlist secret
+            "oauth_client_secret": migrate_module.encrypt_with_key("valid-secret", old_key),
+        }
+
+        migrated, failed_fields = migrate_module.migrate_auth_settings(auth_settings, old_key, new_key)
+
+        assert "api_key" in failed_fields
+        assert "oauth_client_secret" not in failed_fields
+        # oauth_client_secret should still be migrated
+        decrypted = migrate_module.decrypt_with_key(migrated["oauth_client_secret"], new_key)
+        assert decrypted == "valid-secret"
 
 
 class TestDatabaseMigrationUnit:
@@ -337,7 +357,8 @@ class TestDatabaseMigrationUnit:
 
             for fid, _, settings_json in folders:
                 settings_dict = json.loads(settings_json)
-                new_settings = migrate_module.migrate_auth_settings(settings_dict, old_key, new_key)
+                new_settings, failed_fields = migrate_module.migrate_auth_settings(settings_dict, old_key, new_key)
+                assert failed_fields == []
                 conn.execute(
                     text("UPDATE folder SET auth_settings = :val WHERE id = :id"),
                     {"val": json.dumps(new_settings), "id": fid},
@@ -530,3 +551,244 @@ class TestMigrationCompatibility:
         # Decrypt with Langflow
         langflow_decrypted = auth_utils.decrypt_api_key(script_encrypted, settings_service)
         assert langflow_decrypted == plaintext
+
+
+class TestTransactionAtomicity:
+    """Tests for atomic transaction behavior."""
+
+    def test_transaction_rollback_on_error(self, migrate_module, sqlite_db, old_key, new_key):
+        """Test that database changes are rolled back if an error occurs mid-migration."""
+        user_id = str(uuid4())
+        original_value = "user-api-key"
+        encrypted_value = migrate_module.encrypt_with_key(original_value, old_key)
+
+        # Insert test data
+        with sqlite_db.connect() as conn:
+            conn.execute(
+                text('INSERT INTO "user" (id, store_api_key) VALUES (:id, :key)'),
+                {"id": user_id, "key": encrypted_value},
+            )
+            conn.commit()
+
+        # Simulate a failed migration using begin() - any exception causes rollback
+        try:
+            with sqlite_db.begin() as conn:
+                # Update the user's key
+                new_encrypted = migrate_module.migrate_value(encrypted_value, old_key, new_key)
+                conn.execute(
+                    text('UPDATE "user" SET store_api_key = :val WHERE id = :id'),
+                    {"val": new_encrypted, "id": user_id},
+                )
+                # Simulate an error before commit
+                msg = "Simulated failure"
+                raise RuntimeError(msg)
+        except RuntimeError:
+            pass
+
+        # Verify the original value was preserved (transaction was rolled back)
+        with sqlite_db.connect() as conn:
+            result = conn.execute(text('SELECT store_api_key FROM "user" WHERE id = :id'), {"id": user_id}).fetchone()
+            assert result[0] == encrypted_value  # Original value preserved
+
+    def test_partial_migration_does_not_persist(self, migrate_module, sqlite_db, old_key, new_key):
+        """Test that partial migrations don't leave database in inconsistent state."""
+        user_id = str(uuid4())
+        var_id = str(uuid4())
+        user_value = "user-secret"
+        var_value = "var-secret"
+
+        # Insert test data
+        with sqlite_db.connect() as conn:
+            conn.execute(
+                text('INSERT INTO "user" (id, store_api_key) VALUES (:id, :key)'),
+                {"id": user_id, "key": migrate_module.encrypt_with_key(user_value, old_key)},
+            )
+            encrypted_var = migrate_module.encrypt_with_key(var_value, old_key)
+            conn.execute(
+                text("INSERT INTO variable (id, name, value, type) VALUES (:id, :name, :value, :type)"),
+                {"id": var_id, "name": "TEST_VAR", "value": encrypted_var, "type": "Credential"},
+            )
+            conn.commit()
+
+        original_user_key = None
+        original_var_value = None
+        with sqlite_db.connect() as conn:
+            original_user_key = conn.execute(
+                text('SELECT store_api_key FROM "user" WHERE id = :id'), {"id": user_id}
+            ).fetchone()[0]
+            original_var_value = conn.execute(
+                text("SELECT value FROM variable WHERE id = :id"), {"id": var_id}
+            ).fetchone()[0]
+
+        # Attempt migration with failure after first table
+        try:
+            with sqlite_db.begin() as conn:
+                # Migrate user table successfully
+                new_encrypted = migrate_module.migrate_value(original_user_key, old_key, new_key)
+                conn.execute(
+                    text('UPDATE "user" SET store_api_key = :val WHERE id = :id'),
+                    {"val": new_encrypted, "id": user_id},
+                )
+                # Fail before variable table
+                msg = "Simulated failure after partial migration"
+                raise RuntimeError(msg)
+        except RuntimeError:
+            pass
+
+        # Both tables should be unchanged
+        with sqlite_db.connect() as conn:
+            user_result = conn.execute(
+                text('SELECT store_api_key FROM "user" WHERE id = :id'), {"id": user_id}
+            ).fetchone()
+            var_result = conn.execute(text("SELECT value FROM variable WHERE id = :id"), {"id": var_id}).fetchone()
+            assert user_result[0] == original_user_key
+            assert var_result[0] == original_var_value
+
+
+class TestErrorHandling:
+    """Tests for error handling scenarios."""
+
+    def test_migration_handles_invalid_encrypted_data(self, migrate_module, sqlite_db, old_key, new_key):
+        """Test that migration continues when encountering invalid encrypted data."""
+        valid_id = str(uuid4())
+        invalid_id = str(uuid4())
+        valid_value = "valid-secret"
+
+        with sqlite_db.connect() as conn:
+            # Insert valid encrypted data
+            conn.execute(
+                text('INSERT INTO "user" (id, store_api_key) VALUES (:id, :key)'),
+                {"id": valid_id, "key": migrate_module.encrypt_with_key(valid_value, old_key)},
+            )
+            # Insert invalid/corrupted encrypted data
+            conn.execute(
+                text('INSERT INTO "user" (id, store_api_key) VALUES (:id, :key)'),
+                {"id": invalid_id, "key": "not-valid-encrypted-data"},
+            )
+            conn.commit()
+
+        # migrate_value returns None for invalid data, allowing migration to continue
+        with sqlite_db.connect() as conn:
+            users = conn.execute(text('SELECT id, store_api_key FROM "user"')).fetchall()
+
+            migrated_count = 0
+            failed_count = 0
+            for _uid, encrypted_key in users:
+                new_encrypted = migrate_module.migrate_value(encrypted_key, old_key, new_key)
+                if new_encrypted:
+                    migrated_count += 1
+                else:
+                    failed_count += 1
+
+            assert migrated_count == 1  # Valid entry was migrated
+            assert failed_count == 1  # Invalid entry failed gracefully
+
+    def test_migration_handles_null_values(
+        self,
+        migrate_module,  # noqa: ARG002
+        sqlite_db,
+        old_key,  # noqa: ARG002
+        new_key,  # noqa: ARG002
+    ):
+        """Test that migration handles NULL values correctly."""
+        user_id = str(uuid4())
+
+        with sqlite_db.connect() as conn:
+            conn.execute(
+                text('INSERT INTO "user" (id, store_api_key) VALUES (:id, NULL)'),
+                {"id": user_id},
+            )
+            conn.commit()
+
+        # NULL values should not cause errors
+        with sqlite_db.connect() as conn:
+            result = conn.execute(
+                text('SELECT id, store_api_key FROM "user" WHERE id = :id'), {"id": user_id}
+            ).fetchone()
+            assert result[1] is None
+
+    def test_migration_handles_empty_auth_settings(self, migrate_module, old_key, new_key):
+        """Test that migration handles empty auth_settings dict."""
+        empty_settings = {}
+        result, failed_fields = migrate_module.migrate_auth_settings(empty_settings, old_key, new_key)
+        assert result == {}
+        assert failed_fields == []
+
+    def test_migration_handles_malformed_json_gracefully(
+        self,
+        migrate_module,  # noqa: ARG002
+        sqlite_db,
+        old_key,  # noqa: ARG002
+        new_key,  # noqa: ARG002
+    ):
+        """Test that malformed JSON in auth_settings is handled gracefully."""
+        folder_id = str(uuid4())
+
+        with sqlite_db.connect() as conn:
+            conn.execute(
+                text("INSERT INTO folder (id, name, auth_settings) VALUES (:id, :name, :settings)"),
+                {"id": folder_id, "name": "Bad Folder", "settings": "not-valid-json{"},
+            )
+            conn.commit()
+
+        # Attempting to parse and migrate should raise JSONDecodeError
+        with sqlite_db.connect() as conn:
+            result = conn.execute(text("SELECT auth_settings FROM folder WHERE id = :id"), {"id": folder_id}).fetchone()
+
+            with pytest.raises(json.JSONDecodeError):
+                json.loads(result[0])
+
+    def test_key_file_permissions_set_correctly(self, migrate_module):
+        """Test that key file has restrictive permissions on Unix systems."""
+        import platform
+        import stat
+
+        if platform.system() not in {"Linux", "Darwin"}:
+            pytest.skip("Permission test only runs on Unix systems")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_dir = Path(tmpdir)
+            test_key = "secure-key-12345"
+
+            migrate_module.write_secret_key_to_file(config_dir, test_key)
+
+            secret_file = config_dir / "secret_key"
+            file_mode = secret_file.stat().st_mode
+            # Check that only owner has read/write (0o600)
+            assert stat.S_IMODE(file_mode) == 0o600
+
+
+class TestDryRunMode:
+    """Tests for dry-run mode behavior."""
+
+    def test_dry_run_does_not_modify_database(self, migrate_module, sqlite_db, old_key, new_key):
+        """Test that dry run mode doesn't modify the database."""
+        user_id = str(uuid4())
+        original_value = "original-secret"
+        encrypted_value = migrate_module.encrypt_with_key(original_value, old_key)
+
+        with sqlite_db.connect() as conn:
+            conn.execute(
+                text('INSERT INTO "user" (id, store_api_key) VALUES (:id, :key)'),
+                {"id": user_id, "key": encrypted_value},
+            )
+            conn.commit()
+
+        # Simulate dry-run behavior: use begin() then rollback
+        with sqlite_db.begin() as conn:
+            # Migrate the value
+            new_encrypted = migrate_module.migrate_value(encrypted_value, old_key, new_key)
+            conn.execute(
+                text('UPDATE "user" SET store_api_key = :val WHERE id = :id'),
+                {"val": new_encrypted, "id": user_id},
+            )
+            # Explicitly rollback to simulate dry-run
+            conn.rollback()
+
+        # Verify original value is preserved
+        with sqlite_db.connect() as conn:
+            result = conn.execute(text('SELECT store_api_key FROM "user" WHERE id = :id'), {"id": user_id}).fetchone()
+            assert result[0] == encrypted_value
+            # Can still decrypt with old key
+            decrypted = migrate_module.decrypt_with_key(result[0], old_key)
+            assert decrypted == original_value

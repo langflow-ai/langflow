@@ -3,10 +3,14 @@
 This script handles the full key rotation lifecycle:
 1. Reads the current secret key from config directory
 2. Generates a new secret key (or uses one provided)
-3. Backs up the old key
-4. Re-encrypts all sensitive data in the database
-5. Re-encrypts knowledge base metadata files
-6. Saves the new key
+3. Re-encrypts all sensitive data in the database (atomic transaction)
+4. Backs up the old key
+5. Saves the new key
+
+Migrated database fields:
+- user.store_api_key: Langflow Store API keys
+- variable.value: All encrypted variable values
+- folder.auth_settings: MCP oauth_client_secret and api_key fields
 
 Usage:
     python scripts/migrate_secret_key.py --help
@@ -117,15 +121,23 @@ def migrate_value(encrypted: str, old_key: str, new_key: str) -> str | None:
         return None
 
 
-def migrate_auth_settings(auth_settings: dict, old_key: str, new_key: str) -> dict:
-    """Re-encrypt sensitive fields in auth_settings dict."""
+def migrate_auth_settings(auth_settings: dict, old_key: str, new_key: str) -> tuple[dict, list[str]]:
+    """Re-encrypt sensitive fields in auth_settings dict.
+
+    Returns:
+        Tuple of (migrated_settings, failed_fields) where failed_fields contains
+        names of fields that could not be decrypted with the old key.
+    """
     result = auth_settings.copy()
+    failed_fields = []
     for field in SENSITIVE_AUTH_FIELDS:
         if result.get(field):
             new_value = migrate_value(result[field], old_key, new_key)
             if new_value:
                 result[field] = new_value
-    return result
+            else:
+                failed_fields.append(field)
+    return result, failed_fields
 
 
 def get_default_database_url(config_dir: Path) -> str | None:
@@ -247,7 +259,11 @@ def migrate(
                 continue
             try:
                 settings_dict = auth_settings if isinstance(auth_settings, dict) else json.loads(auth_settings)
-                new_settings = migrate_auth_settings(settings_dict, old_key, new_key)
+                new_settings, failed_fields = migrate_auth_settings(settings_dict, old_key, new_key)
+                if failed_fields:
+                    failed += 1
+                    print(f"   Warning: Could not migrate folder '{folder_name}' fields: {', '.join(failed_fields)}")
+                    continue
                 if not dry_run:
                     conn.execute(
                         text("UPDATE folder SET auth_settings = :val WHERE id = :id"),
