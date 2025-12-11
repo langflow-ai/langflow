@@ -144,9 +144,11 @@ The script will:
 
 1. Read your current secret key from the config directory
 2. Generate a new secret key
-3. Backup the old key to `<config-dir>/secret_key.backup.<timestamp>`
-4. Re-encrypt all sensitive data in the database
+3. Re-encrypt all sensitive data in the database (atomic transaction)
+4. Backup the old key to `<config-dir>/secret_key.backup.<timestamp>`
 5. Save the new key to `<config-dir>/secret_key`
+
+If the database migration fails, no changes are made - the transaction rolls back and the key files remain untouched.
 
 ### Config Directory Location
 
@@ -185,16 +187,3 @@ Even with migration, these cannot be preserved:
 
 - **Active sessions**: Users must log in again (JWT tokens are invalidated)
 
-### Recovery
-
-If something goes wrong, restore from backup:
-
-```bash
-# Find the backup (adjust path for your platform)
-ls <config-dir>/secret_key.backup.*
-
-# Restore the old key
-cp <config-dir>/secret_key.backup.YYYYMMDD_HHMMSS <config-dir>/secret_key
-
-# Restart Langflow
-```

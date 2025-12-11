@@ -179,21 +179,14 @@ def migrate(
     if dry_run:
         print("\n[DRY RUN] No changes will be made.\n")
 
-    # Backup old key
-    if not dry_run:
-        backup_file = config_dir / f"secret_key.backup.{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
-        write_secret_key_to_file(config_dir, old_key, backup_file.name)
-        print(f"\n1. Backed up old key to: {backup_file}")
-    else:
-        print("\n1. [DRY RUN] Would backup old key")
-
     engine = create_engine(database_url)
     total_migrated = 0
     total_failed = 0
 
-    with engine.connect() as conn:
+    # Use begin() for atomic transaction - all changes commit together or rollback on failure
+    with engine.begin() as conn:
         # Migrate user.store_api_key
-        print("\n2. Migrating user.store_api_key...")
+        print("\n1. Migrating user.store_api_key...")
         users = conn.execute(text('SELECT id, store_api_key FROM "user" WHERE store_api_key IS NOT NULL')).fetchall()
 
         migrated, failed = 0, 0
@@ -215,7 +208,7 @@ def migrate(
         total_failed += failed
 
         # Migrate variable.value
-        print("\n3. Migrating variable values...")
+        print("\n2. Migrating variable values...")
         variables = conn.execute(text("SELECT id, name, value FROM variable")).fetchall()
 
         migrated, failed, skipped = 0, 0, 0
@@ -240,7 +233,7 @@ def migrate(
         total_failed += failed
 
         # Migrate folder.auth_settings
-        print("\n4. Migrating folder.auth_settings (MCP)...")
+        print("\n3. Migrating folder.auth_settings (MCP)...")
         folders = conn.execute(
             text("SELECT id, name, auth_settings FROM folder WHERE auth_settings IS NOT NULL")
         ).fetchall()
@@ -266,15 +259,20 @@ def migrate(
         total_migrated += migrated
         total_failed += failed
 
-        if not dry_run:
-            conn.commit()
+        # Rollback if dry run (transaction will auto-commit on exit otherwise)
+        if dry_run:
+            conn.rollback()
 
-    # Save new key
+    # Save new key only after successful database migration
     if not dry_run:
+        backup_file = config_dir / f"secret_key.backup.{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
+        write_secret_key_to_file(config_dir, old_key, backup_file.name)
+        print(f"\n4. Backed up old key to: {backup_file}")
         write_secret_key_to_file(config_dir, new_key)
-        print(f"\n5. Saved new secret key to: {config_dir / 'secret_key'}")
+        print(f"5. Saved new secret key to: {config_dir / 'secret_key'}")
     else:
-        print(f"\n5. [DRY RUN] Would save new key to: {config_dir / 'secret_key'}")
+        print("\n4. [DRY RUN] Would backup old key")
+        print(f"5. [DRY RUN] Would save new key to: {config_dir / 'secret_key'}")
 
     # Summary
     print("\n" + "=" * 50)
