@@ -22,31 +22,24 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       type,
       placeholder,
       onChange,
-      value, // 不用于受控模式，只用于初始化
+      value,
       defaultValue,
       ...props
     },
     ref,
   ) => {
-    // -----------------------
-    // 非受控 value（解决无法输入 + placeholder 控制）
-    // -----------------------
     const [currentValue, setCurrentValue] = React.useState(
       () => String(defaultValue ?? value ?? "")
     );
 
     const inputRef = React.useRef<HTMLInputElement>(null);
 
-    // 合并 ref
     const mergedRef = (node: HTMLInputElement) => {
       inputRef.current = node;
       if (typeof ref === "function") ref(node);
       else if (ref) (ref as any).current = node;
     };
 
-    // -----------------------
-    // IME 状态处理
-    // -----------------------
     const [isComposing, setIsComposing] = React.useState(false);
 
     const handleCompositionStart = () => setIsComposing(true);
@@ -99,7 +92,6 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           {...props}
         />
 
-        {/* 自定义 placeholder：value 为空时显示 */}
         <span
           className={cn(
             "pointer-events-none absolute top-1/2 -translate-y-1/2 pl-px text-placeholder-foreground transition-all",
