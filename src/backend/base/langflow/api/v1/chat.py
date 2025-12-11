@@ -37,6 +37,7 @@ from langflow.api.v1.schemas import (
     VerticesOrderResponse,
 )
 from langflow.exceptions.component import ComponentBuildError
+from langflow.services.auth.utils import get_current_active_user
 from langflow.services.chat.service import ChatService
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import (
@@ -54,7 +55,7 @@ if TYPE_CHECKING:
 router = APIRouter(tags=["Chat"])
 
 
-@router.post("/build/{flow_id}/vertices", deprecated=True)
+@router.post("/build/{flow_id}/vertices", deprecated=True, dependencies=[Depends(get_current_active_user)])
 async def retrieve_vertices_order(
     *,
     flow_id: uuid.UUID,
@@ -63,7 +64,6 @@ async def retrieve_vertices_order(
     stop_component_id: str | None = None,
     start_component_id: str | None = None,
     session: DbSession,
-    current_user: CurrentActiveUser,  # noqa: ARG001
 ) -> VerticesOrderResponse:
     """Retrieve the vertices order for a given flow.
 
@@ -199,11 +199,10 @@ async def build_flow(
     )
 
 
-@router.get("/build/{job_id}/events")
+@router.get("/build/{job_id}/events", dependencies=[Depends(get_current_active_user)])
 async def get_build_events(
     job_id: str,
     queue_service: Annotated[JobQueueService, Depends(get_queue_service)],
-    current_user: CurrentActiveUser,  # noqa: ARG001
     *,
     event_delivery: EventDeliveryType = EventDeliveryType.STREAMING,
 ):
@@ -218,11 +217,14 @@ async def get_build_events(
     )
 
 
-@router.post("/build/{job_id}/cancel", response_model=CancelFlowResponse)
+@router.post(
+    "/build/{job_id}/cancel",
+    response_model=CancelFlowResponse,
+    dependencies=[Depends(get_current_active_user)],
+)
 async def cancel_build(
     job_id: str,
     queue_service: Annotated[JobQueueService, Depends(get_queue_service)],
-    current_user: CurrentActiveUser,  # noqa: ARG001
 ):
     """Cancel a specific build job.
 
@@ -519,11 +521,11 @@ async def _stream_vertex(flow_id: str, vertex_id: str, chat_service: ChatService
     "/build/{flow_id}/{vertex_id}/stream",
     response_class=StreamingResponse,
     deprecated=True,
+    dependencies=[Depends(get_current_active_user)],
 )
 async def build_vertex_stream(
     flow_id: uuid.UUID,
     vertex_id: str,
-    current_user: CurrentActiveUser,  # noqa: ARG001
 ):
     """Build a vertex instead of the entire graph.
 
