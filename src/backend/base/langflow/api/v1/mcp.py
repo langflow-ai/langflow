@@ -1,5 +1,4 @@
 import asyncio
-from contextlib import AsyncExitStack
 
 import pydantic
 from anyio import BrokenResourceError
@@ -154,9 +153,28 @@ async def handle_messages(request: Request):
 class StreamableHTTP:
     def __init__(self):
         self.session_manager: StreamableHTTPSessionManager | None = None
-        self._context_stack: AsyncExitStack | None = None
         self._started = False
         self._start_stop_lock = asyncio.Lock()
+        # own the lifecycle of the session manager
+        # inside an asyncio task to ensure that
+        # __aenter__ and __aexit__ happen in the same task
+        self._mgr_task: asyncio.Task | None = None
+        self._mgr_ready: asyncio.Event | None = None
+        self._mgr_close: asyncio.Event | None = None
+
+    async def _start_session_manager(self) -> None:
+        """Create and enter the Streamable HTTP session manager lifecycle."""
+        try:
+            async with self.session_manager.run(): # type: ignore[union-attr]
+                self._started = True
+                self._mgr_ready.set() # type: ignore[union-attr]
+                await self._mgr_close.wait() # type: ignore[union-attr]
+        except Exception as e:
+            msg = f"Error in Streamable HTTP session manager: {e}"
+            raise RuntimeError(msg) from e
+        finally:
+            self._mgr_ready.set() # type: ignore[union-attr] # unblock listeners
+            self._started = False
 
     async def start(self, *, stateless: bool = True) -> None:
         """Create and enter the Streamable HTTP session manager lifecycle."""
@@ -164,19 +182,18 @@ class StreamableHTTP:
             if self._started:
                 await logger.adebug("Streamable HTTP session manager already running; skipping start")
                 return
-
-            manager = StreamableHTTPSessionManager(server, stateless=stateless)
-            stack = AsyncExitStack()
             try:
-                await stack.enter_async_context(manager.run())
-            except Exception:
-                await stack.aclose()
+                self.session_manager = StreamableHTTPSessionManager(server, stateless=stateless)
+                self._mgr_ready = asyncio.Event()
+                self._mgr_close = asyncio.Event()
+                self._mgr_task = asyncio.create_task(self._start_session_manager())
+                await self._mgr_ready.wait()
+                if not self._started: # did not start properly
+                    await self._mgr_task # await to surface the exception
+            except Exception as e:
+                self._cleanup()
+                await logger.aexception(f"Error starting Streamable HTTP session manager: {e}")
                 raise
-
-            self.session_manager = manager
-            self._context_stack = stack
-            self._started = True
-            await logger.adebug("Streamable HTTP session manager started")
 
     def get_manager(self) -> StreamableHTTPSessionManager:
         """Fetch the active Streamable HTTP session manager or raise if it is unavailable."""
@@ -189,16 +206,23 @@ class StreamableHTTP:
         async with self._start_stop_lock:
             if not self._started:
                 return
-
             try:
-                if self._context_stack is not None:
-                    await self._context_stack.aclose()
+                self._mgr_close.set() # type: ignore[union-attr]
+                await self._mgr_task # type: ignore[misc]
+            except Exception as e:
+                await logger.aexception(f"Error stopping Streamable HTTP session manager: {e}")
+                raise
             finally:
-                self._context_stack = None
-                self.session_manager = None
-                self._started = False
+                self._cleanup()
                 await logger.adebug("Streamable HTTP session manager stopped")
 
+    def _cleanup(self) -> None:
+        """Cleanup the Streamable HTTP session manager."""
+        self._mgr_task = None
+        self._mgr_ready = None
+        self._mgr_close = None
+        self.session_manager = None
+        self._started = False
 
 _streamable_http = StreamableHTTP()
 
