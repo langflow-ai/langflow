@@ -585,7 +585,7 @@
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "Pokédex"
+                "value": "Assistant"
               },
               "session_id": {
                 "_input_type": "MessageTextInput",

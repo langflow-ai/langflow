@@ -22,12 +22,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-KS0e2{\u0153dataType\u0153:\u0153Prompt\u0153,\u0153id\u0153:\u0153Prompt-KS0e2\u0153,\u0153name\u0153:\u0153prompt\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-LanguageModelComponent-zY7m0{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153LanguageModelComponent-zY7m0\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
+        "id": "reactflow__edge-Prompt-KS0e2{\"dataType\":\"Prompt\",\"id\":\"Prompt-KS0e2\",\"name\":\"prompt\",\"output_types\":[\"Message\"]}-LanguageModelComponent-zY7m0{\"fieldName\":\"input_value\",\"id\":\"LanguageModelComponent-zY7m0\",\"inputTypes\":[\"Message\"],\"type\":\"str\"}",
         "selected": false,
         "source": "Prompt-KS0e2",
-        "sourceHandle": "{\u0153dataType\u0153: \u0153Prompt\u0153, \u0153id\u0153: \u0153Prompt-KS0e2\u0153, \u0153name\u0153: \u0153prompt\u0153, \u0153output_types\u0153: [\u0153Message\u0153]}",
+        "sourceHandle": "{\"dataType\": \"Prompt\", \"id\": \"Prompt-KS0e2\", \"name\": \"prompt\", \"output_types\": [\"Message\"]}",
         "target": "LanguageModelComponent-zY7m0",
-        "targetHandle": "{\u0153fieldName\u0153: \u0153input_value\u0153, \u0153id\u0153: \u0153LanguageModelComponent-zY7m0\u0153, \u0153inputTypes\u0153: [\u0153Message\u0153], \u0153type\u0153: \u0153str\u0153}"
+        "targetHandle": "{\"fieldName\": \"input_value\", \"id\": \"LanguageModelComponent-zY7m0\", \"inputTypes\": [\"Message\"], \"type\": \"str\"}"
       },
       {
         "animated": false,
@@ -52,12 +52,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-LanguageModelComponent-zY7m0{\u0153dataType\u0153:\u0153LanguageModelComponent\u0153,\u0153id\u0153:\u0153LanguageModelComponent-zY7m0\u0153,\u0153name\u0153:\u0153text_output\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-ChatOutput-S7Bzs{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153ChatOutput-S7Bzs\u0153,\u0153inputTypes\u0153:[\u0153Data\u0153,\u0153DataFrame\u0153,\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
+        "id": "reactflow__edge-LanguageModelComponent-zY7m0{\"dataType\":\"LanguageModelComponent\",\"id\":\"LanguageModelComponent-zY7m0\",\"name\":\"text_output\",\"output_types\":[\"Message\"]}-ChatOutput-S7Bzs{\"fieldName\":\"input_value\",\"id\":\"ChatOutput-S7Bzs\",\"inputTypes\":[\"Data\",\"DataFrame\",\"Message\"],\"type\":\"str\"}",
         "selected": false,
         "source": "LanguageModelComponent-zY7m0",
-        "sourceHandle": "{\u0153dataType\u0153: \u0153LanguageModelComponent\u0153, \u0153id\u0153: \u0153LanguageModelComponent-zY7m0\u0153, \u0153name\u0153: \u0153text_output\u0153, \u0153output_types\u0153: [\u0153Message\u0153]}",
+        "sourceHandle": "{\"dataType\": \"LanguageModelComponent\", \"id\": \"LanguageModelComponent-zY7m0\", \"name\": \"text_output\", \"output_types\": [\"Message\"]}",
         "target": "ChatOutput-S7Bzs",
-        "targetHandle": "{\u0153fieldName\u0153: \u0153input_value\u0153, \u0153id\u0153: \u0153ChatOutput-S7Bzs\u0153, \u0153inputTypes\u0153: [\u0153Data\u0153, \u0153DataFrame\u0153, \u0153Message\u0153], \u0153type\u0153: \u0153str\u0153}"
+        "targetHandle": "{\"fieldName\": \"input_value\", \"id\": \"ChatOutput-S7Bzs\", \"inputTypes\": [\"Data\", \"DataFrame\", \"Message\"], \"type\": \"str\"}"
       },
       {
         "data": {
@@ -78,11 +78,11 @@
             "type": "str"
           }
         },
-        "id": "xy-edge__Prompt-YWJzc{\u0153dataType\u0153:\u0153Prompt\u0153,\u0153id\u0153:\u0153Prompt-YWJzc\u0153,\u0153name\u0153:\u0153prompt\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-LanguageModelComponent-zY7m0{\u0153fieldName\u0153:\u0153system_message\u0153,\u0153id\u0153:\u0153LanguageModelComponent-zY7m0\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
+        "id": "xy-edge__Prompt-YWJzc{\"dataType\":\"Prompt\",\"id\":\"Prompt-YWJzc\",\"name\":\"prompt\",\"output_types\":[\"Message\"]}-LanguageModelComponent-zY7m0{\"fieldName\":\"system_message\",\"id\":\"LanguageModelComponent-zY7m0\",\"inputTypes\":[\"Message\"],\"type\":\"str\"}",
         "source": "Prompt-YWJzc",
-        "sourceHandle": "{\u0153dataType\u0153: \u0153Prompt\u0153, \u0153id\u0153: \u0153Prompt-YWJzc\u0153, \u0153name\u0153: \u0153prompt\u0153, \u0153output_types\u0153: [\u0153Message\u0153]}",
+        "sourceHandle": "{\"dataType\": \"Prompt\", \"id\": \"Prompt-YWJzc\", \"name\": \"prompt\", \"output_types\": [\"Message\"]}",
         "target": "LanguageModelComponent-zY7m0",
-        "targetHandle": "{\u0153fieldName\u0153: \u0153system_message\u0153, \u0153id\u0153: \u0153LanguageModelComponent-zY7m0\u0153, \u0153inputTypes\u0153: [\u0153Message\u0153], \u0153type\u0153: \u0153str\u0153}"
+        "targetHandle": "{\"fieldName\": \"system_message\", \"id\": \"LanguageModelComponent-zY7m0\", \"inputTypes\": [\"Message\"], \"type\": \"str\"}"
       }
     ],
     "nodes": [

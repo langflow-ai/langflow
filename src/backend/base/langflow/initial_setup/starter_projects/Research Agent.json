@@ -2135,7 +2135,7 @@
                 ],
                 "list": false,
                 "list_add_label": "Add More",
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "ollama_base_url",
                 "override_skip": false,
                 "placeholder": "",
@@ -2148,7 +2148,7 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": false,
                 "type": "str",
-                "value": ""
+                "value": "http://localhost:11434"
               },
               "project_id": {
                 "_input_type": "StrInput",

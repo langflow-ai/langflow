@@ -1587,7 +1587,7 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": false,
                 "type": "str",
-                "value": ""
+                "value": "http://localhost:11434"
               },
               "project_id": {
                 "_input_type": "StrInput",
