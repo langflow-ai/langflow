@@ -910,9 +910,9 @@ def get_llm(
     # Add provider-specific parameters
     if provider == "IBM WatsonX":
         # For watsonx, url and project_id are required parameters
-        # If both are provided, add them to kwargs
-        # If neither are provided, let ChatWatsonx raise its own error (graceful for components without these fields)
-        # If only one is provided, that's a misconfiguration - raise a helpful error
+        # Only add them if both are provided by the component
+        # If neither are provided, let ChatWatsonx handle it with its native error
+        # This allows components without WatsonX-specific fields to fail gracefully
 
         url_param = metadata.get("url_param", "url")
         project_id_param = metadata.get("project_id_param", "project_id")
@@ -921,25 +921,18 @@ def get_llm(
         has_project_id = watsonx_project_id is not None
 
         if has_url and has_project_id:
-            # Both provided - ideal case
+            # Both provided - add them to kwargs
             kwargs[url_param] = watsonx_url
             kwargs[project_id_param] = watsonx_project_id
-        elif has_url and not has_project_id:
-            # URL provided but project_id missing
+        elif has_url or has_project_id:
+            # Only one provided - this is a misconfiguration in the component
+            missing = "project ID" if has_url else "URL"
+            provided = "URL" if has_url else "project ID"
             msg = (
-                "IBM WatsonX requires both a URL and project ID. "
-                "You provided a watsonx API endpoint but no project ID. "
-                "Please add a 'watsonx Project ID' field to your component or use the Language Model component "
-                "which fully supports IBM WatsonX configuration."
-            )
-            raise ValueError(msg)
-        elif has_project_id and not has_url:
-            # Project ID provided but URL missing
-            msg = (
-                "IBM WatsonX requires both a URL and project ID. "
-                "You provided a project ID but no watsonx API endpoint. "
-                "Please add a 'watsonx API Endpoint' field to your component or use the Language Model component "
-                "which fully supports IBM WatsonX configuration."
+                f"IBM WatsonX requires both a URL and project ID. "
+                f"You provided a watsonx {provided} but no {missing}. "
+                f"Please add a 'watsonx {missing.title()}' field to your component or use the Language Model component "
+                f"which fully supports IBM WatsonX configuration."
             )
             raise ValueError(msg)
         # else: neither provided - let ChatWatsonx handle it (will fail with its own error)
