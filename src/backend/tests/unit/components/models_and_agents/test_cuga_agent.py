@@ -62,7 +62,7 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         return {
             "_type": "Cuga",
             "add_current_date_tool": True,
-            "model": MockLanguageModel(),
+            "agent_llm": MockLanguageModel(),
             "instructions": "You are a helpful assistant.",
             "input_value": "",
             "n_messages": 100,
@@ -74,33 +74,32 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         }
 
     async def test_build_config_update(self, component_class, default_kwargs):
-        """Test that build configuration updates correctly for different model selections.
+        """Test that build configuration updates correctly for different model provider selections.
 
         This test verifies that the component's build configuration is properly
-        updated when selecting different models using the unified model system.
+        updated when selecting different model providers using the provider system.
         """
         component = await self.component_setup(component_class, default_kwargs)
         frontend_node = component.to_frontend_node()
         build_config = frontend_node["data"]["node"]["template"]
 
-        # Test that model field exists and has proper structure
-        assert "model" in build_config
-        model_config = build_config["model"]
-        assert "input_types" in model_config
-        assert "LanguageModel" in model_config["input_types"]
+        # Test that agent_llm field exists and has proper structure
+        assert "agent_llm" in build_config
+        agent_llm_config = build_config["agent_llm"]
+        assert "options" in agent_llm_config
+        assert "OpenAI" in agent_llm_config["options"]
 
-        # Test updating build config with a model selection (list of model dicts)
-        test_model_value = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
-        updated_config = await component.update_build_config(build_config, test_model_value, "model")
+        # Test updating build config with OpenAI provider
+        updated_config = await component.update_build_config(build_config, "OpenAI", "agent_llm")
 
-        assert "model" in updated_config
-        # When a model is selected, options should be populated
-        assert isinstance(updated_config["model"].get("options"), list)
+        assert "agent_llm" in updated_config
+        # When OpenAI is selected, OpenAI-specific fields should be present
+        assert "openai_api_key" in updated_config or "model_name" in updated_config
 
-        # Test updating build config with "connect_other_models" (should restore input types)
-        updated_config = await component.update_build_config(build_config, "connect_other_models", "model")
-        assert "model" in updated_config
-        assert "LanguageModel" in updated_config["model"]["input_types"]
+        # Test updating build config with "Custom" (should add input types for LanguageModel)
+        updated_config = await component.update_build_config(build_config, "Custom", "agent_llm")
+        assert "agent_llm" in updated_config
+        assert "LanguageModel" in updated_config["agent_llm"]["input_types"]
 
     async def test_cuga_component_initialization(self, component_class, default_kwargs):
         """Test that Cuga component initializes correctly with filtered inputs.
@@ -127,8 +126,8 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         frontend_node = component.to_frontend_node()
         build_config = frontend_node["data"]["node"]["template"]
 
-        # Verify expected fields are present (using new field name 'model')
-        assert "model" in build_config
+        # Verify expected fields are present (using field name 'agent_llm')
+        assert "agent_llm" in build_config
         assert "instructions" in build_config
         assert "add_current_date_tool" in build_config
         assert "browser_enabled" in build_config
