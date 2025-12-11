@@ -63,6 +63,7 @@ async def retrieve_vertices_order(
     stop_component_id: str | None = None,
     start_component_id: str | None = None,
     session: DbSession,
+    current_user: CurrentActiveUser,
 ) -> VerticesOrderResponse:
     """Retrieve the vertices order for a given flow.
 
@@ -201,10 +202,14 @@ async def build_flow(
 async def get_build_events(
     job_id: str,
     queue_service: Annotated[JobQueueService, Depends(get_queue_service)],
+    current_user: CurrentActiveUser,
     *,
     event_delivery: EventDeliveryType = EventDeliveryType.STREAMING,
 ):
-    """Get events for a specific build job."""
+    """Get events for a specific build job.
+    
+    Requires authentication to prevent unauthorized access to build events.
+    """
     return await get_flow_events_response(
         job_id=job_id,
         queue_service=queue_service,
@@ -216,8 +221,12 @@ async def get_build_events(
 async def cancel_build(
     job_id: str,
     queue_service: Annotated[JobQueueService, Depends(get_queue_service)],
+    current_user: CurrentActiveUser,
 ):
-    """Cancel a specific build job."""
+    """Cancel a specific build job.
+    
+    Requires authentication to prevent unauthorized build cancellation.
+    """
     try:
         # Cancel the flow build and check if it was successful
         cancellation_success = await cancel_flow_build(job_id=job_id, queue_service=queue_service)
@@ -513,6 +522,7 @@ async def _stream_vertex(flow_id: str, vertex_id: str, chat_service: ChatService
 async def build_vertex_stream(
     flow_id: uuid.UUID,
     vertex_id: str,
+    current_user: CurrentActiveUser,
 ):
     """Build a vertex instead of the entire graph.
 

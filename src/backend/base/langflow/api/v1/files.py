@@ -74,8 +74,19 @@ async def upload_file(
 
 @router.get("/download/{flow_id}/{file_name}")
 async def download_file(
-    file_name: str, flow_id: UUID, storage_service: Annotated[StorageService, Depends(get_storage_service)]
+    file_name: str,
+    flow_id: UUID,
+    current_user: CurrentActiveUser,
+    session: DbSession,
+    storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
+    # Verify user has access to this flow
+    flow = await session.get(Flow, flow_id)
+    if not flow:
+        raise HTTPException(status_code=404, detail="Flow not found")
+    if flow.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You don't have access to this flow")
+    
     flow_id_str = str(flow_id)
     extension = file_name.split(".")[-1]
 
@@ -102,7 +113,19 @@ async def download_file(
 
 
 @router.get("/images/{flow_id}/{file_name}")
-async def download_image(file_name: str, flow_id: UUID):
+async def download_image(
+    file_name: str,
+    flow_id: UUID,
+    current_user: CurrentActiveUser,
+    session: DbSession,
+):
+    # Verify user has access to this flow
+    flow = await session.get(Flow, flow_id)
+    if not flow:
+        raise HTTPException(status_code=404, detail="Flow not found")
+    if flow.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You don't have access to this flow")
+    
     storage_service = get_storage_service()
     extension = file_name.split(".")[-1]
     flow_id_str = str(flow_id)
@@ -138,16 +161,45 @@ async def download_profile_picture(
     then fallback to the package's bundled profile_pictures directory.
     """
     try:
+        # SECURITY: Validate inputs to prevent path traversal attacks
+        # Reject any path components that contain directory traversal sequences
+        if ".." in folder_name or ".." in file_name:
+            raise HTTPException(status_code=400, detail="Invalid folder or file name")
+        
+        # Only allow specific folder names
+        allowed_folders = {"People", "Space"}
+        if folder_name not in allowed_folders:
+            raise HTTPException(status_code=400, detail="Invalid folder name")
+        
+        # Validate file name contains no path separators
+        if "/" in file_name or "\\" in file_name:
+            raise HTTPException(status_code=400, detail="Invalid file name")
+        
         extension = file_name.split(".")[-1]
         config_dir = settings_service.settings.config_dir
-        config_path = Path(config_dir)  # type: ignore[arg-type]
-        file_path = config_path / "profile_pictures" / folder_name / file_name
+        config_path = Path(config_dir).resolve()  # type: ignore[arg-type]
+        
+        # Construct the file path
+        file_path = (config_path / "profile_pictures" / folder_name / file_name).resolve()
+        
+        # SECURITY: Verify the resolved path is still within the allowed directory
+        # This prevents path traversal even if symbolic links are involved
+        allowed_base = (config_path / "profile_pictures").resolve()
+        if not str(file_path).startswith(str(allowed_base)):
+            raise HTTPException(status_code=403, detail="Access denied")
 
         # Fallback to package bundled profile pictures if not found in config_dir
         if not file_path.exists():
             from langflow.initial_setup import setup
 
-            package_path = Path(setup.__file__).parent / "profile_pictures" / folder_name / file_name
+            package_base = Path(setup.__file__).parent / "profile_pictures"
+            package_path = (package_base / folder_name / file_name).resolve()
+            
+            # SECURITY: Verify package path is also within allowed directory
+            allowed_package_base = package_base.resolve()
+            if not str(package_path).startswith(str(allowed_package_base)):
+                raise HTTPException(status_code=403, detail="Access denied")
+            
             if package_path.exists():
                 file_path = package_path
             else:
