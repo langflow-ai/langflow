@@ -207,7 +207,7 @@ async def get_build_events(
     event_delivery: EventDeliveryType = EventDeliveryType.STREAMING,
 ):
     """Get events for a specific build job.
-    
+
     Requires authentication to prevent unauthorized access to build events.
     """
     return await get_flow_events_response(
@@ -224,7 +224,7 @@ async def cancel_build(
     current_user: CurrentActiveUser,
 ):
     """Cancel a specific build job.
-    
+
     Requires authentication to prevent unauthorized build cancellation.
     """
     try:

@@ -29,7 +29,7 @@ async def add_user(
     current_user: Annotated[User, Depends(get_current_active_superuser)],
 ) -> User:
     """Add a new user to the database.
-    
+
     Requires superuser authentication to prevent unauthorized account creation.
     """
     new_user = User.model_validate(user, from_attributes=True)

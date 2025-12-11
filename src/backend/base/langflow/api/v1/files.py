@@ -86,7 +86,7 @@ async def download_file(
         raise HTTPException(status_code=404, detail="Flow not found")
     if flow.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="You don't have access to this flow")
-    
+
     flow_id_str = str(flow_id)
     extension = file_name.split(".")[-1]
 
@@ -125,7 +125,7 @@ async def download_image(
         raise HTTPException(status_code=404, detail="Flow not found")
     if flow.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="You don't have access to this flow")
-    
+
     storage_service = get_storage_service()
     extension = file_name.split(".")[-1]
     flow_id_str = str(flow_id)
@@ -165,23 +165,23 @@ async def download_profile_picture(
         # Reject any path components that contain directory traversal sequences
         if ".." in folder_name or ".." in file_name:
             raise HTTPException(status_code=400, detail="Invalid folder or file name")
-        
+
         # Only allow specific folder names
         allowed_folders = {"People", "Space"}
         if folder_name not in allowed_folders:
             raise HTTPException(status_code=400, detail="Invalid folder name")
-        
+
         # Validate file name contains no path separators
         if "/" in file_name or "\\" in file_name:
             raise HTTPException(status_code=400, detail="Invalid file name")
-        
+
         extension = file_name.split(".")[-1]
         config_dir = settings_service.settings.config_dir
         config_path = Path(config_dir).resolve()  # type: ignore[arg-type]
-        
+
         # Construct the file path
         file_path = (config_path / "profile_pictures" / folder_name / file_name).resolve()
-        
+
         # SECURITY: Verify the resolved path is still within the allowed directory
         # This prevents path traversal even if symbolic links are involved
         allowed_base = (config_path / "profile_pictures").resolve()
@@ -194,12 +194,12 @@ async def download_profile_picture(
 
             package_base = Path(setup.__file__).parent / "profile_pictures"
             package_path = (package_base / folder_name / file_name).resolve()
-            
+
             # SECURITY: Verify package path is also within allowed directory
             allowed_package_base = package_base.resolve()
             if not str(package_path).startswith(str(allowed_package_base)):
                 raise HTTPException(status_code=403, detail="Access denied")
-            
+
             if package_path.exists():
                 file_path = package_path
             else:
