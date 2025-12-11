@@ -3,7 +3,7 @@ from collections.abc import AsyncIterator, Iterator
 from typing import Any, TypeAlias, get_args
 
 from pandas import DataFrame
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, field_validator, model_serializer, model_validator
 
 from lfx.inputs.validators import CoalesceBool
 from lfx.schema.data import Data
@@ -122,6 +122,30 @@ class PromptInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeM
 
 class CodeInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMixin):
     field_type: SerializableFieldTypes = FieldTypes.CODE
+
+    @field_validator("value", mode="before")
+    @classmethod
+    def convert_list_to_string(cls, v: Any) -> str:
+        """Convert list of strings to single string when loading from JSON.
+
+        This enables backwards compatibility: code can be stored as either
+        a single string or a list of strings (one per line).
+        """
+        if isinstance(v, list):
+            return "\n".join(v)
+        return v
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        """Serialize code as a list of strings for better git diffs."""
+        dump = handler(self)
+        if "field_type" in dump:
+            dump["type"] = dump.pop("field_type")
+        dump["_input_type"] = self.__class__.__name__
+        # Convert code string to list of lines for better git diffs
+        if "value" in dump and isinstance(dump["value"], str):
+            dump["value"] = dump["value"].split("\n")
+        return dump
 
 
 class ModelInput(BaseInputMixin, ModelInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMixin):

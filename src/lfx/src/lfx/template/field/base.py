@@ -116,6 +116,9 @@ class Input(BaseModel):
             result["type"] = "str"
         else:
             result["type"] = self.field_type
+        # Convert code string to list of lines for better git diffs
+        if self.field_type == "code" and isinstance(result.get("value"), str):
+            result["value"] = result["value"].split("\n")
         return result
 
     @model_validator(mode="after")
@@ -170,6 +173,20 @@ class Input(BaseModel):
         elif not isinstance(v, str):
             msg = f"type must be a string or a type, not {type(v)}"
             raise ValueError(msg)  # noqa: TRY004
+        return v
+
+    @field_validator("value", mode="before")
+    @classmethod
+    def convert_code_list_to_string(cls, v, info):
+        """Convert list of strings to single string for code fields.
+
+        This enables backwards compatibility: code can be stored as either
+        a single string or a list of strings (one per line).
+        """
+        # Check if this is a code field by looking at the field_type in the data
+        field_type = info.data.get("field_type") if info.data else None
+        if field_type == "code" and isinstance(v, list):
+            return "\n".join(v)
         return v
 
 

@@ -56,6 +56,9 @@ class Template(BaseModel):
                         msg = f"Error instantiating input {input_type}: {e}"
                         raise ValueError(msg) from e
                 else:
+                    # Convert "type" to "field_type" for Input class (same as instantiate_input does)
+                    if "type" in value:
+                        value["field_type"] = value.pop("type")
                     input_ = Input(**value)
 
                 data["fields"].append(input_)
