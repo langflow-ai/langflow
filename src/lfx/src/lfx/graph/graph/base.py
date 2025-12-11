@@ -2129,17 +2129,20 @@ class Graph:
         return {vertex.id: vertex.parent_node_id for vertex in self.vertices}
 
     def get_vertex_ids(self) -> list[str]:
-        """Get all vertex IDs in the graph."""
+        """
+        Return a list of all vertex IDs in the graph.
+        
+        Returns:
+            vertex_ids (list[str]): List containing the ID of each vertex in insertion order.
+        """
         return [vertex.id for vertex in self.vertices]
 
     def get_terminal_nodes(self) -> list[str]:
-        """Returns vertex IDs that are terminal nodes (not source of any edge).
-
-        Terminal nodes are vertices that have no outgoing edges - they are not
-        listed as source_id in any of the graph's edges.
-
+        """
+        Return IDs of vertices that have no outgoing edges.
+        
         Returns:
-            list[str]: List of vertex IDs that are terminal nodes.
+            list[str]: Vertex IDs that are not the source of any edge.
         """
         return [vertex.id for vertex in self.vertices if not self.successor_map.get(vertex.id, [])]
 
@@ -2148,7 +2151,22 @@ class Graph:
         stop_component_id: str | None = None,
         start_component_id: str | None = None,
     ) -> list[str]:
-        """Sorts the vertices in the graph."""
+        """
+        Compute an execution order for the graph and initialize run state.
+        
+        Marks all vertices active, computes layered topological order (respecting cycles
+        and optional start/stop component constraints), updates internal layer/run maps,
+        and prepares the graph for execution.
+        
+        Parameters:
+            stop_component_id (str | None): If provided, treat this component as a terminal
+                node for ordering (exclude successors beyond it).
+            start_component_id (str | None): If provided, begin ordering from this component
+                (exclude predecessors before it).
+        
+        Returns:
+            first_layer (list[str]): List of vertex IDs that form the first execution layer.
+        """
         self.mark_all_vertices("ACTIVE")
 
         first_layer, remaining_layers = get_sorted_vertices(
