@@ -26,7 +26,7 @@ router = APIRouter(tags=["Users"], prefix="/users")
 async def add_user(
     user: UserCreate,
     session: DbSession,
-    current_user: Annotated[User, Depends(get_current_active_superuser)],
+    current_user: Annotated[User, Depends(get_current_active_superuser)],  # noqa: ARG001
 ) -> User:
     """Add a new user to the database.
 

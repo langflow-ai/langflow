@@ -94,7 +94,7 @@ class ModelStatusUpdate(BaseModel):
 
 
 @router.get("/providers", status_code=200)
-async def list_model_providers(current_user: CurrentActiveUser) -> list[str]:
+async def list_model_providers(current_user: CurrentActiveUser) -> list[str]:  # noqa: ARG001
     """Return available model providers."""
     return get_model_providers()
 

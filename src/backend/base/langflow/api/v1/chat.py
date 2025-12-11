@@ -63,7 +63,7 @@ async def retrieve_vertices_order(
     stop_component_id: str | None = None,
     start_component_id: str | None = None,
     session: DbSession,
-    current_user: CurrentActiveUser,
+    current_user: CurrentActiveUser,  # noqa: ARG001
 ) -> VerticesOrderResponse:
     """Retrieve the vertices order for a given flow.
 
@@ -74,6 +74,7 @@ async def retrieve_vertices_order(
         stop_component_id (str, optional): The ID of the stop component. Defaults to None.
         start_component_id (str, optional): The ID of the start component. Defaults to None.
         session (AsyncSession, optional): The session dependency.
+        current_user (Any, optional): The current user dependency. Defaults to Depends(get_current_active_user).
 
     Returns:
         VerticesOrderResponse: The response containing the ordered vertex IDs and the run ID.
@@ -202,7 +203,7 @@ async def build_flow(
 async def get_build_events(
     job_id: str,
     queue_service: Annotated[JobQueueService, Depends(get_queue_service)],
-    current_user: CurrentActiveUser,
+    current_user: CurrentActiveUser,  # noqa: ARG001
     *,
     event_delivery: EventDeliveryType = EventDeliveryType.STREAMING,
 ):
@@ -221,7 +222,7 @@ async def get_build_events(
 async def cancel_build(
     job_id: str,
     queue_service: Annotated[JobQueueService, Depends(get_queue_service)],
-    current_user: CurrentActiveUser,
+    current_user: CurrentActiveUser,  # noqa: ARG001
 ):
     """Cancel a specific build job.
 
@@ -522,7 +523,7 @@ async def _stream_vertex(flow_id: str, vertex_id: str, chat_service: ChatService
 async def build_vertex_stream(
     flow_id: uuid.UUID,
     vertex_id: str,
-    current_user: CurrentActiveUser,
+    current_user: CurrentActiveUser,  # noqa: ARG001
 ):
     """Build a vertex instead of the entire graph.
 
