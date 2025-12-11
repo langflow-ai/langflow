@@ -4540,6 +4540,13 @@ components:
             - type: string
             - type: 'null'
           title: Oauth Callback Path
+          deprecated: true
+          description: 'Deprecated: Use oauth_callback_url instead'
+        oauth_callback_url:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Oauth Callback Url
         oauth_client_id:
           anyOf:
             - type: string
