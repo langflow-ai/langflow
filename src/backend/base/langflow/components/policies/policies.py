@@ -35,9 +35,18 @@ class PoliciesComponent(Component):
     inputs = [
         BoolInput(
             name="enabled",
-            display_name="Enable ToolGuard Execution",
+            display_name="Enable ToolGuards",
             info="If true, invokes ToolGuard code prior to tool execution, ensuring that tool-related policies are enforced.",
             value=True,
+        ),
+        TabInput(
+            name="build_mode",
+            display_name="ToolGuard Build Mode",
+            options=["execute", "run"],
+            info="Indicates whether to invoke buildtime (execute), or use a cached code (run)",
+            value="execute",
+            real_time_refresh=True,
+            tool_mode=True,
         ),
         MultilineInput(
             name="policies",
