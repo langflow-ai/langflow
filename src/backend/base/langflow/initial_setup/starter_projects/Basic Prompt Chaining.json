@@ -1,6 +1,113 @@
 {
   "data": {
-    "edges": [],
+    "edges": [
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-B7vXK",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tool_placeholder",
+            "id": "Prompt-RcCgD",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ChatInput-B7vXKmessage-Prompt-RcCgDtool_placeholder",
+        "source": "ChatInput-B7vXK",
+        "sourceHandle": "message",
+        "target": "Prompt-RcCgD",
+        "targetHandle": "tool_placeholder",
+        "type": "default"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-RcCgD",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tool_placeholder",
+            "id": "Prompt-gxyFu",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Prompt-RcCgDprompt-Prompt-gxyFutool_placeholder",
+        "source": "Prompt-RcCgD",
+        "sourceHandle": "prompt",
+        "target": "Prompt-gxyFu",
+        "targetHandle": "tool_placeholder",
+        "type": "default"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-gxyFu",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tool_placeholder",
+            "id": "Prompt-7PuDH",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Prompt-gxyFuprompt-Prompt-7PuDHtool_placeholder",
+        "source": "Prompt-gxyFu",
+        "sourceHandle": "prompt",
+        "target": "Prompt-7PuDH",
+        "targetHandle": "tool_placeholder",
+        "type": "default"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-7PuDH",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-mc2Rz",
+            "inputTypes": [
+              "Data",
+              "DataFrame",
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Prompt-7PuDHprompt-ChatOutput-mc2Rzinput_value",
+        "source": "Prompt-7PuDH",
+        "sourceHandle": "prompt",
+        "target": "ChatOutput-mc2Rz",
+        "targetHandle": "input_value",
+        "type": "default"
+      }
+    ],
     "nodes": [
       {
         "data": {
