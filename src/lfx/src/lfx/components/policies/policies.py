@@ -7,7 +7,7 @@ from lfx.log.logger import logger
 from os.path import join
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import MessageTextInput
-from lfx.io import Output, HandleInput, SecretStrInput
+from lfx.io import Output, HandleInput, SecretStrInput, TabInput
 from lfx.field_typing import Tool
 from toolguard import IToolInvoker, ToolGuardSpec, ToolFunctionsInvoker, ToolGuardsCodeGenerationResult, \
     ToolMethodsInvoker, load_toolguard_code_result, load_toolguards
@@ -34,9 +34,18 @@ class PoliciesComponent(Component):
     inputs = [
         BoolInput(
             name="enabled",
-            display_name="Enable ToolGuard Execution",
+            display_name="Enable ToolGuards",
             info="If true, invokes ToolGuard code prior to tool execution, ensuring that tool-related policies are enforced.",
             value=True,
+        ),
+        TabInput(
+            name="build_mode",
+            display_name="ToolGuard Build Mode",
+            options=["execute", "run"],
+            info="Indicates whether to invoke buildtime (execute), or use a cached code (run)",
+            value="execute",
+            real_time_refresh=True,
+            tool_mode=True,
         ),
         MultilineInput(
             name="policies",
@@ -119,17 +128,29 @@ class PoliciesComponent(Component):
         self.log(f"🔒️ToolGuard: please review the generated guard code at ...", name="info")
 
         if self.enabled:
-            # specs = await self._build_guard_specs()
-            # guards = await self._build_guards(specs)
+            build_mode = getattr(self, "build_mode", "execute")
+            if build_mode == "execute":  # run buildtime steps
+                self.log(f"🔒️ToolGuard: execution (build) mode", name="info")
+                # specs  = await self._build_guard_specs()
+                # guards = await self._build_guards(specs)
+                pass
+            else:  # build_mode == "run"
+                self.log(f"🔒️ToolGuard: run mode (cached code from path)", name="info")
+                # make sure self.guard_code_path contains the path to pre-built guards
+                #assert self.guard_code_path, "🔒️ToolGuard: guard path should be a valid code path!"
+                pass
+
             guards = None
             guarded_tools = [WrappedTool(tool, self.tools, self.guard_code_path) for tool in self.tools]
-            return guarded_tools # type: ignore
-        
+            return guarded_tools  # type: ignore
+
         return self.tools
 
 
 from langchain_core.runnables import RunnableConfig
 from langchain_core.callbacks import CallbackManagerForToolRun
+
+
 class WrappedTool(Tool):
     def __init__(self, tool: Tool, all_tools: List[Tool], tg_dir:str):
         super().__init__(name=tool.name, func=tool.func, description=tool.description)
