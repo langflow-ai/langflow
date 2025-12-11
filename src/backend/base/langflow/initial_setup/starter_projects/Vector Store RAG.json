@@ -23,12 +23,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-8l9oz{œdataTypeœ:œChatInputœ,œidœ:œChatInput-8l9ozœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-ML5XQ{œfieldNameœ:œquestionœ,œidœ:œPrompt-ML5XQœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-8l9oz{\u0153dataType\u0153:\u0153ChatInput\u0153,\u0153id\u0153:\u0153ChatInput-8l9oz\u0153,\u0153name\u0153:\u0153message\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-Prompt-ML5XQ{\u0153fieldName\u0153:\u0153question\u0153,\u0153id\u0153:\u0153Prompt-ML5XQ\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153,\u0153Text\u0153],\u0153type\u0153:\u0153str\u0153}",
         "selected": false,
         "source": "ChatInput-8l9oz",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-8l9ozœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "sourceHandle": "{\u0153dataType\u0153: \u0153ChatInput\u0153, \u0153id\u0153: \u0153ChatInput-8l9oz\u0153, \u0153name\u0153: \u0153message\u0153, \u0153output_types\u0153: [\u0153Message\u0153]}",
         "target": "Prompt-ML5XQ",
-        "targetHandle": "{œfieldNameœ: œquestionœ, œidœ: œPrompt-ML5XQœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "targetHandle": "{\u0153fieldName\u0153: \u0153question\u0153, \u0153id\u0153: \u0153Prompt-ML5XQ\u0153, \u0153inputTypes\u0153: [\u0153Message\u0153, \u0153Text\u0153], \u0153type\u0153: \u0153str\u0153}"
       },
       {
         "animated": false,
@@ -52,12 +52,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-parser-oHf4E{œdataTypeœ:œparserœ,œidœ:œparser-oHf4Eœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-ML5XQ{œfieldNameœ:œcontextœ,œidœ:œPrompt-ML5XQœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-parser-oHf4E{\u0153dataType\u0153:\u0153parser\u0153,\u0153id\u0153:\u0153parser-oHf4E\u0153,\u0153name\u0153:\u0153parsed_text\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-Prompt-ML5XQ{\u0153fieldName\u0153:\u0153context\u0153,\u0153id\u0153:\u0153Prompt-ML5XQ\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153,\u0153Text\u0153],\u0153type\u0153:\u0153str\u0153}",
         "selected": false,
         "source": "parser-oHf4E",
-        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-oHf4Eœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
+        "sourceHandle": "{\u0153dataType\u0153: \u0153parser\u0153, \u0153id\u0153: \u0153parser-oHf4E\u0153, \u0153name\u0153: \u0153parsed_text\u0153, \u0153output_types\u0153: [\u0153Message\u0153]}",
         "target": "Prompt-ML5XQ",
-        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-ML5XQœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "targetHandle": "{\u0153fieldName\u0153: \u0153context\u0153, \u0153id\u0153: \u0153Prompt-ML5XQ\u0153, \u0153inputTypes\u0153: [\u0153Message\u0153, \u0153Text\u0153], \u0153type\u0153: \u0153str\u0153}"
       },
       {
         "animated": false,
@@ -82,12 +82,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-File-7D3hP{œdataTypeœ:œFileœ,œidœ:œFile-7D3hPœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-SplitText-4s7Dt{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-4s7Dtœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-File-7D3hP{\u0153dataType\u0153:\u0153File\u0153,\u0153id\u0153:\u0153File-7D3hP\u0153,\u0153name\u0153:\u0153message\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-SplitText-4s7Dt{\u0153fieldName\u0153:\u0153data_inputs\u0153,\u0153id\u0153:\u0153SplitText-4s7Dt\u0153,\u0153inputTypes\u0153:[\u0153Data\u0153,\u0153DataFrame\u0153,\u0153Message\u0153],\u0153type\u0153:\u0153other\u0153}",
         "selected": false,
         "source": "File-7D3hP",
-        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-7D3hPœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "sourceHandle": "{\u0153dataType\u0153: \u0153File\u0153, \u0153id\u0153: \u0153File-7D3hP\u0153, \u0153name\u0153: \u0153message\u0153, \u0153output_types\u0153: [\u0153Message\u0153]}",
         "target": "SplitText-4s7Dt",
-        "targetHandle": "{œfieldNameœ: œdata_inputsœ, œidœ: œSplitText-4s7Dtœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "targetHandle": "{\u0153fieldName\u0153: \u0153data_inputs\u0153, \u0153id\u0153: \u0153SplitText-4s7Dt\u0153, \u0153inputTypes\u0153: [\u0153Data\u0153, \u0153DataFrame\u0153, \u0153Message\u0153], \u0153type\u0153: \u0153other\u0153}"
       },
       {
         "animated": false,
@@ -110,12 +110,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-ML5XQ{œdataTypeœ:œPromptœ,œidœ:œPrompt-ML5XQœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-Wqbva{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-Wqbvaœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-ML5XQ{\u0153dataType\u0153:\u0153Prompt\u0153,\u0153id\u0153:\u0153Prompt-ML5XQ\u0153,\u0153name\u0153:\u0153prompt\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-LanguageModelComponent-Wqbva{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153LanguageModelComponent-Wqbva\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
         "selected": false,
         "source": "Prompt-ML5XQ",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-ML5XQœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "sourceHandle": "{\u0153dataType\u0153: \u0153Prompt\u0153, \u0153id\u0153: \u0153Prompt-ML5XQ\u0153, \u0153name\u0153: \u0153prompt\u0153, \u0153output_types\u0153: [\u0153Message\u0153]}",
         "target": "LanguageModelComponent-Wqbva",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-Wqbvaœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "targetHandle": "{\u0153fieldName\u0153: \u0153input_value\u0153, \u0153id\u0153: \u0153LanguageModelComponent-Wqbva\u0153, \u0153inputTypes\u0153: [\u0153Message\u0153], \u0153type\u0153: \u0153str\u0153}"
       },
       {
         "animated": false,
@@ -140,12 +140,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-LanguageModelComponent-Wqbva{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-Wqbvaœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-g0Phk{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-g0Phkœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-LanguageModelComponent-Wqbva{\u0153dataType\u0153:\u0153LanguageModelComponent\u0153,\u0153id\u0153:\u0153LanguageModelComponent-Wqbva\u0153,\u0153name\u0153:\u0153text_output\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-ChatOutput-g0Phk{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153ChatOutput-g0Phk\u0153,\u0153inputTypes\u0153:[\u0153Data\u0153,\u0153DataFrame\u0153,\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
         "selected": false,
         "source": "LanguageModelComponent-Wqbva",
-        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-Wqbvaœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "sourceHandle": "{\u0153dataType\u0153: \u0153LanguageModelComponent\u0153, \u0153id\u0153: \u0153LanguageModelComponent-Wqbva\u0153, \u0153name\u0153: \u0153text_output\u0153, \u0153output_types\u0153: [\u0153Message\u0153]}",
         "target": "ChatOutput-g0Phk",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-g0Phkœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "targetHandle": "{\u0153fieldName\u0153: \u0153input_value\u0153, \u0153id\u0153: \u0153ChatOutput-g0Phk\u0153, \u0153inputTypes\u0153: [\u0153Data\u0153, \u0153DataFrame\u0153, \u0153Message\u0153], \u0153type\u0153: \u0153str\u0153}"
       },
       {
         "animated": false,
@@ -169,12 +169,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-SplitText-4s7Dt{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-4s7Dtœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-AstraDB-TCSqR{œfieldNameœ:œingest_dataœ,œidœ:œAstraDB-TCSqRœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-SplitText-4s7Dt{\u0153dataType\u0153:\u0153SplitText\u0153,\u0153id\u0153:\u0153SplitText-4s7Dt\u0153,\u0153name\u0153:\u0153dataframe\u0153,\u0153output_types\u0153:[\u0153DataFrame\u0153]}-AstraDB-TCSqR{\u0153fieldName\u0153:\u0153ingest_data\u0153,\u0153id\u0153:\u0153AstraDB-TCSqR\u0153,\u0153inputTypes\u0153:[\u0153Data\u0153,\u0153DataFrame\u0153],\u0153type\u0153:\u0153other\u0153}",
         "selected": false,
         "source": "SplitText-4s7Dt",
-        "sourceHandle": "{œdataTypeœ: œSplitTextœ, œidœ: œSplitText-4s7Dtœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
+        "sourceHandle": "{\u0153dataType\u0153: \u0153SplitText\u0153, \u0153id\u0153: \u0153SplitText-4s7Dt\u0153, \u0153name\u0153: \u0153dataframe\u0153, \u0153output_types\u0153: [\u0153DataFrame\u0153]}",
         "target": "AstraDB-TCSqR",
-        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œAstraDB-TCSqRœ, œinputTypesœ: [œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
+        "targetHandle": "{\u0153fieldName\u0153: \u0153ingest_data\u0153, \u0153id\u0153: \u0153AstraDB-TCSqR\u0153, \u0153inputTypes\u0153: [\u0153Data\u0153, \u0153DataFrame\u0153], \u0153type\u0153: \u0153other\u0153}"
       },
       {
         "animated": false,
@@ -197,12 +197,12 @@
             "type": "query"
           }
         },
-        "id": "reactflow__edge-ChatInput-8l9oz{œdataTypeœ:œChatInputœ,œidœ:œChatInput-8l9ozœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraDB-BteL9{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDB-BteL9œ,œinputTypesœ:[œMessageœ],œtypeœ:œqueryœ}",
+        "id": "reactflow__edge-ChatInput-8l9oz{\u0153dataType\u0153:\u0153ChatInput\u0153,\u0153id\u0153:\u0153ChatInput-8l9oz\u0153,\u0153name\u0153:\u0153message\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-AstraDB-BteL9{\u0153fieldName\u0153:\u0153search_query\u0153,\u0153id\u0153:\u0153AstraDB-BteL9\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153query\u0153}",
         "selected": false,
         "source": "ChatInput-8l9oz",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-8l9ozœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "sourceHandle": "{\u0153dataType\u0153: \u0153ChatInput\u0153, \u0153id\u0153: \u0153ChatInput-8l9oz\u0153, \u0153name\u0153: \u0153message\u0153, \u0153output_types\u0153: [\u0153Message\u0153]}",
         "target": "AstraDB-BteL9",
-        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œAstraDB-BteL9œ, œinputTypesœ: [œMessageœ], œtypeœ: œqueryœ}"
+        "targetHandle": "{\u0153fieldName\u0153: \u0153search_query\u0153, \u0153id\u0153: \u0153AstraDB-BteL9\u0153, \u0153inputTypes\u0153: [\u0153Message\u0153], \u0153type\u0153: \u0153query\u0153}"
       },
       {
         "animated": false,
@@ -226,12 +226,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-AstraDB-BteL9{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-BteL9œ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-parser-oHf4E{œfieldNameœ:œinput_dataœ,œidœ:œparser-oHf4Eœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-AstraDB-BteL9{\u0153dataType\u0153:\u0153AstraDB\u0153,\u0153id\u0153:\u0153AstraDB-BteL9\u0153,\u0153name\u0153:\u0153dataframe\u0153,\u0153output_types\u0153:[\u0153DataFrame\u0153]}-parser-oHf4E{\u0153fieldName\u0153:\u0153input_data\u0153,\u0153id\u0153:\u0153parser-oHf4E\u0153,\u0153inputTypes\u0153:[\u0153DataFrame\u0153,\u0153Data\u0153],\u0153type\u0153:\u0153other\u0153}",
         "selected": false,
         "source": "AstraDB-BteL9",
-        "sourceHandle": "{œdataTypeœ: œAstraDBœ, œidœ: œAstraDB-BteL9œ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
+        "sourceHandle": "{\u0153dataType\u0153: \u0153AstraDB\u0153, \u0153id\u0153: \u0153AstraDB-BteL9\u0153, \u0153name\u0153: \u0153dataframe\u0153, \u0153output_types\u0153: [\u0153DataFrame\u0153]}",
         "target": "parser-oHf4E",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-oHf4Eœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
+        "targetHandle": "{\u0153fieldName\u0153: \u0153input_data\u0153, \u0153id\u0153: \u0153parser-oHf4E\u0153, \u0153inputTypes\u0153: [\u0153DataFrame\u0153, \u0153Data\u0153], \u0153type\u0153: \u0153other\u0153}"
       },
       {
         "animated": false,
@@ -254,12 +254,12 @@
             "type": "other"
           }
         },
-        "id": "xy-edge__OpenAIEmbeddings-U8tZg{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-U8tZgœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-TCSqR{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-TCSqRœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
+        "id": "xy-edge__OpenAIEmbeddings-U8tZg{\u0153dataType\u0153:\u0153OpenAIEmbeddings\u0153,\u0153id\u0153:\u0153OpenAIEmbeddings-U8tZg\u0153,\u0153name\u0153:\u0153embeddings\u0153,\u0153output_types\u0153:[\u0153Embeddings\u0153]}-AstraDB-TCSqR{\u0153fieldName\u0153:\u0153embedding_model\u0153,\u0153id\u0153:\u0153AstraDB-TCSqR\u0153,\u0153inputTypes\u0153:[\u0153Embeddings\u0153],\u0153type\u0153:\u0153other\u0153}",
         "selected": false,
         "source": "OpenAIEmbeddings-U8tZg",
-        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-U8tZgœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
+        "sourceHandle": "{\u0153dataType\u0153: \u0153OpenAIEmbeddings\u0153, \u0153id\u0153: \u0153OpenAIEmbeddings-U8tZg\u0153, \u0153name\u0153: \u0153embeddings\u0153, \u0153output_types\u0153: [\u0153Embeddings\u0153]}",
         "target": "AstraDB-TCSqR",
-        "targetHandle": "{œfieldNameœ: œembedding_modelœ, œidœ: œAstraDB-TCSqRœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
+        "targetHandle": "{\u0153fieldName\u0153: \u0153embedding_model\u0153, \u0153id\u0153: \u0153AstraDB-TCSqR\u0153, \u0153inputTypes\u0153: [\u0153Embeddings\u0153], \u0153type\u0153: \u0153other\u0153}"
       },
       {
         "className": "",
@@ -281,11 +281,11 @@
             "type": "other"
           }
         },
-        "id": "xy-edge__OpenAIEmbeddings-jsaKm{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-jsaKmœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-BteL9{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-BteL9œ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
+        "id": "xy-edge__OpenAIEmbeddings-jsaKm{\u0153dataType\u0153:\u0153OpenAIEmbeddings\u0153,\u0153id\u0153:\u0153OpenAIEmbeddings-jsaKm\u0153,\u0153name\u0153:\u0153embeddings\u0153,\u0153output_types\u0153:[\u0153Embeddings\u0153]}-AstraDB-BteL9{\u0153fieldName\u0153:\u0153embedding_model\u0153,\u0153id\u0153:\u0153AstraDB-BteL9\u0153,\u0153inputTypes\u0153:[\u0153Embeddings\u0153],\u0153type\u0153:\u0153other\u0153}",
         "source": "OpenAIEmbeddings-jsaKm",
-        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-jsaKmœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
+        "sourceHandle": "{\u0153dataType\u0153: \u0153OpenAIEmbeddings\u0153, \u0153id\u0153: \u0153OpenAIEmbeddings-jsaKm\u0153, \u0153name\u0153: \u0153embeddings\u0153, \u0153output_types\u0153: [\u0153Embeddings\u0153]}",
         "target": "AstraDB-BteL9",
-        "targetHandle": "{œfieldNameœ: œembedding_modelœ, œidœ: œAstraDB-BteL9œ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
+        "targetHandle": "{\u0153fieldName\u0153: \u0153embedding_model\u0153, \u0153id\u0153: \u0153AstraDB-BteL9\u0153, \u0153inputTypes\u0153: [\u0153Embeddings\u0153], \u0153type\u0153: \u0153other\u0153}"
       }
     ],
     "nodes": [
@@ -961,7 +961,7 @@
         "data": {
           "id": "note-PMpi6",
           "node": {
-            "description": "## 🐕 2. Retriever Flow\n\nThis flow answers your questions with contextual data retrieved from your vector database.\n\nOpen the **Playground** and ask, \n\n```\nWhat is this document about?\n```\n",
+            "description": "## \ud83d\udc15 2. Retriever Flow\n\nThis flow answers your questions with contextual data retrieved from your vector database.\n\nOpen the **Playground** and ask, \n\n```\nWhat is this document about?\n```\n",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -998,7 +998,7 @@
         "data": {
           "id": "note-WvtH0",
           "node": {
-            "description": "Retrieval Augmented Generation (RAG) is a way of providing additional context to a Large Language Model (LLM) by preloading a vector database with embeddings for relevant content. When a user chats with the LLM, a _similarity search_ retrieves relevant content by comparing an embedding for the user's query against the embeddings in the vector database.\nFor example, a RAG chatbot could be pre-loaded with product data, and then it can help customers find specific products based on their queries.\nThis template has two sub-flows. One flow loads data into your vector store, and the other is the user-driven chat flow that compares a new query against the existing content in your vector database.\n\n## Quickstart\n1. Add your OpenAI API key to the **Language Model** component and the two **Embeddings** components.\n2. Add an Astra application token to the **Astra DB** vector store components, or replace these components with other vector store components available in the **Components** menu.\n**💡 Store your credentials as Langflow global variables 🌐 to simplify token management and reuse in your flows.**\n\n## Run the flows\n1. Load your data into a vector database with the 📚 **Load Data** flow. Select a file to upload in the **File** component, and then click **Play** ▶️ on the **Astra DB** component to run the **Load Data** flow.\n2. Open the **Playground** to start a chat with the 🐕 **Retriever** flow.\n\nOnly the run the **Load Data** flow when you need to populate your vector database with baseline content, such as product data.\nThe **Retriever** flow is the user-facing chat flow. This flow generates an embedding from chat input, runs a similarity search against the vector database to retrieve relevant content, and then passes the original query and the retrieved content to the LLM, which produces the chat response sent to the user.\n\n## Next steps\nExperiment by changing the prompt and the loaded data to see how the LLM's responses change.",
+            "description": "Retrieval Augmented Generation (RAG) is a way of providing additional context to a Large Language Model (LLM) by preloading a vector database with embeddings for relevant content. When a user chats with the LLM, a _similarity search_ retrieves relevant content by comparing an embedding for the user's query against the embeddings in the vector database.\nFor example, a RAG chatbot could be pre-loaded with product data, and then it can help customers find specific products based on their queries.\nThis template has two sub-flows. One flow loads data into your vector store, and the other is the user-driven chat flow that compares a new query against the existing content in your vector database.\n\n## Quickstart\n1. Add your OpenAI API key to the **Language Model** component and the two **Embeddings** components.\n2. Add an Astra application token to the **Astra DB** vector store components, or replace these components with other vector store components available in the **Components** menu.\n**\ud83d\udca1 Store your credentials as Langflow global variables \ud83c\udf10 to simplify token management and reuse in your flows.**\n\n## Run the flows\n1. Load your data into a vector database with the \ud83d\udcda **Load Data** flow. Select a file to upload in the **File** component, and then click **Play** \u25b6\ufe0f on the **Astra DB** component to run the **Load Data** flow.\n2. Open the **Playground** to start a chat with the \ud83d\udc15 **Retriever** flow.\n\nOnly the run the **Load Data** flow when you need to populate your vector database with baseline content, such as product data.\nThe **Retriever** flow is the user-facing chat flow. This flow generates an embedding from chat input, runs a similarity search against the vector database to retrieve relevant content, and then passes the original query and the retrieved content to the LLM, which produces the chat response sent to the user.\n\n## Next steps\nExperiment by changing the prompt and the loaded data to see how the LLM's responses change.",
             "display_name": "Read Me",
             "documentation": "",
             "template": {
@@ -1828,7 +1828,7 @@
         "data": {
           "id": "note-WLlNM",
           "node": {
-            "description": "## 📚 1. Load Data Flow\n\nRun this first! Load data from a local file and embed it into the vector database.\n\nSelect a Database and a Collection, or create new ones. \n\nClick  **Run component** on the **Astra DB** component to load your data.\n\n\n### Next steps:\n Experiment by changing the prompt and the contextual data to see how the retrieval flow's responses change.",
+            "description": "## \ud83d\udcda 1. Load Data Flow\n\nRun this first! Load data from a local file and embed it into the vector database.\n\nSelect a Database and a Collection, or create new ones. \n\nClick  **Run component** on the **Astra DB** component to load your data.\n\n\n### Next steps:\n Experiment by changing the prompt and the contextual data to see how the retrieval flow's responses change.",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -2377,7 +2377,7 @@
         "data": {
           "id": "note-5qEgh",
           "node": {
-            "description": "### 💡 Add your OpenAI API key here 👇",
+            "description": "### \ud83d\udca1 Add your OpenAI API key here \ud83d\udc47",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -2409,7 +2409,7 @@
         "data": {
           "id": "note-siZGp",
           "node": {
-            "description": "### 💡 Add your OpenAI API key here 👇",
+            "description": "### \ud83d\udca1 Add your OpenAI API key here \ud83d\udc47",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -2441,7 +2441,7 @@
         "data": {
           "id": "note-qKdBl",
           "node": {
-            "description": "### 💡 Add your OpenAI API key here 👇",
+            "description": "### \ud83d\udca1 Add your OpenAI API key here \ud83d\udc47",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -3150,12 +3150,14 @@
             "custom_fields": {},
             "description": "Runs a language model given a specified provider.",
             "display_name": "Language Model",
-            "documentation": "",
+            "documentation": "https://docs.langflow.org/components-models",
             "edited": false,
             "field_order": [
-              "provider",
-              "model_name",
+              "model",
               "api_key",
+              "base_url_ibm_watsonx",
+              "project_id",
+              "ollama_base_url",
               "input_value",
               "system_message",
               "stream",
@@ -3163,30 +3165,19 @@
             ],
             "frozen": false,
             "icon": "brain-circuit",
-            "last_updated": "2025-10-10T17:51:27.074Z",
+            "last_updated": "2025-12-11T21:29:10.202Z",
             "legacy": false,
+            "lf_version": "1.7.0",
             "metadata": {
-              "code_hash": "bb5f8714781b",
+              "code_hash": "7fe3257f2169",
               "dependencies": {
                 "dependencies": [
-                  {
-                    "name": "langchain_anthropic",
-                    "version": "0.3.14"
-                  },
-                  {
-                    "name": "langchain_google_genai",
-                    "version": "2.0.6"
-                  },
-                  {
-                    "name": "langchain_openai",
-                    "version": "0.3.23"
-                  },
                   {
                     "name": "lfx",
                     "version": null
                   }
                 ],
-                "total_dependencies": 4
+                "total_dependencies": 1
               },
               "keywords": [
                 "model",
@@ -3194,7 +3185,7 @@
                 "language model",
                 "large language model"
               ],
-              "module": "lfx.components.models.language_model.LanguageModelComponent"
+              "module": "lfx.components.models_and_agents.language_model.LanguageModelComponent"
             },
             "minimized": false,
             "output_types": [],
@@ -3204,6 +3195,7 @@
                 "cache": true,
                 "display_name": "Model Response",
                 "group_outputs": false,
+                "loop_types": null,
                 "method": "text_response",
                 "name": "text_output",
                 "options": null,
@@ -3220,6 +3212,7 @@
                 "cache": true,
                 "display_name": "Language Model",
                 "group_outputs": false,
+                "loop_types": null,
                 "method": "build_model",
                 "name": "model_output",
                 "options": null,
@@ -3235,24 +3228,64 @@
             "pinned": false,
             "priority": 0,
             "template": {
+              "_frontend_node_flow_id": {
+                "value": "524f71dc-cc58-441a-a009-c71d6755765f"
+              },
+              "_frontend_node_folder_id": {
+                "value": "afaca9ee-97e3-4211-8569-722a4058ea5e"
+              },
               "_type": "Component",
               "api_key": {
                 "_input_type": "SecretStrInput",
-                "advanced": false,
-                "display_name": "OpenAI API Key",
+                "advanced": true,
+                "display_name": "API Key",
                 "dynamic": false,
                 "info": "Model Provider API key",
                 "input_types": [],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "api_key",
+                "override_skip": false,
                 "password": true,
                 "placeholder": "",
                 "real_time_refresh": true,
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "track_in_telemetry": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
+              },
+              "base_url_ibm_watsonx": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "watsonx API Endpoint",
+                "dynamic": false,
+                "external_options": {},
+                "info": "The base URL of the API (IBM watsonx.ai only)",
+                "name": "base_url_ibm_watsonx",
+                "options": [
+                  "https://us-south.ml.cloud.ibm.com",
+                  "https://eu-de.ml.cloud.ibm.com",
+                  "https://eu-gb.ml.cloud.ibm.com",
+                  "https://au-syd.ml.cloud.ibm.com",
+                  "https://jp-tok.ml.cloud.ibm.com",
+                  "https://ca-tor.ml.cloud.ibm.com"
+                ],
+                "options_metadata": [],
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "str",
+                "value": "https://us-south.ml.cloud.ibm.com"
               },
               "code": {
                 "advanced": true,
@@ -3285,6 +3318,7 @@
                 "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "input_value",
+                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -3292,85 +3326,95 @@
                 "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
+                "track_in_telemetry": false,
                 "type": "str",
                 "value": ""
               },
-              "model_name": {
-                "_input_type": "DropdownInput",
+              "is_refresh": false,
+              "model": {
+                "_input_type": "ModelInput",
                 "advanced": false,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Model Name",
+                "display_name": "Language Model",
                 "dynamic": false,
-                "info": "Select the model to use",
-                "name": "model_name",
-                "options": [
-                  "gpt-4o-mini",
-                  "gpt-4o",
-                  "gpt-4.1",
-                  "gpt-4.1-mini",
-                  "gpt-4.1-nano",
-                  "gpt-4-turbo",
-                  "gpt-4-turbo-preview",
-                  "gpt-4",
-                  "gpt-3.5-turbo",
-                  "gpt-5",
-                  "gpt-5-mini",
-                  "gpt-5-nano",
-                  "gpt-5-chat-latest",
-                  "o1",
-                  "o3-mini",
-                  "o3",
-                  "o3-pro",
-                  "o4-mini",
-                  "o4-mini-high"
+                "external_options": {
+                  "fields": {
+                    "data": {
+                      "node": {
+                        "display_name": "Connect other models",
+                        "icon": "CornerDownLeft",
+                        "name": "connect_other_models"
+                      }
+                    }
+                  }
+                },
+                "info": "Select your model provider",
+                "input_types": [
+                  "LanguageModel"
                 ],
-                "options_metadata": [],
-                "placeholder": "",
-                "required": false,
+                "list": false,
+                "list_add_label": "Add More",
+                "model_type": "language",
+                "name": "model",
+                "options": [],
+                "override_skip": false,
+                "placeholder": "Setup Provider",
+                "real_time_refresh": true,
+                "refresh_button": true,
+                "required": true,
                 "show": true,
                 "title_case": false,
-                "toggle": false,
                 "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "gpt-4o-mini"
+                "trace_as_input": true,
+                "track_in_telemetry": false,
+                "type": "model",
+                "value": []
               },
-              "provider": {
-                "_input_type": "DropdownInput",
+              "ollama_base_url": {
+                "_input_type": "MessageInput",
                 "advanced": false,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Model Provider",
+                "display_name": "Ollama API URL",
                 "dynamic": false,
-                "info": "Select the model provider",
-                "name": "provider",
-                "options": [
-                  "OpenAI",
-                  "Anthropic",
-                  "Google"
+                "info": "Endpoint of the Ollama API (Ollama only). Defaults to http://localhost:11434",
+                "input_types": [
+                  "Message"
                 ],
-                "options_metadata": [
-                  {
-                    "icon": "OpenAI"
-                  },
-                  {
-                    "icon": "Anthropic"
-                  },
-                  {
-                    "icon": "GoogleGenerativeAI"
-                  }
-                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "ollama_base_url",
+                "override_skip": false,
                 "placeholder": "",
                 "real_time_refresh": true,
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
-                "toggle": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "project_id": {
+                "_input_type": "StrInput",
+                "advanced": false,
+                "display_name": "watsonx Project ID",
+                "dynamic": false,
+                "info": "The project ID associated with the foundation model (IBM watsonx.ai only)",
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "project_id",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
+                "track_in_telemetry": false,
                 "type": "str",
-                "value": "OpenAI"
+                "value": ""
               },
               "stream": {
                 "_input_type": "BoolInput",
@@ -3381,18 +3425,21 @@
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "stream",
+                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
+                "track_in_telemetry": true,
                 "type": "bool",
                 "value": false
               },
               "system_message": {
                 "_input_type": "MultilineInput",
-                "advanced": true,
+                "advanced": false,
+                "ai_enabled": false,
                 "copy_field": false,
                 "display_name": "System Message",
                 "dynamic": false,
@@ -3405,6 +3452,7 @@
                 "load_from_db": false,
                 "multiline": true,
                 "name": "system_message",
+                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -3412,6 +3460,7 @@
                 "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
+                "track_in_telemetry": false,
                 "type": "str",
                 "value": ""
               },
@@ -3426,6 +3475,7 @@
                 "min_label": "",
                 "min_label_icon": "",
                 "name": "temperature",
+                "override_skip": false,
                 "placeholder": "",
                 "range_spec": {
                   "max": 1,
@@ -3440,6 +3490,7 @@
                 "slider_input": false,
                 "title_case": false,
                 "tool_mode": false,
+                "track_in_telemetry": false,
                 "type": "slider",
                 "value": 0.1
               }

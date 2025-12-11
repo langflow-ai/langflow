@@ -22,12 +22,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-RaLHB{œdataTypeœ:œPromptœ,œidœ:œPrompt-RaLHBœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-qFXT1{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-qFXT1œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-RaLHB{\u0153dataType\u0153:\u0153Prompt\u0153,\u0153id\u0153:\u0153Prompt-RaLHB\u0153,\u0153name\u0153:\u0153prompt\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-LanguageModelComponent-qFXT1{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153LanguageModelComponent-qFXT1\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
         "selected": false,
         "source": "Prompt-RaLHB",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-RaLHBœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "sourceHandle": "{\u0153dataType\u0153: \u0153Prompt\u0153, \u0153id\u0153: \u0153Prompt-RaLHB\u0153, \u0153name\u0153: \u0153prompt\u0153, \u0153output_types\u0153: [\u0153Message\u0153]}",
         "target": "LanguageModelComponent-qFXT1",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-qFXT1œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "targetHandle": "{\u0153fieldName\u0153: \u0153input_value\u0153, \u0153id\u0153: \u0153LanguageModelComponent-qFXT1\u0153, \u0153inputTypes\u0153: [\u0153Message\u0153], \u0153type\u0153: \u0153str\u0153}"
       },
       {
         "animated": false,
@@ -50,12 +50,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-LanguageModelComponent-qFXT1{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-qFXT1œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-C5FYM{œfieldNameœ:œsummaryœ,œidœ:œPrompt-C5FYMœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-LanguageModelComponent-qFXT1{\u0153dataType\u0153:\u0153LanguageModelComponent\u0153,\u0153id\u0153:\u0153LanguageModelComponent-qFXT1\u0153,\u0153name\u0153:\u0153text_output\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-Prompt-C5FYM{\u0153fieldName\u0153:\u0153summary\u0153,\u0153id\u0153:\u0153Prompt-C5FYM\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
         "selected": false,
         "source": "LanguageModelComponent-qFXT1",
-        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-qFXT1œ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "sourceHandle": "{\u0153dataType\u0153: \u0153LanguageModelComponent\u0153, \u0153id\u0153: \u0153LanguageModelComponent-qFXT1\u0153, \u0153name\u0153: \u0153text_output\u0153, \u0153output_types\u0153: [\u0153Message\u0153]}",
         "target": "Prompt-C5FYM",
-        "targetHandle": "{œfieldNameœ: œsummaryœ, œidœ: œPrompt-C5FYMœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "targetHandle": "{\u0153fieldName\u0153: \u0153summary\u0153, \u0153id\u0153: \u0153Prompt-C5FYM\u0153, \u0153inputTypes\u0153: [\u0153Message\u0153], \u0153type\u0153: \u0153str\u0153}"
       },
       {
         "animated": false,
@@ -78,12 +78,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-C5FYM{œdataTypeœ:œPromptœ,œidœ:œPrompt-C5FYMœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-Wp3pC{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-Wp3pCœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-C5FYM{\u0153dataType\u0153:\u0153Prompt\u0153,\u0153id\u0153:\u0153Prompt-C5FYM\u0153,\u0153name\u0153:\u0153prompt\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-LanguageModelComponent-Wp3pC{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153LanguageModelComponent-Wp3pC\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
         "selected": false,
         "source": "Prompt-C5FYM",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-C5FYMœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "sourceHandle": "{\u0153dataType\u0153: \u0153Prompt\u0153, \u0153id\u0153: \u0153Prompt-C5FYM\u0153, \u0153name\u0153: \u0153prompt\u0153, \u0153output_types\u0153: [\u0153Message\u0153]}",
         "target": "LanguageModelComponent-Wp3pC",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-Wp3pCœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "targetHandle": "{\u0153fieldName\u0153: \u0153input_value\u0153, \u0153id\u0153: \u0153LanguageModelComponent-Wp3pC\u0153, \u0153inputTypes\u0153: [\u0153Message\u0153], \u0153type\u0153: \u0153str\u0153}"
       },
       {
         "animated": false,
@@ -108,12 +108,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-LanguageModelComponent-Wp3pC{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-Wp3pCœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-K40Du{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-K40Duœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-LanguageModelComponent-Wp3pC{\u0153dataType\u0153:\u0153LanguageModelComponent\u0153,\u0153id\u0153:\u0153LanguageModelComponent-Wp3pC\u0153,\u0153name\u0153:\u0153text_output\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-ChatOutput-K40Du{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153ChatOutput-K40Du\u0153,\u0153inputTypes\u0153:[\u0153Data\u0153,\u0153DataFrame\u0153,\u0153Message\u0153],\u0153type\u0153:\u0153other\u0153}",
         "selected": false,
         "source": "LanguageModelComponent-Wp3pC",
-        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-Wp3pCœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "sourceHandle": "{\u0153dataType\u0153: \u0153LanguageModelComponent\u0153, \u0153id\u0153: \u0153LanguageModelComponent-Wp3pC\u0153, \u0153name\u0153: \u0153text_output\u0153, \u0153output_types\u0153: [\u0153Message\u0153]}",
         "target": "ChatOutput-K40Du",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-K40Duœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "targetHandle": "{\u0153fieldName\u0153: \u0153input_value\u0153, \u0153id\u0153: \u0153ChatOutput-K40Du\u0153, \u0153inputTypes\u0153: [\u0153Data\u0153, \u0153DataFrame\u0153, \u0153Message\u0153], \u0153type\u0153: \u0153other\u0153}"
       },
       {
         "animated": false,
@@ -136,12 +136,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-dabhh{œdataTypeœ:œPromptœ,œidœ:œPrompt-dabhhœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-gYAmH{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-gYAmHœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-dabhh{\u0153dataType\u0153:\u0153Prompt\u0153,\u0153id\u0153:\u0153Prompt-dabhh\u0153,\u0153name\u0153:\u0153prompt\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-LanguageModelComponent-gYAmH{\u0153fieldName\u0153:\u0153system_message\u0153,\u0153id\u0153:\u0153LanguageModelComponent-gYAmH\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
         "selected": false,
         "source": "Prompt-dabhh",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-dabhhœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "sourceHandle": "{\u0153dataType\u0153: \u0153Prompt\u0153, \u0153id\u0153: \u0153Prompt-dabhh\u0153, \u0153name\u0153: \u0153prompt\u0153, \u0153output_types\u0153: [\u0153Message\u0153]}",
         "target": "LanguageModelComponent-gYAmH",
-        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œLanguageModelComponent-gYAmHœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "targetHandle": "{\u0153fieldName\u0153: \u0153system_message\u0153, \u0153id\u0153: \u0153LanguageModelComponent-gYAmH\u0153, \u0153inputTypes\u0153: [\u0153Message\u0153], \u0153type\u0153: \u0153str\u0153}"
       },
       {
         "animated": false,
@@ -166,12 +166,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-LanguageModelComponent-gYAmH{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-gYAmHœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-yiSgq{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-yiSgqœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-LanguageModelComponent-gYAmH{\u0153dataType\u0153:\u0153LanguageModelComponent\u0153,\u0153id\u0153:\u0153LanguageModelComponent-gYAmH\u0153,\u0153name\u0153:\u0153text_output\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-ChatOutput-yiSgq{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153ChatOutput-yiSgq\u0153,\u0153inputTypes\u0153:[\u0153Data\u0153,\u0153DataFrame\u0153,\u0153Message\u0153],\u0153type\u0153:\u0153other\u0153}",
         "selected": false,
         "source": "LanguageModelComponent-gYAmH",
-        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-gYAmHœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "sourceHandle": "{\u0153dataType\u0153: \u0153LanguageModelComponent\u0153, \u0153id\u0153: \u0153LanguageModelComponent-gYAmH\u0153, \u0153name\u0153: \u0153text_output\u0153, \u0153output_types\u0153: [\u0153Message\u0153]}",
         "target": "ChatOutput-yiSgq",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-yiSgqœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "targetHandle": "{\u0153fieldName\u0153: \u0153input_value\u0153, \u0153id\u0153: \u0153ChatOutput-yiSgq\u0153, \u0153inputTypes\u0153: [\u0153Data\u0153, \u0153DataFrame\u0153, \u0153Message\u0153], \u0153type\u0153: \u0153other\u0153}"
       },
       {
         "className": "",
@@ -193,11 +193,11 @@
             "type": "str"
           }
         },
-        "id": "xy-edge__File-oAEuF{œdataTypeœ:œFileœ,œidœ:œFile-oAEuFœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-gYAmH{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-gYAmHœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "xy-edge__File-oAEuF{\u0153dataType\u0153:\u0153File\u0153,\u0153id\u0153:\u0153File-oAEuF\u0153,\u0153name\u0153:\u0153message\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-LanguageModelComponent-gYAmH{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153LanguageModelComponent-gYAmH\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
         "source": "File-oAEuF",
-        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-oAEuFœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "sourceHandle": "{\u0153dataType\u0153: \u0153File\u0153, \u0153id\u0153: \u0153File-oAEuF\u0153, \u0153name\u0153: \u0153message\u0153, \u0153output_types\u0153: [\u0153Message\u0153]}",
         "target": "LanguageModelComponent-gYAmH",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-gYAmHœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "targetHandle": "{\u0153fieldName\u0153: \u0153input_value\u0153, \u0153id\u0153: \u0153LanguageModelComponent-gYAmH\u0153, \u0153inputTypes\u0153: [\u0153Message\u0153], \u0153type\u0153: \u0153str\u0153}"
       },
       {
         "className": "",
@@ -219,11 +219,11 @@
             "type": "str"
           }
         },
-        "id": "xy-edge__File-oAEuF{œdataTypeœ:œFileœ,œidœ:œFile-oAEuFœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-RaLHB{œfieldNameœ:œtextœ,œidœ:œPrompt-RaLHBœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "xy-edge__File-oAEuF{\u0153dataType\u0153:\u0153File\u0153,\u0153id\u0153:\u0153File-oAEuF\u0153,\u0153name\u0153:\u0153message\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-Prompt-RaLHB{\u0153fieldName\u0153:\u0153text\u0153,\u0153id\u0153:\u0153Prompt-RaLHB\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
         "source": "File-oAEuF",
-        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-oAEuFœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "sourceHandle": "{\u0153dataType\u0153: \u0153File\u0153, \u0153id\u0153: \u0153File-oAEuF\u0153, \u0153name\u0153: \u0153message\u0153, \u0153output_types\u0153: [\u0153Message\u0153]}",
         "target": "Prompt-RaLHB",
-        "targetHandle": "{œfieldNameœ: œtextœ, œidœ: œPrompt-RaLHBœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "targetHandle": "{\u0153fieldName\u0153: \u0153text\u0153, \u0153id\u0153: \u0153Prompt-RaLHB\u0153, \u0153inputTypes\u0153: [\u0153Message\u0153], \u0153type\u0153: \u0153str\u0153}"
       }
     ],
     "nodes": [
@@ -1251,7 +1251,7 @@
         "data": {
           "id": "note-S1pun",
           "node": {
-            "description": "### 💡 Add your OpenAI API key here 👇",
+            "description": "### \ud83d\udca1 Add your OpenAI API key here \ud83d\udc47",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -1280,7 +1280,7 @@
         "data": {
           "id": "note-ZAMRC",
           "node": {
-            "description": "### 💡 Add your OpenAI API key here 👇",
+            "description": "### \ud83d\udca1 Add your OpenAI API key here \ud83d\udc47",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -1306,7 +1306,7 @@
         "data": {
           "id": "note-KreFC",
           "node": {
-            "description": "### 💡 Add your OpenAI API key here 👇",
+            "description": "### \ud83d\udca1 Add your OpenAI API key here \ud83d\udc47",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -1337,17 +1337,18 @@
               "Message"
             ],
             "beta": false,
-            "category": "models",
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Runs a language model given a specified provider.",
             "display_name": "Language Model",
-            "documentation": "",
+            "documentation": "https://docs.langflow.org/components-models",
             "edited": false,
             "field_order": [
-              "provider",
-              "model_name",
+              "model",
               "api_key",
+              "base_url_ibm_watsonx",
+              "project_id",
+              "ollama_base_url",
               "input_value",
               "system_message",
               "stream",
@@ -1355,30 +1356,19 @@
             ],
             "frozen": false,
             "icon": "brain-circuit",
-            "key": "LanguageModelComponent",
+            "last_updated": "2025-12-11T21:29:10.202Z",
             "legacy": false,
+            "lf_version": "1.7.0",
             "metadata": {
-              "code_hash": "bb5f8714781b",
+              "code_hash": "7fe3257f2169",
               "dependencies": {
                 "dependencies": [
-                  {
-                    "name": "langchain_anthropic",
-                    "version": "0.3.14"
-                  },
-                  {
-                    "name": "langchain_google_genai",
-                    "version": "2.0.6"
-                  },
-                  {
-                    "name": "langchain_openai",
-                    "version": "0.3.23"
-                  },
                   {
                     "name": "lfx",
                     "version": null
                   }
                 ],
-                "total_dependencies": 4
+                "total_dependencies": 1
               },
               "keywords": [
                 "model",
@@ -1386,7 +1376,7 @@
                 "language model",
                 "large language model"
               ],
-              "module": "lfx.components.models.language_model.LanguageModelComponent"
+              "module": "lfx.components.models_and_agents.language_model.LanguageModelComponent"
             },
             "minimized": false,
             "output_types": [],
@@ -1396,6 +1386,7 @@
                 "cache": true,
                 "display_name": "Model Response",
                 "group_outputs": false,
+                "loop_types": null,
                 "method": "text_response",
                 "name": "text_output",
                 "options": null,
@@ -1412,6 +1403,7 @@
                 "cache": true,
                 "display_name": "Language Model",
                 "group_outputs": false,
+                "loop_types": null,
                 "method": "build_model",
                 "name": "model_output",
                 "options": null,
@@ -1426,26 +1418,65 @@
             ],
             "pinned": false,
             "priority": 0,
-            "score": 0.28173906304863156,
             "template": {
+              "_frontend_node_flow_id": {
+                "value": "524f71dc-cc58-441a-a009-c71d6755765f"
+              },
+              "_frontend_node_folder_id": {
+                "value": "afaca9ee-97e3-4211-8569-722a4058ea5e"
+              },
               "_type": "Component",
               "api_key": {
                 "_input_type": "SecretStrInput",
-                "advanced": false,
-                "display_name": "OpenAI API Key",
+                "advanced": true,
+                "display_name": "API Key",
                 "dynamic": false,
                 "info": "Model Provider API key",
                 "input_types": [],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "api_key",
+                "override_skip": false,
                 "password": true,
                 "placeholder": "",
                 "real_time_refresh": true,
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "track_in_telemetry": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
+              },
+              "base_url_ibm_watsonx": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "watsonx API Endpoint",
+                "dynamic": false,
+                "external_options": {},
+                "info": "The base URL of the API (IBM watsonx.ai only)",
+                "name": "base_url_ibm_watsonx",
+                "options": [
+                  "https://us-south.ml.cloud.ibm.com",
+                  "https://eu-de.ml.cloud.ibm.com",
+                  "https://eu-gb.ml.cloud.ibm.com",
+                  "https://au-syd.ml.cloud.ibm.com",
+                  "https://jp-tok.ml.cloud.ibm.com",
+                  "https://ca-tor.ml.cloud.ibm.com"
+                ],
+                "options_metadata": [],
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "str",
+                "value": "https://us-south.ml.cloud.ibm.com"
               },
               "code": {
                 "advanced": true,
@@ -1478,6 +1509,7 @@
                 "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "input_value",
+                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -1485,85 +1517,95 @@
                 "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
+                "track_in_telemetry": false,
                 "type": "str",
                 "value": ""
               },
-              "model_name": {
-                "_input_type": "DropdownInput",
+              "is_refresh": false,
+              "model": {
+                "_input_type": "ModelInput",
                 "advanced": false,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Model Name",
+                "display_name": "Language Model",
                 "dynamic": false,
-                "info": "Select the model to use",
-                "name": "model_name",
-                "options": [
-                  "gpt-4o-mini",
-                  "gpt-4o",
-                  "gpt-4.1",
-                  "gpt-4.1-mini",
-                  "gpt-4.1-nano",
-                  "gpt-4-turbo",
-                  "gpt-4-turbo-preview",
-                  "gpt-4",
-                  "gpt-3.5-turbo",
-                  "gpt-5",
-                  "gpt-5-mini",
-                  "gpt-5-nano",
-                  "gpt-5-chat-latest",
-                  "o1",
-                  "o3-mini",
-                  "o3",
-                  "o3-pro",
-                  "o4-mini",
-                  "o4-mini-high"
+                "external_options": {
+                  "fields": {
+                    "data": {
+                      "node": {
+                        "display_name": "Connect other models",
+                        "icon": "CornerDownLeft",
+                        "name": "connect_other_models"
+                      }
+                    }
+                  }
+                },
+                "info": "Select your model provider",
+                "input_types": [
+                  "LanguageModel"
                 ],
-                "options_metadata": [],
-                "placeholder": "",
-                "required": false,
+                "list": false,
+                "list_add_label": "Add More",
+                "model_type": "language",
+                "name": "model",
+                "options": [],
+                "override_skip": false,
+                "placeholder": "Setup Provider",
+                "real_time_refresh": true,
+                "refresh_button": true,
+                "required": true,
                 "show": true,
                 "title_case": false,
-                "toggle": false,
                 "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "gpt-4o-mini"
+                "trace_as_input": true,
+                "track_in_telemetry": false,
+                "type": "model",
+                "value": []
               },
-              "provider": {
-                "_input_type": "DropdownInput",
+              "ollama_base_url": {
+                "_input_type": "MessageInput",
                 "advanced": false,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Model Provider",
+                "display_name": "Ollama API URL",
                 "dynamic": false,
-                "info": "Select the model provider",
-                "name": "provider",
-                "options": [
-                  "OpenAI",
-                  "Anthropic",
-                  "Google"
+                "info": "Endpoint of the Ollama API (Ollama only). Defaults to http://localhost:11434",
+                "input_types": [
+                  "Message"
                 ],
-                "options_metadata": [
-                  {
-                    "icon": "OpenAI"
-                  },
-                  {
-                    "icon": "Anthropic"
-                  },
-                  {
-                    "icon": "Google"
-                  }
-                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "ollama_base_url",
+                "override_skip": false,
                 "placeholder": "",
                 "real_time_refresh": true,
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
-                "toggle": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "project_id": {
+                "_input_type": "StrInput",
+                "advanced": false,
+                "display_name": "watsonx Project ID",
+                "dynamic": false,
+                "info": "The project ID associated with the foundation model (IBM watsonx.ai only)",
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "project_id",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
+                "track_in_telemetry": false,
                 "type": "str",
-                "value": "OpenAI"
+                "value": ""
               },
               "stream": {
                 "_input_type": "BoolInput",
@@ -1574,18 +1616,21 @@
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "stream",
+                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
+                "track_in_telemetry": true,
                 "type": "bool",
                 "value": false
               },
               "system_message": {
                 "_input_type": "MultilineInput",
-                "advanced": true,
+                "advanced": false,
+                "ai_enabled": false,
                 "copy_field": false,
                 "display_name": "System Message",
                 "dynamic": false,
@@ -1598,6 +1643,7 @@
                 "load_from_db": false,
                 "multiline": true,
                 "name": "system_message",
+                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -1605,6 +1651,7 @@
                 "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
+                "track_in_telemetry": false,
                 "type": "str",
                 "value": ""
               },
@@ -1619,6 +1666,7 @@
                 "min_label": "",
                 "min_label_icon": "",
                 "name": "temperature",
+                "override_skip": false,
                 "placeholder": "",
                 "range_spec": {
                   "max": 1,
@@ -1633,6 +1681,7 @@
                 "slider_input": false,
                 "title_case": false,
                 "tool_mode": false,
+                "track_in_telemetry": false,
                 "type": "slider",
                 "value": 0.1
               }
@@ -1665,17 +1714,18 @@
               "Message"
             ],
             "beta": false,
-            "category": "models",
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Runs a language model given a specified provider.",
             "display_name": "Language Model",
-            "documentation": "",
+            "documentation": "https://docs.langflow.org/components-models",
             "edited": false,
             "field_order": [
-              "provider",
-              "model_name",
+              "model",
               "api_key",
+              "base_url_ibm_watsonx",
+              "project_id",
+              "ollama_base_url",
               "input_value",
               "system_message",
               "stream",
@@ -1683,30 +1733,19 @@
             ],
             "frozen": false,
             "icon": "brain-circuit",
-            "key": "LanguageModelComponent",
+            "last_updated": "2025-12-11T21:29:10.202Z",
             "legacy": false,
+            "lf_version": "1.7.0",
             "metadata": {
-              "code_hash": "bb5f8714781b",
+              "code_hash": "7fe3257f2169",
               "dependencies": {
                 "dependencies": [
-                  {
-                    "name": "langchain_anthropic",
-                    "version": "0.3.14"
-                  },
-                  {
-                    "name": "langchain_google_genai",
-                    "version": "2.0.6"
-                  },
-                  {
-                    "name": "langchain_openai",
-                    "version": "0.3.23"
-                  },
                   {
                     "name": "lfx",
                     "version": null
                   }
                 ],
-                "total_dependencies": 4
+                "total_dependencies": 1
               },
               "keywords": [
                 "model",
@@ -1714,7 +1753,7 @@
                 "language model",
                 "large language model"
               ],
-              "module": "lfx.components.models.language_model.LanguageModelComponent"
+              "module": "lfx.components.models_and_agents.language_model.LanguageModelComponent"
             },
             "minimized": false,
             "output_types": [],
@@ -1724,6 +1763,7 @@
                 "cache": true,
                 "display_name": "Model Response",
                 "group_outputs": false,
+                "loop_types": null,
                 "method": "text_response",
                 "name": "text_output",
                 "options": null,
@@ -1740,6 +1780,7 @@
                 "cache": true,
                 "display_name": "Language Model",
                 "group_outputs": false,
+                "loop_types": null,
                 "method": "build_model",
                 "name": "model_output",
                 "options": null,
@@ -1754,26 +1795,65 @@
             ],
             "pinned": false,
             "priority": 0,
-            "score": 0.28173906304863156,
             "template": {
+              "_frontend_node_flow_id": {
+                "value": "524f71dc-cc58-441a-a009-c71d6755765f"
+              },
+              "_frontend_node_folder_id": {
+                "value": "afaca9ee-97e3-4211-8569-722a4058ea5e"
+              },
               "_type": "Component",
               "api_key": {
                 "_input_type": "SecretStrInput",
-                "advanced": false,
-                "display_name": "OpenAI API Key",
+                "advanced": true,
+                "display_name": "API Key",
                 "dynamic": false,
                 "info": "Model Provider API key",
                 "input_types": [],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "api_key",
+                "override_skip": false,
                 "password": true,
                 "placeholder": "",
                 "real_time_refresh": true,
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "track_in_telemetry": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
+              },
+              "base_url_ibm_watsonx": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "watsonx API Endpoint",
+                "dynamic": false,
+                "external_options": {},
+                "info": "The base URL of the API (IBM watsonx.ai only)",
+                "name": "base_url_ibm_watsonx",
+                "options": [
+                  "https://us-south.ml.cloud.ibm.com",
+                  "https://eu-de.ml.cloud.ibm.com",
+                  "https://eu-gb.ml.cloud.ibm.com",
+                  "https://au-syd.ml.cloud.ibm.com",
+                  "https://jp-tok.ml.cloud.ibm.com",
+                  "https://ca-tor.ml.cloud.ibm.com"
+                ],
+                "options_metadata": [],
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "str",
+                "value": "https://us-south.ml.cloud.ibm.com"
               },
               "code": {
                 "advanced": true,
@@ -1806,6 +1886,7 @@
                 "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "input_value",
+                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -1813,85 +1894,95 @@
                 "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
+                "track_in_telemetry": false,
                 "type": "str",
                 "value": ""
               },
-              "model_name": {
-                "_input_type": "DropdownInput",
+              "is_refresh": false,
+              "model": {
+                "_input_type": "ModelInput",
                 "advanced": false,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Model Name",
+                "display_name": "Language Model",
                 "dynamic": false,
-                "info": "Select the model to use",
-                "name": "model_name",
-                "options": [
-                  "gpt-4o-mini",
-                  "gpt-4o",
-                  "gpt-4.1",
-                  "gpt-4.1-mini",
-                  "gpt-4.1-nano",
-                  "gpt-4-turbo",
-                  "gpt-4-turbo-preview",
-                  "gpt-4",
-                  "gpt-3.5-turbo",
-                  "gpt-5",
-                  "gpt-5-mini",
-                  "gpt-5-nano",
-                  "gpt-5-chat-latest",
-                  "o1",
-                  "o3-mini",
-                  "o3",
-                  "o3-pro",
-                  "o4-mini",
-                  "o4-mini-high"
+                "external_options": {
+                  "fields": {
+                    "data": {
+                      "node": {
+                        "display_name": "Connect other models",
+                        "icon": "CornerDownLeft",
+                        "name": "connect_other_models"
+                      }
+                    }
+                  }
+                },
+                "info": "Select your model provider",
+                "input_types": [
+                  "LanguageModel"
                 ],
-                "options_metadata": [],
-                "placeholder": "",
-                "required": false,
+                "list": false,
+                "list_add_label": "Add More",
+                "model_type": "language",
+                "name": "model",
+                "options": [],
+                "override_skip": false,
+                "placeholder": "Setup Provider",
+                "real_time_refresh": true,
+                "refresh_button": true,
+                "required": true,
                 "show": true,
                 "title_case": false,
-                "toggle": false,
                 "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "gpt-4o-mini"
+                "trace_as_input": true,
+                "track_in_telemetry": false,
+                "type": "model",
+                "value": []
               },
-              "provider": {
-                "_input_type": "DropdownInput",
+              "ollama_base_url": {
+                "_input_type": "MessageInput",
                 "advanced": false,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Model Provider",
+                "display_name": "Ollama API URL",
                 "dynamic": false,
-                "info": "Select the model provider",
-                "name": "provider",
-                "options": [
-                  "OpenAI",
-                  "Anthropic",
-                  "Google"
+                "info": "Endpoint of the Ollama API (Ollama only). Defaults to http://localhost:11434",
+                "input_types": [
+                  "Message"
                 ],
-                "options_metadata": [
-                  {
-                    "icon": "OpenAI"
-                  },
-                  {
-                    "icon": "Anthropic"
-                  },
-                  {
-                    "icon": "Google"
-                  }
-                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "ollama_base_url",
+                "override_skip": false,
                 "placeholder": "",
                 "real_time_refresh": true,
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
-                "toggle": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "project_id": {
+                "_input_type": "StrInput",
+                "advanced": false,
+                "display_name": "watsonx Project ID",
+                "dynamic": false,
+                "info": "The project ID associated with the foundation model (IBM watsonx.ai only)",
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "project_id",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
+                "track_in_telemetry": false,
                 "type": "str",
-                "value": "OpenAI"
+                "value": ""
               },
               "stream": {
                 "_input_type": "BoolInput",
@@ -1902,18 +1993,21 @@
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "stream",
+                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
+                "track_in_telemetry": true,
                 "type": "bool",
                 "value": false
               },
               "system_message": {
                 "_input_type": "MultilineInput",
-                "advanced": true,
+                "advanced": false,
+                "ai_enabled": false,
                 "copy_field": false,
                 "display_name": "System Message",
                 "dynamic": false,
@@ -1926,6 +2020,7 @@
                 "load_from_db": false,
                 "multiline": true,
                 "name": "system_message",
+                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -1933,6 +2028,7 @@
                 "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
+                "track_in_telemetry": false,
                 "type": "str",
                 "value": ""
               },
@@ -1947,6 +2043,7 @@
                 "min_label": "",
                 "min_label_icon": "",
                 "name": "temperature",
+                "override_skip": false,
                 "placeholder": "",
                 "range_spec": {
                   "max": 1,
@@ -1961,6 +2058,7 @@
                 "slider_input": false,
                 "title_case": false,
                 "tool_mode": false,
+                "track_in_telemetry": false,
                 "type": "slider",
                 "value": 0.1
               }
@@ -1992,17 +2090,18 @@
               "Message"
             ],
             "beta": false,
-            "category": "models",
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Runs a language model given a specified provider.",
             "display_name": "Language Model",
-            "documentation": "",
+            "documentation": "https://docs.langflow.org/components-models",
             "edited": false,
             "field_order": [
-              "provider",
-              "model_name",
+              "model",
               "api_key",
+              "base_url_ibm_watsonx",
+              "project_id",
+              "ollama_base_url",
               "input_value",
               "system_message",
               "stream",
@@ -2010,30 +2109,19 @@
             ],
             "frozen": false,
             "icon": "brain-circuit",
-            "key": "LanguageModelComponent",
+            "last_updated": "2025-12-11T21:29:10.202Z",
             "legacy": false,
+            "lf_version": "1.7.0",
             "metadata": {
-              "code_hash": "bb5f8714781b",
+              "code_hash": "7fe3257f2169",
               "dependencies": {
                 "dependencies": [
-                  {
-                    "name": "langchain_anthropic",
-                    "version": "0.3.14"
-                  },
-                  {
-                    "name": "langchain_google_genai",
-                    "version": "2.0.6"
-                  },
-                  {
-                    "name": "langchain_openai",
-                    "version": "0.3.23"
-                  },
                   {
                     "name": "lfx",
                     "version": null
                   }
                 ],
-                "total_dependencies": 4
+                "total_dependencies": 1
               },
               "keywords": [
                 "model",
@@ -2041,7 +2129,7 @@
                 "language model",
                 "large language model"
               ],
-              "module": "lfx.components.models.language_model.LanguageModelComponent"
+              "module": "lfx.components.models_and_agents.language_model.LanguageModelComponent"
             },
             "minimized": false,
             "output_types": [],
@@ -2051,6 +2139,7 @@
                 "cache": true,
                 "display_name": "Model Response",
                 "group_outputs": false,
+                "loop_types": null,
                 "method": "text_response",
                 "name": "text_output",
                 "options": null,
@@ -2067,6 +2156,7 @@
                 "cache": true,
                 "display_name": "Language Model",
                 "group_outputs": false,
+                "loop_types": null,
                 "method": "build_model",
                 "name": "model_output",
                 "options": null,
@@ -2081,26 +2171,65 @@
             ],
             "pinned": false,
             "priority": 0,
-            "score": 0.28173906304863156,
             "template": {
+              "_frontend_node_flow_id": {
+                "value": "524f71dc-cc58-441a-a009-c71d6755765f"
+              },
+              "_frontend_node_folder_id": {
+                "value": "afaca9ee-97e3-4211-8569-722a4058ea5e"
+              },
               "_type": "Component",
               "api_key": {
                 "_input_type": "SecretStrInput",
-                "advanced": false,
-                "display_name": "OpenAI API Key",
+                "advanced": true,
+                "display_name": "API Key",
                 "dynamic": false,
                 "info": "Model Provider API key",
                 "input_types": [],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "api_key",
+                "override_skip": false,
                 "password": true,
                 "placeholder": "",
                 "real_time_refresh": true,
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "track_in_telemetry": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
+              },
+              "base_url_ibm_watsonx": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "watsonx API Endpoint",
+                "dynamic": false,
+                "external_options": {},
+                "info": "The base URL of the API (IBM watsonx.ai only)",
+                "name": "base_url_ibm_watsonx",
+                "options": [
+                  "https://us-south.ml.cloud.ibm.com",
+                  "https://eu-de.ml.cloud.ibm.com",
+                  "https://eu-gb.ml.cloud.ibm.com",
+                  "https://au-syd.ml.cloud.ibm.com",
+                  "https://jp-tok.ml.cloud.ibm.com",
+                  "https://ca-tor.ml.cloud.ibm.com"
+                ],
+                "options_metadata": [],
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "str",
+                "value": "https://us-south.ml.cloud.ibm.com"
               },
               "code": {
                 "advanced": true,
@@ -2133,6 +2262,7 @@
                 "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "input_value",
+                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -2140,85 +2270,95 @@
                 "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
+                "track_in_telemetry": false,
                 "type": "str",
                 "value": ""
               },
-              "model_name": {
-                "_input_type": "DropdownInput",
+              "is_refresh": false,
+              "model": {
+                "_input_type": "ModelInput",
                 "advanced": false,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Model Name",
+                "display_name": "Language Model",
                 "dynamic": false,
-                "info": "Select the model to use",
-                "name": "model_name",
-                "options": [
-                  "gpt-4o-mini",
-                  "gpt-4o",
-                  "gpt-4.1",
-                  "gpt-4.1-mini",
-                  "gpt-4.1-nano",
-                  "gpt-4-turbo",
-                  "gpt-4-turbo-preview",
-                  "gpt-4",
-                  "gpt-3.5-turbo",
-                  "gpt-5",
-                  "gpt-5-mini",
-                  "gpt-5-nano",
-                  "gpt-5-chat-latest",
-                  "o1",
-                  "o3-mini",
-                  "o3",
-                  "o3-pro",
-                  "o4-mini",
-                  "o4-mini-high"
+                "external_options": {
+                  "fields": {
+                    "data": {
+                      "node": {
+                        "display_name": "Connect other models",
+                        "icon": "CornerDownLeft",
+                        "name": "connect_other_models"
+                      }
+                    }
+                  }
+                },
+                "info": "Select your model provider",
+                "input_types": [
+                  "LanguageModel"
                 ],
-                "options_metadata": [],
-                "placeholder": "",
-                "required": false,
+                "list": false,
+                "list_add_label": "Add More",
+                "model_type": "language",
+                "name": "model",
+                "options": [],
+                "override_skip": false,
+                "placeholder": "Setup Provider",
+                "real_time_refresh": true,
+                "refresh_button": true,
+                "required": true,
                 "show": true,
                 "title_case": false,
-                "toggle": false,
                 "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "gpt-4o-mini"
+                "trace_as_input": true,
+                "track_in_telemetry": false,
+                "type": "model",
+                "value": []
               },
-              "provider": {
-                "_input_type": "DropdownInput",
+              "ollama_base_url": {
+                "_input_type": "MessageInput",
                 "advanced": false,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Model Provider",
+                "display_name": "Ollama API URL",
                 "dynamic": false,
-                "info": "Select the model provider",
-                "name": "provider",
-                "options": [
-                  "OpenAI",
-                  "Anthropic",
-                  "Google"
+                "info": "Endpoint of the Ollama API (Ollama only). Defaults to http://localhost:11434",
+                "input_types": [
+                  "Message"
                 ],
-                "options_metadata": [
-                  {
-                    "icon": "OpenAI"
-                  },
-                  {
-                    "icon": "Anthropic"
-                  },
-                  {
-                    "icon": "Google"
-                  }
-                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "ollama_base_url",
+                "override_skip": false,
                 "placeholder": "",
                 "real_time_refresh": true,
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
-                "toggle": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "project_id": {
+                "_input_type": "StrInput",
+                "advanced": false,
+                "display_name": "watsonx Project ID",
+                "dynamic": false,
+                "info": "The project ID associated with the foundation model (IBM watsonx.ai only)",
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "project_id",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
+                "track_in_telemetry": false,
                 "type": "str",
-                "value": "OpenAI"
+                "value": ""
               },
               "stream": {
                 "_input_type": "BoolInput",
@@ -2229,18 +2369,21 @@
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "stream",
+                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
+                "track_in_telemetry": true,
                 "type": "bool",
                 "value": false
               },
               "system_message": {
                 "_input_type": "MultilineInput",
                 "advanced": false,
+                "ai_enabled": false,
                 "copy_field": false,
                 "display_name": "System Message",
                 "dynamic": false,
@@ -2253,6 +2396,7 @@
                 "load_from_db": false,
                 "multiline": true,
                 "name": "system_message",
+                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -2260,6 +2404,7 @@
                 "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
+                "track_in_telemetry": false,
                 "type": "str",
                 "value": ""
               },
@@ -2274,6 +2419,7 @@
                 "min_label": "",
                 "min_label_icon": "",
                 "name": "temperature",
+                "override_skip": false,
                 "placeholder": "",
                 "range_spec": {
                   "max": 1,
@@ -2288,6 +2434,7 @@
                 "slider_input": false,
                 "title_case": false,
                 "tool_mode": false,
+                "track_in_telemetry": false,
                 "type": "slider",
                 "value": 0.1
               }
