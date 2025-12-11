@@ -299,12 +299,10 @@ class TestWindowsPathHandling:
 
         # Test with actual Windows temp path format that includes curly braces
         test_path = (
-            "flow_id\\6d6c70df-fb29-46b2-8bca-56ca9a48c562"
-            "{2025-12-11_11-56-47_Capt  e tela 2025-12-11 114434.png"
+            "flow_id\\6d6c70df-fb29-46b2-8bca-56ca9a48c562{2025-12-11_11-56-47_Capt  e tela 2025-12-11 114434.png"
         )
         flow_id, file_name = service.parse_file_path(test_path)
         assert flow_id == "flow_id"
         assert file_name == (
-            "6d6c70df-fb29-46b2-8bca-56ca9a48c562"
-            "{2025-12-11_11-56-47_Captura de tela 2025-12-11 114434.png"
+            "6d6c70df-fb29-46b2-8bca-56ca9a48c562{2025-12-11_11-56-47_Captura de tela 2025-12-11 114434.png"
         )
