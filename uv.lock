@@ -1811,7 +1811,7 @@ wheels = [
 
 [[package]]
 name = "cuga"
-version = "0.2.1"
+version = "0.2.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -1839,9 +1839,9 @@ dependencies = [
     { name = "typer" },
     { name = "uvicorn" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a8/99/bf3b7beb6dba0d0ef367f907cf9f4e1784b0f28c87bfeabd634d9eda2cc8/cuga-0.2.1.tar.gz", hash = "sha256:fa665c016bdb3b0dcb0abbd9f8575e13fc67a8b55f16bc5aaee55c75972e949d", size = 518956, upload-time = "2025-12-11T16:34:18.722Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f2/1b/afba98a0985ab490a136b436f3b9eb91ecad6b002314d7f7e0620eb69313/cuga-0.2.2.tar.gz", hash = "sha256:a55e87396998ad2f9ac81dc949c56b4901a4c248d245f34344ea71c8e85efe91", size = 519010, upload-time = "2025-12-11T18:56:36.985Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/29/4c/a4864b47d7850a73f041c3b7474057dbd0838768703a0afd3b61faa5cff8/cuga-0.2.1-py3-none-any.whl", hash = "sha256:659421697f6c6ebe6391249709afff57dc4e4f1ea31a4e2a2b2ce97679669df5", size = 691490, upload-time = "2025-12-11T16:34:17.19Z" },
+    { url = "https://files.pythonhosted.org/packages/55/90/7bd2aaa19fc3b4824e75c53eb5a0c6147555c2b3d0dd08e15b1b08c077df/cuga-0.2.2-py3-none-any.whl", hash = "sha256:d8ac7d18257a515b81193423cc58e8f4ca2726efff1eddbd2e82becb51de8a64", size = 691499, upload-time = "2025-12-11T18:56:38.317Z" },
 ]
 
 [[package]]
@@ -5765,7 +5765,7 @@ requires-dist = [
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
     { name = "cryptography", specifier = ">=43.0.1,<44.0.0" },
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10" },
-    { name = "cuga", specifier = "~=0.2.1" },
+    { name = "cuga", specifier = "~=0.2.2" },
     { name = "datasets", specifier = ">2.14.7,<4.0.0" },
     { name = "docling", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'", specifier = ">=2.36.1,<3.0.0" },
     { name = "docling-core", specifier = ">=2.36.1,<3.0.0" },
