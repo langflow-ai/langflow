@@ -168,6 +168,19 @@ async def test_download_file(files_client, files_created_api_key):
     assert response.content == b"test content"
 
 
+async def test_download_file_not_found(files_client, files_created_api_key):
+    """Test that downloading a non-existent file returns 404 error."""
+    headers = {"x-api-key": files_created_api_key.api_key}
+
+    # Try to download a file that doesn't exist
+    fake_file_id = "00000000-0000-0000-0000-000000000000"
+    response = await files_client.get(f"api/v2/files/{fake_file_id}", headers=headers)
+
+    assert response.status_code == 404
+    error_response = response.json()
+    assert "File not found" in error_response["detail"]
+
+
 async def test_list_files(files_client, files_created_api_key):
     headers = {"x-api-key": files_created_api_key.api_key}
 
