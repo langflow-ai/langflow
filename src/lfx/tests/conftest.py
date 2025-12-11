@@ -8,10 +8,13 @@ import pytest
 def pytest_configure(config):  # noqa: ARG001
     """Configure pytest with data paths and check prerequisites."""
     # Check if langflow is installed first - fail fast
-    try:
-        import langflow  # noqa: F401
+    import os
 
-        pytest.exit(
+    if not os.getenv("LFX_TEST_ALLOW_LANGFLOW"):
+        try:
+            import langflow  # noqa: F401
+
+            pytest.exit(
             "\n"
             "=" * 80 + "\n"
             "ERROR: langflow is installed. These tests require langflow to NOT be installed.\n"
@@ -26,10 +29,10 @@ def pytest_configure(config):  # noqa: ARG001
             "packaging and dependency management.\n"
             "=" * 80 + "\n",
             returncode=1,
-        )
-    except ImportError:
-        # Good, langflow is not installed
-        pass
+            )
+        except ImportError:
+            # Good, langflow is not installed
+            pass
 
     # Set up test data paths
     data_path = Path(__file__).parent / "data"
