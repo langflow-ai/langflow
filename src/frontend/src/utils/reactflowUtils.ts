@@ -2229,9 +2229,18 @@ export function checkHasToolMode(template: APITemplateType): boolean {
 
   const templateKeys = Object.keys(template);
 
-  // Check if the template has no additional fields
-  const hasNoAdditionalFields =
-    templateKeys.length === 2 &&
+  // System/metadata fields that are not actual input fields
+  const systemFields = ["code", "is_refresh", "tools_metadata"];
+
+  // Count only fields that are actual inputs (not internal, not system fields)
+  const inputFields = templateKeys.filter(
+    (key) => !key.startsWith("_") && !systemFields.includes(key),
+  );
+
+  // Check if the template has no input fields
+  // This means the component can support tool mode (it only has code and metadata)
+  const hasNoInputFields =
+    inputFields.length === 0 &&
     Boolean(template.code) &&
     Boolean(template._type);
 
@@ -2239,15 +2248,12 @@ export function checkHasToolMode(template: APITemplateType): boolean {
   const hasToolModeFields = Object.values(template).some((field) =>
     Boolean(field.tool_mode),
   );
-  // Check if the component is already in tool mode
-  // This occurs when the template has exactly 3 fields: _type, code, and tools_metadata
-  const isInToolMode =
-    templateKeys.length === 3 &&
-    Boolean(template.code) &&
-    Boolean(template._type) &&
-    Boolean(template.tools_metadata);
 
-  return hasNoAdditionalFields || hasToolModeFields || isInToolMode;
+  // Check if the component is already in tool mode
+  // This occurs when the template has tools_metadata field
+  const isInToolMode = Boolean(template.tools_metadata);
+
+  return hasNoInputFields || hasToolModeFields || isInToolMode;
 }
 
 export function buildPositionDictionary(nodes: AllNodeType[]) {
