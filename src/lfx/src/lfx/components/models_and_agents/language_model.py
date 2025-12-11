@@ -124,9 +124,8 @@ class LanguageModelComponent(LCModelComponent):
             is_watsonx = provider == "IBM WatsonX"
             build_config["base_url_ibm_watsonx"]["show"] = is_watsonx
             build_config["project_id"]["show"] = is_watsonx
-            if is_watsonx:
-                build_config["base_url_ibm_watsonx"]["required"] = True
-                build_config["project_id"]["required"] = True
+            build_config["base_url_ibm_watsonx"]["required"] = is_watsonx
+            build_config["project_id"]["required"] = is_watsonx
 
             # Show/hide Ollama fields
             is_ollama = provider == "Ollama"
