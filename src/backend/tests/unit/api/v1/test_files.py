@@ -585,7 +585,8 @@ async def test_download_profile_picture_invalid_folder(empty_config_dir, files_c
     assert response.status_code == 400
 
     data = response.json()
-    assert "invalid folder" in data["detail"].lower()
+    # Check for the new specific error message
+    assert "folder must be one of" in data["detail"].lower()
 
 
 async def test_download_profile_picture_config_dir_takes_precedence(setup_profile_pictures, files_client):

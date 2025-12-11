@@ -74,7 +74,6 @@ async def retrieve_vertices_order(
         stop_component_id (str, optional): The ID of the stop component. Defaults to None.
         start_component_id (str, optional): The ID of the start component. Defaults to None.
         session (AsyncSession, optional): The session dependency.
-        current_user (Any, optional): The current user dependency. Defaults to Depends(get_current_active_user).
 
     Returns:
         VerticesOrderResponse: The response containing the ordered vertex IDs and the run ID.

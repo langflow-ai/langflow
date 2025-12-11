@@ -66,10 +66,8 @@ async def get_flow(
 ):
     # AttributeError: 'SelectOfScalar' object has no attribute 'first'
     flow = await session.get(Flow, flow_id)
-    if not flow:
-        raise HTTPException(status_code=404, detail="Flow not found")
-    if flow.user_id != current_user.id:
-        # Return 404 to prevent information disclosure about resource existence
+    # Return 404 for both non-existent flows and unauthorized access to prevent information disclosure
+    if not flow or flow.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Flow not found")
     return flow
 
@@ -79,7 +77,6 @@ async def upload_file(
     *,
     file: UploadFile,
     flow: Annotated[Flow, Depends(get_flow)],
-    current_user: CurrentActiveUser,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
     settings_service: Annotated[SettingsService, Depends(get_settings_service)],
 ) -> UploadFileResponse:
@@ -93,10 +90,7 @@ async def upload_file(
             status_code=413, detail=f"File size is larger than the maximum file size {max_file_size_upload}MB."
         )
 
-    if flow.user_id != current_user.id:
-        # Return 404 to prevent information disclosure about resource existence
-        raise HTTPException(status_code=404, detail="Flow not found")
-
+    # Authorization handled by get_flow dependency
     try:
         file_content = await file.read()
         timestamp = datetime.now(tz=timezone.utc).astimezone().strftime("%Y-%m-%d_%H-%M-%S")
@@ -112,20 +106,11 @@ async def upload_file(
 @router.get("/download/{flow_id}/{file_name}")
 async def download_file(
     file_name: str,
-    flow_id: UUID,
-    current_user: CurrentActiveUser,
-    session: DbSession,
+    flow: Annotated[Flow, Depends(get_flow)],
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
-    # Verify user has access to this flow
-    flow = await session.get(Flow, flow_id)
-    if not flow:
-        raise HTTPException(status_code=404, detail="Flow not found")
-    if flow.user_id != current_user.id:
-        # Return 404 to prevent information disclosure about resource existence
-        raise HTTPException(status_code=404, detail="Flow not found")
-
-    flow_id_str = str(flow_id)
+    # Authorization handled by get_flow dependency
+    flow_id_str = str(flow.id)
     extension = file_name.split(".")[-1]
 
     if not extension:
@@ -153,21 +138,12 @@ async def download_file(
 @router.get("/images/{flow_id}/{file_name}")
 async def download_image(
     file_name: str,
-    flow_id: UUID,
-    current_user: CurrentActiveUser,
-    session: DbSession,
+    flow: Annotated[Flow, Depends(get_flow)],
 ):
-    # Verify user has access to this flow
-    flow = await session.get(Flow, flow_id)
-    if not flow:
-        raise HTTPException(status_code=404, detail="Flow not found")
-    if flow.user_id != current_user.id:
-        # Return 404 to prevent information disclosure about resource existence
-        raise HTTPException(status_code=404, detail="Flow not found")
-
+    # Authorization handled by get_flow dependency
     storage_service = get_storage_service()
     extension = file_name.split(".")[-1]
-    flow_id_str = str(flow_id)
+    flow_id_str = str(flow.id)
 
     if not extension:
         raise HTTPException(status_code=500, detail=f"Extension not found for file {file_name}")
