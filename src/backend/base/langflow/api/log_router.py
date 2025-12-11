@@ -79,7 +79,7 @@ async def logs(
     timestamp: Annotated[int, Query(description="The timestamp to start getting logs from")] = 0,
 ):
     """Retrieve application logs with authentication required.
-    
+
     SECURITY: Logs may contain sensitive information and require authentication.
     """
     global log_buffer  # noqa: PLW0602
