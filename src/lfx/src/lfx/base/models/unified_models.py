@@ -876,10 +876,12 @@ def get_llm(
 
     # Validate API key (Ollama doesn't require one)
     if not api_key and provider != "Ollama":
+        # Get the correct variable name from the provider variable mapping
+        provider_variable_map = get_model_provider_variable_mapping()
+        variable_name = provider_variable_map.get(provider, f"{provider.upper().replace(' ', '_')}_API_KEY")
         msg = (
             f"{provider} API key is required when using {provider} provider. "
-            f"Please provide it in the component or configure it globally as "
-            f"{provider.upper().replace(' ', '_')}_API_KEY."
+            f"Please provide it in the component or configure it globally as {variable_name}."
         )
         raise ValueError(msg)
 
@@ -907,26 +909,59 @@ def get_llm(
 
     # Add provider-specific parameters
     if provider == "IBM WatsonX":
-        # For watsonx, we need url and project_id
-        if watsonx_url:
-            url_param = metadata.get("url_param", "url")
+        # For watsonx, url and project_id are required parameters
+        # If both are provided, add them to kwargs
+        # If neither are provided, let ChatWatsonx raise its own error (graceful for components without these fields)
+        # If only one is provided, that's a misconfiguration - raise a helpful error
+        
+        url_param = metadata.get("url_param", "url")
+        project_id_param = metadata.get("project_id_param", "project_id")
+        
+        has_url = watsonx_url is not None
+        has_project_id = watsonx_project_id is not None
+        
+        if has_url and has_project_id:
+            # Both provided - ideal case
             kwargs[url_param] = watsonx_url
-        else:
-            msg = "IBM WatsonX requires a watsonx API endpoint (url). Please provide it in the component."
-            raise ValueError(msg)
-
-        if watsonx_project_id:
-            project_id_param = metadata.get("project_id_param", "project_id")
             kwargs[project_id_param] = watsonx_project_id
-        else:
-            msg = "IBM WatsonX requires a project ID. Please provide it in the component."
+        elif has_url and not has_project_id:
+            # URL provided but project_id missing
+            msg = (
+                "IBM WatsonX requires both a URL and project ID. "
+                "You provided a watsonx API endpoint but no project ID. "
+                "Please add a 'watsonx Project ID' field to your component or use the Language Model component "
+                "which fully supports IBM WatsonX configuration."
+            )
             raise ValueError(msg)
+        elif has_project_id and not has_url:
+            # Project ID provided but URL missing
+            msg = (
+                "IBM WatsonX requires both a URL and project ID. "
+                "You provided a project ID but no watsonx API endpoint. "
+                "Please add a 'watsonx API Endpoint' field to your component or use the Language Model component "
+                "which fully supports IBM WatsonX configuration."
+            )
+            raise ValueError(msg)
+        # else: neither provided - let ChatWatsonx handle it (will fail with its own error)
     elif provider == "Ollama" and ollama_base_url:
         # For Ollama, handle custom base_url
         base_url_param = metadata.get("base_url_param", "base_url")
         kwargs[base_url_param] = ollama_base_url
 
-    return model_class(**kwargs)
+    try:
+        return model_class(**kwargs)
+    except Exception as e:
+        # If instantiation fails and it's WatsonX, provide additional context
+        if provider == "IBM WatsonX" and ("url" in str(e).lower() or "project" in str(e).lower()):
+            msg = (
+                f"Failed to initialize IBM WatsonX model: {e}\n\n"
+                "IBM WatsonX requires additional configuration parameters (API endpoint URL and project ID). "
+                "This component may not support these parameters. "
+                "Consider using the 'Language Model' component instead, which fully supports IBM WatsonX."
+            )
+            raise ValueError(msg) from e
+        # Re-raise the original exception for other cases
+        raise
 
 
 def update_model_options_in_build_config(
