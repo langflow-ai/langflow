@@ -28,8 +28,8 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     },
     ref,
   ) => {
-    const [currentValue, setCurrentValue] = React.useState(
-      () => String(defaultValue ?? value ?? "")
+    const [currentValue, setCurrentValue] = React.useState(() =>
+      String(defaultValue ?? value ?? ""),
     );
 
     const inputRef = React.useRef<HTMLInputElement>(null);
@@ -96,7 +96,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           className={cn(
             "pointer-events-none absolute top-1/2 -translate-y-1/2 pl-px text-placeholder-foreground transition-all",
             icon ? "left-9" : "left-3",
-            currentValue ? "hidden" : ""
+            currentValue ? "hidden" : "",
           )}
         >
           {placeholder}
