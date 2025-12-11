@@ -42,9 +42,9 @@ class PoliciesComponent(Component):
         TabInput(
             name="build_mode",
             display_name="ToolGuard Build Mode",
-            options=["execute", "run"],
-            info="Indicates whether to invoke buildtime (execute), or use a cached code (run)",
-            value="execute",
+            options=["build", "use cache"],
+            info="Indicates whether to invoke buildtime (build), or use a cached code (use cache)",
+            value="build",
             real_time_refresh=True,
             tool_mode=True,
         ),
