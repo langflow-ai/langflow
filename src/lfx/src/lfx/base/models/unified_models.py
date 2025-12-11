@@ -913,13 +913,13 @@ def get_llm(
         # If both are provided, add them to kwargs
         # If neither are provided, let ChatWatsonx raise its own error (graceful for components without these fields)
         # If only one is provided, that's a misconfiguration - raise a helpful error
-        
+
         url_param = metadata.get("url_param", "url")
         project_id_param = metadata.get("project_id_param", "project_id")
-        
+
         has_url = watsonx_url is not None
         has_project_id = watsonx_project_id is not None
-        
+
         if has_url and has_project_id:
             # Both provided - ideal case
             kwargs[url_param] = watsonx_url
