@@ -1531,10 +1531,6 @@ async def update_tools(
     if not server_name:
         return "", [], {}
     
-    # Track whether we created the clients internally
-    _internal_stdio_client = mcp_stdio_client is None
-    _internal_http_client = mcp_streamable_http_client is None and mcp_sse_client is None
-    
     if mcp_stdio_client is None:
         mcp_stdio_client = MCPStdioClient()
 
