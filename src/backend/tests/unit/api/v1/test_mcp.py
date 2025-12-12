@@ -1,8 +1,9 @@
+import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from fastapi import status
+from fastapi import HTTPException, status
 from httpx import AsyncClient
 from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.user import User
@@ -64,6 +65,36 @@ def mock_sse_transport():
         mock.connect_sse = AsyncMock()
         mock.handle_post_message = AsyncMock()
         yield mock
+
+
+class _DummyRunContext:
+    """Async context manager that records when StreamableHTTP enters/exits the session."""
+
+    def __init__(self, entered_event: asyncio.Event, exited_event: asyncio.Event):
+        self._entered_event = entered_event
+        self._exited_event = exited_event
+
+    async def __aenter__(self):
+        self._entered_event.set()
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        """Mark the context as exited without suppressing exceptions."""
+        self._exited_event.set()
+        return False
+
+
+class _FailingRunContext:
+    """Async context manager that raises on enter to simulate startup failures."""
+
+    def __init__(self, exc: Exception):
+        self._exc = exc
+
+    async def __aenter__(self):
+        raise self._exc
+
+    async def __aexit__(self, exc_type, exc, tb):
+        return False
 
 
 # Fixture to mock the current user context variable needed for auth in /sse GET
@@ -242,6 +273,76 @@ async def test_mcp_streamable_delete_endpoint_no_auth(client: AsyncClient):
     """Test DELETE /streamable endpoint without authentication returns 403 Forbidden."""
     response = await client.delete("api/v1/mcp/streamable")
     assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+async def test_streamable_http_start_stop_lifecycle():
+    """Ensure StreamableHTTP starts and stops its session manager cleanly."""
+    from langflow.api.v1.mcp import StreamableHTTP
+
+    entered = asyncio.Event()
+    exited = asyncio.Event()
+    manager_instance = MagicMock()
+    manager_instance.run.return_value = _DummyRunContext(entered, exited)
+
+    with (
+        patch("langflow.api.v1.mcp.StreamableHTTPSessionManager", return_value=manager_instance),
+        patch("langflow.api.v1.mcp.logger.adebug", new_callable=AsyncMock),
+    ):
+        streamable_http = StreamableHTTP()
+        await streamable_http.start()
+        assert streamable_http.get_manager() is manager_instance
+        assert entered.is_set(), "session manager never entered run()"
+
+        await streamable_http.stop()
+        assert exited.is_set(), "session manager never exited run()"
+
+
+async def test_streamable_http_start_failure_keeps_manager_unavailable():
+    """Ensure failures while starting the session manager propagate and keep manager unavailable."""
+    from langflow.api.v1.mcp import StreamableHTTP
+
+    failure = RuntimeError("boom")
+    manager_instance = MagicMock()
+    manager_instance.run.return_value = _FailingRunContext(failure)
+
+    with (
+        patch("langflow.api.v1.mcp.StreamableHTTPSessionManager", return_value=manager_instance),
+        patch("langflow.api.v1.mcp.logger.adebug", new_callable=AsyncMock),
+        patch("langflow.api.v1.mcp.logger.aexception", new_callable=AsyncMock),
+    ):
+        streamable_http = StreamableHTTP()
+        with pytest.raises(RuntimeError):
+            await streamable_http.start()
+
+        with pytest.raises(HTTPException):
+            streamable_http.get_manager()
+
+
+async def test_streamable_http_start_failure_surfaces_exception_once():
+    """Verify StreamableHTTP.start surfaces the exact exception raised by _start_session_manager."""
+    from langflow.api.v1.mcp import StreamableHTTP
+
+    failure = RuntimeError("failed to run session manager")
+    manager_instance = MagicMock()
+    manager_instance.run.return_value = _FailingRunContext(failure)
+
+    async_logger = AsyncMock()
+    with (
+        patch("langflow.api.v1.mcp.StreamableHTTPSessionManager", return_value=manager_instance),
+        patch("langflow.api.v1.mcp.logger.aexception", new=async_logger),
+    ):
+        streamable_http = StreamableHTTP()
+        with pytest.raises(RuntimeError) as exc_info:
+            await streamable_http.start()
+
+    assert str(exc_info.value) == "Error in Streamable HTTP session manager: failed to run session manager"
+    assert exc_info.value.__cause__ is failure
+    assert async_logger.await_count == 1
+    expected_message = (
+        "Error starting Streamable HTTP session manager: "
+        "Error in Streamable HTTP session manager: failed to run session manager"
+    )
+    assert async_logger.await_args_list[0].args[0] == expected_message
 
 
 # Tests for find_validation_error function
