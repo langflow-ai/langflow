@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
@@ -13,12 +14,25 @@ from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS_DETAILED
 from lfx.base.models.google_generative_ai_constants import (
     GOOGLE_GENERATIVE_AI_MODELS_DETAILED,
 )
+from lfx.base.models.models_dev_client import (
+    clear_cache as clear_models_dev_cache,
+)
+from lfx.base.models.models_dev_client import (
+    get_live_models_detailed as fetch_live_models,
+)
+from lfx.base.models.models_dev_client import (
+    get_provider_metadata_from_api,
+)
 from lfx.base.models.ollama_constants import OLLAMA_EMBEDDING_MODELS_DETAILED, OLLAMA_MODELS_DETAILED
 from lfx.base.models.openai_constants import OPENAI_EMBEDDING_MODELS_DETAILED, OPENAI_MODELS_DETAILED
 from lfx.base.models.watsonx_constants import WATSONX_MODELS_DETAILED
 from lfx.log.logger import logger
 from lfx.services.deps import get_variable_service, session_scope
 from lfx.utils.async_helpers import run_until_complete
+
+# Configuration for live model data
+# When true, fetches model data from models.dev API instead of static constants
+USE_LIVE_MODEL_DATA = os.environ.get("LFX_USE_LIVE_MODEL_DATA", "false").lower() == "true"
 
 
 @lru_cache(maxsize=1)
@@ -57,7 +71,8 @@ def get_embedding_classes():
 
 
 @lru_cache(maxsize=1)
-def get_model_provider_metadata():
+def get_static_model_provider_metadata():
+    """Get static provider metadata (hardcoded providers)."""
     return {
         "OpenAI": {
             "icon": "OpenAI",
@@ -82,11 +97,28 @@ def get_model_provider_metadata():
     }
 
 
+def get_model_provider_metadata():
+    """Get provider metadata from either static constants or live API."""
+    if not USE_LIVE_MODEL_DATA:
+        return get_static_model_provider_metadata()
+
+    try:
+        live_metadata = get_provider_metadata_from_api()
+        if live_metadata:
+            return live_metadata
+    except Exception as e:
+        logger.debug(f"Failed to get live provider metadata: {e}")
+
+    # Fallback to static
+    return get_static_model_provider_metadata()
+
+
 model_provider_metadata = get_model_provider_metadata()
 
 
 @lru_cache(maxsize=1)
-def get_models_detailed():
+def get_static_models_detailed():
+    """Get static model definitions (hardcoded constants)."""
     return [
         ANTHROPIC_MODELS_DETAILED,
         OPENAI_MODELS_DETAILED,
@@ -98,7 +130,74 @@ def get_models_detailed():
     ]
 
 
+def get_live_models_as_groups() -> list[list[dict]]:
+    """Fetch live models from models.dev API and group by provider.
+
+    Only includes models from supported providers.
+    """
+    try:
+        # Only fetch supported providers, exclude unsupported ones entirely
+        live_models = fetch_live_models(include_unsupported=False)
+        if not live_models:
+            return []
+
+        # Group models by provider
+        provider_groups: dict[str, list[dict]] = {}
+        for model in live_models:
+            provider = model.get("provider", "Unknown")
+            if provider not in provider_groups:
+                provider_groups[provider] = []
+            provider_groups[provider].append(model)
+
+        return list(provider_groups.values())
+    except Exception as e:
+        logger.debug(f"Failed to fetch live models: {e}")
+        return []
+
+
+def get_models_detailed():
+    """Get model definitions from either static constants or live API.
+
+    When USE_LIVE_MODEL_DATA is True, fetches from models.dev API.
+    When False (default), uses static constants.
+    Falls back to static if live API fails.
+    """
+    if not USE_LIVE_MODEL_DATA:
+        return get_static_models_detailed()
+
+    # Try to get live data
+    live_groups = get_live_models_as_groups()
+    if live_groups:
+        return live_groups
+
+    # Fallback to static if live fails
+    logger.warning("Live model data unavailable, falling back to static constants")
+    return get_static_models_detailed()
+
+
 MODELS_DETAILED = get_models_detailed()
+
+
+def refresh_live_model_data() -> None:
+    """Refresh live model data from models.dev API.
+
+    Clears the cache and re-fetches model data. This is useful when you want
+    to ensure you have the latest model information.
+
+    Note: This function modifies the global MODELS_DETAILED list in place.
+    """
+    global MODELS_DETAILED
+
+    # Clear the API cache
+    clear_models_dev_cache()
+
+    # Clear lru_cache for provider metadata
+    get_provider_metadata_from_api.cache_clear()
+
+    # Re-fetch and update global
+    MODELS_DETAILED[:] = get_models_detailed()
+
+    logger.info("Refreshed live model data from models.dev")
 
 
 @lru_cache(maxsize=1)

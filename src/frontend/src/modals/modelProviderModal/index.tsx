@@ -252,7 +252,7 @@ const ModelProviderModal = ({
         <div className="flex flex-row w-full overflow-hidden">
           <div
             className={cn(
-              "flex border-r p-2 flex-col transition-all duration-300 h-[513px] ease-in-out",
+              "flex border-r p-2 flex-col transition-all duration-300 h-[513px] ease-in-out overflow-y-auto",
               selectedProvider ? "w-1/3" : "w-full",
             )}
           >
