@@ -104,7 +104,11 @@ jest.mock("@/components/ui/button", () => ({
     disabled?: boolean;
     loading?: boolean;
   }) => (
-    <button onClick={onClick} className={className} disabled={disabled || loading}>
+    <button
+      onClick={onClick}
+      className={className}
+      disabled={disabled || loading}
+    >
       {loading ? "Loading..." : children}
     </button>
   ),

@@ -220,7 +220,10 @@ test(
           // Retry until the JSON no longer contains "YOUR_API_KEY"
           let jsonAfterGeneration = await preElement.textContent();
           let retries = 0;
-          while (jsonAfterGeneration?.includes("YOUR_API_KEY") && retries < 10) {
+          while (
+            jsonAfterGeneration?.includes("YOUR_API_KEY") &&
+            retries < 10
+          ) {
             await page.waitForTimeout(500);
             jsonAfterGeneration = await preElement.textContent();
             retries++;
