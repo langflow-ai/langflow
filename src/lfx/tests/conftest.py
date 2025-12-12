@@ -15,20 +15,20 @@ def pytest_configure(config):  # noqa: ARG001
             import langflow  # noqa: F401
 
             pytest.exit(
-            "\n"
-            "=" * 80 + "\n"
-            "ERROR: langflow is installed. These tests require langflow to NOT be installed.\n"
-            "\n"
-            "To fix this, run these commands:\n"
-            "\n"
-            "    cd src/lfx\n"
-            "    uv sync\n"
-            "    uv run pytest ...\n"
-            "\n"
-            "The lfx tests are designed to run in isolation from langflow to ensure proper\n"
-            "packaging and dependency management.\n"
-            "=" * 80 + "\n",
-            returncode=1,
+                "\n"
+                "=" * 80 + "\n"
+                "ERROR: langflow is installed. These tests require langflow to NOT be installed.\n"
+                "\n"
+                "To fix this, run these commands:\n"
+                "\n"
+                "    cd src/lfx\n"
+                "    uv sync\n"
+                "    uv run pytest ...\n"
+                "\n"
+                "The lfx tests are designed to run in isolation from langflow to ensure proper\n"
+                "packaging and dependency management.\n"
+                "=" * 80 + "\n",
+                returncode=1,
             )
         except ImportError:
             # Good, langflow is not installed
