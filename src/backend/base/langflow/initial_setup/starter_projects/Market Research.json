@@ -398,7 +398,6 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "height": 234,
         "id": "ChatInput-OSw5o",
         "measured": {
           "height": 234,
@@ -413,8 +412,7 @@
           "y": 889.8398446936101
         },
         "selected": false,
-        "type": "genericNode",
-        "width": 320
+        "type": "genericNode"
       },
       {
         "data": {
@@ -679,7 +677,6 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "height": 234,
         "id": "ChatOutput-tjFWM",
         "measured": {
           "height": 234,
@@ -694,8 +691,7 @@
           "y": 855.3686932779933
         },
         "selected": false,
-        "type": "genericNode",
-        "width": 320
+        "type": "genericNode"
       },
       {
         "data": {

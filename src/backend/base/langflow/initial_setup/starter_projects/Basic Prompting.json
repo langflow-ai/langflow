@@ -347,8 +347,7 @@
           "y": 765.155834131403
         },
         "selected": false,
-        "type": "genericNode",
-        "width": 320
+        "type": "genericNode"
       },
       {
         "data": {
@@ -479,8 +478,7 @@
           "y": 1018.5443911764344
         },
         "selected": false,
-        "type": "genericNode",
-        "width": 320
+        "type": "genericNode"
       },
       {
         "data": {
