@@ -7,7 +7,7 @@ import {
 import { customDefaultShortcuts } from "../customization/constants";
 import type { languageMap } from "../types/components";
 
-const getEnvVar = (key: string, defaultValue: any = undefined) => {
+const getEnvVar = (key: string, defaultValue: unknown = undefined) => {
   if (typeof process !== "undefined" && process.env) {
     return process.env[key] ?? defaultValue;
   }
@@ -173,7 +173,7 @@ export const PROMPT_DIALOG_SUBTITLE =
   "Create your prompt. Prompts can help guide the behavior of a Language Model. Use curly brackets {} to introduce variables.";
 
 export const MUSTACHE_PROMPT_DIALOG_SUBTITLE =
-  "Create your prompt. Prompts can help guide the behavior of a Language Model. Use double curly brackets {{}} to introduce variables. Mustache syntax is supported.";
+  "Create your prompt. Prompts can help guide the behavior of a Language Model. Use double curly brackets {{}} to introduce variables.";
 
 export const CHAT_CANNOT_OPEN_TITLE = "Chat Cannot Open";
 

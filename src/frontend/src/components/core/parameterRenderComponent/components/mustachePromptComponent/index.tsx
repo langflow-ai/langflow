@@ -53,7 +53,10 @@ export default function MustachePromptAreaComponent({
         />
       ) : (
         <span className="text-sm text-muted-foreground">
-          {getPlaceholder(disabled, "Type your mustache prompt here...")}
+          {getPlaceholder(
+            disabled,
+            "Type your prompt here using {{variable}}...",
+          )}
         </span>
       )}
     </span>
@@ -62,7 +65,7 @@ export default function MustachePromptAreaComponent({
   const renderExternalLinkIcon = () =>
     !value || value == "" ? (
       <ForwardedIconComponent
-        name={disabled ? "lock" : "Scan"}
+        name={disabled ? "lock" : "Braces"}
         className={cn(
           "icons-parameters-comp pointer-events-none absolute right-3 top-1/2 h-4 w-4 shrink-0 -translate-y-1/2",
           disabled ? "text-placeholder-foreground" : "text-foreground",
