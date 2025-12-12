@@ -961,9 +961,11 @@ async def custom_component_update(
         raise SerializationError.from_exception(exc, data=component_node) from exc
 
 
-@router.get("/config")
+@router.get("/config", dependencies=[Depends(get_current_active_user)])
 async def get_config() -> ConfigResponse:
     """Retrieve the current application configuration settings.
+
+    Requires authentication to prevent exposure of sensitive configuration details.
 
     Returns:
         ConfigResponse: The configuration settings of the application.

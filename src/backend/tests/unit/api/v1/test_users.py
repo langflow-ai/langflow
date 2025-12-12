@@ -2,9 +2,9 @@ from fastapi import status
 from httpx import AsyncClient
 
 
-async def test_add_user(client: AsyncClient):
+async def test_add_user(client: AsyncClient, logged_in_headers_super_user):
     basic_case = {"username": "string", "password": "string"}
-    response = await client.post("api/v1/users/", json=basic_case)
+    response = await client.post("api/v1/users/", json=basic_case, headers=logged_in_headers_super_user)
     result = response.json()
 
     assert response.status_code == status.HTTP_201_CREATED
@@ -49,7 +49,7 @@ async def test_patch_user(client: AsyncClient, logged_in_headers_super_user):
     name = "string"
     updated_name = "string2"
     basic_case = {"username": name, "password": "string"}
-    response_ = await client.post("api/v1/users/", json=basic_case)
+    response_ = await client.post("api/v1/users/", json=basic_case, headers=logged_in_headers_super_user)
     id_ = response_.json()["id"]
     basic_case["username"] = updated_name
     response = await client.patch(f"api/v1/users/{id_}", json=basic_case, headers=logged_in_headers_super_user)
@@ -88,7 +88,7 @@ async def test_reset_password(client: AsyncClient, logged_in_headers, active_use
 
 async def test_delete_user(client: AsyncClient, logged_in_headers_super_user):
     basic_case = {"username": "string", "password": "string"}
-    response_ = await client.post("api/v1/users/", json=basic_case)
+    response_ = await client.post("api/v1/users/", json=basic_case, headers=logged_in_headers_super_user)
     id_ = response_.json()["id"]
     response = await client.delete(f"api/v1/users/{id_}", headers=logged_in_headers_super_user)
     result = response.json()

@@ -4,7 +4,7 @@ import json
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from lfx.base.models.unified_models import (
     get_model_provider_variable_mapping,
     get_model_providers,
@@ -13,6 +13,7 @@ from lfx.base.models.unified_models import (
 from pydantic import BaseModel, field_validator
 
 from langflow.api.utils import CurrentActiveUser, DbSession
+from langflow.services.auth.utils import get_current_active_user
 from langflow.services.deps import get_variable_service
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 from langflow.services.variable.service import DatabaseVariableService
@@ -93,7 +94,7 @@ class ModelStatusUpdate(BaseModel):
         return v.strip()
 
 
-@router.get("/providers", status_code=200)
+@router.get("/providers", status_code=200, dependencies=[Depends(get_current_active_user)])
 async def list_model_providers() -> list[str]:
     """Return available model providers."""
     return get_model_providers()

@@ -576,15 +576,17 @@ async def test_download_profile_picture_not_found_in_both_locations(empty_config
 
 
 async def test_download_profile_picture_invalid_folder(empty_config_dir, files_client):  # noqa: ARG001
-    """Test 404 when using an invalid folder name.
+    """Test 400 when using an invalid folder name.
 
-    Only 'People' and 'Space' folders should exist in the package.
+    Only 'People' and 'Space' folders are whitelisted for security.
+    Invalid folder names should be rejected with 400 Bad Request.
     """
     response = await files_client.get("api/v1/files/profile_pictures/InvalidFolder/file.svg")
-    assert response.status_code == 404
+    assert response.status_code == 400
 
     data = response.json()
-    assert "not found" in data["detail"].lower()
+    # Check for the new specific error message
+    assert "folder must be one of" in data["detail"].lower()
 
 
 async def test_download_profile_picture_config_dir_takes_precedence(setup_profile_pictures, files_client):
