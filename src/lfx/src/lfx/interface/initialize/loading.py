@@ -196,7 +196,9 @@ async def update_table_params_with_load_from_db_fields(
                         if key is None:
                             key = os.getenv(variable_name)
                             if key:
-                                logger.info(f"Using environment variable {variable_name} for table column {column_name}")
+                                logger.info(
+                                    f"Using environment variable {variable_name} for table column {column_name}"
+                                )
                             else:
                                 logger.error(f"Environment variable {variable_name} is not set.")
                     else:
