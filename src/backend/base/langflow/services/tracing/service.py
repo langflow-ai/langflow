@@ -139,7 +139,7 @@ class TracingService(Service):
             try:
                 trace_func(*args)
             except Exception:  # noqa: BLE001
-                logger.exception("Error processing trace_func")
+                await logger.aexception("Error processing trace_func")
             finally:
                 trace_context.traces_queue.task_done()
 
@@ -150,7 +150,7 @@ class TracingService(Service):
             trace_context.running = True
             trace_context.worker_task = asyncio.create_task(self._trace_worker(trace_context))
         except Exception:  # noqa: BLE001
-            logger.exception("Error starting tracing service")
+            await logger.aexception("Error starting tracing service")
 
     def _initialize_langsmith_tracer(self, trace_context: TraceContext) -> None:
         langsmith_tracer = _get_langsmith_tracer()
