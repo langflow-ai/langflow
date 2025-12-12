@@ -1,0 +1,52 @@
+---
+title: GigaChat
+slug: /bundles-gigachat
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **GigaChat** bundle.
+
+For more information about GigaChat features and functionality used by GigaChat components, see the [GigaChat documentation](https://developers.sber.ru/docs/en/gigachat/api/overview).
+
+## GigaChat text generation
+
+The **GigaChat** component generates text using GigaChat's language models.
+
+It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
+
+Use the **Language Model** output when you want to use a GigaChat model as the LLM for another LLM-driven component, such as an **Agent** or **Smart Function** component.
+
+For more information, see [Language model components](/components-models).
+
+### GigaChat text generation parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| stream | Boolean | Input parameter. Whether to stream the response. Only works in chat. Default: `false`. |
+| max_tokens | Integer | Input parameter. Maximum number of tokens to generate. Range: `0-128000`. |
+| model_name | String | Input parameter. The GigaChat model to use. Default: `GigaChat-2`. |
+| scope | String | Input parameter. Version of the API you are getting access to. Default: `GIGACHAT_API_PERS`.|
+| credentials | SecretString | Input parameter. Your GigaChat API key for authentication. |
+| temperature | Float | Input parameter. Controls randomness in responses. Range: `[0.0, 2.0]`. Default: `0.1`. |
+
+## GigaChat Embeddings
+
+The **GigaChat Embeddings** component is used to load embedding models from GigaChat.
+
+For more information about using embedding model components in flows, see [Embedding model components](/components-embedding-models).
+
+### GigaChat Embeddings parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| model_name | String | Input parameter. The GigaChat model to use. Default: `EmbeddingsGigaR`. |
+| scope | String | Input parameter. Version of the API you are getting access to. Default: `GIGACHAT_API_PERS`.|
+| credentials | SecretString | Input parameter. Your GigaChat API key for authentication. |
