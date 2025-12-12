@@ -21,7 +21,7 @@ def _get_storage_location_options():
     all_options = [{"name": "AWS", "icon": "Amazon"}, {"name": "Google Drive", "icon": "google"}]
     if is_astra_cloud_environment():
         return all_options
-    return [{"name": "Local", "icon": "hard-drive"}] + all_options
+    return [{"name": "Local", "icon": "hard-drive"}, *all_options]
 
 
 class SaveToFileComponent(Component):
