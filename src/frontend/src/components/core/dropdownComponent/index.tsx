@@ -114,7 +114,14 @@ export default function Dropdown({
   // Utility functions
   const filterMetadataKeys = (
     metadata: Record<string, any> = {},
-    excludeKeys: string[] = ["api_endpoint", "icon", "status", "org_id"],
+    excludeKeys: string[] = [
+      "api_endpoint",
+      "icon",
+      "status",
+      "org_id",
+      "id",
+      "updated_at",
+    ],
   ) => {
     return Object.fromEntries(
       Object.entries(metadata).filter(([key]) => !excludeKeys.includes(key)),
@@ -271,6 +278,10 @@ export default function Dropdown({
       handleNodeClass,
       postTemplateValue,
       setErrorData,
+      undefined, // parameterName
+      undefined, // callback
+      undefined, // toolMode
+      true, // isRefresh
     )?.then(() => {
       setTimeout(() => {
         setRefreshOptions(false);
@@ -283,7 +294,13 @@ export default function Dropdown({
 
     const metadata = filteredMetadata[index];
     const metadataEntries = Object.entries(metadata)
-      .filter(([key, value]) => value !== null && key !== "icon")
+      .filter(
+        ([key, value]) =>
+          value !== null &&
+          key !== "icon" &&
+          key !== "id" &&
+          key !== "updated_at",
+      )
       .map(([key, value]) => {
         const displayValue =
           typeof value === "string" && value.length > 20
@@ -494,7 +511,12 @@ export default function Dropdown({
                 <CommandItem
                   value={option}
                   onSelect={(currentValue) => {
-                    onSelect(currentValue);
+                    onSelect(
+                      currentValue,
+                      undefined,
+                      undefined,
+                      filteredMetadata?.[index],
+                    );
                     setOpen(false);
                     setWaitingForResponse(false);
                   }}
@@ -667,7 +689,7 @@ export default function Dropdown({
         {options?.length > 0 && renderSearchInput()}
         {renderOptionsList()}
         {!sourceOptions?.fields && hasRefreshButton && (
-          <div className="sticky bottom-0 border-t bg-background">
+          <div className="border-t bg-background">
             <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate rounded-b-md py-3 text-xs font-semibold text-muted-foreground">
               <Button
                 className="w-full"

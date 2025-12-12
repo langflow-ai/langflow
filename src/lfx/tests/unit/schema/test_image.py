@@ -1,14 +1,14 @@
 import tempfile
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import aiofiles
 import pytest
-from PIL import Image as PILImage
-
 from lfx.schema.image import (
     get_file_paths,
     get_files,
     is_image_file,
 )
+from PIL import Image as PILImage
 
 
 @pytest.fixture
@@ -91,3 +91,77 @@ async def test_get_files__empty():
     result = await get_files([])
 
     assert len(result) == 0
+
+
+@pytest.mark.asyncio
+async def test_get_files_with_storage_service_local_path():
+    """Test that get_files uses parse_file_path for local storage paths."""
+    mock_storage = MagicMock()
+    mock_storage.parse_file_path = MagicMock(return_value=("flow_123", "image.png"))
+    mock_storage.get_file = AsyncMock(return_value=b"fake image content")
+
+    with patch("lfx.schema.image.get_storage_service", return_value=mock_storage):
+        result = await get_files(["/data/flow_123/image.png"])
+
+        # Verify parse_file_path was called with the correct path
+        mock_storage.parse_file_path.assert_called_once_with("/data/flow_123/image.png")
+        # Verify get_file was called with parsed flow_id and file_name
+        mock_storage.get_file.assert_called_once_with(flow_id="flow_123", file_name="image.png")
+        # Verify result contains the file content
+        assert result == [b"fake image content"]
+
+
+@pytest.mark.asyncio
+async def test_get_files_with_storage_service_s3_path():
+    """Test that get_files uses parse_file_path for S3 storage paths."""
+    mock_storage = MagicMock()
+    # S3 path with prefix
+    mock_storage.parse_file_path = MagicMock(return_value=("flow_456", "document.pdf"))
+    mock_storage.get_file = AsyncMock(return_value=b"fake pdf content")
+
+    with patch("lfx.schema.image.get_storage_service", return_value=mock_storage):
+        result = await get_files(["files/flow_456/document.pdf"])
+
+        # Verify parse_file_path was called with the S3 path
+        mock_storage.parse_file_path.assert_called_once_with("files/flow_456/document.pdf")
+        # Verify get_file was called with parsed flow_id and file_name
+        mock_storage.get_file.assert_called_once_with(flow_id="flow_456", file_name="document.pdf")
+        # Verify result contains the file content
+        assert result == [b"fake pdf content"]
+
+
+@pytest.mark.asyncio
+async def test_get_files_with_storage_service_convert_to_base64():
+    """Test that get_files converts to base64 when requested."""
+    import base64
+
+    mock_storage = MagicMock()
+    mock_storage.parse_file_path = MagicMock(return_value=("flow_789", "test.txt"))
+    mock_storage.get_file = AsyncMock(return_value=b"test content")
+
+    with patch("lfx.schema.image.get_storage_service", return_value=mock_storage):
+        result = await get_files(["flow_789/test.txt"], convert_to_base64=True)
+
+        # Verify parse_file_path was called
+        mock_storage.parse_file_path.assert_called_once_with("flow_789/test.txt")
+        # Verify result is base64 encoded
+        assert isinstance(result[0], str)
+        assert result[0] == base64.b64encode(b"test content").decode("utf-8")
+
+
+@pytest.mark.asyncio
+async def test_get_files_with_storage_service_multiple_files():
+    """Test that get_files handles multiple files correctly."""
+    mock_storage = MagicMock()
+    mock_storage.parse_file_path = MagicMock(side_effect=[("flow_1", "file1.txt"), ("flow_2", "file2.txt")])
+    mock_storage.get_file = AsyncMock(side_effect=[b"content1", b"content2"])
+
+    with patch("lfx.schema.image.get_storage_service", return_value=mock_storage):
+        result = await get_files(["flow_1/file1.txt", "flow_2/file2.txt"])
+
+        # Verify parse_file_path was called for each file
+        assert mock_storage.parse_file_path.call_count == 2
+        # Verify get_file was called for each file
+        assert mock_storage.get_file.call_count == 2
+        # Verify results
+        assert result == [b"content1", b"content2"]

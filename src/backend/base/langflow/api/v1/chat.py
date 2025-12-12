@@ -37,6 +37,7 @@ from langflow.api.v1.schemas import (
     VerticesOrderResponse,
 )
 from langflow.exceptions.component import ComponentBuildError
+from langflow.services.auth.utils import get_current_active_user
 from langflow.services.chat.service import ChatService
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import (
@@ -54,7 +55,7 @@ if TYPE_CHECKING:
 router = APIRouter(tags=["Chat"])
 
 
-@router.post("/build/{flow_id}/vertices", deprecated=True)
+@router.post("/build/{flow_id}/vertices", deprecated=True, dependencies=[Depends(get_current_active_user)])
 async def retrieve_vertices_order(
     *,
     flow_id: uuid.UUID,
@@ -197,14 +198,17 @@ async def build_flow(
     )
 
 
-@router.get("/build/{job_id}/events")
+@router.get("/build/{job_id}/events", dependencies=[Depends(get_current_active_user)])
 async def get_build_events(
     job_id: str,
     queue_service: Annotated[JobQueueService, Depends(get_queue_service)],
     *,
     event_delivery: EventDeliveryType = EventDeliveryType.STREAMING,
 ):
-    """Get events for a specific build job."""
+    """Get events for a specific build job.
+
+    Requires authentication to prevent unauthorized access to build events.
+    """
     return await get_flow_events_response(
         job_id=job_id,
         queue_service=queue_service,
@@ -212,12 +216,19 @@ async def get_build_events(
     )
 
 
-@router.post("/build/{job_id}/cancel", response_model=CancelFlowResponse)
+@router.post(
+    "/build/{job_id}/cancel",
+    response_model=CancelFlowResponse,
+    dependencies=[Depends(get_current_active_user)],
+)
 async def cancel_build(
     job_id: str,
     queue_service: Annotated[JobQueueService, Depends(get_queue_service)],
 ):
-    """Cancel a specific build job."""
+    """Cancel a specific build job.
+
+    Requires authentication to prevent unauthorized build cancellation.
+    """
     try:
         # Cancel the flow build and check if it was successful
         cancellation_success = await cancel_flow_build(job_id=job_id, queue_service=queue_service)
@@ -289,6 +300,7 @@ async def build_vertex(
         if isinstance(cache, CacheMiss):
             # If there's no cache
             await logger.awarning(f"No cache found for {flow_id_str}. Building graph starting at {vertex_id}")
+
             async with session_scope() as session:
                 graph = await build_graph_from_db(
                     flow_id=flow_id,
@@ -355,6 +367,14 @@ async def build_vertex(
             )
 
         timedelta = time.perf_counter() - start_time
+
+        # Use client_request_time if available for accurate end-to-end duration
+        if inputs and inputs.client_request_time:
+            # Convert client timestamp (ms) to seconds and calculate elapsed time
+            client_start_seconds = inputs.client_request_time / 1000
+            current_time_seconds = time.time()
+            timedelta = current_time_seconds - client_start_seconds
+
         duration = format_elapsed_time(timedelta)
         result_data_response.duration = duration
         result_data_response.timedelta = timedelta
@@ -388,6 +408,7 @@ async def build_vertex(
             telemetry_service.log_package_component,
             ComponentPayload(
                 component_name=vertex_id.split("-")[0],
+                component_id=vertex_id,
                 component_seconds=int(time.perf_counter() - start_time),
                 component_success=valid,
                 component_error_message=error_message,
@@ -399,6 +420,7 @@ async def build_vertex(
             telemetry_service.log_package_component,
             ComponentPayload(
                 component_name=vertex_id.split("-")[0],
+                component_id=vertex_id,
                 component_seconds=int(time.perf_counter() - start_time),
                 component_success=False,
                 component_error_message=str(exc),
@@ -498,6 +520,7 @@ async def _stream_vertex(flow_id: str, vertex_id: str, chat_service: ChatService
     "/build/{flow_id}/{vertex_id}/stream",
     response_class=StreamingResponse,
     deprecated=True,
+    dependencies=[Depends(get_current_active_user)],
 )
 async def build_vertex_stream(
     flow_id: uuid.UUID,

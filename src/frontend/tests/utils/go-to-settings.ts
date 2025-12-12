@@ -1,9 +1,9 @@
-import type { Page } from "@playwright/test";
+import { type Page } from "@playwright/test";
 
 export const navigateSettingsPages = async (
   page: Page,
   pageName: string,
-  settingsMenuName: string,
+  settingsMenuName: string
 ) => {
   if (!pageName) {
     return;

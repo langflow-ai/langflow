@@ -7,7 +7,6 @@ which is responsible for processing and managing parameters in vertices.
 from unittest.mock import Mock
 
 import pytest
-
 from lfx.graph.edge.base import Edge
 from lfx.graph.vertex.base import ParameterHandler, Vertex
 from lfx.services.storage.service import StorageService
@@ -19,6 +18,7 @@ def mock_storage_service() -> Mock:
     """Create a mock storage service for testing."""
     storage = Mock(spec=StorageService)
     storage.build_full_path = Mock(return_value="/mocked/full/path")
+    storage.resolve_component_path = Mock(return_value="/mocked/full/path")
     return storage
 
 

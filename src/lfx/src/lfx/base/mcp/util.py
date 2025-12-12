@@ -23,6 +23,7 @@ from pydantic import BaseModel
 from lfx.log.logger import logger
 from lfx.schema.json_schema import create_input_schema_from_json_schema
 from lfx.services.deps import get_settings_service
+from lfx.utils.async_helpers import run_until_complete
 
 HTTP_ERROR_STATUS_CODE = httpx_codes.BAD_REQUEST  # HTTP status code for client errors
 
@@ -35,13 +36,33 @@ HTTP_INTERNAL_SERVER_ERROR = 500
 HTTP_UNAUTHORIZED = 401
 HTTP_FORBIDDEN = 403
 
-# MCP Session Manager constants
-settings = get_settings_service().settings
-MAX_SESSIONS_PER_SERVER = (
-    settings.mcp_max_sessions_per_server
-)  # Maximum number of sessions per server to prevent resource exhaustion
-SESSION_IDLE_TIMEOUT = settings.mcp_session_idle_timeout  # 5 minutes idle timeout for sessions
-SESSION_CLEANUP_INTERVAL = settings.mcp_session_cleanup_interval  # Cleanup interval in seconds
+# MCP Session Manager constants - lazy loaded
+_mcp_settings_cache: dict[str, Any] = {}
+
+
+def _get_mcp_setting(key: str, default: Any = None) -> Any:
+    """Lazy load MCP settings from settings service."""
+    if key not in _mcp_settings_cache:
+        settings = get_settings_service().settings
+        _mcp_settings_cache[key] = getattr(settings, key, default)
+    return _mcp_settings_cache[key]
+
+
+def get_max_sessions_per_server() -> int:
+    """Get maximum number of sessions per server to prevent resource exhaustion."""
+    return _get_mcp_setting("mcp_max_sessions_per_server")
+
+
+def get_session_idle_timeout() -> int:
+    """Get 5 minutes idle timeout for sessions."""
+    return _get_mcp_setting("mcp_session_idle_timeout")
+
+
+def get_session_cleanup_interval() -> int:
+    """Get cleanup interval in seconds."""
+    return _get_mcp_setting("mcp_session_cleanup_interval")
+
+
 # RFC 7230 compliant header name pattern: token = 1*tchar
 # tchar = "!" / "#" / "$" / "%" / "&" / "'" / "*" / "+" / "-" / "." /
 #         "^" / "_" / "`" / "|" / "~" / DIGIT / ALPHA
@@ -63,6 +84,46 @@ ALLOWED_HEADERS = {
     "x-mcp-client",
     "x-requested-with",
 }
+
+
+def create_mcp_http_client_with_ssl_option(
+    headers: dict[str, str] | None = None,
+    timeout: httpx.Timeout | None = None,
+    auth: httpx.Auth | None = None,
+    *,
+    verify_ssl: bool = True,
+) -> httpx.AsyncClient:
+    """Create an httpx AsyncClient with configurable SSL verification.
+
+    This is a custom factory that extends the standard MCP client factory
+    to support disabling SSL verification for self-signed certificates.
+
+    Args:
+        headers: Optional headers to include with all requests.
+        timeout: Request timeout as httpx.Timeout object.
+        auth: Optional authentication handler.
+        verify_ssl: Whether to verify SSL certificates (default: True).
+
+    Returns:
+        Configured httpx.AsyncClient instance.
+    """
+    kwargs: dict[str, Any] = {
+        "follow_redirects": True,
+        "verify": verify_ssl,
+    }
+
+    if timeout is None:
+        kwargs["timeout"] = httpx.Timeout(30.0)
+    else:
+        kwargs["timeout"] = timeout
+
+    if headers is not None:
+        kwargs["headers"] = headers
+
+    if auth is not None:
+        kwargs["auth"] = auth
+
+    return httpx.AsyncClient(**kwargs)
 
 
 def validate_headers(headers: dict[str, str]) -> dict[str, str]:
@@ -291,8 +352,7 @@ def create_tool_func(tool_name: str, arg_schema: type[BaseModel], client) -> Cal
             _handle_tool_validation_error(e, tool_name, provided_args, arg_schema)
 
         try:
-            loop = asyncio.get_event_loop()
-            return loop.run_until_complete(client.run_tool(tool_name, arguments=validated.model_dump()))
+            return run_until_complete(client.run_tool(tool_name, arguments=validated.model_dump()))
         except Exception as e:
             logger.error(f"Tool '{tool_name}' execution failed: {e}")
             # Re-raise with more context
@@ -432,7 +492,7 @@ class MCPSessionManager:
         """Periodically clean up idle sessions."""
         while True:
             try:
-                await asyncio.sleep(SESSION_CLEANUP_INTERVAL)
+                await asyncio.sleep(get_session_cleanup_interval())
                 await self._cleanup_idle_sessions()
             except asyncio.CancelledError:
                 break
@@ -450,7 +510,7 @@ class MCPSessionManager:
             sessions_to_remove = []
 
             for session_id, session_info in list(sessions.items()):
-                if current_time - session_info["last_used"] > SESSION_IDLE_TIMEOUT:
+                if current_time - session_info["last_used"] > get_session_idle_timeout():
                     sessions_to_remove.append(session_id)
 
             # Clean up idle sessions
@@ -573,7 +633,7 @@ class MCPSessionManager:
                 await self._cleanup_session_by_id(server_key, session_id)
 
         # Check if we've reached the maximum number of sessions for this server
-        if len(sessions) >= MAX_SESSIONS_PER_SERVER:
+        if len(sessions) >= get_max_sessions_per_server():
             # Remove the oldest session
             oldest_session_id = min(sessions.keys(), key=lambda x: sessions[x]["last_used"])
             await logger.ainfo(
@@ -675,7 +735,7 @@ class MCPSessionManager:
 
         Args:
             session_id: Unique identifier for this session
-            connection_params: Connection parameters including URL, headers, timeouts
+            connection_params: Connection parameters including URL, headers, timeouts, verify_ssl
             preferred_transport: If set to "sse", skip Streamable HTTP and go directly to SSE
 
         Returns:
@@ -691,6 +751,19 @@ class MCPSessionManager:
         # Track which transport succeeded
         used_transport: list[str] = []
 
+        # Get verify_ssl option from connection params, default to True
+        verify_ssl = connection_params.get("verify_ssl", True)
+
+        # Create custom httpx client factory with SSL verification option
+        def custom_httpx_factory(
+            headers: dict[str, str] | None = None,
+            timeout: httpx.Timeout | None = None,
+            auth: httpx.Auth | None = None,
+        ) -> httpx.AsyncClient:
+            return create_mcp_http_client_with_ssl_option(
+                headers=headers, timeout=timeout, auth=auth, verify_ssl=verify_ssl
+            )
+
         async def session_task():
             """Background task that keeps the session alive."""
             streamable_error = None
@@ -705,6 +778,7 @@ class MCPSessionManager:
                         url=connection_params["url"],
                         headers=connection_params["headers"],
                         timeout=connection_params["timeout_seconds"],
+                        httpx_client_factory=custom_httpx_factory,
                     ) as (read, write, _):
                         session = ClientSession(read, write)
                         async with session:
@@ -745,6 +819,7 @@ class MCPSessionManager:
                         connection_params["headers"],
                         connection_params["timeout_seconds"],
                         sse_read_timeout,
+                        httpx_client_factory=custom_httpx_factory,
                     ) as (read, write):
                         session = ClientSession(read, write)
                         async with session:
@@ -1196,6 +1271,8 @@ class MCPStreamableHttpClient:
         headers: dict[str, str] | None = None,
         timeout_seconds: int = 30,
         sse_read_timeout_seconds: int = 30,
+        *,
+        verify_ssl: bool = True,
     ) -> list[StructuredTool]:
         """Connect to MCP server using Streamable HTTP transport with SSE fallback (SDK style)."""
         # Validate and sanitize headers early
@@ -1213,12 +1290,13 @@ class MCPStreamableHttpClient:
                 msg = f"Invalid Streamable HTTP or SSE URL ({url}): {error_msg}"
                 raise ValueError(msg)
             # Store connection parameters for later use in run_tool
-            # Include SSE read timeout for fallback
+            # Include SSE read timeout for fallback and SSL verification option
             self._connection_params = {
                 "url": url,
                 "headers": validated_headers,
                 "timeout_seconds": timeout_seconds,
                 "sse_read_timeout_seconds": sse_read_timeout_seconds,
+                "verify_ssl": verify_ssl,
             }
         elif headers:
             self._connection_params["headers"] = validated_headers
@@ -1238,11 +1316,18 @@ class MCPStreamableHttpClient:
         return response.tools
 
     async def connect_to_server(
-        self, url: str, headers: dict[str, str] | None = None, sse_read_timeout_seconds: int = 30
+        self,
+        url: str,
+        headers: dict[str, str] | None = None,
+        sse_read_timeout_seconds: int = 30,
+        *,
+        verify_ssl: bool = True,
     ) -> list[StructuredTool]:
         """Connect to MCP server using Streamable HTTP with SSE fallback transport (SDK style)."""
         return await asyncio.wait_for(
-            self._connect_to_server(url, headers, sse_read_timeout_seconds=sse_read_timeout_seconds),
+            self._connect_to_server(
+                url, headers, sse_read_timeout_seconds=sse_read_timeout_seconds, verify_ssl=verify_ssl
+            ),
             timeout=get_settings_service().settings.mcp_server_timeout,
         )
 
@@ -1473,7 +1558,8 @@ async def update_tools(
         client = mcp_stdio_client
     elif mode in ["Streamable_HTTP", "SSE"]:
         # Streamable HTTP connection with SSE fallback
-        tools = await mcp_streamable_http_client.connect_to_server(url, headers=headers)
+        verify_ssl = server_config.get("verify_ssl", True)
+        tools = await mcp_streamable_http_client.connect_to_server(url, headers=headers, verify_ssl=verify_ssl)
         client = mcp_streamable_http_client
     else:
         logger.error(f"Invalid MCP server mode for '{server_name}': {mode}")

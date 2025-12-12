@@ -1100,7 +1100,7 @@
   }
 
   .input-invalid {
-    @apply border-destructive focus:border-destructive focus:ring-destructive;
+    @apply border-destructive focus:border-destructive focus:ring-destructive hover:border-destructive hover:ring-destructive;
   }
 
   .fade-container {
@@ -1155,7 +1155,7 @@
   }
 
   .store-beta-icon {
-    @apply relative bottom-3 left-1 ml-2 rounded-full bg-beta-background px-2 py-1 text-center text-xs font-semibold text-beta-foreground;
+    @apply relative bottom-3 left-1 ml-2 rounded-full border border-accent-purple-foreground bg-background px-2 py-1 text-center text-xs font-semibold text-accent-purple-foreground;
   }
   .color-option-container {
     @apply w-fit;
@@ -1284,6 +1284,13 @@
 
   .helper-line.vertical {
     stroke: hsl(var(--primary));
+  }
+}
+
+@layer components {
+  /* text-sm--medium */
+  .text-sm--medium {
+    @apply font-sans not-italic text-[13px] font-medium leading-4;
   }
 }
 

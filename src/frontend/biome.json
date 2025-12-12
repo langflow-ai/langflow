@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.1.2/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.1.1/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
@@ -73,6 +73,7 @@
         "noDuplicateElseIf": "error",
         "noDuplicateObjectKeys": "error",
         "noDuplicateParameters": "error",
+        "noExplicitAny": "error",
         "noFallthroughSwitchClause": "error",
         "noFunctionAssign": "error",
         "noGlobalAssign": "error",

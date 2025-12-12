@@ -22,7 +22,7 @@ from langflow.services.database.models.vertex_builds.model import VertexBuildMap
 router = APIRouter(prefix="/monitor", tags=["Monitor"])
 
 
-@router.get("/builds")
+@router.get("/builds", dependencies=[Depends(get_current_active_user)])
 async def get_vertex_builds(flow_id: Annotated[UUID, Query()], session: DbSession) -> VertexBuildMapModel:
     try:
         vertex_builds = await get_vertex_builds_by_flow_id(session, flow_id)
@@ -31,11 +31,10 @@ async def get_vertex_builds(flow_id: Annotated[UUID, Query()], session: DbSessio
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.delete("/builds", status_code=204)
+@router.delete("/builds", status_code=204, dependencies=[Depends(get_current_active_user)])
 async def delete_vertex_builds(flow_id: Annotated[UUID, Query()], session: DbSession) -> None:
     try:
         await delete_vertex_builds_by_flow_id(session, flow_id)
-        await session.commit()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -58,7 +57,7 @@ async def get_message_sessions(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.get("/messages")
+@router.get("/messages", dependencies=[Depends(get_current_active_user)])
 async def get_messages(
     session: DbSession,
     flow_id: Annotated[UUID | None, Query()] = None,
@@ -93,7 +92,6 @@ async def get_messages(
 async def delete_messages(message_ids: list[UUID], session: DbSession) -> None:
     try:
         await session.exec(delete(MessageTable).where(MessageTable.id.in_(message_ids)))  # type: ignore[attr-defined]
-        await session.commit()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -118,7 +116,7 @@ async def update_message(
             message_dict["edit"] = True
         db_message.sqlmodel_update(message_dict)
         session.add(db_message)
-        await session.commit()
+        await session.flush()
         await session.refresh(db_message)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
@@ -151,7 +149,7 @@ async def update_session_id(
 
         session.add_all(messages)
 
-        await session.commit()
+        await session.flush()
         message_responses = []
         for message in messages:
             await session.refresh(message)
@@ -162,7 +160,7 @@ async def update_session_id(
     return message_responses
 
 
-@router.delete("/messages/session/{session_id}", status_code=204)
+@router.delete("/messages/session/{session_id}", status_code=204, dependencies=[Depends(get_current_active_user)])
 async def delete_messages_session(
     session_id: str,
     session: DbSession,
@@ -173,14 +171,13 @@ async def delete_messages_session(
             .where(col(MessageTable.session_id) == session_id)
             .execution_options(synchronize_session="fetch")
         )
-        await session.commit()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
     return {"message": "Messages deleted successfully"}
 
 
-@router.get("/transactions")
+@router.get("/transactions", dependencies=[Depends(get_current_active_user)])
 async def get_transactions(
     flow_id: Annotated[UUID, Query()],
     session: DbSession,

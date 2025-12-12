@@ -1,7 +1,6 @@
 from collections import deque
 
 import pytest
-
 from lfx.components.input_output import ChatInput, ChatOutput, TextOutputComponent
 from lfx.graph import Graph
 from lfx.graph.graph.constants import Finish

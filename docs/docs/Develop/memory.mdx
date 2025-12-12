@@ -15,7 +15,7 @@ The default storage path depends on your operating system and installation metho
 
 - **Langflow Desktop**:
     - **macOS**: `/Users/<username>/.langflow/data/database.db`
-    - **Windows**: `C:\Users\<name>\AppData\Roaming\com.Langflow\data\langflow.db`
+    - **Windows**: `C:\Users\<name>\AppData\Roaming\com.LangflowDesktop\data\database.db`
 - **Langflow OSS**
     - **macOS/Windows/Linux/WSL with `uv pip install`**: `<path_to_venv>/lib/python3.12/site-packages/langflow/langflow.db` (Python version can vary. Database isn't shared between virtual environments because it is tied to the venv path.)
     - **macOS/Windows/Linux/WSL with `git clone`**: `<path_to_clone>/src/backend/base/langflow/langflow.db`
@@ -80,7 +80,9 @@ To fine-tune your database connection pool and timeout settings, you can set the
 
 * `LANGFLOW_DB_CONNECT_TIMEOUT`: The number of seconds to wait before giving up on a lock to be released or establishing a connection to the database. This may be separate from the `pool_timeout` in `LANGFLOW_DB_CONNECTION_SETTINGS`. Default: 30.
 
-* `LANGFLOW_DB_CONNECTION_SETTINGS`: A a JSON dictionary containing the following database connection pool settings:
+* `LANGFLOW_MIGRATION_LOCK_NAMESPACE`: Optional namespace identifier for PostgreSQL advisory lock during migrations. If not provided, a hash of the database URL will be used. Useful when multiple Langflow instances share the same database and need coordinated migration locking
+
+* `LANGFLOW_DB_CONNECTION_SETTINGS`: A JSON dictionary containing the following database connection pool settings:
 
     - `pool_size`: The base number of connections to keep open in the connection pool. Default: 20.
     - `max_overflow`: Maximum number of connections that can be created in excess of `pool_size` if needed. Default: 30.

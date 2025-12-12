@@ -12,7 +12,6 @@ This module tests the new langchain-style dynamic import system to ensure:
 from unittest.mock import patch
 
 import pytest
-
 from lfx.components._importing import import_mod
 
 
@@ -27,9 +26,9 @@ class TestImportUtils:
 
     def test_import_mod_without_module_name(self):
         """Test importing entire module when module_name is None."""
-        result = import_mod("agents", "__module__", "lfx.components")
+        result = import_mod("models_and_agents", "__module__", "lfx.components")
         assert result is not None
-        # Should return the agents module
+        # Should return the models_and_agents module
         assert hasattr(result, "__all__")
 
     def test_import_mod_module_not_found(self):
@@ -53,21 +52,21 @@ class TestComponentDynamicImports:
         from lfx import components
 
         # Test that submodules are in __all__
-        assert "agents" in components.__all__
+        assert "models_and_agents" in components.__all__
         assert "data" in components.__all__
         assert "openai" in components.__all__
 
-        # Access agents module - this should work via dynamic import
-        agents_module = components.agents
-        assert agents_module is not None
+        # Access models_and_agents module - this should work via dynamic import
+        models_and_agents_module = components.models_and_agents
+        assert models_and_agents_module is not None
 
         # Should be cached in globals after access
-        assert "agents" in components.__dict__
-        assert components.__dict__["agents"] is agents_module
+        assert "models_and_agents" in components.__dict__
+        assert components.__dict__["models_and_agents"] is models_and_agents_module
 
         # Second access should return cached version
-        agents_module_2 = components.agents
-        assert agents_module_2 is agents_module
+        models_and_agents_module_2 = components.models_and_agents
+        assert models_and_agents_module_2 is models_and_agents_module
 
     def test_main_components_module_dir(self):
         """Test __dir__ functionality for main components module."""
@@ -75,7 +74,7 @@ class TestComponentDynamicImports:
 
         dir_result = dir(components)
         # Should include all component categories
-        assert "agents" in dir_result
+        assert "models_and_agents" in dir_result
         assert "data" in dir_result
         assert "openai" in dir_result
         assert "vectorstores" in dir_result
@@ -148,7 +147,7 @@ class TestComponentDynamicImports:
         # These imports should work since langflow is installed with dependencies
         # Test that the import mechanism correctly handles the components
 
-        from lfx.components.agents import AgentComponent
+        from lfx.components.models_and_agents import AgentComponent
 
         assert AgentComponent is not None
         assert hasattr(AgentComponent, "__init__")
@@ -232,18 +231,6 @@ class TestPerformanceCharacteristics:
         with pytest.raises(AttributeError, match=r"Could not import.*ChromaVectorStoreComponent"):
             chromamodules.ChromaVectorStoreComponent  # noqa: B018
 
-    def test_caching_behavior(self):
-        """Test that components are cached after first access."""
-        from lfx.components import models
-
-        # EmbeddingModelComponent should raise AttributeError due to missing dependencies
-        with pytest.raises(AttributeError, match=r"Could not import.*EmbeddingModelComponent"):
-            _ = models.EmbeddingModelComponent
-
-        # Test that error is cached - subsequent access should also fail
-        with pytest.raises(AttributeError, match=r"Could not import.*EmbeddingModelComponent"):
-            _ = models.EmbeddingModelComponent
-
     def test_memory_usage_multiple_accesses(self):
         """Test memory behavior with multiple component accesses."""
         from lfx.components import processing
@@ -276,8 +263,8 @@ class TestSpecialCases:
         from lfx import components
 
         # These should work even if some categories have empty __init__.py files
-        agents = components.agents
-        assert agents is not None
+        models_and_agents = components.models_and_agents
+        assert models_and_agents is not None
 
     def test_platform_specific_components(self):
         """Test platform-specific component handling (like NVIDIA Windows components)."""

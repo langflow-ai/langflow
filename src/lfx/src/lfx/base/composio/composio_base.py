@@ -28,12 +28,70 @@ from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
+from lfx.utils.validate_cloud import raise_error_if_astra_cloud_disable_component
+
+disable_component_in_astra_cloud_msg = (
+    "Composio tools are not supported in Astra cloud environment. "
+    "Please use local storage mode or cloud-based versions of the tools."
+)
 
 
 class ComposioBaseComponent(Component):
     """Base class for Composio components with common functionality."""
 
     default_tools_limit: int = 5
+
+    # Reserved attribute names that conflict with Component base class
+    RESERVED_ATTRIBUTES: set[str] = {
+        # Core component attributes
+        "name",
+        "description",
+        "status",
+        "display_name",
+        "icon",
+        "priority",
+        "code",
+        "inputs",
+        "outputs",
+        "selected_output",
+        # Properties and methods
+        "trace_type",
+        "trace_name",
+        "function",
+        "repr_value",
+        "field_config",
+        "field_order",
+        "frozen",
+        "build_parameters",
+        "cache",
+        "tools_metadata",
+        "vertex",
+        # User and session attributes
+        "user_id",  # Already handled separately but included for completeness
+        "session_id",
+        "flow_id",
+        "flow_name",
+        "context",
+        # Common method names
+        "build",
+        "run",
+        "stop",
+        "start",
+        "validate",
+        "get_function",
+        "set_attributes",
+        # Additional common conflicts
+        "id",
+        "type",
+        "value",
+        "metadata",
+        "logs",
+        "results",
+        "artifacts",
+        "parameters",
+        "template",
+        "config",
+    }
 
     _base_inputs = [
         MessageTextInput(
@@ -67,6 +125,200 @@ class ComposioBaseComponent(Component):
             auth_tooltip="Please insert a valid Composio API Key.",
             show=False,
         ),
+        # Pre-defined placeholder fields for dynamic auth - hidden by default
+        SecretStrInput(
+            name="client_id",
+            display_name="Client ID",
+            info="",
+            show=False,
+            value="",
+            required=False,
+            real_time_refresh=True,
+        ),
+        SecretStrInput(
+            name="client_secret",
+            display_name="Client Secret",
+            info="",
+            show=False,
+            value="",
+            required=False,
+            real_time_refresh=True,
+        ),
+        StrInput(
+            name="verification_token",
+            display_name="Verification Token",
+            info="",
+            show=False,
+            value="",
+            required=False,
+            real_time_refresh=True,
+        ),
+        StrInput(
+            name="redirect_uri",
+            display_name="Redirect URI",
+            info="",
+            show=False,
+            value="",
+            required=False,
+            real_time_refresh=True,
+        ),
+        StrInput(
+            name="authorization_url",
+            display_name="Authorization URL",
+            info="",
+            show=False,
+            value="",
+            required=False,
+            real_time_refresh=True,
+        ),
+        StrInput(
+            name="token_url",
+            display_name="Token URL",
+            info="",
+            show=False,
+            value="",
+            required=False,
+            real_time_refresh=True,
+        ),
+        # API Key auth fields
+        SecretStrInput(
+            name="api_key_field",
+            display_name="API Key",
+            info="",
+            show=False,
+            value="",
+            required=False,
+            real_time_refresh=True,
+        ),
+        SecretStrInput(
+            name="generic_api_key",
+            display_name="API Key",
+            info="Enter API key on Composio page",
+            show=False,
+            value="",
+            required=False,
+            real_time_refresh=True,
+        ),
+        SecretStrInput(
+            name="token",
+            display_name="Token",
+            info="",
+            show=False,
+            value="",
+            required=False,
+            real_time_refresh=True,
+        ),
+        SecretStrInput(
+            name="access_token",
+            display_name="Access Token",
+            info="",
+            show=False,
+            value="",
+            required=False,
+            real_time_refresh=True,
+        ),
+        SecretStrInput(
+            name="refresh_token",
+            display_name="Refresh Token",
+            info="",
+            show=False,
+            value="",
+            required=False,
+            real_time_refresh=True,
+        ),
+        # Basic Auth fields
+        StrInput(
+            name="username",
+            display_name="Username",
+            info="",
+            show=False,
+            value="",
+            required=False,
+            real_time_refresh=True,
+        ),
+        SecretStrInput(
+            name="password",
+            display_name="Password",
+            info="",
+            show=False,
+            value="",
+            required=False,
+            real_time_refresh=True,
+        ),
+        # Other common auth fields
+        StrInput(
+            name="domain",
+            display_name="Domain",
+            info="",
+            show=False,
+            value="",
+            required=False,
+            real_time_refresh=True,
+        ),
+        StrInput(
+            name="base_url",
+            display_name="Base URL",
+            info="",
+            show=False,
+            value="",
+            required=False,
+            real_time_refresh=True,
+        ),
+        SecretStrInput(
+            name="bearer_token",
+            display_name="Bearer Token",
+            info="",
+            show=False,
+            value="",
+            required=False,
+            real_time_refresh=True,
+        ),
+        SecretStrInput(
+            name="authorization_code",
+            display_name="Authorization Code",
+            info="",
+            show=False,
+            value="",
+            required=False,
+            real_time_refresh=True,
+        ),
+        StrInput(
+            name="scopes",
+            display_name="Scopes",
+            info="",
+            show=False,
+            value="",
+            required=False,
+            real_time_refresh=True,
+        ),
+        # Add more common auth fields
+        StrInput(
+            name="subdomain",
+            display_name="Subdomain",
+            info="",
+            show=False,
+            value="",
+            required=False,
+            real_time_refresh=True,
+        ),
+        StrInput(
+            name="instance_url",
+            display_name="Instance URL",
+            info="",
+            show=False,
+            value="",
+            required=False,
+            real_time_refresh=True,
+        ),
+        StrInput(
+            name="tenant_id",
+            display_name="Tenant ID",
+            info="",
+            show=False,
+            value="",
+            required=False,
+            real_time_refresh=True,
+        ),
         SortableListInput(
             name="action_button",
             display_name="Action",
@@ -87,6 +339,23 @@ class ComposioBaseComponent(Component):
     # Class-level caches
     _actions_cache: dict[str, dict[str, Any]] = {}
     _action_schema_cache: dict[str, dict[str, Any]] = {}
+    # Track all auth field names discovered across all toolkits
+    _all_auth_field_names: set[str] = set()
+
+    @classmethod
+    def get_actions_cache(cls) -> dict[str, dict[str, Any]]:
+        """Get the class-level actions cache."""
+        return cls._actions_cache
+
+    @classmethod
+    def get_action_schema_cache(cls) -> dict[str, dict[str, Any]]:
+        """Get the class-level action schema cache."""
+        return cls._action_schema_cache
+
+    @classmethod
+    def get_all_auth_field_names(cls) -> set[str]:
+        """Get all auth field names discovered across toolkits."""
+        return cls._all_auth_field_names
 
     outputs = [
         Output(name="dataFrame", display_name="DataFrame", method="as_dataframe"),
@@ -117,6 +386,8 @@ class ComposioBaseComponent(Component):
         return Message(text=str(result))
 
     def as_dataframe(self) -> DataFrame:
+        # Check if we're in Astra cloud environment and raise an error if we are.
+        raise_error_if_astra_cloud_disable_component(disable_component_in_astra_cloud_msg)
         result = self.execute_action()
 
         if isinstance(result, dict):
@@ -160,6 +431,8 @@ class ComposioBaseComponent(Component):
 
     def _build_wrapper(self) -> Composio:
         """Build the Composio wrapper."""
+        # Check if we're in Astra cloud environment and raise an error if we are.
+        raise_error_if_astra_cloud_disable_component(disable_component_in_astra_cloud_msg)
         try:
             if not self.api_key:
                 msg = "Composio API Key is required"
@@ -207,11 +480,11 @@ class ComposioBaseComponent(Component):
 
         # Try to load from the class-level cache
         toolkit_slug = self.app_name.lower()
-        if toolkit_slug in self.__class__._actions_cache:
+        if toolkit_slug in self.__class__.get_actions_cache():
             # Deep-copy so that any mutation on this instance does not affect the
             # cached master copy.
-            self._actions_data = copy.deepcopy(self.__class__._actions_cache[toolkit_slug])
-            self._action_schemas = copy.deepcopy(self.__class__._action_schema_cache.get(toolkit_slug, {}))
+            self._actions_data = copy.deepcopy(self.__class__.get_actions_cache()[toolkit_slug])
+            self._action_schemas = copy.deepcopy(self.__class__.get_action_schema_cache().get(toolkit_slug, {}))
             logger.debug(f"Loaded actions for {toolkit_slug} from in-process cache")
             return
 
@@ -259,11 +532,17 @@ class ComposioBaseComponent(Component):
                     if parameters_schema is None:
                         logger.warning(f"Parameters schema is None for action key: {action_key}")
                         # Still add the action but with empty fields
+                        # Extract version information from the tool
+                        version = tool_dict.get("version")
+                        available_versions = tool_dict.get("available_versions", [])
+
                         self._action_schemas[action_key] = tool_dict
                         self._actions_data[action_key] = {
                             "display_name": display_name,
                             "action_fields": [],
                             "file_upload_fields": set(),
+                            "version": version,
+                            "available_versions": available_versions,
                         }
                         continue
 
@@ -277,11 +556,17 @@ class ComposioBaseComponent(Component):
                                 parameters_schema = parameters_schema.__dict__
                             else:
                                 logger.warning(f"Cannot process parameters schema for {action_key}, skipping")
+                                # Extract version information from the tool
+                                version = tool_dict.get("version")
+                                available_versions = tool_dict.get("available_versions", [])
+
                                 self._action_schemas[action_key] = tool_dict
                                 self._actions_data[action_key] = {
                                     "display_name": display_name,
                                     "action_fields": [],
                                     "file_upload_fields": set(),
+                                    "version": version,
+                                    "available_versions": available_versions,
                                 }
                                 continue
 
@@ -320,22 +605,34 @@ class ComposioBaseComponent(Component):
                                         elif field_name in original_descriptions:
                                             field_schema["description"] = original_descriptions[field_name]
                         except (KeyError, TypeError, ValueError):
+                            # Extract version information from the tool
+                            version = tool_dict.get("version")
+                            available_versions = tool_dict.get("available_versions", [])
+
                             self._action_schemas[action_key] = tool_dict
                             self._actions_data[action_key] = {
                                 "display_name": display_name,
                                 "action_fields": [],
                                 "file_upload_fields": set(),
+                                "version": version,
+                                "available_versions": available_versions,
                             }
                             continue
 
                         if flat_schema is None:
                             logger.warning(f"Flat schema is None for action key: {action_key}")
                             # Still add the action but with empty fields so the UI doesn't break
+                            # Extract version information from the tool
+                            version = tool_dict.get("version")
+                            available_versions = tool_dict.get("available_versions", [])
+
                             self._action_schemas[action_key] = tool_dict
                             self._actions_data[action_key] = {
                                 "display_name": display_name,
                                 "action_fields": [],
                                 "file_upload_fields": set(),
+                                "version": version,
+                                "available_versions": available_versions,
                             }
                             continue
 
@@ -378,13 +675,9 @@ class ComposioBaseComponent(Component):
                                 attachment_related_found = True
                                 continue  # Skip individual attachment fields
 
-                            # Handle conflicting field names - rename user_id to avoid conflicts with entity_id
-                            if clean_field == "user_id":
-                                clean_field = f"{self.app_name}_user_id"
-
-                            # Handle reserved attribute name conflicts (e.g., 'status', 'name')
+                            # Handle reserved attribute name conflicts
                             # Prefix with app name to prevent clashes with component attributes
-                            if clean_field in {"status", "name"}:
+                            if clean_field in self.RESERVED_ATTRIBUTES:
                                 clean_field = f"{self.app_name}_{clean_field}"
 
                             action_fields.append(clean_field)
@@ -408,20 +701,32 @@ class ComposioBaseComponent(Component):
                                     clean_field_name = p_name.replace("[0]", "")
                                     self._bool_variables.add(clean_field_name)
 
+                        # Extract version information from the tool
+                        version = tool_dict.get("version")
+                        available_versions = tool_dict.get("available_versions", [])
+
                         self._action_schemas[action_key] = tool_dict
                         self._actions_data[action_key] = {
                             "display_name": display_name,
                             "action_fields": action_fields,
                             "file_upload_fields": file_upload_fields,
+                            "version": version,
+                            "available_versions": available_versions,
                         }
 
                     except (KeyError, TypeError, ValueError) as flatten_error:
                         logger.error(f"flatten_schema failed for {action_key}: {flatten_error}")
+                        # Extract version information from the tool
+                        version = tool_dict.get("version")
+                        available_versions = tool_dict.get("available_versions", [])
+
                         self._action_schemas[action_key] = tool_dict
                         self._actions_data[action_key] = {
                             "display_name": display_name,
                             "action_fields": [],
                             "file_upload_fields": set(),
+                            "version": version,
+                            "available_versions": available_versions,
                         }
                         continue
 
@@ -434,8 +739,8 @@ class ComposioBaseComponent(Component):
 
             # Cache actions for this toolkit so subsequent component instances
             # can reuse them without hitting the Composio API again.
-            self.__class__._actions_cache[toolkit_slug] = copy.deepcopy(self._actions_data)
-            self.__class__._action_schema_cache[toolkit_slug] = copy.deepcopy(self._action_schemas)
+            self.__class__.get_actions_cache()[toolkit_slug] = copy.deepcopy(self._actions_data)
+            self.__class__.get_action_schema_cache()[toolkit_slug] = copy.deepcopy(self._action_schemas)
 
         except ValueError as e:
             logger.debug(f"Could not populate Composio actions for {self.app_name}: {e}")
@@ -475,6 +780,9 @@ class ComposioBaseComponent(Component):
             if parameters_schema.get("required") is None:
                 parameters_schema = parameters_schema.copy()  # Don't modify the original
                 parameters_schema["required"] = []
+
+            # Also get top-level required fields from original schema
+            original_required = set(parameters_schema.get("required", []))
 
             try:
                 # Preserve original descriptions before flattening to restore if lost
@@ -535,28 +843,16 @@ class ComposioBaseComponent(Component):
                     # Don't add individual attachment sub-fields to the schema
                     continue
 
-                # Handle conflicting field names - rename user_id to avoid conflicts with entity_id
-                if clean_field_name == "user_id":
-                    clean_field_name = f"{self.app_name}_user_id"
+                # Handle reserved attribute name conflicts
+                if clean_field_name in self.RESERVED_ATTRIBUTES:
+                    original_name = clean_field_name
+                    clean_field_name = f"{self.app_name}_{clean_field_name}"
                     # Update the field schema description to reflect the name change
                     field_schema_copy = field_schema.copy()
+                    original_description = field_schema.get("description", "")
                     field_schema_copy["description"] = (
-                        f"User ID for {self.app_name.title()}: " + field_schema["description"]
-                    )
-                elif clean_field_name == "status":
-                    clean_field_name = f"{self.app_name}_status"
-                    # Update the field schema description to reflect the name change
-                    field_schema_copy = field_schema.copy()
-                    field_schema_copy["description"] = f"Status for {self.app_name.title()}: " + field_schema.get(
-                        "description", ""
-                    )
-                elif clean_field_name == "name":
-                    clean_field_name = f"{self.app_name}_name"
-                    # Update the field schema description to reflect the name change
-                    field_schema_copy = field_schema.copy()
-                    field_schema_copy["description"] = f"Name for {self.app_name.title()}: " + field_schema.get(
-                        "description", ""
-                    )
+                        f"{original_name.replace('_', ' ').title()} for {self.app_name.title()}: {original_description}"
+                    ).strip()
                 else:
                     # Use the original field schema for all other fields
                     field_schema_copy = field_schema
@@ -582,12 +878,8 @@ class ComposioBaseComponent(Component):
                 cleaned_required = []
                 for field in flat_schema["required"]:
                     base = field.replace("[0]", "")
-                    if base == "user_id":
-                        cleaned_required.append(f"{self.app_name}_user_id")
-                    elif base == "status":
-                        cleaned_required.append(f"{self.app_name}_status")
-                    elif base == "name":
-                        cleaned_required.append(f"{self.app_name}_name")
+                    if base in self.RESERVED_ATTRIBUTES:
+                        cleaned_required.append(f"{self.app_name}_{base}")
                     else:
                         cleaned_required.append(base)
                 flat_schema["required"] = cleaned_required
@@ -683,9 +975,10 @@ class ComposioBaseComponent(Component):
                                 inp.advanced = True
 
                             # Skip entity_id being mapped to user_id parameter
-                            if inp.name == "user_id" and getattr(self, "entity_id", None) == getattr(
-                                inp, "value", None
-                            ):
+                            # Check both original name and renamed version
+                            if inp.name in {"user_id", f"{self.app_name}_user_id"} and getattr(
+                                self, "entity_id", None
+                            ) == getattr(inp, "value", None):
                                 continue
 
                             processed_inputs.append(inp)
@@ -699,6 +992,8 @@ class ComposioBaseComponent(Component):
                     if any(getattr(i, "name", None) == top_name for i in processed_inputs):
                         continue
                     top_schema = props_dict.get(top_name, {})
+                    # For MultilineInput fields (complex JSON objects/arrays)
+                    is_required = top_name in original_required
                     processed_inputs.append(
                         MultilineInput(
                             name=top_name,
@@ -706,7 +1001,7 @@ class ComposioBaseComponent(Component):
                             info=(
                                 top_schema.get("description") or "Provide JSON for this parameter (object or array)."
                             ),
-                            required=top_name in required_fields_set,
+                            required=is_required,  # Setting original schema
                         )
                     )
 
@@ -796,24 +1091,14 @@ class ComposioBaseComponent(Component):
         return auth_config.id
 
     def _initiate_connection(self, app_name: str) -> tuple[str, str]:
-        """Initiate OAuth connection and return (redirect_url, connection_id)."""
+        """Initiate connection using link method and return (redirect_url, connection_id)."""
         try:
             composio = self._build_wrapper()
 
-            auth_configs = composio.auth_configs.list(toolkit_slug=app_name)
-            if len(auth_configs.items) == 0:
-                auth_config_id = self.create_new_auth_config(app_name)
-            else:
-                auth_config_id = None
-                for auth_config in auth_configs.items:
-                    if auth_config.auth_scheme == "OAUTH2":
-                        auth_config_id = auth_config.id
+            # Always create a new auth config (previous behavior)
+            auth_config_id = self.create_new_auth_config(app_name)
 
-                auth_config_id = auth_configs.items[0].id
-
-            connection_request = composio.connected_accounts.initiate(
-                user_id=self.entity_id, auth_config_id=auth_config_id
-            )
+            connection_request = composio.connected_accounts.link(user_id=self.entity_id, auth_config_id=auth_config_id)
 
             redirect_url = getattr(connection_request, "redirect_url", None)
             connection_id = getattr(connection_request, "id", None)
@@ -826,12 +1111,12 @@ class ComposioBaseComponent(Component):
                 msg = "No connection ID received from Composio"
                 raise ValueError(msg)
 
-            logger.info(f"OAuth connection initiated for {app_name}: {redirect_url} (ID: {connection_id})")
+            logger.info(f"Connection initiated for {app_name}: {redirect_url} (ID: {connection_id})")
             return redirect_url, connection_id  # noqa: TRY300
 
         except (ValueError, ConnectionError, TypeError, AttributeError) as e:
             logger.error(f"Error initiating connection for {app_name}: {e}")
-            msg = f"Failed to initiate OAuth connection: {e}"
+            msg = f"Failed to initiate connection: {e}"
             raise ValueError(msg) from e
 
     def _check_connection_status_by_id(self, connection_id: str) -> str | None:
@@ -925,26 +1210,11 @@ class ComposioBaseComponent(Component):
             return self._toolkit_schema
         try:
             composio = self._build_wrapper()
-            # The SDK typically offers a retrieve by slug; if not present, try a few fallbacks
             app_slug = getattr(self, "app_name", "").lower()
             if not app_slug:
                 return None
-            try:
-                schema = composio.toolkits.retrieve(slug=app_slug)
-            except (AttributeError, ValueError, ConnectionError, TypeError):
-                schema = None
-                for method_name, kwargs in (
-                    ("retrieve", {"toolkit_slug": app_slug}),
-                    ("get", {"slug": app_slug}),
-                    ("get", {"toolkit_slug": app_slug}),
-                ):
-                    try:
-                        method = getattr(composio.toolkits, method_name)
-                        schema = method(**kwargs)
-                        if schema:
-                            break
-                    except (AttributeError, ValueError, ConnectionError, TypeError):
-                        continue
+            # Use the correct Composio SDK method
+            schema = composio.toolkits.get(slug=app_slug)
             self._toolkit_schema = self._to_plain_dict(schema)
         except (AttributeError, ValueError, ConnectionError, TypeError) as e:
             logger.debug(f"Could not retrieve toolkit schema for {getattr(self, 'app_name', '')}: {e}")
@@ -959,8 +1229,12 @@ class ComposioBaseComponent(Component):
         modes: list[str] = []
         # composio_managed_auth_schemes: list[str]
         managed = schema.get("composio_managed_auth_schemes") or schema.get("composioManagedAuthSchemes") or []
-        if isinstance(managed, list):
-            modes.extend([m for m in managed if isinstance(m, str)])
+        has_managed_schemes = isinstance(managed, list) and len(managed) > 0
+
+        # Add "Composio_Managed" as first option if there are managed schemes
+        if has_managed_schemes:
+            modes.append("Composio_Managed")
+
         # auth_config_details: list with entries containing mode
         details = schema.get("auth_config_details") or schema.get("authConfigDetails") or []
         for item in details:
@@ -1012,10 +1286,56 @@ class ComposioBaseComponent(Component):
         except (TypeError, ValueError, AttributeError) as e:
             logger.debug(f"Failed to render auth_mode dropdown: {e}")
 
+    def _insert_field_before_action_button(self, build_config: dict, field_name: str, field_data: dict) -> None:
+        """Insert a field in the correct position (before action_button) in build_config."""
+        # If field already exists, don't add it again
+        if field_name in build_config:
+            return
+
+        # If action_button doesn't exist, just add the field normally
+        if "action_button" not in build_config:
+            build_config[field_name] = field_data
+            return
+
+        # Find all the keys we need to preserve order for
+        keys_before_action = []
+        keys_after_action = []
+        found_action = False
+
+        for key in list(build_config.keys()):
+            if key == "action_button":
+                found_action = True
+                keys_after_action.append(key)
+            elif found_action:
+                keys_after_action.append(key)
+            else:
+                keys_before_action.append(key)
+
+        # Create new ordered dict
+        new_config = {}
+
+        # Add all fields before action_button
+        for key in keys_before_action:
+            new_config[key] = build_config[key]
+
+        # Add the new field
+        new_config[field_name] = field_data
+
+        # Add action_button and all fields after it
+        for key in keys_after_action:
+            new_config[key] = build_config[key]
+
+        # Clear and update build_config to maintain reference
+        build_config.clear()
+        build_config.update(new_config)
+
     def _clear_auth_dynamic_fields(self, build_config: dict) -> None:
         for fname in list(self._auth_dynamic_fields):
-            if fname in build_config:
-                build_config.pop(fname, None)
+            if fname in build_config and isinstance(build_config[fname], dict):
+                # Hide and reset instead of removing
+                build_config[fname]["show"] = False
+                build_config[fname]["value"] = ""
+                build_config[fname]["required"] = False
         self._auth_dynamic_fields.clear()
 
     def _add_text_field(
@@ -1028,19 +1348,61 @@ class ComposioBaseComponent(Component):
         required: bool,
         default_value: str | None = None,
     ) -> None:
-        """Add a simple text input (StrInput) for custom auth forms, prefilled with schema defaults when available."""
-        field = StrInput(
-            name=name,
-            display_name=display_name or name.replace("_", " ").title(),
-            info=info or "",
-            required=required,
-            real_time_refresh=True,
-            show=True,
-        ).to_dict()
-        if default_value is not None and default_value != "":
-            field["value"] = default_value
-        build_config[name] = field
+        """Update existing field or add new text input for custom auth forms."""
+        # Check if field already exists in build_config (pre-defined placeholder)
+        if name in build_config:
+            # Update existing field properties
+            build_config[name]["display_name"] = display_name or name.replace("_", " ").title()
+            build_config[name]["info"] = info or ""
+            build_config[name]["required"] = required
+            build_config[name]["show"] = True
+            if default_value is not None and default_value != "":
+                build_config[name]["value"] = default_value
+        else:
+            # Create new field if it doesn't exist
+            # Use SecretStrInput for sensitive fields
+            sensitive_fields = {
+                "client_id",
+                "client_secret",
+                "api_key",
+                "api_key_field",
+                "generic_api_key",
+                "token",
+                "access_token",
+                "refresh_token",
+                "password",
+                "bearer_token",
+                "authorization_code",
+            }
+
+            if name in sensitive_fields:
+                field = SecretStrInput(
+                    name=name,
+                    display_name=display_name or name.replace("_", " ").title(),
+                    info=info or "",
+                    required=required,
+                    real_time_refresh=True,
+                    show=True,
+                ).to_dict()
+            else:
+                field = StrInput(
+                    name=name,
+                    display_name=display_name or name.replace("_", " ").title(),
+                    info=info or "",
+                    required=required,
+                    real_time_refresh=True,
+                    show=True,
+                ).to_dict()
+
+            if default_value is not None and default_value != "":
+                field["value"] = default_value
+
+            # Insert the field in the correct position (before action_button)
+            self._insert_field_before_action_button(build_config, name, field)
+
         self._auth_dynamic_fields.add(name)
+        # Also add to class-level cache for better tracking
+        self.__class__.get_all_auth_field_names().add(name)
 
     def _render_custom_auth_fields(self, build_config: dict, schema: dict[str, Any], mode: str) -> None:
         """Render fields for custom auth based on schema auth_config_details sections."""
@@ -1053,35 +1415,31 @@ class ComposioBaseComponent(Component):
         if not selected:
             return
         fields = selected.get("fields") or {}
-        # a) AuthConfigCreation required fields for OAUTH2 custom
+
+        # Helper function to process fields
+        def process_fields(field_list: list, *, required: bool) -> None:
+            for field in field_list:
+                name = field.get("name")
+                if not name:
+                    continue
+                # Skip Access Token field (bearer_token)
+                if name == "bearer_token":
+                    continue
+                # Skip fields with default values for both required and optional fields
+                default_val = field.get("default")
+                if default_val is not None:
+                    continue
+                disp = field.get("display_name") or field.get("displayName") or name
+                desc = field.get("description")
+                self._add_text_field(build_config, name, disp, desc, required=required, default_value=default_val)
+
+        # Only process AuthConfigCreation fields (for custom OAuth2, etc.)
+        # Connection initiation fields are now handled on Composio page via link method
         creation = fields.get("auth_config_creation") or fields.get("authConfigCreation") or {}
-        for req in creation.get("required", []):
-            name = req.get("name")
-            if not name:
-                continue
-            disp = req.get("display_name") or req.get("displayName") or name
-            desc = req.get("description")
-            default_val = req.get("default")
-            self._add_text_field(build_config, name, disp, desc, required=True, default_value=default_val)
-        # Optional auth_config_creation fields intentionally not rendered
-        # b) ConnectedAccountInitiation fields for API_KEY mode
-        initiation = fields.get("connected_account_initiation") or fields.get("connectedAccountInitiation") or {}
-        for req in initiation.get("required", []):
-            name = req.get("name")
-            if not name:
-                continue
-            disp = req.get("display_name") or req.get("displayName") or name
-            desc = req.get("description")
-            default_val = req.get("default")
-            self._add_text_field(build_config, name, disp, desc, required=True, default_value=default_val)
-        for opt in initiation.get("optional", []):
-            name = opt.get("name")
-            if not name:
-                continue
-            disp = opt.get("display_name") or opt.get("displayName") or name
-            desc = opt.get("description")
-            default_val = opt.get("default")
-            self._add_text_field(build_config, name, disp, desc, required=False, default_value=default_val)
+        # Process required fields
+        process_fields(creation.get("required", []), required=True)
+        # Process optional fields (excluding those with defaults and bearer_token)
+        process_fields(creation.get("optional", []), required=False)
 
     def _collect_all_auth_field_names(self, schema: dict[str, Any] | None) -> set[str]:
         names: set[str] = set()
@@ -1102,6 +1460,8 @@ class ComposioBaseComponent(Component):
                         name = entry.get("name") if isinstance(entry, dict) else None
                         if name:
                             names.add(name)
+                            # Add to class-level cache for tracking all discovered auth fields
+                            self.__class__.get_all_auth_field_names().add(name)
         # Only use names discovered from the toolkit schema; do not add aliases
         return names
 
@@ -1166,7 +1526,7 @@ class ComposioBaseComponent(Component):
         # Check if we need to populate actions - but also check cache availability
         actions_available = bool(self._actions_data)
         toolkit_slug = getattr(self, "app_name", "").lower()
-        cached_actions_available = toolkit_slug in self.__class__._actions_cache
+        cached_actions_available = toolkit_slug in self.__class__.get_actions_cache()
 
         should_populate = False
 
@@ -1189,9 +1549,16 @@ class ComposioBaseComponent(Component):
             try:
                 selected_mode = (build_config.get("auth_mode") or {}).get("value")
                 managed = (schema or {}).get("composio_managed_auth_schemes") or []
-                if selected_mode and not (isinstance(managed, list) and selected_mode in managed):
+                # Don't render custom fields if "Composio_Managed" is selected
+                # For API_KEY and other token modes, no fields are needed as they use link method
+                token_modes = ["API_KEY", "BEARER_TOKEN", "BASIC"]
+                if selected_mode and selected_mode not in ["Composio_Managed", *token_modes]:
                     self._clear_auth_dynamic_fields(build_config)
                     self._render_custom_auth_fields(build_config, schema or {}, selected_mode)
+                    # Already reordered in _render_custom_auth_fields
+                elif selected_mode in token_modes:
+                    # Clear any existing auth fields for token-based modes
+                    self._clear_auth_dynamic_fields(build_config)
             except (TypeError, ValueError, AttributeError):
                 pass
 
@@ -1335,12 +1702,21 @@ class ComposioBaseComponent(Component):
                 build_config["create_auth_config"]["value"] = ""
                 build_config["create_auth_config"]["helper_text"] = ""
                 build_config["create_auth_config"]["options"] = ["create"]
-                if isinstance(managed, list) and mode in managed:
-                    # Managed → no extra fields
+                if mode == "Composio_Managed":
+                    # Composio_Managed → no extra fields needed
                     pass
+                elif mode in ["API_KEY", "BEARER_TOKEN", "BASIC"]:
+                    # Token-based modes → no fields needed, user enters on Composio page via link
+                    pass
+                elif isinstance(managed, list) and mode in managed:
+                    # This is a specific managed auth scheme (e.g., OAUTH2) but user can still choose custom
+                    # So we should render custom fields for this mode
+                    self._render_custom_auth_fields(build_config, schema, mode)
+                    # Already reordered in _render_custom_auth_fields
                 else:
                     # Custom → render only required fields based on the toolkit schema
                     self._render_custom_auth_fields(build_config, schema, mode)
+                    # Already reordered in _render_custom_auth_fields
                 return self.update_input_types(build_config)
 
         # Handle connection initiation when tool mode is enabled
@@ -1357,6 +1733,37 @@ class ComposioBaseComponent(Component):
                     build_config["auth_link"]["connection_id"] = connection_id
                     build_config["action_button"]["helper_text"] = ""
                     build_config["action_button"]["helper_text_metadata"] = {}
+
+                    # Clear auth fields when connected
+                    schema = self._get_toolkit_schema()
+                    self._clear_auth_fields_from_schema(build_config, schema)
+
+                    # Convert auth_mode to pill for connected state
+                    scheme, _ = self._get_connection_auth_info(connection_id)
+                    if scheme:
+                        build_config.setdefault("auth_mode", {})
+                        build_config["auth_mode"]["value"] = scheme
+                        build_config["auth_mode"]["options"] = [scheme]
+                        build_config["auth_mode"]["show"] = False
+                        try:
+                            pill = TabInput(
+                                name="auth_mode",
+                                display_name="Auth Mode",
+                                options=[scheme],
+                                value=scheme,
+                            ).to_dict()
+                            pill["show"] = True
+                            build_config["auth_mode"] = pill
+                        except (TypeError, ValueError, AttributeError):
+                            build_config["auth_mode"] = {
+                                "name": "auth_mode",
+                                "display_name": "Auth Mode",
+                                "type": "tab",
+                                "options": [scheme],
+                                "value": scheme,
+                                "show": True,
+                            }
+
                     logger.info(f"Using existing ACTIVE connection {connection_id} for {toolkit_slug}")
                     return self.update_input_types(build_config)
 
@@ -1365,6 +1772,13 @@ class ComposioBaseComponent(Component):
 
                 # Create new connection ONLY if we truly have no usable connection yet
                 if existing_active is None:
+                    # Check if we already have a redirect URL in progress
+                    current_auth_link_value = build_config.get("auth_link", {}).get("value", "")
+                    if current_auth_link_value and current_auth_link_value.startswith(("http://", "https://")):
+                        # We already have a redirect URL, don't create a new one
+                        logger.info(f"Redirect URL already exists for {toolkit_slug}, skipping new creation")
+                        return self.update_input_types(build_config)
+
                     try:
                         # Determine auth mode
                         schema = self._get_toolkit_schema()
@@ -1373,47 +1787,27 @@ class ComposioBaseComponent(Component):
                             mode = build_config["auth_mode"].get("value")
                         # If no managed default exists (400 Default auth config), require mode selection
                         managed = (schema or {}).get("composio_managed_auth_schemes") or []
-                        if isinstance(managed, list) and "OAUTH2" in managed and (mode is None or mode == "OAUTH2"):
+
+                        # Handle "Composio_Managed" mode explicitly
+                        if mode == "Composio_Managed":
+                            # Use Composio_Managed auth flow
                             redirect_url, connection_id = self._initiate_connection(toolkit_slug)
                             build_config["auth_link"]["value"] = redirect_url
                             logger.info(f"New OAuth URL created for {toolkit_slug}: {redirect_url}")
                             return self.update_input_types(build_config)
+
                         if not mode:
                             build_config["auth_link"]["value"] = "connect"
                             build_config["auth_link"]["auth_tooltip"] = "Select Auth Mode"
                             return self.update_input_types(build_config)
                         # Custom modes: create auth config and/or initiate with config
-                        # Validate required fields before creating any auth config
+                        # Only validate auth_config_creation fields for OAUTH2
                         required_missing = []
                         if mode == "OAUTH2":
                             req_names_pre = self._get_schema_field_names(
                                 schema,
                                 "OAUTH2",
                                 "auth_config_creation",
-                                "required",
-                            )
-                            for fname in req_names_pre:
-                                if fname in build_config:
-                                    val = build_config[fname].get("value")
-                                    if val in (None, ""):
-                                        required_missing.append(fname)
-                        elif mode == "API_KEY":
-                            req_names_pre = self._get_schema_field_names(
-                                schema,
-                                "API_KEY",
-                                "connected_account_initiation",
-                                "required",
-                            )
-                            for fname in req_names_pre:
-                                if fname in build_config:
-                                    val = build_config[fname].get("value")
-                                    if val in (None, ""):
-                                        required_missing.append(fname)
-                        else:
-                            req_names_pre = self._get_schema_field_names(
-                                schema,
-                                mode,
-                                "connected_account_initiation",
                                 "required",
                             )
                             for fname in req_names_pre:
@@ -1444,24 +1838,18 @@ class ComposioBaseComponent(Component):
                             # If an auth_config was already created via the button, use it and include initiation fields
                             stored_ac_id = (build_config.get("auth_link") or {}).get("auth_config_id")
                             if stored_ac_id:
-                                # Build val from schema-declared connected_account_initiation required + rendered fields
-                                val_payload = {}
-                                init_req = self._get_schema_field_names(
-                                    schema,
-                                    "OAUTH2",
-                                    "connected_account_initiation",
-                                    "required",
-                                )
-                                candidate_names = set(self._auth_dynamic_fields) | init_req
-                                for fname in candidate_names:
-                                    if fname in build_config:
-                                        v = build_config[fname].get("value")
-                                        if v not in (None, ""):
-                                            val_payload[fname] = v
-                                redirect = composio.connected_accounts.initiate(
+                                # Check if we already have a redirect URL to prevent duplicates
+                                current_link_value = build_config.get("auth_link", {}).get("value", "")
+                                if current_link_value and current_link_value.startswith(("http://", "https://")):
+                                    logger.info(
+                                        f"Redirect URL already exists for {toolkit_slug} OAUTH2, skipping new creation"
+                                    )
+                                    return self.update_input_types(build_config)
+
+                                # Use link method - no need to collect connection initiation fields
+                                redirect = composio.connected_accounts.link(
                                     user_id=self.entity_id,
                                     auth_config_id=stored_ac_id,
-                                    config={"auth_scheme": "OAUTH2", "val": val_payload} if val_payload else None,
                                 )
                                 redirect_url = getattr(redirect, "redirect_url", None)
                                 connection_id = getattr(redirect, "id", None)
@@ -1472,6 +1860,9 @@ class ComposioBaseComponent(Component):
                                 # Clear action blocker text on successful initiation
                                 build_config["action_button"]["helper_text"] = ""
                                 build_config["action_button"]["helper_text_metadata"] = {}
+                                # Clear any auth fields
+                                schema = self._get_toolkit_schema()
+                                self._clear_auth_fields_from_schema(build_config, schema)
                                 return self.update_input_types(build_config)
                             # Otherwise, create custom OAuth2 auth config using schema-declared required fields
                             credentials = {}
@@ -1492,6 +1883,14 @@ class ComposioBaseComponent(Component):
                                     else:
                                         missing.append(fname)
                             # proceed even if missing optional; backend will validate
+                            # Check if we already have a redirect URL to prevent duplicates
+                            current_link_value = build_config.get("auth_link", {}).get("value", "")
+                            if current_link_value and current_link_value.startswith(("http://", "https://")):
+                                logger.info(
+                                    f"Redirect URL already exists for {toolkit_slug} OAUTH2, skipping new creation"
+                                )
+                                return self.update_input_types(build_config)
+
                             ac = composio.auth_configs.create(
                                 toolkit=toolkit_slug,
                                 options={
@@ -1501,30 +1900,8 @@ class ComposioBaseComponent(Component):
                                 },
                             )
                             auth_config_id = getattr(ac, "id", None)
-                            # If the schema declares initiation required fields, render them and defer initiation
-                            init_req = self._get_schema_field_names(
-                                schema,
-                                "OAUTH2",
-                                "connected_account_initiation",
-                                "required",
-                            )
-                            if init_req:
-                                self._clear_auth_dynamic_fields(build_config)
-                                for name in init_req:
-                                    self._add_text_field(
-                                        build_config,
-                                        name=name,
-                                        display_name=name.replace("_", " ").title(),
-                                        info="Provide connection parameter",
-                                        required=True,
-                                    )
-                                build_config.setdefault("auth_link", {})
-                                build_config["auth_link"]["auth_config_id"] = auth_config_id
-                                build_config["auth_link"]["value"] = "connect"
-                                build_config["auth_link"]["auth_tooltip"] = "Connect"
-                                return self.update_input_types(build_config)
-                            # Otherwise initiate immediately
-                            redirect = composio.connected_accounts.initiate(
+                            # Use link method directly - no need to check for connection initiation fields
+                            redirect = composio.connected_accounts.link(
                                 user_id=self.entity_id,
                                 auth_config_id=auth_config_id,
                             )
@@ -1541,84 +1918,64 @@ class ComposioBaseComponent(Component):
                             build_config["action_button"]["helper_text_metadata"] = {}
                             return self.update_input_types(build_config)
                         if mode == "API_KEY":
+                            # Check if we already have a redirect URL to prevent duplicates
+                            current_link_value = build_config.get("auth_link", {}).get("value", "")
+                            if current_link_value and current_link_value.startswith(("http://", "https://")):
+                                logger.info(
+                                    f"Redirect URL already exists for {toolkit_slug} API_KEY, skipping new creation"
+                                )
+                                return self.update_input_types(build_config)
+
                             ac = composio.auth_configs.create(
                                 toolkit=toolkit_slug,
                                 options={"type": "use_custom_auth", "auth_scheme": "API_KEY", "credentials": {}},
                             )
                             auth_config_id = getattr(ac, "id", None)
-                            # Build initiation config.val from schema-declared required names and dynamic fields
-                            val_payload = {}
-                            missing = []
-                            # Collect required names from schema
-                            req_names = self._get_schema_field_names(
-                                schema,
-                                "API_KEY",
-                                "connected_account_initiation",
-                                "required",
-                            )
-                            # Merge rendered dynamic fields and schema-required names
-                            candidate_names = set(self._auth_dynamic_fields) | req_names
-                            for fname in candidate_names:
-                                if fname in build_config:
-                                    val = build_config[fname].get("value")
-                                    if val not in (None, ""):
-                                        val_payload[fname] = val
-                                    else:
-                                        missing.append(fname)
-                            initiation = composio.connected_accounts.initiate(
+                            # Use link method - user will enter API key on Composio page
+                            initiation = composio.connected_accounts.link(
                                 user_id=self.entity_id,
                                 auth_config_id=auth_config_id,
-                                config={"auth_scheme": "API_KEY", "val": val_payload},
                             )
                             connection_id = getattr(initiation, "id", None)
                             redirect_url = getattr(initiation, "redirect_url", None)
-                            # Do not store connection_id on initiation; only when ACTIVE
+                            # API_KEY now also returns redirect URL with new link method
                             if redirect_url:
                                 build_config["auth_link"]["value"] = redirect_url
                                 build_config["auth_link"]["auth_tooltip"] = "Disconnect"
-                            else:
-                                # No redirect for API_KEY; mark as connected
-                                build_config["auth_link"]["value"] = "validated"
-                                build_config["auth_link"]["auth_tooltip"] = "Disconnect"
-                            # In both cases, hide auth fields immediately after successful initiation
+                            # Hide auth fields immediately after successful initiation
                             schema = self._get_toolkit_schema()
                             self._clear_auth_fields_from_schema(build_config, schema)
                             build_config["action_button"]["helper_text"] = ""
                             build_config["action_button"]["helper_text_metadata"] = {}
+
                             return self.update_input_types(build_config)
                         # Generic custom auth flow for any other mode (treat like API_KEY)
+                        # Check if we already have a redirect URL to prevent duplicates
+                        current_link_value = build_config.get("auth_link", {}).get("value", "")
+                        if current_link_value and current_link_value.startswith(("http://", "https://")):
+                            logger.info(f"Redirect URL already exists for {toolkit_slug} {mode}, skipping new creation")
+                            return self.update_input_types(build_config)
+
                         ac = composio.auth_configs.create(
                             toolkit=toolkit_slug,
                             options={"type": "use_custom_auth", "auth_scheme": mode, "credentials": {}},
                         )
                         auth_config_id = getattr(ac, "id", None)
-                        val_payload = {}
-                        req_names = self._get_schema_field_names(
-                            schema,
-                            mode,
-                            "connected_account_initiation",
-                            "required",
-                        )
-                        candidate_names = set(self._auth_dynamic_fields) | req_names
-                        for fname in candidate_names:
-                            if fname in build_config:
-                                val = build_config[fname].get("value")
-                                if val not in (None, ""):
-                                    val_payload[fname] = val
-                        initiation = composio.connected_accounts.initiate(
+                        # Use link method - user will enter required fields on Composio page
+                        initiation = composio.connected_accounts.link(
                             user_id=self.entity_id,
                             auth_config_id=auth_config_id,
-                            config={"auth_scheme": mode, "val": val_payload},
                         )
                         connection_id = getattr(initiation, "id", None)
                         redirect_url = getattr(initiation, "redirect_url", None)
-                        # Do not store connection_id on initiation; only when ACTIVE
                         if redirect_url:
                             build_config["auth_link"]["value"] = redirect_url
                             build_config["auth_link"]["auth_tooltip"] = "Disconnect"
-                        else:
-                            build_config["auth_link"]["value"] = "validated"
-                            build_config["auth_link"]["auth_tooltip"] = "Disconnect"
+                        # Clear auth fields
+                        schema = self._get_toolkit_schema()
+                        self._clear_auth_fields_from_schema(build_config, schema)
+                        build_config["action_button"]["helper_text"] = ""
+                        build_config["action_button"]["helper_text_metadata"] = {}
                         return self.update_input_types(build_config)
                     except (ValueError, ConnectionError, TypeError) as e:
                         logger.error(f"Error creating connection: {e}")
@@ -1744,18 +2101,27 @@ class ComposioBaseComponent(Component):
             build_config.setdefault("auth_link", {})
             build_config["auth_link"]["show"] = False
             build_config["auth_link"]["display_name"] = ""
-            try:
-                schema = self._get_toolkit_schema()
-                mode = (build_config.get("auth_mode") or {}).get("value")
-                managed = (schema or {}).get("composio_managed_auth_schemes") or []
-                if (
-                    mode
-                    and not (isinstance(managed, list) and mode in managed)
-                    and not getattr(self, "_auth_dynamic_fields", set())
-                ):
-                    self._render_custom_auth_fields(build_config, schema or {}, mode)
-            except (TypeError, ValueError, AttributeError):
-                pass
+
+            # Only render auth fields if NOT already connected
+            active_connection = self._find_active_connection_for_app(self.app_name)
+            if not active_connection:
+                try:
+                    schema = self._get_toolkit_schema()
+                    mode = (build_config.get("auth_mode") or {}).get("value")
+                    managed = (schema or {}).get("composio_managed_auth_schemes") or []
+                    token_modes = ["API_KEY", "BEARER_TOKEN", "BASIC"]
+                    if (
+                        mode
+                        and mode not in ["Composio_Managed", *token_modes]
+                        and not getattr(self, "_auth_dynamic_fields", set())
+                    ):
+                        self._render_custom_auth_fields(build_config, schema or {}, mode)
+                        # Already reordered in _render_custom_auth_fields
+                except (TypeError, ValueError, AttributeError):
+                    pass
+            else:
+                # If connected, clear any auth fields that might be showing
+                self._clear_auth_dynamic_fields(build_config)
             # Do NOT return here; allow auth flow to run in Tool Mode
 
         if field_name == "tool_mode":
@@ -1793,6 +2159,12 @@ class ComposioBaseComponent(Component):
         # Handle auth config button click
         if field_name == "create_auth_config" and field_value == "create":
             try:
+                # Check if we already have a redirect URL to prevent duplicates
+                current_link_value = build_config.get("auth_link", {}).get("value", "")
+                if current_link_value and current_link_value.startswith(("http://", "https://")):
+                    logger.info("Redirect URL already exists, skipping new auth config creation")
+                    return self.update_input_types(build_config)
+
                 composio = self._build_wrapper()
                 toolkit_slug = self.app_name.lower()
                 schema = self._get_toolkit_schema() or {}
@@ -1813,29 +2185,8 @@ class ComposioBaseComponent(Component):
                 auth_config_id = getattr(ac, "id", None)
                 build_config.setdefault("auth_link", {})
                 if auth_config_id:
-                    # Check if there are connection initiation required fields
-                    initiation_required = self._get_schema_field_names(
-                        schema, "OAUTH2", "connected_account_initiation", "required"
-                    )
-                    if initiation_required:
-                        # Populate those fields dynamically for the user to fill
-                        self._clear_auth_dynamic_fields(build_config)
-                        for name in initiation_required:
-                            # Render as text inputs to collect connection fields
-                            self._add_text_field(
-                                build_config,
-                                name=name,
-                                display_name=name.replace("_", " ").title(),
-                                info="Provide connection parameter",
-                                required=True,
-                            )
-                        # Store the new auth_config_id so pressing Connect will use it
-                        build_config["auth_link"]["auth_config_id"] = auth_config_id
-                        build_config["auth_link"]["value"] = "connect"
-                        build_config["auth_link"]["auth_tooltip"] = "Connect"
-                        return self.update_input_types(build_config)
-                    # If no initiation fields required, initiate immediately
-                    connection_request = composio.connected_accounts.initiate(
+                    # Use link method directly - no need to check for connection initiation fields
+                    connection_request = composio.connected_accounts.link(
                         user_id=self.entity_id, auth_config_id=auth_config_id
                     )
                     redirect_url = getattr(connection_request, "redirect_url", None)
@@ -1942,6 +2293,36 @@ class ComposioBaseComponent(Component):
             build_config["auth_link"]["auth_tooltip"] = "Disconnect"
             build_config["action_button"]["helper_text"] = ""
             build_config["action_button"]["helper_text_metadata"] = {}
+
+            # Clear auth fields when connected
+            schema = self._get_toolkit_schema()
+            self._clear_auth_fields_from_schema(build_config, schema)
+
+            # Convert auth_mode to pill for connected state
+            scheme, _ = self._get_connection_auth_info(active_connection_id)
+            if scheme:
+                build_config.setdefault("auth_mode", {})
+                build_config["auth_mode"]["value"] = scheme
+                build_config["auth_mode"]["options"] = [scheme]
+                build_config["auth_mode"]["show"] = False
+                try:
+                    pill = TabInput(
+                        name="auth_mode",
+                        display_name="Auth Mode",
+                        options=[scheme],
+                        value=scheme,
+                    ).to_dict()
+                    pill["show"] = True
+                    build_config["auth_mode"] = pill
+                except (TypeError, ValueError, AttributeError):
+                    build_config["auth_mode"] = {
+                        "name": "auth_mode",
+                        "display_name": "Auth Mode",
+                        "type": "tab",
+                        "options": [scheme],
+                        "value": scheme,
+                        "show": True,
+                    }
         elif stored_connection_id:
             status = self._check_connection_status_by_id(stored_connection_id)
             if status == "INITIATED":
@@ -2012,6 +2393,8 @@ class ComposioBaseComponent(Component):
 
     def execute_action(self):
         """Execute the selected Composio tool."""
+        # Check if we're in Astra cloud environment and raise an error if we are.
+        raise_error_if_astra_cloud_disable_component(disable_component_in_astra_cloud_msg)
         composio = self._build_wrapper()
         self._populate_actions_data()
         self._build_action_maps()
@@ -2072,21 +2455,31 @@ class ComposioBaseComponent(Component):
 
                 # Handle renamed fields - map back to original names for API execution
                 final_field_name = field
-                if field.endswith("_user_id") and field.startswith(self.app_name):
-                    final_field_name = "user_id"
-                elif field == f"{self.app_name}_status":
-                    final_field_name = "status"
-                elif field == f"{self.app_name}_name":
-                    final_field_name = "name"
+                # Check if this is a renamed reserved attribute
+                if field.startswith(f"{self.app_name}_"):
+                    potential_original = field[len(self.app_name) + 1 :]  # Remove app_name prefix
+                    if potential_original in self.RESERVED_ATTRIBUTES:
+                        final_field_name = potential_original
 
                 arguments[final_field_name] = value
 
-            # Execute using new SDK
-            result = composio.tools.execute(
-                slug=action_key,
-                arguments=arguments,
-                user_id=self.entity_id,
-            )
+            # Get the version from the action data
+            version = self._actions_data.get(action_key, {}).get("version")
+            if version:
+                logger.info(f"Executing {action_key} with version: {version}")
+
+            # Execute using new SDK with version parameter
+            execute_params = {
+                "slug": action_key,
+                "arguments": arguments,
+                "user_id": self.entity_id,
+            }
+
+            # Only add version if it's available
+            if version:
+                execute_params["version"] = version
+
+            result = composio.tools.execute(**execute_params)
 
             if isinstance(result, dict) and "successful" in result:
                 if result["successful"]:
@@ -2177,7 +2570,7 @@ class ComposioBaseComponent(Component):
                 build_config[fname]["value"] = "" if fname not in self._bool_variables else False
         # Hide any other visible, non-protected fields that look like parameters
         protected = {
-            "code",
+            # Component control fields
             "entity_id",
             "api_key",
             "auth_link",
@@ -2186,7 +2579,39 @@ class ComposioBaseComponent(Component):
             "auth_mode",
             "auth_mode_pill",
             "create_auth_config",
+            # Pre-defined auth fields
+            "client_id",
+            "client_secret",
+            "verification_token",
+            "redirect_uri",
+            "authorization_url",
+            "token_url",
+            "api_key_field",
+            "generic_api_key",
+            "token",
+            "access_token",
+            "refresh_token",
+            "username",
+            "password",
+            "domain",
+            "base_url",
+            "bearer_token",
+            "authorization_code",
+            "scopes",
+            "subdomain",
+            "instance_url",
+            "tenant_id",
         }
+        # Add all reserved Component attributes to protected set
+        protected.update(self.RESERVED_ATTRIBUTES)
+        # Also add the renamed versions (with app_name prefix) to protected set
+        for attr in self.RESERVED_ATTRIBUTES:
+            protected.add(f"{self.app_name}_{attr}")
+        # Add all dynamic auth fields to protected set
+        protected.update(self._auth_dynamic_fields)
+        # Also protect any auth fields discovered across all instances
+        protected.update(self.__class__.get_all_auth_field_names())
+
         for key, cfg in list(build_config.items()):
             if key in protected:
                 continue
