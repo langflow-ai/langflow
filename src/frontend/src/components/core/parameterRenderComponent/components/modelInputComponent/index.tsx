@@ -332,13 +332,18 @@ export default function ModelInputComponent({
     </Button>
   );
 
-  const renderSelectedIcon = () =>
-    selectedModel?.icon ? (
+  const renderSelectedIcon = () => {
+    if (disabled || options.length === 0) {
+      return null;
+    }
+
+    return selectedModel?.icon ? (
       <ForwardedIconComponent
-        name={selectedModel.icon}
+        name={selectedModel.icon || "Bot"}
         className="h-4 w-4 flex-shrink-0"
       />
     ) : null;
+  };
 
   // Renders either a "Setup Provider" button (no providers) or the model selector dropdown trigger
   const renderTriggerButton = () =>

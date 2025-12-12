@@ -180,16 +180,19 @@ export function useRefreshModelInputs() {
   const queryClient = useQueryClient();
   const isRefreshingRef = useRef(false);
 
-  const refresh = useCallback(async () => {
-    if (isRefreshingRef.current) return;
-    isRefreshingRef.current = true;
+  const refresh = useCallback(
+    async (options?: RefreshOptions) => {
+      if (isRefreshingRef.current) return;
+      isRefreshingRef.current = true;
 
-    try {
-      await refreshAllModelInputs(queryClient);
-    } finally {
-      isRefreshingRef.current = false;
-    }
-  }, [queryClient]);
+      try {
+        await refreshAllModelInputs(queryClient, options);
+      } finally {
+        isRefreshingRef.current = false;
+      }
+    },
+    [queryClient],
+  );
 
   return {
     refresh,

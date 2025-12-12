@@ -243,7 +243,7 @@ const ModelProviderModal = ({
   };
 
   const handleClose = () => {
-    refreshAllModelInputs();
+    refreshAllModelInputs({ silent: true });
     onClose();
   };
 
