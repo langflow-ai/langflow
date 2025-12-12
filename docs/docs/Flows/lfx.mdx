@@ -48,7 +48,7 @@ If you have [installed Langflow OSS version >=1.6](/get-started-installation#ins
    cd langflow/src/lfx
    ```
 
-   From this directory, you can run `lfx` commands as shown in [`lfx serve`](#serve) or [`lfx run`](#run).
+   From this directory, you can run `lfx` commands using `uv run lfx` as shown in [`lfx serve`](#serve) or [`lfx run`](#run).
 
 </TabItem>
 <TabItem value="pypi" label="Install from PyPI">
@@ -291,11 +291,12 @@ If you want to use a different provider, edit the model provider, model name, an
 
     This flow expects a [Message](/data-types#message) input, which is a simple text string.
 
-    If your flow expects multiple structured input fields, you can pass structured JSON with the `--input-value` flag. The field names must match what your flow expects:
+    You can also use the `--input-value` flag instead of a positional argument:
     ```bash
-    uv run lfx run structured-input-flow.json \
-      --input-value '{"question": "What is the weather in Paris?", "context": "weather"}'
+    uv run lfx run simple-agent-flow.json --input-value "Hello world"
     ```
+
+    The `--input-value` flag is required when using `--stdin` or `--flow-json` options, since those options use the positional argument for the flow definition instead of the input value.
 
 In addition to running flows from JSON files, `lfx run` supports other input methods, which are described in the following sections.
 
@@ -303,9 +304,9 @@ In addition to running flows from JSON files, `lfx run` supports other input met
 
 The `--stdin` option allows you to run flows that come from dynamic sources such as APIs or databases, or when you want to modify a flow before execution.
 The command reads the flow's JSON definition from `stdin`, validates the JSON structure, and runs the flow.
+The `--input-value` flag is required when using `--stdin`.
 
 This example reads a flow JSON from stdin.
-Provide the input value to the flow with the `--input-value` flag.
 ```bash
 cat simple-agent-flow.json | uv run lfx run --stdin \
   --input-value "Hello world" \
@@ -329,7 +330,9 @@ cat simple-agent-flow.json | jq '(.data.nodes[] | select(.data.node.template.mod
 
 ### Run flows with inline JSON
 
-Instead of piping from `stdin` or reading from a JSON file, you can pass the flow JSON directly as a string argument:
+Instead of piping from `stdin` or reading from a JSON file, you can pass the flow JSON directly as a string argument.
+The `--input-value` flag is required when using `--flow-json`.
+
 ```bash
 uv run lfx run --flow-json '{"data": {"nodes": [...], "edges": [...]}}' \
   --input-value "Hello world"
@@ -350,6 +353,10 @@ uv run lfx run --flow-json '{"data": {"nodes": [...], "edges": [...]}}' \
 | `-vvv`                                         | Show full debugging output including component logs.                                            |
 
 ### Use LFX run to create an application
+
+:::info
+This feature is still a work in progress.
+:::
 
 In addition to running flows from JSON files, you can use `lfx run` with Python scripts that define flows programmatically.
 This approach allows you to create flows directly in Python code without the visual builder.
