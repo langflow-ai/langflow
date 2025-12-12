@@ -137,7 +137,6 @@ export const useMcpServer = ({
       setS((prev) => ({ ...prev, isGeneratingApiKey: true }));
       const { createApiKey } = await import("@/controllers/API");
       const res = await createApiKey(`MCP Server ${folderName ?? ""}`);
-      console.log("res", res);
       if (res?.api_key) {
         setS((prev) => ({ ...prev, apiKey: res.api_key }));
       }
