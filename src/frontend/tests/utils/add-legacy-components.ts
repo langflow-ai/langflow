@@ -8,7 +8,7 @@ export const addLegacyComponents = async (page: Page) => {
     '[data-testid="sidebar-legacy-switch"][data-state="checked"]',
     {
       timeout: 5000,
-    }
+    },
   );
   await page.getByTestId("sidebar-options-trigger").click();
 };
