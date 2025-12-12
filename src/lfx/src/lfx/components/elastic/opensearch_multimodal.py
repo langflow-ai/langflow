@@ -12,7 +12,6 @@ from opensearchpy.exceptions import OpenSearchException, RequestError
 
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.base.vectorstores.vector_store_connection_decorator import vector_store_connection
-from lfx.inputs.inputs import DictInput
 from lfx.io import (
     BoolInput,
     DropdownInput,
@@ -360,7 +359,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         Raises:
             ValueError: If 'query' is not a valid OpenSearch query (must be a non-empty dict).
         """
-        query =self.search_query
+        query = self.search_query
         if isinstance(query, str):
             query = json.loads(query)
         client = self.build_client()
@@ -369,12 +368,11 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
             body=query,
             params={"terminate_after": 0},
         )
+
         # Remove any _source keys whose value is a list of floats (embedding vectors)
         def is_vector(val):
             # Accepts if it's a list of numbers (float or int) and has reasonable vector length (>3)
-            return (
-                isinstance(val, list) and len(val) > 3 and all(isinstance(x, (float, int)) for x in val)
-            )
+            return isinstance(val, list) and len(val) > 3 and all(isinstance(x, (float, int)) for x in val)
 
         if "hits" in resp and "hits" in resp["hits"]:
             for hit in resp["hits"]["hits"]:
