@@ -173,8 +173,7 @@ async def run_flow_for_openai_responses(
                                         type_="processing_error",
                                     )
                                     yield f"data: {json.dumps(error_response)}\n\n"
-                                    # Stop the stream on error
-                                    return
+
                                 if event_type == "add_message":
                                     sender_name = data.get("sender_name", "")
                                     text = data.get("text", "")
