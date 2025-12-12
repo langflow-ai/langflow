@@ -1806,11 +1806,7 @@
                 "dynamic": false,
                 "info": "Select your model provider",
                 "name": "model",
-                "options": [
-                  "text-embedding-3-small",
-                  "text-embedding-3-large",
-                  "text-embedding-ada-002"
-                ],
+                "options": [],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": true,
