@@ -135,7 +135,7 @@ dependencies = [
     "fastparquet>=2024.11.0,<2025.0.0",
     "traceloop-sdk>=0.43.1,<1.0.0",
     "vlmrun[all]>=0.2.0",
-    "cuga~=0.2.4",
+    "cuga",
     "agent-lifecycle-toolkit~=0.4.4",
     "astrapy>=2.1.0,<3.0.0",
     "aioboto3>=15.2.0,<16.0.0"
@@ -195,6 +195,8 @@ dev = [
 [tool.uv.sources]
 langflow-base = { workspace = true }
 langflow = { workspace = true }
+cuga = { path = "../cuga-agent", editable = true }
+
 
 lfx = { workspace = true }
 
