@@ -80,9 +80,8 @@ export const ColorPickerButtons = memo(
             <div
               className="absolute inset-0"
               style={{
-                background: isCustomColor
-                  ? bgColor
-                  : "conic-gradient(from 0deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)",
+                background:
+                  "conic-gradient(from 0deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)",
               }}
             />
           </div>
