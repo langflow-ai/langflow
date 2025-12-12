@@ -348,7 +348,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         Output(display_name="Raw Search", name="raw_search", method="raw_search"),
     ]
 
-    def raw_search(self, query: str | None = None) -> Data:
+    def raw_search(self) -> Data:
         """Execute a raw OpenSearch query against the target index.
 
         Args:
@@ -360,6 +360,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         Raises:
             ValueError: If 'query' is not a valid OpenSearch query (must be a non-empty dict).
         """
+        query =self.search_query
         if isinstance(query, str):
             query = json.loads(query)
         client = self.build_client()
