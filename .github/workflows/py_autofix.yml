@@ -27,22 +27,44 @@ jobs:
       - name: Check if last commit is from autofix bot
         id: check_autofix
         run: |
+          set -euo pipefail
+
+          # Try to get author info from the event payload first
+          LAST_AUTHOR_NAME=""
+          LAST_AUTHOR_EMAIL=""
           if [ -f "$GITHUB_EVENT_PATH" ]; then
-            AUTHOR_NAME=$(jq -r '.pull_request.head.repo.owner.login // .head_commit.author.name' "$GITHUB_EVENT_PATH" || echo "")
-            # If triggered by PR, the head commit author isn't always directly available in top-level head_commit for all event types, 
-            # but for 'pull_request' events, we might need to inspect the PR object or just rely on git log with correct ref.
-            # However, the user suggestion specifically mentioned .head_commit.author.name. 
-            # Let's try the user's snippet which captures email too for robustness.
-            LAST_AUTHOR_EMAIL=$(jq -r '.head_commit.author.email // .pull_request.head.user.email // ""' "$GITHUB_EVENT_PATH")
-            LAST_AUTHOR_NAME=$(jq -r '.head_commit.author.name // .pull_request.head.user.login // ""' "$GITHUB_EVENT_PATH")
-          else
-             # Fallback just in case
-             LAST_AUTHOR_NAME="$(git log -1 --pretty=format:'%an')"
+            LAST_AUTHOR_NAME=$(jq -r '.head_commit.author.name // .pull_request.head.user.login // ""' "$GITHUB_EVENT_PATH" 2>/dev/null || echo "")
+            LAST_AUTHOR_EMAIL=$(jq -r '.head_commit.author.email // .pull_request.head.user.email // ""' "$GITHUB_EVENT_PATH" 2>/dev/null || echo "")
+          fi
+
+          # Fallback to git to ensure we have exact last commit author if payload is incomplete
+          if [ -z "${LAST_AUTHOR_NAME}" ] || [ "${LAST_AUTHOR_NAME}" = "null" ]; then
+            LAST_AUTHOR_NAME=$(git log -1 --pretty=format:'%an' || echo "")
+          fi
+          if [ -z "${LAST_AUTHOR_EMAIL}" ] || [ "${LAST_AUTHOR_EMAIL}" = "null" ]; then
+            LAST_AUTHOR_EMAIL=$(git log -1 --pretty=format:'%ae' || echo "")
           fi
 
           echo "Detected Last Author: $LAST_AUTHOR_NAME <$LAST_AUTHOR_EMAIL>"
 
-          if [[ "$LAST_AUTHOR_NAME" == "autofix-ci[bot]" ]] || [[ "$LAST_AUTHOR_NAME" == "autofix-ci" ]]; then
+          # Known bot names / emails used by autofix action
+          BOT_NAMES=("autofix-ci" "autofix-ci[bot]" "autofix-ci[bot]@users.noreply.github.com")
+          BOT_EMAILS=("autofix-ci[bot]@users.noreply.github.com")
+
+          skip_autofix=false
+          # check name and email explicitly and also partial matches to be resilient
+          for b in "${BOT_NAMES[@]}"; do
+            if [[ "$LAST_AUTHOR_NAME" == "$b" ]] || [[ "$LAST_AUTHOR_NAME" == *"$b"* ]]; then
+              skip_autofix=true
+            fi
+          done
+          for e in "${BOT_EMAILS[@]}"; do
+            if [[ "$LAST_AUTHOR_EMAIL" == "$e" ]] || [[ "$LAST_AUTHOR_EMAIL" == *"$e"* ]]; then
+              skip_autofix=true
+            fi
+          done
+
+          if $skip_autofix; then
             echo "Last commit was by autofix bot. Skipping autofix."
             echo "skip_autofix=true" >> $GITHUB_OUTPUT
           fi
@@ -75,15 +97,44 @@ jobs:
       - name: Check if last commit is from autofix bot
         id: check_autofix
         run: |
+          set -euo pipefail
+
+          # Try to get author info from the event payload first
+          LAST_AUTHOR_NAME=""
+          LAST_AUTHOR_EMAIL=""
           if [ -f "$GITHUB_EVENT_PATH" ]; then
-            LAST_AUTHOR_NAME=$(jq -r '.head_commit.author.name // .pull_request.head.user.login // ""' "$GITHUB_EVENT_PATH")
-          else
-             LAST_AUTHOR_NAME="$(git log -1 --pretty=format:'%an')"
+            LAST_AUTHOR_NAME=$(jq -r '.head_commit.author.name // .pull_request.head.user.login // ""' "$GITHUB_EVENT_PATH" 2>/dev/null || echo "")
+            LAST_AUTHOR_EMAIL=$(jq -r '.head_commit.author.email // .pull_request.head.user.email // ""' "$GITHUB_EVENT_PATH" 2>/dev/null || echo "")
           fi
 
-          echo "Detected Last Author: $LAST_AUTHOR_NAME"
+          # Fallback to git to ensure we have exact last commit author if payload is incomplete
+          if [ -z "${LAST_AUTHOR_NAME}" ] || [ "${LAST_AUTHOR_NAME}" = "null" ]; then
+            LAST_AUTHOR_NAME=$(git log -1 --pretty=format:'%an' || echo "")
+          fi
+          if [ -z "${LAST_AUTHOR_EMAIL}" ] || [ "${LAST_AUTHOR_EMAIL}" = "null" ]; then
+            LAST_AUTHOR_EMAIL=$(git log -1 --pretty=format:'%ae' || echo "")
+          fi
 
-          if [[ "$LAST_AUTHOR_NAME" == "autofix-ci[bot]" ]] || [[ "$LAST_AUTHOR_NAME" == "autofix-ci" ]]; then
+          echo "Detected Last Author: $LAST_AUTHOR_NAME <$LAST_AUTHOR_EMAIL>"
+
+          # Known bot names / emails used by autofix action
+          BOT_NAMES=("autofix-ci" "autofix-ci[bot]" "autofix-ci[bot]@users.noreply.github.com")
+          BOT_EMAILS=("autofix-ci[bot]@users.noreply.github.com")
+
+          skip_autofix=false
+          # check name and email explicitly and also partial matches to be resilient
+          for b in "${BOT_NAMES[@]}"; do
+            if [[ "$LAST_AUTHOR_NAME" == "$b" ]] || [[ "$LAST_AUTHOR_NAME" == *"$b"* ]]; then
+              skip_autofix=true
+            fi
+          done
+          for e in "${BOT_EMAILS[@]}"; do
+            if [[ "$LAST_AUTHOR_EMAIL" == "$e" ]] || [[ "$LAST_AUTHOR_EMAIL" == *"$e"* ]]; then
+              skip_autofix=true
+            fi
+          done
+
+          if $skip_autofix; then
             echo "Last commit was by autofix bot. Skipping autofix."
             echo "skip_autofix=true" >> $GITHUB_OUTPUT
           fi
@@ -116,15 +167,44 @@ jobs:
       - name: Check if last commit is from autofix bot
         id: check_autofix
         run: |
+          set -euo pipefail
+
+          # Try to get author info from the event payload first
+          LAST_AUTHOR_NAME=""
+          LAST_AUTHOR_EMAIL=""
           if [ -f "$GITHUB_EVENT_PATH" ]; then
-             LAST_AUTHOR_NAME=$(jq -r '.head_commit.author.name // .pull_request.head.user.login // ""' "$GITHUB_EVENT_PATH")
-          else
-             LAST_AUTHOR_NAME="$(git log -1 --pretty=format:'%an')"
+            LAST_AUTHOR_NAME=$(jq -r '.head_commit.author.name // .pull_request.head.user.login // ""' "$GITHUB_EVENT_PATH" 2>/dev/null || echo "")
+            LAST_AUTHOR_EMAIL=$(jq -r '.head_commit.author.email // .pull_request.head.user.email // ""' "$GITHUB_EVENT_PATH" 2>/dev/null || echo "")
           fi
 
-          echo "Detected Last Author: $LAST_AUTHOR_NAME"
+          # Fallback to git to ensure we have exact last commit author if payload is incomplete
+          if [ -z "${LAST_AUTHOR_NAME}" ] || [ "${LAST_AUTHOR_NAME}" = "null" ]; then
+            LAST_AUTHOR_NAME=$(git log -1 --pretty=format:'%an' || echo "")
+          fi
+          if [ -z "${LAST_AUTHOR_EMAIL}" ] || [ "${LAST_AUTHOR_EMAIL}" = "null" ]; then
+            LAST_AUTHOR_EMAIL=$(git log -1 --pretty=format:'%ae' || echo "")
+          fi
 
-          if [[ "$LAST_AUTHOR_NAME" == "autofix-ci[bot]" ]] || [[ "$LAST_AUTHOR_NAME" == "autofix-ci" ]]; then
+          echo "Detected Last Author: $LAST_AUTHOR_NAME <$LAST_AUTHOR_EMAIL>"
+
+          # Known bot names / emails used by autofix action
+          BOT_NAMES=("autofix-ci" "autofix-ci[bot]" "autofix-ci[bot]@users.noreply.github.com")
+          BOT_EMAILS=("autofix-ci[bot]@users.noreply.github.com")
+
+          skip_autofix=false
+          # check name and email explicitly and also partial matches to be resilient
+          for b in "${BOT_NAMES[@]}"; do
+            if [[ "$LAST_AUTHOR_NAME" == "$b" ]] || [[ "$LAST_AUTHOR_NAME" == *"$b"* ]]; then
+              skip_autofix=true
+            fi
+          done
+          for e in "${BOT_EMAILS[@]}"; do
+            if [[ "$LAST_AUTHOR_EMAIL" == "$e" ]] || [[ "$LAST_AUTHOR_EMAIL" == *"$e"* ]]; then
+              skip_autofix=true
+            fi
+          done
+
+          if $skip_autofix; then
             echo "Last commit was by autofix bot. Skipping autofix."
             echo "skip_autofix=true" >> $GITHUB_OUTPUT
           fi
