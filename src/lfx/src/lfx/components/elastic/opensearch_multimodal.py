@@ -12,7 +12,17 @@ from opensearchpy.exceptions import OpenSearchException, RequestError
 
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.base.vectorstores.vector_store_connection_decorator import vector_store_connection
-from lfx.io import BoolInput, DropdownInput, HandleInput, IntInput, MultilineInput, SecretStrInput, StrInput, TableInput
+from lfx.io import (
+    BoolInput,
+    DropdownInput,
+    HandleInput,
+    IntInput,
+    MultilineInput,
+    Output,
+    SecretStrInput,
+    StrInput,
+    TableInput,
+)
 from lfx.log import logger
 from lfx.schema.data import Data
 
@@ -85,8 +95,33 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
     icon: str = "OpenSearch"
     description: str = (
         "Store and search documents using OpenSearch with multi-model hybrid semantic and keyword search."
+        "To search use the tools search_documents and raw_search. Search documents takes a query for vector search, for example\n"
+        '  {search_query: "components in openrag"}'
+        "\n"
+        "you can also override the filter_expression to limit the hybrid query in search_documents by also passing filter_expression\n"
+        "for example:\n"
+        '  {search_query: "components in openrag",  filter_expression: {"data_sources":["my_doc.md"],"document_types":["*"],"owners":["*"],"connector_types":["*"]},"limit":10,"scoreThreshold":0}'
+        "\n"
+        "raw_search takes actual opensearch queries for example:"
+        "  {"
+        '    "size": 100,'
+        '    "query": {'
+        '        "term": {"filename": "my_doc.md"}'
+        "    }"
+        '    "_source": ["filename", "text", "page"]'
+        " }"
+        "\n"
+        "or:"
+        "\n"
+        "  {"
+        '     "size": 0,'
+        '     "aggs": {'
+        '         "distinct_filenames": {'
+        '             "cardinality": {"field": "filename"}'
+        "         }"
+        "     },"
+        "  }"
     )
-
     # Keys we consider baseline
     default_keys: list[str] = [
         "opensearch_url",
@@ -325,7 +360,54 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
                 "Disable for self-signed certificates in development environments."
             ),
         ),
+        # DictInput(name="query", display_name="Query", input_types=["Data"], is_list=False, tool_mode=True),
     ]
+    outputs = [
+        Output(
+            display_name="Search Results",
+            name="search_results",
+            method="search_documents",
+        ),
+        Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
+        Output(display_name="Raw Search", name="raw_search", method="raw_search"),
+    ]
+
+    def raw_search(self) -> Data:
+        """Execute a raw OpenSearch query against the target index.
+
+        Args:
+            query (dict[str, Any]): The OpenSearch query DSL dictionary.
+
+        Returns:
+            Data: Search results as a Data object.
+
+        Raises:
+            ValueError: If 'query' is not a valid OpenSearch query (must be a non-empty dict).
+        """
+        query = self.search_query
+        if isinstance(query, str):
+            query = json.loads(query)
+        client = self.build_client()
+        resp = client.search(
+            index=self.index_name,
+            body=query,
+            params={"terminate_after": 0},
+        )
+
+        # Remove any _source keys whose value is a list of floats (embedding vectors)
+        def is_vector(val):
+            # Accepts if it's a list of numbers (float or int) and has reasonable vector length (>3)
+            return isinstance(val, list) and len(val) > 3 and all(isinstance(x, (float, int)) for x in val)
+
+        if "hits" in resp and "hits" in resp["hits"]:
+            for hit in resp["hits"]["hits"]:
+                source = hit.get("_source")
+                if isinstance(source, dict):
+                    keys_to_remove = [k for k, v in source.items() if is_vector(v)]
+                    for k in keys_to_remove:
+                        source.pop(k)
+        logger.info(f"Raw search response (all embedding vectors removed): {resp}")
+        return Data(**resp)
 
     def _get_embedding_model_name(self, embedding_obj=None) -> str:
         """Get the embedding model name from component config or embedding object.
