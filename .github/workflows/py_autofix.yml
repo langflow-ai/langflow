@@ -47,12 +47,13 @@ jobs:
 
           echo "Detected Last Author: $LAST_AUTHOR_NAME <$LAST_AUTHOR_EMAIL>"
 
-          # Known bot names / emails used by autofix action
+          # Known bot names / emails used by autofix action (keep these)
           BOT_NAMES=("autofix-ci" "autofix-ci[bot]" "autofix-ci[bot]@users.noreply.github.com")
           BOT_EMAILS=("autofix-ci[bot]@users.noreply.github.com")
 
           skip_autofix=false
-          # check name and email explicitly and also partial matches to be resilient
+
+          # Explicit name/email checks (existing behavior)
           for b in "${BOT_NAMES[@]}"; do
             if [[ "$LAST_AUTHOR_NAME" == "$b" ]] || [[ "$LAST_AUTHOR_NAME" == *"$b"* ]]; then
               skip_autofix=true
@@ -64,9 +65,27 @@ jobs:
             fi
           done
 
+          # --- New: scan recent commits for any bot-like author/email or autofix references ---
+          RECENT_COMMITS=$(git log -n 10 --pretty=format:'%an <%ae> || %s' || true)
+          echo "Recent commits (last 10):"
+          echo "$RECENT_COMMITS"
+
+          # Patterns to treat as bot/autofix activity; extend as necessary
+          BOT_PATTERNS='autofix-ci|autofix.ci|autofix-ci\[bot\]|autofix-ci\[bot\]@users.noreply.github.com|autofix|autofix\.ci|\[autofix\]'
+
+          if echo "$RECENT_COMMITS" | grep -Eiq "$BOT_PATTERNS"; then
+            echo "Detected recent autofix/bot activity in commit history. Skipping autofix to avoid repeated bot commits."
+            skip_autofix=true
+          fi
+
+          # Also catch generic [bot] no-reply email authors (covers many GitHub apps)
+          if echo "$RECENT_COMMITS" | grep -Eiq '\[bot\]@users.noreply.github.com'; then
+            echo "Detected commits from a GitHub app/bot (..[bot]@users.noreply.github.com). Skipping autofix."
+            skip_autofix=true
+          fi
+
           if $skip_autofix; then
-            echo "Last commit was by autofix bot. Skipping autofix."
-            echo "skip_autofix=true" >> $GITHUB_OUTPUT
+            echo "skip_autofix=true" >> "$GITHUB_OUTPUT"
           fi
 
       - uses: autofix-ci/action@635ffb0c9798bd160680f18fd73371e355b85f27
@@ -117,12 +136,13 @@ jobs:
 
           echo "Detected Last Author: $LAST_AUTHOR_NAME <$LAST_AUTHOR_EMAIL>"
 
-          # Known bot names / emails used by autofix action
+          # Known bot names / emails used by autofix action (keep these)
           BOT_NAMES=("autofix-ci" "autofix-ci[bot]" "autofix-ci[bot]@users.noreply.github.com")
           BOT_EMAILS=("autofix-ci[bot]@users.noreply.github.com")
 
           skip_autofix=false
-          # check name and email explicitly and also partial matches to be resilient
+
+          # Explicit name/email checks (existing behavior)
           for b in "${BOT_NAMES[@]}"; do
             if [[ "$LAST_AUTHOR_NAME" == "$b" ]] || [[ "$LAST_AUTHOR_NAME" == *"$b"* ]]; then
               skip_autofix=true
@@ -134,9 +154,27 @@ jobs:
             fi
           done
 
+          # --- New: scan recent commits for any bot-like author/email or autofix references ---
+          RECENT_COMMITS=$(git log -n 10 --pretty=format:'%an <%ae> || %s' || true)
+          echo "Recent commits (last 10):"
+          echo "$RECENT_COMMITS"
+
+          # Patterns to treat as bot/autofix activity; extend as necessary
+          BOT_PATTERNS='autofix-ci|autofix.ci|autofix-ci\[bot\]|autofix-ci\[bot\]@users.noreply.github.com|autofix|autofix\.ci|\[autofix\]'
+
+          if echo "$RECENT_COMMITS" | grep -Eiq "$BOT_PATTERNS"; then
+            echo "Detected recent autofix/bot activity in commit history. Skipping autofix to avoid repeated bot commits."
+            skip_autofix=true
+          fi
+
+          # Also catch generic [bot] no-reply email authors (covers many GitHub apps)
+          if echo "$RECENT_COMMITS" | grep -Eiq '\[bot\]@users.noreply.github.com'; then
+            echo "Detected commits from a GitHub app/bot (..[bot]@users.noreply.github.com). Skipping autofix."
+            skip_autofix=true
+          fi
+
           if $skip_autofix; then
-            echo "Last commit was by autofix bot. Skipping autofix."
-            echo "skip_autofix=true" >> $GITHUB_OUTPUT
+            echo "skip_autofix=true" >> "$GITHUB_OUTPUT"
           fi
 
       - uses: autofix-ci/action@635ffb0c9798bd160680f18fd73371e355b85f27
@@ -187,12 +225,13 @@ jobs:
 
           echo "Detected Last Author: $LAST_AUTHOR_NAME <$LAST_AUTHOR_EMAIL>"
 
-          # Known bot names / emails used by autofix action
+          # Known bot names / emails used by autofix action (keep these)
           BOT_NAMES=("autofix-ci" "autofix-ci[bot]" "autofix-ci[bot]@users.noreply.github.com")
           BOT_EMAILS=("autofix-ci[bot]@users.noreply.github.com")
 
           skip_autofix=false
-          # check name and email explicitly and also partial matches to be resilient
+
+          # Explicit name/email checks (existing behavior)
           for b in "${BOT_NAMES[@]}"; do
             if [[ "$LAST_AUTHOR_NAME" == "$b" ]] || [[ "$LAST_AUTHOR_NAME" == *"$b"* ]]; then
               skip_autofix=true
@@ -204,9 +243,27 @@ jobs:
             fi
           done
 
+          # --- New: scan recent commits for any bot-like author/email or autofix references ---
+          RECENT_COMMITS=$(git log -n 10 --pretty=format:'%an <%ae> || %s' || true)
+          echo "Recent commits (last 10):"
+          echo "$RECENT_COMMITS"
+
+          # Patterns to treat as bot/autofix activity; extend as necessary
+          BOT_PATTERNS='autofix-ci|autofix.ci|autofix-ci\[bot\]|autofix-ci\[bot\]@users.noreply.github.com|autofix|autofix\.ci|\[autofix\]'
+
+          if echo "$RECENT_COMMITS" | grep -Eiq "$BOT_PATTERNS"; then
+            echo "Detected recent autofix/bot activity in commit history. Skipping autofix to avoid repeated bot commits."
+            skip_autofix=true
+          fi
+
+          # Also catch generic [bot] no-reply email authors (covers many GitHub apps)
+          if echo "$RECENT_COMMITS" | grep -Eiq '\[bot\]@users.noreply.github.com'; then
+            echo "Detected commits from a GitHub app/bot (..[bot]@users.noreply.github.com). Skipping autofix."
+            skip_autofix=true
+          fi
+
           if $skip_autofix; then
-            echo "Last commit was by autofix bot. Skipping autofix."
-            echo "skip_autofix=true" >> $GITHUB_OUTPUT
+            echo "skip_autofix=true" >> "$GITHUB_OUTPUT"
           fi
 
       - uses: autofix-ci/action@635ffb0c9798bd160680f18fd73371e355b85f27
