@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID
 
 from fastapi import HTTPException
-from lfx.log.logger import logger
 from pydantic.v1 import BaseModel, Field, create_model
 from sqlalchemy.orm import aliased
 from sqlmodel import asc, desc, select
@@ -446,35 +445,27 @@ def json_schema_from_flow(flow: Flow) -> dict:
 
     graph = Graph.from_payload(flow_data)
     input_nodes = [vertex for vertex in graph.vertices if vertex.is_input]
-
     properties = {}
     required = []
     for node in input_nodes:
         node_data = node.data["node"]
+        name = node.data["id"]
+
         template = node_data["template"]
 
-        for field_name, field_data in template.items():
-            if field_data != "Component" and field_data.get("show", False) and not field_data.get("advanced", False):
-                field_type = field_data.get("type", "string")
-                properties[field_name] = {
-                    "type": field_type,
-                    "description": field_data.get("info", f"Input for {field_name}"),
-                }
-                # Update field_type in properties after determining the JSON Schema type
-                if field_type == "str":
-                    field_type = "string"
-                elif field_type == "int":
-                    field_type = "integer"
-                elif field_type == "float":
-                    field_type = "number"
-                elif field_type == "bool":
-                    field_type = "boolean"
-                else:
-                    logger.warning(f"Unknown field type: {field_type} defaulting to string")
-                    field_type = "string"
-                properties[field_name]["type"] = field_type
+        properties[name] = {"type": "string", "description": f"Input for {name}"}
 
-                if field_data.get("required", False):
-                    required.append(field_name)
+        for field_name, field_data in template.items():
+            if field_name.startswith("mcp_"):
+                if field_name == "mcp_description":
+                    val = field_data.get("value")
+                    properties[name]["description"] = val or f"Input for {name}"
+
+                if field_name == "mcp_type" and field_data.get("value") != "":
+                    val = field_data.get("value")
+                    properties[name]["description"] = val or f"Input for {name}"
+
+                if field_name == "mcp_required" and field_data.get("value", False):
+                    required.append(name)
 
     return {"type": "object", "properties": properties, "required": required}

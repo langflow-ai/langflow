@@ -192,8 +192,9 @@ async def handle_call_tool(
             msg = f"Flow '{name}' not found in project {project_id}"
             raise ValueError(msg)
 
-        # Process inputs
-        processed_inputs = dict(arguments)
+        # Convert inputs to tweaks
+        def transform_arguments(args: dict) -> dict:
+            return {key: {"input_value": value} for key, value in args.items()}
 
         # Initial progress notification
         if mcp_config.enable_progress_notifications and (progress_token := server.request_context.meta.progressToken):
@@ -203,7 +204,9 @@ async def handle_call_tool(
 
         conversation_id = str(uuid4())
         input_request = SimplifiedAPIRequest(
-            input_value=processed_inputs.get("input_value", ""), session_id=conversation_id
+            # input_value=processed_inputs.get("input_value", ""),
+            session_id=conversation_id,
+            tweaks=transform_arguments(arguments),
         )
 
         async def send_progress_updates(progress_token):
