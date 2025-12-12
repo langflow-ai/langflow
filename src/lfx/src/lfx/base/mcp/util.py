@@ -1518,11 +1518,19 @@ async def update_tools(
     mcp_streamable_http_client: MCPStreamableHttpClient | None = None,
     mcp_sse_client: MCPStreamableHttpClient | None = None,  # Backward compatibility
 ) -> tuple[str, list[StructuredTool], dict[str, StructuredTool]]:
-    """Fetch server config and update available tools."""
+    """Fetch server config and update available tools.
+    
+    Note: When called without providing client instances, this function creates
+    clients internally but does NOT clean them up automatically. For proper cleanup,
+    use update_tools_with_cleanup() which is a context manager, or manually manage
+    client lifecycle by creating clients and passing them to this function, then
+    calling their disconnect() methods when done.
+    """
     if server_config is None:
         server_config = {}
     if not server_name:
         return "", [], {}
+    
     if mcp_stdio_client is None:
         mcp_stdio_client = MCPStdioClient()
 
@@ -1657,3 +1665,114 @@ async def update_tools(
 
     logger.info(f"Successfully loaded {len(tool_list)} tools from MCP server '{server_name}'")
     return mode, tool_list, tool_cache
+
+
+async def update_tools_with_cleanup(
+    server_name: str,
+    server_config: dict,
+) -> MCPToolsManager:
+    """Create an MCPToolsManager context manager for fetching tools with automatic cleanup.
+    
+    This is a convenience function that returns a context manager which:
+    1. Creates MCP clients internally
+    2. Fetches tools from the server
+    3. Automatically disconnects clients when exiting the context
+    
+    Args:
+        server_name: Name of the MCP server
+        server_config: Server configuration dictionary
+    
+    Returns:
+        MCPToolsManager: Context manager that yields (mode, tools, tool_cache)
+    
+    Example:
+        async with update_tools_with_cleanup(server_name, server_config) as (mode, tools, cache):
+            # Use the tools
+            for tool in tools:
+                print(tool.name)
+        # Clients are automatically disconnected here
+    """
+    return MCPToolsManager(server_name, server_config)
+
+
+class MCPToolsManager:
+    """Context manager for MCP tools that ensures proper cleanup of client connections.
+    
+    This manager creates MCP clients, fetches tools, and automatically cleans up
+    client connections when exiting the context, preventing process leaks.
+    
+    Example usage:
+        async with MCPToolsManager(server_name, server_config) as (mode, tools, tool_cache):
+            # Use the tools
+            pass
+        # Clients are automatically disconnected here
+    """
+    
+    def __init__(
+        self,
+        server_name: str,
+        server_config: dict,
+        mcp_stdio_client: MCPStdioClient | None = None,
+        mcp_streamable_http_client: MCPStreamableHttpClient | None = None,
+    ):
+        """Initialize the tools manager.
+        
+        Args:
+            server_name: Name of the MCP server
+            server_config: Server configuration dictionary
+            mcp_stdio_client: Optional pre-created stdio client (will not be cleaned up)
+            mcp_streamable_http_client: Optional pre-created HTTP client (will not be cleaned up)
+        """
+        self.server_name = server_name
+        self.server_config = server_config
+        self._external_stdio_client = mcp_stdio_client
+        self._external_http_client = mcp_streamable_http_client
+        self._internal_stdio_client: MCPStdioClient | None = None
+        self._internal_http_client: MCPStreamableHttpClient | None = None
+        self._result: tuple[str, list[StructuredTool], dict[str, StructuredTool]] | None = None
+    
+    async def __aenter__(self):
+        """Enter the context and fetch tools."""
+        # Create clients if not provided externally
+        stdio_client = self._external_stdio_client
+        if stdio_client is None:
+            stdio_client = MCPStdioClient()
+            self._internal_stdio_client = stdio_client
+        
+        http_client = self._external_http_client
+        if http_client is None:
+            http_client = MCPStreamableHttpClient()
+            self._internal_http_client = http_client
+        
+        # Fetch tools using the clients
+        self._result = await update_tools(
+            server_name=self.server_name,
+            server_config=self.server_config,
+            mcp_stdio_client=stdio_client,
+            mcp_streamable_http_client=http_client,
+        )
+        
+        return self._result
+    
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Exit the context and clean up internally created clients."""
+        # Only disconnect clients we created internally
+        cleanup_errors = []
+        
+        if self._internal_stdio_client is not None:
+            try:
+                await self._internal_stdio_client.disconnect()
+            except Exception as e:  # noqa: BLE001
+                cleanup_errors.append(f"stdio client: {e}")
+        
+        if self._internal_http_client is not None:
+            try:
+                await self._internal_http_client.disconnect()
+            except Exception as e:  # noqa: BLE001
+                cleanup_errors.append(f"HTTP client: {e}")
+        
+        if cleanup_errors:
+            await logger.awarning(f"Errors during cleanup for server '{self.server_name}': {', '.join(cleanup_errors)}")
+        
+        # Don't suppress exceptions from the with block
+        return False

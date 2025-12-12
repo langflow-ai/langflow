@@ -5,7 +5,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from lfx.base.agents.utils import safe_cache_get, safe_cache_set
-from lfx.base.mcp.util import update_tools
+from lfx.base.mcp.util import update_tools_with_cleanup
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v2.files import (
@@ -152,20 +152,16 @@ async def get_servers(
     # Check all of the tool counts for each server concurrently
     async def check_server(server_name: str) -> dict:
         server_info: dict[str, str | int | None] = {"name": server_name, "mode": None, "toolsCount": None}
-        # Create clients that we control so we can clean them up after
-        mcp_stdio_client = MCPStdioClient()
-        mcp_streamable_http_client = MCPStreamableHttpClient()
         try:
-            mode, tool_list, _ = await update_tools(
+            # Use context manager for automatic cleanup
+            async with update_tools_with_cleanup(
                 server_name=server_name,
-                server_config=server_list["mcpServers"][server_name],
-                mcp_stdio_client=mcp_stdio_client,
-                mcp_streamable_http_client=mcp_streamable_http_client,
-            )
-            server_info["mode"] = mode.lower()
-            server_info["toolsCount"] = len(tool_list)
-            if len(tool_list) == 0:
-                server_info["error"] = "No tools found"
+                server_config=server_list["mcpServers"][server_name]
+            ) as (mode, tool_list, _):
+                server_info["mode"] = mode.lower()
+                server_info["toolsCount"] = len(tool_list)
+                if len(tool_list) == 0:
+                    server_info["error"] = "No tools found"
         except ValueError as e:
             # Configuration validation errors, invalid URLs, etc.
             await logger.aerror(f"Configuration error for server {server_name}: {e}")
@@ -206,11 +202,6 @@ async def get_servers(
             else:
                 await logger.aexception(f"Error checking server {server_name}: {e}")
                 server_info["error"] = f"Error loading server: {e}"
-        finally:
-            # Always disconnect clients to prevent mcp-proxy process leaks
-            # These clients spawn subprocesses that need to be explicitly terminated
-            await mcp_stdio_client.disconnect()
-            await mcp_streamable_http_client.disconnect()
         return server_info
 
     # Run all server checks concurrently
