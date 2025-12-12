@@ -545,7 +545,6 @@
           "type": "Memory"
         },
         "dragging": false,
-        "height": 262,
         "id": "Memory-4gSCw",
         "measured": {
           "height": 262,
@@ -560,8 +559,7 @@
           "y": 946.1205963195098
         },
         "selected": false,
-        "type": "genericNode",
-        "width": 320
+        "type": "genericNode"
       },
       {
         "data": {
@@ -798,7 +796,6 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "height": 685,
         "id": "Prompt-cMwv1",
         "measured": {
           "height": 685,
@@ -813,8 +810,7 @@
           "y": 521.6320563271215
         },
         "selected": false,
-        "type": "genericNode",
-        "width": 320
+        "type": "genericNode"
       },
       {
         "data": {
@@ -1189,7 +1185,6 @@
           "type": "URL"
         },
         "dragging": false,
-        "height": 365,
         "id": "URL-gEE5N",
         "measured": {
           "height": 365,
@@ -1204,8 +1199,7 @@
           "y": 264.218898085405
         },
         "selected": false,
-        "type": "genericNode",
-        "width": 320
+        "type": "genericNode"
       },
       {
         "data": {
@@ -1551,7 +1545,6 @@
           "type": "URL"
         },
         "dragging": false,
-        "height": 661,
         "id": "URL-h1gAB",
         "measured": {
           "height": 661,
@@ -1566,8 +1559,7 @@
           "y": 245.62940316018893
         },
         "selected": false,
-        "type": "genericNode",
-        "width": 320
+        "type": "genericNode"
       },
       {
         "data": {
@@ -1907,7 +1899,6 @@
           "type": "URL"
         },
         "dragging": false,
-        "height": 365,
         "id": "URL-G5J7i",
         "measured": {
           "height": 365,
@@ -1922,8 +1913,7 @@
           "y": 651.1409296825055
         },
         "selected": false,
-        "type": "genericNode",
-        "width": 320
+        "type": "genericNode"
       },
       {
         "data": {
