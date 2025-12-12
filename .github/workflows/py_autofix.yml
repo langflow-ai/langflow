@@ -8,7 +8,6 @@ on:
 env:
   PYTHON_VERSION: "3.13"
 
-
 jobs:
   lint:
     name: Run Ruff Check and Format
@@ -25,8 +24,17 @@ jobs:
           prune-cache: false
       - run: uv run ruff check --fix-only .
       - run: uv run ruff format . --config pyproject.toml
-      - uses: autofix-ci/action@635ffb0c9798bd160680f18fd73371e355b85f27
+      - name: Check if last commit is from autofix bot
+        id: check_autofix
+        run: |
+          AUTHOR="$(git log -1 --pretty=format:'%an')"
+          if [[ "$AUTHOR" == "autofix-ci[bot]" ]]; then
+            echo "Last commit was by autofix bot. Skipping autofix."
+            echo "skip_autofix=true" >> $GITHUB_OUTPUT
+          fi
 
+      - uses: autofix-ci/action@635ffb0c9798bd160680f18fd73371e355b85f27
+        if: steps.check_autofix.outputs.skip_autofix != 'true'
 
   update-starter-projects:
     name: Update Starter Projects
@@ -50,8 +58,17 @@ jobs:
       - name: Run starter projects update
         run: uv run python scripts/ci/update_starter_projects.py
 
-      - uses: autofix-ci/action@635ffb0c9798bd160680f18fd73371e355b85f27
+      - name: Check if last commit is from autofix bot
+        id: check_autofix
+        run: |
+          AUTHOR="$(git log -1 --pretty=format:'%an')"
+          if [[ "$AUTHOR" == "autofix-ci[bot]" ]]; then
+            echo "Last commit was by autofix bot. Skipping autofix."
+            echo "skip_autofix=true" >> $GITHUB_OUTPUT
+          fi
 
+      - uses: autofix-ci/action@635ffb0c9798bd160680f18fd73371e355b85f27
+        if: steps.check_autofix.outputs.skip_autofix != 'true'
 
   update-component-index:
     name: Update Component Index
@@ -75,7 +92,14 @@ jobs:
           LFX_DEV: "1"
         run: make build_component_index
 
+      - name: Check if last commit is from autofix bot
+        id: check_autofix
+        run: |
+          AUTHOR="$(git log -1 --pretty=format:'%an')"
+          if [[ "$AUTHOR" == "autofix-ci[bot]" ]]; then
+            echo "Last commit was by autofix bot. Skipping autofix."
+            echo "skip_autofix=true" >> $GITHUB_OUTPUT
+          fi
+
       - uses: autofix-ci/action@635ffb0c9798bd160680f18fd73371e355b85f27
-
-
-
+        if: steps.check_autofix.outputs.skip_autofix != 'true'
