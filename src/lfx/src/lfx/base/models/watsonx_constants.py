@@ -5,24 +5,32 @@ WATSONX_DEFAULT_EMBEDDING_MODELS = [
         provider="IBM Watsonx",
         name="sentence-transformers/all-minilm-l12-v2",
         icon="WatsonxAI",
+        model_type="embeddings",
     ),
     create_model_metadata(
         provider="IBM Watsonx",
         name="ibm/slate-125m-english-rtrvr-v2",
         icon="WatsonxAI",
+        model_type="embeddings",
     ),
     create_model_metadata(
         provider="IBM Watsonx",
         name="ibm/slate-30m-english-rtrvr-v2",
         icon="WatsonxAI",
+        model_type="embeddings",
     ),
     create_model_metadata(
         provider="IBM Watsonx",
         name="intfloat/multilingual-e5-large",
         icon="WatsonxAI",
+        model_type="embeddings",
     ),
 ]
 
+
+WATSONX_EMBEDDING_MODELS_DETAILED = WATSONX_DEFAULT_EMBEDDING_MODELS
+# Alias for consistency with other providers (OpenAI, Anthropic, etc.)
+WATSONX_MODELS_DETAILED = WATSONX_DEFAULT_EMBEDDING_MODELS
 
 WATSONX_EMBEDDING_MODEL_NAMES = [metadata["name"] for metadata in WATSONX_DEFAULT_EMBEDDING_MODELS]
 
