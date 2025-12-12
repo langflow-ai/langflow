@@ -295,6 +295,7 @@ export type TextHighlightType = {
 
 export interface IVarHighlightType {
   name: string;
+  addCurlyBraces?: boolean;
 }
 
 export type IconComponentProps = {
