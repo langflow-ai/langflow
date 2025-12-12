@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import logging
 import os
 import re
 import time
@@ -9,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 from langchain_core.documents import Document
 from langchain_core.messages import BaseMessage
+from loguru import logger
 from typing_extensions import override
 
 from langflow.schema.data import Data
@@ -24,13 +24,10 @@ if TYPE_CHECKING:
 
     from langflow.services.tracing.schema import Log
 
-from openlayer.lib.tracing.context import UserSessionContext
-
-logger = logging.getLogger(__name__)
-
 # Component name constants
 CHAT_OUTPUT_NAMES = ("Chat Output", "ChatOutput")
 CHAT_INPUT_NAMES = ("Text Input", "Chat Input", "TextInput", "ChatInput")
+AGENT_NAMES = ("Agent",)
 
 
 class OpenlayerTracer(BaseTracer):
@@ -60,7 +57,11 @@ class OpenlayerTracer(BaseTracer):
 
         # Get config based on flow name
         config = self._get_config(trace_name)
-        self._ready: bool = self.setup_openlayer(config) if config else False
+        if not config:
+            logger.debug("Openlayer tracer not initialized: no configuration found (check OPENLAYER_API_KEY)")
+            self._ready = False
+        else:
+            self._ready = self.setup_openlayer(config)
 
     @property
     def ready(self):
@@ -76,7 +77,7 @@ class OpenlayerTracer(BaseTracer):
         required_keys = ["api_key", "inference_pipeline_id"]
         for key in required_keys:
             if key not in config or not config[key]:
-                logger.debug("Openlayer tracer not initialized: missing required key '%s'", key)
+                logger.debug("Openlayer tracer not initialized: missing required key '{}'", key)
                 return False
 
         try:
@@ -87,23 +88,33 @@ class OpenlayerTracer(BaseTracer):
             from openlayer.lib.tracing import traces as openlayer_traces
             from openlayer.lib.tracing.context import UserSessionContext
 
+            # Import Openlayer client for direct API calls
+            from openlayer import Openlayer
+
             self._openlayer_tracer = openlayer_tracer
             self._openlayer_steps = openlayer_steps
             self._openlayer_traces = openlayer_traces
             self._openlayer_enums = openlayer_enums
+            self._user_session_context = UserSessionContext
             self._inference_pipeline_id = config["inference_pipeline_id"]
 
-            if self.user_id:
-                UserSessionContext.set_user_id(self.user_id)
-            if self.session_id:
-                UserSessionContext.set_session_id(self.session_id)
+            # Create our own client for manual uploads (bypasses _publish check)
+            self._client = Openlayer(api_key=config["api_key"])
 
+            if self.user_id:
+                self._user_session_context.set_user_id(self.user_id)
+            if self.session_id:
+                self._user_session_context.set_session_id(self.session_id)
+
+            # Disable auto-publishing to prevent duplicate uploads
+            # We manually upload in end() method using self._client
+            os.environ["OPENLAYER_DISABLE_PUBLISH"] = "true"
             configure(inference_pipeline_id=config["inference_pipeline_id"])
         except ImportError as e:
-            logger.debug("Openlayer tracer not initialized: import error - %s", e)
+            logger.debug("Openlayer tracer not initialized: import error - {}", e)
             return False
         except Exception as e:  # noqa: BLE001
-            logger.debug("Openlayer tracer not initialized: unexpected error - %s", e)
+            logger.debug("Openlayer tracer not initialized: unexpected error - {}", e)
             return False
         else:
             return True
@@ -130,10 +141,10 @@ class OpenlayerTracer(BaseTracer):
         # Extract session/user from inputs and update SDK context
         if inputs and "session_id" in inputs and inputs["session_id"] != self.flow_id:
             self.session_id = inputs["session_id"]
-            UserSessionContext.set_session_id(self.session_id)
+            self._user_session_context.set_session_id(self.session_id)
         if inputs and "user_id" in inputs:
             self.user_id = inputs["user_id"]
-            UserSessionContext.set_user_id(self.user_id)
+            self._user_session_context.set_user_id(self.user_id)
 
         # Clean component name
         name = trace_name.removesuffix(f" ({trace_id})")
@@ -229,7 +240,12 @@ class OpenlayerTracer(BaseTracer):
         try:
             # Build hierarchy and add to trace
             # This will integrate handler's traces and then clear them
-            self._build_and_add_hierarchy()
+            self._build_and_add_hierarchy(
+                flow_inputs=inputs,
+                flow_outputs=outputs,
+                error=error,
+                flow_metadata=metadata,
+            )
 
             # Use SDK's post_process_trace
             try:
@@ -262,20 +278,17 @@ class OpenlayerTracer(BaseTracer):
             if "context" in trace_data:
                 config["context_column_name"] = "context"
 
-            # Send using SDK client
-            if self._openlayer_tracer._publish:
-                client = self._openlayer_tracer._get_client()
-                if client:
-                    client.inference_pipelines.data.stream(
-                        inference_pipeline_id=self._inference_pipeline_id,
-                        rows=[trace_data],
-                        config=config,
-                    )
+            # Send using our own client (we disabled auto-publish, so we always upload here)
+            if self._client:
+                self._client.inference_pipelines.data.stream(
+                    inference_pipeline_id=self._inference_pipeline_id,
+                    rows=[trace_data],
+                    config=config,
+                )
 
-        except Exception:  # noqa: BLE001, S110
-            # Silently handle any unexpected exceptions
-            # finally block will still execute for cleanup
-            pass
+        except Exception as e:  # noqa: BLE001
+            # Log unexpected exceptions for troubleshooting
+            logger.debug("Openlayer tracer end() failed: {}", e)
         finally:
             # Always clean up SDK context regardless of early returns or exceptions
             self._cleanup_sdk_context()
@@ -287,17 +300,27 @@ class OpenlayerTracer(BaseTracer):
         except Exception:  # noqa: BLE001, S110
             pass
 
-    def _extract_flow_metadata(self, components: list[Any]) -> dict[str, Any]:
+    def _extract_flow_metadata(
+        self,
+        components: list[Any],
+        error: Exception | None = None,
+    ) -> dict[str, Any]:
         metadata = {
             "chat_output": "Flow completed",
             "chat_input": {},
             "start_time": None,
             "end_time": None,
+            "error": None,
         }
 
+        # Handle error case - set output to error message
+        if error:
+            metadata["error"] = str(error)
+            metadata["chat_output"] = f"Error: {error}"
+
         for step in components:
-            # Extract Chat Output
-            if step.name in CHAT_OUTPUT_NAMES:
+            # Extract Chat Output (only if no error, since error takes precedence)
+            if step.name in CHAT_OUTPUT_NAMES and not error:
                 chat_output = self._safe_get_input(step, "input_value")
                 if chat_output:
                     metadata["chat_output"] = chat_output
@@ -329,25 +352,35 @@ class OpenlayerTracer(BaseTracer):
             return default
         return step.inputs.get(key, default)
 
-    def _build_and_add_hierarchy(self) -> list[Any]:
+    def _build_and_add_hierarchy(
+        self,
+        flow_inputs: dict[str, Any] | None = None,
+        flow_outputs: dict[str, Any] | None = None,
+        error: Exception | None = None,
+        flow_metadata: dict[str, Any] | None = None,
+    ) -> list[Any]:
         if self.langchain_handler and hasattr(self.langchain_handler, "_traces_by_root"):
             langchain_traces = self.langchain_handler._traces_by_root
 
             if langchain_traces:
                 target_component = None
                 for component_step in self.component_steps.values():
-                    if component_step.name == "Agent":
+                    if component_step.name in AGENT_NAMES:
                         target_component = component_step
                         break
 
                 if target_component is None:
                     for component_step in self.component_steps.values():
-                        if hasattr(component_step, "step_type") and component_step.step_type.value in [
-                            "llm",
-                            "chain",
-                            "agent",
-                            "chat_completion",
-                        ]:
+                        if (
+                            hasattr(component_step, "step_type")
+                            and hasattr(component_step.step_type, "value")
+                            and component_step.step_type.value in [
+                                "llm",
+                                "chain",
+                                "agent",
+                                "chat_completion",
+                            ]
+                        ):
                             target_component = component_step
 
                 for lc_trace in langchain_traces.values():
@@ -360,19 +393,67 @@ class OpenlayerTracer(BaseTracer):
 
         flow_name = self.trace_name.split(" - ")[0] if " - " in self.trace_name else self.trace_name
 
-        flow_metadata = self._extract_flow_metadata(self.component_steps.values())
+        # Extract metadata from components with error handling
+        extracted_metadata = self._extract_flow_metadata(self.component_steps.values(), error=error)
+
+        # Determine input: prefer flow-level input_value, fallback to component extraction
+        root_input = extracted_metadata["chat_input"]
+        if flow_inputs:
+            # Extract input_value from flow-level inputs (API call inputs)
+            if "input_value" in flow_inputs:
+                root_input = {"user_query": flow_inputs["input_value"]}
+            elif not root_input:
+                # Fallback to full flow_inputs if no input_value and no component input
+                # Wrap in consistent structure for data processing
+                root_input = {"flow_inputs": self._convert_to_openlayer_types(flow_inputs)}
+
+        # Determine output: prefer Chat Output component message, then error message
+        root_output = extracted_metadata["chat_output"]
+        if error:
+            # Error takes precedence - already set in extracted_metadata
+            pass
+        elif flow_outputs:
+            # Look for Chat Output component's message in flow_outputs
+            chat_output_found = False
+            for key, value in flow_outputs.items():
+                # Check if this is a Chat Output component
+                if any(name in key for name in CHAT_OUTPUT_NAMES):
+                    if isinstance(value, dict) and "message" in value:
+                        # Extract the message from Chat Output
+                        chat_output_msg = self._convert_to_openlayer_type(value["message"])
+                        if chat_output_msg:
+                            root_output = chat_output_msg
+                            chat_output_found = True
+                            break
+
+            # If no Chat Output found, try common output keys at top level
+            if not chat_output_found:
+                converted_outputs = self._convert_to_openlayer_types(flow_outputs)
+                if "message" in converted_outputs:
+                    root_output = converted_outputs["message"]
+                elif "result" in converted_outputs:
+                    root_output = converted_outputs["result"]
+                elif "output" in converted_outputs:
+                    root_output = converted_outputs["output"]
+
+        # Build root step metadata
+        root_step_metadata = {"flow_name": flow_name}
+        if flow_metadata:
+            root_step_metadata.update(self._convert_to_openlayer_types(flow_metadata))
+        if extracted_metadata.get("error"):
+            root_step_metadata["error"] = extracted_metadata["error"]
 
         root_step = self._openlayer_steps.UserCallStep(
             name=flow_name,
-            inputs=flow_metadata["chat_input"],
-            output=flow_metadata["chat_output"],
-            metadata={"flow_name": flow_name},
+            inputs=root_input,
+            output=root_output,
+            metadata=root_step_metadata,
         )
 
         # Set timing from extracted metadata
-        if flow_metadata["start_time"] and flow_metadata["end_time"]:
-            root_step.start_time = flow_metadata["start_time"]
-            root_step.end_time = flow_metadata["end_time"]
+        if extracted_metadata["start_time"] and extracted_metadata["end_time"]:
+            root_step.start_time = extracted_metadata["start_time"]
+            root_step.end_time = extracted_metadata["end_time"]
             root_step.latency = int((root_step.end_time - root_step.start_time) * 1000)
 
         for step in self.component_steps.values():

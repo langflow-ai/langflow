@@ -139,7 +139,7 @@ class TracingService(Service):
             try:
                 trace_func(*args)
             except Exception:  # noqa: BLE001
-                await logger.aexception("Error processing trace_func")
+                logger.exception("Error processing trace_func")
             finally:
                 trace_context.traces_queue.task_done()
 
@@ -150,7 +150,7 @@ class TracingService(Service):
             trace_context.running = True
             trace_context.worker_task = asyncio.create_task(self._trace_worker(trace_context))
         except Exception:  # noqa: BLE001
-            await logger.aexception("Error starting tracing service")
+            logger.exception("Error starting tracing service")
 
     def _initialize_langsmith_tracer(self, trace_context: TraceContext) -> None:
         langsmith_tracer = _get_langsmith_tracer()
@@ -216,15 +216,18 @@ class TracingService(Service):
     def _initialize_traceloop_tracer(self, trace_context: TraceContext) -> None:
         if self.deactivated:
             return
-        traceloop_tracer = _get_traceloop_tracer()
-        trace_context.tracers["traceloop"] = traceloop_tracer(
-            trace_name=trace_context.run_name,
-            trace_type="chain",
-            project_name=trace_context.project_name,
-            trace_id=trace_context.run_id,
-            user_id=trace_context.user_id,
-            session_id=trace_context.session_id,
-        )
+        try:
+            traceloop_tracer = _get_traceloop_tracer()
+            trace_context.tracers["traceloop"] = traceloop_tracer(
+                trace_name=trace_context.run_name,
+                trace_type="chain",
+                project_name=trace_context.project_name,
+                trace_id=trace_context.run_id,
+                user_id=trace_context.user_id,
+                session_id=trace_context.session_id,
+            )
+        except ImportError:
+            logger.debug("Traceloop tracer not available (module not found)")
 
     def _initialize_openlayer_tracer(self, trace_context: TraceContext) -> None:
         if self.deactivated:
@@ -268,7 +271,7 @@ class TracingService(Service):
             self._initialize_traceloop_tracer(trace_context)
             self._initialize_openlayer_tracer(trace_context)
         except Exception as e:  # noqa: BLE001
-            await logger.adebug(f"Error initializing tracers: {e}")
+            logger.debug(f"Error initializing tracers: {e}")
 
     async def _stop(self, trace_context: TraceContext) -> None:
         try:
@@ -281,7 +284,7 @@ class TracingService(Service):
                 trace_context.worker_task = None
 
         except Exception:  # noqa: BLE001
-            await logger.aexception("Error stopping tracing service")
+            logger.exception("Error stopping tracing service")
 
     def _end_all_tracers(self, trace_context: TraceContext, outputs: dict, error: Exception | None = None) -> None:
         for tracer in trace_context.tracers.values():
