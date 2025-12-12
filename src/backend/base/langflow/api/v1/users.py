@@ -26,8 +26,12 @@ router = APIRouter(tags=["Users"], prefix="/users")
 async def add_user(
     user: UserCreate,
     session: DbSession,
+    current_user: Annotated[User, Depends(get_current_active_superuser)],  # noqa: ARG001
 ) -> User:
-    """Add a new user to the database."""
+    """Add a new user to the database.
+
+    Requires superuser authentication to prevent unauthorized account creation.
+    """
     new_user = User.model_validate(user, from_attributes=True)
     try:
         new_user.password = get_password_hash(user.password)
