@@ -271,7 +271,7 @@ class TracingService(Service):
             self._initialize_traceloop_tracer(trace_context)
             self._initialize_openlayer_tracer(trace_context)
         except Exception as e:  # noqa: BLE001
-            logger.debug(f"Error initializing tracers: {e}")
+            await logger.adebug(f"Error initializing tracers: {e}")
 
     async def _stop(self, trace_context: TraceContext) -> None:
         try:
@@ -284,7 +284,7 @@ class TracingService(Service):
                 trace_context.worker_task = None
 
         except Exception:  # noqa: BLE001
-            logger.exception("Error stopping tracing service")
+            await logger.aexception("Error stopping tracing service")
 
     def _end_all_tracers(self, trace_context: TraceContext, outputs: dict, error: Exception | None = None) -> None:
         for tracer in trace_context.tracers.values():
