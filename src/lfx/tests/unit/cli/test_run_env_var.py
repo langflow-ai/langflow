@@ -140,3 +140,95 @@ graph = Graph(chat_input, chat_output)
         except json.JSONDecodeError:
             # Fallback if output is raw text (should be JSON though)
             assert "Invalid environment variable format" in result.stdout
+
+    @pytest.fixture
+    def precedence_script(self, tmp_path):
+        """Create a script with a component that uses load_from_db."""
+        script_content = """
+from lfx.components.input_output import ChatInput, ChatOutput
+from lfx.custom.custom_component.component import Component
+from lfx.template.field.base import Output, Input
+from lfx.schema.message import Message
+from lfx.graph import Graph
+
+class ApiKeyReader(Component):
+    inputs = [
+        Input(
+            name="api_key",
+            field_type="str",
+            load_from_db=True,
+            value="MY_TEST_API_KEY"
+        ),
+        Input(name="trigger", input_types=["Message"], field_type="Message")
+    ]
+    outputs = [Output(name="result", method="get_result", types=["Message"])]
+
+    def get_result(self) -> Message:
+        # The api_key should be resolved to the actual value, not the variable name
+        return Message(text=f"Key: {self.api_key}")
+
+chat_input = ChatInput()
+reader = ApiKeyReader()
+reader.set(trigger=chat_input.message_response)
+chat_output = ChatOutput().set(input_value=reader.get_result)
+
+graph = Graph(chat_input, chat_output)
+"""
+        script_path = tmp_path / "precedence_script.py"
+        script_path.write_text(script_content)
+        return script_path
+
+    def test_cli_env_var_overrides_os_env_var(self, runner, precedence_script):
+        """Test that CLI --env-var overrides OS environment variable for load_from_db fields."""
+        import os
+        from unittest.mock import patch
+
+        # Set OS environment variable
+        with patch.dict(os.environ, {"MY_TEST_API_KEY": "OS_VALUE"}):
+            result = runner.invoke(
+                app,
+                [
+                    "run",
+                    str(precedence_script),
+                    "trigger",
+                    "--env-var",
+                    "MY_TEST_API_KEY=CLI_VALUE",
+                    "--format",
+                    "json",
+                ],
+            )
+
+            if result.exit_code != 0:
+                pytest.fail(f"Exit code {result.exit_code}. Output:\n{result.stdout}")
+
+            try:
+                output_data = json.loads(result.stdout)
+                if not output_data.get("success"):
+                    pytest.fail(f"Run failed: {json.dumps(output_data, indent=2)}")
+
+                result_text = output_data.get("result", output_data.get("text", ""))
+                # It should match CLI_VALUE, overriding OS_VALUE
+                assert "Key: CLI_VALUE" in str(result_text)
+                assert "Key: OS_VALUE" not in str(result_text)
+
+            except json.JSONDecodeError:
+                pytest.fail(f"Output was not valid JSON: {result.stdout}")
+
+    def test_os_env_var_fallback(self, runner, precedence_script):
+        """Test that it falls back to OS environment variable if no CLI var provided."""
+        import os
+        from unittest.mock import patch
+
+        with patch.dict(os.environ, {"MY_TEST_API_KEY": "OS_VALUE"}):
+            result = runner.invoke(app, ["run", str(precedence_script), "trigger", "--format", "json"])
+
+            if result.exit_code != 0:
+                pytest.fail(f"Exit code {result.exit_code}. Output:\n{result.stdout}")
+
+            try:
+                output_data = json.loads(result.stdout)
+                result_text = output_data.get("result", output_data.get("text", ""))
+                assert "Key: OS_VALUE" in str(result_text)
+
+            except json.JSONDecodeError:
+                pytest.fail(f"Output was not valid JSON: {result.stdout}")
