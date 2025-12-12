@@ -46,6 +46,7 @@ from langflow.services.deps import (
 )
 from langflow.services.schema import ServiceType
 from langflow.services.utils import initialize_services, initialize_settings_service, teardown_services
+from langflow.utils.mcp_cleanup import cleanup_mcp_sessions
 
 if TYPE_CHECKING:
     from tempfile import TemporaryDirectory
@@ -320,6 +321,10 @@ def get_lifespan(*, fix_migration=False, version=None):
                 await log_exception_to_telemetry(exc, "lifespan")
             raise
         finally:
+            # CRITICAL: Cleanup MCP sessions FIRST, before any other shutdown logic.
+            # This ensures MCP subprocesses are killed even if shutdown is interrupted.
+            await cleanup_mcp_sessions()
+
             # Clean shutdown with progress indicator
             # Create shutdown progress (show verbose timing if log level is DEBUG)
             from langflow.__main__ import get_number_of_workers
