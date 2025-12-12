@@ -20,7 +20,5 @@ def raise_error_if_astra_cloud_disable_component(msg: str):
     Raises:
         ValueError: If running in an Astra cloud environment.
     """
-    if (
-        disable_component := os.getenv("ASTRA_CLOUD_DISABLE_COMPONENT", "false")
-    ) and disable_component.lower().strip() == "true":
+    if os.getenv("ASTRA_CLOUD_DISABLE_COMPONENT", "false").lower().strip() == "true":
         raise ValueError(msg)
