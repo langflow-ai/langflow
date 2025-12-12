@@ -78,6 +78,11 @@ async def run(
         show_default=True,
         help="Check global variables for environment compatibility",
     ),
+    env_var: list[str] = typer.Option(
+        None,
+        "--env-var",
+        help="Global variables to pass to the graph (KEY=VALUE). Can be used multiple times.",
+    ),
     verbose: bool = typer.Option(
         False,  # noqa: FBT003
         "-v",
@@ -155,6 +160,16 @@ async def run(
             )
         output_error(error_msg, verbose=verbose)
         raise typer.Exit(1)
+
+    # Parse environment variables
+    global_variables = {}
+    if env_var:
+        for item in env_var:
+            if "=" not in item:
+                output_error(f"Invalid environment variable format: {item}. Expected KEY=VALUE", verbose=verbose)
+                raise typer.Exit(1)
+            key, value = item.split("=", 1)
+            global_variables[key] = value
 
     temp_file_to_cleanup = None
 
@@ -235,6 +250,16 @@ async def run(
             from lfx.load import aload_flow_from_json
 
             graph = await aload_flow_from_json(script_path, disable_logs=not verbose)
+
+        # Inject global variables into graph context
+        if global_variables:
+            if "request_variables" not in graph.context:
+                graph.context["request_variables"] = {}
+            graph.context["request_variables"].update(global_variables)
+            if verbosity > 0:
+                # Log keys only to avoid leaking sensitive data
+                logger.info(f"Injected global variables: {list(global_variables.keys())}")
+
     except Exception as e:
         error_type = type(e).__name__
         logger.error(f"Graph loading failed with {error_type}")
