@@ -18,13 +18,10 @@ from lfx.utils.validate_cloud import is_astra_cloud_environment
 
 def _get_storage_location_options():
     """Get storage location options, filtering out Local if in Astra cloud environment."""
-all_options = [
-    {"name": "AWS", "icon": "Amazon"},
-    {"name": "Google Drive", "icon": "google"}
-    ]
-if is_astra_cloud_environment():
-   return all_options
- return  [{"name": "Local", "icon": "hard-drive"}] + all_options
+    all_options = [{"name": "AWS", "icon": "Amazon"}, {"name": "Google Drive", "icon": "google"}]
+    if is_astra_cloud_environment():
+        return all_options
+    return [{"name": "Local", "icon": "hard-drive"}] + all_options
 
 
 class SaveToFileComponent(Component):
