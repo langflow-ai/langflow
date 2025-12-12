@@ -1,4 +1,5 @@
 import type { UseMutationResult } from "@tanstack/react-query";
+import { refreshAllModelInputs } from "@/hooks/use-refresh-model-inputs";
 import type { useMutationFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
@@ -29,6 +30,7 @@ export const useDeleteGlobalVariables: useMutationFunctionType<
     onSettled: () => {
       queryClient.refetchQueries({ queryKey: ["useGetGlobalVariables"] });
       queryClient.refetchQueries({ queryKey: ["useGetModelProviders"] });
+      refreshAllModelInputs(queryClient, { silent: true });
     },
     ...options,
   });
