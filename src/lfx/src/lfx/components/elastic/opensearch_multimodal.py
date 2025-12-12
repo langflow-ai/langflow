@@ -96,28 +96,28 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
     description: str = (
         "Store and search documents using OpenSearch with multi-model hybrid semantic and keyword search."
         "To search use the tools search_documents and raw_search. Search documents takes a query for vector search, for example\n"
-        "  {search_query: \"components in openrag\"}"
+        '  {search_query: "components in openrag"}'
         "\n"
         "you can also override the filter_expression to limit the hybrid query in search_documents by also passing filter_expression\n"
         "for example:\n"
-        "  {search_query: \"components in openrag\",  filter_expression: {\"data_sources\":[\"my_doc.md\"],\"document_types\":[\"*\"],\"owners\":[\"*\"],\"connector_types\":[\"*\"]},\"limit\":10,\"scoreThreshold\":0}"
+        '  {search_query: "components in openrag",  filter_expression: {"data_sources":["my_doc.md"],"document_types":["*"],"owners":["*"],"connector_types":["*"]},"limit":10,"scoreThreshold":0}'
         "\n"
         "raw_search takes actual opensearch queries for example:"
         "  {"
-        "    \"size\": 100,"
-        "    \"query\": {"
-        "        \"term\": {\"filename\": \"my_doc.md\"}"
+        '    "size": 100,'
+        '    "query": {'
+        '        "term": {"filename": "my_doc.md"}'
         "    }"
-        "    \"_source\": [\"filename\", \"text\", \"page\"]"
+        '    "_source": ["filename", "text", "page"]'
         " }"
         "\n"
         "or:"
         "\n"
         "  {"
-        "     \"size\": 0,"
-        "     \"aggs\": {"
-        "         \"distinct_filenames\": {"
-        "             \"cardinality\": {\"field\": \"filename\"}"
+        '     "size": 0,'
+        '     "aggs": {'
+        '         "distinct_filenames": {'
+        '             "cardinality": {"field": "filename"}'
         "         }"
         "     },"
         "  }"
