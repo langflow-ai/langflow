@@ -15,6 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 50
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v6
         with:
@@ -71,7 +73,7 @@ jobs:
           echo "$RECENT_COMMITS"
 
           # Patterns to treat as bot/autofix activity; extend as necessary
-          BOT_PATTERNS='autofix-ci|autofix.ci|autofix-ci\[bot\]|autofix-ci\[bot\]@users.noreply.github.com|autofix|autofix\.ci|\[autofix\]'
+          BOT_PATTERNS='autofix-ci|autofix.ci|autofix-ci\[bot\]|autofix-ci\[bot\]@users.noreply.github.com|autofix|autofix\.ci|github-actions\[bot\]|\[autofix\]'
 
           if echo "$RECENT_COMMITS" | grep -Eiq "$BOT_PATTERNS"; then
             echo "Detected recent autofix/bot activity in commit history. Skipping autofix to avoid repeated bot commits."
@@ -97,6 +99,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 50
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v6
         with:
@@ -160,7 +164,7 @@ jobs:
           echo "$RECENT_COMMITS"
 
           # Patterns to treat as bot/autofix activity; extend as necessary
-          BOT_PATTERNS='autofix-ci|autofix.ci|autofix-ci\[bot\]|autofix-ci\[bot\]@users.noreply.github.com|autofix|autofix\.ci|\[autofix\]'
+          BOT_PATTERNS='autofix-ci|autofix.ci|autofix-ci\[bot\]|autofix-ci\[bot\]@users.noreply.github.com|autofix|autofix\.ci|github-actions\[bot\]|\[autofix\]'
 
           if echo "$RECENT_COMMITS" | grep -Eiq "$BOT_PATTERNS"; then
             echo "Detected recent autofix/bot activity in commit history. Skipping autofix to avoid repeated bot commits."
@@ -186,6 +190,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 50
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v6
         with:
@@ -249,7 +255,7 @@ jobs:
           echo "$RECENT_COMMITS"
 
           # Patterns to treat as bot/autofix activity; extend as necessary
-          BOT_PATTERNS='autofix-ci|autofix.ci|autofix-ci\[bot\]|autofix-ci\[bot\]@users.noreply.github.com|autofix|autofix\.ci|\[autofix\]'
+          BOT_PATTERNS='autofix-ci|autofix.ci|autofix-ci\[bot\]|autofix-ci\[bot\]@users.noreply.github.com|autofix|autofix\.ci|github-actions\[bot\]|\[autofix\]'
 
           if echo "$RECENT_COMMITS" | grep -Eiq "$BOT_PATTERNS"; then
             echo "Detected recent autofix/bot activity in commit history. Skipping autofix to avoid repeated bot commits."
