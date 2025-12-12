@@ -6,7 +6,6 @@ are not supported.
 """
 
 import pytest
-
 from lfx.schema.message import Message
 from lfx.utils.mustache_security import validate_mustache_template
 
