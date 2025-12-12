@@ -165,15 +165,15 @@ class StreamableHTTP:
     async def _start_session_manager(self) -> None:
         """Create and enter the Streamable HTTP session manager lifecycle."""
         try:
-            async with self.session_manager.run(): # type: ignore[union-attr]
+            async with self.session_manager.run():  # type: ignore[union-attr]
                 self._started = True
-                self._mgr_ready.set() # type: ignore[union-attr]
-                await self._mgr_close.wait() # type: ignore[union-attr]
+                self._mgr_ready.set()  # type: ignore[union-attr]
+                await self._mgr_close.wait()  # type: ignore[union-attr]
         except Exception as e:
             msg = f"Error in Streamable HTTP session manager: {e}"
             raise RuntimeError(msg) from e
         finally:
-            self._mgr_ready.set() # type: ignore[union-attr] # unblock listeners
+            self._mgr_ready.set()  # type: ignore[union-attr] # unblock listeners
             self._started = False
 
     async def start(self, *, stateless: bool = True) -> None:
@@ -188,8 +188,8 @@ class StreamableHTTP:
                 self._mgr_close = asyncio.Event()
                 self._mgr_task = asyncio.create_task(self._start_session_manager())
                 await self._mgr_ready.wait()
-                if not self._started: # did not start properly
-                    await self._mgr_task # await to surface the exception
+                if not self._started:  # did not start properly
+                    await self._mgr_task  # await to surface the exception
             except Exception as e:
                 self._cleanup()
                 await logger.aexception(f"Error starting Streamable HTTP session manager: {e}")
@@ -207,8 +207,8 @@ class StreamableHTTP:
             if not self._started:
                 return
             try:
-                self._mgr_close.set() # type: ignore[union-attr]
-                await self._mgr_task # type: ignore[misc]
+                self._mgr_close.set()  # type: ignore[union-attr]
+                await self._mgr_task  # type: ignore[misc]
             except Exception as e:
                 await logger.aexception(f"Error stopping Streamable HTTP session manager: {e}")
                 raise
@@ -223,6 +223,7 @@ class StreamableHTTP:
         self._mgr_close = None
         self.session_manager = None
         self._started = False
+
 
 _streamable_http = StreamableHTTP()
 

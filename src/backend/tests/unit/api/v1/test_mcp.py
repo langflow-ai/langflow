@@ -284,8 +284,9 @@ async def test_streamable_http_start_stop_lifecycle():
     manager_instance = MagicMock()
     manager_instance.run.return_value = _DummyRunContext(entered, exited)
 
-    with patch("langflow.api.v1.mcp.StreamableHTTPSessionManager", return_value=manager_instance), patch(
-        "langflow.api.v1.mcp.logger.adebug", new_callable=AsyncMock
+    with (
+        patch("langflow.api.v1.mcp.StreamableHTTPSessionManager", return_value=manager_instance),
+        patch("langflow.api.v1.mcp.logger.adebug", new_callable=AsyncMock),
     ):
         streamable_http = StreamableHTTP()
         await streamable_http.start()
@@ -304,9 +305,11 @@ async def test_streamable_http_start_failure_keeps_manager_unavailable():
     manager_instance = MagicMock()
     manager_instance.run.return_value = _FailingRunContext(failure)
 
-    with patch("langflow.api.v1.mcp.StreamableHTTPSessionManager", return_value=manager_instance), patch(
-        "langflow.api.v1.mcp.logger.adebug", new_callable=AsyncMock
-    ), patch("langflow.api.v1.mcp.logger.aexception", new_callable=AsyncMock):
+    with (
+        patch("langflow.api.v1.mcp.StreamableHTTPSessionManager", return_value=manager_instance),
+        patch("langflow.api.v1.mcp.logger.adebug", new_callable=AsyncMock),
+        patch("langflow.api.v1.mcp.logger.aexception", new_callable=AsyncMock),
+    ):
         streamable_http = StreamableHTTP()
         with pytest.raises(RuntimeError):
             await streamable_http.start()
@@ -324,8 +327,9 @@ async def test_streamable_http_start_failure_surfaces_exception_once():
     manager_instance.run.return_value = _FailingRunContext(failure)
 
     async_logger = AsyncMock()
-    with patch("langflow.api.v1.mcp.StreamableHTTPSessionManager", return_value=manager_instance), patch(
-        "langflow.api.v1.mcp.logger.aexception", new=async_logger
+    with (
+        patch("langflow.api.v1.mcp.StreamableHTTPSessionManager", return_value=manager_instance),
+        patch("langflow.api.v1.mcp.logger.aexception", new=async_logger),
     ):
         streamable_http = StreamableHTTP()
         with pytest.raises(RuntimeError) as exc_info:
@@ -339,6 +343,7 @@ async def test_streamable_http_start_failure_surfaces_exception_once():
         "Error in Streamable HTTP session manager: failed to run session manager"
     )
     assert async_logger.await_args_list[0].args[0] == expected_message
+
 
 # Tests for find_validation_error function
 @pytest.mark.asyncio(loop_scope="session")
