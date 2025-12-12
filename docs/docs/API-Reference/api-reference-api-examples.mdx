@@ -173,12 +173,13 @@ curl -X GET \
 
 ### Get configuration
 
-Returns configuration details for your Langflow deployment:
+Returns configuration details for your Langflow deployment.
 
 ```bash
 curl -X GET \
   "$LANGFLOW_SERVER_URL/api/v1/config" \
-  -H "accept: application/json"
+  -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
 <details>
@@ -313,6 +314,7 @@ Other endpoints are helpful for specific use cases, such as administration and f
   * POST `/v1/custom_component`: Build a custom component from code and return its node.
   * POST `/v1/custom_component/update`: Update an existing custom component's build config and outputs.
   * POST `/v1/validate/code`: Validate a Python code snippet for a custom component.
+  * POST `/v1/validate/prompt`: Validate a prompt payload.
 
 </TabItem>
 <TabItem value="Codebase contribution" label="Codebase development">
@@ -388,7 +390,8 @@ Langflow MCP servers support both streamable HTTP and SSE transport.
   * GET `/v1/all`: Return all available Langflow component types. See [Get all components](/api-reference-api-examples#get-all-components).
   * POST `/v1/custom_component`: Build a custom component from code and return its node.
   * POST `/v1/custom_component/update`: Update an existing custom component's build config and outputs.
-  * POST `/v1/validate/code`: Validate a Python code snippet for a custom component.
+  * POST `/v1/validate/code`: Validate a Python code snippet for a custom component (authentication required).
+  * POST `/v1/validate/prompt`: Validate a prompt payload (authentication required).
 
 </TabItem>
 <TabItem value="Deprecated" label="Deprecated">
