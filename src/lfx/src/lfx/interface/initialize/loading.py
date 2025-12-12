@@ -6,7 +6,6 @@ import warnings
 from typing import TYPE_CHECKING, Any
 
 import orjson
-from pydantic import PydanticDeprecatedSince20
 
 from lfx.custom.eval import eval_custom_component_code
 from lfx.log.logger import logger
@@ -14,6 +13,7 @@ from lfx.schema.artifact import get_artifact_type, post_process_raw
 from lfx.schema.data import Data
 from lfx.services.deps import get_settings_service, session_scope
 from lfx.services.session import NoopSession
+from pydantic import PydanticDeprecatedSince20
 
 if TYPE_CHECKING:
     from lfx.custom.custom_component.component import Component
