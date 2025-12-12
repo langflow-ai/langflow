@@ -141,6 +141,8 @@ async def get_servers(
     """Get the list of available servers."""
     import asyncio
 
+    from lfx.base.mcp.util import MCPStdioClient, MCPStreamableHttpClient
+
     server_list = await get_server_list(current_user, session, storage_service, settings_service)
 
     if not action_count:
@@ -149,8 +151,6 @@ async def get_servers(
 
     # Check all of the tool counts for each server concurrently
     async def check_server(server_name: str) -> dict:
-        from lfx.base.mcp.util import MCPStdioClient, MCPStreamableHttpClient
-
         server_info: dict[str, str | int | None] = {"name": server_name, "mode": None, "toolsCount": None}
         # Create clients that we control so we can clean them up after
         mcp_stdio_client = MCPStdioClient()
