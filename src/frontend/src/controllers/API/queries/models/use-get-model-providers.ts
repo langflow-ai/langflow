@@ -74,18 +74,29 @@ export const useGetModelProviders: useQueryFunctionType<
 };
 
 // Helper function to map provider names to icon names
+// Icon keys must match lazyIconImports.ts in frontend/src/icons/
 const getProviderIcon = (providerName: string): string => {
   const iconMap: Record<string, string> = {
     OpenAI: "OpenAI",
     Anthropic: "Anthropic",
-    "Google Generative AI": "Google",
-    Groq: "Groq",
-    "Amazon Bedrock": "Bedrock",
-    NVIDIA: "NVIDIA",
+    "Google Generative AI": "GoogleGenerativeAI",
+    "Google Vertex AI": "VertexAI",
+    "Mistral AI": "Mistral",
     Cohere: "Cohere",
-    "Azure OpenAI": "AzureOpenAI",
-    SambaNova: "SambaNova",
+    Groq: "Groq",
+    "Together AI": "Bot",
+    "Fireworks AI": "Bot",
+    DeepSeek: "DeepSeek",
+    xAI: "xAI",
+    Alibaba: "Bot",
+    Nvidia: "NVIDIA",
+    "Amazon Bedrock": "AWS",
+    "Azure OpenAI": "Azure",
+    Cerebras: "Bot",
     Ollama: "Ollama",
+    "Ollama Cloud": "Ollama",
+    "IBM Watsonx": "WatsonxAI",
+    SambaNova: "SambaNova",
   };
 
   return iconMap[providerName] || "Bot";

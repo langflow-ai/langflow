@@ -1,0 +1,439 @@
+"""Client for fetching live model data from models.dev API.
+
+This module provides functionality to fetch, cache, and transform model data
+from the models.dev API into the format used by the unified models system.
+"""
+
+from __future__ import annotations
+
+import json
+import time
+from functools import lru_cache
+from pathlib import Path
+from typing import Any
+
+import httpx
+
+from lfx.log.logger import logger
+
+from .model_metadata import ModelCost, ModelLimits, ModelMetadata, ModelModalities
+
+# API Configuration
+MODELS_DEV_API_URL = "https://models.dev/api.json"
+CACHE_TTL_SECONDS = 3600  # 1 hour cache TTL
+CACHE_FILE_NAME = ".models_dev_cache.json"
+
+# Provider name mapping from API IDs to display names
+PROVIDER_NAME_MAP = {
+    "openai": "OpenAI",
+    "anthropic": "Anthropic",
+    "google": "Google Generative AI",
+    "google-vertex": "Google Vertex AI",
+    "mistral": "Mistral AI",
+    "cohere": "Cohere",
+    "groq": "Groq",
+    "together": "Together AI",
+    "fireworks": "Fireworks AI",
+    "deepseek": "DeepSeek",
+    "xai": "xAI",
+    "alibaba": "Alibaba",
+    "nvidia": "Nvidia",
+    "amazon-bedrock": "Amazon Bedrock",
+    "azure": "Azure OpenAI",
+    "cerebras": "Cerebras",
+    "ollama": "Ollama",
+    "ollama-cloud": "Ollama Cloud",
+}
+
+# Provider icon mapping - keys from lazyIconImports.ts in frontend/src/icons/
+# Use "Bot" as fallback for providers without custom icons
+PROVIDER_ICON_MAP = {
+    "openai": "OpenAI",
+    "anthropic": "Anthropic",
+    "google": "GoogleGenerativeAI",
+    "google-vertex": "VertexAI",
+    "mistral": "Mistral",
+    "cohere": "Cohere",
+    "groq": "Groq",
+    "together": "Bot",  # No custom icon
+    "fireworks": "Bot",  # No custom icon
+    "deepseek": "DeepSeek",
+    "xai": "xAI",
+    "alibaba": "Bot",  # No custom icon
+    "nvidia": "NVIDIA",
+    "amazon-bedrock": "AWS",
+    "azure": "Azure",
+    "cerebras": "Bot",  # No custom icon
+    "ollama": "Ollama",
+    "ollama-cloud": "Ollama",
+    "ibm-watsonx": "WatsonxAI",
+}
+
+# Providers that are currently supported/integrated
+SUPPORTED_PROVIDERS = [
+    "openai",
+    "anthropic",
+    "google",
+    "google-vertex",
+    "mistral",
+    "cohere",
+    "groq",
+    "together",
+    "fireworks",
+    "deepseek",
+    "xai",
+    "alibaba",
+    "nvidia",
+    "amazon-bedrock",
+    "azure",
+    "cerebras",
+    "ollama",
+    "ollama-cloud",
+    "ibm-watsonx",
+]
+
+
+def _get_cache_path() -> Path:
+    """Get the path for the cache file."""
+    return Path.home() / ".cache" / "langflow" / CACHE_FILE_NAME
+
+
+def _load_cache() -> dict[str, Any] | None:
+    """Load cached data from disk if valid."""
+    cache_path = _get_cache_path()
+    if not cache_path.exists():
+        return None
+
+    try:
+        with cache_path.open() as f:
+            cache_data = json.load(f)
+
+        # Check if cache is still valid
+        cached_at = cache_data.get("cached_at", 0)
+        if time.time() - cached_at > CACHE_TTL_SECONDS:
+            return None
+
+        return cache_data.get("data")
+    except (OSError, json.JSONDecodeError) as e:
+        logger.debug(f"Failed to load models.dev cache: {e}")
+        return None
+
+
+def _save_cache(data: dict[str, Any]) -> None:
+    """Save data to disk cache."""
+    cache_path = _get_cache_path()
+    try:
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        with cache_path.open("w") as f:
+            json.dump({"cached_at": time.time(), "data": data}, f)
+    except OSError as e:
+        logger.debug(f"Failed to save models.dev cache: {e}")
+
+
+def fetch_models_dev_data(*, force_refresh: bool = False) -> dict[str, Any]:
+    """Fetch model data from models.dev API.
+
+    Args:
+        force_refresh: If True, bypass cache and fetch fresh data.
+
+    Returns:
+        Dictionary containing all provider and model data from the API.
+    """
+    # Try cache first
+    if not force_refresh:
+        cached = _load_cache()
+        if cached is not None:
+            logger.debug("Using cached models.dev data")
+            return cached
+
+    # Fetch from API
+    try:
+        with httpx.Client(timeout=30.0) as client:
+            response = client.get(MODELS_DEV_API_URL)
+            response.raise_for_status()
+            data = response.json()
+
+        # Cache the result
+        _save_cache(data)
+        logger.info("Successfully fetched models.dev data")
+        return data
+
+    except httpx.HTTPError as e:
+        logger.warning(f"Failed to fetch models.dev data: {e}")
+        # Try to return stale cache if available
+        cached = _load_cache()
+        if cached is not None:
+            logger.info("Using stale cache due to API error")
+            return cached
+        return {}
+    except Exception as e:
+        logger.error(f"Unexpected error fetching models.dev data: {e}")
+        return {}
+
+
+def _determine_model_type(model_data: dict[str, Any]) -> str:
+    """Determine the model type based on modalities."""
+    modalities = model_data.get("modalities", {})
+    output_types = modalities.get("output", ["text"])
+
+    if "image" in output_types and "text" not in output_types:
+        return "image"
+    if "audio" in output_types and "text" not in output_types:
+        return "audio"
+    if "video" in output_types:
+        return "video"
+    # Check if it's an embedding model (no output or just returns vectors)
+    if model_data.get("id", "").lower().find("embed") != -1:
+        return "embeddings"
+    return "llm"
+
+
+def _transform_cost(cost_data: dict[str, Any] | None) -> ModelCost | None:
+    """Transform API cost data to ModelCost format."""
+    if not cost_data:
+        return None
+
+    return ModelCost(
+        input=cost_data.get("input", 0),
+        output=cost_data.get("output", 0),
+        reasoning=cost_data.get("reasoning"),
+        cache_read=cost_data.get("cache_read"),
+        cache_write=cost_data.get("cache_write"),
+        input_audio=cost_data.get("input_audio"),
+        output_audio=cost_data.get("output_audio"),
+    )
+
+
+def _transform_limits(limit_data: dict[str, Any] | None) -> ModelLimits | None:
+    """Transform API limit data to ModelLimits format."""
+    if not limit_data:
+        return None
+
+    return ModelLimits(
+        context=limit_data.get("context", 0),
+        output=limit_data.get("output", 0),
+    )
+
+
+def _transform_modalities(modalities_data: dict[str, Any] | None) -> ModelModalities | None:
+    """Transform API modalities data to ModelModalities format."""
+    if not modalities_data:
+        return None
+
+    return ModelModalities(
+        input=modalities_data.get("input", ["text"]),
+        output=modalities_data.get("output", ["text"]),
+    )
+
+
+def transform_api_model_to_metadata(
+    provider_id: str,
+    provider_data: dict[str, Any],
+    model_id: str,
+    model_data: dict[str, Any],
+) -> ModelMetadata:
+    """Transform API model data to ModelMetadata format.
+
+    Args:
+        provider_id: The provider ID from the API (e.g., "openai")
+        provider_data: The provider data from the API
+        model_id: The model ID from the API
+        model_data: The model data from the API
+
+    Returns:
+        ModelMetadata object with transformed data
+    """
+    provider_name = PROVIDER_NAME_MAP.get(provider_id, provider_data.get("name", provider_id.title()))
+    icon = PROVIDER_ICON_MAP.get(provider_id, "bot")  # Default to "bot" if no custom icon
+
+    # Determine model type
+    model_type = _determine_model_type(model_data)
+
+    # Build metadata
+    metadata = ModelMetadata(
+        # Core identification
+        provider=provider_name,
+        provider_id=provider_id,
+        name=model_id,
+        display_name=model_data.get("name", model_id),
+        icon=icon,
+        # Capabilities
+        tool_calling=model_data.get("tool_call", False),
+        reasoning=model_data.get("reasoning", False),
+        structured_output=model_data.get("structured_output", False),
+        temperature=model_data.get("temperature", True),
+        attachment=model_data.get("attachment", False),
+        # Status flags
+        preview="-preview" in model_id.lower() or "beta" in model_id.lower(),
+        not_supported=provider_id not in SUPPORTED_PROVIDERS,
+        deprecated=False,
+        default=False,
+        open_weights=model_data.get("open_weights", False),
+        # Model classification
+        model_type=model_type,
+    )
+
+    # Add extended metadata
+    cost = _transform_cost(model_data.get("cost"))
+    if cost:
+        metadata["cost"] = cost
+
+    limits = _transform_limits(model_data.get("limit"))
+    if limits:
+        metadata["limits"] = limits
+
+    modalities = _transform_modalities(model_data.get("modalities"))
+    if modalities:
+        metadata["modalities"] = modalities
+
+    if model_data.get("knowledge"):
+        metadata["knowledge_cutoff"] = model_data["knowledge"]
+    if model_data.get("release_date"):
+        metadata["release_date"] = model_data["release_date"]
+    if model_data.get("last_updated"):
+        metadata["last_updated"] = model_data["last_updated"]
+
+    # Provider metadata
+    if provider_data.get("api"):
+        metadata["api_base"] = provider_data["api"]
+    if provider_data.get("env"):
+        metadata["env_vars"] = provider_data["env"]
+    if provider_data.get("doc"):
+        metadata["documentation_url"] = provider_data["doc"]
+
+    return metadata
+
+
+def get_live_models_detailed(
+    *,
+    providers: list[str] | None = None,
+    model_types: list[str] | None = None,
+    include_unsupported: bool = False,
+    force_refresh: bool = False,
+) -> list[ModelMetadata]:
+    """Get live model metadata from models.dev API.
+
+    Args:
+        providers: Optional list of provider IDs to filter by
+        model_types: Optional list of model types to filter by ("llm", "embeddings", etc.)
+        include_unsupported: If True, include models from unsupported providers
+        force_refresh: If True, bypass cache and fetch fresh data
+
+    Returns:
+        List of ModelMetadata objects for all matching models
+    """
+    api_data = fetch_models_dev_data(force_refresh=force_refresh)
+    if not api_data:
+        return []
+
+    models: list[ModelMetadata] = []
+
+    for provider_id, provider_data in api_data.items():
+        # Skip if filtering by provider and this one isn't included
+        if providers and provider_id not in providers:
+            continue
+
+        # Skip unsupported providers unless explicitly requested
+        if not include_unsupported and provider_id not in SUPPORTED_PROVIDERS:
+            continue
+
+        provider_models = provider_data.get("models", {})
+        for model_id, model_data in provider_models.items():
+            metadata = transform_api_model_to_metadata(provider_id, provider_data, model_id, model_data)
+
+            # Filter by model type if specified
+            if model_types and metadata.get("model_type") not in model_types:
+                continue
+
+            models.append(metadata)
+
+    return models
+
+
+@lru_cache(maxsize=1)
+def get_provider_metadata_from_api() -> dict[str, dict[str, Any]]:
+    """Get provider metadata from the API for all supported providers.
+
+    Returns:
+        Dictionary mapping provider names to their metadata
+    """
+    api_data = fetch_models_dev_data()
+    if not api_data:
+        return {}
+
+    provider_metadata = {}
+    for provider_id, provider_data in api_data.items():
+        if provider_id not in SUPPORTED_PROVIDERS:
+            continue
+
+        provider_name = PROVIDER_NAME_MAP.get(provider_id, provider_data.get("name", provider_id.title()))
+        icon = PROVIDER_ICON_MAP.get(provider_id, "Bot")
+
+        env_vars = provider_data.get("env", [])
+        variable_name = env_vars[0] if env_vars else f"{provider_id.upper()}_API_KEY"
+
+        provider_metadata[provider_name] = {
+            "icon": icon,
+            "variable_name": variable_name,
+            "api_base": provider_data.get("api"),
+            "documentation_url": provider_data.get("doc"),
+            "provider_id": provider_id,
+        }
+
+    return provider_metadata
+
+
+def clear_cache() -> None:
+    """Clear the models.dev cache."""
+    cache_path = _get_cache_path()
+    try:
+        if cache_path.exists():
+            cache_path.unlink()
+            logger.info("Cleared models.dev cache")
+    except OSError as e:
+        logger.warning(f"Failed to clear cache: {e}")
+
+
+def get_models_by_provider(provider_id: str, *, force_refresh: bool = False) -> list[ModelMetadata]:
+    """Get all models for a specific provider.
+
+    Args:
+        provider_id: The provider ID (e.g., "openai", "anthropic")
+        force_refresh: If True, bypass cache and fetch fresh data
+
+    Returns:
+        List of ModelMetadata objects for the provider's models
+    """
+    return get_live_models_detailed(providers=[provider_id], force_refresh=force_refresh)
+
+
+def search_models(
+    query: str,
+    *,
+    providers: list[str] | None = None,
+    model_types: list[str] | None = None,
+    force_refresh: bool = False,
+) -> list[ModelMetadata]:
+    """Search for models by name or display name.
+
+    Args:
+        query: Search query string
+        providers: Optional list of provider IDs to filter by
+        model_types: Optional list of model types to filter by
+        force_refresh: If True, bypass cache and fetch fresh data
+
+    Returns:
+        List of matching ModelMetadata objects
+    """
+    all_models = get_live_models_detailed(
+        providers=providers,
+        model_types=model_types,
+        force_refresh=force_refresh,
+    )
+
+    query_lower = query.lower()
+    return [
+        model
+        for model in all_models
+        if query_lower in model.get("name", "").lower() or query_lower in model.get("display_name", "").lower()
+    ]
