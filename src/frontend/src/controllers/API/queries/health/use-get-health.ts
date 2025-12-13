@@ -4,7 +4,7 @@ import {
   REFETCH_SERVER_HEALTH_INTERVAL,
   SERVER_HEALTH_INTERVAL,
 } from "@/constants/constants";
-import { HEALTH_CHECK_URL } from "@/customization/config-constants";
+import { getHealthCheckUrl } from "@/customization/utils/urls";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { createNewError503 } from "@/types/factory/axios-error-503";
 import type { useQueryFunctionType } from "../../../../types/api";
@@ -45,9 +45,7 @@ export const useGetHealthQuery: useQueryFunctionType<
         setTimeout(() => reject(createNewError503()), SERVER_HEALTH_INTERVAL),
       );
 
-      const apiPromise = api.get<getHealthResponse>(
-        HEALTH_CHECK_URL || "/health",
-      );
+      const apiPromise = api.get<getHealthResponse>(getHealthCheckUrl());
       const response = await Promise.race([apiPromise, timeoutPromise]);
       setHealthCheckTimeout(
         Object.values(response.data).some((value) => value !== "ok")
