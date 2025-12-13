@@ -73,12 +73,51 @@ async def parse_input_request_from_body(http_request: Request) -> SimplifiedAPIR
         SimplifiedAPIRequest: Parsed request or default instance if parsing fails
     """
     try:
+        content_type = (http_request.headers.get("content-type") or "").lower()
+
+        # If multipart/form-data, use request.form() so uploaded files are not consumed
+        if "multipart/form-data" in content_type:
+            form = await http_request.form()
+            data: dict = {}
+
+            # Map expected form fields to the SimplifiedAPIRequest schema
+            if "input_value" in form:
+                data["input_value"] = form.get("input_value")
+            if "input_type" in form:
+                data["input_type"] = form.get("input_type")
+            if "output_type" in form:
+                data["output_type"] = form.get("output_type")
+            if "output_component" in form:
+                data["output_component"] = form.get("output_component")
+            if "session_id" in form:
+                data["session_id"] = form.get("session_id")
+
+            # Tweaks may be JSON encoded in a form field. Only attempt JSON
+            # decoding when the form value is a str/bytes. If a client uploaded a
+            # file under the tweaks field, it would be an UploadFile and should
+            # not be JSON-decoded here.
+            if "tweaks" in form:
+                raw_tweaks = form.get("tweaks")
+                if raw_tweaks and isinstance(raw_tweaks, (str, bytes)):
+                    try:
+                        data["tweaks"] = (
+                            orjson.loads(raw_tweaks) if isinstance(raw_tweaks, (str, bytes)) else raw_tweaks
+                        )
+                    except (ValueError, orjson.JSONDecodeError):
+                        # Leave as raw value if parsing fails
+                        data["tweaks"] = raw_tweaks
+
+            return SimplifiedAPIRequest(**data)
+
+        # Fallback: parse as JSON (application/json or others)
         body = await http_request.body()
         if body:
             body_data = orjson.loads(body)
             return SimplifiedAPIRequest(**body_data)
         return SimplifiedAPIRequest()
-    except Exception as exc:  # noqa: BLE001
+    except (orjson.JSONDecodeError, ValueError) as exc:
+        # Only handle JSON / decoding related parse errors here. Other
+        # exceptions should surface so they can be handled by the framework.
         logger.warning(f"Failed to parse request body: {exc}")
         return SimplifiedAPIRequest()
 
