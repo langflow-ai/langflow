@@ -2,7 +2,7 @@ import asyncio
 
 import pydantic
 from anyio import BrokenResourceError
-from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse
 from lfx.log.logger import logger
 from mcp import types
@@ -10,7 +10,7 @@ from mcp.server import NotificationOptions, Server
 from mcp.server.sse import SseServerTransport
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 
-from langflow.api.utils import CurrentActiveMCPUser
+from langflow.api.utils import CurrentActiveMCPUser, raise_error_if_astra_cloud_env
 from langflow.api.v1.mcp_utils import (
     current_user_ctx,
     handle_call_tool,
@@ -85,12 +85,21 @@ def find_validation_error(exc):
 sse = SseServerTransport("/api/v1/mcp/")
 
 
-@router.head("/sse", response_class=HTMLResponse, include_in_schema=False)
+@router.head(
+    "/sse",
+    response_class=HTMLResponse,
+    include_in_schema=False,
+    dependencies=[Depends(raise_error_if_astra_cloud_env)],
+)
 async def im_alive():
     return Response()
 
 
-@router.get("/sse", response_class=ResponseNoOp)
+@router.get(
+    "/sse",
+    response_class=ResponseNoOp,
+    dependencies=[Depends(raise_error_if_astra_cloud_env)],
+)
 async def handle_sse(request: Request, current_user: CurrentActiveMCPUser):
     msg = f"Starting SSE connection, server name: {server.name}"
     await logger.ainfo(msg)
@@ -135,7 +144,7 @@ async def handle_sse(request: Request, current_user: CurrentActiveMCPUser):
         current_user_ctx.reset(token)
 
 
-@router.post("/")
+@router.post("/", dependencies=[Depends(raise_error_if_astra_cloud_env)])
 async def handle_messages(request: Request):
     try:
         await sse.handle_post_message(request.scope, request.receive, request._send)  # noqa: SLF001
