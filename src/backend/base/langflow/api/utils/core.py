@@ -42,9 +42,7 @@ DbSession = Annotated[AsyncSession, Depends(injectable_session_scope)]
 DbSessionReadOnly = Annotated[AsyncSession, Depends(injectable_session_scope_readonly)]
 
 # Message to raise if we're in an Astra cloud environment and a component or endpoint is not supported
-disable_endpoint_in_astra_cloud_msg = (
-    "This endpoint is not supported in Astra cloud environment."
-)
+disable_endpoint_in_astra_cloud_msg = "This endpoint is not supported in Astra cloud environment."
 
 
 class EventDeliveryType(str, Enum):

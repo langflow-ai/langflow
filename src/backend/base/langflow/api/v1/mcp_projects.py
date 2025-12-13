@@ -35,7 +35,7 @@ from langflow.api.utils import (
     CurrentActiveMCPUser,
     extract_global_variables_from_headers,
     raise_error_if_astra_cloud_env,
-    )
+)
 from langflow.api.utils.mcp import (
     auto_configure_starter_projects_mcp,
     get_composer_streamable_http_url,
@@ -314,7 +314,7 @@ async def list_project_tools(
     response_class=HTMLResponse,
     include_in_schema=False,
     dependencies=[Depends(raise_error_if_astra_cloud_env)],
-    )
+)
 async def im_alive(project_id: str):  # noqa: ARG001
     return Response()
 
