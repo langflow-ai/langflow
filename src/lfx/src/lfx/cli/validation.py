@@ -1,9 +1,10 @@
 """Validation utilities for CLI commands."""
 
 import re
+from typing import TYPE_CHECKING
 
-from lfx.graph.graph.base import Graph
-from lfx.services.deps import get_settings_service
+if TYPE_CHECKING:
+    from lfx.graph.graph.base import Graph
 
 
 def is_valid_env_var_name(name: str) -> bool:
@@ -26,7 +27,7 @@ def is_valid_env_var_name(name: str) -> bool:
     return bool(re.match(pattern, name))
 
 
-def validate_global_variables_for_env(graph: Graph) -> list[str]:
+def validate_global_variables_for_env(graph: "Graph") -> list[str]:
     """Validate that all global variables with load_from_db=True can be used as environment variables.
 
     When the database is not available (noop mode), global variables with load_from_db=True
@@ -39,6 +40,8 @@ def validate_global_variables_for_env(graph: Graph) -> list[str]:
     Returns:
         list[str]: List of error messages for invalid variable names
     """
+    from lfx.services.deps import get_settings_service
+
     errors = []
     settings_service = get_settings_service()
 
