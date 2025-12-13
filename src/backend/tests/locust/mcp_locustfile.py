@@ -5,51 +5,51 @@ Tests both SSE and Streamable HTTP transports for MCP servers.
 Usage:
     # Required
     export LF_TOKEN="your-langflow-token"
-    
+
     # Optional - Environment
     export LF_PROJECT_ID="your-project-id"
     export LF_ORG="your-org-id"
-    
+
     # Optional - Logging
     export PRINT_RESPONSES="true"  # Print response content for debugging
-    
+
     # Optional - User Class Weights (0 to disable, higher = more of this type)
     export WEIGHT_STREAMABLE="3"  # MCPStreamableHTTPUser (list tools/resources)
     export WEIGHT_PROJECT="3"     # MCPProjectStreamableUser (project-specific)
     export WEIGHT_BURST="2"       # MCPBurstUser (burst traffic)
     export WEIGHT_CONCURRENT="2"  # MCPConcurrentSessionUser (concurrent ops)
-    
+
     # Optional - Task Weights (0 to disable)
     export TASK_LIST_TOOLS="40"
     export TASK_LIST_RESOURCES="30"
     export TASK_CALL_TOOL="0"  # Agent execution - slow, disabled by default
     export TASK_PROJECT_LIST="50"
     export TASK_PROJECT_CALL="0"  # Project agent execution - slow
-    
+
     # Optional - Wait Time Strategy
     export WAIT_TIME_MIN="0.1"     # Minimum wait between requests (seconds)
     export WAIT_TIME_MAX="0.5"     # Maximum wait between requests (seconds)
     export BURST_WAIT_MIN="1"      # Burst cycle minimum wait
     export BURST_WAIT_MAX="3"      # Burst cycle maximum wait
     export CONCURRENT_PACING="0.5" # Concurrent constant pacing (seconds)
-    
+
     # Optional - Performance
     export REQUEST_TIMEOUT="30.0"  # Request timeout (increase for tool calls)
-    
+
     locust -f mcp_locustfile.py --host http://localhost:7860
-    
+
 Examples:
     # Test primarily tool calls (slow, needs high timeout)
     export LF_TOKEN="token" TASK_CALL_TOOL="50" TASK_PROJECT_CALL="50" \
            TASK_LIST_TOOLS="10" TASK_LIST_RESOURCES="10" TASK_PROJECT_LIST="10" \
            REQUEST_TIMEOUT="120" WAIT_TIME_MIN="1" WAIT_TIME_MAX="3"
     locust -f mcp_locustfile.py -u 10 -r 2
-    
+
     # Test list operations only (fast, high throughput)
     export LF_TOKEN="token" TASK_CALL_TOOL="0" TASK_PROJECT_CALL="0" \
            WAIT_TIME_MIN="0.1" WAIT_TIME_MAX="0.3"
     locust -f mcp_locustfile.py -u 250 -r 10
-    
+
     # Test burst patterns
     export LF_TOKEN="token" WEIGHT_BURST="10" WEIGHT_STREAMABLE="1" \
            WEIGHT_PROJECT="1" WEIGHT_CONCURRENT="1"
