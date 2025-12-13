@@ -1,7 +1,7 @@
 import type React from "react";
 import { forwardRef } from "react";
 import SvgApifyLogo from "./Apify";
-import ApifyWhiteImage from "./apify_white.png";
+import ApifyWhiteImage from "./apify-symbol-white.svg";
 
 export const ApifyIcon = forwardRef<SVGSVGElement, React.PropsWithChildren<{}>>(
   (props, ref) => {
