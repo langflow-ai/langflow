@@ -10,34 +10,39 @@ import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
 This page describes the components that are available in the **Amazon** bundle.
 
-## Amazon Bedrock
+## Amazon Bedrock Converse
 
-This component generates text using [Amazon Bedrock LLMs](https://docs.aws.amazon.com/bedrock).
+This component generates text using [Amazon Bedrock LLMs](https://docs.aws.amazon.com/bedrock) with the Bedrock Converse API.
 
 It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
-Specifically, the **Language Model** output is an instance of [`ChatBedrock`](https://docs.langchain.com/oss/python/integrations/chat/bedrock) configured according to the component's parameters.
+Specifically, the **Language Model** output is an instance of [`ChatBedrockConverse`](https://docs.langchain.com/oss/python/integrations/chat/bedrock) configured according to the component's parameters.
 
-Use the **Language Model** output when you want to use an Amazon Bedrock model as the LLM for another LLM-driven component, such as an **Agent** or **Smart Function** component.
+Use the **Language Model** output when you want to use an Amazon Bedrock model as the LLM for another LLM-driven component, such as an **Agent** or **Smart Transform** component.
 
 For more information, see [Language model components](/components-models).
 
-### Amazon Bedrock parameters
+### Amazon Bedrock Converse parameters
 
 <PartialParams />
 
 | Name | Type | Description |
 |------|------|-------------|
-| input | String | Input parameter. The input string for text generation. |
+| input_value | String | Input parameter. The input string for text generation. |
 | system_message | String | Input parameter. A system message to pass to the model. |
 | stream | Boolean | Input parameter. Whether to stream the response. Only works in chat. Default: `false`. |
-| model_id | String | Input parameter. The Amazon Bedrock model to use. |
-| aws_access_key_id | SecretString | Input parameter. AWS Access Key for authentication. |
-| aws_secret_access_key | SecretString | Input parameter. AWS Secret Key for authentication. |
-| aws_session_token | SecretString | Input parameter. The session key for your AWS account. |
-| credentials_profile_name | String | Input parameter. Name of the AWS credentials profile to use. |
+| model_id | String | Input parameter. The Amazon Bedrock model to use.|
+| aws_access_key_id | SecretString | Input parameter. AWS Access Key for authentication. Required. |
+| aws_secret_access_key | SecretString | Input parameter. AWS Secret Key for authentication. Required. |
+| aws_session_token | SecretString | Input parameter. The session key for your AWS account. Only needed for temporary credentials. |
+| credentials_profile_name | String | Input parameter. Name of the AWS credentials profile to use. If not provided, the default profile will be used. |
 | region_name | String | Input parameter. AWS region where your Bedrock resources are located. Default: `us-east-1`. |
-| model_kwargs | Dictionary | Input parameter. Additional keyword arguments to pass to the model. |
 | endpoint_url | String | Input parameter. Custom endpoint URL for a Bedrock service. |
+| temperature | Float | Input parameter. Controls randomness in output. Higher values make output more random. Default: `0.7`. |
+| max_tokens | Integer | Input parameter. Maximum number of tokens to generate. Default: `4096`. |
+| top_p | Float | Input parameter. Nucleus sampling parameter. Controls diversity of output. Default: `0.9`. |
+| top_k | Integer | Input parameter. Limits the number of highest probability vocabulary tokens to consider. Note: Not all models support top_k. Default: `250`. |
+| disable_streaming | Boolean | Input parameter. If True, disables streaming responses. Useful for batch processing. Default: `false`. |
+| additional_model_fields | Dictionary | Input parameter. Additional model-specific parameters for fine-tuning behavior. |
 
 ## Amazon Bedrock Embeddings
 
@@ -62,7 +67,7 @@ For more information about using embedding model components in flows, see [Embed
 ## S3 Bucket Uploader
 
 The **S3 Bucket Uploader** component uploads files to an Amazon S3 bucket.
-It is designed to process `Data` input from a **File** or **Directory** component.
+It is designed to process `Data` input from a **Read File** or **Directory** component.
 If you upload `Data` from other components, test the results before running the flow in production.
 
 Requires the `boto3` package, which is included in your Langflow installation.
@@ -82,3 +87,21 @@ The component produces logs but it doesn't emit output to the flow.
 | **Data Inputs** | Data | Input parameter. The `Data` input to iterate over and upload as files in the specified S3 bucket. |
 | **S3 Prefix** | String | Input parameter. Optional prefix (folder path) within the S3 bucket where files will be uploaded. |
 | **Strip Path** | Boolean | Input parameter. Whether to strip the file path when uploading. Default: `false`. |
+
+## Legacy Amazon components
+
+import PartialLegacy from '@site/docs/_partial-legacy.mdx';
+
+<PartialLegacy />
+
+The following Amazon components are in legacy status:
+
+<details>
+<summary>Amazon Bedrock</summary>
+
+The **Amazon Bedrock** component was deprecated in favor of the **Amazon Bedrock Converse** component, which uses the Bedrock Converse API for conversation handling.
+
+To use Amazon Bedrock models in your flows, use the [**Amazon Bedrock Converse**](#amazon-bedrock-converse) component instead.
+
+
+</details>
