@@ -30,6 +30,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
           prune-cache: false
       - run: uv sync
+      - name: Update Codeflash to latest version
+        run: uv pip install --upgrade codeflash
       - name: Run Codeflash Optimizer
         working-directory: ./src/backend/base
         continue-on-error: true
