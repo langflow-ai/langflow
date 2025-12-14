@@ -4,7 +4,7 @@ from typing import Any
 from lfx.custom.custom_component.component import Component
 from lfx.field_typing import Tool
 from lfx.inputs.inputs import BoolInput, MessageTextInput
-from lfx.io import HandleInput, MessageTextInput, Output, SecretStrInput
+from lfx.io import HandleInput, MessageTextInput, Output, SecretStrInput, TabInput
 from toolguard import LitellmModel, ToolGuardsCodeGenerationResult, ToolGuardSpec, load_toolguards
 from toolguard.buildtime import generate_guard_specs, generate_guards_from_specs
 from toolguard.data_types import MelleaSessionData
@@ -29,9 +29,18 @@ class PoliciesComponent(Component):
     inputs = [
         BoolInput(
             name="enabled",
-            display_name="Enable ToolGuard Execution",
+            display_name="Enable ToolGuards",
             info="If true, invokes ToolGuard code prior to tool execution, ensuring that tool-related policies are enforced.",
             value=True,
+        ),
+        TabInput(
+            name="build_mode",
+            display_name="ToolGuard Build Mode",
+            options=["build", "use cache"],
+            info="Indicates whether to invoke buildtime (build), or use a cached code (use cache)",
+            value="build",
+            real_time_refresh=True,
+            tool_mode=True,
         ),
         MultilineInput(
             name="policies",
@@ -111,8 +120,16 @@ class PoliciesComponent(Component):
         self.log("🔒️ToolGuard: please review the generated guard code at ...", name="info")
 
         if self.enabled:
-            # specs = await self._build_guard_specs()
-            # guards = await self._build_guards(specs)
+            build_mode = getattr(self, "build_mode", "build")
+            if build_mode == "build":  # run buildtime steps
+                self.log("🔒️ToolGuard: execution (build) mode", name="info")
+                # specs  = await self._build_guard_specs()
+                # guards = await self._build_guards(specs)
+            else:  # build_mode == "use cache"
+                self.log("🔒️ToolGuard: run mode (cached code from path)", name="info")
+                # make sure self.guard_code_path contains the path to pre-built guards
+                # assert self.guard_code_path, "🔒️ToolGuard: guard path should be a valid code path!"
+
             guards = None
             guarded_tools = [WrappedTool(tool, self.tools, self.guard_code_path) for tool in self.tools]
             return guarded_tools  # type: ignore
