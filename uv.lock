@@ -5915,7 +5915,7 @@ requires-dist = [
     { name = "structlog", specifier = ">=25.4.0,<26.0.0" },
     { name = "supabase", specifier = ">=2.6.0,<3.0.0" },
     { name = "tesserocr", marker = "extra == 'docling'", specifier = ">=2.8.0" },
-    { name = "toolguard", specifier = ">=0.1.4" },
+    { name = "toolguard", specifier = ">=0.1.6" },
     { name = "traceloop-sdk", specifier = ">=0.43.1,<1.0.0" },
     { name = "twelvelabs", specifier = ">=0.4.7,<1.0.0" },
     { name = "types-cachetools", specifier = ">=5.5.0.20240820,<6.0.0" },
@@ -13338,7 +13338,7 @@ wheels = [
 
 [[package]]
 name = "toolguard"
-version = "0.1.4"
+version = "0.1.6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "datamodel-code-generator" },
@@ -13355,9 +13355,9 @@ dependencies = [
     { name = "pytest-json-report" },
     { name = "smolagents" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/7a/69/f27eb512b3d1ce462b3c3167a033c601c9c75e6504b73248310bc2cb2dac/toolguard-0.1.4.tar.gz", hash = "sha256:16e27adb167cf522f01dfb8ba56e5fe1157cbda48b6b4765ae4594b3c27028a2", size = 54005, upload-time = "2025-12-10T05:38:58.02Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/aa/a7/6b61160e70301e8c9003df9da84cdef42ab7b8d45c7ce7cef3a3c0b2b10a/toolguard-0.1.6.tar.gz", hash = "sha256:a666b2982710c1d6c821b92ece8d070ada07eb6bacc827a88b7b4f43e4d0cb16", size = 54024, upload-time = "2025-12-14T07:25:43.989Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3c/81/21d4ec8c5e0315e84eb1d0460e6435f55636fcbc92219b379fd791a7af65/toolguard-0.1.4-py3-none-any.whl", hash = "sha256:e4585ee8e9dbdacac5ac07e52040be5ed6d82fe8c9a100c95bd68bcabbccd29c", size = 77995, upload-time = "2025-12-10T05:38:56.974Z" },
+    { url = "https://files.pythonhosted.org/packages/39/e6/a577357c31c3b61430c733dfce952367dfa8cb0e173a5555096a10294f3e/toolguard-0.1.6-py3-none-any.whl", hash = "sha256:ac737d69ea32f66f374cbfe7b4258d6a7be4cea73813fb6b9f75e5f438fe7955", size = 78002, upload-time = "2025-12-14T07:25:42.764Z" },
 ]
 
 [[package]]
