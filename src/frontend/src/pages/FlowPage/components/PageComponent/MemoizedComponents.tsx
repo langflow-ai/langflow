@@ -1,5 +1,5 @@
 import { Background, Panel } from "@xyflow/react";
-import { memo } from "react";
+import { memo, useCallback, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import CanvasControlButton from "@/components/core/canvasControlsComponent/CanvasControlButton";
@@ -12,6 +12,10 @@ import useFlowStore from "@/stores/flowStore";
 import { cn } from "@/utils/utils";
 import { useSearchContext } from "../flowSidebarComponent";
 import { NAV_ITEMS } from "../flowSidebarComponent/components/sidebarSegmentedNav";
+import { getLayoutedNodes } from "@/utils/layoutUtils";
+import { Separator } from "@/components/ui/separator";
+import IconComponent from "@/components/common/genericIconComponent";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 
 export const MemoizedBackground = memo(() => (
   <Background size={2} gap={20} className="" />
@@ -35,6 +39,30 @@ export const MemoizedCanvasControls = memo(
       useShallow((state) => state.currentFlow?.locked),
     );
 
+    const [isArranging, setIsArranging] = useState(false);
+
+    const { setNodes } = useFlowStore.getState();
+    const { takeSnapshot } = useFlowsManagerStore.getState();
+
+    const handleAutoArrange = useCallback(async () => {
+      if (isArranging || isLocked) return;
+
+      const { nodes, edges } = useFlowStore.getState();
+      if (!nodes.length || !edges.length) return;
+
+      setIsArranging(true);
+
+      try {
+        const layouted = await getLayoutedNodes(nodes, edges);
+        takeSnapshot();
+        setNodes(layouted);
+      } catch (error) {
+        console.error("[AutoArrange] Failed to compute layout", error);
+      } finally {
+        setIsArranging(false);
+      }
+    }, [isArranging, isLocked, setNodes, takeSnapshot]);
+
     return (
       <CanvasControls>
         <Button
@@ -55,6 +83,22 @@ export const MemoizedCanvasControls = memo(
           {isLocked && (
             <span className="text-xs text-destructive">Flow Locked</span>
           )}
+        </Button>
+        <span>
+          <Separator orientation="vertical" />
+        </span>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="group flex items-center justify-center px-2 rounded-none"
+          title={isArranging ? "Organizing…" : "Organize Nodes"}
+          onClick={handleAutoArrange}
+          disabled={isLocked || isArranging}
+        >
+          <IconComponent
+            name="Layers"
+            className="text-muted-foreground group-hover:text-primary !h-5 !w-5"
+          />
         </Button>
       </CanvasControls>
     );
