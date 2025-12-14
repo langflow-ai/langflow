@@ -7,19 +7,17 @@ from lfx.inputs.inputs import BoolInput, ModelInput
 from lfx.base.models.model import LCModelComponent
 from lfx.log.logger import logger
 from os.path import join
-from typing import Any
 
 from langflow.inputs import DropdownInput, MultilineInput
-from toolguard import IToolInvoker, LitellmModel, ToolGuardsCodeGenerationResult, ToolGuardSpec, load_toolguards
+from toolguard import LitellmModel, ToolGuardsCodeGenerationResult, ToolGuardSpec
 from toolguard.buildtime import generate_guard_specs, generate_guards_from_specs
-from toolguard.data_types import MeleaSessionData
-from toolguard.runtime import LangchainToolInvoker
+from toolguard.data_types import MelleaSessionData
 
+from lfx.components.policies.wrapped_tool import wrap_tool
 from lfx.custom.custom_component.component import Component
 from lfx.field_typing import Tool
 from lfx.inputs.inputs import BoolInput, MessageTextInput
 from lfx.io import HandleInput, MessageTextInput, Output, SecretStrInput
-from lfx.log.logger import logger
 
 MODEL_PROVIDERS_LIST = ["Anthropic", "OpenAI"]
 MODEL = "gpt-4o-2024-08-06"
@@ -105,7 +103,7 @@ class PoliciesComponent(Component):
             tools=self.tools,
             tool_specs=specs,
             work_dir=out_dir,
-            llm_data=MeleaSessionData(),  # FIXME
+            llm_data=MelleaSessionData(),  # FIXME
         )
         return gen_result
 
