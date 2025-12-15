@@ -798,7 +798,7 @@ function hasLoop(
         const targetHandleObject: targetHandleType = scapeJSONParse(
           e.targetHandle!,
         );
-        
+
         // For loop inputs, compare by name and id instead of full stringified comparison
         // This handles the case where loop inputs have additional loop_types in output_types
         if (
@@ -808,7 +808,7 @@ function hasLoop(
         ) {
           return true;
         }
-        
+
         // Fallback to original comparison for non-loop inputs
         const sourceHandleParsed = scapedJSONStringfy(sourceHandleObject);
         if (sourceHandleParsed === e.targetHandle) {
