@@ -89,6 +89,9 @@ async def test_webhook_endpoint_with_valid_api_key(client, added_webhook_test, c
         # Should work with valid API key
         response = await client.post(endpoint, headers={"x-api-key": created_api_key.api_key}, json=payload)
         assert response.status_code == 202
+
+        # Wait for background task to complete (webhook returns 202 immediately)
+        await asyncio.sleep(2)
         assert await file_path.exists(), f"File {file_path} does not exist"
 
     file_does_not_exist = not await file_path.exists()
