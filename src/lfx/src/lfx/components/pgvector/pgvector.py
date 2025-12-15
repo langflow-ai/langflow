@@ -7,6 +7,7 @@ from lfx.schema.data import Data
 from lfx.serialization import serialize
 from lfx.utils.connection_string_parser import transform_connection_string
 
+
 class PGVectorStoreComponent(LCVectorStoreComponent):
     display_name = "PGVector"
     description = "PGVector Vector Store with search capabilities"
