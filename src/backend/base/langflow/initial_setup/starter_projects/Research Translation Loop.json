@@ -25,9 +25,9 @@
         "id": "reactflow__edge-ChatInput-0fTqa{œdataTypeœ:œChatInputœ,œidœ:œChatInput-0fTqaœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ArXivComponent-H8Mae{œfieldNameœ:œsearch_queryœ,œidœ:œArXivComponent-H8Maeœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-0fTqa",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-0fTqaœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-0fTqaœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ArXivComponent-H8Mae",
-        "targetHandle": "{œfieldNameœ:œsearch_queryœ,œidœ:œArXivComponent-H8Maeœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œArXivComponent-H8Maeœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -53,9 +53,9 @@
         "id": "reactflow__edge-ArXivComponent-H8Mae{œdataTypeœ:œArXivComponentœ,œidœ:œArXivComponent-H8Maeœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-LoopComponent-qcJgH{œfieldNameœ:œdataœ,œidœ:œLoopComponent-qcJgHœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "ArXivComponent-H8Mae",
-        "sourceHandle": "{œdataTypeœ:œArXivComponentœ,œidœ:œArXivComponent-H8Maeœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œArXivComponentœ, œidœ: œArXivComponent-H8Maeœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "LoopComponent-qcJgH",
-        "targetHandle": "{œfieldNameœ:œdataœ,œidœ:œLoopComponent-qcJgHœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œLoopComponent-qcJgHœ, œinputTypesœ: [œDataFrameœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -82,9 +82,9 @@
         "id": "reactflow__edge-LoopComponent-qcJgH{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-qcJgHœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}-ParserComponent-E1d8t{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-E1d8tœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "LoopComponent-qcJgH",
-        "sourceHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-qcJgHœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}",
+        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-qcJgHœ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ]}",
         "target": "ParserComponent-E1d8t",
-        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-E1d8tœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-E1d8tœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -112,9 +112,9 @@
         "id": "reactflow__edge-LoopComponent-qcJgH{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-qcJgHœ,œnameœ:œdoneœ,œoutput_typesœ:[œDataFrameœ]}-ChatOutput-NVM2L{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-NVM2Lœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "LoopComponent-qcJgH",
-        "sourceHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-qcJgHœ,œnameœ:œdoneœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-qcJgHœ, œnameœ: œdoneœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "ChatOutput-NVM2L",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-NVM2Lœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-NVM2Lœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -140,9 +140,9 @@
         "id": "xy-edge__ParserComponent-E1d8t{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-E1d8tœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-khJQA{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-khJQAœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ParserComponent-E1d8t",
-        "sourceHandle": "{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-E1d8tœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-E1d8tœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "LanguageModelComponent-khJQA",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-khJQAœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-khJQAœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -169,9 +169,9 @@
         "id": "xy-edge__LanguageModelComponent-khJQA{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-khJQAœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-LoopComponent-qcJgH{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-qcJgHœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ,œMessageœ]}",
         "selected": false,
         "source": "LanguageModelComponent-khJQA",
-        "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-khJQAœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-khJQAœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "LoopComponent-qcJgH",
-        "targetHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-qcJgHœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ,œMessageœ]}"
+        "targetHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-qcJgHœ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ, œMessageœ]}"
       }
     ],
     "nodes": [
