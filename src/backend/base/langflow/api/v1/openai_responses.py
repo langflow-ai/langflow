@@ -165,6 +165,15 @@ async def run_flow_for_openai_responses(
                                         "[OpenAIResponses][stream] token: token_data=%s",
                                         token_data,
                                     )
+                                if event_type == "error":
+                                    error_message = data.get("error", "Unknown error")
+                                    await logger.adebug(f"[OpenAIResponses][stream] error event: {error_message}")
+                                    error_response = create_openai_error(
+                                        message=error_message,
+                                        type_="processing_error",
+                                    )
+                                    yield f"data: {json.dumps(error_response)}\n\n"
+
                                 if event_type == "add_message":
                                     sender_name = data.get("sender_name", "")
                                     text = data.get("text", "")
