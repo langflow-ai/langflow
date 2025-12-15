@@ -5,7 +5,7 @@ from lfx.helpers.data import docs_to_data
 from lfx.io import HandleInput, IntInput, SecretStrInput, StrInput
 from lfx.schema.data import Data
 from lfx.utils.connection_string_parser import transform_connection_string
-
+from lfx.serialization import serialize
 
 class PGVectorStoreComponent(LCVectorStoreComponent):
     display_name = "PGVector"
@@ -36,6 +36,7 @@ class PGVectorStoreComponent(LCVectorStoreComponent):
         for _input in self.ingest_data or []:
             if isinstance(_input, Data):
                 documents.append(_input.to_lc_document())
+                documents[-1].metadata = serialize(documents[-1].metadata, to_str=True)
             else:
                 documents.append(_input)
 
