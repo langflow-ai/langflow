@@ -1,5 +1,5 @@
-import Mustache from "mustache";
-import React, { useEffect, useRef, useState } from "react";
+import type React from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePostValidatePrompt } from "@/controllers/API/queries/nodes/use-post-validate-prompt";
 import IconComponent from "../../components/common/genericIconComponent";
 import SanitizedHTMLWrapper from "../../components/common/sanitizedHTMLWrapper";
@@ -25,6 +25,17 @@ import { classNames } from "../../utils/utils";
 import BaseModal from "../baseModal";
 import varHighlightHTML from "../promptModal/utils/var-highlight-html";
 
+// Simple regex to extract mustache variables - only matches valid {{variable_name}} patterns
+const SIMPLE_VARIABLE_PATTERN = /\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g;
+
+// Type for non-standard caretPositionFromPoint API (not supported in Safari)
+interface CaretPosition {
+  offset: number;
+}
+interface DocumentWithCaretPosition extends Document {
+  caretPositionFromPoint(x: number, y: number): CaretPosition | null;
+}
+
 export default function MustachePromptModal({
   field_name = "",
   value,
@@ -44,28 +55,28 @@ export default function MustachePromptModal({
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setNoticeData = useAlertStore((state) => state.setNoticeData);
   const divRef = useRef(null);
-  const divRefPrompt = useRef(null);
+  const _divRefPrompt = useRef(null);
   const { mutate: postValidatePrompt } = usePostValidatePrompt();
   const [clickPosition, setClickPosition] = useState({ x: 0, y: 0 });
   const [scrollPosition, setScrollPosition] = useState(0);
   const previewRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [templateVariables, setTemplateVariables] = useState<string[]>([]);
 
   function checkVariables(valueToCheck: string): void {
-    try {
-      const tokens = Mustache.parse(valueToCheck);
-      const variables = tokens
-        .filter((token) => token[0] === "name")
-        .map((token) => token[1]);
-      setTemplateVariables(Array.from(new Set(variables)));
-      setWordsHighlight(new Set(variables.map((v) => `{{${v}}}`)));
-    } catch (error) {
-      console.error("Error parsing Mustache template:", error);
-      // Handle the error gracefully, e.g., set empty arrays/sets
-      setTemplateVariables([]);
-      setWordsHighlight(new Set());
+    // Extract only valid mustache variables {{variable_name}}
+    const matches: string[] = [];
+    const regex = new RegExp(SIMPLE_VARIABLE_PATTERN.source, "g");
+    let match: RegExpExecArray | null = regex.exec(valueToCheck);
+
+    while (match !== null) {
+      const varName = match[1];
+      if (!matches.includes(varName)) {
+        matches.push(varName);
+      }
+      match = regex.exec(valueToCheck);
     }
+
+    setWordsHighlight(new Set(matches.map((v) => `{{${v}}}`)));
   }
 
   useEffect(() => {
@@ -77,7 +88,7 @@ export default function MustachePromptModal({
   const coloredContent = (typeof inputValue === "string" ? inputValue : "")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/\{\{(.+?)\}\}/g, (match, p1) => {
+    .replace(/\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g, (match) => {
       return varHighlightHTML({ name: match, addCurlyBraces: false });
     })
     .replace(/\n/g, "<br />");
@@ -116,7 +127,7 @@ export default function MustachePromptModal({
               : (apiReturn?.frontend_node?.custom_fields?.[""] ?? "");
           }
           if (apiReturn) {
-            let inputVariables = apiReturn.input_variables ?? [];
+            const inputVariables = apiReturn.input_variables ?? [];
             if (
               JSON.stringify(apiReturn?.frontend_node) !== JSON.stringify({})
             ) {
@@ -173,7 +184,8 @@ export default function MustachePromptModal({
 
       // Use caretPositionFromPoint to get the closest text position. Does not work on Safari.
       if ("caretPositionFromPoint" in document) {
-        let range = (document as any).caretPositionFromPoint(x, y)?.offset ?? 0;
+        const docWithCaret = document as DocumentWithCaretPosition;
+        const range = docWithCaret.caretPositionFromPoint(x, y)?.offset ?? 0;
         if (range) {
           const position = range;
           textArea.setSelectionRange(position, position);
@@ -197,14 +209,14 @@ export default function MustachePromptModal({
       <BaseModal.Header description={MUSTACHE_PROMPT_DIALOG_SUBTITLE}>
         <div className="flex w-full items-start gap-3">
           <div className="flex">
-            <span className="pr-2" data-testid="modal-title">
-              Edit Prompt
-            </span>
             <IconComponent
               name="TerminalSquare"
-              className="h-6 w-6 pl-1 text-primary"
+              className="h-6 w-6 pr-1 text-primary"
               aria-hidden="true"
             />
+            <span className="pl-2" data-testid="modal-title">
+              Edit Prompt
+            </span>
           </div>
         </div>
       </BaseModal.Header>
@@ -259,18 +271,23 @@ export default function MustachePromptModal({
                     Prompt Variables:
                   </span>
 
-                  {templateVariables.map((variable, index) => (
-                    <ShadTooltip key={index} content={variable} asChild={false}>
+                  {Array.from(wordsHighlight).map((word, index) => (
+                    <ShadTooltip
+                      key={index}
+                      content={word.replace(/[{}]/g, "")}
+                      asChild={false}
+                    >
                       <Badge
+                        key={index}
                         variant="gray"
                         size="md"
                         className="max-w-[40vw] cursor-default truncate p-1 text-sm"
                       >
                         <div className="relative bottom-[1px]">
                           <span id={"badge" + index.toString()}>
-                            {variable.length > 59
-                              ? variable.slice(0, 56) + "..."
-                              : variable}
+                            {word.replace(/[{}]/g, "").length > 59
+                              ? word.replace(/[{}]/g, "").slice(0, 56) + "..."
+                              : word.replace(/[{}]/g, "")}
                           </span>
                         </div>
                       </Badge>
