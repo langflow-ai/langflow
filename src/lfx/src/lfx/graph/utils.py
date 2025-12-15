@@ -204,6 +204,76 @@ async def log_vertex_build(
             async with db_service._with_session() as session:  # noqa: SLF001
                 await crud_log_vertex_build(session, vertex_build)
 
+            # Emit end_vertex event for webhook real-time feedback
+            try:
+                from datetime import datetime, timezone
+
+                from langflow.services.event_manager import webhook_event_manager
+
+                flow_id_str = str(flow_id)
+                if webhook_event_manager.has_listeners(flow_id_str):
+                    # Get build duration
+                    duration = webhook_event_manager.get_build_duration(flow_id_str, vertex_id)
+
+                    # Serialize data_dict to JSON-safe format
+                    def serialize_for_json(obj):
+                        """Convert object to JSON-serializable format."""
+                        if obj is None:
+                            return None
+                        if isinstance(obj, (str, int, float, bool)):
+                            return obj
+                        if isinstance(obj, dict):
+                            return {k: serialize_for_json(v) for k, v in obj.items()}
+                        if isinstance(obj, (list, tuple)):
+                            return [serialize_for_json(item) for item in obj]
+                        if hasattr(obj, "model_dump"):
+                            return serialize_for_json(obj.model_dump())
+                        if hasattr(obj, "dict"):
+                            return serialize_for_json(obj.dict())
+                        # For other objects, try to convert to string
+                        try:
+                            return str(obj)
+                        except (TypeError, ValueError):
+                            return None
+
+                    # Build vertex_data with full content
+                    results = serialize_for_json(data_dict.get("results")) if isinstance(data_dict, dict) else {}
+                    outputs = serialize_for_json(data_dict.get("outputs")) if isinstance(data_dict, dict) else {}
+                    logs = serialize_for_json(data_dict.get("logs")) if isinstance(data_dict, dict) else {}
+                    messages = serialize_for_json(data_dict.get("messages")) if isinstance(data_dict, dict) else []
+                    vertex_data = {
+                        "results": results,
+                        "outputs": outputs,
+                        "logs": logs,
+                        "messages": messages,
+                        "duration": duration,
+                    }
+
+                    # Serialize artifacts
+                    serialized_artifacts = serialize_for_json(artifacts_dict) if artifacts_dict else {}
+
+                    # Build complete VertexBuildTypeAPI structure
+                    await webhook_event_manager.emit(
+                        flow_id_str,
+                        "end_vertex",
+                        {
+                            "build_data": {
+                                "id": vertex_id,
+                                "valid": valid,
+                                "params": str(params) if params else None,
+                                "data": vertex_data,
+                                "artifacts": serialized_artifacts,
+                                "timestamp": datetime.now(timezone.utc).isoformat(),
+                                "messages": vertex_data.get("messages", []),
+                                "inactivated_vertices": None,
+                                "next_vertices_ids": [],
+                                "top_level_vertices": [],
+                            }
+                        },
+                    )
+            except Exception:  # noqa: BLE001, S110
+                pass  # SSE emission is not critical - intentionally silent
+
         except ImportError:
             # Fallback for standalone lfx usage (without langflow)
             settings_service = get_settings_service()

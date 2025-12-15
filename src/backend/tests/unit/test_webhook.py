@@ -406,3 +406,128 @@ async def test_vertex_builds_endpoint_returns_empty_for_new_flow(client, logged_
     finally:
         # Cleanup
         await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+
+
+# =============================================================================
+# WEBHOOK EVENT MANAGER TESTS
+# =============================================================================
+
+
+async def test_webhook_event_manager_subscribe_unsubscribe():
+    """Test subscribing and unsubscribing from webhook events."""
+    from langflow.services.event_manager import WebhookEventManager
+
+    manager = WebhookEventManager()
+    flow_id = "test-flow-123"
+
+    # Initially no listeners
+    assert not manager.has_listeners(flow_id)
+
+    # Subscribe
+    queue = await manager.subscribe(flow_id)
+    assert manager.has_listeners(flow_id)
+
+    # Unsubscribe
+    await manager.unsubscribe(flow_id, queue)
+    assert not manager.has_listeners(flow_id)
+
+
+async def test_webhook_event_manager_emit():
+    """Test emitting events to subscribers."""
+    from langflow.services.event_manager import WebhookEventManager
+
+    manager = WebhookEventManager()
+    flow_id = "test-flow-456"
+
+    # Subscribe
+    queue = await manager.subscribe(flow_id)
+
+    # Emit event
+    await manager.emit(flow_id, "test_event", {"key": "value"})
+
+    # Check event was received
+    event = await asyncio.wait_for(queue.get(), timeout=1.0)
+    assert event["event"] == "test_event"
+    assert event["data"] == {"key": "value"}
+    assert "timestamp" in event
+
+    # Cleanup
+    await manager.unsubscribe(flow_id, queue)
+
+
+async def test_webhook_event_manager_emit_no_listeners():
+    """Test that emit with no listeners doesn't raise errors."""
+    from langflow.services.event_manager import WebhookEventManager
+
+    manager = WebhookEventManager()
+    flow_id = "test-flow-789"
+
+    # Should not raise any errors
+    await manager.emit(flow_id, "test_event", {"key": "value"})
+
+
+async def test_webhook_event_manager_duration_tracking():
+    """Test build duration tracking."""
+    from langflow.services.event_manager import WebhookEventManager
+
+    manager = WebhookEventManager()
+    flow_id = "test-flow-duration"
+    vertex_id = "vertex-1"
+
+    # Record start time
+    manager.record_build_start(flow_id, vertex_id)
+
+    # Wait a bit
+    await asyncio.sleep(0.1)
+
+    # Get duration
+    duration = manager.get_build_duration(flow_id, vertex_id)
+    assert duration is not None
+    assert "ms" in duration  # Should be in milliseconds format
+
+    # Duration should be cleared after getting it
+    duration_again = manager.get_build_duration(flow_id, vertex_id)
+    assert duration_again is None
+
+
+async def test_webhook_event_manager_format_duration():
+    """Test duration formatting."""
+    from langflow.services.event_manager import WebhookEventManager
+
+    # Test milliseconds
+    assert WebhookEventManager._format_duration(0.5) == "500 ms"
+    assert WebhookEventManager._format_duration(0.999) == "999 ms"
+
+    # Test seconds
+    assert WebhookEventManager._format_duration(1.0) == "1.0 s"
+    assert WebhookEventManager._format_duration(30.5) == "30.5 s"
+
+    # Test minutes
+    assert WebhookEventManager._format_duration(60.0) == "1m 0.0s"
+    assert WebhookEventManager._format_duration(90.5) == "1m 30.5s"
+
+
+async def test_webhook_event_manager_multiple_subscribers():
+    """Test multiple subscribers receive the same events."""
+    from langflow.services.event_manager import WebhookEventManager
+
+    manager = WebhookEventManager()
+    flow_id = "test-flow-multi"
+
+    # Subscribe multiple times
+    queue1 = await manager.subscribe(flow_id)
+    queue2 = await manager.subscribe(flow_id)
+
+    # Emit event
+    await manager.emit(flow_id, "broadcast", {"msg": "hello"})
+
+    # Both should receive the event
+    event1 = await asyncio.wait_for(queue1.get(), timeout=1.0)
+    event2 = await asyncio.wait_for(queue2.get(), timeout=1.0)
+
+    assert event1["data"] == {"msg": "hello"}
+    assert event2["data"] == {"msg": "hello"}
+
+    # Cleanup
+    await manager.unsubscribe(flow_id, queue1)
+    await manager.unsubscribe(flow_id, queue2)

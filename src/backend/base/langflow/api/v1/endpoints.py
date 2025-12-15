@@ -205,9 +205,48 @@ async def simple_run_flow_task(
     telemetry_service=None,
     start_time: float | None = None,
     run_id: str | None = None,
+    emit_events: bool = False,
+    flow_id: str | None = None,
 ):
-    """Run a flow task as a BackgroundTask, therefore it should not throw exceptions."""
+    """Run a flow task as a BackgroundTask, therefore it should not throw exceptions.
+
+    Args:
+        flow: The flow to execute
+        input_request: The simplified API request
+        stream: Whether to stream results
+        api_key_user: The user executing the flow
+        event_manager: Event manager for streaming
+        telemetry_service: Service for logging telemetry
+        start_time: Start time for duration calculation
+        run_id: Unique ID for this run
+        emit_events: Whether to emit events to webhook_event_manager (for UI feedback)
+        flow_id: Flow ID for event emission (required if emit_events=True)
+    """
+    webhook_event_mgr = None
+
+    if emit_events and flow_id:
+        from langflow.services.event_manager import webhook_event_manager
+
+        webhook_event_mgr = webhook_event_manager
+
     try:
+        # Emit vertices_sorted event before starting execution
+        if emit_events and webhook_event_mgr and flow_id:
+            # Get all vertex IDs from the flow
+            vertex_ids = []
+            if flow.data and flow.data.get("nodes"):
+                vertex_ids = [node.get("id") for node in flow.data.get("nodes", []) if node.get("id")]
+
+            await webhook_event_mgr.emit(
+                flow_id,
+                "vertices_sorted",
+                {
+                    "ids": vertex_ids,
+                    "to_run": vertex_ids,
+                    "run_id": run_id,
+                }
+            )
+
         result = await simple_run_flow(
             flow=flow,
             input_request=input_request,
@@ -216,6 +255,11 @@ async def simple_run_flow_task(
             event_manager=event_manager,
             run_id=run_id,
         )
+
+        # Emit end event if UI is listening
+        if emit_events and webhook_event_mgr and flow_id:
+            await webhook_event_mgr.emit(flow_id, "end", {"run_id": run_id, "success": True})
+
         if telemetry_service and start_time is not None:
             await telemetry_service.log_package_run(
                 RunPayload(
@@ -230,6 +274,11 @@ async def simple_run_flow_task(
 
     except Exception as exc:  # noqa: BLE001
         await logger.aexception(f"Error running flow {flow.id} task")
+
+        # Emit error event if UI is listening
+        if emit_events and webhook_event_mgr and flow_id:
+            await webhook_event_mgr.emit(flow_id, "end", {"run_id": run_id, "success": False, "error": str(exc)})
+
         if telemetry_service and start_time is not None:
             await telemetry_service.log_package_run(
                 RunPayload(
@@ -608,27 +657,80 @@ async def simplified_run_flow_session(
     )
 
 
+@router.get("/webhook-events/{flow_id_or_name}")
+async def webhook_events_stream(
+    flow_id_or_name: str,  # noqa: ARG001
+    flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
+    request: Request,
+):
+    """Server-Sent Events (SSE) endpoint for real-time webhook build updates.
+
+    When a flow is open in the UI, this endpoint provides live feedback
+    of webhook execution progress, similar to clicking "Play" in the UI.
+    """
+    import json
+
+    from langflow.services.event_manager import webhook_event_manager
+
+    async def event_generator() -> AsyncGenerator[str, None]:
+        """Generate SSE events from the webhook event manager."""
+        flow_id_str = str(flow.id)
+        queue = await webhook_event_manager.subscribe(flow_id_str)
+
+        try:
+            # Send initial connection event
+            yield f"event: connected\ndata: {json.dumps({'flow_id': flow_id_str, 'flow_name': flow.name})}\n\n"
+
+            while True:
+                if await request.is_disconnected():
+                    break
+
+                try:
+                    event = await asyncio.wait_for(queue.get(), timeout=30.0)
+                    event_type = event["event"]
+                    event_data = json.dumps(event["data"])
+                    yield f"event: {event_type}\ndata: {event_data}\n\n"
+                except asyncio.TimeoutError:
+                    # Heartbeat
+                    yield f"event: heartbeat\ndata: {json.dumps({'timestamp': time.time()})}\n\n"
+
+        except asyncio.CancelledError:
+            pass
+        finally:
+            await webhook_event_manager.unsubscribe(flow_id_str, queue)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
 @router.post("/webhook/{flow_id_or_name}", response_model=dict, status_code=HTTPStatus.ACCEPTED)  # noqa: RUF100, FAST003
 async def webhook_run_flow(
     flow_id_or_name: str,
     flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
     request: Request,
-    background_tasks: BackgroundTasks,
 ):
     """Run a flow using a webhook request.
 
     Args:
-        flow_id_or_name (str): The flow ID or endpoint name.
-        flow (Flow): The flow to be executed.
-        request (Request): The incoming HTTP request.
-        background_tasks (BackgroundTasks): The background tasks manager.
+        flow_id_or_name: The flow ID or endpoint name (used by dependency).
+        flow: The flow to be executed.
+        request: The incoming HTTP request.
 
     Returns:
-        dict: A dictionary containing the status of the task.
+        A dictionary containing the status of the task.
 
     Raises:
         HTTPException: If the flow is not found or if there is an error processing the request.
     """
+    from langflow.services.event_manager import webhook_event_manager
+
     telemetry_service = get_telemetry_service()
     start_time = time.perf_counter()
     await logger.adebug("Received webhook request")
@@ -662,17 +764,29 @@ async def webhook_run_flow(
             session_id=None,
         )
 
+        # Check if there are UI listeners connected via SSE
+        flow_id_str = str(flow.id)
+        has_ui_listeners = webhook_event_manager.has_listeners(flow_id_str)
+
         await logger.adebug("Starting background task")
         run_id = str(uuid4())
-        background_tasks.add_task(
-            simple_run_flow_task,
-            flow=flow,
-            input_request=input_request,
-            api_key_user=webhook_user,
-            telemetry_service=telemetry_service,
-            start_time=start_time,
-            run_id=run_id,
+
+        # Use asyncio.create_task to run in same event loop (needed for SSE)
+        # Store reference to avoid "Task was destroyed" warnings
+        _task = asyncio.create_task(
+            simple_run_flow_task(
+                flow=flow,
+                input_request=input_request,
+                api_key_user=webhook_user,
+                telemetry_service=telemetry_service,
+                start_time=start_time,
+                run_id=run_id,
+                emit_events=has_ui_listeners,
+                flow_id=flow_id_str,
+            )
         )
+        # Keep task reference alive (fire-and-forget pattern)
+        _task.add_done_callback(lambda t: t.exception() if not t.cancelled() else None)
     except Exception as exc:
         error_msg = str(exc)
         raise HTTPException(status_code=500, detail=error_msg) from exc
