@@ -347,7 +347,13 @@ export function detectBrokenEdgesEdges(nodes: AllNodeType[], edges: Edge[]) {
           id.proxy = targetNode.data.node!.template[field]?.proxy;
         }
       }
-      if (scapedJSONStringfy(id) !== targetHandle) {
+      // Check if target is an loop input (allows_loop=true)
+      const targetOutput = targetNode.data.node!.outputs?.find(
+        (output) => output.name === targetHandleObject.name,
+      );
+      const isLoopInput = targetOutput?.allows_loop === true;
+
+      if (scapedJSONStringfy(id) !== targetHandle && !isLoopInput) {
         newEdges = newEdges.filter((e) => e.id !== edge.id);
         BrokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
       }
@@ -369,7 +375,9 @@ export function detectBrokenEdgesEdges(nodes: AllNodeType[], edges: Edge[]) {
             output_types: outputTypes,
             dataType: sourceNode.data.type,
           };
-          if (scapedJSONStringfy(id) !== sourceHandle) {
+          // Skip edge validation for outputs with allows_loop=true
+          const hasAllowsLoop = output?.allows_loop === true;
+          if (scapedJSONStringfy(id) !== sourceHandle && !hasAllowsLoop) {
             newEdges = newEdges.filter((e) => e.id !== edge.id);
             BrokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
           }
