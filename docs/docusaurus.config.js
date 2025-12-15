@@ -105,6 +105,19 @@ const config = {
           routeBasePath: "/", // Serve the docs at the site's root
           sidebarPath: require.resolve("./sidebars.js"), // Use sidebars.js file
           sidebarCollapsed: true,
+          // Versioning configuration
+          lastVersion: '1.7.0', // Make 1.7.0 the latest released version
+          versions: {
+            current: {
+              label: 'Next', // Work-in-progress version (will become 1.8.0)
+              path: 'next',
+            },
+            '1.7.0': {
+              label: '1.7.0',
+              path: '1.7.0',
+            },
+          },
+          onlyIncludeVersions: ['current', '1.7.0'], // Include both versions
           beforeDefaultRemarkPlugins: [
             [
               remarkCodeHike,
