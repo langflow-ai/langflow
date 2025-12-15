@@ -22,50 +22,75 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       type,
       placeholder,
       onChange,
+      onCompositionStart: userOnCompositionStart,
+      onCompositionEnd: userOnCompositionEnd,
       value,
       defaultValue,
       ...props
     },
-    ref,
+    ref
   ) => {
+    // Internal state
     const [currentValue, setCurrentValue] = React.useState(
       () => String(defaultValue ?? value ?? "")
     );
 
+    // Ref merge
     const inputRef = React.useRef<HTMLInputElement>(null);
-
     const mergedRef = (node: HTMLInputElement) => {
       inputRef.current = node;
       if (typeof ref === "function") ref(node);
       else if (ref) (ref as any).current = node;
     };
 
+    // IME composition state
     const [isComposing, setIsComposing] = React.useState(false);
 
-    const handleCompositionStart = () => setIsComposing(true);
+    const handleCompositionStart: React.CompositionEventHandler<HTMLInputElement> =
+      (e) => {
+        setIsComposing(true);
+        userOnCompositionStart?.(e);
+      };
 
-    const handleCompositionEnd = (
-      e: React.CompositionEvent<HTMLInputElement>,
-    ) => {
-      setIsComposing(false);
-      const newValue = e.currentTarget.value;
-      setCurrentValue(newValue);
-      onChange?.(e as any);
-    };
+    const handleCompositionEnd: React.CompositionEventHandler<HTMLInputElement> =
+      (e) => {
+        setIsComposing(false);
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (!isComposing) {
-        const newValue = e.target.value;
+        const newValue = e.currentTarget.value;
         setCurrentValue(newValue);
+
+        // 触发一次 onChange，确保中文输入提交
+        const syntheticEvent = {
+          ...e,
+          target: e.currentTarget,
+        } as React.ChangeEvent<HTMLInputElement>;
+        onChange?.(syntheticEvent);
+
+        userOnCompositionEnd?.(e);
+      };
+
+    const handleChange: React.ChangeEventHandler<HTMLInputElement> = (e) => {
+      const newValue = e.target.value;
+      setCurrentValue(newValue);
+
+      // 仅在非拼音输入阶段触发
+      if (!isComposing) {
         onChange?.(e);
       }
     };
+
+    // Sync external value when controlled
+    React.useEffect(() => {
+      if (value !== undefined && !isComposing) {
+        setCurrentValue(String(value));
+      }
+    }, [value, isComposing]);
 
     return (
       <label
         className={cn(
           "relative block h-fit w-full text-sm",
-          icon ? className : "",
+          icon ? className : ""
         )}
       >
         {icon && (
@@ -78,12 +103,12 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         <input
           autoComplete="off"
           type={type}
-          defaultValue={currentValue}
+          value={currentValue}
           className={cn(
             "nopan nodelete nodrag noflow primary-input !placeholder-transparent",
             icon && "pl-9",
             endIcon && "pr-9",
-            icon ? inputClassName : className,
+            icon ? inputClassName : className
           )}
           ref={mergedRef}
           onCompositionStart={handleCompositionStart}
@@ -107,13 +132,13 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             name={endIcon}
             className={cn(
               "pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 transform text-muted-foreground",
-              endIconClassName,
+              endIconClassName
             )}
           />
         )}
       </label>
     );
-  },
+  }
 );
 
 Input.displayName = "Input";
