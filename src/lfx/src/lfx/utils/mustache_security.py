@@ -8,6 +8,7 @@ SIMPLE_VARIABLE_PATTERN = re.compile(r"\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}")
 
 # Patterns for complex mustache syntax that we want to block
 DANGEROUS_PATTERNS = [
+    re.compile(r"\{\{\{"),  # Triple braces (unescaped HTML in Mustache)
     re.compile(r"\{\{#"),  # Conditionals/sections start
     re.compile(r"\{\{/"),  # Conditionals/sections end
     re.compile(r"\{\{\^"),  # Inverted sections
@@ -45,6 +46,11 @@ def validate_mustache_template(template: str) -> None:
 
 def safe_mustache_render(template: str, variables: dict[str, Any]) -> str:
     """Safely render a mustache template with only simple variable substitution.
+
+    This function performs a single-pass replacement of all {{variable}} patterns.
+    Variable values that themselves contain mustache-like patterns (e.g., "{{other}}")
+    will NOT be processed - they are treated as literal strings. This prevents
+    injection attacks where user-controlled values could introduce new template variables.
 
     Args:
         template: The mustache template string
