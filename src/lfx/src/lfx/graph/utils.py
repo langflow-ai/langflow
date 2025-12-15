@@ -11,7 +11,7 @@ from lfx.schema.data import Data
 from lfx.schema.message import Message
 
 # Database imports removed - lfx should be lightweight
-from lfx.services.deps import get_db_service, get_settings_service
+from lfx.services.deps import get_settings_service
 
 if TYPE_CHECKING:
     from lfx.graph.vertex.base import Vertex
