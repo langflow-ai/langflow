@@ -463,7 +463,7 @@ def json_schema_from_flow(flow: Flow) -> dict:
 
                 if field_name == "mcp_type" and field_data.get("value") != "":
                     val = field_data.get("value")
-                    properties[name]["description"] = val or f"Input for {name}"
+                    properties[name]["type"] = val or "string"
 
                 if field_name == "mcp_required" and field_data.get("value", False):
                     required.append(name)
