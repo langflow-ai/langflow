@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { convertTestName } from "@/components/common/storeCardComponent/utils/convert-test-name";
@@ -22,12 +23,22 @@ export default function TemplateGetStartedCardComponent({
 
   const folderIdUrl = folderId ?? myCollectionId;
 
+  const [loading, setLoading] = useState(false);
+
   const handleClick = () => {
+    if (loading) return;
+
     if (flow) {
+      setLoading(true);
       updateIds(flow.data!);
-      addFlow({ flow }).then((id) => {
-        navigate(`/flow/${id}/folder/${folderIdUrl}`);
-      });
+      addFlow({ flow })
+        .then((id) => {
+          navigate(`/flow/${id}/folder/${folderIdUrl}`);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+
       track("New Flow Created", { template: `${flow.name} Template` });
     } else {
       console.error(`Flow template not found`);

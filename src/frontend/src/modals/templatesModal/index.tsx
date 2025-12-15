@@ -18,6 +18,7 @@ export default function TemplatesModal({
   setOpen,
 }: newFlowModalPropsType): JSX.Element {
   const [currentTab, setCurrentTab] = useState("get-started");
+  const [loading, setLoading] = useState(false);
   const addFlow = useAddFlow();
   const navigate = useCustomNavigate();
   const { folderId } = useParams();
@@ -86,11 +87,17 @@ export default function TemplatesModal({
                   </div>
                   <Button
                     onClick={() => {
-                      addFlow().then((id) => {
-                        navigate(
-                          `/flow/${id}${folderId ? `/folder/${folderId}` : ""}`,
-                        );
-                      });
+                      if (loading) return;
+                      setLoading(true);
+                      addFlow()
+                        .then((id) => {
+                          navigate(
+                            `/flow/${id}${folderId ? `/folder/${folderId}` : ""}`,
+                          );
+                        })
+                        .finally(() => {
+                          setLoading(false);
+                        });
                       track("New Flow Created", { template: "Blank Flow" });
                     }}
                     size="sm"
