@@ -5,6 +5,7 @@ from lfx.custom.custom_component.component import Component
 from lfx.inputs.input_mixin import FieldTypes
 from lfx.inputs.inputs import DefaultPromptField
 from lfx.io import BoolInput, MessageTextInput, Output, PromptInput
+from lfx.log.logger import logger
 from lfx.schema.dotdict import dotdict
 from lfx.schema.message import Message
 from lfx.template.utils import update_template_values
@@ -84,10 +85,10 @@ class PromptComponent(Component):
                         frontend_node_template=build_config,
                         is_mustache=is_mustache,
                     )
-                except ValueError:
+                except ValueError as e:
                     # If validation fails, we still updated the mode and cleaned old fields
                     # User will see error when they try to save
-                    pass
+                    logger.debug(f"Template validation failed during mode switch: {e}")
         return build_config
 
     async def build_prompt(self) -> Message:
@@ -116,9 +117,9 @@ class PromptComponent(Component):
                 frontend_node_template=frontend_node_template,
                 is_mustache=is_mustache,
             )
-        except ValueError:
+        except ValueError as e:
             # If validation fails, don't add variables but allow component to be created
-            pass
+            logger.debug(f"Template validation failed in _update_template: {e}")
         return frontend_node
 
     async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict):
@@ -141,9 +142,9 @@ class PromptComponent(Component):
                 frontend_node_template=frontend_node["template"],
                 is_mustache=is_mustache,
             )
-        except ValueError:
+        except ValueError as e:
             # If validation fails, don't add variables but allow component to be updated
-            pass
+            logger.debug(f"Template validation failed in update_frontend_node: {e}")
         # Now that template is updated, we need to grab any values that were set in the current_frontend_node
         # and update the frontend_node with those values
         update_template_values(new_template=frontend_node, previous_template=current_frontend_node["template"])
