@@ -239,9 +239,10 @@ The `BoolInput` creates a boolean toggle that's enabled by default with `value=T
 
 The `DropdownInput` provides a selection menu with three predefined options: "Fast", "Safe", and "Experimental".
 The `value="Safe"` sets "Safe" as the default selection, and you access the user's choice with `self.mode`.
+
 For a list of all available parameters, see the [BaseInputMixin definition](https://github.com/langflow-ai/langflow/blob/main/src/lfx/src/lfx/inputs/input_mixin.py) in the Langflow codebase.
 
-For a complete list of all available input types, see the [input type definitions](https://github.com/langflow-ai/langflow/blob/main/src/lfx/src/lfx/inputs/inputs.py) in the Langflow codebase. All input types are exported from `lfx.io` and imported directly.
+For a list of all available input types, see the [input type definitions](https://github.com/langflow-ai/langflow/blob/main/src/lfx/src/lfx/inputs/inputs.py) in the Langflow codebase.
 
 ```python
 from lfx.io import StrInput, DataInput, MultilineInput, IntInput, BoolInput, DropdownInput, FileInput, CodeInput, ModelInput, HandleInput, Output
