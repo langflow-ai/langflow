@@ -69,7 +69,7 @@
     "react-pdf": "^9.0.0",
     "react-router-dom": "^6.23.1",
     "react-sortablejs": "^6.1.4",
-    "react-syntax-highlighter": "^15.6.1",
+    "react-syntax-highlighter": "^16.1.0",
     "reactflow": "^11.11.3",
     "rehype-mathjax": "^4.0.3",
     "rehype-raw": "^6.1.1",
@@ -127,12 +127,12 @@
   "devDependencies": {
     "@biomejs/biome": "2.1.1",
     "@jest/types": "^30.0.1",
+    "@modelcontextprotocol/server-everything": "^2025.11.25",
+    "@playwright/test": "^1.56.0",
     "@storybook/addon-docs": "^10.1.0",
     "@storybook/addon-links": "^10.1.0",
     "@storybook/react": "^10.1.0",
     "@storybook/react-vite": "^10.1.0",
-    "@modelcontextprotocol/server-everything": "^0.6.2",
-    "@playwright/test": "^1.56.0",
     "@swc/cli": "^0.5.2",
     "@swc/core": "^1.6.1",
     "@tailwindcss/typography": "^0.5.13",
@@ -158,6 +158,6 @@
     "ts-jest": "^29.4.0",
     "typescript": "^5.4.5",
     "ua-parser-js": "^1.0.38",
-    "vite": "^5.4.21"
+    "vite": "^7.2.7"
   }
 }
