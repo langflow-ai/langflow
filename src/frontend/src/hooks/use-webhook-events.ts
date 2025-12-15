@@ -44,7 +44,7 @@ export function useWebhookEvents() {
       const verticesToRun = data.to_run;
 
       const verticesLayers: VertexLayerElementType[][] = verticesIds.map(
-        (id: string) => [{ id, reference: id }]
+        (id: string) => [{ id, reference: id }],
       );
 
       useFlowStore.getState().updateVerticesBuild({
@@ -54,7 +54,9 @@ export function useWebhookEvents() {
         runId: data.run_id,
       });
 
-      useFlowStore.getState().updateBuildStatus(verticesIds, BuildStatus.TO_BUILD);
+      useFlowStore
+        .getState()
+        .updateBuildStatus(verticesIds, BuildStatus.TO_BUILD);
       useFlowStore.getState().setIsBuilding(true);
     });
 
@@ -71,31 +73,53 @@ export function useWebhookEvents() {
       const data = JSON.parse(event.data);
       const buildData: VertexBuildTypeAPI = data.build_data;
 
-      if (buildData.inactivated_vertices && buildData.inactivated_vertices.length > 0) {
-        useFlowStore.getState().removeFromVerticesBuild(buildData.inactivated_vertices);
-        useFlowStore.getState().updateBuildStatus(
-          buildData.inactivated_vertices,
-          BuildStatus.INACTIVE
-        );
+      if (
+        buildData.inactivated_vertices &&
+        buildData.inactivated_vertices.length > 0
+      ) {
+        useFlowStore
+          .getState()
+          .removeFromVerticesBuild(buildData.inactivated_vertices);
+        useFlowStore
+          .getState()
+          .updateBuildStatus(
+            buildData.inactivated_vertices,
+            BuildStatus.INACTIVE,
+          );
       }
 
-      useFlowStore.getState().addDataToFlowPool(
-        { ...buildData, run_id: data.run_id || "" },
-        buildData.id
-      );
+      useFlowStore
+        .getState()
+        .addDataToFlowPool(
+          { ...buildData, run_id: data.run_id || "" },
+          buildData.id,
+        );
 
       if (buildData.valid) {
-        useFlowStore.getState().updateBuildStatus([buildData.id], BuildStatus.BUILT);
+        useFlowStore
+          .getState()
+          .updateBuildStatus([buildData.id], BuildStatus.BUILT);
       } else {
-        useFlowStore.getState().updateBuildStatus([buildData.id], BuildStatus.ERROR);
+        useFlowStore
+          .getState()
+          .updateBuildStatus([buildData.id], BuildStatus.ERROR);
       }
 
       useFlowStore.getState().clearEdgesRunningByNodes();
 
-      if (buildData.next_vertices_ids && buildData.next_vertices_ids.length > 0) {
-        useFlowStore.getState().setCurrentBuildingNodeId(buildData.next_vertices_ids);
-        useFlowStore.getState().updateEdgesRunningByNodes(buildData.next_vertices_ids, true);
-        useFlowStore.getState().updateBuildStatus(buildData.next_vertices_ids, BuildStatus.TO_BUILD);
+      if (
+        buildData.next_vertices_ids &&
+        buildData.next_vertices_ids.length > 0
+      ) {
+        useFlowStore
+          .getState()
+          .setCurrentBuildingNodeId(buildData.next_vertices_ids);
+        useFlowStore
+          .getState()
+          .updateEdgesRunningByNodes(buildData.next_vertices_ids, true);
+        useFlowStore
+          .getState()
+          .updateBuildStatus(buildData.next_vertices_ids, BuildStatus.TO_BUILD);
       }
     });
 
@@ -111,7 +135,7 @@ export function useWebhookEvents() {
       } else {
         useFlowStore.getState().setBuildInfo({
           error: [data.error || "Build failed"],
-          success: false
+          success: false,
         });
       }
     });

@@ -132,7 +132,8 @@ export const useGetBuildsMutation: useMutationFunctionType<
 
             if (existingEntries && newEntries && newEntries.length > 0) {
               // Find duration from existing SSE data
-              const existingDuration = existingEntries[existingEntries.length - 1]?.data?.duration;
+              const existingDuration =
+                existingEntries[existingEntries.length - 1]?.data?.duration;
 
               // If we have duration from SSE but polling doesn't have it, add it
               if (existingDuration && newEntries[newEntries.length - 1]?.data) {
