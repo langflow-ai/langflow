@@ -22,7 +22,7 @@ from langflow.services.database.models.vertex_builds.model import VertexBuildMap
 router = APIRouter(prefix="/monitor", tags=["Monitor"])
 
 
-@router.get("/builds")
+@router.get("/builds", dependencies=[Depends(get_current_active_user)])
 async def get_vertex_builds(flow_id: Annotated[UUID, Query()], session: DbSession) -> VertexBuildMapModel:
     try:
         vertex_builds = await get_vertex_builds_by_flow_id(session, flow_id)
@@ -31,7 +31,7 @@ async def get_vertex_builds(flow_id: Annotated[UUID, Query()], session: DbSessio
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.delete("/builds", status_code=204)
+@router.delete("/builds", status_code=204, dependencies=[Depends(get_current_active_user)])
 async def delete_vertex_builds(flow_id: Annotated[UUID, Query()], session: DbSession) -> None:
     try:
         await delete_vertex_builds_by_flow_id(session, flow_id)
