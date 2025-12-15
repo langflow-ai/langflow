@@ -161,7 +161,8 @@ class TestDocumentConverterCaching:
         _get_cached_converter.cache_clear()
 
         # Mock the DocumentConverter creation to avoid heavy imports
-        with patch("lfx.base.data.docling_utils.DocumentConverter") as mock_converter:
+        # Patch at import source since DocumentConverter is imported inside _get_cached_converter
+        with patch("docling.document_converter.DocumentConverter") as mock_converter:
             mock_instance1 = MagicMock()
             mock_instance2 = MagicMock()
             mock_converter.side_effect = [mock_instance1, mock_instance2]
@@ -209,7 +210,8 @@ class TestDocumentConverterCaching:
         # Clear cache before test
         _get_cached_converter.cache_clear()
 
-        with patch("lfx.base.data.docling_utils.DocumentConverter") as mock_converter:
+        # Patch at import source since DocumentConverter is imported inside _get_cached_converter
+        with patch("docling.document_converter.DocumentConverter") as mock_converter:
             mock_instances = [MagicMock() for _ in range(5)]
             mock_converter.side_effect = mock_instances
 
@@ -241,7 +243,8 @@ class TestDocumentConverterCaching:
         # Clear cache before test
         _get_cached_converter.cache_clear()
 
-        with patch("lfx.base.data.docling_utils.DocumentConverter") as mock_converter:
+        # Patch at import source since DocumentConverter is imported inside _get_cached_converter
+        with patch("docling.document_converter.DocumentConverter") as mock_converter:
             # Simulate slow converter creation
             def slow_creation(*args, **kwargs):  # noqa: ARG001
                 time.sleep(0.05)  # 50ms delay
@@ -281,7 +284,8 @@ class TestDocumentConverterCaching:
         # Clear cache
         _get_cached_converter.cache_clear()
 
-        with patch("lfx.base.data.docling_utils.DocumentConverter"):
+        # Patch at import source since DocumentConverter is imported inside _get_cached_converter
+        with patch("docling.document_converter.DocumentConverter"):
             # Add something to cache
             _get_cached_converter(
                 pipeline="standard",
@@ -309,7 +313,8 @@ class TestDocumentConverterCaching:
 
         _get_cached_converter.cache_clear()
 
-        with patch("lfx.base.data.docling_utils.DocumentConverter") as mock_converter:
+        # Patch at import source since DocumentConverter is imported inside _get_cached_converter
+        with patch("docling.document_converter.DocumentConverter") as mock_converter:
             mock_instance1 = MagicMock()
             mock_instance2 = MagicMock()
             mock_converter.side_effect = [mock_instance1, mock_instance2]
@@ -340,7 +345,8 @@ class TestDocumentConverterCaching:
 
         _get_cached_converter.cache_clear()
 
-        with patch("lfx.base.data.docling_utils.DocumentConverter") as mock_converter:
+        # Patch at import source since DocumentConverter is imported inside _get_cached_converter
+        with patch("docling.document_converter.DocumentConverter") as mock_converter:
             mock_instance1 = MagicMock()
             mock_instance2 = MagicMock()
             mock_converter.side_effect = [mock_instance1, mock_instance2]
