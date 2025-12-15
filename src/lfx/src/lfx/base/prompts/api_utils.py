@@ -126,7 +126,17 @@ def _check_input_variables(input_variables):
 def validate_prompt(prompt_template: str, *, silent_errors: bool = False, is_mustache: bool = False) -> list[str]:
     if is_mustache:
         # Extract only mustache variables
-        input_variables = mustache_template_vars(prompt_template)
+        try:
+            input_variables = mustache_template_vars(prompt_template)
+        except Exception as exc:
+            # Mustache parser errors are often cryptic (e.g., "unclosed tag at line 1")
+            # Provide a more helpful error message
+            error_str = str(exc).lower()
+            if "unclosed" in error_str or "tag" in error_str:
+                msg = "Invalid template syntax. Check that all {{variables}} have matching opening and closing braces."
+            else:
+                msg = f"Invalid mustache template: {exc}"
+            raise ValueError(msg) from exc
 
         # Also get f-string variables to filter them out
         fstring_vars = extract_input_variables_from_prompt(prompt_template)
