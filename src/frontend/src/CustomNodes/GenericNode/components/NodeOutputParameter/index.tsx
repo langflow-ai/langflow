@@ -28,13 +28,7 @@ export const OutputParameter = ({
       dataType: data.type,
       name: output.name,
     };
-  }, [
-    output.selected,
-    output.types,
-    data.id,
-    data.type,
-    output.name,
-  ]);
+  }, [output.selected, output.types, data.id, data.type, output.name]);
 
   // ID for the left handle (loop input) - includes loop_types for validation
   const loopInputId = useMemo(() => {
