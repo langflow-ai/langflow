@@ -41,10 +41,7 @@ class LangWatchTracer(BaseTracer):
                 return
 
             # Pass the dedicated tracer_provider here
-            self.trace = self._client.trace(
-                trace_id=str(self.trace_id),
-                tracer_provider=self.tracer_provider
-            )
+            self.trace = self._client.trace(trace_id=str(self.trace_id), tracer_provider=self.tracer_provider)
             self.trace.__enter__()
             self.spans: dict[str, ContextSpan] = {}
 
@@ -72,14 +69,13 @@ class LangWatchTracer(BaseTracer):
             from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 
             # Initialize the shared provider if it doesn't exist
-            if  self.tracer_provider is None:
+            if self.tracer_provider is None:
                 api_key = os.environ["LANGWATCH_API_KEY"]
                 endpoint = os.environ.get("LANGWATCH_ENDPOINT", "https://app.langwatch.ai")
 
                 resource = Resource.create(attributes={"service.name": "langflow"})
                 exporter = OTLPSpanExporter(
-                    endpoint=f"{endpoint}/api/otel/v1/traces",
-                    headers={"Authorization": f"Bearer {api_key}"}
+                    endpoint=f"{endpoint}/api/otel/v1/traces", headers={"Authorization": f"Bearer {api_key}"}
                 )
                 provider = TracerProvider(resource=resource)
                 provider.add_span_processor(BatchSpanProcessor(exporter))
