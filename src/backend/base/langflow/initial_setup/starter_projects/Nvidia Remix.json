@@ -2113,7 +2113,11 @@
                 "dynamic": false,
                 "info": "Select the embedding model to use",
                 "name": "model",
-                "options": [],
+                "options": [
+                  "text-embedding-3-small",
+                  "text-embedding-3-large",
+                  "text-embedding-ada-002"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
