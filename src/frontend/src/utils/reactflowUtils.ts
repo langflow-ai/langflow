@@ -110,10 +110,15 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
         targetNode.type === "genericNode"
       ) {
         const dataType = targetNode.data.type;
+        const output = targetNode.data.node!.outputs?.find(
+          (output) => output.name === targetHandleObject.name,
+        );
+        const baseTypes = output?.types ?? [];
+        // Include loop_types for loop inputs (allows_loop=true)
         const outputTypes =
-          targetNode.data.node!.outputs?.find(
-            (output) => output.name === targetHandleObject.name,
-          )?.types ?? [];
+          output?.allows_loop && output?.loop_types
+            ? [output.selected ?? baseTypes[0], ...output.loop_types]
+            : baseTypes;
 
         id = {
           dataType: dataType ?? "",
