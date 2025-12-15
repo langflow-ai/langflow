@@ -5,6 +5,9 @@ from typing import TYPE_CHECKING, Any, cast
 
 import nanoid
 from lfx.log.logger import logger
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from typing_extensions import override
 
 from langflow.schema.data import Data
@@ -67,9 +70,6 @@ class LangWatchTracer(BaseTracer):
         try:
             import langwatch
             from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-            from opentelemetry.sdk.resources import Resource
-            from opentelemetry.sdk.trace import TracerProvider
-            from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
             # Initialize the shared provider if it doesn't exist
             if  self.tracer_provider is None:
@@ -94,8 +94,8 @@ class LangWatchTracer(BaseTracer):
                 )
 
             self._client = langwatch
-        except ImportError:
-            logger.exception("Could not import langwatch. Please install it with `pip install langwatch`.")
+        except ImportError as e:
+            logger.exception(f"{e}")
             return False
         return True
 
