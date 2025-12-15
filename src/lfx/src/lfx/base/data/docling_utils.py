@@ -223,6 +223,7 @@ def _get_cached_converter(
 
     return DocumentConverter(format_options=format_options)
 
+
 def docling_worker(
     *,
     file_paths: list[str],

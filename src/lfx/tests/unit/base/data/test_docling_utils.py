@@ -271,8 +271,7 @@ class TestDocumentConverterCaching:
 
             # Cache hit should be significantly faster (at least 10x)
             assert second_call_duration < first_call_duration / 10, (
-                f"Cache hit should be much faster: "
-                f"first={first_call_duration:.4f}s, second={second_call_duration:.4f}s"
+                f"Cache hit should be much faster: first={first_call_duration:.4f}s, second={second_call_duration:.4f}s"
             )
 
     def test_cache_clear(self):
