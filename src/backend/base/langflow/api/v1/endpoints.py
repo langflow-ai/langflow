@@ -7,6 +7,8 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING, Annotated
 from uuid import UUID, uuid4
 
+import json
+
 import orjson
 import sqlalchemy as sa
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, UploadFile, status
@@ -50,6 +52,7 @@ from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import get_session_service, get_settings_service, get_telemetry_service
+from langflow.services.event_manager import webhook_event_manager
 from langflow.services.telemetry.schema import RunPayload
 from langflow.utils.compression import compress_response
 from langflow.utils.version import get_version_info
@@ -58,6 +61,9 @@ if TYPE_CHECKING:
     from langflow.events.event_manager import EventManager
 
 router = APIRouter(tags=["Base"])
+
+# SSE Constants
+SSE_HEARTBEAT_TIMEOUT_SECONDS = 30.0
 
 
 async def parse_input_request_from_body(http_request: Request) -> SimplifiedAPIRequest:
@@ -222,12 +228,7 @@ async def simple_run_flow_task(
         emit_events: Whether to emit events to webhook_event_manager (for UI feedback)
         flow_id: Flow ID for event emission (required if emit_events=True)
     """
-    webhook_event_mgr = None
-
-    if emit_events and flow_id:
-        from langflow.services.event_manager import webhook_event_manager
-
-        webhook_event_mgr = webhook_event_manager
+    webhook_event_mgr = webhook_event_manager if emit_events and flow_id else None
 
     try:
         # Emit vertices_sorted event before starting execution
@@ -668,10 +669,6 @@ async def webhook_events_stream(
     When a flow is open in the UI, this endpoint provides live feedback
     of webhook execution progress, similar to clicking "Play" in the UI.
     """
-    import json
-
-    from langflow.services.event_manager import webhook_event_manager
-
     async def event_generator() -> AsyncGenerator[str, None]:
         """Generate SSE events from the webhook event manager."""
         flow_id_str = str(flow.id)
@@ -686,12 +683,11 @@ async def webhook_events_stream(
                     break
 
                 try:
-                    event = await asyncio.wait_for(queue.get(), timeout=30.0)
+                    event = await asyncio.wait_for(queue.get(), timeout=SSE_HEARTBEAT_TIMEOUT_SECONDS)
                     event_type = event["event"]
                     event_data = json.dumps(event["data"])
                     yield f"event: {event_type}\ndata: {event_data}\n\n"
                 except asyncio.TimeoutError:
-                    # Heartbeat
                     yield f"event: heartbeat\ndata: {json.dumps({'timestamp': time.time()})}\n\n"
 
         except asyncio.CancelledError:
@@ -729,8 +725,6 @@ async def webhook_run_flow(
     Raises:
         HTTPException: If the flow is not found or if there is an error processing the request.
     """
-    from langflow.services.event_manager import webhook_event_manager
-
     telemetry_service = get_telemetry_service()
     start_time = time.perf_counter()
     await logger.adebug("Received webhook request")
@@ -772,8 +766,7 @@ async def webhook_run_flow(
         run_id = str(uuid4())
 
         # Use asyncio.create_task to run in same event loop (needed for SSE)
-        # Store reference to avoid "Task was destroyed" warnings
-        _task = asyncio.create_task(
+        background_task = asyncio.create_task(
             simple_run_flow_task(
                 flow=flow,
                 input_request=input_request,
@@ -785,8 +778,8 @@ async def webhook_run_flow(
                 flow_id=flow_id_str,
             )
         )
-        # Keep task reference alive (fire-and-forget pattern)
-        _task.add_done_callback(lambda t: t.exception() if not t.cancelled() else None)
+        # Fire-and-forget: log exceptions but don't block
+        background_task.add_done_callback(lambda t: t.exception() if not t.cancelled() else None)
     except Exception as exc:
         error_msg = str(exc)
         raise HTTPException(status_code=500, detail=error_msg) from exc

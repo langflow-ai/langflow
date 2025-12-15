@@ -5,6 +5,8 @@ import aiofiles
 import anyio
 import pytest
 
+from langflow.services.event_manager import WebhookEventManager
+
 
 @pytest.fixture(autouse=True)
 def _check_openai_api_key_in_environment_variables():
@@ -58,9 +60,6 @@ async def test_webhook_with_json_payload(client, added_webhook_test, created_api
 
 async def test_webhook_endpoint_requires_api_key_when_auto_login_false(client, added_webhook_test):
     """Test that webhook endpoint requires API key when WEBHOOK_AUTH_ENABLE=true."""
-    # Mock the settings service to enable webhook authentication
-    from unittest.mock import patch
-
     with patch("langflow.services.auth.utils.get_settings_service") as mock_settings:
         mock_auth_settings = type("AuthSettings", (), {"WEBHOOK_AUTH_ENABLE": True})()
         mock_settings_service = type("SettingsService", (), {"auth_settings": mock_auth_settings})()
@@ -98,9 +97,6 @@ async def test_webhook_endpoint_with_valid_api_key(client, added_webhook_test, c
 
 async def test_webhook_endpoint_unauthorized_user_flow(client, added_webhook_test):
     """Test that webhook fails when user doesn't own the flow."""
-    # Mock the settings service to enable webhook authentication
-    from unittest.mock import patch
-
     with patch("langflow.services.auth.utils.get_settings_service") as mock_settings:
         mock_auth_settings = type("AuthSettings", (), {"WEBHOOK_AUTH_ENABLE": True})()
         mock_settings_service = type("SettingsService", (), {"auth_settings": mock_auth_settings})()
@@ -133,9 +129,6 @@ async def test_webhook_flow_on_run_endpoint(client, added_webhook_test, created_
 
 async def test_webhook_with_auto_login_enabled(client, added_webhook_test):
     """Test webhook behavior when WEBHOOK_AUTH_ENABLE=false - should work without API key."""
-    # Mock the settings service to disable webhook authentication (default behavior)
-    from unittest.mock import patch
-
     with patch("langflow.services.auth.utils.get_settings_service") as mock_settings:
         mock_auth_settings = type("AuthSettings", (), {"WEBHOOK_AUTH_ENABLE": False})()
         mock_settings_service = type("SettingsService", (), {"auth_settings": mock_auth_settings})()
@@ -153,9 +146,6 @@ async def test_webhook_with_auto_login_enabled(client, added_webhook_test):
 
 async def test_webhook_with_random_payload_requires_auth(client, added_webhook_test, created_api_key):
     """Test that webhook with random payload still requires authentication."""
-    # Mock the settings service to enable webhook authentication
-    from unittest.mock import patch
-
     with patch("langflow.services.auth.utils.get_settings_service") as mock_settings:
         mock_auth_settings = type("AuthSettings", (), {"WEBHOOK_AUTH_ENABLE": True})()
         mock_settings_service = type("SettingsService", (), {"auth_settings": mock_auth_settings})()
@@ -415,8 +405,6 @@ async def test_vertex_builds_endpoint_returns_empty_for_new_flow(client, logged_
 
 async def test_webhook_event_manager_subscribe_unsubscribe():
     """Test subscribing and unsubscribing from webhook events."""
-    from langflow.services.event_manager import WebhookEventManager
-
     manager = WebhookEventManager()
     flow_id = "test-flow-123"
 
@@ -434,8 +422,6 @@ async def test_webhook_event_manager_subscribe_unsubscribe():
 
 async def test_webhook_event_manager_emit():
     """Test emitting events to subscribers."""
-    from langflow.services.event_manager import WebhookEventManager
-
     manager = WebhookEventManager()
     flow_id = "test-flow-456"
 
@@ -457,8 +443,6 @@ async def test_webhook_event_manager_emit():
 
 async def test_webhook_event_manager_emit_no_listeners():
     """Test that emit with no listeners doesn't raise errors."""
-    from langflow.services.event_manager import WebhookEventManager
-
     manager = WebhookEventManager()
     flow_id = "test-flow-789"
 
@@ -468,8 +452,6 @@ async def test_webhook_event_manager_emit_no_listeners():
 
 async def test_webhook_event_manager_duration_tracking():
     """Test build duration tracking."""
-    from langflow.services.event_manager import WebhookEventManager
-
     manager = WebhookEventManager()
     flow_id = "test-flow-duration"
     vertex_id = "vertex-1"
@@ -492,8 +474,6 @@ async def test_webhook_event_manager_duration_tracking():
 
 async def test_webhook_event_manager_format_duration():
     """Test duration formatting."""
-    from langflow.services.event_manager import WebhookEventManager
-
     # Test milliseconds
     assert WebhookEventManager._format_duration(0.5) == "500 ms"
     assert WebhookEventManager._format_duration(0.999) == "999 ms"
@@ -509,8 +489,6 @@ async def test_webhook_event_manager_format_duration():
 
 async def test_webhook_event_manager_multiple_subscribers():
     """Test multiple subscribers receive the same events."""
-    from langflow.services.event_manager import WebhookEventManager
-
     manager = WebhookEventManager()
     flow_id = "test-flow-multi"
 

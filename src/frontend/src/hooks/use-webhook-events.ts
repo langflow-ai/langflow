@@ -1,8 +1,6 @@
 /**
  * Hook for real-time webhook build events via Server-Sent Events (SSE).
- *
- * This hook uses the SAME logic as the normal Play button flow by calling
- * the same store functions (handleBuildUpdate pattern from flowStore).
+ * Uses the same logic as the Play button flow by calling the same store functions.
  */
 
 import { useEffect, useRef } from "react";
@@ -11,6 +9,16 @@ import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { VertexBuildTypeAPI } from "@/types/api";
 import type { VertexLayerElementType } from "@/types/zustand/flow";
+
+const SSE_EVENTS = {
+  CONNECTED: "connected",
+  VERTICES_SORTED: "vertices_sorted",
+  BUILD_START: "build_start",
+  END_VERTEX: "end_vertex",
+  END: "end",
+  ERROR: "error",
+  HEARTBEAT: "heartbeat",
+} as const;
 
 export function useWebhookEvents() {
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
@@ -21,39 +29,24 @@ export function useWebhookEvents() {
       return;
     }
 
-    // Connect to SSE endpoint for this flow
     const flowIdentifier = currentFlow.endpoint_name || currentFlow.id;
     const sseUrl = `/api/v1/webhook-events/${flowIdentifier}`;
-
-    console.log("[useWebhookEvents] Connecting to SSE:", sseUrl);
-
     const eventSource = new EventSource(sseUrl);
     eventSourceRef.current = eventSource;
 
-    // ============================================================
-    // EVENT: connected
-    // ============================================================
-    eventSource.addEventListener("connected", (event) => {
-      const data = JSON.parse(event.data);
-      console.log("[useWebhookEvents] Connected to flow:", data);
+    eventSource.addEventListener(SSE_EVENTS.CONNECTED, () => {
+      // Connection established
     });
 
-    // ============================================================
-    // EVENT: vertices_sorted (same as buildUtils onEvent)
-    // ============================================================
-    eventSource.addEventListener("vertices_sorted", (event) => {
+    eventSource.addEventListener(SSE_EVENTS.VERTICES_SORTED, (event) => {
       const data = JSON.parse(event.data);
-      console.log("[useWebhookEvents] vertices_sorted:", data);
-
       const verticesIds = data.ids;
       const verticesToRun = data.to_run;
 
-      // Build the verticesLayers structure (same as buildUtils)
       const verticesLayers: VertexLayerElementType[][] = verticesIds.map(
         (id: string) => [{ id, reference: id }]
       );
 
-      // Update store with vertices build info
       useFlowStore.getState().updateVerticesBuild({
         verticesLayers,
         verticesIds,
@@ -61,41 +54,23 @@ export function useWebhookEvents() {
         runId: data.run_id,
       });
 
-      // Mark all as TO_BUILD
       useFlowStore.getState().updateBuildStatus(verticesIds, BuildStatus.TO_BUILD);
-
-      // Set building state
       useFlowStore.getState().setIsBuilding(true);
     });
 
-    // ============================================================
-    // EVENT: build_start (same as onBuildStart in flowStore)
-    // ============================================================
-    eventSource.addEventListener("build_start", (event) => {
+    eventSource.addEventListener(SSE_EVENTS.BUILD_START, (event) => {
       const data = JSON.parse(event.data);
-      console.log("[useWebhookEvents] build_start:", data);
-
       const ids = [data.id];
 
-      // Mark as BUILDING (same as onBuildStart callback)
       useFlowStore.getState().updateBuildStatus(ids, BuildStatus.BUILDING);
-
-      // Update edges animation
       useFlowStore.getState().updateEdgesRunningByNodes(ids, true);
       useFlowStore.getState().setCurrentBuildingNodeId(ids);
     });
 
-    // ============================================================
-    // EVENT: end_vertex (same as buildUtils onEvent case "end_vertex")
-    // ============================================================
-    eventSource.addEventListener("end_vertex", (event) => {
+    eventSource.addEventListener(SSE_EVENTS.END_VERTEX, (event) => {
       const data = JSON.parse(event.data);
-      console.log("[useWebhookEvents] end_vertex:", data);
-
       const buildData: VertexBuildTypeAPI = data.build_data;
-      // Duration is calculated and formatted by the backend (event_manager.py)
 
-      // Handle inactivated vertices (same as handleBuildUpdate in flowStore)
       if (buildData.inactivated_vertices && buildData.inactivated_vertices.length > 0) {
         useFlowStore.getState().removeFromVerticesBuild(buildData.inactivated_vertices);
         useFlowStore.getState().updateBuildStatus(
@@ -104,23 +79,19 @@ export function useWebhookEvents() {
         );
       }
 
-      // Add data to flow pool (THIS IS THE KEY - same as handleBuildUpdate)
       useFlowStore.getState().addDataToFlowPool(
         { ...buildData, run_id: data.run_id || "" },
         buildData.id
       );
 
-      // Update build status based on validity
       if (buildData.valid) {
         useFlowStore.getState().updateBuildStatus([buildData.id], BuildStatus.BUILT);
       } else {
         useFlowStore.getState().updateBuildStatus([buildData.id], BuildStatus.ERROR);
       }
 
-      // Clear edge animations
       useFlowStore.getState().clearEdgesRunningByNodes();
 
-      // Handle next vertices (same as buildUtils)
       if (buildData.next_vertices_ids && buildData.next_vertices_ids.length > 0) {
         useFlowStore.getState().setCurrentBuildingNodeId(buildData.next_vertices_ids);
         useFlowStore.getState().updateEdgesRunningByNodes(buildData.next_vertices_ids, true);
@@ -128,19 +99,13 @@ export function useWebhookEvents() {
       }
     });
 
-    // ============================================================
-    // EVENT: end (build completed)
-    // ============================================================
-    eventSource.addEventListener("end", (event) => {
+    eventSource.addEventListener(SSE_EVENTS.END, (event) => {
       const data = JSON.parse(event.data);
-      console.log("[useWebhookEvents] Build completed:", data);
 
-      // Finalize build (same as onBuildComplete)
       useFlowStore.getState().setIsBuilding(false);
       useFlowStore.getState().clearEdgesRunningByNodes();
       useFlowStore.getState().setCurrentBuildingNodeId([]);
 
-      // Set build info for success/error popup
       if (data.success) {
         useFlowStore.getState().setBuildInfo({ success: true });
       } else {
@@ -149,41 +114,30 @@ export function useWebhookEvents() {
           success: false
         });
       }
-
     });
 
-    // ============================================================
-    // EVENT: error
-    // ============================================================
-    eventSource.addEventListener("error", (eventOrError: any) => {
-      if (eventOrError.data) {
+    eventSource.addEventListener(SSE_EVENTS.ERROR, (eventOrError: Event) => {
+      const messageEvent = eventOrError as MessageEvent;
+      if (messageEvent.data) {
         try {
-          const data = JSON.parse(eventOrError.data);
-          console.error("[useWebhookEvents] Build error:", data);
+          JSON.parse(messageEvent.data);
           useFlowStore.getState().setIsBuilding(false);
           useFlowStore.getState().clearEdgesRunningByNodes();
         } catch {
-          console.error("[useWebhookEvents] SSE connection error");
+          // SSE connection error, not a data event
         }
       }
     });
 
-    // ============================================================
-    // EVENT: heartbeat
-    // ============================================================
-    eventSource.addEventListener("heartbeat", () => {
+    eventSource.addEventListener(SSE_EVENTS.HEARTBEAT, () => {
       // Keep-alive ping
     });
 
-    // Cleanup
     return () => {
-      console.log("[useWebhookEvents] Disconnecting from SSE...");
       if (eventSourceRef.current) {
         eventSourceRef.current.close();
         eventSourceRef.current = null;
       }
     };
   }, [currentFlow?.id, currentFlow?.endpoint_name]);
-
-  return null;
 }

@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 
 from lfx.exceptions.component import ComponentBuildError
 from lfx.graph.schema import INPUT_COMPONENTS, OUTPUT_COMPONENTS, InterfaceComponentTypes, ResultData
-from lfx.graph.utils import UnbuiltObject, UnbuiltResult, log_transaction
+from lfx.graph.utils import UnbuiltObject, UnbuiltResult, emit_build_start_event, log_transaction
 from lfx.graph.vertex.param_handler import ParameterHandler
 from lfx.interface import initialize
 from lfx.interface.listing import lazy_load_dict
@@ -747,21 +747,8 @@ class Vertex:
             self._reset()
 
             # Emit build_start event for webhook real-time feedback
-            try:
-                from langflow.services.event_manager import webhook_event_manager
-
-                if self.graph and self.graph.flow_id:
-                    flow_id_str = str(self.graph.flow_id)
-                    if webhook_event_manager.has_listeners(flow_id_str):
-                        # Record start time for duration calculation
-                        webhook_event_manager.record_build_start(flow_id_str, self.id)
-                        await webhook_event_manager.emit(
-                            flow_id_str,
-                            "build_start",
-                            {"id": self.id}
-                        )
-            except Exception:  # noqa: BLE001, S110
-                pass  # SSE emission is not critical - intentionally silent
+            if self.graph and self.graph.flow_id:
+                await emit_build_start_event(self.graph.flow_id, self.id)
 
             # inject session_id if it is not None
             if inputs is not None and "session" in inputs and inputs["session"] is not None and self.has_session_id:

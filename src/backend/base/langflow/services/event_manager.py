@@ -13,6 +13,11 @@ from typing import Any
 
 from loguru import logger
 
+# Constants
+SSE_QUEUE_MAX_SIZE = 100
+SSE_EMIT_TIMEOUT_SECONDS = 1.0
+SECONDS_PER_MINUTE = 60
+
 
 class WebhookEventManager:
     """Manages SSE connections and broadcasts build events for webhooks.
@@ -47,18 +52,15 @@ class WebhookEventManager:
         self._vertex_start_times[flow_id].pop(vertex_id, None)
         return self._format_duration(elapsed)
 
-    # Constants for duration formatting
-    _SECONDS_PER_MINUTE = 60
-
     @staticmethod
     def _format_duration(seconds: float) -> str:
         """Format duration in a human-readable way."""
         if seconds < 1:
             return f"{int(seconds * 1000)} ms"
-        if seconds < WebhookEventManager._SECONDS_PER_MINUTE:
+        if seconds < SECONDS_PER_MINUTE:
             return f"{seconds:.1f} s"
-        minutes = int(seconds // WebhookEventManager._SECONDS_PER_MINUTE)
-        secs = seconds % WebhookEventManager._SECONDS_PER_MINUTE
+        minutes = int(seconds // SECONDS_PER_MINUTE)
+        secs = seconds % SECONDS_PER_MINUTE
         return f"{minutes}m {secs:.1f}s"
 
     async def subscribe(self, flow_id: str) -> asyncio.Queue:
@@ -70,7 +72,7 @@ class WebhookEventManager:
         Returns:
             Queue that will receive events for this flow
         """
-        queue: asyncio.Queue = asyncio.Queue(maxsize=100)
+        queue: asyncio.Queue = asyncio.Queue(maxsize=SSE_QUEUE_MAX_SIZE)
         async with self._lock:
             self._listeners[flow_id].add(queue)
             listener_count = len(self._listeners[flow_id])
@@ -126,8 +128,7 @@ class WebhookEventManager:
 
         for queue in listeners:
             try:
-                # Try to put with timeout to avoid blocking
-                await asyncio.wait_for(queue.put(event), timeout=1.0)
+                await asyncio.wait_for(queue.put(event), timeout=SSE_EMIT_TIMEOUT_SECONDS)
             except asyncio.TimeoutError:
                 # Queue is full (slow consumer), skip this event
                 logger.warning(f"Queue full for flow {flow_id}, dropping event {event_type}")
@@ -149,5 +150,22 @@ class WebhookEventManager:
         return flow_id in self._listeners and len(self._listeners[flow_id]) > 0
 
 
-# Global singleton instance
-webhook_event_manager = WebhookEventManager()
+# Module-level instance (can be replaced in tests via dependency injection)
+# TODO: Consider migrating to langflow's service manager pattern for better DI
+_webhook_event_manager: WebhookEventManager | None = None
+
+
+def get_webhook_event_manager() -> WebhookEventManager:
+    """Get the webhook event manager instance.
+
+    Returns:
+        The WebhookEventManager singleton instance.
+    """
+    global _webhook_event_manager  # noqa: PLW0603
+    if _webhook_event_manager is None:
+        _webhook_event_manager = WebhookEventManager()
+    return _webhook_event_manager
+
+
+# Backwards compatibility alias
+webhook_event_manager = get_webhook_event_manager()
