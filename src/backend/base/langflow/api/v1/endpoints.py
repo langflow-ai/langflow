@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import time
 from collections.abc import AsyncGenerator
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Annotated
 from uuid import UUID, uuid4
-
-import json
 
 import orjson
 import sqlalchemy as sa
@@ -245,7 +244,7 @@ async def simple_run_flow_task(
                     "ids": vertex_ids,
                     "to_run": vertex_ids,
                     "run_id": run_id,
-                }
+                },
             )
 
         result = await simple_run_flow(
@@ -669,6 +668,7 @@ async def webhook_events_stream(
     When a flow is open in the UI, this endpoint provides live feedback
     of webhook execution progress, similar to clicking "Play" in the UI.
     """
+
     async def event_generator() -> AsyncGenerator[str, None]:
         """Generate SSE events from the webhook event manager."""
         flow_id_str = str(flow.id)
