@@ -4,6 +4,7 @@ from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vec
 from lfx.helpers.data import docs_to_data
 from lfx.io import HandleInput, IntInput, SecretStrInput, StrInput
 from lfx.schema.data import Data
+from lfx.serialization import serialize
 from lfx.utils.connection_string_parser import transform_connection_string
 
 
@@ -36,6 +37,7 @@ class PGVectorStoreComponent(LCVectorStoreComponent):
         for _input in self.ingest_data or []:
             if isinstance(_input, Data):
                 documents.append(_input.to_lc_document())
+                documents[-1].metadata = serialize(documents[-1].metadata, to_str=True)
             else:
                 documents.append(_input)
 
