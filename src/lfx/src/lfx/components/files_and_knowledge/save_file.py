@@ -13,6 +13,15 @@ from lfx.io import BoolInput, DropdownInput, HandleInput, SecretStrInput, StrInp
 from lfx.schema import Data, DataFrame, Message
 from lfx.services.deps import get_settings_service, get_storage_service, session_scope
 from lfx.template.field.base import Output
+from lfx.utils.validate_cloud import is_astra_cloud_environment
+
+
+def _get_storage_location_options():
+    """Get storage location options, filtering out Local if in Astra cloud environment."""
+    all_options = [{"name": "AWS", "icon": "Amazon"}, {"name": "Google Drive", "icon": "google"}]
+    if is_astra_cloud_environment():
+        return all_options
+    return [{"name": "Local", "icon": "hard-drive"}, *all_options]
 
 
 class SaveToFileComponent(Component):
@@ -49,11 +58,7 @@ class SaveToFileComponent(Component):
             display_name="Storage Location",
             placeholder="Select Location",
             info="Choose where to save the file.",
-            options=[
-                {"name": "Local", "icon": "hard-drive"},
-                {"name": "AWS", "icon": "Amazon"},
-                {"name": "Google Drive", "icon": "google"},
-            ],
+            options=_get_storage_location_options(),
             real_time_refresh=True,
             limit=1,
         ),
@@ -170,6 +175,12 @@ class SaveToFileComponent(Component):
 
     def update_build_config(self, build_config, field_value, field_name=None):
         """Update build configuration to show/hide fields based on storage location selection."""
+        # Update options dynamically based on cloud environment
+        # This ensures options are refreshed when build_config is updated
+        if "storage_location" in build_config:
+            updated_options = _get_storage_location_options()
+            build_config["storage_location"]["options"] = updated_options
+
         if field_name != "storage_location":
             return build_config
 
@@ -247,6 +258,11 @@ class SaveToFileComponent(Component):
         storage_location = self._get_selected_storage_location()
         if not storage_location:
             msg = "Storage location must be selected."
+            raise ValueError(msg)
+
+        # Check if Local storage is disabled in cloud environment
+        if storage_location == "Local" and is_astra_cloud_environment():
+            msg = "Local storage is not available in cloud environment. Please use AWS or Google Drive."
             raise ValueError(msg)
 
         # Route to appropriate save method based on storage location
