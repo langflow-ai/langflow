@@ -28,11 +28,11 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       defaultValue,
       ...props
     },
-    ref
+    ref,
   ) => {
     // Internal state
-    const [currentValue, setCurrentValue] = React.useState(
-      () => String(defaultValue ?? value ?? "")
+    const [currentValue, setCurrentValue] = React.useState(() =>
+      String(defaultValue ?? value ?? ""),
     );
 
     // Ref merge
@@ -46,28 +46,30 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     // IME composition state
     const [isComposing, setIsComposing] = React.useState(false);
 
-    const handleCompositionStart: React.CompositionEventHandler<HTMLInputElement> =
-      (e) => {
-        setIsComposing(true);
-        userOnCompositionStart?.(e);
-      };
+    const handleCompositionStart: React.CompositionEventHandler<
+      HTMLInputElement
+    > = (e) => {
+      setIsComposing(true);
+      userOnCompositionStart?.(e);
+    };
 
-    const handleCompositionEnd: React.CompositionEventHandler<HTMLInputElement> =
-      (e) => {
-        setIsComposing(false);
+    const handleCompositionEnd: React.CompositionEventHandler<
+      HTMLInputElement
+    > = (e) => {
+      setIsComposing(false);
 
-        const newValue = e.currentTarget.value;
-        setCurrentValue(newValue);
+      const newValue = e.currentTarget.value;
+      setCurrentValue(newValue);
 
-        // 触发一次 onChange，确保中文输入提交
-        const syntheticEvent = {
-          ...e,
-          target: e.currentTarget,
-        } as React.ChangeEvent<HTMLInputElement>;
-        onChange?.(syntheticEvent);
+      // 触发一次 onChange，确保中文输入提交
+      const syntheticEvent = {
+        ...e,
+        target: e.currentTarget,
+      } as React.ChangeEvent<HTMLInputElement>;
+      onChange?.(syntheticEvent);
 
-        userOnCompositionEnd?.(e);
-      };
+      userOnCompositionEnd?.(e);
+    };
 
     const handleChange: React.ChangeEventHandler<HTMLInputElement> = (e) => {
       const newValue = e.target.value;
@@ -90,7 +92,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       <label
         className={cn(
           "relative block h-fit w-full text-sm",
-          icon ? className : ""
+          icon ? className : "",
         )}
       >
         {icon && (
@@ -108,7 +110,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             "nopan nodelete nodrag noflow primary-input !placeholder-transparent",
             icon && "pl-9",
             endIcon && "pr-9",
-            icon ? inputClassName : className
+            icon ? inputClassName : className,
           )}
           ref={mergedRef}
           onCompositionStart={handleCompositionStart}
@@ -121,7 +123,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           className={cn(
             "pointer-events-none absolute top-1/2 -translate-y-1/2 pl-px text-placeholder-foreground transition-all",
             icon ? "left-9" : "left-3",
-            currentValue ? "hidden" : ""
+            currentValue ? "hidden" : "",
           )}
         >
           {placeholder}
@@ -132,13 +134,13 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             name={endIcon}
             className={cn(
               "pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 transform text-muted-foreground",
-              endIconClassName
+              endIconClassName,
             )}
           />
         )}
       </label>
     );
-  }
+  },
 );
 
 Input.displayName = "Input";
