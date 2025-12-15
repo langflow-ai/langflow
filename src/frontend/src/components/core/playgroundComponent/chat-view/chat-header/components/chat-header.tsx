@@ -1,4 +1,5 @@
 import React, { useMemo } from "react";
+import { AnimatedConditional } from "@/components/ui/animated-close";
 import { cn } from "@/utils/utils";
 import { useChatHeaderRename } from "../hooks/use-chat-header-rename";
 import { useChatHeaderSessionActions } from "../hooks/use-chat-header-session-actions";
@@ -49,23 +50,15 @@ export function ChatHeader({
         className,
       )}
     >
-      {!isFullscreen && (
-        <div className="flex items-center gap-2 flex-[2_1_0] min-w-0">
-          <ChatSessionsDropdown
-            onNewChat={onNewChat}
-            onSessionSelect={onSessionSelect}
-            currentSessionId={currentSessionId}
-          />
-          <ChatHeaderTitle
-            sessionTitle={sessionTitle}
-            isEditing={isEditing}
-            currentSessionId={currentSessionId}
-            isFullscreen={isFullscreen}
-            onRenameSave={handleRenameSave}
-          />
-        </div>
-      )}
-      {isFullscreen && (
+      <AnimatedConditional
+        isOpen={!isFullscreen}
+        className="flex items-center gap-2 flex-[2_1_0] min-w-0"
+      >
+        <ChatSessionsDropdown
+          onNewChat={onNewChat}
+          onSessionSelect={onSessionSelect}
+          currentSessionId={currentSessionId}
+        />
         <ChatHeaderTitle
           sessionTitle={sessionTitle}
           isEditing={isEditing}
@@ -73,9 +66,24 @@ export function ChatHeader({
           isFullscreen={isFullscreen}
           onRenameSave={handleRenameSave}
         />
-      )}
-      {!isFullscreen && (
-        <div className="flex items-center gap-2 flex-1 justify-end">
+      </AnimatedConditional>
+      <AnimatedConditional
+        isOpen={isFullscreen}
+        className="flex items-center gap-2 flex-1 min-w-0"
+      >
+        <ChatHeaderTitle
+          sessionTitle={sessionTitle}
+          isEditing={isEditing}
+          currentSessionId={currentSessionId}
+          isFullscreen={isFullscreen}
+          onRenameSave={handleRenameSave}
+        />
+      </AnimatedConditional>
+      <div className="relative flex items-center flex-1 justify-end min-h-[32px] w-[120px]">
+        <AnimatedConditional
+          isOpen={!isFullscreen}
+          className="absolute right-0 top-1/2 flex h-full w-full -translate-y-1/2 items-center justify-end gap-1"
+        >
           <SessionMoreMenu
             onRename={handleRename}
             onMessageLogs={handleMessageLogs}
@@ -89,19 +97,22 @@ export function ChatHeader({
             tooltipSide="left"
           />
           <ChatHeaderActions
-            isFullscreen={isFullscreen}
+            isFullscreen={false}
             onToggleFullscreen={onToggleFullscreen}
             onClose={onClose}
           />
-        </div>
-      )}
-      {isFullscreen && (
-        <ChatHeaderActions
-          isFullscreen={isFullscreen}
-          onToggleFullscreen={onToggleFullscreen}
-          onClose={onClose}
-        />
-      )}
+        </AnimatedConditional>
+        <AnimatedConditional
+          isOpen={isFullscreen}
+          className="absolute right-0 top-1/2 flex h-full w-full -translate-y-1/2 items-center justify-end gap-1"
+        >
+          <ChatHeaderActions
+            isFullscreen={true}
+            onToggleFullscreen={onToggleFullscreen}
+            onClose={onClose}
+          />
+        </AnimatedConditional>
+      </div>
       {currentSessionId && (
         <SessionLogsModal
           sessionId={currentSessionId}

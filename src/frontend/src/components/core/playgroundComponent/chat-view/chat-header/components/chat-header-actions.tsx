@@ -18,12 +18,7 @@ export function ChatHeaderActions({
   }
 
   return (
-    <div
-      className={cn(
-        "flex items-center gap-2",
-        isFullscreen && "absolute right-4",
-      )}
-    >
+    <div className={cn("flex items-center gap-1 justify-end")}>
       <button
         type="button"
         onClick={onToggleFullscreen}
