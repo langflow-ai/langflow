@@ -75,9 +75,7 @@ async def create_flow_from_template_and_get_link(
 
     # 4) Use the same creation path as API
     storage_service = get_storage_service()
-    db_flow = await _new_flow(
-        session=session, flow=new_flow, user_id=user_id, storage_service=storage_service
-    )
+    db_flow = await _new_flow(session=session, flow=new_flow, user_id=user_id, storage_service=storage_service)
     await session.commit()
     await session.refresh(db_flow)
     await _save_flow_to_fs(db_flow, user_id, storage_service)
