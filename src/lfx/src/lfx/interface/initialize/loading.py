@@ -125,7 +125,7 @@ def load_from_env_vars(params, load_from_db_fields, custom_component=None):
                 request_variables = context["request_variables"]
                 if variable_name in request_variables:
                     key = request_variables[variable_name]
-                    logger.debug(f"Found context override for variable '{variable_name}': {key}")
+                    logger.debug(f"Found context override for variable '{variable_name}'")
 
         if key is None:
             key = os.getenv(variable_name)
