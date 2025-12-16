@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChatHeader } from "@/components/core/playgroundComponent/chat-view/chat-header";
 import { ChatSidebar } from "@/components/core/playgroundComponent/chat-view/chat-header/components/chat-sidebar";
-import { useSessionManagement } from "@/components/core/playgroundComponent/chat-view/hooks/use-session-management";
+import { useSessionManagement } from "@/components/core/playgroundComponent/hooks/use-session-management";
 import { useSlidingContainerStore } from "../stores/sliding-container-store";
 
 const TRANSITION_MS = 300;

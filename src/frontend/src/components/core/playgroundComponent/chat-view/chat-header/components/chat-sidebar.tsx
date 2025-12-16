@@ -2,8 +2,9 @@ import React from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
-import { useGetSessionsFromFlowQuery } from "@/controllers/API/queries/messages/use-get-sessions-from-flow";
-import { useGetFlowId } from "../../hooks/use-get-flow-id";
+import { useGetFlowId } from "../../../hooks/use-get-flow-id";
+import { useEditSessionInfo } from "../hooks/use-edit-session-info";
+import { useGetAddSessions } from "../hooks/use-get-add-sessions";
 import { SessionSelector } from "./session-selector";
 
 interface ChatSidebarProps {
@@ -20,36 +21,20 @@ export function ChatSidebar({
   onDeleteSession,
 }: ChatSidebarProps) {
   const currentFlowId = useGetFlowId();
-  const { data: sessionsData, isLoading } = useGetSessionsFromFlowQuery({
-    id: currentFlowId,
+  const { sessions, addNewSession } = useGetAddSessions({
+    flowId: currentFlowId,
   });
+  const { handleDelete } = useEditSessionInfo({ flowId: currentFlowId });
 
-  // Use sessions directly from query
-  // Ensure currentFlowId (Default Session) is always in the list
-  // Also ensure currentSessionId is included if it's not in the API response
-  const sessions = React.useMemo(() => {
-    const sessionList = [...(sessionsData?.sessions || [])];
-
-    // Always ensure currentFlowId (Default Session) is in the list
-    if (currentFlowId && !sessionList.includes(currentFlowId)) {
-      sessionList.unshift(currentFlowId);
-    }
-
-    // If currentSessionId exists and is not in the list, add it
-    if (
-      currentSessionId &&
-      currentSessionId !== currentFlowId &&
-      !sessionList.includes(currentSessionId)
-    ) {
-      sessionList.push(currentSessionId);
-    }
-
-    return sessionList;
-  }, [sessionsData?.sessions, currentSessionId, currentFlowId]);
+  const sessionIds = React.useMemo(
+    () => sessions.map((s) => s.sessionId),
+    [sessions],
+  );
 
   const visibleSession = currentSessionId;
 
   const handleDeleteSession = (session: string) => {
+    handleDelete(session);
     onDeleteSession?.(session);
     // If deleted session was the current one, switch to default
     if (session === currentSessionId) {
@@ -91,11 +76,13 @@ export function ChatSidebar({
           </ShadTooltip>
         </div>
       </div>
-      {isLoading ? (
-        <div className="p-4 text-sm text-muted-foreground">Loading...</div>
+      {sessionIds.length === 0 ? (
+        <div className="p-4 text-sm text-muted-foreground">
+          No sessions yet.
+        </div>
       ) : (
         <div className="flex flex-col" style={{ gap: "0.5rem" }}>
-          {sessions.map((session, index) => (
+          {sessionIds.map((session, index) => (
             <SessionSelector
               key={index}
               session={session}

@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { NEW_SESSION_NAME } from "@/constants/constants";
 import { useGetSessionsFromFlowQuery } from "@/controllers/API/queries/messages/use-get-sessions-from-flow";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 
@@ -16,15 +17,10 @@ type UseGetAddSessionsReturnType = (props: UseGetAddSessionsProps) => {
   sessions: SessionInfo[];
 };
 
-const LOCAL_NEW_SESSION_NAME = "New chat";
-
 export const useGetAddSessions: UseGetAddSessionsReturnType = ({ flowId }) => {
-  const { isPlayground } = usePlaygroundStore();
-
   const setSelectedSession = usePlaygroundStore(
     (state) => state.setSelectedSession,
   );
-
   const selectedSession = usePlaygroundStore((state) => state.selectedSession);
 
   const { data: dbSessionsResponse } = useGetSessionsFromFlowQuery({
@@ -36,18 +32,18 @@ export const useGetAddSessions: UseGetAddSessionsReturnType = ({ flowId }) => {
     selectedSession && !dbSessions.includes(selectedSession)
       ? undefined
       : () => {
-          const newSessionId = `${LOCAL_NEW_SESSION_NAME} ${
-            dbSessions.length ?? 0
-          }`;
+          const newSessionId = `${NEW_SESSION_NAME} ${dbSessions.length ?? 0}`;
           setSelectedSession(newSessionId);
         };
 
-  const sessions: SessionInfo[] = useMemo(() => {
-    return dbSessions.map((sessionId, index) => ({
-      id: `session-${index}`, // provide id based on index to not re-render on rename
-      sessionId,
-    }));
-  }, [dbSessions]);
+  const sessions: SessionInfo[] = useMemo(
+    () =>
+      dbSessions.map((sessionId, index) => ({
+        id: `session-${index}`,
+        sessionId,
+      })),
+    [dbSessions],
+  );
 
   return {
     addNewSession,

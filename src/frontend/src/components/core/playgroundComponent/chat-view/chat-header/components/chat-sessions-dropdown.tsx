@@ -10,11 +10,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/utils/utils";
+import { useGetFlowId } from "../../../hooks/use-get-flow-id";
 import {
   type SessionInfo,
   useGetAddSessions,
-} from "../../../hooks/use-get-add-sessions";
-import { useGetFlowId } from "../../hooks/use-get-flow-id";
+} from "../hooks/use-get-add-sessions";
 
 interface ChatSessionsDropdownProps {
   onNewChat?: () => void;

@@ -1,8 +1,8 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { AnimatedConditional } from "@/components/ui/animated-close";
 import { cn } from "@/utils/utils";
-import { useChatHeaderRename } from "../hooks/use-chat-header-rename";
-import { useChatHeaderSessionActions } from "../hooks/use-chat-header-session-actions";
+import { useEditSessionInfo } from "../hooks/use-edit-session-info";
+import { useRenameSession } from "../hooks/use-rename-session";
 import type { ChatHeaderProps } from "../types/chat-header.types";
 import { getSessionTitle } from "../utils/get-session-title";
 import { ChatHeaderActions } from "./chat-header-actions";
@@ -28,18 +28,28 @@ export function ChatHeader({
     [currentSessionId, currentFlowId],
   );
 
-  // Rename functionality
-  const { isEditing, handleRename, handleRenameSave } = useChatHeaderRename({
+  // Session edit/delete logic
+  const { handleRename, handleDelete } = useEditSessionInfo({
+    flowId: currentFlowId,
+  });
+  const { isEditing, handleEditSave, handleEditStart } = useRenameSession({
     currentSessionId,
+    handleRename,
     onSessionSelect,
   });
 
-  // Session actions (message logs, delete)
-  const { openLogsModal, setOpenLogsModal, handleMessageLogs, handleDelete } =
-    useChatHeaderSessionActions({
-      currentSessionId,
-      onDeleteSession,
-    });
+  const [openLogsModal, setOpenLogsModal] = useState(false);
+  const handleMessageLogs = () => {
+    if (currentSessionId) {
+      setOpenLogsModal(true);
+    }
+  };
+
+  const handleDeleteSessionInternal = () => {
+    if (!currentSessionId) return;
+    handleDelete(currentSessionId);
+    onDeleteSession?.(currentSessionId);
+  };
 
   return (
     <div
@@ -61,7 +71,7 @@ export function ChatHeader({
             isEditing={isEditing}
             currentSessionId={currentSessionId}
             isFullscreen={isFullscreen}
-            onRenameSave={handleRenameSave}
+            onRenameSave={handleEditSave}
           />
         </div>
       )}
@@ -72,7 +82,7 @@ export function ChatHeader({
             isEditing={isEditing}
             currentSessionId={currentSessionId}
             isFullscreen={isFullscreen}
-            onRenameSave={handleRenameSave}
+            onRenameSave={handleEditSave}
           />
         </div>
       )}
@@ -87,9 +97,9 @@ export function ChatHeader({
             onClose={onClose}
             renderPrefix={() => (
               <SessionMoreMenu
-                onRename={handleRename}
+                onRename={handleEditStart}
                 onMessageLogs={handleMessageLogs}
-                onDelete={handleDelete}
+                onDelete={handleDeleteSessionInternal}
                 side="bottom"
                 align="end"
                 sideOffset={4}
