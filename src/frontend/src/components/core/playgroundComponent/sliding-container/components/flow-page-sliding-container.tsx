@@ -1,12 +1,15 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChatHeader } from "@/components/core/playgroundComponent/chat-view/chat-header";
 import { ChatSidebar } from "@/components/core/playgroundComponent/chat-view/chat-header/components/chat-sidebar";
-import { useSessionManagement } from "@/components/core/playgroundComponent/hooks/use-session-management";
+import { useGetFlowId } from "@/components/core/playgroundComponent/hooks/use-get-flow-id";
+import { useEditSessionInfo } from "../../chat-view/chat-header/hooks/use-edit-session-info";
+import { useGetAddSessions } from "../../chat-view/chat-header/hooks/use-get-add-sessions";
 import { useSlidingContainerStore } from "../stores/sliding-container-store";
 
 const TRANSITION_MS = 300;
 
 export function FlowPageSlidingContainerContent() {
+  const currentFlowId = useGetFlowId();
   const isFullscreen = useSlidingContainerStore((state) => state.isFullscreen);
   const setIsFullscreen = useSlidingContainerStore(
     (state) => state.setIsFullscreen,
@@ -15,15 +18,21 @@ export function FlowPageSlidingContainerContent() {
   const setIsOpen = useSlidingContainerStore((state) => state.setIsOpen);
   const isOpen = useSlidingContainerStore((state) => state.isOpen);
 
-  // Session management logic extracted to custom hook
-  const {
-    currentSessionId,
-    sessions,
-    handleSessionSelect,
-    handleNewChat,
-    handleDeleteSession,
+  const { sessions: fetchedSessions, addNewSession } = useGetAddSessions({
+    flowId: currentFlowId,
+  });
+  const { handleDelete } = useEditSessionInfo({ flowId: currentFlowId });
+
+  const [currentSessionId, setCurrentSessionId] = useState<string | undefined>(
     currentFlowId,
-  } = useSessionManagement(isOpen);
+  );
+
+  const sessions = useMemo(() => {
+    const base = new Set<string>(fetchedSessions);
+    if (currentFlowId) base.add(currentFlowId);
+    if (currentSessionId) base.add(currentSessionId);
+    return Array.from(base);
+  }, [fetchedSessions, currentFlowId, currentSessionId]);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -80,6 +89,22 @@ export function FlowPageSlidingContainerContent() {
     setIsFullscreen(true);
   };
 
+  const handleSessionSelect = (sessionId: string) => {
+    setCurrentSessionId(sessionId);
+  };
+
+  const handleNewChat = () => {
+    const newId = addNewSession?.() ?? `Session ${sessions.length}`;
+    setCurrentSessionId(newId);
+  };
+
+  const handleDeleteSession = (sessionId: string) => {
+    handleDelete(sessionId);
+    if (sessionId === currentSessionId) {
+      setCurrentSessionId(currentFlowId);
+    }
+  };
+
   return (
     <div className="h-full w-full bg-background border-l border-transparent shadow-lg flex flex-col relative">
       <div className="flex-1 flex overflow-hidden">
@@ -96,6 +121,7 @@ export function FlowPageSlidingContainerContent() {
             <div className="h-full overflow-y-auto">
               <div className="p-4 pt-[15px]">
                 <ChatSidebar
+                  sessions={sessions}
                   onNewChat={handleNewChat}
                   onSessionSelect={handleSessionSelect}
                   currentSessionId={currentSessionId}
@@ -107,6 +133,7 @@ export function FlowPageSlidingContainerContent() {
         )}
         <div className="flex-1 flex flex-col overflow-hidden">
           <ChatHeader
+            sessions={sessions}
             onNewChat={handleNewChat}
             onSessionSelect={handleSessionSelect}
             currentSessionId={currentSessionId}

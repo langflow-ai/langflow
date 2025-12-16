@@ -11,26 +11,21 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/utils/utils";
 import { useGetFlowId } from "../../../hooks/use-get-flow-id";
-import {
-  type SessionInfo,
-  useGetAddSessions,
-} from "../hooks/use-get-add-sessions";
 
 interface ChatSessionsDropdownProps {
+  sessions: string[];
   onNewChat?: () => void;
   onSessionSelect?: (sessionId: string) => void;
   currentSessionId?: string;
 }
 
 export function ChatSessionsDropdown({
+  sessions,
   onNewChat,
   onSessionSelect,
   currentSessionId,
 }: ChatSessionsDropdownProps) {
   const currentFlowId = useGetFlowId();
-  const { sessions, addNewSession } = useGetAddSessions({
-    flowId: currentFlowId,
-  });
   const hasSessions: boolean = sessions.length > 0;
 
   return (
@@ -51,20 +46,17 @@ export function ChatSessionsDropdown({
             <DropdownMenuGroup>
               {sessions.map((session) => (
                 <DropdownMenuItem
-                  key={session.sessionId ?? session}
+                  key={session}
                   className={cn(
                     "gap-2 text-sm",
-                    currentSessionId === session.sessionId &&
-                      "font-semibold bg-accent",
+                    currentSessionId === session && "font-semibold bg-accent",
                   )}
                   onSelect={(event) => {
                     event.preventDefault();
-                    onSessionSelect?.(session.sessionId ?? session);
+                    onSessionSelect?.(session);
                   }}
                 >
-                  {session.sessionId === currentFlowId
-                    ? "Default Session"
-                    : session.sessionId}
+                  {session === currentFlowId ? "Default Session" : session}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuGroup>
@@ -74,7 +66,6 @@ export function ChatSessionsDropdown({
                 className="gap-2 text-sm"
                 onSelect={(event) => {
                   event.preventDefault();
-                  addNewSession?.();
                   onNewChat?.();
                 }}
               >
@@ -88,7 +79,6 @@ export function ChatSessionsDropdown({
             className="gap-2 text-sm"
             onSelect={(event) => {
               event.preventDefault();
-              addNewSession?.();
               onNewChat?.();
             }}
           >

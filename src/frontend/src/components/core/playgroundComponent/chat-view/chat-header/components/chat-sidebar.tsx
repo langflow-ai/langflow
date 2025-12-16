@@ -4,10 +4,10 @@ import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { useGetFlowId } from "../../../hooks/use-get-flow-id";
 import { useEditSessionInfo } from "../hooks/use-edit-session-info";
-import { useGetAddSessions } from "../hooks/use-get-add-sessions";
 import { SessionSelector } from "./session-selector";
 
 interface ChatSidebarProps {
+  sessions: string[];
   onNewChat?: () => void;
   onSessionSelect?: (sessionId: string) => void;
   currentSessionId?: string;
@@ -15,21 +15,16 @@ interface ChatSidebarProps {
 }
 
 export function ChatSidebar({
+  sessions,
   onNewChat,
   onSessionSelect,
   currentSessionId,
   onDeleteSession,
 }: ChatSidebarProps) {
   const currentFlowId = useGetFlowId();
-  const { sessions, addNewSession } = useGetAddSessions({
-    flowId: currentFlowId,
-  });
   const { handleDelete } = useEditSessionInfo({ flowId: currentFlowId });
 
-  const sessionIds = React.useMemo(
-    () => sessions.map((s) => s.sessionId),
-    [sessions],
-  );
+  const sessionIds = React.useMemo(() => sessions, [sessions]);
 
   const visibleSession = currentSessionId;
 

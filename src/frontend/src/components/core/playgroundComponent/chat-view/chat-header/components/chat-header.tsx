@@ -12,6 +12,7 @@ import { SessionLogsModal } from "./session-logs-modal";
 import { SessionMoreMenu } from "./session-more-menu";
 
 export function ChatHeader({
+  sessions,
   onNewChat,
   onSessionSelect,
   currentSessionId,
@@ -21,7 +22,7 @@ export function ChatHeader({
   onDeleteSession,
   className,
   onClose,
-}: ChatHeaderProps) {
+}: ChatHeaderProps & { sessions: string[] }) {
   // Determine the title based on the current session
   const sessionTitle = useMemo(
     () => getSessionTitle(currentSessionId, currentFlowId),
@@ -62,6 +63,7 @@ export function ChatHeader({
       {!isFullscreen && (
         <div className="flex items-center gap-2 flex-[2_1_0] min-w-0">
           <ChatSessionsDropdown
+            sessions={sessions}
             onNewChat={onNewChat}
             onSessionSelect={onSessionSelect}
             currentSessionId={currentSessionId}

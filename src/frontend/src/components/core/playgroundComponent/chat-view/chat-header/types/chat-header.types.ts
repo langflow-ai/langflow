@@ -1,4 +1,5 @@
 export interface ChatHeaderProps {
+  sessions: string[];
   onNewChat?: () => void;
   onSessionSelect?: (sessionId: string) => void;
   currentSessionId?: string;
