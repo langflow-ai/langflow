@@ -150,7 +150,7 @@ def create_google_drive_service(service_account_key: str, scopes: list[str], ret
 
     credentials = service_account.Credentials.from_service_account_info(credentials_dict, scopes=scopes)
     service = build("drive", "v3", credentials=credentials)
-    
+
     if return_credentials:
         return service, credentials
     return service
