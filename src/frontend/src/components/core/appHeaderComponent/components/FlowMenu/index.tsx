@@ -33,7 +33,6 @@ export const MenuBar = memo((): JSX.Element => {
   const saveFlow = useSaveFlow();
   const autoSaving = useFlowsManagerStore((state) => state.autoSaving);
   const {
-    isFlowLocked,
     currentFlowName,
     currentFlowId,
     currentFlowFolderId,
@@ -74,6 +73,7 @@ export const MenuBar = memo((): JSX.Element => {
   );
 
   const handleSave = () => {
+    if (!onFlowPage) return;
     saveFlow().then(() => {
       setSuccessData({ title: "Saved successfully" });
     });
