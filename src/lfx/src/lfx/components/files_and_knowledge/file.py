@@ -170,10 +170,7 @@ class FileComponent(BaseFileComponent):
         StrInput(
             name="file_id",
             display_name="Google Drive File ID",
-            info=(
-                "The Google Drive file ID to read. "
-                "The file must be shared with the service account email."
-            ),
+            info=("The Google Drive file ID to read. The file must be shared with the service account email."),
             required=False,
             show=False,
             advanced=False,
@@ -578,9 +575,7 @@ class FileComponent(BaseFileComponent):
         # Get file extension from S3 key
         file_extension = Path(self.s3_file_key).suffix or ""
 
-        with tempfile.NamedTemporaryFile(
-            mode="wb", suffix=file_extension, delete=False
-        ) as temp_file:
+        with tempfile.NamedTemporaryFile(mode="wb", suffix=file_extension, delete=False) as temp_file:
             try:
                 s3_client.download_fileobj(self.bucket_name, self.s3_file_key, temp_file)
                 temp_file_path = temp_file.name
@@ -631,9 +626,7 @@ class FileComponent(BaseFileComponent):
 
         # Download file to temp location
         file_extension = Path(file_name).suffix or ""
-        with tempfile.NamedTemporaryFile(
-            mode="wb", suffix=file_extension, delete=False
-        ) as temp_file:
+        with tempfile.NamedTemporaryFile(mode="wb", suffix=file_extension, delete=False) as temp_file:
             try:
                 request = drive_service.files().get_media(fileId=self.file_id)
                 downloader = MediaIoBaseDownload(temp_file, request)
