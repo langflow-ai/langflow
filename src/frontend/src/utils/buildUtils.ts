@@ -13,6 +13,7 @@ import {
   customEventsUrl,
 } from "@/customization/utils/custom-buildUtils";
 import { customPollBuildEvents } from "@/customization/utils/custom-poll-build-events";
+import { getFetchCredentials } from "@/customization/utils/get-fetch-credentials";
 import { useMessagesStore } from "@/stores/messagesStore";
 import { BuildStatus, EventDeliveryType } from "../constants/enums";
 import { getVerticesOrder, postBuildVertex } from "../controllers/API";
@@ -317,6 +318,7 @@ export async function buildFlowVertices({
         "Content-Type": "application/json",
       },
       body: JSON.stringify(postData),
+      credentials: getFetchCredentials(),
     });
 
     if (!buildResponse.ok) {
@@ -339,6 +341,7 @@ export async function buildFlowVertices({
           headers: {
             "Content-Type": "application/json",
           },
+          credentials: getFetchCredentials(),
         });
       } catch (error) {
         console.error("Error canceling build:", error);
