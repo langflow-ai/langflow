@@ -191,7 +191,7 @@ async def update_table_params_with_load_from_db_fields(
                                 request_variables = context["request_variables"]
                                 if variable_name in request_variables:
                                     key = request_variables[variable_name]
-                                    logger.debug(f"Found context override for variable '{variable_name}': {key}")
+                                    logger.debug(f"Found context override for variable '{variable_name}'")
 
                         if key is None:
                             key = os.getenv(variable_name)
