@@ -111,6 +111,7 @@ function NodeOutputField({
   data,
   title,
   id,
+  loopInputId,
   colors,
   tooltipTitle,
   showNode,
@@ -297,7 +298,7 @@ function NodeOutputField({
         <HandleRenderComponent
           left={true}
           tooltipTitle={tooltipTitle}
-          id={id}
+          id={loopInputId}
           title={title}
           nodeId={data.id}
           myData={myData}
@@ -311,7 +312,7 @@ function NodeOutputField({
     }
   }, [
     tooltipTitle,
-    id,
+    loopInputId,
     title,
     data.id,
     myData,
