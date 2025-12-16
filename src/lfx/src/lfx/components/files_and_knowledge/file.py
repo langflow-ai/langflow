@@ -768,7 +768,7 @@ class FileComponent(BaseFileComponent):
                     else:
                         # For local storage, read bytes directly from filesystem
                         content = file.path.read_bytes()
-                    
+
                     is_valid, error_msg = validate_image_content_type(
                         str(file.path),
                         content=content,
@@ -829,7 +829,7 @@ class FileComponent(BaseFileComponent):
 
                 # --- UNNEST: expand each element in `doc` to its own Data row
                 payload = getattr(advanced_data, "data", {}) or {}
-                
+
                 # Check for errors first
                 if "error" in payload:
                     error_msg = payload.get("error", "Unknown error")
@@ -842,7 +842,7 @@ class FileComponent(BaseFileComponent):
                     )
                     final_return.extend(self.rollup_data([file], [error_data]))
                     continue
-                
+
                 doc_rows = payload.get("doc")
                 if isinstance(doc_rows, list) and doc_rows:
                     # Non-empty list of structured rows
