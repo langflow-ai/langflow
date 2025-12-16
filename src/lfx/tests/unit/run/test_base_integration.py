@@ -4,12 +4,9 @@ This file demonstrates how to test run_flow with real components and graphs,
 reducing the need for extensive mocking while still maintaining test isolation.
 """
 
-import json
-import tempfile
 from pathlib import Path
 
 import pytest
-
 from lfx.run.base import run_flow
 
 
@@ -19,7 +16,7 @@ class TestRunFlowIntegrationMinimalMocking:
     @pytest.fixture
     def simple_python_graph(self, tmp_path):
         """Create a simple Python graph script that can actually run."""
-        script_content = '''
+        script_content = """
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.graph import Graph
 
@@ -28,7 +25,7 @@ chat_input = ChatInput()
 chat_output = ChatOutput().set(input_value=chat_input.message_response)
 
 graph = Graph(chat_input, chat_output)
-'''
+"""
         script_path = tmp_path / "simple_graph.py"
         script_path.write_text(script_content)
         return script_path
@@ -74,7 +71,7 @@ graph = Graph(chat_input, chat_output)
             global_variables=None,
             verbose=False,
             check_variables=False,  # Skip validation for speed
-            timing=False
+            timing=False,
         )
 
         assert result["success"] is True
@@ -91,7 +88,7 @@ graph = Graph(chat_input, chat_output)
             global_variables=env_vars,
             verbose=False,
             check_variables=False,
-            timing=False
+            timing=False,
         )
 
         assert result["success"] is True
@@ -106,7 +103,7 @@ graph = Graph(chat_input, chat_output)
             global_variables=None,  # No env vars provided
             verbose=False,
             check_variables=False,
-            timing=False
+            timing=False,
         )
 
         assert result["success"] is True
@@ -123,11 +120,7 @@ graph = Graph(chat_input, chat_output)
         simple_json = '{"test": "data"}'  # This will fail at graph loading, but tests JSON processing
 
         with pytest.raises(Exception):  # Will fail when trying to load the graph
-            await run_flow(
-                flow_json=simple_json,
-                verbose=False,
-                check_variables=False
-            )
+            await run_flow(flow_json=simple_json, verbose=False, check_variables=False)
 
     @pytest.mark.asyncio
     async def test_run_flow_stdin_input(self):
@@ -144,11 +137,7 @@ graph = Graph(chat_input, chat_output)
 
         try:
             with pytest.raises(Exception):  # Will fail at graph loading
-                await run_flow(
-                    stdin=True,
-                    verbose=False,
-                    check_variables=False
-                )
+                await run_flow(stdin=True, verbose=False, check_variables=False)
         finally:
             sys.stdin = old_stdin
 
@@ -177,7 +166,7 @@ class TestRunFlowErrorHandlingIntegration:
 # Example of how to create a test utility for common graph patterns
 def create_test_graph_with_env_reader(tmp_path, env_var_name="TEST_VAR", default_value="default"):
     """Utility function to create a test graph that reads environment variables."""
-    script_content = f'''
+    script_content = f"""
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.custom.custom_component.component import Component
 from lfx.template.field.base import Output, Input
@@ -199,7 +188,7 @@ env_reader.set(trigger=chat_input.message_response)
 chat_output = ChatOutput().set(input_value=env_reader.read_env)
 
 graph = Graph(chat_input, chat_output)
-'''
+"""
     script_path = tmp_path / f"env_reader_{env_var_name.lower()}.py"
     script_path.write_text(script_content)
     return script_path
@@ -211,15 +200,13 @@ class TestRunFlowWithTestUtilities:
     @pytest.mark.asyncio
     async def test_env_reader_with_custom_var(self, tmp_path):
         """Test environment variable reading with custom variable name."""
-        script_path = create_test_graph_with_env_reader(
-            tmp_path, env_var_name="CUSTOM_VAR", default_value="not-set"
-        )
+        script_path = create_test_graph_with_env_reader(tmp_path, env_var_name="CUSTOM_VAR", default_value="not-set")
 
         result = await run_flow(
             script_path=script_path,
             global_variables={"CUSTOM_VAR": "custom-value"},
             verbose=False,
-            check_variables=False
+            check_variables=False,
         )
 
         assert result["success"] is True
@@ -236,7 +223,7 @@ class TestRunFlowWithTestUtilities:
             script_path=script_path,
             global_variables={},  # Empty env vars
             verbose=False,
-            check_variables=False
+            check_variables=False,
         )
 
         assert result["success"] is True

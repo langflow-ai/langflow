@@ -193,8 +193,7 @@ async def run_flow(
             graph_info = find_graph_variable(script_path)
             if not graph_info:
                 error_msg = (
-                    "No 'graph' variable found in the script. "
-                    "Expected to find an assignment like: graph = Graph(...)"
+                    "No 'graph' variable found in the script. Expected to find an assignment like: graph = Graph(...)"
                 )
                 raise ValueError(error_msg)
             if verbosity > 0:
@@ -493,4 +492,3 @@ async def run_flow(
     if timing_metadata:
         result_data["timing"] = timing_metadata
     return result_data
-

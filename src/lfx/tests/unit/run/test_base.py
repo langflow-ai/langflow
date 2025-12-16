@@ -15,11 +15,9 @@ Strategies to reduce mocking:
 
 import json
 from io import StringIO
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
-
 from lfx.run.base import RunError, output_error, run_flow
 
 
@@ -222,14 +220,14 @@ class TestRunFlowPythonScript:
     @pytest.fixture
     def valid_script(self, tmp_path):
         """Create a valid Python script with a graph variable."""
-        script_content = '''
+        script_content = """
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.graph import Graph
 
 chat_input = ChatInput()
 chat_output = ChatOutput().set(input_value=chat_input.message_response)
 graph = Graph(chat_input, chat_output)
-'''
+"""
         script_path = tmp_path / "valid_script.py"
         script_path.write_text(script_content)
         return script_path
@@ -237,11 +235,11 @@ graph = Graph(chat_input, chat_output)
     @pytest.fixture
     def no_graph_script(self, tmp_path):
         """Create a script without a graph variable."""
-        script_content = '''
+        script_content = """
 from lfx.components.input_output import ChatInput
 chat_input = ChatInput()
 # No graph variable
-'''
+"""
         script_path = tmp_path / "no_graph.py"
         script_path.write_text(script_content)
         return script_path
@@ -294,14 +292,14 @@ class TestRunFlowGlobalVariables:
     @pytest.mark.asyncio
     async def test_global_variables_injected_into_context(self, tmp_path):
         """Test that global variables are injected into graph context."""
-        script_content = '''
+        script_content = """
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.graph import Graph
 
 chat_input = ChatInput()
 chat_output = ChatOutput().set(input_value=chat_input.message_response)
 graph = Graph(chat_input, chat_output)
-'''
+"""
         script_path = tmp_path / "test_script.py"
         script_path.write_text(script_content)
 
@@ -310,6 +308,7 @@ graph = Graph(chat_input, chat_output)
         mock_graph.vertices = []
         mock_graph.edges = []
         mock_graph.prepare = MagicMock()
+
         async def mock_async_start(inputs):
             return
             yield  # Make it an async generator
@@ -357,6 +356,7 @@ class TestRunFlowOutputFormats:
         mock_graph.vertices = []
         mock_graph.edges = []
         mock_graph.prepare = MagicMock()
+
         async def mock_async_start(inputs):
             return
             yield  # Make it an async generator
@@ -648,6 +648,7 @@ class TestRunFlowVariableValidation:
         mock_graph.vertices = []
         mock_graph.edges = []
         mock_graph.prepare = MagicMock()
+
         async def mock_async_start(inputs):
             return
             yield  # Make it an async generator
@@ -684,6 +685,7 @@ class TestRunFlowInputValueHandling:
         mock_graph.vertices = []
         mock_graph.edges = []
         mock_graph.prepare = MagicMock()
+
         async def mock_async_start(inputs):
             return
             yield  # Make it an async generator
@@ -722,6 +724,7 @@ class TestRunFlowInputValueHandling:
         mock_graph.vertices = []
         mock_graph.edges = []
         mock_graph.prepare = MagicMock()
+
         async def mock_async_start(inputs):
             return
             yield  # Make it an async generator
@@ -779,6 +782,7 @@ class TestRunFlowJsonFileExecution:
         mock_graph.vertices = []
         mock_graph.edges = []
         mock_graph.prepare = MagicMock()
+
         async def mock_async_start(inputs):
             return
             yield  # Make it an async generator
@@ -807,7 +811,7 @@ class TestRunFlowEnvironmentIntegration:
     @pytest.fixture
     def simple_env_script(self, tmp_path):
         """Create a simple script that uses environment variables."""
-        script_content = '''
+        script_content = """
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.custom.custom_component.component import Component
 from lfx.template.field.base import Output, Input
@@ -831,7 +835,7 @@ env_reader.set(trigger=chat_input.message_response)
 chat_output = ChatOutput().set(input_value=env_reader.get_env_value)
 
 graph = Graph(chat_input, chat_output)
-'''
+"""
         script_path = tmp_path / "env_script.py"
         script_path.write_text(script_content)
         return script_path
@@ -845,7 +849,7 @@ graph = Graph(chat_input, chat_output)
             script_path=simple_env_script,
             global_variables=global_vars,
             verbose=False,
-            check_variables=False  # Skip validation for this test
+            check_variables=False,  # Skip validation for this test
         )
 
         assert result["success"] is True
@@ -854,17 +858,15 @@ graph = Graph(chat_input, chat_output)
     @pytest.mark.asyncio
     async def test_run_flow_without_env_vars_integration(self, simple_env_script):
         """Integration test without environment variables."""
-
         result = await run_flow(
             script_path=simple_env_script,
             global_variables=None,
             verbose=False,
-            check_variables=False  # Skip validation for this test
+            check_variables=False,  # Skip validation for this test
         )
 
         assert result["success"] is True
         assert "Value: Not Found" in result["result"]
-
 
 
 class TestRunFlowExecutionErrors:
@@ -926,4 +928,3 @@ class TestRunFlowExecutionErrors:
                 await run_flow(script_path=script_path)
 
             assert "Failed to prepare graph" in str(exc_info.value)
-
