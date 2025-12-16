@@ -155,7 +155,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   }, [blocker.state, isBuilding]);
 
   const getFlowToAddToCanvas = async (id: string) => {
-    const flow = await getFlow({ id: id });
+    const flow = await getFlow({ id });
     setCurrentFlow(flow);
     refreshAllModelInputs({ silent: true });
   };
