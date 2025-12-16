@@ -45,61 +45,60 @@ export function ChatHeader({
     <div
       className={cn(
         "flex items-center border-b border-transparent p-4 bg-background relative overflow-visible",
-        isFullscreen && "justify-center",
-        !isFullscreen && "justify-between",
+        isFullscreen ? "justify-between" : "justify-between",
         className,
       )}
     >
-      <AnimatedConditional
-        isOpen={!isFullscreen}
-        className="flex items-center gap-2 flex-[2_1_0] min-w-0"
-      >
-        <ChatSessionsDropdown
-          onNewChat={onNewChat}
-          onSessionSelect={onSessionSelect}
-          currentSessionId={currentSessionId}
-        />
-        <ChatHeaderTitle
-          sessionTitle={sessionTitle}
-          isEditing={isEditing}
-          currentSessionId={currentSessionId}
-          isFullscreen={isFullscreen}
-          onRenameSave={handleRenameSave}
-        />
-      </AnimatedConditional>
-      <AnimatedConditional
-        isOpen={isFullscreen}
-        className="flex items-center gap-2 flex-1 min-w-0"
-      >
-        <ChatHeaderTitle
-          sessionTitle={sessionTitle}
-          isEditing={isEditing}
-          currentSessionId={currentSessionId}
-          isFullscreen={isFullscreen}
-          onRenameSave={handleRenameSave}
-        />
-      </AnimatedConditional>
+      {!isFullscreen && (
+        <div className="flex items-center gap-2 flex-[2_1_0] min-w-0">
+          <ChatSessionsDropdown
+            onNewChat={onNewChat}
+            onSessionSelect={onSessionSelect}
+            currentSessionId={currentSessionId}
+          />
+          <ChatHeaderTitle
+            sessionTitle={sessionTitle}
+            isEditing={isEditing}
+            currentSessionId={currentSessionId}
+            isFullscreen={isFullscreen}
+            onRenameSave={handleRenameSave}
+          />
+        </div>
+      )}
+      {isFullscreen && (
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <ChatHeaderTitle
+            sessionTitle={sessionTitle}
+            isEditing={isEditing}
+            currentSessionId={currentSessionId}
+            isFullscreen={isFullscreen}
+            onRenameSave={handleRenameSave}
+          />
+        </div>
+      )}
       <div className="relative flex items-center flex-1 justify-end min-h-[32px] w-[120px]">
         <AnimatedConditional
           isOpen={!isFullscreen}
           className="absolute right-0 top-1/2 flex h-full w-full -translate-y-1/2 items-center justify-end gap-1"
         >
-          <SessionMoreMenu
-            onRename={handleRename}
-            onMessageLogs={handleMessageLogs}
-            onDelete={handleDelete}
-            side="bottom"
-            align="end"
-            sideOffset={4}
-            contentClassName="z-[100] [&>div.p-1]:!h-auto [&>div.p-1]:!min-h-0"
-            isVisible={true}
-            tooltipContent="More options"
-            tooltipSide="left"
-          />
           <ChatHeaderActions
             isFullscreen={false}
             onToggleFullscreen={onToggleFullscreen}
             onClose={onClose}
+            renderPrefix={() => (
+              <SessionMoreMenu
+                onRename={handleRename}
+                onMessageLogs={handleMessageLogs}
+                onDelete={handleDelete}
+                side="bottom"
+                align="end"
+                sideOffset={4}
+                contentClassName="z-[100] [&>div.p-1]:!h-auto [&>div.p-1]:!min-h-0"
+                isVisible={true}
+                tooltipContent="More options"
+                tooltipSide="left"
+              />
+            )}
           />
         </AnimatedConditional>
         <AnimatedConditional

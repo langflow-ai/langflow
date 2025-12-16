@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/utils/utils";
 
 const DEFAULT_WIDTH = 400;
-const DEFAULT_DURATION = 300;
+const DEFAULT_DURATION = 0.3;
 
 interface SlidingContainerProps {
   isOpen: boolean;
@@ -59,19 +59,24 @@ export function SlidingContainer({
     };
   }, [isResizing, onWidthChange]);
 
-  const actualWidth = isFullscreen ? "100%" : isOpen ? `${width}px` : "0px";
+  const fullscreenWidth = "100%";
+  const actualWidth = isFullscreen
+    ? fullscreenWidth
+    : isOpen
+      ? `${width}px`
+      : "0px";
 
   return (
     <div
       ref={containerRef}
       className={cn(
-        "relative h-full overflow-hidden transition-all ease-in-out",
+        // Sync with outer overlay: animate width only, match easing and duration.
+        "relative h-full overflow-hidden transition-[width] ease",
         isResizing && "select-none",
         className,
       )}
       style={{
         width: actualWidth,
-        minWidth: actualWidth,
         transitionDuration: isResizing ? "0ms" : `${duration}ms`,
       }}
     >

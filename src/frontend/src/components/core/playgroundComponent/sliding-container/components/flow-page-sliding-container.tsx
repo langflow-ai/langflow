@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChatHeader } from "@/components/core/playgroundComponent/chat-view/chat-header";
 import { ChatSidebar } from "@/components/core/playgroundComponent/chat-view/chat-header/components/chat-sidebar";
 import { useSessionManagement } from "@/components/core/playgroundComponent/chat-view/hooks/use-session-management";
 import { useSlidingContainerStore } from "../stores/sliding-container-store";
+
+const TRANSITION_MS = 300;
 
 export function FlowPageSlidingContainerContent() {
   const isFullscreen = useSlidingContainerStore((state) => state.isFullscreen);
@@ -24,60 +26,102 @@ export function FlowPageSlidingContainerContent() {
   } = useSessionManagement(isOpen);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const transitionTimer = useRef<number | null>(null);
 
-  // Auto-open sidebar when entering fullscreen
-  useEffect(() => {
-    if (isFullscreen) {
-      setSidebarOpen(true);
+  const startTransitionLock = () => {
+    setIsTransitioning(true);
+    if (transitionTimer.current) {
+      window.clearTimeout(transitionTimer.current);
     }
+    transitionTimer.current = window.setTimeout(() => {
+      setIsTransitioning(false);
+      transitionTimer.current = null;
+    }, TRANSITION_MS);
+  };
+
+  useEffect(
+    () => () => {
+      if (transitionTimer.current) {
+        window.clearTimeout(transitionTimer.current);
+      }
+    },
+    [],
+  );
+
+  // In fullscreen, start immediately but slide in from the right edge.
+  useEffect(() => {
+    if (!isFullscreen) {
+      setSidebarOpen(false);
+      return;
+    }
+    setSidebarOpen(false);
+    requestAnimationFrame(() => setSidebarOpen(true));
   }, [isFullscreen]);
 
   const handleExitFullscreen = () => {
+    if (isTransitioning) return;
+    startTransitionLock();
     setIsFullscreen(false);
     setIsOpen(true);
     setWidth(300);
   };
 
   const handleClose = () => {
+    if (isTransitioning) return;
+    startTransitionLock();
     setIsOpen(false);
     setIsFullscreen(false);
   };
 
+  const handleEnterFullscreen = () => {
+    if (isTransitioning) return;
+    startTransitionLock();
+    setIsFullscreen(true);
+  };
+
   return (
     <div className="h-full w-full bg-background border-l border-transparent shadow-lg flex flex-col relative">
-      <ChatHeader
-        onNewChat={handleNewChat}
-        onSessionSelect={handleSessionSelect}
-        currentSessionId={currentSessionId}
-        currentFlowId={currentFlowId}
-        onToggleFullscreen={
-          isFullscreen ? handleExitFullscreen : () => setIsFullscreen(true)
-        }
-        isFullscreen={isFullscreen}
-        onDeleteSession={handleDeleteSession}
-        onClose={handleClose}
-      />
-      {isFullscreen && sidebarOpen && (
-        <div className="absolute left-0 top-0 z-50 h-full w-1/5 max-w-[280px] border-r border-border bg-background overflow-y-auto">
-          <div className="p-4 pt-[15px]">
-            <ChatSidebar
-              onNewChat={handleNewChat}
-              onSessionSelect={handleSessionSelect}
-              currentSessionId={currentSessionId}
-              onDeleteSession={handleDeleteSession}
-            />
+      <div className="flex-1 flex overflow-hidden">
+        {isFullscreen && (
+          <div
+            className="border-r border-border bg-background overflow-hidden"
+            style={{
+              width: sidebarOpen ? "20%" : "0px",
+              minWidth: sidebarOpen ? "250px" : "0px",
+              maxWidth: "280px",
+              transition: "width 0.3s ease, min-width 0.3s ease",
+            }}
+          >
+            <div className="h-full overflow-y-auto">
+              <div className="p-4 pt-[15px]">
+                <ChatSidebar
+                  onNewChat={handleNewChat}
+                  onSessionSelect={handleSessionSelect}
+                  currentSessionId={currentSessionId}
+                  onDeleteSession={handleDeleteSession}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <ChatHeader
+            onNewChat={handleNewChat}
+            onSessionSelect={handleSessionSelect}
+            currentSessionId={currentSessionId}
+            currentFlowId={currentFlowId}
+            onToggleFullscreen={
+              isFullscreen ? handleExitFullscreen : handleEnterFullscreen
+            }
+            isFullscreen={isFullscreen}
+            onDeleteSession={handleDeleteSession}
+            onClose={handleClose}
+          />
+          <div className="flex-1 overflow-auto p-6">
+            {/* TODO: Add messages here */}
           </div>
         </div>
-      )}
-      <div
-        className="flex-1 overflow-auto p-6"
-        style={
-          isFullscreen && sidebarOpen
-            ? { marginLeft: "max(20%, 280px)" }
-            : undefined
-        }
-      >
-        {/* Content will be added here */}
       </div>
     </div>
   );

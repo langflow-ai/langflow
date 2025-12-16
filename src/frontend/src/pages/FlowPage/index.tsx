@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import { useBlocker, useParams } from "react-router-dom";
-import { SlidingContainer } from "@/components/core/playgroundComponent/sliding-container/components";
 import { FlowPageSlidingContainerContent } from "@/components/core/playgroundComponent/sliding-container/components/flow-page-sliding-container";
 import { useSlidingContainerStore } from "@/components/core/playgroundComponent/sliding-container/stores";
 import { SidebarProvider } from "@/components/ui/sidebar";
+import {
+  SimpleSidebar,
+  SimpleSidebarProvider,
+} from "@/components/ui/simple-sidebar";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { useGetTypes } from "@/controllers/API/queries/flows/use-get-types";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
@@ -175,7 +178,13 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const setSlidingContainerWidth = useSlidingContainerStore(
     (state) => state.setWidth,
   );
+  const setSlidingContainerOpen = useSlidingContainerStore(
+    (state) => state.setIsOpen,
+  );
   const isFullscreen = useSlidingContainerStore((state) => state.isFullscreen);
+  const setIsFullscreen = useSlidingContainerStore(
+    (state) => state.setIsFullscreen,
+  );
   const hasIO = useFlowStore((state) => state.hasIO);
 
   return (
@@ -192,42 +201,41 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
                 {!view && !isFullscreen && (
                   <FlowSidebarComponent isLoading={isLoading} />
                 )}
-                <main className="flex w-full overflow-hidden">
-                  {!isFullscreen && (
+                <SimpleSidebarProvider
+                  width={`${slidingContainerWidth}px`}
+                  open={isSlidingContainerOpen || isFullscreen}
+                  onOpenChange={(open) => {
+                    setSlidingContainerOpen(open);
+                    if (!open) setIsFullscreen(false);
+                  }}
+                  fullscreen={isFullscreen}
+                  onMaxWidth={() => {
+                    setIsFullscreen(true);
+                    setSlidingContainerOpen(true);
+                  }}
+                >
+                  <main className="relative flex w-full overflow-hidden">
                     <div
-                      className="h-full overflow-hidden"
+                      className="h-full flex-1 min-w-0 overflow-hidden"
                       style={{
-                        width:
-                          hasIO && isSlidingContainerOpen
-                            ? `calc(100% - ${slidingContainerWidth}px)`
-                            : "100%",
-                        minWidth: 0,
                         padding:
                           hasIO && isSlidingContainerOpen
                             ? "0.5rem 0 0.5rem 0.5rem"
-                            : "0.5rem",
+                            : "0",
                       }}
                     >
                       <Page setIsLoading={setIsLoading} />
                     </div>
-                  )}
-                  {hasIO && (
-                    <SlidingContainer
-                      isOpen={isSlidingContainerOpen}
-                      width={slidingContainerWidth}
-                      onWidthChange={setSlidingContainerWidth}
-                      resizable={!isFullscreen}
-                      isFullscreen={isFullscreen}
-                      className={
-                        isFullscreen
-                          ? "fixed top-[48px] left-0 right-0 bottom-0 z-50 bg-background"
-                          : ""
-                      }
-                    >
-                      <FlowPageSlidingContainerContent />
-                    </SlidingContainer>
-                  )}
-                </main>
+                    {hasIO && (
+                      <SimpleSidebar
+                        resizable={!isFullscreen}
+                        className="h-full"
+                      >
+                        <FlowPageSlidingContainerContent />
+                      </SimpleSidebar>
+                    )}
+                  </main>
+                </SimpleSidebarProvider>
               </FlowSearchProvider>
             </SidebarProvider>
           </div>
