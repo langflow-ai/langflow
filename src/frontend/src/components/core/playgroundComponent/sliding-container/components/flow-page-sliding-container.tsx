@@ -106,7 +106,7 @@ export function FlowPageSlidingContainerContent() {
   };
 
   return (
-    <div className="h-full w-full bg-background border-l border-transparent shadow-lg flex flex-col relative">
+    <div className="h-full w-full bg-background border-l border-transparent shadow-lg flex flex-col relative z-[50]">
       <div className="flex-1 flex overflow-hidden">
         {isFullscreen && (
           <div

@@ -71,7 +71,7 @@ export function SlidingContainer({
       ref={containerRef}
       className={cn(
         // Sync with outer overlay: animate width only, match easing and duration.
-        "relative h-full overflow-hidden transition-[width] ease",
+        "relative h-full overflow-hidden transition-[width] ease z-[50]",
         isResizing && "select-none",
         className,
       )}

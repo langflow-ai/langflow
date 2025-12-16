@@ -52,6 +52,21 @@ export function ChatHeader({
     onDeleteSession?.(currentSessionId);
   };
 
+  const moreMenu = (
+    <SessionMoreMenu
+      onRename={handleEditStart}
+      onMessageLogs={handleMessageLogs}
+      onDelete={handleDeleteSessionInternal}
+      side="bottom"
+      align="end"
+      sideOffset={4}
+      contentClassName="z-[100] [&>div.p-1]:!h-auto [&>div.p-1]:!min-h-0"
+      isVisible={true}
+      tooltipContent="More options"
+      tooltipSide="left"
+    />
+  );
+
   return (
     <div
       className={cn(
@@ -97,20 +112,7 @@ export function ChatHeader({
             isFullscreen={false}
             onToggleFullscreen={onToggleFullscreen}
             onClose={onClose}
-            renderPrefix={() => (
-              <SessionMoreMenu
-                onRename={handleEditStart}
-                onMessageLogs={handleMessageLogs}
-                onDelete={handleDeleteSessionInternal}
-                side="bottom"
-                align="end"
-                sideOffset={4}
-                contentClassName="z-[100] [&>div.p-1]:!h-auto [&>div.p-1]:!min-h-0"
-                isVisible={true}
-                tooltipContent="More options"
-                tooltipSide="left"
-              />
-            )}
+            renderPrefix={() => moreMenu}
           />
         </AnimatedConditional>
         <AnimatedConditional

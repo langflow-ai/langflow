@@ -16,7 +16,13 @@ export const SessionLogsModal = ({
   setOpen,
 }: SessionLogsModalProps) => {
   return (
-    <BaseModal size="large" open={open} setOpen={setOpen}>
+    <BaseModal
+      size="large"
+      open={open}
+      setOpen={setOpen}
+      className="z-[300]"
+      style={{ zIndex: 500 }}
+    >
       <BaseModal.Content>
         <BaseModal.Header description="Inspect and edit all messages of the session.">
           <div className="flex h-fit w-32 items-center">
