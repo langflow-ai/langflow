@@ -777,7 +777,7 @@ class FileComponent(BaseFileComponent):
                         self.log(error_msg)
                         if not self.silent_errors:
                             raise ValueError(error_msg)
-                except (OSError, FileNotFoundError, ValueError) as e:
+                except (OSError, FileNotFoundError) as e:
                     self.log(f"Could not read file for validation: {e}")
                     # Continue - let it fail later with better error
 
