@@ -598,10 +598,9 @@ class SaveToFileComponent(Component):
         """Save file to Google Drive using Google Drive functionality."""
         import tempfile
 
-        from google.oauth2 import service_account
         from googleapiclient.http import MediaFileUpload
 
-        from lfx.base.data.cloud_storage_utils import create_google_drive_service, parse_google_service_account_key
+        from lfx.base.data.cloud_storage_utils import create_google_drive_service
 
         # Validate Google Drive credentials
         if not getattr(self, "service_account_key", None):
@@ -612,14 +611,8 @@ class SaveToFileComponent(Component):
             raise ValueError(msg)
 
         # Create Google Drive service with full drive scope (needed for folder operations)
-        drive_service = create_google_drive_service(
-            self.service_account_key, scopes=["https://www.googleapis.com/auth/drive"]
-        )
-
-        # Get credentials for additional services (slides, docs)
-        credentials_dict = parse_google_service_account_key(self.service_account_key)
-        credentials = service_account.Credentials.from_service_account_info(
-            credentials_dict, scopes=["https://www.googleapis.com/auth/drive"]
+        drive_service, credentials = create_google_drive_service(
+            self.service_account_key, scopes=["https://www.googleapis.com/auth/drive"], return_credentials=True
         )
 
         # Extract content and format

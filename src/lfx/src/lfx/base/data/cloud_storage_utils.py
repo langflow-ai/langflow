@@ -124,15 +124,16 @@ def parse_google_service_account_key(service_account_key: str) -> dict:
     return credentials_dict
 
 
-def create_google_drive_service(service_account_key: str, scopes: list[str]):
+def create_google_drive_service(service_account_key: str, scopes: list[str], return_credentials: bool = False):
     """Create and return a configured Google Drive API service.
 
     Args:
         service_account_key: Service account JSON key as string
         scopes: List of Google API scopes to request
+        return_credentials: If True, return both service and credentials as tuple
 
     Returns:
-        Google Drive API service instance
+        Google Drive API service instance, or tuple of (service, credentials) if return_credentials=True
 
     Raises:
         ImportError: If Google API client libraries are not installed
@@ -148,4 +149,8 @@ def create_google_drive_service(service_account_key: str, scopes: list[str]):
     credentials_dict = parse_google_service_account_key(service_account_key)
 
     credentials = service_account.Credentials.from_service_account_info(credentials_dict, scopes=scopes)
-    return build("drive", "v3", credentials=credentials)
+    service = build("drive", "v3", credentials=credentials)
+    
+    if return_credentials:
+        return service, credentials
+    return service
