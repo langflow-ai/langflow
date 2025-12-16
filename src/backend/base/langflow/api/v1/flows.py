@@ -80,9 +80,7 @@ def _get_safe_flow_path(fs_path: str, user_id: UUID, storage_service: StorageSer
         raise HTTPException(status_code=400, detail=f"Invalid base directory: {e}") from e
 
     # Determine if path is absolute (Unix or Windows style)
-    is_absolute = normalized_path.startswith("/") or (
-        len(normalized_path) > 1 and normalized_path[1] == ":"
-    )
+    is_absolute = normalized_path.startswith("/") or (len(normalized_path) > 1 and normalized_path[1] == ":")
 
     if is_absolute:
         # Absolute path - resolve and validate it's within base directory
@@ -95,10 +93,7 @@ def _get_safe_flow_path(fs_path: str, user_id: UUID, storage_service: StorageSer
             except ValueError:
                 raise HTTPException(
                     status_code=400,
-                    detail=(
-                        f"Absolute path must be within your flows directory: "
-                        f"{base_dir_resolved}"
-                    ),
+                    detail=(f"Absolute path must be within your flows directory: {base_dir_resolved}"),
                 ) from None
             return Path(requested_resolved)
         except (OSError, ValueError) as e:
