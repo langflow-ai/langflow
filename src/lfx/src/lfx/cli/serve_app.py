@@ -37,7 +37,7 @@ if TYPE_CHECKING:
     from lfx.graph import Graph
 
 # Security - use the same pattern as Langflow main API
-API_KEY_NAME = "x-api-key"
+API_KEY_NAME = "x-api-key"  # pragma: allowlist secret
 api_key_query = APIKeyQuery(name=API_KEY_NAME, scheme_name="API key query", auto_error=False)
 api_key_header = APIKeyHeader(name=API_KEY_NAME, scheme_name="API key header", auto_error=False)
 
@@ -315,20 +315,26 @@ async def run_flow_generator_for_serve(
     Events Generated:
         - "add_message": Sent when new messages are added during flow execution
         - "token": Sent for each token generated during streaming
+        - "end_vertex": Sent when each vertex completes execution (emitted by graph.async_start)
         - "end": Sent when flow execution completes, includes final result
         - "error": Sent if an error occurs during execution
 
     Notes:
         - Runs the flow with streaming enabled via execute_graph_with_capture()
+        - Events (including end_vertex) are emitted during execution by the graph
         - On success, sends the final result via event_manager.on_end()
         - On error, logs the error and sends it via event_manager.on_error()
         - Always sends a final None event to signal completion
     """
     try:
-        # For the serve app, we'll use execute_graph_with_capture with streaming
-        # Note: This is a simplified version. In a full implementation, you might want
-        # to integrate with the full LFX streaming pipeline from endpoints.py
-        results, logs = await execute_graph_with_capture(graph, input_request.input_value)
+        # Execute graph with event_manager for real-time event streaming
+        results, logs = await execute_graph_with_capture(
+            graph,
+            input_request.input_value,
+            event_manager=event_manager,
+        )
+
+        # Extract final result
         result_data = extract_result_data(results, logs)
 
         # Send the final result
