@@ -14,6 +14,7 @@ export interface ModelProviderInfo {
 
 export interface ModelProviderWithStatus extends ModelProviderInfo {
   icon?: string;
+  documentation_url?: string;
 }
 
 export interface GetModelProvidersParams {
