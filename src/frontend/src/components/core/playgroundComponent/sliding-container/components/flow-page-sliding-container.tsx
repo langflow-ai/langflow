@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChatHeader } from "@/components/core/playgroundComponent/chat-view/chat-header";
+import { ChatHeader } from "@/components/core/playgroundComponent/chat-view/chat-header/components/chat-header";
 import { ChatSidebar } from "@/components/core/playgroundComponent/chat-view/chat-header/components/chat-sidebar";
 import { useGetFlowId } from "@/components/core/playgroundComponent/hooks/use-get-flow-id";
 import { useEditSessionInfo } from "../../chat-view/chat-header/hooks/use-edit-session-info";

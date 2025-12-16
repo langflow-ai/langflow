@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import { useBlocker, useParams } from "react-router-dom";
+import { FlowPageSlidingContainerContent } from "@/components/core/playgroundComponent/sliding-container/components/flow-page-sliding-container";
+import { useSlidingContainerStore } from "@/components/core/playgroundComponent/sliding-container/stores/sliding-container-store";
 import { SidebarProvider } from "@/components/ui/sidebar";
+import {
+  SimpleSidebar,
+  SimpleSidebarProvider,
+} from "@/components/ui/simple-sidebar";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { useGetTypes } from "@/controllers/API/queries/flows/use-get-types";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
@@ -161,9 +167,24 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   };
 
   const isMobile = useIsMobile();
+  const slidingContainerWidth = useSlidingContainerStore(
+    (state) => state.width,
+  );
+  const isSlidingContainerOpen = useSlidingContainerStore(
+    (state) => state.isOpen,
+  );
+  const setSlidingContainerOpen = useSlidingContainerStore(
+    (state) => state.setIsOpen,
+  );
+  const isFullscreen = useSlidingContainerStore((state) => state.isFullscreen);
+  const setIsFullscreen = useSlidingContainerStore(
+    (state) => state.setIsFullscreen,
+  );
 
   return (
     <>
+      {/* TODO: will be revert - original main layout without playground panel */}
+      {/*
       <div className="flow-page-positioning">
         {currentFlow && (
           <div className="flex h-full overflow-hidden">
@@ -175,7 +196,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
               <FlowSearchProvider>
                 {!view && <FlowSidebarComponent isLoading={isLoading} />}
                 <main className="flex w-full overflow-hidden">
-                  <div className="h-full w-full">
+                  <div className="h-full w/full">
                     <Page setIsLoading={setIsLoading} />
                   </div>
                 </main>
@@ -184,6 +205,47 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
           </div>
         )}
       </div>
+      */}
+
+      <SimpleSidebarProvider
+        width={`${slidingContainerWidth}px`}
+        open={isSlidingContainerOpen || isFullscreen}
+        onOpenChange={(open) => {
+          setSlidingContainerOpen(open);
+          if (!open) {
+            setIsFullscreen(false);
+          }
+        }}
+        fullscreen={isFullscreen}
+        onMaxWidth={() => {
+          setIsFullscreen(true);
+          setSlidingContainerOpen(true);
+        }}
+      >
+        <div className="flow-page-positioning">
+          {currentFlow && (
+            <div className="flex h-full overflow-hidden">
+              <SidebarProvider
+                width="17.5rem"
+                defaultOpen={!isMobile}
+                segmentedSidebar={ENABLE_NEW_SIDEBAR}
+              >
+                <FlowSearchProvider>
+                  {!view && <FlowSidebarComponent isLoading={isLoading} />}
+                  <main className="flex w-full overflow-hidden">
+                    <div className="h-full w-full">
+                      <Page setIsLoading={setIsLoading} />
+                    </div>
+                  </main>
+                </FlowSearchProvider>
+              </SidebarProvider>
+              <SimpleSidebar resizable={!isFullscreen} className="h-full">
+                <FlowPageSlidingContainerContent />
+              </SimpleSidebar>
+            </div>
+          )}
+        </div>
+      </SimpleSidebarProvider>
       {blocker.state === "blocked" && (
         <>
           {!isBuilding && currentSavedFlow && (
