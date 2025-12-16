@@ -35,27 +35,90 @@ from langflow.services.database.models.flow.model import (
 from langflow.services.database.models.flow.utils import get_webhook_component_in_flow
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
-from langflow.services.deps import get_settings_service
+from langflow.services.deps import get_settings_service, get_storage_service
+from langflow.services.storage.service import StorageService
 from langflow.utils.compression import compress_response
 
 # build router
 router = APIRouter(prefix="/flows", tags=["Flows"])
 
 
-async def _verify_fs_path(path: str | None) -> None:
-    if path:
-        path_ = Path(path)
-        if not await path_.exists():
-            await path_.touch()
-
-
-async def _save_flow_to_fs(flow: Flow) -> None:
-    if flow.fs_path:
-        async with async_open(flow.fs_path, "w") as f:
+def _get_safe_flow_path(fs_path: str, user_id: UUID, storage_service: StorageService) -> Path:
+    """Get a safe filesystem path for flow storage, restricted to user's flows directory.
+    
+    Allows both absolute and relative paths, but ensures they're within the user's flows directory.
+    """
+    if not fs_path:
+        raise HTTPException(status_code=400, detail="fs_path cannot be empty")
+    
+    # Reject directory traversal and null bytes
+    if ".." in fs_path or "\x00" in fs_path:
+        raise HTTPException(status_code=400, detail="Invalid fs_path: directory traversal and null bytes are not allowed")
+    
+    # Build the safe base directory: data_dir/flows/user_id
+    base_dir = storage_service.data_dir / "flows" / str(user_id)
+    
+    # Handle absolute vs relative paths
+    if fs_path.startswith("/") or (len(fs_path) > 1 and fs_path[1] == ":"):
+        # Absolute path - verify it's within the user's flows directory
+        try:
+            requested_path = Path(fs_path)
+            resolved_requested = requested_path.resolve()
+            resolved_base = base_dir.resolve()
+            
+            # Check if the absolute path is within the base directory
             try:
-                await f.write(flow.model_dump_json())
-            except OSError:
-                await logger.aexception("Failed to write flow %s to path %s", flow.name, flow.fs_path)
+                # Try to get relative path - if it fails, it's outside the base
+                resolved_requested.relative_to(resolved_base)
+                safe_path = resolved_requested
+            except ValueError:
+                # Path is outside the allowed directory
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Absolute path must be within your flows directory: {resolved_base}",
+                ) from None
+        except (OSError, ValueError) as e:
+            raise HTTPException(status_code=400, detail=f"Invalid absolute path: {e}") from e
+    else:
+        # Relative path - build from base directory
+        safe_path = base_dir / fs_path.lstrip("/")
+    
+    # Final check: ensure resolved path stays within base (prevent symlink attacks)
+    try:
+        resolved_path = safe_path.resolve()
+        resolved_base = base_dir.resolve()
+        if not str(resolved_path).startswith(str(resolved_base)):
+            raise HTTPException(status_code=400, detail="Invalid path: resolves outside allowed directory")
+    except (OSError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=f"Invalid path: {e}") from e
+    
+    return safe_path
+
+
+async def _verify_fs_path(path: str | None, user_id: UUID, storage_service: StorageService) -> None:
+    """Verify and prepare the filesystem path for flow storage."""
+    if path:
+        safe_path = _get_safe_flow_path(path, user_id, storage_service)
+        await safe_path.parent.mkdir(parents=True, exist_ok=True)
+        if not await safe_path.exists():
+            await safe_path.touch()
+
+
+async def _save_flow_to_fs(flow: Flow, user_id: UUID, storage_service: StorageService) -> None:
+    """Save flow data to the filesystem at the validated path."""
+    if not flow.fs_path:
+        return
+    
+    try:
+        safe_path = _get_safe_flow_path(flow.fs_path, user_id, storage_service)
+        await safe_path.parent.mkdir(parents=True, exist_ok=True)
+        async with async_open(safe_path, "w") as f:
+            await f.write(flow.model_dump_json())
+    except HTTPException:
+        raise
+    except OSError as e:
+        await logger.aexception("Failed to write flow %s to path %s", flow.name, flow.fs_path)
+        raise HTTPException(status_code=500, detail=f"Failed to write flow to filesystem: {e}") from e
 
 
 async def _new_flow(
@@ -63,9 +126,11 @@ async def _new_flow(
     session: AsyncSession,
     flow: FlowCreate,
     user_id: UUID,
+    storage_service: StorageService,
 ):
     try:
-        await _verify_fs_path(flow.fs_path)
+        # Validate fs_path if provided (will raise HTTPException if invalid)
+        await _verify_fs_path(flow.fs_path, user_id, storage_service)
 
         """Create a new flow."""
         if flow.user_id is None:
@@ -157,12 +222,15 @@ async def create_flow(
     session: DbSession,
     flow: FlowCreate,
     current_user: CurrentActiveUser,
+    storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     try:
-        db_flow = await _new_flow(session=session, flow=flow, user_id=current_user.id)
+        db_flow = await _new_flow(
+            session=session, flow=flow, user_id=current_user.id, storage_service=storage_service
+        )
         await session.flush()
         await session.refresh(db_flow)
-        await _save_flow_to_fs(db_flow)
+        await _save_flow_to_fs(db_flow, current_user.id, storage_service)
 
         # Convert to FlowRead while session is still active to avoid detached instance errors
         flow_read = FlowRead.model_validate(db_flow, from_attributes=True)
@@ -324,6 +392,7 @@ async def update_flow(
     flow_id: UUID,
     flow: FlowUpdate,
     current_user: CurrentActiveUser,
+    storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     """Update a flow."""
     settings_service = get_settings_service()
@@ -349,7 +418,9 @@ async def update_flow(
         for key, value in update_data.items():
             setattr(db_flow, key, value)
 
-        await _verify_fs_path(db_flow.fs_path)
+        # Validate fs_path if it was changed (will raise HTTPException if invalid)
+        if "fs_path" in update_data:
+            await _verify_fs_path(db_flow.fs_path, current_user.id, storage_service)
 
         webhook_component = get_webhook_component_in_flow(db_flow.data)
         db_flow.webhook = webhook_component is not None
@@ -363,7 +434,7 @@ async def update_flow(
         session.add(db_flow)
         await session.flush()
         await session.refresh(db_flow)
-        await _save_flow_to_fs(db_flow)
+        await _save_flow_to_fs(db_flow, current_user.id, storage_service)
 
         # Convert to FlowRead while session is still active to avoid detached instance errors
         flow_read = FlowRead.model_validate(db_flow, from_attributes=True)
@@ -435,6 +506,7 @@ async def upload_file(
     file: Annotated[UploadFile, File(...)],
     current_user: CurrentActiveUser,
     folder_id: UUID | None = None,
+    storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     """Upload flows from a file."""
     contents = await file.read()
@@ -446,14 +518,16 @@ async def upload_file(
         flow.user_id = current_user.id
         if folder_id:
             flow.folder_id = folder_id
-        response = await _new_flow(session=session, flow=flow, user_id=current_user.id)
+        response = await _new_flow(
+            session=session, flow=flow, user_id=current_user.id, storage_service=storage_service
+        )
         response_list.append(response)
 
     try:
         await session.flush()
         for db_flow in response_list:
             await session.refresh(db_flow)
-            await _save_flow_to_fs(db_flow)
+            await _save_flow_to_fs(db_flow, current_user.id, storage_service)
 
         # Convert to FlowRead while session is still active to avoid detached instance errors
         flow_reads = [FlowRead.model_validate(db_flow, from_attributes=True) for db_flow in response_list]
