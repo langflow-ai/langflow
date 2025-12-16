@@ -61,6 +61,21 @@ class TestPathValidation:
         assert exc_info.value.status_code == 400
         assert "directory traversal" in exc_info.value.detail.lower()
 
+    def test_rejects_backslash_directory_traversal(self, mock_storage_service, user_id):
+        """Test that backslash directory traversal is caught after normalization."""
+        # Backslash traversal should be normalized first, then caught
+        with pytest.raises(HTTPException) as exc_info:
+            _get_safe_flow_path("sub\\..\\etc\\passwd", user_id, mock_storage_service)
+        assert exc_info.value.status_code == 400
+        assert "directory traversal" in exc_info.value.detail.lower()
+
+    def test_rejects_windows_backslash_traversal(self, mock_storage_service, user_id):
+        """Test that Windows-style backslash traversal is rejected."""
+        with pytest.raises(HTTPException) as exc_info:
+            _get_safe_flow_path("folder\\..\\..\\etc\\passwd", user_id, mock_storage_service)
+        assert exc_info.value.status_code == 400
+        assert "directory traversal" in exc_info.value.detail.lower()
+
     def test_rejects_multiple_traversal(self, mock_storage_service, user_id):
         """Test that multiple directory traversals are rejected."""
         with pytest.raises(HTTPException) as exc_info:

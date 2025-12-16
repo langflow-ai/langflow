@@ -52,11 +52,20 @@ def _get_safe_flow_path(fs_path: str, user_id: UUID, storage_service: StorageSer
     if not fs_path:
         raise HTTPException(status_code=400, detail="fs_path cannot be empty")
 
-    # Reject directory traversal and null bytes
-    if ".." in fs_path:
-        raise HTTPException(status_code=400, detail='Invalid fs_path: directory traversal ("..") is not allowed')
-    if "\x00" in fs_path:
-        raise HTTPException(status_code=400, detail='Invalid fs_path: null bytes ("\x00") are not allowed')
+    # Normalize path separators first (before security checks to prevent backslash bypass)
+    normalized_path = fs_path.replace("\\", "/")
+
+    # Reject directory traversal and null bytes (check normalized path)
+    if ".." in normalized_path:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid fs_path: directory traversal (..) is not allowed",
+        )
+    if "\x00" in normalized_path:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid fs_path: null bytes are not allowed",
+        )
 
     # Build the safe base directory path
     base_dir = storage_service.data_dir / "flows" / str(user_id)
@@ -70,10 +79,15 @@ def _get_safe_flow_path(fs_path: str, user_id: UUID, storage_service: StorageSer
     except (OSError, ValueError) as e:
         raise HTTPException(status_code=400, detail=f"Invalid base directory: {e}") from e
 
-    if fs_path.startswith("/") or (len(fs_path) > 1 and fs_path[1] == ":"):
+    # Determine if path is absolute (Unix or Windows style)
+    is_absolute = normalized_path.startswith("/") or (
+        len(normalized_path) > 1 and normalized_path[1] == ":"
+    )
+
+    if is_absolute:
         # Absolute path - resolve and validate it's within base directory
         try:
-            requested_path = StdlibPath(fs_path).resolve()
+            requested_path = StdlibPath(normalized_path).resolve()
             requested_resolved = str(requested_path)
             try:
                 # Ensure it's a subpath of the base directory
@@ -81,17 +95,23 @@ def _get_safe_flow_path(fs_path: str, user_id: UUID, storage_service: StorageSer
             except ValueError:
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Absolute path must be within your flows directory: {base_dir_resolved}",
+                    detail=(
+                        f"Absolute path must be within your flows directory: "
+                        f"{base_dir_resolved}"
+                    ),
                 ) from None
-            final_resolved = requested_resolved
+            return Path(requested_resolved)
         except (OSError, ValueError) as e:
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid file save path: {e}. Verify that the path is within your flows directory: {base_dir_resolved}",
+                detail=(
+                    f"Invalid file save path: {e}. "
+                    f"Verify that the path is within your flows directory: {base_dir_resolved}"
+                ),
             ) from e
     else:
         # Relative path - validate that it's within the base directory
-        relative_part = fs_path.lstrip("/").replace("\\", "/")
+        relative_part = normalized_path.lstrip("/")
         safe_path = base_dir / relative_part if relative_part else base_dir
         safe_path_stdlib = base_dir_stdlib / relative_part if relative_part else base_dir_stdlib
         try:
@@ -107,8 +127,6 @@ def _get_safe_flow_path(fs_path: str, user_id: UUID, storage_service: StorageSer
             raise HTTPException(status_code=400, detail=f"Invalid path: {e}") from e
 
         return safe_path
-
-    return Path(final_resolved)
 
 
 async def _verify_fs_path(path: str | None, user_id: UUID, storage_service: StorageService) -> None:
