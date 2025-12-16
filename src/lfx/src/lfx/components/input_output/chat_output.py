@@ -139,6 +139,8 @@ class ChatOutput(ChatComponent):
         message.properties.source = self._build_source(source_id, display_name, source)
 
         # Store message if needed
+        # Note: send_message → _store_message → astore_message handles upsert
+        # If message already has an ID, it will update; otherwise it will insert
         if message.session_id and self.should_store_message:
             stored_message = await self.send_message(message)
             self.message.value = stored_message
