@@ -299,13 +299,14 @@ async def test_sync_flows_from_fs(client: AsyncClient, logged_in_headers):
         created_flow = response.json()
         flow_id = created_flow["id"]
         user_id = created_flow["user_id"]
-        
+
         # Construct the full path where the file was saved
         # The API saves relative paths to: storage_service.data_dir / "flows" / user_id / filename
         from langflow.services.deps import get_storage_service
+
         storage_service = get_storage_service()
         flow_file = storage_service.data_dir / "flows" / str(user_id) / flow_filename
-        
+
         # Read the file created by the API
         content = await flow_file.read_text(encoding="utf-8")
         fs_flow = Flow.model_validate_json(content)
