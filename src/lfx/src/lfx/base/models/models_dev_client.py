@@ -241,13 +241,11 @@ def transform_api_model_to_metadata(
     if model_data.get("last_updated"):
         metadata["last_updated"] = model_data["last_updated"]
 
-    # Provider metadata
+    # Provider metadata (only api_base and env_vars at model level, documentation_url is at provider level)
     if provider_data.get("api"):
         metadata["api_base"] = provider_data["api"]
     if provider_data.get("env"):
         metadata["env_vars"] = provider_data["env"]
-    if provider_data.get("doc"):
-        metadata["documentation_url"] = provider_data["doc"]
 
     return metadata
 

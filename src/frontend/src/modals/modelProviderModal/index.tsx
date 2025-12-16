@@ -294,9 +294,20 @@ const ModelProviderModal = ({
                 {requiresApiKey ? (
                   <>
                     Add your{" "}
-                    <span className="underline cursor-pointer hover:text-primary">
-                      {selectedProvider?.provider} API key
-                    </span>{" "}
+                    {selectedProvider?.documentation_url ? (
+                      <a
+                        href={selectedProvider.documentation_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="underline cursor-pointer hover:text-primary"
+                      >
+                        {selectedProvider?.provider} API key
+                      </a>
+                    ) : (
+                      <span className="underline cursor-pointer hover:text-primary">
+                        {selectedProvider?.provider} API key
+                      </span>
+                    )}{" "}
                     to enable these models
                   </>
                 ) : (

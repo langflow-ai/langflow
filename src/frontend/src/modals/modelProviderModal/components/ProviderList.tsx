@@ -40,6 +40,7 @@ const ProviderList = ({
           is_enabled: provider.is_enabled,
           model_count: matchingModels.length,
           models: matchingModels,
+          documentation_url: provider.documentation_url,
         };
       })
       .filter((provider) => provider.model_count > 0);

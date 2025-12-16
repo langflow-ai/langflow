@@ -77,22 +77,27 @@ def get_static_model_provider_metadata():
         "OpenAI": {
             "icon": "OpenAI",
             "variable_name": "OPENAI_API_KEY",
+            "documentation_url": "https://platform.openai.com/api-keys",
         },
         "Anthropic": {
             "icon": "Anthropic",
             "variable_name": "ANTHROPIC_API_KEY",
+            "documentation_url": "https://console.anthropic.com/settings/keys",
         },
         "Google Generative AI": {
             "icon": "GoogleGenerativeAI",
             "variable_name": "GOOGLE_GENERATIVE_AI_API_KEY",
+            "documentation_url": "https://aistudio.google.com/app/apikey",
         },
         "Ollama": {
             "icon": "Ollama",
             "variable_name": "OLLAMA_BASE_URL",  # Ollama is local but can have custom URL
+            "documentation_url": "https://ollama.com/download",
         },
         "IBM Watsonx": {
             "icon": "WatsonxAI",
             "variable_name": "WATSONX_APIKEY",
+            "documentation_url": "https://cloud.ibm.com/iam/apikeys",
         },
     }
 
