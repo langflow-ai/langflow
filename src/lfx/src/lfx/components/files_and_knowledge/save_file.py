@@ -235,12 +235,14 @@ class SaveToFileComponent(Component):
                 for f_name in aws_fields:
                     if f_name in build_config:
                         build_config[f_name]["show"] = True
+                        build_config[f_name]["advanced"] = False
 
             elif location == "Google Drive":
                 gdrive_fields = ["gdrive_format", "service_account_key", "folder_id"]
                 for f_name in gdrive_fields:
                     if f_name in build_config:
                         build_config[f_name]["show"] = True
+                        build_config[f_name]["advanced"] = False
 
         return build_config
 
@@ -556,34 +558,13 @@ class SaveToFileComponent(Component):
 
     async def _save_to_aws(self) -> Message:
         """Save file to AWS S3 using S3 functionality."""
-        # Validate AWS credentials
-        if not getattr(self, "aws_access_key_id", None):
-            msg = "AWS Access Key ID is required for S3 storage"
-            raise ValueError(msg)
-        if not getattr(self, "aws_secret_access_key", None):
-            msg = "AWS Secret Key is required for S3 storage"
-            raise ValueError(msg)
-        if not getattr(self, "bucket_name", None):
-            msg = "S3 Bucket Name is required for S3 storage"
-            raise ValueError(msg)
+        from lfx.base.data.cloud_storage_utils import create_s3_client, validate_aws_credentials
 
-        # Use S3 upload functionality
-        try:
-            import boto3
-        except ImportError as e:
-            msg = "boto3 is not installed. Please install it using `uv pip install boto3`."
-            raise ImportError(msg) from e
+        # Validate AWS credentials
+        validate_aws_credentials(self)
 
         # Create S3 client
-        client_config = {
-            "aws_access_key_id": self.aws_access_key_id,
-            "aws_secret_access_key": self.aws_secret_access_key,
-        }
-
-        if hasattr(self, "aws_region") and self.aws_region:
-            client_config["region_name"] = self.aws_region
-
-        s3_client = boto3.client("s3", **client_config)
+        s3_client = create_s3_client(self)
 
         # Extract content
         content = self._extract_content_for_upload()
@@ -615,6 +596,13 @@ class SaveToFileComponent(Component):
 
     async def _save_to_google_drive(self) -> Message:
         """Save file to Google Drive using Google Drive functionality."""
+        import tempfile
+
+        from google.oauth2 import service_account
+        from googleapiclient.http import MediaFileUpload
+
+        from lfx.base.data.cloud_storage_utils import create_google_drive_service, parse_google_service_account_key
+
         # Validate Google Drive credentials
         if not getattr(self, "service_account_key", None):
             msg = "GCP Credentials Secret Key is required for Google Drive storage"
@@ -623,71 +611,16 @@ class SaveToFileComponent(Component):
             msg = "Google Drive Folder ID is required for Google Drive storage"
             raise ValueError(msg)
 
-        # Use Google Drive upload functionality
-        try:
-            import json
-            import tempfile
+        # Create Google Drive service with full drive scope (needed for folder operations)
+        drive_service = create_google_drive_service(
+            self.service_account_key, scopes=["https://www.googleapis.com/auth/drive"]
+        )
 
-            from google.oauth2 import service_account
-            from googleapiclient.discovery import build
-            from googleapiclient.http import MediaFileUpload
-        except ImportError as e:
-            msg = "Google API client libraries are not installed. Please install them."
-            raise ImportError(msg) from e
-
-        # Parse credentials with multiple fallback strategies
-        credentials_dict = None
-        parse_errors = []
-
-        # Strategy 1: Parse as-is with strict=False to allow control characters
-        try:
-            credentials_dict = json.loads(self.service_account_key, strict=False)
-        except json.JSONDecodeError as e:
-            parse_errors.append(f"Standard parse: {e!s}")
-
-        # Strategy 2: Strip whitespace and try again
-        if credentials_dict is None:
-            try:
-                cleaned_key = self.service_account_key.strip()
-                credentials_dict = json.loads(cleaned_key, strict=False)
-            except json.JSONDecodeError as e:
-                parse_errors.append(f"Stripped parse: {e!s}")
-
-        # Strategy 3: Check if it's double-encoded (JSON string of a JSON string)
-        if credentials_dict is None:
-            try:
-                decoded_once = json.loads(self.service_account_key, strict=False)
-                if isinstance(decoded_once, str):
-                    credentials_dict = json.loads(decoded_once, strict=False)
-                else:
-                    credentials_dict = decoded_once
-            except json.JSONDecodeError as e:
-                parse_errors.append(f"Double-encoded parse: {e!s}")
-
-        # Strategy 4: Try to fix common issues with newlines in the private_key field
-        if credentials_dict is None:
-            try:
-                # Replace literal \n with actual newlines which is common in pasted JSON
-                fixed_key = self.service_account_key.replace("\\n", "\n")
-                credentials_dict = json.loads(fixed_key, strict=False)
-            except json.JSONDecodeError as e:
-                parse_errors.append(f"Newline-fixed parse: {e!s}")
-
-        if credentials_dict is None:
-            error_details = "; ".join(parse_errors)
-            msg = (
-                f"Unable to parse service account key JSON. Tried multiple strategies: {error_details}. "
-                "Please ensure you've copied the entire JSON content from your service account key file. "
-                "The JSON should start with '{' and contain fields like 'type', 'project_id', 'private_key', etc."
-            )
-            raise ValueError(msg)
-
-        # Create Google Drive service with appropriate scopes
-        # Use drive scope for folder access, file scope is too restrictive for folder verification
+        # Get credentials for additional services (slides, docs)
+        credentials_dict = parse_google_service_account_key(self.service_account_key)
         credentials = service_account.Credentials.from_service_account_info(
             credentials_dict, scopes=["https://www.googleapis.com/auth/drive"]
         )
-        drive_service = build("drive", "v3", credentials=credentials)
 
         # Extract content and format
         content = self._extract_content_for_upload()
