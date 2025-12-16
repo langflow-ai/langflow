@@ -490,7 +490,6 @@
                 "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "context_id",
-                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -498,7 +497,6 @@
                 "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
-                "track_in_telemetry": false,
                 "type": "str",
                 "value": ""
               },
@@ -964,7 +962,6 @@
                 "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "context_id",
-                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -972,7 +969,6 @@
                 "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
-                "track_in_telemetry": false,
                 "type": "str",
                 "value": ""
               },
@@ -2201,7 +2197,6 @@
                 "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "context_id",
-                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -2209,7 +2204,6 @@
                 "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
-                "track_in_telemetry": false,
                 "type": "str",
                 "value": ""
               },
