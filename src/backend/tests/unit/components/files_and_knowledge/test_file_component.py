@@ -1,4 +1,5 @@
 import json
+import tempfile
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -572,7 +573,7 @@ class TestFileComponentToolMode:
 
     @patch("lfx.base.data.cloud_storage_utils.create_s3_client")
     @patch("lfx.base.data.cloud_storage_utils.validate_aws_credentials")
-    def test_s3_temp_file_cleanup_on_download_failure(self, mock_validate, mock_create_client):
+    def test_s3_temp_file_cleanup_on_download_failure(self, mock_validate, mock_create_client):  # noqa: ARG002
         """Test that temp file is cleaned up when S3 download fails."""
         from pathlib import Path
 
@@ -593,14 +594,18 @@ class TestFileComponentToolMode:
         mock_create_client.return_value = mock_s3_client
 
         # Track temp files created
-        temp_files_before = set(Path("/tmp").glob("tmp*.txt")) if Path("/tmp").exists() else set()
+        temp_dir = Path(tempfile.gettempdir())
+        temp_files_before = (
+            set(temp_dir.glob("tmp*.txt")) if temp_dir.exists() else set()
+        )
 
         # Attempt to read from S3 - should fail and clean up temp file
         with pytest.raises(RuntimeError, match="Failed to download file from S3"):
             component._read_from_aws_s3()
 
         # Verify no new temp files are left behind
-        temp_files_after = set(Path("/tmp").glob("tmp*.txt")) if Path("/tmp").exists() else set()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_files_after = set(Path(temp_dir).glob("tmp*.txt"))
         new_temp_files = temp_files_after - temp_files_before
         assert len(new_temp_files) == 0, f"Temp files not cleaned up: {new_temp_files}"
 
@@ -627,13 +632,21 @@ class TestFileComponentToolMode:
         mock_create_service.return_value = mock_drive_service
 
         # Track temp files created
-        temp_files_before = set(Path("/tmp").glob("tmp*.txt")) if Path("/tmp").exists() else set()
+        temp_files_before = (
+            set(Path(tempfile.gettempdir()).glob("tmp*.txt"))
+            if Path(tempfile.gettempdir()).exists()
+            else set()
+        )
 
         # Attempt to read from Google Drive - should fail and clean up temp file
         with pytest.raises(RuntimeError, match="Failed to download file from Google Drive"):
             component._read_from_google_drive()
 
         # Verify no new temp files are left behind
-        temp_files_after = set(Path("/tmp").glob("tmp*.txt")) if Path("/tmp").exists() else set()
+        temp_files_after = (
+            set(Path(tempfile.gettempdir()).glob("tmp*.txt"))
+            if Path(tempfile.gettempdir()).exists()
+            else set()
+        )
         new_temp_files = temp_files_after - temp_files_before
         assert len(new_temp_files) == 0, f"Temp files not cleaned up: {new_temp_files}"
