@@ -46,22 +46,22 @@ router = APIRouter(prefix="/flows", tags=["Flows"])
 
 def _get_safe_flow_path(fs_path: str, user_id: UUID, storage_service: StorageService) -> Path:
     """Get a safe filesystem path for flow storage, restricted to user's flows directory.
-    
+
     Allows both absolute and relative paths, but ensures they're within the user's flows directory.
     """
     if not fs_path:
         raise HTTPException(status_code=400, detail="fs_path cannot be empty")
-    
+
     # Reject directory traversal and null bytes
     if ".." in fs_path:
-        raise HTTPException(status_code=400, detail="Invalid fs_path: directory traversal (\"..\") is not allowed")
+        raise HTTPException(status_code=400, detail='Invalid fs_path: directory traversal ("..") is not allowed')
     if "\x00" in fs_path:
-        raise HTTPException(status_code=400, detail="Invalid fs_path: null bytes (\"\x00\") are not allowed")
-    
+        raise HTTPException(status_code=400, detail='Invalid fs_path: null bytes ("\x00") are not allowed')
+
     # Build the safe base directory path
     base_dir = storage_service.data_dir / "flows" / str(user_id)
     base_dir_str = str(base_dir)
-    
+
     # Normalize base directory path (resolve to absolute, handle symlinks)
     # resolve() doesn't require the path to exist, it just resolves symlinks
     try:
@@ -69,7 +69,7 @@ def _get_safe_flow_path(fs_path: str, user_id: UUID, storage_service: StorageSer
         base_dir_resolved = str(base_dir_stdlib)
     except (OSError, ValueError) as e:
         raise HTTPException(status_code=400, detail=f"Invalid base directory: {e}") from e
-    
+
     if fs_path.startswith("/") or (len(fs_path) > 1 and fs_path[1] == ":"):
         # Absolute path - resolve and validate it's within base directory
         try:
@@ -85,7 +85,10 @@ def _get_safe_flow_path(fs_path: str, user_id: UUID, storage_service: StorageSer
                 ) from None
             final_resolved = requested_resolved
         except (OSError, ValueError) as e:
-            raise HTTPException(status_code=400, detail=f"Invalid file save path: {e}. Verify that the path is within your flows directory: {base_dir_resolved}") from e
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid file save path: {e}. Verify that the path is within your flows directory: {base_dir_resolved}",
+            ) from e
     else:
         # Relative path - validate that it's within the base directory
         relative_part = fs_path.lstrip("/").replace("\\", "/")
@@ -102,9 +105,9 @@ def _get_safe_flow_path(fs_path: str, user_id: UUID, storage_service: StorageSer
                 )
         except (OSError, ValueError) as e:
             raise HTTPException(status_code=400, detail=f"Invalid path: {e}") from e
-        
+
         return safe_path
-    
+
     return Path(final_resolved)
 
 
@@ -124,7 +127,7 @@ async def _save_flow_to_fs(flow: Flow, user_id: UUID, storage_service: StorageSe
     """Save flow data to the filesystem at the validated path."""
     if not flow.fs_path:
         return
-    
+
     try:
         safe_path = _get_safe_flow_path(flow.fs_path, user_id, storage_service)
         await safe_path.parent.mkdir(parents=True, exist_ok=True)
@@ -242,9 +245,7 @@ async def create_flow(
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     try:
-        db_flow = await _new_flow(
-            session=session, flow=flow, user_id=current_user.id, storage_service=storage_service
-        )
+        db_flow = await _new_flow(session=session, flow=flow, user_id=current_user.id, storage_service=storage_service)
         await session.flush()
         await session.refresh(db_flow)
         await _save_flow_to_fs(db_flow, current_user.id, storage_service)
@@ -535,9 +536,7 @@ async def upload_file(
         flow.user_id = current_user.id
         if folder_id:
             flow.folder_id = folder_id
-        response = await _new_flow(
-            session=session, flow=flow, user_id=current_user.id, storage_service=storage_service
-        )
+        response = await _new_flow(session=session, flow=flow, user_id=current_user.id, storage_service=storage_service)
         response_list.append(response)
 
     try:

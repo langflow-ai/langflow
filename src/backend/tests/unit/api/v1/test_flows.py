@@ -1,10 +1,7 @@
-import tempfile
 import uuid
 
-from anyio import Path
 from fastapi import status
 from httpx import AsyncClient
-from langflow.services.database.models import Flow
 
 
 async def test_create_flow(client: AsyncClient, logged_in_headers):
@@ -335,7 +332,10 @@ async def test_create_flow_rejects_directory_traversal(client: AsyncClient, logg
     }
     response = await client.post("api/v1/flows/", json=basic_case, headers=logged_in_headers)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert "directory traversal" in response.json()["detail"].lower() or "absolute paths" in response.json()["detail"].lower()
+    assert (
+        "directory traversal" in response.json()["detail"].lower()
+        or "absolute paths" in response.json()["detail"].lower()
+    )
 
 
 async def test_create_flow_rejects_null_bytes(client: AsyncClient, logged_in_headers):
@@ -350,7 +350,9 @@ async def test_create_flow_rejects_null_bytes(client: AsyncClient, logged_in_hea
     assert "absolute paths" in response.json()["detail"].lower() or "null" in response.json()["detail"].lower()
 
 
-async def test_create_flow_rejects_windows_absolute_path_outside_allowed_directory(client: AsyncClient, logged_in_headers):
+async def test_create_flow_rejects_windows_absolute_path_outside_allowed_directory(
+    client: AsyncClient, logged_in_headers
+):
     """Test that Windows-style absolute paths outside the allowed directory are rejected."""
     basic_case = {
         "name": "test_flow",
