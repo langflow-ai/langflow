@@ -194,6 +194,7 @@ class S3StorageService(StorageService):
             FileNotFoundError: If the file does not exist in S3
         """
         key = self.build_full_path(flow_id, file_name)
+        logger.debug(f"Attempting to retrieve file from S3: bucket={self.bucket_name}, key={key}, flow_id={flow_id}, file_name={file_name}")
 
         try:
             async with self._get_client() as s3_client:
@@ -203,11 +204,25 @@ class S3StorageService(StorageService):
             logger.debug(f"File {file_name} retrieved successfully from S3: s3://{self.bucket_name}/{key}")
         except Exception as e:
             if hasattr(e, "response") and e.response.get("Error", {}).get("Code") == "NoSuchKey":
-                await logger.awarning(f"File {file_name} not found in S3 flow {flow_id}")
-                msg = f"File not found: {file_name}"
+                await logger.awarning(
+                    f"File {file_name} not found in S3 flow {flow_id}. "
+                    f"Looking for key: {key} in bucket: {self.bucket_name}"
+                )
+                msg = f"File not found: {file_name} (S3 key: {key})"
                 raise FileNotFoundError(msg) from e
 
-            logger.exception(f"Error retrieving file {file_name} from S3 in flow {flow_id}")
+            # Log full exception details for debugging
+            error_details = str(e)
+            if hasattr(e, "response") and isinstance(e.response, dict):
+                error_info = e.response.get("Error", {})
+                error_code = error_info.get("Code", "Unknown")
+                error_msg = error_info.get("Message", str(e))
+                error_details = f"{error_code}: {error_msg}"
+            
+            logger.exception(
+                f"Error retrieving file {file_name} from S3 in flow {flow_id}: {error_details}. "
+                f"Attempted key: {key} in bucket: {self.bucket_name}"
+            )
             raise
         else:
             return content
