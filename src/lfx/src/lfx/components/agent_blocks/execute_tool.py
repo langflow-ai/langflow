@@ -95,11 +95,25 @@ class ExecuteToolComponent(Component):
     def _get_or_create_agent_message(self) -> Message:
         """Get the existing AI message or create a new one for tool execution updates.
 
-        The event manager updates messages in the DB by ID. If the incoming ai_message
-        has an ID (from CallModel's send_message), we should use it to update that
-        message with tool execution content_blocks. This ensures all updates go to
-        the same message in the UI.
+        The event manager updates messages in the DB by ID. If we have a _parent_message
+        from AgentLoop, use that. Otherwise, if the incoming ai_message has an ID
+        (from AgentStep's send_message), we should use it to update that message with
+        tool execution content_blocks. This ensures all updates go to the same message in the UI.
         """
+        # Check if we have a parent message from AgentLoop - use it directly
+        parent_message: Message | None = getattr(self, "_parent_message", None)
+        if parent_message:
+            # Ensure parent message has an "Agent Steps" content block
+            if not parent_message.content_blocks:
+                parent_message.content_blocks = [ContentBlock(title="Agent Steps", contents=[])]
+            else:
+                has_agent_steps = any(
+                    getattr(cb, "title", None) == "Agent Steps" for cb in parent_message.content_blocks
+                )
+                if not has_agent_steps:
+                    parent_message.content_blocks.append(ContentBlock(title="Agent Steps", contents=[]))
+            return parent_message
+
         # Get session_id from graph if available
         if hasattr(self, "graph") and self.graph:
             session_id = self.graph.session_id
@@ -333,25 +347,51 @@ class ExecuteToolComponent(Component):
                 }
             )
 
-        # Pre-create all ToolContent items and emit start events
+        # Find existing or create ToolContent items for each tool call
+        # AgentStep may have already created "Accessing" ToolContent during streaming
         tool_contents: dict[str, ToolContent] = {}
         steps_block = self._get_agent_steps_block(agent_message)
 
         for info in tool_call_infos:
-            tool_content = ToolContent(
-                type="tool_use",
-                name=info["name"],
-                tool_input=info["args"],
-                output=None,
-                error=None,
-                header={"title": f"Accessing **{info['name']}**", "icon": "Hammer"},
-                duration=0,
-            )
-            tool_contents[info["tool_call_id"]] = tool_content
-            if steps_block:
-                steps_block.contents.append(tool_content)
+            tool_name = info["name"]
+            tool_args = info["args"]
 
-        # Emit all start events at once
+            # Check if there's already an "Accessing" ToolContent for this tool
+            # that we can update (created by AgentStep during streaming)
+            existing_content = None
+            if steps_block:
+                for content in steps_block.contents:
+                    if (
+                        isinstance(content, ToolContent)
+                        and content.name == tool_name
+                        and content.output is None  # Not yet completed
+                        and content.error is None  # Not errored
+                        and content.tool_input == {}  # Created by AgentStep with empty args
+                    ):
+                        existing_content = content
+                        break
+
+            if existing_content:
+                # Update existing ToolContent with actual args
+                existing_content.tool_input = tool_args
+                tool_content = existing_content
+            else:
+                # Create new ToolContent (e.g., when not streaming or tool not detected during stream)
+                tool_content = ToolContent(
+                    type="tool_use",
+                    name=tool_name,
+                    tool_input=tool_args,
+                    output=None,
+                    error=None,
+                    header={"title": f"Accessing **{tool_name}**", "icon": "Hammer"},
+                    duration=0,
+                )
+                if steps_block:
+                    steps_block.contents.append(tool_content)
+
+            tool_contents[info["tool_call_id"]] = tool_content
+
+        # Emit start events (updates existing or shows new)
         agent_message = await self._send_tool_event(agent_message)
 
         # Execute tools (parallel or sequential)
