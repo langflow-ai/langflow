@@ -7,14 +7,18 @@ from lfx.inputs.inputs import BoolInput, ModelInput
 from lfx.base.models.model import LCModelComponent
 from lfx.log.logger import logger
 from os.path import join
+from typing import Any
 
-from langflow.inputs import DropdownInput, MultilineInput
-from toolguard import LitellmModel, ToolGuardsCodeGenerationResult, ToolGuardSpec
-from toolguard.buildtime import generate_guard_specs, generate_guards_from_specs
-from toolguard.data_types import MelleaSessionData
-
-from lfx.components.policies.wrapped_tool import wrap_tool
+from lfx.base.models import LCModelComponent
 from lfx.custom.custom_component.component import Component
+
+from lfx.base.models.unified_models import (
+    get_language_model_options,
+    get_llm,
+    update_model_options_in_build_config,
+)
+from lfx.field_typing import LanguageModel
+
 from lfx.field_typing import Tool
 from lfx.inputs.inputs import BoolInput, MessageTextInput
 from lfx.io import HandleInput, MessageTextInput, Output, SecretStrInput
@@ -25,7 +29,7 @@ STEP1 = "Step_1"
 STEP2 = "Step_2"
 
 
-class PoliciesComponent(Component):
+class PoliciesComponent(LCModelComponent):
     display_name = "Policies"
     description = "Component for building tool protection code from textual business policies and instructions."
     documentation: str = "https://github.com/IBM/toolguard"
@@ -35,31 +39,36 @@ class PoliciesComponent(Component):
 
     inputs = [
         BoolInput(
-            name="enabled",
-            display_name="Enable ToolGuards",
-            info="If true, invokes ToolGuard code prior to tool execution, ensuring that tool-related policies are enforced.",
-            value=True,
+            name="bypass_policies",
+            display_name="Bypass",
+            info="If false, invokes ToolGuard code prior to tool execution, ensuring that tool-related policies are enforced.",
+            value=False,
         ),
         TabInput(
             name="build_mode",
-            display_name="ToolGuard Build Mode",
-            options=["build", "use cache"],
+            display_name="Policies Build Mode",
+            options=["Build", "Use Cache"],
             info="Indicates whether to invoke buildtime (build), or use a cached code (use cache)",
-            value="build",
+            value="Build",
             real_time_refresh=True,
             tool_mode=True,
         ),
-        MultilineInput(
+        MessageTextInput(
             name="policies",
-            display_name="Business Policies",
-            info="Company business policies: concise, well-defined, self-contained policies, one in a line.",
-            value="<example: division by zero is prohibited>",
+            display_name="Policies",
+            info="Enter one or more clear, well-defined and self-contained business policies, by clicking the '+' button.",
+            is_list=True,
+            tool_mode=True,
+            placeholder="Add business policy...",
+            list_add_label="Add Policy",
+            input_types=[],
         ),
         MessageTextInput(
             name="guard_code_path",
             display_name="ToolGuards Generated Code Path",
             info="Automatically generated ToolGuards code",
             # show_if={"enable_tool_guard": True},
+            value='',  # todo: decide on the path
             advanced=True,
         ),
         DropdownInput(
@@ -71,7 +80,6 @@ class PoliciesComponent(Component):
             # real_time_refresh=True,
             # refresh_button=False,
             required=True,
-            input_types=[],
         ),
         SecretStrInput(
             name="api_key",
