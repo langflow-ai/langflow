@@ -1572,7 +1572,18 @@ class Component(CustomComponent):
         return has_chat_input(self.graph.get_vertex_neighbors(self._vertex))
 
     def _should_skip_message(self, message: Message) -> bool:
-        """Check if the message should be skipped based on vertex configuration and message type."""
+        """Check if the message should be skipped based on vertex configuration and message type.
+
+        Messages should NOT be skipped (i.e., should be sent) when:
+        - The vertex is an output or input vertex
+        - The component is connected to ChatOutput
+        - The component has _stream_to_playground=True (set by parent for inner graphs)
+        - The message is an ErrorMessage
+        """
+        # If parent explicitly enabled streaming for this inner graph component
+        if getattr(self, "_stream_to_playground", False):
+            return False
+
         return (
             self._vertex is not None
             and not (self._vertex.is_output or self._vertex.is_input)
