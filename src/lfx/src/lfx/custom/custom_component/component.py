@@ -1181,10 +1181,17 @@ class Component(CustomComponent):
     def _should_process_output(self, output):
         """Determines whether a given output should be processed based on vertex edge configuration.
 
-        Returns True if the component has no vertex or outgoing edges, or if the output's name is among
-        the vertex's source edge names.
+        Returns True if:
+        - The component has no vertex or outgoing edges
+        - The output is part of a grouped outputs (conditional routing) - these must always run
+          so the routing logic can execute and decide which branch to take
+        - The output's name is among the vertex's source edge names
         """
         if not self._vertex or not self._vertex.outgoing_edges:
+            return True
+        # Always process outputs with group_outputs=True (conditional routing outputs)
+        # These need to run so the routing logic can execute, even if not connected
+        if getattr(output, "group_outputs", False):
             return True
         return output.name in self._vertex.edges_source_names
 
