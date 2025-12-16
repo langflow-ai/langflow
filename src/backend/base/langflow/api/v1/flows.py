@@ -87,11 +87,9 @@ def _get_safe_flow_path(fs_path: str, user_id: UUID, storage_service: StorageSer
         except (OSError, ValueError) as e:
             raise HTTPException(status_code=400, detail=f"Invalid file save path: {e}. Verify that the path is within your flows directory: {base_dir_resolved}") from e
     else:
+        # Relative path - validate that it's within the base directory
         relative_part = fs_path.lstrip("/").replace("\\", "/")
-        # Build path using anyio.Path directly (more reliable than string conversion)
         safe_path = base_dir / relative_part if relative_part else base_dir
-        
-        # Validate using stdlib Path for resolution check
         safe_path_stdlib = base_dir_stdlib / relative_part if relative_part else base_dir_stdlib
         try:
             final_resolved_str = str(safe_path_stdlib.resolve())
@@ -107,7 +105,6 @@ def _get_safe_flow_path(fs_path: str, user_id: UUID, storage_service: StorageSer
         
         return safe_path
     
-    # For absolute paths, convert resolved string back to anyio.Path
     return Path(final_resolved)
 
 
