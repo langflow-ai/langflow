@@ -111,21 +111,19 @@ def convert_kwargs(params):
     return params
 
 
-def load_from_env_vars(params, load_from_db_fields, custom_component=None):
+def load_from_env_vars(params, load_from_db_fields, context=None):
     for field in load_from_db_fields:
         if field not in params or not params[field]:
             continue
         variable_name = params[field]
         key = None
 
-        # Check request_variables in graph context
-        if custom_component and hasattr(custom_component, "graph") and hasattr(custom_component.graph, "context"):
-            context = custom_component.graph.context
-            if context and "request_variables" in context:
-                request_variables = context["request_variables"]
-                if variable_name in request_variables:
-                    key = request_variables[variable_name]
-                    logger.debug(f"Found context override for variable '{variable_name}'")
+        # Check request_variables in context
+        if context and "request_variables" in context:
+            request_variables = context["request_variables"]
+            if variable_name in request_variables:
+                key = request_variables[variable_name]
+                logger.debug(f"Found context override for variable '{variable_name}'")
 
         if key is None:
             key = os.getenv(variable_name)
@@ -154,6 +152,11 @@ async def update_table_params_with_load_from_db_fields(
 
     if not table_data or not load_from_db_columns:
         return params
+
+    # Extract context once for use throughout the function
+    context = None
+    if hasattr(custom_component, "graph") and hasattr(custom_component.graph, "context"):
+        context = custom_component.graph.context
 
     async with session_scope() as session:
         settings_service = get_settings_service()
@@ -185,13 +188,11 @@ async def update_table_params_with_load_from_db_fields(
                         # Fallback to environment variables
                         key = None
                         # Check request_variables first
-                        if hasattr(custom_component, "graph") and hasattr(custom_component.graph, "context"):
-                            context = custom_component.graph.context
-                            if context and "request_variables" in context:
-                                request_variables = context["request_variables"]
-                                if variable_name in request_variables:
-                                    key = request_variables[variable_name]
-                                    logger.debug(f"Found context override for variable '{variable_name}'")
+                        if context and "request_variables" in context:
+                            request_variables = context["request_variables"]
+                            if variable_name in request_variables:
+                                key = request_variables[variable_name]
+                                logger.debug(f"Found context override for variable '{variable_name}'")
 
                         if key is None:
                             key = os.getenv(variable_name)
@@ -248,7 +249,10 @@ async def update_params_with_load_from_db_fields(
         )
         if is_noop_session:
             logger.debug("Loading variables from environment variables because database is not available.")
-            return load_from_env_vars(params, load_from_db_fields, custom_component=custom_component)
+            context = None
+            if hasattr(custom_component, "graph") and hasattr(custom_component.graph, "context"):
+                context = custom_component.graph.context
+            return load_from_env_vars(params, load_from_db_fields, context=context)
         for field in load_from_db_fields:
             # Check if this is a table field (using our naming convention)
             if field.startswith("table:"):
