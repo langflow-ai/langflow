@@ -530,7 +530,7 @@ export default function ModelInputComponent({
   );
 
   // Loading state
-  if (!options || options.length === 0 || refreshOptions) {
+  if ((!options || options?.length === 0) && hasEnabledProviders) {
     return <div className="w-full">{renderLoadingButton()}</div>;
   }
 

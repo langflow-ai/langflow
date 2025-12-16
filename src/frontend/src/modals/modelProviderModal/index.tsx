@@ -5,9 +5,9 @@ import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   NO_API_KEY_PROVIDERS,
-  PROVIDER_VARIABLE_MAPPING,
   VARIABLE_CATEGORY,
 } from "@/constants/providerConstants";
+import { useGetProviderVariableMapping } from "@/controllers/API/queries/models/use-get-provider-variable-mapping";
 import { useUpdateEnabledModels } from "@/controllers/API/queries/models/use-update-enabled-models";
 import {
   useGetGlobalVariables,
@@ -53,6 +53,8 @@ const ModelProviderModal = ({
   const { data: globalVariables = [] } = useGetGlobalVariables();
   const { mutate: updateEnabledModels } = useUpdateEnabledModels();
   const { refreshAllModelInputs } = useRefreshModelInputs();
+  const { data: providerVariableMapping = {} } =
+    useGetProviderVariableMapping();
 
   const isPending = isCreating || isUpdating;
 
@@ -128,7 +130,7 @@ const ModelProviderModal = ({
     if (!selectedProvider) return;
 
     // Map provider name to its corresponding global variable name
-    const variableName = PROVIDER_VARIABLE_MAPPING[selectedProvider.provider];
+    const variableName = providerVariableMapping[selectedProvider.provider];
     if (!variableName) {
       setErrorData({
         title: "Invalid Provider",
@@ -187,7 +189,7 @@ const ModelProviderModal = ({
   const handleConfigureProvider = () => {
     if (!selectedProvider || !apiKey.trim()) return;
 
-    const variableName = PROVIDER_VARIABLE_MAPPING[selectedProvider.provider];
+    const variableName = providerVariableMapping[selectedProvider.provider];
     if (!variableName) {
       setErrorData({
         title: "Invalid Provider",

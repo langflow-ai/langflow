@@ -12,15 +12,6 @@ jest.mock("@/components/common/genericIconComponent", () => ({
   ),
 }));
 
-// Mock PROVIDER_VARIABLE_MAPPING
-jest.mock("@/constants/providerConstants", () => ({
-  PROVIDER_VARIABLE_MAPPING: {
-    OpenAI: "OPENAI_API_KEY",
-    Anthropic: "ANTHROPIC_API_KEY",
-    Cohere: "COHERE_API_KEY",
-  },
-}));
-
 const defaultProps = {
   authName: "",
   onAuthNameChange: jest.fn(),
@@ -70,14 +61,16 @@ describe("ModelProviderEdit", () => {
       expect(screen.getByText(/Find your API key/)).toBeInTheDocument();
     });
 
-    it("should display provider-specific variable name when providerName is set", () => {
-      render(<ModelProviderEdit {...defaultProps} providerName="OpenAI" />);
+    it("should display provider-specific variable name when variableName is set", () => {
+      render(
+        <ModelProviderEdit {...defaultProps} variableName="OPENAI_API_KEY" />,
+      );
 
       const authInput = screen.getByTestId("auth-name-input");
       expect(authInput).toHaveValue("OPENAI_API_KEY");
     });
 
-    it("should display UNKNOWN_API_KEY when providerName is not set", () => {
+    it("should display UNKNOWN_API_KEY when variableName is not set", () => {
       render(<ModelProviderEdit {...defaultProps} />);
 
       const authInput = screen.getByTestId("auth-name-input");

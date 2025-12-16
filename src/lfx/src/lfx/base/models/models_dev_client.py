@@ -23,26 +23,12 @@ MODELS_DEV_API_URL = "https://models.dev/api.json"
 CACHE_TTL_SECONDS = 3600  # 1 hour cache TTL
 CACHE_FILE_NAME = ".models_dev_cache.json"
 
-# Provider name mapping from API IDs to display names
 PROVIDER_NAME_MAP = {
     "openai": "OpenAI",
     "anthropic": "Anthropic",
-    "google": "Google Generative AI",
-    "google-vertex": "Google Vertex AI",
-    "mistral": "Mistral AI",
-    "cohere": "Cohere",
-    "groq": "Groq",
-    "together": "Together AI",
-    "fireworks": "Fireworks AI",
-    "deepseek": "DeepSeek",
-    "xai": "xAI",
-    "alibaba": "Alibaba",
-    "nvidia": "Nvidia",
-    "amazon-bedrock": "Amazon Bedrock",
-    "azure": "Azure OpenAI",
-    "cerebras": "Cerebras",
+    "google": "Google",
     "ollama": "Ollama",
-    "ollama-cloud": "Ollama Cloud",
+    "ibm-watsonx": "WatsonxAI",
 }
 
 # Provider icon mapping - keys from lazyIconImports.ts in frontend/src/icons/
@@ -50,47 +36,10 @@ PROVIDER_NAME_MAP = {
 PROVIDER_ICON_MAP = {
     "openai": "OpenAI",
     "anthropic": "Anthropic",
-    "google": "GoogleGenerativeAI",
-    "google-vertex": "VertexAI",
-    "mistral": "Mistral",
-    "cohere": "Cohere",
-    "groq": "Groq",
-    "together": "Bot",  # No custom icon
-    "fireworks": "Bot",  # No custom icon
-    "deepseek": "DeepSeek",
-    "xai": "xAI",
-    "alibaba": "Bot",  # No custom icon
-    "nvidia": "NVIDIA",
-    "amazon-bedrock": "AWS",
-    "azure": "Azure",
-    "cerebras": "Bot",  # No custom icon
+    "google": "Google",
     "ollama": "Ollama",
-    "ollama-cloud": "Ollama",
     "ibm-watsonx": "WatsonxAI",
 }
-
-# Providers that are currently supported/integrated
-SUPPORTED_PROVIDERS = [
-    "openai",
-    "anthropic",
-    "google",
-    "google-vertex",
-    "mistral",
-    "cohere",
-    "groq",
-    "together",
-    "fireworks",
-    "deepseek",
-    "xai",
-    "alibaba",
-    "nvidia",
-    "amazon-bedrock",
-    "azure",
-    "cerebras",
-    "ollama",
-    "ollama-cloud",
-    "ibm-watsonx",
-]
 
 
 def _get_cache_path() -> Path:
@@ -265,7 +214,6 @@ def transform_api_model_to_metadata(
         attachment=model_data.get("attachment", False),
         # Status flags
         preview="-preview" in model_id.lower() or "beta" in model_id.lower(),
-        not_supported=provider_id not in SUPPORTED_PROVIDERS,
         deprecated=False,
         default=False,
         open_weights=model_data.get("open_weights", False),
@@ -308,7 +256,6 @@ def get_live_models_detailed(
     *,
     providers: list[str] | None = None,
     model_types: list[str] | None = None,
-    include_unsupported: bool = False,
     force_refresh: bool = False,
 ) -> list[ModelMetadata]:
     """Get live model metadata from models.dev API.
@@ -316,7 +263,6 @@ def get_live_models_detailed(
     Args:
         providers: Optional list of provider IDs to filter by
         model_types: Optional list of model types to filter by ("llm", "embeddings", etc.)
-        include_unsupported: If True, include models from unsupported providers
         force_refresh: If True, bypass cache and fetch fresh data
 
     Returns:
@@ -331,10 +277,6 @@ def get_live_models_detailed(
     for provider_id, provider_data in api_data.items():
         # Skip if filtering by provider and this one isn't included
         if providers and provider_id not in providers:
-            continue
-
-        # Skip unsupported providers unless explicitly requested
-        if not include_unsupported and provider_id not in SUPPORTED_PROVIDERS:
             continue
 
         provider_models = provider_data.get("models", {})
@@ -352,7 +294,7 @@ def get_live_models_detailed(
 
 @lru_cache(maxsize=1)
 def get_provider_metadata_from_api() -> dict[str, dict[str, Any]]:
-    """Get provider metadata from the API for all supported providers.
+    """Get provider metadata from the API for all providers.
 
     Returns:
         Dictionary mapping provider names to their metadata
@@ -363,9 +305,6 @@ def get_provider_metadata_from_api() -> dict[str, dict[str, Any]]:
 
     provider_metadata = {}
     for provider_id, provider_data in api_data.items():
-        if provider_id not in SUPPORTED_PROVIDERS:
-            continue
-
         provider_name = PROVIDER_NAME_MAP.get(provider_id, provider_data.get("name", provider_id.title()))
         icon = PROVIDER_ICON_MAP.get(provider_id, "Bot")
 

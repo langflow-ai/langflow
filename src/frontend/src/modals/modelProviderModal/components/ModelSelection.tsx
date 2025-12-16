@@ -70,6 +70,15 @@ const ModelSelection = ({
   const embeddingModels = availableModels.filter(
     (model) => model.metadata?.model_type === "embeddings",
   );
+  const imageModels = availableModels.filter(
+    (model) => model.metadata?.model_type === "image",
+  );
+  const audioModels = availableModels.filter(
+    (model) => model.metadata?.model_type === "audio",
+  );
+  const videoModels = availableModels.filter(
+    (model) => model.metadata?.model_type === "video",
+  );
 
   const renderModelSection = (
     title: string,
@@ -108,6 +117,9 @@ const ModelSelection = ({
             embeddingModels,
             "embeddings",
           )}
+          {renderModelSection("Image Models", imageModels, "image")}
+          {renderModelSection("Audio Models", audioModels, "audio")}
+          {renderModelSection("Video Models", videoModels, "video")}
         </>
       ) : modelType === "llm" ? (
         renderModelSection("LLM Models", llmModels, "llm")

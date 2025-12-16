@@ -48,7 +48,6 @@ export const useGetModelProviders: useQueryFunctionType<
 
       return providersData.map((providerInfo) => ({
         ...providerInfo,
-        icon: getProviderIcon(providerInfo.provider),
       }));
     } catch (error) {
       console.error("Error fetching model providers:", error);
@@ -71,33 +70,4 @@ export const useGetModelProviders: useQueryFunctionType<
   );
 
   return queryResult;
-};
-
-// Helper function to map provider names to icon names
-// Icon keys must match lazyIconImports.ts in frontend/src/icons/
-const getProviderIcon = (providerName: string): string => {
-  const iconMap: Record<string, string> = {
-    OpenAI: "OpenAI",
-    Anthropic: "Anthropic",
-    "Google Generative AI": "GoogleGenerativeAI",
-    "Google Vertex AI": "VertexAI",
-    "Mistral AI": "Mistral",
-    Cohere: "Cohere",
-    Groq: "Groq",
-    "Together AI": "Bot",
-    "Fireworks AI": "Bot",
-    DeepSeek: "DeepSeek",
-    xAI: "xAI",
-    Alibaba: "Bot",
-    Nvidia: "NVIDIA",
-    "Amazon Bedrock": "AWS",
-    "Azure OpenAI": "Azure",
-    Cerebras: "Bot",
-    Ollama: "Ollama",
-    "Ollama Cloud": "Ollama",
-    "IBM Watsonx": "WatsonxAI",
-    SambaNova: "SambaNova",
-  };
-
-  return iconMap[providerName] || "Bot";
 };

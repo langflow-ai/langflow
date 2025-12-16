@@ -84,7 +84,7 @@ def get_static_model_provider_metadata():
         },
         "Google Generative AI": {
             "icon": "GoogleGenerativeAI",
-            "variable_name": "GOOGLE_API_KEY",
+            "variable_name": "GOOGLE_GENERATIVE_AI_API_KEY",
         },
         "Ollama": {
             "icon": "Ollama",
@@ -131,13 +131,9 @@ def get_static_models_detailed():
 
 
 def get_live_models_as_groups() -> list[list[dict]]:
-    """Fetch live models from models.dev API and group by provider.
-
-    Only includes models from supported providers.
-    """
+    """Fetch live models from models.dev API and group by provider."""
     try:
-        # Only fetch supported providers, exclude unsupported ones entirely
-        live_models = fetch_live_models(include_unsupported=False)
+        live_models = fetch_live_models()
         if not live_models:
             return []
 
@@ -327,14 +323,8 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
     if user_id is None or (isinstance(user_id, str) and user_id == "None"):
         return None
 
-    # Map provider to global variable name
-    provider_variable_map = {
-        "OpenAI": "OPENAI_API_KEY",
-        "Anthropic": "ANTHROPIC_API_KEY",
-        "Google Generative AI": "GOOGLE_API_KEY",
-        "IBM WatsonX": "WATSONX_APIKEY",
-    }
-
+    # Get provider to variable name mapping dynamically
+    provider_variable_map = get_model_provider_variable_mapping()
     variable_name = provider_variable_map.get(provider)
     if not variable_name:
         return None
@@ -365,16 +355,11 @@ def validate_model_provider_key(variable_name: str, api_key: str) -> None:
     Raises:
         HTTPException: If the API key is invalid
     """
-    # Map variable names to providers
-    provider_map = {
-        "OPENAI_API_KEY": "OpenAI",
-        "ANTHROPIC_API_KEY": "Anthropic",
-        "GOOGLE_API_KEY": "Google Generative AI",
-        "WATSONX_APIKEY": "IBM WatsonX",
-        "OLLAMA_BASE_URL": "Ollama",
-    }
+    # Reverse the provider-variable mapping to get provider from variable name
+    provider_variable_map = get_model_provider_variable_mapping()
+    variable_to_provider = {var_name: provider for provider, var_name in provider_variable_map.items()}
 
-    provider = provider_map.get(variable_name)
+    provider = variable_to_provider.get(variable_name)
     if not provider:
         return  # Not a model provider key we validate
 
