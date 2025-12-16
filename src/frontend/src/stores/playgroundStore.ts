@@ -1,22 +1,15 @@
 import { create } from "zustand";
-import type { PlaygroundStoreType } from "@/types/zustand/playground";
 
-export const usePlaygroundStore = create<PlaygroundStoreType>((set) => ({
+type PlaygroundState = {
+  isPlayground: boolean;
+  selectedSession?: string;
+  setSelectedSession: (id?: string) => void;
+};
+
+const usePlaygroundStore = create<PlaygroundState>((set) => ({
+  isPlayground: true,
   selectedSession: undefined,
-  setSelectedSession: (selectedSession: string | undefined) =>
-    set({ selectedSession }),
-  isPlayground: false,
-  setIsPlayground: (isPlayground: boolean) => set({ isPlayground }),
-  isFullscreen: false,
-  toggleFullscreen: () =>
-    set((state) => ({ isFullscreen: !state.isFullscreen })),
-  setIsFullscreen: (isFullscreen: boolean) => set({ isFullscreen }),
-  isOpen: false,
-  setIsOpen: (isOpen: boolean) => set({ isOpen }),
-  reset: (flowId: string) =>
-    set({
-      selectedSession: flowId,
-      isFullscreen: false,
-      isOpen: false,
-    }),
+  setSelectedSession: (id) => set({ selectedSession: id }),
 }));
+
+export { usePlaygroundStore };

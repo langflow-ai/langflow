@@ -9,7 +9,6 @@ import type { languageMap } from "../types/components";
 
 export const DEFAULT_SESSION_NAME = "Default Session";
 export const NEW_SESSION_NAME = "New Session";
-export const SLIDING_TRANSITION_MS = 300;
 
 const getEnvVar = <T = string | undefined>(
   key: string,
