@@ -290,7 +290,7 @@ class CugaComponent(ToolCallingAgentComponent):
                             data_dict = json.loads(last_event.data)
                         except json.JSONDecodeError:
                             data_dict = last_event.data
-                        if last_event.name == "CodeAgent":
+                        if last_event.name == "CodeAgent" and isinstance(data_dict, dict) and "code" in data_dict:
                             data_dict = data_dict["code"]
                         yield {
                             "event": "on_tool_end",
