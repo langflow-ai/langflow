@@ -163,7 +163,6 @@ class PoliciesComponent(LCModelComponent):
 
         self.log("🔒️ToolGuard: starting building toolguards...", name="info")
         self.log(f"🔒️ToolGuard: policies document: {self.policies}", name="info")
-        self.log(f"🔒️ToolGuard: model provider: {self.model_provider}, using model: <model name>", name="info")
         self.log(f"🔒️ToolGuard: input tools: {self.tools}", name="info")
 
         self.log("🔒️ToolGuard: please review the generated guard code at ...", name="info")
