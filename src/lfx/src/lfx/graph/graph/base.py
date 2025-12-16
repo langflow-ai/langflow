@@ -358,7 +358,9 @@ class Graph:
         *,
         reset_output_values: bool = True,
     ):
-        self.prepare()
+        # Preserve start_component_id from constructor if available
+        start_component_id = self._start.get_id() if self._start else None
+        self.prepare(start_component_id=start_component_id)
         if reset_output_values:
             self._reset_all_output_values()
 
