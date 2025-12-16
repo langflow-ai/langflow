@@ -595,9 +595,7 @@ class TestFileComponentToolMode:
 
         # Track temp files created
         temp_dir = Path(tempfile.gettempdir())
-        temp_files_before = (
-            set(temp_dir.glob("tmp*.txt")) if temp_dir.exists() else set()
-        )
+        temp_files_before = set(temp_dir.glob("tmp*.txt")) if temp_dir.exists() else set()
 
         # Attempt to read from S3 - should fail and clean up temp file
         with pytest.raises(RuntimeError, match="Failed to download file from S3"):
@@ -633,9 +631,7 @@ class TestFileComponentToolMode:
 
         # Track temp files created
         temp_files_before = (
-            set(Path(tempfile.gettempdir()).glob("tmp*.txt"))
-            if Path(tempfile.gettempdir()).exists()
-            else set()
+            set(Path(tempfile.gettempdir()).glob("tmp*.txt")) if Path(tempfile.gettempdir()).exists() else set()
         )
 
         # Attempt to read from Google Drive - should fail and clean up temp file
@@ -644,9 +640,7 @@ class TestFileComponentToolMode:
 
         # Verify no new temp files are left behind
         temp_files_after = (
-            set(Path(tempfile.gettempdir()).glob("tmp*.txt"))
-            if Path(tempfile.gettempdir()).exists()
-            else set()
+            set(Path(tempfile.gettempdir()).glob("tmp*.txt")) if Path(tempfile.gettempdir()).exists() else set()
         )
         new_temp_files = temp_files_after - temp_files_before
         assert len(new_temp_files) == 0, f"Temp files not cleaned up: {new_temp_files}"
