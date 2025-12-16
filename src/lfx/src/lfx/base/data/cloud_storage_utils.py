@@ -124,7 +124,7 @@ def parse_google_service_account_key(service_account_key: str) -> dict:
     return credentials_dict
 
 
-def create_google_drive_service(service_account_key: str, scopes: list[str], return_credentials: bool = False):
+def create_google_drive_service(service_account_key: str, scopes: list[str], *, return_credentials: bool = False):
     """Create and return a configured Google Drive API service.
 
     Args:
