@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.10, <3.14"
 resolution-markers = [
     "python_full_version >= '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
@@ -1829,7 +1829,7 @@ wheels = [
 
 [[package]]
 name = "cuga"
-version = "0.1.11"
+version = "0.2.6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -1839,6 +1839,7 @@ dependencies = [
     { name = "fastapi", extra = ["standard"] },
     { name = "fastmcp" },
     { name = "html2text" },
+    { name = "httpx" },
     { name = "langchain" },
     { name = "langchain-core" },
     { name = "langchain-ibm" },
@@ -1850,13 +1851,15 @@ dependencies = [
     { name = "mcp", extra = ["cli"] },
     { name = "playwright" },
     { name = "psutil" },
+    { name = "pymilvus" },
     { name = "python-dotenv" },
+    { name = "pyyaml" },
     { name = "typer" },
     { name = "uvicorn" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/49/e8/5a5d9b2d6f894a9c667485c654b9946e01ab8d96364d6142acc4e233cec3/cuga-0.1.11.tar.gz", hash = "sha256:9c0f66401ac200d4d94c8b3bdaff96cb7d3d52cc5d7dd07a5a7ec62cdaa6e5c7", size = 472123, upload-time = "2025-11-26T17:35:20.024Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/64/60/b77f7a0ebac1174b1b5a477bb22fd6f3a9e80692d253616a50aacfcea598/cuga-0.2.6.tar.gz", hash = "sha256:123f89c4adc5d5cf638f9a70c31db0ebb875e76e6a5ca8d9f49274466e276fa5", size = 527371, upload-time = "2025-12-15T12:11:09.987Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/8b/fa/b8e8e19d84d4e47d0f3654366f6f7e33b5f5ec05bdf0787fd16981696bde/cuga-0.1.11-py3-none-any.whl", hash = "sha256:cd5e05680134599268878c6c7b0c94913605b182e013f01bf480f924abfdf5b3", size = 642770, upload-time = "2025-11-26T17:35:18.593Z" },
+    { url = "https://files.pythonhosted.org/packages/e6/3d/c51e8940304d5e96c2e6cd849d61a3bed8a3cb4d3190e9281cf6c57d40b8/cuga-0.2.6-py3-none-any.whl", hash = "sha256:4590a2628473fd50e85121090f16218759a0eb65612bc7fbdf4cc9150341bcb5", size = 702405, upload-time = "2025-12-15T12:11:11.232Z" },
 ]
 
 [[package]]
@@ -5814,7 +5817,7 @@ requires-dist = [
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
     { name = "cryptography", specifier = ">=43.0.1,<44.0.0" },
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10" },
-    { name = "cuga", specifier = "~=0.1.11" },
+    { name = "cuga", specifier = "~=0.2.6" },
     { name = "datasets", specifier = ">2.14.7,<4.0.0" },
     { name = "docling", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'", specifier = ">=2.36.1,<3.0.0" },
     { name = "docling-core", specifier = ">=2.36.1,<3.0.0" },
@@ -7187,7 +7190,7 @@ wheels = [
 
 [[package]]
 name = "mcp"
-version = "1.22.0"
+version = "1.23.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
@@ -7205,9 +7208,9 @@ dependencies = [
     { name = "typing-inspection" },
     { name = "uvicorn", marker = "sys_platform != 'emscripten'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a3/a2/c5ec0ab38b35ade2ae49a90fada718fbc76811dc5aa1760414c6aaa6b08a/mcp-1.22.0.tar.gz", hash = "sha256:769b9ac90ed42134375b19e777a2858ca300f95f2e800982b3e2be62dfc0ba01", size = 471788, upload-time = "2025-11-20T20:11:28.095Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a7/a4/d06a303f45997e266f2c228081abe299bbcba216cb806128e2e49095d25f/mcp-1.23.3.tar.gz", hash = "sha256:b3b0da2cc949950ce1259c7bfc1b081905a51916fcd7c8182125b85e70825201", size = 600697, upload-time = "2025-12-09T16:04:37.351Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a9/bb/711099f9c6bb52770f56e56401cdfb10da5b67029f701e0df29362df4c8e/mcp-1.22.0-py3-none-any.whl", hash = "sha256:bed758e24df1ed6846989c909ba4e3df339a27b4f30f1b8b627862a4bade4e98", size = 175489, upload-time = "2025-11-20T20:11:26.542Z" },
+    { url = "https://files.pythonhosted.org/packages/32/c6/13c1a26b47b3f3a3b480783001ada4268917c9f42d78a079c336da2e75e5/mcp-1.23.3-py3-none-any.whl", hash = "sha256:32768af4b46a1b4f7df34e2bfdf5c6011e7b63d7f1b0e321d0fdef4cd6082031", size = 231570, upload-time = "2025-12-09T16:04:35.56Z" },
 ]
 
 [package.optional-dependencies]
