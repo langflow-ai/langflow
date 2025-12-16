@@ -971,6 +971,9 @@ class Component(CustomComponent):
     def _map_parameters_on_frontend_node(self, frontend_node: ComponentFrontendNode) -> None:
         for name, value in self._parameters.items():
             frontend_node.set_field_value_in_template(name, value)
+            # Disable load_from_db for explicitly set parameters to prevent
+            # overwriting the value during graph execution
+            frontend_node.set_field_load_from_db_in_template(name, value=False)
 
     def _map_parameters_on_template(self, template: dict) -> None:
         for name, value in self._parameters.items():
