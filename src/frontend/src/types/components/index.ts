@@ -105,6 +105,7 @@ export type NodeOutputFieldComponentType = {
   data: NodeDataType;
   title: string;
   id: sourceHandleType;
+  loopInputId?: sourceHandleType;
   colors: string[];
   tooltipTitle: string | undefined;
   showNode: boolean;
