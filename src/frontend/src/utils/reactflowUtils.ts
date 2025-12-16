@@ -320,15 +320,17 @@ export function detectBrokenEdgesEdges(nodes: AllNodeType[], edges: Edge[]) {
         targetNode.type === "genericNode"
       ) {
         const dataType = targetNode.data.type;
-        const output = targetNode.data.node!.outputs?.find(
+        const targetOutput = targetNode.data.node!.outputs?.find(
           (output) => output.name === targetHandleObject.name,
         );
-        const baseTypes = output?.types ?? [];
-        // Include loop_types for loop inputs (allows_loop=true)
+        // Match the handle ID generation logic from NodeOutputParameter
+        const selectedType = targetOutput?.selected ?? targetOutput?.types[0];
         const outputTypes =
-          output?.allows_loop && output?.loop_types
-            ? [output.selected ?? baseTypes[0], ...output.loop_types]
-            : baseTypes;
+          targetOutput?.allows_loop && targetOutput?.loop_types
+            ? [selectedType, ...targetOutput.loop_types]
+            : selectedType
+              ? [selectedType]
+              : [];
 
         id = {
           dataType: dataType ?? "",
@@ -360,8 +362,12 @@ export function detectBrokenEdgesEdges(nodes: AllNodeType[], edges: Edge[]) {
           (output) => output.name === name,
         );
         if (output) {
+          // Match the handle ID generation logic from NodeOutputParameter
+          const selectedType = output.selected ?? output.types[0];
           const outputTypes =
-            output!.types.length === 1 ? output!.types : [output!.selected!];
+            output.allows_loop && output.loop_types
+              ? [selectedType, ...output.loop_types]
+              : [selectedType];
 
           const id: sourceHandleType = {
             id: sourceNode.data.id,
