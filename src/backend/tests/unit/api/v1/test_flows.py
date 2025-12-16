@@ -8,7 +8,7 @@ from langflow.services.database.models import Flow
 
 
 async def test_create_flow(client: AsyncClient, logged_in_headers):
-    # Use relative path instead of absolute path (security requirement)
+    # Use relative path - absolute paths outside allowed directory are rejected
     flow_filename = f"{uuid.uuid4()}.json"
     basic_case = {
         "name": "string",
@@ -117,7 +117,7 @@ async def test_update_flow(client: AsyncClient, logged_in_headers):
     response_ = await client.post("api/v1/flows/", json=basic_case, headers=logged_in_headers)
     id_ = response_.json()["id"]
 
-    # Use relative path instead of absolute path (security requirement)
+    # Use relative path - absolute paths outside allowed directory are rejected
     flow_filename = f"{uuid.uuid4()!s}.json"
     basic_case["name"] = updated_name
     basic_case["fs_path"] = flow_filename
@@ -314,7 +314,6 @@ async def test_read_flows_user_isolation(client: AsyncClient, logged_in_headers,
             await session.commit()
 
 
-# Security tests for fs_path validation
 async def test_create_flow_rejects_absolute_path_outside_allowed_directory(client: AsyncClient, logged_in_headers):
     """Test that absolute paths outside the allowed directory are rejected."""
     basic_case = {
@@ -481,7 +480,7 @@ async def test_upload_flow_rejects_absolute_path(client: AsyncClient, logged_in_
     }
     # Create a JSON file content
     file_content = json.dumps({"flows": [flow_data]})
-    
+
     response = await client.post(
         "api/v1/flows/upload/",
         files={"file": ("flows.json", file_content, "application/json")},

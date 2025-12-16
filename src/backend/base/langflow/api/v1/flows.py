@@ -63,6 +63,7 @@ def _get_safe_flow_path(fs_path: str, user_id: UUID, storage_service: StorageSer
     base_dir_str = str(base_dir)
     
     # Normalize base directory path (resolve to absolute, handle symlinks)
+    # resolve() doesn't require the path to exist, it just resolves symlinks
     try:
         base_dir_stdlib = StdlibPath(base_dir_str).resolve()
         base_dir_resolved = str(base_dir_stdlib)
@@ -87,25 +88,35 @@ def _get_safe_flow_path(fs_path: str, user_id: UUID, storage_service: StorageSer
             raise HTTPException(status_code=400, detail=f"Invalid file save path: {e}. Verify that the path is within your flows directory: {base_dir_resolved}") from e
     else:
         relative_part = fs_path.lstrip("/").replace("\\", "/")
+        # Build path using anyio.Path directly (more reliable than string conversion)
+        safe_path = base_dir / relative_part if relative_part else base_dir
+        
+        # Validate using stdlib Path for resolution check
         safe_path_stdlib = base_dir_stdlib / relative_part if relative_part else base_dir_stdlib
         try:
-            final_resolved = str(safe_path_stdlib.resolve())
+            final_resolved_str = str(safe_path_stdlib.resolve())
 
             # Ensure resolved path stays within base (prevent symlink attacks)
-            if not final_resolved.startswith(base_dir_resolved):
+            if not final_resolved_str.startswith(base_dir_resolved):
                 raise HTTPException(
                     status_code=400,
                     detail="Invalid path: resolves outside allowed directory",
                 )
         except (OSError, ValueError) as e:
             raise HTTPException(status_code=400, detail=f"Invalid path: {e}") from e
+        
+        return safe_path
     
+    # For absolute paths, convert resolved string back to anyio.Path
     return Path(final_resolved)
 
 
 async def _verify_fs_path(path: str | None, user_id: UUID, storage_service: StorageService) -> None:
     """Verify and prepare the filesystem path for flow storage."""
-    if path:
+    if path is not None:
+        # Empty strings should be rejected (None is allowed, empty string is not)
+        if path == "":
+            raise HTTPException(status_code=400, detail="fs_path cannot be empty")
         safe_path = _get_safe_flow_path(path, user_id, storage_service)
         await safe_path.parent.mkdir(parents=True, exist_ok=True)
         if not await safe_path.exists():
@@ -120,7 +131,8 @@ async def _save_flow_to_fs(flow: Flow, user_id: UUID, storage_service: StorageSe
     try:
         safe_path = _get_safe_flow_path(flow.fs_path, user_id, storage_service)
         await safe_path.parent.mkdir(parents=True, exist_ok=True)
-        async with async_open(safe_path, "w") as f:
+        # async_open expects a string path, not a Path object
+        async with async_open(str(safe_path), "w") as f:
             await f.write(flow.model_dump_json())
     except HTTPException:
         raise
