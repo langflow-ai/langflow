@@ -123,7 +123,7 @@ class TestPathValidation:
         assert path is not None
         assert str(user_id) in str(path)
 
-    def test_path_is_user_isolated(self, mock_storage_service, user_id):
+    def test_path_is_user_isolated(self, mock_storage_service, user_id):  # noqa: ARG002
         """Test that paths are isolated per user."""
         user1_id = uuid4()
         user2_id = uuid4()
@@ -140,7 +140,7 @@ class TestPathValidation:
 
     def test_handles_leading_slash_in_relative_path(self, mock_storage_service, user_id):
         """Test that leading slashes in relative paths are handled correctly."""
-        path1 = _get_safe_flow_path("flow.json", user_id, mock_storage_service)
+        _get_safe_flow_path("flow.json", user_id, mock_storage_service)
         # Leading slash makes it absolute, so it will be checked against base directory
         # For a simple "/flow.json", it's not within the base dir, so it should be rejected
         with pytest.raises(HTTPException):

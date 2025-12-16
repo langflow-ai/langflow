@@ -1,3 +1,4 @@
+import tempfile
 import uuid
 
 from fastapi import status
@@ -357,7 +358,8 @@ async def test_create_flow_rejects_windows_absolute_path_outside_allowed_directo
     basic_case = {
         "name": "test_flow",
         "data": {},
-        "fs_path": "C:\\Windows\\System32\\config\\sam",  # Windows absolute path outside allowed directory should be rejected
+        "fs_path": "C:\\Windows\\System32\\config\\sam",  # Windows absolute path outside
+        # allowed directory should be rejected
     }
     response = await client.post("api/v1/flows/", json=basic_case, headers=logged_in_headers)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -398,9 +400,10 @@ async def test_update_flow_rejects_absolute_path_outside_allowed_directory(clien
     flow_id = create_response.json()["id"]
 
     # Try to update with absolute path outside allowed directory
-    update_case = {
-        "fs_path": "/tmp/malicious.json",
-    }
+    with tempfile.NamedTemporaryFile(delete=True) as temp_file:
+        update_case = {
+            "fs_path": temp_file.name,
+        }
     update_response = await client.patch(f"api/v1/flows/{flow_id}", json=update_case, headers=logged_in_headers)
     assert update_response.status_code == status.HTTP_400_BAD_REQUEST
     assert "within" in update_response.json()["detail"].lower() or "outside" in update_response.json()["detail"].lower()
@@ -426,7 +429,10 @@ async def test_update_flow_accepts_relative_path(client: AsyncClient, logged_in_
 
 
 async def test_create_flow_rejects_empty_path(client: AsyncClient, logged_in_headers):
-    """Test that empty fs_path is handled correctly (should be allowed as None, but empty string should fail validation)."""
+    """Test that empty fs_path is handled correctly (should be allowed as None).
+
+    But empty string should fail validation.
+    """
     # Empty string should fail validation if fs_path validation is called
     basic_case = {
         "name": "test_flow",
@@ -475,11 +481,12 @@ async def test_upload_flow_rejects_absolute_path(client: AsyncClient, logged_in_
     """Test that uploading flows with absolute paths is rejected."""
     import json
 
-    flow_data = {
-        "name": "test_flow",
-        "data": {},
-        "fs_path": "/tmp/malicious.json",  # Absolute path
-    }
+    with tempfile.NamedTemporaryFile(delete=True) as temp_file:
+        flow_data = {
+            "name": "test_flow",
+            "data": {},
+            "fs_path": temp_file.name,  # Absolute path
+        }
     # Create a JSON file content
     file_content = json.dumps({"flows": [flow_data]})
 
