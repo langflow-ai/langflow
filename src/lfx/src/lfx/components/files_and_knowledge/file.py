@@ -575,11 +575,16 @@ class FileComponent(BaseFileComponent):
         # Get file extension from S3 key
         file_extension = Path(self.s3_file_key).suffix or ""
 
-        with tempfile.NamedTemporaryFile(mode="wb", suffix=file_extension, delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(
+            mode="wb", suffix=file_extension, delete=False
+        ) as temp_file:
+            temp_file_path = temp_file.name
             try:
                 s3_client.download_fileobj(self.bucket_name, self.s3_file_key, temp_file)
-                temp_file_path = temp_file.name
             except Exception as e:
+                # Clean up temp file on failure
+                with contextlib.suppress(OSError):
+                    Path(temp_file_path).unlink()
                 msg = f"Failed to download file from S3: {e}"
                 raise RuntimeError(msg) from e
 
@@ -627,14 +632,17 @@ class FileComponent(BaseFileComponent):
         # Download file to temp location
         file_extension = Path(file_name).suffix or ""
         with tempfile.NamedTemporaryFile(mode="wb", suffix=file_extension, delete=False) as temp_file:
+            temp_file_path = temp_file.name
             try:
                 request = drive_service.files().get_media(fileId=self.file_id)
                 downloader = MediaIoBaseDownload(temp_file, request)
                 done = False
                 while not done:
                     _status, done = downloader.next_chunk()
-                temp_file_path = temp_file.name
             except Exception as e:
+                # Clean up temp file on failure
+                with contextlib.suppress(OSError):
+                    Path(temp_file_path).unlink()
                 msg = f"Failed to download file from Google Drive: {e}"
                 raise RuntimeError(msg) from e
 

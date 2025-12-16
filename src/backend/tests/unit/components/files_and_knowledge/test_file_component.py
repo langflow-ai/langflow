@@ -567,3 +567,71 @@ class TestFileComponentToolMode:
                 break
         else:
             pytest.fail("Output 'message' not found in component outputs")
+
+    # ==================== Cloud Storage Temp File Cleanup Tests ====================
+
+    @patch("lfx.base.data.cloud_storage_utils.create_s3_client")
+    @patch("lfx.base.data.cloud_storage_utils.validate_aws_credentials")
+    def test_s3_temp_file_cleanup_on_download_failure(self, mock_validate, mock_create_client):
+        """Test that temp file is cleaned up when S3 download fails."""
+        import os
+        from pathlib import Path
+
+        component = FileComponent()
+        component.set_attributes({
+            "storage_location": [{"name": "AWS"}],
+            "aws_access_key_id": "test_key",
+            "aws_secret_access_key": "test_secret",
+            "bucket_name": "test-bucket",
+            "s3_file_key": "test-file.txt",
+        })
+
+        # Mock S3 client to raise an exception during download
+        mock_s3_client = MagicMock()
+        mock_s3_client.download_fileobj.side_effect = Exception("S3 download failed")
+        mock_create_client.return_value = mock_s3_client
+
+        # Track temp files created
+        temp_files_before = set(Path("/tmp").glob("tmp*.txt")) if Path("/tmp").exists() else set()
+
+        # Attempt to read from S3 - should fail and clean up temp file
+        with pytest.raises(RuntimeError, match="Failed to download file from S3"):
+            component._read_from_aws_s3()
+
+        # Verify no new temp files are left behind
+        temp_files_after = set(Path("/tmp").glob("tmp*.txt")) if Path("/tmp").exists() else set()
+        new_temp_files = temp_files_after - temp_files_before
+        assert len(new_temp_files) == 0, f"Temp files not cleaned up: {new_temp_files}"
+
+    @patch("lfx.base.data.cloud_storage_utils.create_google_drive_service")
+    def test_google_drive_temp_file_cleanup_on_download_failure(self, mock_create_service):
+        """Test that temp file is cleaned up when Google Drive download fails."""
+        import os
+        from pathlib import Path
+
+        component = FileComponent()
+        component.set_attributes({
+            "storage_location": [{"name": "Google Drive"}],
+            "service_account_key": '{"type": "service_account", "project_id": "test"}',
+            "file_id": "test-file-id",
+        })
+
+        # Mock Google Drive service
+        mock_drive_service = MagicMock()
+        # Metadata call succeeds
+        mock_drive_service.files().get().execute.return_value = {"name": "test-file.txt"}
+        # Media download fails
+        mock_drive_service.files().get_media.side_effect = Exception("Drive download failed")
+        mock_create_service.return_value = mock_drive_service
+
+        # Track temp files created
+        temp_files_before = set(Path("/tmp").glob("tmp*.txt")) if Path("/tmp").exists() else set()
+
+        # Attempt to read from Google Drive - should fail and clean up temp file
+        with pytest.raises(RuntimeError, match="Failed to download file from Google Drive"):
+            component._read_from_google_drive()
+
+        # Verify no new temp files are left behind
+        temp_files_after = set(Path("/tmp").glob("tmp*.txt")) if Path("/tmp").exists() else set()
+        new_temp_files = temp_files_after - temp_files_before
+        assert len(new_temp_files) == 0, f"Temp files not cleaned up: {new_temp_files}"

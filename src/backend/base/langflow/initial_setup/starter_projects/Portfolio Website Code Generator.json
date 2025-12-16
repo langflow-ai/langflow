@@ -947,8 +947,8 @@
                     "version": "2.11.10"
                   },
                   {
-                    "name": "googleapiclient",
-                    "version": "2.154.0"
+                    "name": "google-api-python-client",
+                    "version": "2.187.0"
                   }
                 ],
                 "total_dependencies": 4
