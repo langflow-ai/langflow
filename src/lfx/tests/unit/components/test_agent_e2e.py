@@ -12,7 +12,7 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage, BaseMessage
 from langchain_core.outputs import ChatGeneration, ChatResult
 from lfx.components.agent_blocks import (
-    CallModelComponent,
+    AgentStepComponent,
     ExecuteToolComponent,
 )
 from lfx.components.flow_controls.while_loop import WhileLoopComponent
@@ -82,14 +82,14 @@ class MockSearchTool:
         return f"Search results for '{query}': Found 3 relevant documents about {query}."
 
 
-# Global fake LLM that will be used by FakeCallModelComponent
+# Global fake LLM that will be used by FakeAgentStepComponent
 _fake_llm_instance: FakeToolCallingLLM | None = None
 
 
-class FakeCallModelComponent(CallModelComponent):
-    """A CallModelComponent subclass that uses a fake LLM."""
+class FakeAgentStepComponent(AgentStepComponent):
+    """An AgentStepComponent subclass that uses a fake LLM."""
 
-    def build_llm(self):
+    def build_model(self):
         """Return the global fake LLM instance."""
         if _fake_llm_instance is None:
             msg = "Fake LLM instance not set. Call set_fake_llm() first."
@@ -120,14 +120,14 @@ class TestAgentGraphE2ESingleIteration:
         while_loop = WhileLoopComponent(_id="while_loop")
         while_loop.set(input_value=chat_input.message_response)
 
-        call_model = FakeCallModelComponent(_id="call_model")
-        call_model.set(
+        agent_step = FakeAgentStepComponent(_id="agent_step")
+        agent_step.set(
             messages=while_loop.loop_output,
             system_message="You are a helpful assistant.",
         )
 
         chat_output = ChatOutput(_id="chat_output")
-        chat_output.set(input_value=call_model.get_ai_message)
+        chat_output.set(input_value=agent_step.get_ai_message)
 
         # Build and run graph
         graph = Graph(chat_input, chat_output)
@@ -144,7 +144,7 @@ class TestAgentGraphE2ESingleIteration:
         # Verify the results
         result_ids = [r.vertex.id for r in results if hasattr(r, "vertex")]
         assert "chat_input" in result_ids
-        assert "call_model" in result_ids
+        assert "agent_step" in result_ids
         assert "chat_output" in result_ids
 
         # The final output should contain the AI response
@@ -180,8 +180,8 @@ class TestAgentGraphE2EWithToolCalls:
         while_loop = WhileLoopComponent(_id="while_loop")
         while_loop.set(input_value=chat_input.message_response)
 
-        call_model = FakeCallModelComponent(_id="call_model")
-        call_model.set(
+        agent_step = FakeAgentStepComponent(_id="agent_step")
+        agent_step.set(
             messages=while_loop.loop_output,
             system_message="You are a helpful assistant.",
             tools=tools,
@@ -189,7 +189,7 @@ class TestAgentGraphE2EWithToolCalls:
 
         execute_tool = ExecuteToolComponent(_id="execute_tool")
         execute_tool.set(
-            ai_message=call_model.get_tool_calls,
+            ai_message=agent_step.get_tool_calls,
             tools=tools,
         )
 
@@ -197,7 +197,7 @@ class TestAgentGraphE2EWithToolCalls:
         while_loop.set(loop=execute_tool.execute_tools)
 
         chat_output = ChatOutput(_id="chat_output")
-        chat_output.set(input_value=call_model.get_ai_message)
+        chat_output.set(input_value=agent_step.get_ai_message)
 
         # Build and run graph
         graph = Graph(chat_input, chat_output)
@@ -217,17 +217,17 @@ class TestAgentGraphE2EWithToolCalls:
         # Verify the execution path
         result_ids = [r.vertex.id for r in results if hasattr(r, "vertex")]
 
-        # Should have executed: chat_input, while_loop, call_model (tool_calls),
-        # execute_tool, while_loop (again), call_model (ai_message), chat_output
+        # Should have executed: chat_input, while_loop, agent_step (tool_calls),
+        # execute_tool, while_loop (again), agent_step (ai_message), chat_output
         assert "chat_input" in result_ids
         assert "while_loop" in result_ids
-        assert "call_model" in result_ids
+        assert "agent_step" in result_ids
         assert "execute_tool" in result_ids
         assert "chat_output" in result_ids
 
-        # call_model should appear twice (once for tool_calls, once for ai_message)
-        call_model_count = result_ids.count("call_model")
-        assert call_model_count >= 2, f"Expected call_model to appear at least twice, got {call_model_count}"
+        # agent_step should appear twice (once for tool_calls, once for ai_message)
+        agent_step_count = result_ids.count("agent_step")
+        assert agent_step_count >= 2, f"Expected agent_step to appear at least twice, got {agent_step_count}"
 
 
 class TestAgentGraphE2EMultipleIterations:
@@ -265,15 +265,15 @@ class TestAgentGraphE2EMultipleIterations:
         while_loop = WhileLoopComponent(_id="while_loop")
         while_loop.set(input_value=chat_input.message_response)
 
-        call_model = FakeCallModelComponent(_id="call_model")
-        call_model.set(
+        agent_step = FakeAgentStepComponent(_id="agent_step")
+        agent_step.set(
             messages=while_loop.loop_output,
             tools=tools,
         )
 
         execute_tool = ExecuteToolComponent(_id="execute_tool")
         execute_tool.set(
-            ai_message=call_model.get_tool_calls,
+            ai_message=agent_step.get_tool_calls,
             tools=tools,
         )
 
@@ -281,7 +281,7 @@ class TestAgentGraphE2EMultipleIterations:
         while_loop.set(loop=execute_tool.execute_tools)
 
         chat_output = ChatOutput(_id="chat_output")
-        chat_output.set(input_value=call_model.get_ai_message)
+        chat_output.set(input_value=agent_step.get_ai_message)
 
         # Build and run graph
         graph = Graph(chat_input, chat_output)
@@ -302,9 +302,9 @@ class TestAgentGraphE2EMultipleIterations:
         # Should have executed multiple iterations
         assert "chat_output" in result_ids, f"chat_output not in results: {result_ids}"
 
-        # call_model should appear 3 times (2 tool_calls + 1 ai_message)
-        call_model_count = result_ids.count("call_model")
-        assert call_model_count >= 3, f"Expected call_model at least 3 times, got {call_model_count}: {result_ids}"
+        # agent_step should appear 3 times (2 tool_calls + 1 ai_message)
+        agent_step_count = result_ids.count("agent_step")
+        assert agent_step_count >= 3, f"Expected agent_step at least 3 times, got {agent_step_count}: {result_ids}"
 
         # execute_tool should appear 2 times (for each tool call)
         execute_tool_count = result_ids.count("execute_tool")
@@ -344,8 +344,8 @@ class TestMessageHistoryAccumulation:
         while_loop = WhileLoopComponent(_id="while_loop")
         while_loop.set(input_value=chat_input.message_response)
 
-        call_model = FakeCallModelComponent(_id="call_model")
-        call_model.set(
+        agent_step = FakeAgentStepComponent(_id="agent_step")
+        agent_step.set(
             messages=while_loop.loop_output,
             system_message="You are a helpful assistant.",
             tools=tools,
@@ -353,7 +353,7 @@ class TestMessageHistoryAccumulation:
 
         execute_tool = ExecuteToolComponent(_id="execute_tool")
         execute_tool.set(
-            ai_message=call_model.get_tool_calls,
+            ai_message=agent_step.get_tool_calls,
             tools=tools,
         )
 
@@ -361,7 +361,7 @@ class TestMessageHistoryAccumulation:
         while_loop.set(loop=execute_tool.execute_tools)
 
         chat_output = ChatOutput(_id="chat_output")
-        chat_output.set(input_value=call_model.get_ai_message)
+        chat_output.set(input_value=agent_step.get_ai_message)
 
         # Build and run graph
         graph = Graph(chat_input, chat_output)
@@ -382,9 +382,9 @@ class TestMessageHistoryAccumulation:
         while_loop_count = result_ids.count("while_loop")
         assert while_loop_count >= 2, f"Expected while_loop to be called at least twice, got {while_loop_count}"
 
-        # call_model should appear at least twice (tool_calls and ai_message)
-        call_model_count = result_ids.count("call_model")
-        assert call_model_count >= 2, f"Expected call_model to be called at least twice, got {call_model_count}"
+        # agent_step should appear at least twice (tool_calls and ai_message)
+        agent_step_count = result_ids.count("agent_step")
+        assert agent_step_count >= 2, f"Expected agent_step to be called at least twice, got {agent_step_count}"
 
         # execute_tool should appear once (for the tool call)
         execute_tool_count = result_ids.count("execute_tool")
