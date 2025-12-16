@@ -15,6 +15,7 @@ ChatInput → WhileLoop → AgentStep → [Tool Calls] → ExecuteTool → While
 
 from __future__ import annotations
 
+from time import perf_counter
 from typing import Any
 
 from langchain_core.messages import AIMessage, AIMessageChunk, BaseMessage, HumanMessage, SystemMessage
@@ -31,6 +32,8 @@ from lfx.components.agent_blocks.think_tool import ThinkToolComponent
 from lfx.field_typing import LanguageModel  # noqa: TC001
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.io import BoolInput, HandleInput, ModelInput, MultilineInput, Output, SecretStrInput, SliderInput
+from lfx.schema.content_block import ContentBlock
+from lfx.schema.content_types import ToolContent
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.dotdict import dotdict  # noqa: TC001
 from lfx.schema.message import Message
@@ -155,8 +158,18 @@ class AgentStepComponent(LCModelComponent):
 
     def build_model(self) -> LanguageModel:
         """Build the language model using the unified model API."""
+        # Handle various model formats that can come from .set() or UI
+        # get_llm expects a list of model dicts
+        model = self.model
+        if isinstance(model, str):
+            # String model name - convert to dict format
+            from lfx.base.models.unified_models import normalize_model_names_to_dicts
+
+            model = normalize_model_names_to_dicts(model)
+        elif isinstance(model, dict):
+            model = [model]
         return get_llm(
-            model=self.model,
+            model=model,
             user_id=self.user_id,
             api_key=self.api_key,
             temperature=self.temperature,
@@ -204,9 +217,11 @@ class AgentStepComponent(LCModelComponent):
         return runnable
 
     async def _handle_stream(self, runnable, inputs) -> tuple[Message | None, AIMessage | None]:
-        """Handle streaming with tool call capture.
+        """Handle streaming with tool call capture and immediate tool notifications.
 
         Overrides LCModelComponent._handle_stream to aggregate chunks and capture tool_calls.
+        If a _parent_message is available (from AgentLoop), uses it instead of creating new message.
+        Sends tool call notifications immediately when tool_call_chunks are detected.
 
         Returns:
             tuple: (Message for UI, AIMessage with tool_calls)
@@ -226,9 +241,21 @@ class AgentStepComponent(LCModelComponent):
             existing_message_id = extract_message_id_from_dataframe(self.messages)
             existing_content_blocks = extract_content_blocks_from_dataframe(self.messages)
 
+        # Check if we have a parent message from AgentLoop
+        parent_message: Message | None = getattr(self, "_parent_message", None)
+        should_stream = getattr(self, "_stream_to_playground", False)
+
         # Closure to capture tool_calls while streaming
         aggregated_chunk: AIMessage | None = None
+        start_time = perf_counter()
 
+        # When we have a parent_message AND should_stream, we manually iterate to send
+        # immediate tool notifications. This avoids the reentrancy issue where
+        # send_message tries to iterate a generator we're already inside of.
+        if parent_message and should_stream:
+            return await self._handle_stream_with_immediate_notifications(runnable, inputs, parent_message, start_time)
+
+        # Standard streaming path (no parent message or no streaming)
         async def stream_and_capture():
             """Stream chunks to frontend while capturing tool_calls."""
             nonlocal aggregated_chunk
@@ -241,7 +268,7 @@ class AgentStepComponent(LCModelComponent):
                     aggregated_chunk = chunk
                 yield chunk
 
-        # Create message with the async stream
+        # Create new message with the async stream
         model_message = Message(
             text=stream_and_capture(),
             sender=MESSAGE_SENDER_AI,
@@ -250,7 +277,6 @@ class AgentStepComponent(LCModelComponent):
             session_id=session_id,
             content_blocks=existing_content_blocks if existing_content_blocks else [],
         )
-
         # Reuse existing message ID for UI continuity
         if existing_message_id is not None:
             model_message.id = existing_message_id
@@ -268,11 +294,79 @@ class AgentStepComponent(LCModelComponent):
                     aggregated_chunk = aggregated_chunk + chunk
                 elif hasattr(chunk, "tool_calls") and chunk.tool_calls:
                     aggregated_chunk = chunk
+
                 if hasattr(chunk, "content"):
                     full_text += chunk.content or ""
             lf_message.text = full_text
 
         return lf_message, aggregated_chunk
+
+    async def _handle_stream_with_immediate_notifications(
+        self,
+        runnable,
+        inputs,
+        parent_message: Message,
+        start_time: float,
+    ) -> tuple[Message, AIMessage | None]:
+        """Handle streaming with immediate tool notifications for parent message.
+
+        This method manually iterates the stream instead of assigning the generator
+        to parent_message.text. This allows us to call send_message for immediate
+        tool notifications without causing reentrancy issues.
+        """
+        aggregated_chunk: AIMessage | None = None
+        tool_names_notified: set[str] = set()
+        full_text = ""
+
+        # Ensure content_blocks exists on parent message
+        if not parent_message.content_blocks:
+            parent_message.content_blocks = [ContentBlock(title="Agent Steps", contents=[])]
+
+        async for chunk in runnable.astream(inputs):
+            # Aggregate chunks for tool_calls extraction
+            if aggregated_chunk is None:
+                aggregated_chunk = chunk
+            elif isinstance(aggregated_chunk, AIMessageChunk) and isinstance(chunk, AIMessageChunk):
+                aggregated_chunk = aggregated_chunk + chunk
+            elif hasattr(chunk, "tool_calls") and chunk.tool_calls:
+                aggregated_chunk = chunk
+
+            # Accumulate text content
+            if hasattr(chunk, "content") and chunk.content:
+                full_text += chunk.content
+
+            # Send immediate tool call notification when we detect tool_call_chunks
+            if hasattr(chunk, "tool_call_chunks"):
+                for tc_chunk in chunk.tool_call_chunks:
+                    tool_name = tc_chunk.get("name") if isinstance(tc_chunk, dict) else getattr(tc_chunk, "name", None)
+                    if tool_name and tool_name not in tool_names_notified:
+                        tool_names_notified.add(tool_name)
+                        # Add tool notification to parent message content_blocks
+                        duration = int((perf_counter() - start_time) * 1000)
+                        tool_content = ToolContent(
+                            type="tool_use",
+                            name=tool_name,
+                            tool_input={},  # Input not yet available during streaming
+                            output=None,
+                            error=None,
+                            header={"title": f"Accessing **{tool_name}**", "icon": "Hammer"},
+                            duration=duration,
+                        )
+                        parent_message.content_blocks[0].contents.append(tool_content)
+                        # Send update to UI immediately - safe because parent_message.text
+                        # is NOT an async generator, it's just accumulated text
+                        parent_message.text = full_text
+                        # Use skip_db_update=True to avoid slow DB writes on each update
+                        # The message was already created by AgentLoop, so we just need to send events
+                        await self.send_message(parent_message, skip_db_update=True)
+                        start_time = perf_counter()  # Reset timer for next operation
+
+        # Set final text
+        parent_message.text = full_text
+        # Final update - still skip DB since AgentLoop will handle the final state
+        await self.send_message(parent_message, skip_db_update=True)
+
+        return parent_message, aggregated_chunk
 
     async def _call_model_internal(self) -> Message:
         """Internal method to call the language model with streaming support."""
@@ -318,14 +412,6 @@ class AgentStepComponent(LCModelComponent):
 
         result.data["ai_message"] = ai_response
 
-        # Log response (inherited pattern)
-        log_truncate_len = 100
-        self.log(
-            f"Model response: {result.text[:log_truncate_len]}..."
-            if len(result.text or "") > log_truncate_len
-            else f"Model response: {result.text}"
-        )
-
         self._cached_result = result
         return result
 
@@ -363,7 +449,9 @@ class AgentStepComponent(LCModelComponent):
             return Message(text="")
 
         # Pass stream_events flag to ExecuteTool
-        result.data["should_stream_events"] = self.is_connected_to_chat_output()
+        # Check _stream_to_playground (set by AgentLoop) OR direct connection to ChatOutput
+        should_stream = getattr(self, "_stream_to_playground", False) or self.is_connected_to_chat_output()
+        result.data["should_stream_events"] = should_stream
 
         # Continue loop - stop the ai_message branch
         self.stop("ai_message")
