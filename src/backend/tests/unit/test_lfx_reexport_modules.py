@@ -98,7 +98,7 @@ class TestLfxReexportModules:
     @classmethod
     def _discover_langflow_modules(cls) -> list[str]:
         """Dynamically discover all langflow modules."""
-        langflow_modules = []
+        langflow_modules: list[str] = []
         try:
             import langflow
 
@@ -467,15 +467,11 @@ class TestLfxReexportModules:
         # Test with a known module that has lfx imports
         test_cases = [("langflow.schema", "lfx.schema"), ("langflow.custom", "lfx.custom")]
 
-        for lf_module, _expected_lfx_source in test_cases:
-            pattern_info = self._detect_reexport_pattern(lf_module)
-            if pattern_info["type"] == "direct" and pattern_info["source"]:
-                symbols = self._get_expected_symbols(pattern_info["source"])
-                assert len(symbols) > 0, f"Should find some symbols in {pattern_info['source']}"
+        for lf_module, expected_lfx_source in test_cases:
+            symbols = self._get_expected_symbols(expected_lfx_source)
+            assert len(symbols) > 0, f"Should find some symbols in {expected_lfx_source}"
 
-                # Test that at least some symbols are accessible in the langflow module
-                module = importlib.import_module(lf_module)
-                available_symbols = [sym for sym in symbols[:3] if hasattr(module, sym)]  # Test first 3
-                assert len(available_symbols) > 0, (
-                    f"Module {lf_module} should have some symbols from {pattern_info['source']}"
-                )
+            # Test that at least some symbols are accessible in the langflow module
+            module = importlib.import_module(lf_module)
+            available_symbols = [sym for sym in symbols[:3] if hasattr(module, sym)]  # Test first 3
+            assert len(available_symbols) > 0, f"Module {lf_module} should have some symbols from {expected_lfx_source}"

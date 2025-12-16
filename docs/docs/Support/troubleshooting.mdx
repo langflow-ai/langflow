@@ -179,6 +179,18 @@ Earlier versions can't automatically detect or apply updates.
 
 To resolve this issue, uninstall Langflow Desktop, and then [download and install the latest version of Langflow Desktop](https://langflow.org/desktop).
 
+### 422 error when freezing components after upgrading Pydantic/FastAPI dependencies
+
+If you locally upgrade your Pydantic and FastAPI dependencies, you may encounter a 422 error when trying to freeze components.
+
+This error occurs due to changes in how request bodies are handled in newer versions of these dependencies.
+
+If you're experiencing this issue, update your Langflow installation to version 1.6.5 or later, which includes a fix for this issue.
+
+```bash
+uv pip install langflow -U
+```
+
 ## Langflow uninstall issues
 
 The following issues can occur when uninstalling Langflow.
@@ -257,6 +269,16 @@ This issue occurs because the MCP server runs from a Python process, which preve
 To work around this issue, use the standalone MCP server approach documented in the [Playwright MCP repository](https://github.com/microsoft/playwright-mcp?tab=readme-ov-file#standalone-mcp-server).
 After the server is up and running, you can add it as an SSE server in Langflow.
 For other browser navigation tools, see the provider's documentation for specific troubleshooting guidance.
+
+### "No tools or prompts connected" on MCP servers in mixed Windows/WSL environments
+
+If you encounter "No tools or prompts connected" errors or connection failures when using Langflow Desktop as an MCP server with clients running in different environments, such as Langflow on a Windows host and an MCP client in WSL, this is due to network isolation between Windows and WSL environments.
+
+WSL cannot directly access Windows localhost services, and Langflow running on a Windows host is not accessible from WSL clients at `localhost:7860`.
+
+To work around this issue, run the server and host in the same operating environment.
+
+Alternatively, configure Langflow Desktop to accept connections from WSL at the default Windows IP address of `10.255.255.254:7860` instead of `localhost`.
 
 ## Token length limit errors in Embedding Model components
 

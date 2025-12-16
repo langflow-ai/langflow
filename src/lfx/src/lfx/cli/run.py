@@ -1,4 +1,5 @@
 import json
+import re
 import sys
 import tempfile
 from functools import partial
@@ -18,18 +19,29 @@ from lfx.cli.validation import validate_global_variables_for_env
 from lfx.log.logger import logger
 from lfx.schema.schema import InputValueRequest
 
+# Verbosity level constants
+VERBOSITY_DETAILED = 2
+VERBOSITY_FULL = 3
 
-def output_error(error_message: str, *, verbose: bool) -> None:
+
+def output_error(error_message: str, *, verbose: bool, exception: Exception | None = None) -> None:
     """Output error in JSON format to stdout when not verbose, or to stderr when verbose."""
     if verbose:
         typer.echo(f"{error_message}", file=sys.stderr)
+
+    error_response = {
+        "success": False,
+        "type": "error",
+    }
+
+    # Add clean exception data if available
+    if exception:
+        error_response["exception_type"] = type(exception).__name__
+        error_response["exception_message"] = str(exception)
     else:
-        error_response = {
-            "success": False,
-            "error": error_message,
-            "type": "error",
-        }
-        typer.echo(json.dumps(error_response))
+        error_response["exception_message"] = error_message
+
+    typer.echo(json.dumps(error_response))
 
 
 @partial(syncify, raise_sync_error=False)
@@ -67,9 +79,20 @@ async def run(
         help="Check global variables for environment compatibility",
     ),
     verbose: bool = typer.Option(
-        default=False,
-        show_default=True,
-        help="Show diagnostic output and execution details",
+        False,  # noqa: FBT003
+        "-v",
+        "--verbose",
+        help="Show basic progress information",
+    ),
+    verbose_detailed: bool = typer.Option(
+        False,  # noqa: FBT003
+        "-vv",
+        help="Show detailed progress and debug information",
+    ),
+    verbose_full: bool = typer.Option(
+        False,  # noqa: FBT003
+        "-vvv",
+        help="Show full debugging output including component logs",
     ),
     timing: bool = typer.Option(
         default=False,
@@ -88,6 +111,8 @@ async def run(
         input_value: Input value to pass to the graph (positional argument)
         input_value_option: Input value to pass to the graph (alternative option)
         verbose: Show diagnostic output and execution details
+        verbose_detailed: Show detailed progress and debug information (-vv)
+        verbose_full: Show full debugging output including component logs (-vvv)
         output_format: Format for output (json, text, message, or result)
         flow_json: Inline JSON flow content as a string
         stdin: Read JSON flow content from stdin
@@ -96,15 +121,22 @@ async def run(
     """
     # Start timing if requested
     import time
-    from datetime import datetime
 
-    def verbose_print(message: str, level: str = "INFO") -> None:
-        if verbose:
-            timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]  # Include milliseconds  # noqa: DTZ005
-            typer.echo(f"[{timestamp}] {level}: {message}", file=sys.stderr)
+    # Configure logger based on verbosity level
+    from lfx.log.logger import configure
 
-    def debug_print(message: str) -> None:
-        verbose_print(message, level="DEBUG")
+    if verbose_full:
+        configure(log_level="DEBUG", output_file=sys.stderr)  # Show everything including component debug logs
+        verbosity = 3
+    elif verbose_detailed:
+        configure(log_level="DEBUG", output_file=sys.stderr)  # Show debug and above
+        verbosity = 2
+    elif verbose:
+        configure(log_level="INFO", output_file=sys.stderr)  # Show info and above including our CLI info messages
+        verbosity = 1
+    else:
+        configure(log_level="CRITICAL", output_file=sys.stderr)  # Only critical errors
+        verbosity = 0
 
     start_time = time.time() if timing else None
 
@@ -127,15 +159,18 @@ async def run(
     temp_file_to_cleanup = None
 
     if flow_json is not None:
-        verbose_print("Processing inline JSON content...")
+        if verbosity > 0:
+            typer.echo("Processing inline JSON content...", file=sys.stderr)
         try:
             json_data = json.loads(flow_json)
-            verbose_print("JSON content is valid")
+            if verbosity > 0:
+                typer.echo("JSON content is valid", file=sys.stderr)
             with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as temp_file:
                 json.dump(json_data, temp_file, indent=2)
                 temp_file_to_cleanup = temp_file.name
             script_path = Path(temp_file_to_cleanup)
-            verbose_print(f"Created temporary file: {script_path}")
+            if verbosity > 0:
+                typer.echo(f"Created temporary file: {script_path}", file=sys.stderr)
         except json.JSONDecodeError as e:
             output_error(f"Invalid JSON content: {e}", verbose=verbose)
             raise typer.Exit(1) from e
@@ -143,19 +178,22 @@ async def run(
             output_error(f"Error processing JSON content: {e}", verbose=verbose)
             raise typer.Exit(1) from e
     elif stdin:
-        verbose_print("Reading JSON content from stdin...")
+        if verbosity > 0:
+            typer.echo("Reading JSON content from stdin...", file=sys.stderr)
         try:
             stdin_content = sys.stdin.read().strip()
             if not stdin_content:
                 output_error("No content received from stdin", verbose=verbose)
                 raise typer.Exit(1)
             json_data = json.loads(stdin_content)
-            verbose_print("JSON content from stdin is valid")
+            if verbosity > 0:
+                typer.echo("JSON content from stdin is valid", file=sys.stderr)
             with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as temp_file:
                 json.dump(json_data, temp_file, indent=2)
                 temp_file_to_cleanup = temp_file.name
             script_path = Path(temp_file_to_cleanup)
-            verbose_print(f"Created temporary file from stdin: {script_path}")
+            if verbosity > 0:
+                typer.echo(f"Created temporary file from stdin: {script_path}", file=sys.stderr)
         except json.JSONDecodeError as e:
             output_error(f"Invalid JSON content from stdin: {e}", verbose=verbose)
             raise typer.Exit(1) from e
@@ -175,7 +213,8 @@ async def run(
             error_msg = f"'{script_path}' must be a .py or .json file."
             raise ValueError(error_msg)
         file_type = "Python script" if file_extension == ".py" else "JSON flow"
-        verbose_print(f"Analyzing {file_type}: {script_path}")
+        if verbosity > 0:
+            typer.echo(f"Analyzing {file_type}: {script_path}", file=sys.stderr)
         if file_extension == ".py":
             graph_info = find_graph_variable(script_path)
             if not graph_info:
@@ -183,47 +222,47 @@ async def run(
                     "No 'graph' variable found in the script. Expected to find an assignment like: graph = Graph(...)"
                 )
                 raise ValueError(error_msg)
-            verbose_print(f"Found 'graph' variable at line {graph_info['line_number']}")
-            verbose_print(f"Type: {graph_info['type']}")
-            verbose_print(f"Source: {graph_info['source_line']}")
-            verbose_print("Loading and executing script...")
-            graph = load_graph_from_script(script_path)
+            if verbosity > 0:
+                typer.echo(f"Found 'graph' variable at line {graph_info['line_number']}", file=sys.stderr)
+                typer.echo(f"Type: {graph_info['type']}", file=sys.stderr)
+                typer.echo(f"Source: {graph_info['source_line']}", file=sys.stderr)
+                typer.echo("Loading and executing script...", file=sys.stderr)
+            graph = await load_graph_from_script(script_path)
         elif file_extension == ".json":
-            verbose_print("Valid JSON flow file detected")
-            verbose_print("\nLoading and executing JSON flow...")
+            if verbosity > 0:
+                typer.echo("Valid JSON flow file detected", file=sys.stderr)
+                typer.echo("Loading and executing JSON flow", file=sys.stderr)
             from lfx.load import aload_flow_from_json
 
             graph = await aload_flow_from_json(script_path, disable_logs=not verbose)
     except Exception as e:
         error_type = type(e).__name__
-        verbose_print(f"Graph loading failed with {error_type}", level="ERROR")
+        logger.error(f"Graph loading failed with {error_type}")
 
-        if verbose:
-            # Enhanced error context for better debugging
-            debug_print(f"Exception type: {error_type}")
-            debug_print(f"Exception message: {e!s}")
-
+        if verbosity > 0:
             # Try to identify common error patterns
             if "ModuleNotFoundError" in str(e) or "No module named" in str(e):
-                verbose_print("This appears to be a missing dependency issue", level="WARN")
+                logger.info("This appears to be a missing dependency issue")
                 if "langchain" in str(e).lower():
-                    verbose_print(
-                        "Missing LangChain dependency detected. Try: pip install langchain-<provider>",
-                        level="WARN",
-                    )
+                    match = re.search(r"langchain_(.*)", str(e).lower())
+                    if match:
+                        module_name = match.group(1)
+                        logger.info(
+                            f"Missing LangChain dependency detected. Try: pip install langchain-{module_name}",
+                        )
             elif "ImportError" in str(e):
-                verbose_print("This appears to be an import issue - check component dependencies", level="WARN")
+                logger.info("This appears to be an import issue - check component dependencies")
             elif "AttributeError" in str(e):
-                verbose_print("This appears to be a component configuration issue", level="WARN")
+                logger.info("This appears to be a component configuration issue")
 
             # Show full traceback in debug mode
-            logger.exception("Failed to load graph - full traceback:")
+            logger.exception("Failed to load graph.")
 
-        output_error(f"Failed to load graph: {e}", verbose=verbose)
+        output_error(f"Failed to load graph. {e}", verbose=verbose, exception=e)
         if temp_file_to_cleanup:
             try:
                 Path(temp_file_to_cleanup).unlink()
-                verbose_print(f"Cleaned up temporary file: {temp_file_to_cleanup}", level="SUCCESS")
+                logger.info(f"Cleaned up temporary file: {temp_file_to_cleanup}")
             except OSError:
                 pass
         raise typer.Exit(1) from e
@@ -233,70 +272,70 @@ async def run(
     # Mark end of loading phase if timing
     load_end_time = time.time() if timing else None
 
-    verbose_print("Preparing graph for execution...")
+    if verbosity > 0:
+        typer.echo("Preparing graph for execution...", file=sys.stderr)
     try:
         # Add detailed preparation steps
-        if verbose:
-            debug_print(f"Graph contains {len(graph.vertices)} vertices")
-            debug_print(f"Graph contains {len(graph.edges)} edges")
+        if verbosity > 0:
+            logger.debug(f"Graph contains {len(graph.vertices)} vertices")
+            logger.debug(f"Graph contains {len(graph.edges)} edges")
 
             # Show component types being used
             component_types = set()
             for vertex in graph.vertices:
                 if hasattr(vertex, "display_name"):
                     component_types.add(vertex.display_name)
-            debug_print(f"Component types in graph: {', '.join(sorted(component_types))}")
+            logger.debug(f"Component types in graph: {', '.join(sorted(component_types))}")
 
         graph.prepare()
-        verbose_print("Graph preparation completed", level="SUCCESS")
+        logger.info("Graph preparation completed")
 
         # Validate global variables for environment compatibility
         if check_variables:
-            verbose_print("Validating global variables...")
+            logger.info("Validating global variables...")
             validation_errors = validate_global_variables_for_env(graph)
             if validation_errors:
                 error_details = "Global variable validation failed: " + "; ".join(validation_errors)
-                verbose_print(f"Variable validation failed: {len(validation_errors)} errors", level="ERROR")
+                logger.info(f"Variable validation failed: {len(validation_errors)} errors")
                 for error in validation_errors:
-                    debug_print(f"Validation error: {error}")
+                    logger.debug(f"Validation error: {error}")
                 output_error(error_details, verbose=verbose)
             if temp_file_to_cleanup:
                 try:
                     Path(temp_file_to_cleanup).unlink()
-                    verbose_print(f"Cleaned up temporary file: {temp_file_to_cleanup}", level="SUCCESS")
+                    logger.info(f"Cleaned up temporary file: {temp_file_to_cleanup}")
                 except OSError:
                     pass
             if validation_errors:
                 raise typer.Exit(1)
-            verbose_print("Global variable validation passed", level="SUCCESS")
+            logger.info("Global variable validation passed")
         else:
-            verbose_print("Global variable validation skipped", level="SUCCESS")
+            logger.info("Global variable validation skipped")
     except Exception as e:
         error_type = type(e).__name__
-        verbose_print(f"Graph preparation failed with {error_type}", level="ERROR")
+        logger.info(f"Graph preparation failed with {error_type}")
 
-        if verbose:
-            debug_print(f"Preparation error: {e!s}")
+        if verbosity > 0:
+            logger.debug(f"Preparation error: {e!s}")
             logger.exception("Failed to prepare graph - full traceback:")
 
-        output_error(f"Failed to prepare graph: {e}", verbose=verbose)
+        output_error(f"Failed to prepare graph: {e}", verbose=verbose, exception=e)
         if temp_file_to_cleanup:
             try:
                 Path(temp_file_to_cleanup).unlink()
-                verbose_print(f"Cleaned up temporary file: {temp_file_to_cleanup}")
+                logger.info(f"Cleaned up temporary file: {temp_file_to_cleanup}")
             except OSError:
                 pass
         raise typer.Exit(1) from e
 
-    verbose_print("Executing graph...")
+    logger.info("Executing graph...")
     execution_start_time = time.time() if timing else None
-
     if verbose:
-        debug_print("Setting up execution environment")
+        logger.debug("Setting up execution environment")
         if inputs:
-            debug_print(f"Input provided: {inputs.input_value}")
+            logger.debug(f"Input provided: {inputs.input_value}")
         else:
-            debug_print("No input provided")
+            logger.debug("No input provided")
 
     captured_stdout = StringIO()
     captured_stderr = StringIO()
@@ -309,18 +348,20 @@ async def run(
 
     try:
         sys.stdout = captured_stdout
-        sys.stderr = captured_stderr
+        # Don't capture stderr at high verbosity levels to avoid duplication with direct logging
+        if verbosity < VERBOSITY_FULL:
+            sys.stderr = captured_stderr
         results = []
 
-        verbose_print("Starting graph execution...", level="DEBUG")
+        logger.info("Starting graph execution...", level="DEBUG")
         result_count = 0
 
         async for result in graph.async_start(inputs):
             result_count += 1
-            if verbose:
-                debug_print(f"Processing result #{result_count}")
+            if verbosity > 0:
+                logger.debug(f"Processing result #{result_count}")
                 if hasattr(result, "vertex") and hasattr(result.vertex, "display_name"):
-                    debug_print(f"Component: {result.vertex.display_name}")
+                    logger.debug(f"Component: {result.vertex.display_name}")
             if timing:
                 step_end_time = time.time()
                 step_duration = step_end_time - execution_step_start
@@ -342,46 +383,70 @@ async def run(
 
             results.append(result)
 
-        verbose_print(f"Graph execution completed. Processed {result_count} results", level="SUCCESS")
+        logger.info(f"Graph execution completed. Processed {result_count} results")
 
     except Exception as e:
-        sys.stdout = original_stdout
-        sys.stderr = original_stderr
-
         error_type = type(e).__name__
-        verbose_print(f"Graph execution failed with {error_type}", level="ERROR")
+        logger.info(f"Graph execution failed with {error_type}")
 
-        if verbose:
-            debug_print(f"Execution error: {e!s}")
-            debug_print(f"Failed after processing {result_count} results")
+        if verbosity >= VERBOSITY_DETAILED:  # Only show details at -vv and above
+            logger.debug(f"Failed after processing {result_count} results")
 
+        # Only show component output at maximum verbosity (-vvv)
+        if verbosity >= VERBOSITY_FULL:
             # Capture any output that was generated before the error
-            captured_content = captured_stdout.getvalue() + captured_stderr.getvalue()
+            # Only show captured stdout since stderr logging is already shown directly in verbose mode
+            captured_content = captured_stdout.getvalue()
             if captured_content.strip():
-                debug_print("Captured output before error:")
-                for line in captured_content.strip().split("\n"):
-                    debug_print(f"  | {line}")
+                # Check if captured content contains the same error that will be displayed at the end
+                error_text = str(e)
+                captured_lines = captured_content.strip().split("\n")
+
+                # Filter out lines that are duplicates of the final error message
+                unique_lines = [
+                    line
+                    for line in captured_lines
+                    if not any(
+                        error_part.strip() in line for error_part in error_text.split("\n") if error_part.strip()
+                    )
+                ]
+
+                if unique_lines:
+                    logger.info("Component output before error:", level="DEBUG")
+                    for line in unique_lines:
+                        # Log each line directly using the logger to avoid nested formatting
+                        if verbosity > 0:
+                            # Remove any existing timestamp prefix to avoid duplication
+                            clean_line = line
+                            if "] " in line and line.startswith("2025-"):
+                                # Extract just the log message after the timestamp and level
+                                parts = line.split("] ", 1)
+                                if len(parts) > 1:
+                                    clean_line = parts[1]
+                            logger.debug(clean_line)
 
             # Provide context about common execution errors
             if "list can't be used in 'await' expression" in str(e):
-                verbose_print("This appears to be an async/await mismatch in a component", level="WARN")
-                verbose_print("Check that async methods are properly awaited", level="WARN")
+                logger.info("This appears to be an async/await mismatch in a component")
+                logger.info("Check that async methods are properly awaited")
             elif "AttributeError" in error_type and "NoneType" in str(e):
-                verbose_print("This appears to be a null reference error", level="WARN")
-                verbose_print("A component may be receiving unexpected None values", level="WARN")
+                logger.info("This appears to be a null reference error")
+                logger.info("A component may be receiving unexpected None values")
             elif "ConnectionError" in str(e) or "TimeoutError" in str(e):
-                verbose_print("This appears to be a network connectivity issue", level="WARN")
-                verbose_print("Check API keys and network connectivity", level="WARN")
+                logger.info("This appears to be a network connectivity issue")
+                logger.info("Check API keys and network connectivity")
 
             logger.exception("Failed to execute graph - full traceback:")
 
-        output_error(f"Failed to execute graph: {e}", verbose=verbose)
         if temp_file_to_cleanup:
             try:
                 Path(temp_file_to_cleanup).unlink()
-                verbose_print(f"Cleaned up temporary file: {temp_file_to_cleanup}", level="SUCCESS")
+                logger.info(f"Cleaned up temporary file: {temp_file_to_cleanup}")
             except OSError:
                 pass
+        sys.stdout = original_stdout
+        sys.stderr = original_stderr
+        output_error(f"Failed to execute graph: {e}", verbose=verbosity > 0, exception=e)
         raise typer.Exit(1) from e
     finally:
         sys.stdout = original_stdout
@@ -389,7 +454,7 @@ async def run(
         if temp_file_to_cleanup:
             try:
                 Path(temp_file_to_cleanup).unlink()
-                verbose_print(f"Cleaned up temporary file: {temp_file_to_cleanup}")
+                logger.info(f"Cleaned up temporary file: {temp_file_to_cleanup}")
             except OSError:
                 pass
 
@@ -424,7 +489,7 @@ async def run(
         result_data["logs"] = captured_logs
         if timing_metadata:
             result_data["timing"] = timing_metadata
-        indent = 2 if verbose else None
+        indent = 2 if verbosity > 0 else None
         typer.echo(json.dumps(result_data, indent=indent))
     elif output_format in {"text", "message"}:
         result_data = extract_structured_result(results)
@@ -437,5 +502,5 @@ async def run(
         result_data["logs"] = captured_logs
         if timing_metadata:
             result_data["timing"] = timing_metadata
-        indent = 2 if verbose else None
+        indent = 2 if verbosity > 0 else None
         typer.echo(json.dumps(result_data, indent=indent))

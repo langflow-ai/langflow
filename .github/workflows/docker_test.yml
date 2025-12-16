@@ -1,14 +1,12 @@
 name: Test Docker images
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "docker/**"
-      - "uv.lock"
-      - "pyproject.toml"
-      - "src/backend/**"
-      - ".github/workflows/docker_test.yml"
+  workflow_call:
+    secrets:
+      DOCKERHUB_USERNAME:
+        required: true
+      DOCKERHUB_TOKEN:
+        required: true
   workflow_dispatch:
 
 env:
@@ -19,7 +17,7 @@ jobs:
     runs-on: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
     name: Test docker images
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Set container runtime
         run: |
           if command -v docker &> /dev/null; then
@@ -50,6 +48,13 @@ jobs:
           if command -v docker &> /dev/null; then
             docker buildx du || true
           fi
+      - name: Login to Docker Hub
+        if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Build image
         run: |
           ${{ env.CONTAINER_RUNTIME }} build -t langflowai/langflow:latest-dev \

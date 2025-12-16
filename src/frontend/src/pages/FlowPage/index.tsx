@@ -7,6 +7,7 @@ import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
 import { SaveChangesModal } from "@/modals/saveChangesModal";
 import useAlertStore from "@/stores/alertStore";
 import { useTypesStore } from "@/stores/typesStore";
@@ -52,6 +53,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const stopBuilding = useFlowStore((state) => state.stopBuilding);
 
   const { mutateAsync: getFlow } = useGetFlow();
+  const { refreshAllModelInputs } = useRefreshModelInputs();
 
   const handleSave = () => {
     let saving = true;
@@ -153,8 +155,9 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   }, [blocker.state, isBuilding]);
 
   const getFlowToAddToCanvas = async (id: string) => {
-    const flow = await getFlow({ id: id });
+    const flow = await getFlow({ id });
     setCurrentFlow(flow);
+    refreshAllModelInputs({ silent: true });
   };
 
   const isMobile = useIsMobile();

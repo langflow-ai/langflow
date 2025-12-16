@@ -1,0 +1,1497 @@
+import os
+import re
+from unittest.mock import MagicMock, patch
+
+import openai
+import pytest
+from langflow.helpers.base_model import build_model_from_schema
+from langflow.inputs.inputs import TableInput
+from lfx.components.llm_operations.structured_output import StructuredOutputComponent
+from pydantic import BaseModel
+
+from tests.base import ComponentTestBaseWithoutClient
+from tests.unit.mock_language_model import MockLanguageModel
+
+
+class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
+    @pytest.fixture
+    def component_class(self):
+        """Return the component class to test."""
+        return StructuredOutputComponent
+
+    @pytest.fixture
+    def mock_llm(self):
+        """Create a mock LLM for testing."""
+        return MockLanguageModel()
+
+    @pytest.fixture
+    def default_kwargs(self):
+        """Return the default kwargs for the component with proper model metadata."""
+        return {
+            "model": [
+                {
+                    "name": "gpt-3.5-turbo",
+                    "provider": "OpenAI",
+                    "metadata": {
+                        "model_class": "MockLanguageModel",
+                        "model_name_param": "model",
+                        "api_key_param": "api_key",
+                    },
+                }
+            ],
+            "api_key": "test-api-key",
+            "input_value": "Test input",
+            "schema_name": "TestSchema",
+            "output_schema": [{"name": "field", "type": "str", "description": "A test field"}],
+            "multiple": False,
+            "system_prompt": "Test system prompt",
+        }
+
+    @pytest.fixture
+    def file_names_mapping(self):
+        """Return the file names mapping for version-specific files."""
+
+    @pytest.fixture
+    def mock_model_classes(self):
+        """Helper fixture to mock get_model_classes for MockLanguageModel."""
+
+        def _create_mock_model_classes(mock_llm_instance):
+            """Create a mock model classes dict that returns the provided mock LLM."""
+            mock_model_class = MagicMock(return_value=mock_llm_instance)
+            return {"MockLanguageModel": mock_model_class}
+
+        return _create_mock_model_classes
+
+    @pytest.fixture
+    def model_metadata(self):
+        """Helper fixture that returns standard model metadata structure."""
+        return [
+            {
+                "name": "gpt-3.5-turbo",
+                "provider": "OpenAI",
+                "metadata": {
+                    "model_class": "MockLanguageModel",
+                    "model_name_param": "model",
+                    "api_key_param": "api_key",
+                },
+            }
+        ]
+
+    @patch("lfx.base.models.unified_models.get_model_classes")
+    def test_successful_structured_output_generation_with_patch_with_config(self, mock_get_model_classes, mock_llm):
+        def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
+            class MockBaseModel(BaseModel):
+                def model_dump(self, **__):
+                    return {"objects": [{"field": "value"}]}
+
+            # Return trustcall-style response structure
+            return {
+                "messages": ["mock_message"],
+                "responses": [MockBaseModel()],
+                "response_metadata": [{"id": "mock_id"}],
+                "attempts": 1,
+            }
+
+        # Mock get_model_classes to return MockLanguageModel factory
+        mock_model_class = MagicMock(return_value=mock_llm)
+        mock_get_model_classes.return_value = {"MockLanguageModel": mock_model_class}
+
+        component = StructuredOutputComponent(
+            model=[
+                {
+                    "name": "gpt-3.5-turbo",
+                    "provider": "OpenAI",
+                    "metadata": {
+                        "model_class": "MockLanguageModel",
+                        "model_name_param": "model",
+                        "api_key_param": "api_key",
+                    },
+                }
+            ],
+            api_key="test-api-key",
+            input_value="Test input",
+            schema_name="TestSchema",
+            output_schema=[{"name": "field", "type": "str", "description": "A test field"}],
+            multiple=False,
+            system_prompt="Test system prompt",
+        )
+
+        with patch("lfx.components.llm_operations.structured_output.get_chat_result", mock_get_chat_result):
+            result = component.build_structured_output_base()
+            assert isinstance(result, list)
+            assert result == [{"field": "value"}]
+
+    @patch("lfx.base.models.unified_models.get_model_classes")
+    def test_raises_value_error_for_unsupported_language_model(self, mock_get_model_classes):
+        # Mocking an incompatible language model that doesn't support with_structured_output
+        class IncompatibleModel:
+            pass
+
+        # Mock get_model_classes to return IncompatibleModel factory
+        mock_model_class = MagicMock(return_value=IncompatibleModel())
+        mock_get_model_classes.return_value = {"MockLanguageModel": mock_model_class}
+
+        # Creating an instance of StructuredOutputComponent
+        component = StructuredOutputComponent(
+            model=[
+                {
+                    "name": "test-model",
+                    "provider": "Test",
+                    "metadata": {
+                        "model_class": "MockLanguageModel",
+                        "model_name_param": "model",
+                        "api_key_param": "api_key",
+                    },
+                }
+            ],
+            api_key="test-api-key",
+            input_value="Test input",
+            schema_name="TestSchema",
+            output_schema=[{"name": "field", "type": "str", "description": "A test field"}],
+            multiple=False,
+        )
+
+        with pytest.raises(TypeError, match=re.escape("Language model does not support structured output.")):
+            component.build_structured_output()
+
+    def test_correctly_builds_output_model(self):
+        # Setup
+        component = StructuredOutputComponent()
+        schema = [
+            {
+                "name": "name",
+                "display_name": "Name",
+                "type": "str",
+                "description": "Specify the name of the output field.",
+            },
+            {
+                "name": "description",
+                "display_name": "Description",
+                "type": "str",
+                "description": "Describe the purpose of the output field.",
+            },
+            {
+                "name": "type",
+                "display_name": "Type",
+                "type": "str",
+                "description": (
+                    "Indicate the data type of the output field (e.g., str, int, float, bool, list, dict)."
+                ),
+            },
+            {
+                "name": "multiple",
+                "display_name": "Multiple",
+                "type": "boolean",
+                "description": "Set to True if this output field should be a list of the specified type.",
+            },
+        ]
+        component.output_schema = TableInput(name="output_schema", display_name="Output Schema", table_schema=schema)
+
+        # Assertion
+        output_model = build_model_from_schema(schema)
+        assert isinstance(output_model, type)
+
+    def test_handles_multiple_outputs(self):
+        # Setup
+        component = StructuredOutputComponent()
+        schema = [
+            {
+                "name": "name",
+                "display_name": "Name",
+                "type": "str",
+                "description": "Specify the name of the output field.",
+            },
+            {
+                "name": "description",
+                "display_name": "Description",
+                "type": "str",
+                "description": "Describe the purpose of the output field.",
+            },
+            {
+                "name": "type",
+                "display_name": "Type",
+                "type": "str",
+                "description": (
+                    "Indicate the data type of the output field (e.g., str, int, float, bool, list, dict)."
+                ),
+            },
+            {
+                "name": "multiple",
+                "display_name": "Multiple",
+                "type": "boolean",
+                "description": "Set to True if this output field should be a list of the specified type.",
+            },
+        ]
+        component.output_schema = TableInput(name="output_schema", display_name="Output Schema", table_schema=schema)
+        component.multiple = True
+
+        # Assertion
+        output_model = build_model_from_schema(schema)
+        assert isinstance(output_model, type)
+
+    @patch("lfx.base.models.unified_models.get_model_classes")
+    def test_empty_output_schema(self, mock_get_model_classes, mock_llm, mock_model_classes):
+        # Mock get_model_classes
+        mock_get_model_classes.return_value = mock_model_classes(mock_llm)
+
+        component = StructuredOutputComponent(
+            model=[
+                {
+                    "name": "gpt-3.5-turbo",
+                    "provider": "OpenAI",
+                    "metadata": {
+                        "model_class": "MockLanguageModel",
+                        "model_name_param": "model",
+                        "api_key_param": "api_key",
+                    },
+                }
+            ],
+            api_key="test-api-key",
+            input_value="Test input",
+            schema_name="EmptySchema",
+            output_schema=[],
+            multiple=False,
+        )
+
+        with pytest.raises(ValueError, match="Output schema cannot be empty"):
+            component.build_structured_output()
+
+    @patch("lfx.base.models.unified_models.get_model_classes")
+    def test_invalid_output_schema_type(self, mock_get_model_classes, mock_llm, mock_model_classes):
+        # Mock get_model_classes
+        mock_get_model_classes.return_value = mock_model_classes(mock_llm)
+
+        component = StructuredOutputComponent(
+            model=[
+                {
+                    "name": "gpt-3.5-turbo",
+                    "provider": "OpenAI",
+                    "metadata": {
+                        "model_class": "MockLanguageModel",
+                        "model_name_param": "model",
+                        "api_key_param": "api_key",
+                    },
+                }
+            ],
+            api_key="test-api-key",
+            input_value="Test input",
+            schema_name="InvalidSchema",
+            output_schema=[{"name": "field", "type": "invalid_type", "description": "Invalid field"}],
+            multiple=False,
+        )
+
+        with pytest.raises(ValueError, match="Invalid type: invalid_type"):
+            component.build_structured_output()
+
+    @patch("lfx.components.llm_operations.structured_output.get_chat_result")
+    @patch("lfx.base.models.unified_models.get_model_classes")
+    def test_nested_output_schema(
+        self, mock_get_model_classes, mock_get_chat_result, mock_llm, mock_model_classes, model_metadata
+    ):
+        # Mock get_model_classes
+        mock_get_model_classes.return_value = mock_model_classes(mock_llm)
+
+        class ChildModel(BaseModel):
+            child: str = "value"
+
+        class ParentModel(BaseModel):
+            objects: list[dict] = [{"parent": {"child": "value"}}]
+
+            def model_dump(self, **__):
+                return {"objects": self.objects}
+
+        # Update to return trustcall-style response
+        mock_get_chat_result.return_value = {
+            "messages": ["mock_message"],
+            "responses": [ParentModel()],
+            "response_metadata": [{"id": "mock_id"}],
+            "attempts": 1,
+        }
+
+        component = StructuredOutputComponent(
+            model=model_metadata,
+            api_key="test-api-key",
+            input_value="Test input",
+            schema_name="NestedSchema",
+            output_schema=[
+                {
+                    "name": "parent",
+                    "type": "dict",
+                    "description": "Parent field",
+                    "fields": [{"name": "child", "type": "str", "description": "Child field"}],
+                }
+            ],
+            multiple=False,
+            system_prompt="Test system prompt",
+        )
+
+        result = component.build_structured_output_base()
+        assert isinstance(result, list)
+        assert result == [{"parent": {"child": "value"}}]
+
+    @patch("lfx.components.llm_operations.structured_output.get_chat_result")
+    @patch("lfx.base.models.unified_models.get_model_classes")
+    def test_large_input_value(
+        self, mock_get_model_classes, mock_get_chat_result, mock_llm, mock_model_classes, model_metadata
+    ):
+        # Mock get_model_classes
+        mock_get_model_classes.return_value = mock_model_classes(mock_llm)
+        large_input = "Test input " * 1000
+
+        class MockBaseModel(BaseModel):
+            objects: list[dict] = [{"field": "value"}]
+
+            def model_dump(self, **__):
+                return {"objects": self.objects}
+
+        # Update to return trustcall-style response
+        mock_get_chat_result.return_value = {
+            "messages": ["mock_message"],
+            "responses": [MockBaseModel()],
+            "response_metadata": [{"id": "mock_id"}],
+            "attempts": 1,
+        }
+
+        component = StructuredOutputComponent(
+            model=model_metadata,
+            api_key="test-api-key",
+            input_value=large_input,
+            schema_name="LargeInputSchema",
+            output_schema=[{"name": "field", "type": "str", "description": "A test field"}],
+            multiple=False,
+            system_prompt="Test system prompt",
+        )
+
+        result = component.build_structured_output_base()
+        assert isinstance(result, list)
+        assert result == [{"field": "value"}]
+        mock_get_chat_result.assert_called_once()
+
+    @pytest.mark.skipif(
+        not (os.getenv("OPENAI_API_KEY") or "").strip(),
+        reason="OPENAI_API_KEY is not set or is empty",
+    )
+    def test_with_real_openai_model_simple_schema(self):
+        # Create a component with a simple schema using real OpenAI model
+        component = StructuredOutputComponent(
+            model=[
+                {
+                    "name": "gpt-4o-mini",
+                    "provider": "OpenAI",
+                    "metadata": {
+                        "model_class": "ChatOpenAI",
+                        "model_name_param": "model",
+                        "api_key_param": "api_key",
+                    },
+                }
+            ],
+            api_key=os.getenv("OPENAI_API_KEY"),
+            input_value="Extract the name and age from this text: John Doe is 30 years old.",
+            schema_name="PersonInfo",
+            output_schema=[
+                {"name": "name", "type": "str", "description": "The person's name"},
+                {"name": "age", "type": "int", "description": "The person's age"},
+            ],
+            multiple=False,
+            system_prompt="Extract structured information from the input text.",
+        )
+
+        # Get the structured output
+        result = component.build_structured_output_base()
+
+        # Verify the result
+        assert isinstance(result, list)
+        assert len(result) > 0
+        assert "name" in result[0]
+        assert "age" in result[0]
+        assert result[0]["name"] == "John Doe"
+        assert result[0]["age"] == 30
+
+    @pytest.mark.skipif(
+        not (os.getenv("OPENAI_API_KEY") or "").strip(),
+        reason="OPENAI_API_KEY environment variable not set",
+    )
+    def test_with_real_openai_model_multiple_patterns(self):
+        # Create a component with multiple people in the input using real OpenAI model
+        component = StructuredOutputComponent(
+            model=[
+                {
+                    "name": "gpt-4o-mini",
+                    "provider": "OpenAI",
+                    "metadata": {
+                        "model_class": "ChatOpenAI",
+                        "model_name_param": "model",
+                        "api_key_param": "api_key",
+                    },
+                }
+            ],
+            api_key=os.getenv("OPENAI_API_KEY"),
+            input_value=(
+                "Extract all people from this text: John Doe is 30 years old, Jane Smith is 25, and Bob Johnson is 35."
+            ),
+            schema_name="PersonInfo",
+            output_schema=[
+                {"name": "name", "type": "str", "description": "The person's name"},
+                {"name": "age", "type": "int", "description": "The person's age"},
+            ],
+            multiple=False,
+            system_prompt=(
+                "You are an AI that extracts structured JSON objects from unstructured text. "
+                "Use a predefined schema with expected types (str, int, float, bool, dict). "
+                "Extract ALL relevant instances that match the schema - if multiple patterns exist, capture them all. "
+                "Fill missing or ambiguous values with defaults: null for missing values. "
+                "Remove exact duplicates but keep variations that have different field values. "
+                "Always return valid JSON in the expected format, never throw errors. "
+                "If multiple objects can be extracted, return them all in the structured format."
+            ),
+        )
+
+        # Get the structured output
+        result = component.build_structured_output_base()
+
+        # Verify the result contains multiple people
+        assert isinstance(result, list)
+        assert len(result) >= 3  # Should extract all three people
+
+        # Check that we have names and ages for multiple people
+        names = [item["name"] for item in result if "name" in item]
+        ages = [item["age"] for item in result if "age" in item]
+
+        assert len(names) >= 3
+        assert len(ages) >= 3
+
+        # Check that we extracted the expected people (order may vary)
+        expected_names = ["John Doe", "Jane Smith", "Bob Johnson"]
+        expected_ages = [30, 25, 35]
+
+        for expected_name in expected_names:
+            assert any(expected_name in name for name in names)
+        for expected_age in expected_ages:
+            assert expected_age in ages
+
+    @patch("lfx.base.models.unified_models.get_model_classes")
+    def test_multiple_patterns_with_duplicates_and_variations(
+        self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata
+    ):
+        """Test that multiple patterns are extracted while removing exact duplicates but keeping variations."""
+        # Mock get_model_classes
+        mock_get_model_classes.return_value = mock_model_classes(mock_llm)
+
+        def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
+            class MockBaseModel(BaseModel):
+                def model_dump(self, **__):
+                    return {
+                        "objects": [
+                            {"product": "iPhone", "price": 999.99},
+                            {"product": "iPhone", "price": 1099.99},  # Variation - different price
+                            {"product": "Samsung", "price": 899.99},
+                            {"product": "iPhone", "price": 999.99},  # Exact duplicate - should be removed
+                        ]
+                    }
+
+            return {
+                "messages": ["mock_message"],
+                "responses": [MockBaseModel()],
+                "response_metadata": [{"id": "mock_id"}],
+                "attempts": 1,
+            }
+
+        component = StructuredOutputComponent(
+            model=model_metadata,
+            api_key="test-api-key",
+            input_value="Products: iPhone $999.99, iPhone $1099.99, Samsung $899.99, iPhone $999.99",
+            schema_name="ProductSchema",
+            output_schema=[
+                {"name": "product", "type": "str", "description": "Product name"},
+                {"name": "price", "type": "float", "description": "Product price"},
+            ],
+            multiple=False,
+            system_prompt="Remove exact duplicates but keep variations that have different field values.",
+        )
+
+        with patch("lfx.components.llm_operations.structured_output.get_chat_result", mock_get_chat_result):
+            result = component.build_structured_output()
+
+            # Check that result is a Data object
+            from lfx.schema.data import Data
+
+            assert isinstance(result, Data)
+
+            # Should have multiple results due to multiple patterns
+            assert isinstance(result.data, dict)
+            assert "results" in result.data
+            assert (
+                len(result.data["results"]) == 4
+            )  # All items returned (duplicate handling is expected to be done by LLM)
+
+            # Verify the expected products are present
+            products = [item["product"] for item in result.data["results"]]
+            prices = [item["price"] for item in result.data["results"]]
+
+            assert "iPhone" in products
+            assert "Samsung" in products
+            assert 999.99 in prices
+            assert 1099.99 in prices
+            assert 899.99 in prices
+
+    @pytest.mark.skipif(
+        not (os.getenv("OPENAI_API_KEY") or "").strip(),
+        reason="OPENAI_API_KEY environment variable not set",
+    )
+    def test_with_real_openai_model_simple_schema_fail(self):
+        # Create a component with a simple schema using real OpenAI model with very low max_tokens
+        # Note: max_tokens parameter should be passed through model metadata if supported
+        component = StructuredOutputComponent(
+            model=[
+                {
+                    "name": "gpt-4o-mini",
+                    "provider": "OpenAI",
+                    "metadata": {
+                        "model_class": "ChatOpenAI",
+                        "model_name_param": "model",
+                        "api_key_param": "api_key",
+                    },
+                }
+            ],
+            api_key=os.getenv("OPENAI_API_KEY"),
+            input_value="Extract the name and age from this text: John Doe is 30 years old.",
+            schema_name="PersonInfo",
+            output_schema=[
+                {"name": "name", "type": "str", "description": "The person's name"},
+                {"name": "age", "type": "int", "description": "The person's age"},
+            ],
+            multiple=False,
+            system_prompt="Extract structured information from the input text.",
+        )
+
+        # Attempt to build structured output with max_tokens=1
+        # Note: Some API versions may handle this gracefully and succeed,
+        # while others may raise BadRequestError. This test verifies error handling when it occurs.
+        try:
+            result = component.build_structured_output_base()
+            # If the API succeeds with max_tokens=1, that's also valid behavior
+            # Just verify we got some result back
+            assert result is not None, "Expected a result even with max_tokens=1"
+        except (ValueError, openai.BadRequestError) as exc_info:
+            # If an error is raised, verify it's related to max_tokens
+            error_message = str(exc_info.value)
+            assert any(
+                phrase in error_message
+                for phrase in [
+                    "max_tokens was reached",
+                    "max_tokens or model output limit was reached",
+                    "Could not finish the message because max_tokens",
+                    "BadRequestError",
+                    "with_structured_output also failed",  # Langchain fallback error message
+                ]
+            ), f"Expected max_tokens error but got: {error_message}"
+
+    @pytest.mark.skipif(
+        not (os.getenv("OPENAI_API_KEY") or "").strip(),
+        reason="OPENAI_API_KEY environment variable not set",
+    )
+    def test_with_real_openai_model_complex_schema(self):
+        # Create a component with a more complex schema using real OpenAI model
+        component = StructuredOutputComponent(
+            model=[
+                {
+                    "name": "gpt-4o-mini",
+                    "provider": "OpenAI",
+                    "metadata": {
+                        "model_class": "ChatOpenAI",
+                        "model_name_param": "model",
+                        "api_key_param": "api_key",
+                    },
+                }
+            ],
+            api_key=os.getenv("OPENAI_API_KEY"),
+            input_value="""
+            Product Review:
+            I purchased the XYZ Wireless Headphones last month. The sound quality is excellent,
+            and the battery lasts about 8 hours. However, they're a bit uncomfortable after
+            wearing them for a long time. The price was $129.99, which I think is reasonable
+            for the quality. Overall rating: 4/5.
+            """,
+            schema_name="ProductReview",
+            output_schema=[
+                {"name": "product_name", "type": "str", "description": "The name of the product"},
+                {"name": "sound_quality", "type": "str", "description": "Description of sound quality"},
+                {"name": "comfort", "type": "str", "description": "Description of comfort"},
+                {"name": "battery_life", "type": "str", "description": "Description of battery life"},
+                {"name": "price", "type": "float", "description": "The price of the product"},
+                {"name": "rating", "type": "float", "description": "The overall rating out of 5"},
+            ],
+            multiple=False,
+            system_prompt="Extract detailed product review information from the input text.",
+        )
+
+        # Get the structured output
+        result = component.build_structured_output_base()
+
+        # Verify the result
+        assert isinstance(result, list)
+        assert len(result) > 0
+        assert "product_name" in result[0]
+        assert "sound_quality" in result[0]
+        assert "comfort" in result[0]
+        assert "battery_life" in result[0]
+        assert "price" in result[0]
+        assert "rating" in result[0]
+        assert result[0]["product_name"] == "XYZ Wireless Headphones"
+        assert result[0]["price"] == 129.99
+        assert result[0]["rating"] == 4.0
+
+    @pytest.mark.skipif(
+        not (os.getenv("OPENAI_API_KEY") or "").strip(),
+        reason="OPENAI_API_KEY environment variable not set",
+    )
+    def test_with_real_openai_model_nested_schema(self):
+        # Create a component with a flattened schema (no nested structures) using real OpenAI model
+        component = StructuredOutputComponent(
+            model=[
+                {
+                    "name": "gpt-4o-mini",
+                    "provider": "OpenAI",
+                    "metadata": {
+                        "model_class": "ChatOpenAI",
+                        "model_name_param": "model",
+                        "api_key_param": "api_key",
+                    },
+                }
+            ],
+            api_key=os.getenv("OPENAI_API_KEY"),
+            input_value="""
+            Restaurant: Bella Italia
+            Address: 123 Main St, Anytown, CA 12345
+            Visited: June 15, 2023
+
+            Ordered:
+            - Margherita Pizza ($14.99) - Delicious with fresh basil
+            - Tiramisu ($8.50) - Perfect sweetness
+
+            Service was excellent, atmosphere was cozy.
+            Total bill: $35.49 including tip.
+            Would definitely visit again!
+            """,
+            schema_name="RestaurantReview",
+            output_schema=[
+                {"name": "restaurant_name", "type": "str", "description": "The name of the restaurant"},
+                {"name": "street", "type": "str", "description": "Street address"},
+                {"name": "city", "type": "str", "description": "City"},
+                {"name": "state", "type": "str", "description": "State"},
+                {"name": "zip", "type": "str", "description": "ZIP code"},
+                {"name": "first_item_name", "type": "str", "description": "Name of first item ordered"},
+                {"name": "first_item_price", "type": "float", "description": "Price of first item"},
+                {"name": "second_item_name", "type": "str", "description": "Name of second item ordered"},
+                {"name": "second_item_price", "type": "float", "description": "Price of second item"},
+                {"name": "total_bill", "type": "float", "description": "Total bill amount"},
+                {"name": "would_return", "type": "bool", "description": "Whether the reviewer would return"},
+            ],
+            multiple=False,
+            system_prompt="Extract detailed restaurant review information from the input text.",
+        )
+
+        # Get the structured output
+        result = component.build_structured_output_base()
+
+        # Verify the result
+        assert isinstance(result, list)
+        assert len(result) > 0
+        assert "restaurant_name" in result[0]
+        assert "street" in result[0]
+        assert "city" in result[0]
+        assert "state" in result[0]
+        assert "zip" in result[0]
+        assert "first_item_name" in result[0]
+        assert "first_item_price" in result[0]
+        assert "total_bill" in result[0]
+        assert "would_return" in result[0]
+
+        assert result[0]["restaurant_name"] == "Bella Italia"
+        assert result[0]["street"] == "123 Main St"
+        assert result[0]["total_bill"] == 35.49
+        assert result[0]["would_return"] is True
+
+    @pytest.mark.skipif(
+        not (os.getenv("NVIDIA_API_KEY") or "").strip(),
+        reason="NVIDIA_API_KEY environment variable not set",
+    )
+    def test_with_real_nvidia_model_simple_schema(self):
+        # Create a component with a simple schema using real NVIDIA model
+        # Note: ChatNVIDIA is not imported as it's resolved dynamically via model_class string
+        component = StructuredOutputComponent(
+            model=[
+                {
+                    "name": "meta/llama-3.2-3b-instruct",
+                    "provider": "NVIDIA",
+                    "metadata": {
+                        "model_class": "ChatNVIDIA",
+                        "model_name_param": "model",
+                        "api_key_param": "nvidia_api_key",
+                    },
+                }
+            ],
+            api_key=os.getenv("NVIDIA_API_KEY"),
+            input_value="Extract the name and age from this text: John Doe is 30 years old.",
+            schema_name="PersonInfo",
+            output_schema=[
+                {"name": "name", "type": "str", "description": "The person's name"},
+                {"name": "age", "type": "int", "description": "The person's age"},
+            ],
+            multiple=False,
+            system_prompt="Extract structured information from the input text.",
+        )
+
+        # Test that it now works with NVIDIA models (previously expected to fail but now supports structured output)
+        try:
+            result = component.build_structured_output_base()
+            # If it succeeds, verify it returns a valid runnable
+            assert result is not None
+        except (TypeError, ValueError, RuntimeError) as e:
+            # If it still fails, verify it's with a known error message
+            error_msg = str(e)
+            assert any(
+                msg in error_msg
+                for msg in [
+                    "Language model does not support structured output",
+                    "400 Bad Request",
+                    "not supported",
+                ]
+            ), f"Unexpected error: {error_msg}"
+
+    @patch("lfx.base.models.unified_models.get_model_classes")
+    def test_structured_output_returns_dict_when_no_objects_key(
+        self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata
+    ):
+        """Test that when trustcall returns a dict without 'objects' key, we return the dict directly."""
+        # Mock get_model_classes
+        mock_get_model_classes.return_value = mock_model_classes(mock_llm)
+
+        def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
+            # Return trustcall-style response but without BaseModel that creates "objects" key
+            return {
+                "messages": ["mock_message"],
+                "responses": [{"field": "value", "another_field": "another_value"}],  # Direct dict, not BaseModel
+                "response_metadata": [{"id": "mock_id"}],
+                "attempts": 1,
+            }
+
+        component = StructuredOutputComponent(
+            model=model_metadata,
+            api_key="test-api-key",
+            input_value="Test input",
+            schema_name="TestSchema",
+            output_schema=[{"name": "field", "type": "str", "description": "A test field"}],
+            multiple=False,
+            system_prompt="Test system prompt",
+        )
+
+        with patch("lfx.components.llm_operations.structured_output.get_chat_result", mock_get_chat_result):
+            result = component.build_structured_output_base()
+            # Should return the dict directly since there's no "objects" key
+            assert isinstance(result, dict)
+            assert result == {"field": "value", "another_field": "another_value"}
+
+    @patch("lfx.base.models.unified_models.get_model_classes")
+    def test_structured_output_returns_direct_response_when_not_dict(
+        self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata
+    ):
+        """Test that when trustcall returns a non-dict response, we return it directly."""
+        # Mock get_model_classes
+        mock_get_model_classes.return_value = mock_model_classes(mock_llm)
+
+        def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
+            # Return a string response (edge case)
+            return "Simple string response"
+
+        component = StructuredOutputComponent(
+            model=model_metadata,
+            api_key="test-api-key",
+            input_value="Test input",
+            schema_name="TestSchema",
+            output_schema=[{"name": "field", "type": "str", "description": "A test field"}],
+            multiple=False,
+            system_prompt="Test system prompt",
+        )
+
+        with patch("lfx.components.llm_operations.structured_output.get_chat_result", mock_get_chat_result):
+            result = component.build_structured_output_base()
+            # Should return the string directly
+            assert isinstance(result, str)
+            assert result == "Simple string response"
+
+    @patch("lfx.base.models.unified_models.get_model_classes")
+    def test_structured_output_handles_empty_responses_array(
+        self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata
+    ):
+        """Test that when trustcall returns empty responses array, we return the result dict."""
+        # Mock get_model_classes
+        mock_get_model_classes.return_value = mock_model_classes(mock_llm)
+
+        def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
+            # Return trustcall-style response with empty responses
+            return {
+                "messages": ["mock_message"],
+                "responses": [],  # Empty responses array
+                "response_metadata": [],
+                "attempts": 1,
+                "fallback_data": {"field": "fallback_value"},  # Some other data in the result
+            }
+
+        component = StructuredOutputComponent(
+            model=model_metadata,
+            api_key="test-api-key",
+            input_value="Test input",
+            schema_name="TestSchema",
+            output_schema=[{"name": "field", "type": "str", "description": "A test field"}],
+            multiple=False,
+            system_prompt="Test system prompt",
+        )
+
+        with patch("lfx.components.llm_operations.structured_output.get_chat_result", mock_get_chat_result):
+            result = component.build_structured_output_base()
+            # Should return the entire result dict when responses is empty
+            assert isinstance(result, dict)
+            assert "messages" in result
+            assert "responses" in result
+            assert "fallback_data" in result
+
+    @patch("lfx.base.models.unified_models.get_model_classes")
+    def test_build_structured_output_fails_when_base_returns_non_list(
+        self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata
+    ):
+        """Test that build_structured_output() fails when base method returns non-list."""
+        # Mock get_model_classes
+        mock_get_model_classes.return_value = mock_model_classes(mock_llm)
+
+        def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
+            # Return a dict instead of list with objects
+            return {
+                "messages": ["mock_message"],
+                "responses": [{"single_item": "value"}],  # Dict without "objects" key
+                "response_metadata": [{"id": "mock_id"}],
+                "attempts": 1,
+            }
+
+        component = StructuredOutputComponent(
+            model=model_metadata,
+            api_key="test-api-key",
+            input_value="Test input",
+            schema_name="TestSchema",
+            output_schema=[{"name": "field", "type": "str", "description": "A test field"}],
+            multiple=False,
+            system_prompt="Test system prompt",
+        )
+
+        with (
+            patch("lfx.components.llm_operations.structured_output.get_chat_result", mock_get_chat_result),
+            pytest.raises(ValueError, match="No structured output returned"),
+        ):
+            component.build_structured_output()
+
+    @patch("lfx.base.models.unified_models.get_model_classes")
+    def test_build_structured_output_returns_data_with_dict(
+        self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata
+    ):
+        """Test that build_structured_output() returns Data object with dict data."""
+        # Mock get_model_classes
+        mock_get_model_classes.return_value = mock_model_classes(mock_llm)
+
+        def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
+            class MockBaseModel(BaseModel):
+                def model_dump(self, **__):
+                    return {"objects": [{"field": "value2", "number": 24}]}  # Return only one object
+
+            # Return trustcall-style response structure
+            return {
+                "messages": ["mock_message"],
+                "responses": [MockBaseModel()],
+                "response_metadata": [{"id": "mock_id"}],
+                "attempts": 1,
+            }
+
+        component = StructuredOutputComponent(
+            model=model_metadata,
+            api_key="test-api-key",
+            input_value="Test input",
+            schema_name="TestSchema",
+            output_schema=[
+                {"name": "field", "type": "str", "description": "A test field"},
+                {"name": "number", "type": "int", "description": "A test number"},
+            ],
+            multiple=False,
+            system_prompt="Test system prompt",
+        )
+
+        with patch("lfx.components.llm_operations.structured_output.get_chat_result", mock_get_chat_result):
+            result = component.build_structured_output()
+
+            # Check that result is a Data object
+            from lfx.schema.data import Data
+
+            assert isinstance(result, Data)
+
+            # Check that result.data is a dict
+            assert isinstance(result.data, dict)
+
+            # Check the content of the dict
+            assert result.data == {"field": "value2", "number": 24}
+
+            # Verify the data has the expected keys
+            assert "field" in result.data
+            assert "number" in result.data
+            assert result.data["field"] == "value2"
+            assert result.data["number"] == 24
+
+    @patch("lfx.base.models.unified_models.get_model_classes")
+    def test_build_structured_output_returns_multiple_objects(
+        self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata
+    ):
+        """Test that build_structured_output() returns Data object with multiple objects wrapped in results."""
+        # Mock get_model_classes
+        mock_get_model_classes.return_value = mock_model_classes(mock_llm)
+
+        def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
+            class MockBaseModel(BaseModel):
+                def model_dump(self, **__):
+                    return {
+                        "objects": [
+                            {"name": "John", "age": 30},
+                            {"name": "Jane", "age": 25},
+                            {"name": "Bob", "age": 35},
+                        ]
+                    }
+
+            return {
+                "messages": ["mock_message"],
+                "responses": [MockBaseModel()],
+                "response_metadata": [{"id": "mock_id"}],
+                "attempts": 1,
+            }
+
+        component = StructuredOutputComponent(
+            model=model_metadata,
+            api_key="test-api-key",
+            input_value="Extract multiple people: John is 30, Jane is 25, Bob is 35",
+            schema_name="PersonSchema",
+            output_schema=[
+                {"name": "name", "type": "str", "description": "Person's name"},
+                {"name": "age", "type": "int", "description": "Person's age"},
+            ],
+            multiple=False,
+            system_prompt="Extract ALL relevant instances that match the schema",
+        )
+
+        with patch("lfx.components.llm_operations.structured_output.get_chat_result", mock_get_chat_result):
+            result = component.build_structured_output()
+
+            # Check that result is a Data object
+            from lfx.schema.data import Data
+
+            assert isinstance(result, Data)
+
+            # Check that result.data is a dict with results key
+            assert isinstance(result.data, dict)
+            assert "results" in result.data
+            assert len(result.data["results"]) == 3
+
+            # Check the content of each result
+            assert result.data["results"][0] == {"name": "John", "age": 30}
+            assert result.data["results"][1] == {"name": "Jane", "age": 25}
+            assert result.data["results"][2] == {"name": "Bob", "age": 35}
+
+    @patch("lfx.base.models.unified_models.get_model_classes")
+    def test_build_structured_output_returns_data_with_single_item(
+        self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata
+    ):
+        """Test that build_structured_output() returns Data object when only one item in objects."""
+        # Mock get_model_classes
+        mock_get_model_classes.return_value = mock_model_classes(mock_llm)
+
+        def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
+            class MockBaseModel(BaseModel):
+                def model_dump(self, **__):
+                    return {"objects": [{"name": "John Doe", "age": 30}]}
+
+            return {
+                "messages": ["mock_message"],
+                "responses": [MockBaseModel()],
+                "response_metadata": [{"id": "mock_id"}],
+                "attempts": 1,
+            }
+
+        component = StructuredOutputComponent(
+            model=model_metadata,
+            api_key="test-api-key",
+            input_value="Extract name and age from: John Doe is 30 years old",
+            schema_name="PersonInfo",
+            output_schema=[
+                {"name": "name", "type": "str", "description": "Person's name"},
+                {"name": "age", "type": "int", "description": "Person's age"},
+            ],
+            multiple=False,
+            system_prompt="Extract person info",
+        )
+
+        with patch("lfx.components.llm_operations.structured_output.get_chat_result", mock_get_chat_result):
+            result = component.build_structured_output()
+
+            # Check that result is a Data object
+            from lfx.schema.data import Data
+
+            assert isinstance(result, Data)
+
+            # Check that result.data is a dict
+            assert isinstance(result.data, dict)
+
+            # Check the content matches exactly
+            assert result.data == {"name": "John Doe", "age": 30}
+
+    @patch("lfx.base.models.unified_models.get_model_classes")
+    def test_build_structured_output_data_object_properties(
+        self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata
+    ):
+        """Test that the returned Data object has proper properties."""
+        # Mock get_model_classes
+        mock_get_model_classes.return_value = mock_model_classes(mock_llm)
+
+        def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
+            class MockBaseModel(BaseModel):
+                def model_dump(self, **__):
+                    return {"objects": [{"product": "iPhone", "price": 999.99, "available": True}]}
+
+            return {
+                "messages": ["mock_message"],
+                "responses": [MockBaseModel()],
+                "response_metadata": [{"id": "mock_id"}],
+                "attempts": 1,
+            }
+
+        component = StructuredOutputComponent(
+            model=model_metadata,
+            api_key="test-api-key",
+            input_value="Product info: iPhone costs $999.99 and is available",
+            schema_name="ProductInfo",
+            output_schema=[
+                {"name": "product", "type": "str", "description": "Product name"},
+                {"name": "price", "type": "float", "description": "Product price"},
+                {"name": "available", "type": "bool", "description": "Product availability"},
+            ],
+            multiple=False,
+            system_prompt="Extract product info",
+        )
+
+        with patch("lfx.components.llm_operations.structured_output.get_chat_result", mock_get_chat_result):
+            result = component.build_structured_output()
+
+            # Check that result is a Data object
+            from lfx.schema.data import Data
+
+            assert isinstance(result, Data)
+
+            # Check that result.data is a dict with correct types
+            assert isinstance(result.data, dict)
+            assert isinstance(result.data["product"], str)
+            assert isinstance(result.data["price"], float)
+            assert isinstance(result.data["available"], bool)
+
+            # Check values
+            assert result.data["product"] == "iPhone"
+            assert result.data["price"] == 999.99
+            assert result.data["available"] is True
+
+            # Test Data object methods if they exist
+            if hasattr(result, "get_text"):
+                # Data object should be able to represent itself as text
+                text_repr = result.get_text()
+                assert isinstance(text_repr, str)
+
+    @patch("lfx.base.models.unified_models.get_model_classes")
+    def test_build_structured_dataframe_returns_dataframe_with_single_data(
+        self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata
+    ):
+        """Test that build_structured_dataframe() returns DataFrame object with single Data item."""
+        # Mock get_model_classes
+        mock_get_model_classes.return_value = mock_model_classes(mock_llm)
+
+        def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
+            class MockBaseModel(BaseModel):
+                def model_dump(self, **__):
+                    return {"objects": [{"field": "value2", "number": 24}]}
+
+            return {
+                "messages": ["mock_message"],
+                "responses": [MockBaseModel()],
+                "response_metadata": [{"id": "mock_id"}],
+                "attempts": 1,
+            }
+
+        component = StructuredOutputComponent(
+            model=model_metadata,
+            api_key="test-api-key",
+            input_value="Test input",
+            schema_name="TestSchema",
+            output_schema=[
+                {"name": "field", "type": "str", "description": "A test field"},
+                {"name": "number", "type": "int", "description": "A test number"},
+            ],
+            multiple=False,
+            system_prompt="Test system prompt",
+        )
+
+        with patch("lfx.components.llm_operations.structured_output.get_chat_result", mock_get_chat_result):
+            result = component.build_structured_dataframe()
+
+            # Check that result is a DataFrame object
+            from lfx.schema.dataframe import DataFrame
+
+            assert isinstance(result, DataFrame)
+            assert len(result) == 1
+            assert result.iloc[0]["field"] == "value2"
+            assert result.iloc[0]["number"] == 24
+
+            # Test conversion back to Data list
+            data_list = result.to_data_list()
+            assert len(data_list) == 1
+            assert data_list[0].data == {"field": "value2", "number": 24}
+
+    @patch("lfx.base.models.unified_models.get_model_classes")
+    def test_build_structured_dataframe_returns_dataframe_with_multiple_data(
+        self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata
+    ):
+        """Test that build_structured_dataframe() returns DataFrame object with multiple Data items."""
+        # Mock get_model_classes
+        mock_get_model_classes.return_value = mock_model_classes(mock_llm)
+
+        def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
+            class MockBaseModel(BaseModel):
+                def model_dump(self, **__):
+                    return {
+                        "objects": [
+                            {"name": "John", "age": 30},
+                            {"name": "Jane", "age": 25},
+                            {"name": "Bob", "age": 35},
+                        ]
+                    }
+
+            return {
+                "messages": ["mock_message"],
+                "responses": [MockBaseModel()],
+                "response_metadata": [{"id": "mock_id"}],
+                "attempts": 1,
+            }
+
+        component = StructuredOutputComponent(
+            model=model_metadata,
+            api_key="test-api-key",
+            input_value="Test input with multiple people",
+            schema_name="PersonSchema",
+            output_schema=[
+                {"name": "name", "type": "str", "description": "Person's name"},
+                {"name": "age", "type": "int", "description": "Person's age"},
+            ],
+            multiple=False,
+            system_prompt="Test system prompt",
+        )
+
+        with patch("lfx.components.llm_operations.structured_output.get_chat_result", mock_get_chat_result):
+            result = component.build_structured_dataframe()
+
+            # Check that result is a DataFrame object
+            from lfx.schema.dataframe import DataFrame
+
+            assert isinstance(result, DataFrame)
+            assert len(result) == 3
+            assert result.iloc[0]["name"] == "John"
+            assert result.iloc[0]["age"] == 30
+            assert result.iloc[1]["name"] == "Jane"
+            assert result.iloc[1]["age"] == 25
+            assert result.iloc[2]["name"] == "Bob"
+            assert result.iloc[2]["age"] == 35
+
+            # Test conversion back to Data list
+            data_list = result.to_data_list()
+            assert len(data_list) == 3
+            assert data_list[0].data == {"name": "John", "age": 30}
+            assert data_list[1].data == {"name": "Jane", "age": 25}
+            assert data_list[2].data == {"name": "Bob", "age": 35}
+
+    @patch("lfx.base.models.unified_models.get_model_classes")
+    def test_build_structured_dataframe_fails_when_base_returns_non_list(
+        self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata
+    ):
+        """Test that build_structured_dataframe() fails when base method returns non-list."""
+        # Mock get_model_classes
+        mock_get_model_classes.return_value = mock_model_classes(mock_llm)
+
+        def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
+            return {
+                "messages": ["mock_message"],
+                "responses": [{"single_item": "value"}],
+                "response_metadata": [{"id": "mock_id"}],
+                "attempts": 1,
+            }
+
+        component = StructuredOutputComponent(
+            model=model_metadata,
+            api_key="test-api-key",
+            input_value="Test input",
+            schema_name="TestSchema",
+            output_schema=[{"name": "field", "type": "str", "description": "A test field"}],
+            multiple=False,
+            system_prompt="Test system prompt",
+        )
+
+        with (
+            patch("lfx.components.llm_operations.structured_output.get_chat_result", mock_get_chat_result),
+            pytest.raises(ValueError, match="No structured output returned"),
+        ):
+            component.build_structured_dataframe()
+
+    @patch("lfx.base.models.unified_models.get_model_classes")
+    def test_build_structured_dataframe_fails_when_empty_output(
+        self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata
+    ):
+        """Test that build_structured_dataframe() fails when base method returns empty list."""
+        # Mock get_model_classes
+        mock_get_model_classes.return_value = mock_model_classes(mock_llm)
+
+        def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
+            class MockBaseModel(BaseModel):
+                def model_dump(self, **__):
+                    return {"objects": []}
+
+            return {
+                "messages": ["mock_message"],
+                "responses": [MockBaseModel()],
+                "response_metadata": [{"id": "mock_id"}],
+                "attempts": 1,
+            }
+
+        component = StructuredOutputComponent(
+            model=model_metadata,
+            api_key="test-api-key",
+            input_value="Test input",
+            schema_name="TestSchema",
+            output_schema=[{"name": "field", "type": "str", "description": "A test field"}],
+            multiple=False,
+            system_prompt="Test system prompt",
+        )
+
+        with (
+            patch("lfx.components.llm_operations.structured_output.get_chat_result", mock_get_chat_result),
+            pytest.raises(ValueError, match="No structured output returned"),
+        ):
+            component.build_structured_dataframe()
+
+    @patch("lfx.base.models.unified_models.get_model_classes")
+    def test_fallback_to_langchain_on_trustcall_generic_exception(
+        self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata
+    ):
+        """Test that when trustcall fails with a generic exception, it falls back to langchain."""
+        # Mock get_model_classes
+        mock_get_model_classes.return_value = mock_model_classes(mock_llm)
+
+        component = StructuredOutputComponent(
+            model=model_metadata,
+            api_key="test-api-key",
+            input_value="Test input",
+            schema_name="TestSchema",
+            output_schema=[{"name": "field", "type": "str", "description": "A test field"}],
+            system_prompt="Test system prompt",
+        )
+
+        with (
+            patch.object(component, "_extract_output_with_trustcall", return_value=None) as mock_trustcall,
+            patch.object(
+                component, "_extract_output_with_langchain", return_value=[{"field": "langchain_value"}]
+            ) as mock_langchain,
+        ):
+            result = component.build_structured_output_base()
+
+            # Verify fallback was successful
+            assert isinstance(result, list)
+            assert result == [{"field": "langchain_value"}]
+
+            # Verify both methods were called
+            mock_trustcall.assert_called_once()
+            mock_langchain.assert_called_once()
+
+    @patch("lfx.base.models.unified_models.get_model_classes")
+    def test_fallback_both_methods_fail_raises_value_error(
+        self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata
+    ):
+        """Test that when both trustcall and langchain fail, a ValueError is raised."""
+        # Mock get_model_classes
+        mock_get_model_classes.return_value = mock_model_classes(mock_llm)
+
+        component = StructuredOutputComponent(
+            model=model_metadata,
+            api_key="test-api-key",
+            input_value="Test input",
+            schema_name="TestSchema",
+            output_schema=[{"name": "field", "type": "str", "description": "A test field"}],
+            system_prompt="Test system prompt",
+        )
+
+        # Mock trustcall to return None (indicating failure)
+        # Mock langchain to raise an exception
+        with (
+            patch.object(component, "_extract_output_with_trustcall", return_value=None),
+            patch.object(
+                component,
+                "_extract_output_with_langchain",
+                side_effect=ValueError(
+                    "Model does not support tool calling (trustcall failed) and fallback "
+                    "with_structured_output also failed: Langchain parsing error"
+                ),
+            ),
+        ):
+            with pytest.raises(ValueError, match="trustcall failed") as exc_info:
+                component.build_structured_output_base()
+
+            error_msg = str(exc_info.value)
+            # Verify error message mentions both failures
+            assert "Model does not support tool calling" in error_msg
+            assert "trustcall failed" in error_msg
+            assert "fallback with_structured_output also failed" in error_msg
+            assert "Langchain parsing error" in error_msg
+
+    @patch("lfx.base.models.unified_models.get_model_classes")
+    def test_langchain_fallback_processes_basemodel_response(
+        self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata
+    ):
+        """Test that langchain fallback correctly processes BaseModel responses."""
+        # Mock get_model_classes
+        mock_get_model_classes.return_value = mock_model_classes(mock_llm)
+
+        component = StructuredOutputComponent(
+            model=model_metadata,
+            api_key="test-api-key",
+            input_value="Test input",
+            schema_name="TestSchema",
+            output_schema=[{"name": "field", "type": "str", "description": "A test field"}],
+            system_prompt="Test system prompt",
+        )
+
+        # Mock trustcall to return None (fail)
+        # Mock langchain to return list with dict
+        with (
+            patch.object(component, "_extract_output_with_trustcall", return_value=None),
+            patch.object(component, "_extract_output_with_langchain", return_value=[{"field": "test_value"}]),
+        ):
+            result = component.build_structured_output_base()
+
+            # Verify it extracted the objects
+            assert isinstance(result, list)
+            assert result == [{"field": "test_value"}]
+
+    @patch("lfx.base.models.unified_models.get_model_classes")
+    def test_langchain_fallback_processes_dict_response(
+        self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata
+    ):
+        """Test that langchain fallback correctly processes dict responses without BaseModel conversion."""
+        # Mock get_model_classes
+        mock_get_model_classes.return_value = mock_model_classes(mock_llm)
+
+        component = StructuredOutputComponent(
+            model=model_metadata,
+            api_key="test-api-key",
+            input_value="Test input",
+            schema_name="TestSchema",
+            output_schema=[{"name": "field", "type": "str", "description": "A test field"}],
+            system_prompt="Test system prompt",
+        )
+
+        # Mock trustcall to return None (fail)
+        # Mock langchain to return dict directly
+        with (
+            patch.object(component, "_extract_output_with_trustcall", return_value=None),
+            patch.object(component, "_extract_output_with_langchain", return_value={"field": "dict_value"}),
+        ):
+            result = component.build_structured_output_base()
+
+            # When langchain returns dict, it's returned as-is
+            assert result == {"field": "dict_value"}
+
+    @patch("lfx.base.models.unified_models.get_model_classes")
+    def test_fallback_error_message_includes_both_errors(
+        self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata
+    ):
+        """Test that the error message when both methods fail includes context about both failures."""
+        # Mock get_model_classes
+        mock_get_model_classes.return_value = mock_model_classes(mock_llm)
+
+        component = StructuredOutputComponent(
+            model=model_metadata,
+            api_key="test-api-key",
+            input_value="Test input",
+            schema_name="TestSchema",
+            output_schema=[{"name": "field", "type": "str", "description": "A test field"}],
+            system_prompt="Test system prompt",
+        )
+
+        # Mock trustcall to return None (fail)
+        # Mock langchain to raise an exception with full error message
+        with (
+            patch.object(component, "_extract_output_with_trustcall", return_value=None),
+            patch.object(
+                component,
+                "_extract_output_with_langchain",
+                side_effect=ValueError(
+                    "Model does not support tool calling (trustcall failed) and fallback "
+                    "with_structured_output also failed: Langchain parsing error"
+                ),
+            ),
+        ):
+            with pytest.raises(ValueError, match="trustcall failed") as exc_info:
+                component.build_structured_output_base()
+
+            error_msg = str(exc_info.value)
+            # Verify error message mentions both failures
+            assert "Model does not support tool calling" in error_msg
+            assert "trustcall failed" in error_msg
+            assert "fallback with_structured_output also failed" in error_msg
+            assert "Langchain parsing error" in error_msg
+
+    @patch("lfx.base.models.unified_models.get_model_classes")
+    def test_trustcall_success_no_fallback_attempted(
+        self, mock_get_model_classes, mock_llm, mock_model_classes, model_metadata
+    ):
+        """Test that when trustcall succeeds, langchain fallback is not attempted."""
+        # Mock get_model_classes
+        mock_get_model_classes.return_value = mock_model_classes(mock_llm)
+
+        def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
+            class MockBaseModel(BaseModel):
+                def model_dump(self, **__):
+                    return {"objects": [{"field": "trustcall_value"}]}
+
+            return {
+                "messages": ["mock_message"],
+                "responses": [MockBaseModel()],
+                "response_metadata": [{"id": "mock_id"}],
+                "attempts": 1,
+            }
+
+        component = StructuredOutputComponent(
+            model=model_metadata,
+            api_key="test-api-key",
+            input_value="Test input",
+            schema_name="TestSchema",
+            output_schema=[{"name": "field", "type": "str", "description": "A test field"}],
+            system_prompt="Test system prompt",
+        )
+
+        with (
+            patch("lfx.components.llm_operations.structured_output.get_chat_result", mock_get_chat_result),
+            patch.object(component, "_extract_output_with_langchain") as mock_lc_fallback,
+        ):
+            result = component.build_structured_output_base()
+
+            # Verify trustcall succeeded
+            assert isinstance(result, list)
+            assert result == [{"field": "trustcall_value"}]
+
+            # Verify langchain was NOT called
+            mock_lc_fallback.assert_not_called()

@@ -184,9 +184,11 @@ def remove_exception_in_production(_logger: Any, _method_name: str, event_dict: 
 
 def buffer_writer(_logger: Any, _method_name: str, event_dict: dict[str, Any]) -> dict[str, Any]:
     """Write to log buffer if enabled."""
-    if log_buffer.enabled():
-        # Create a JSON representation for the buffer
-        log_buffer.write(json.dumps(event_dict))
+    if log_buffer.enabled() and "serialized" in event_dict:
+        # Use the already-serialized version prepared by add_serialized()
+        # This avoids duplicate serialization and ensures consistency
+        serialized_bytes = event_dict["serialized"]
+        log_buffer.write(serialized_bytes.decode("utf-8"))
     return event_dict
 
 
@@ -209,6 +211,7 @@ def configure(
     log_format: str | None = None,
     log_rotation: str | None = None,
     cache: bool | None = None,
+    output_file=None,
 ) -> None:
     """Configure the logger."""
     # Early-exit only if structlog is configured AND current min level matches the requested one.
@@ -297,11 +300,14 @@ def configure(
     wrapper_class.min_level = numeric_level
 
     # Configure structlog
+    # Default to stdout for backward compatibility, unless output_file is specified
+    log_output_file = output_file if output_file is not None else sys.stdout
+
     structlog.configure(
         processors=processors,
         wrapper_class=wrapper_class,
         context_class=dict,
-        logger_factory=structlog.PrintLoggerFactory(file=sys.stdout)
+        logger_factory=structlog.PrintLoggerFactory(file=log_output_file)
         if not log_file
         else structlog.stdlib.LoggerFactory(),
         cache_logger_on_first_use=cache if cache is not None else True,

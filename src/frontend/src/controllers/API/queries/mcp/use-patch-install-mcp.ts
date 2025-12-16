@@ -12,8 +12,11 @@ interface PatchInstallMCPResponse {
   message: string;
 }
 
+export type MCPTransport = "sse" | "streamablehttp";
+
 interface PatchInstallMCPBody {
   client: string;
+  transport?: MCPTransport;
 }
 
 export const usePatchInstallMCP: useMutationFunctionType<
@@ -47,10 +50,8 @@ export const usePatchInstallMCP: useMutationFunctionType<
     PatchInstallMCPResponse,
     any,
     PatchInstallMCPBody
-  > = mutate(["usePatchInstallMCP"], patchInstallMCP, {
+  > = mutate(["usePatchInstallMCP", params.project_id], patchInstallMCP, {
     ...options,
-    retry: 0,
-
     onSuccess: (data, variables, context) => {
       queryClient.invalidateQueries({
         queryKey: ["useGetInstalledMCP", params.project_id],

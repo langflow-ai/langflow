@@ -6,7 +6,7 @@ from langchain_core.tools import BaseTool, ToolException
 from typing_extensions import override
 
 from lfx.base.flow_processing.utils import build_data_from_result_data, format_flow_output_data
-from lfx.helpers.flow import build_schema_from_inputs, get_arg_names, get_flow_inputs, run_flow
+from lfx.helpers import build_schema_from_inputs, get_arg_names, get_flow_inputs, run_flow
 from lfx.log.logger import logger
 from lfx.utils.async_helpers import run_until_complete
 

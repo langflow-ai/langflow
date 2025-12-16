@@ -11,7 +11,7 @@ export const useGetReplacementComponents = (replacement?: string[]) => {
         return (
           categoryName &&
           componentName &&
-          data[categoryName][componentName].display_name
+          data[categoryName]?.[componentName]?.display_name
         );
       })
     : [];

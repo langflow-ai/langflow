@@ -177,6 +177,11 @@ module.exports = {
           label: "Deploy a public Langflow server"
         },
         {
+          type: "doc",
+          id: "Deployment/deployment-nginx-ssl",
+          label: "Deploy Langflow with Nginx and SSL"
+        },
+        {
           type: "category",
           label: "Containerized deployments",
           items: [
@@ -244,6 +249,11 @@ module.exports = {
               label: "Render"
             },
           ]
+        },
+        {
+          type: "doc",
+          id: "Deployment/security",
+          label: "Security",
         },
       ],
     },
@@ -338,6 +348,7 @@ module.exports = {
             "Components/bundles-serper",
             "Components/bundles-supabase",
             "Components/bundles-upstash",
+            "Components/bundles-vllm",
             "Components/bundles-vectara",
             "Components/bundles-vertexai",
             "Components/bundles-weaviate",

@@ -37,12 +37,12 @@ from langflow.api.v1.schemas import (
     VerticesOrderResponse,
 )
 from langflow.exceptions.component import ComponentBuildError
+from langflow.services.auth.utils import get_current_active_user
 from langflow.services.chat.service import ChatService
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import (
     get_chat_service,
     get_queue_service,
-    get_session,
     get_telemetry_service,
     session_scope,
 )
@@ -55,7 +55,7 @@ if TYPE_CHECKING:
 router = APIRouter(tags=["Chat"])
 
 
-@router.post("/build/{flow_id}/vertices", deprecated=True)
+@router.post("/build/{flow_id}/vertices", deprecated=True, dependencies=[Depends(get_current_active_user)])
 async def retrieve_vertices_order(
     *,
     flow_id: uuid.UUID,
@@ -85,6 +85,7 @@ async def retrieve_vertices_order(
     telemetry_service = get_telemetry_service()
     start_time = time.perf_counter()
     components_count = None
+    run_id = str(uuid.uuid4())
     try:
         # First, we need to check if the flow_id is in the cache
         if not data:
@@ -94,6 +95,7 @@ async def retrieve_vertices_order(
                 flow_id=flow_id, graph_data=data.model_dump(), chat_service=chat_service
             )
         graph = graph.prepare(stop_component_id, start_component_id)
+        graph.set_run_id(run_id)
 
         # Now vertices is a list of lists
         # We need to get the id of each vertex
@@ -107,6 +109,7 @@ async def retrieve_vertices_order(
                 playground_seconds=int(time.perf_counter() - start_time),
                 playground_component_count=components_count,
                 playground_success=True,
+                playground_run_id=run_id,
             ),
         )
         return VerticesOrderResponse(ids=graph.first_layer, run_id=graph.run_id, vertices_to_run=vertices_to_run)
@@ -118,6 +121,7 @@ async def retrieve_vertices_order(
                 playground_component_count=components_count,
                 playground_success=False,
                 playground_error_message=str(exc),
+                playground_run_id=run_id,
             ),
         )
         if "stream or streaming set to True" in str(exc):
@@ -194,14 +198,17 @@ async def build_flow(
     )
 
 
-@router.get("/build/{job_id}/events")
+@router.get("/build/{job_id}/events", dependencies=[Depends(get_current_active_user)])
 async def get_build_events(
     job_id: str,
     queue_service: Annotated[JobQueueService, Depends(get_queue_service)],
     *,
     event_delivery: EventDeliveryType = EventDeliveryType.STREAMING,
 ):
-    """Get events for a specific build job."""
+    """Get events for a specific build job.
+
+    Requires authentication to prevent unauthorized access to build events.
+    """
     return await get_flow_events_response(
         job_id=job_id,
         queue_service=queue_service,
@@ -209,12 +216,19 @@ async def get_build_events(
     )
 
 
-@router.post("/build/{job_id}/cancel", response_model=CancelFlowResponse)
+@router.post(
+    "/build/{job_id}/cancel",
+    response_model=CancelFlowResponse,
+    dependencies=[Depends(get_current_active_user)],
+)
 async def cancel_build(
     job_id: str,
     queue_service: Annotated[JobQueueService, Depends(get_queue_service)],
 ):
-    """Cancel a specific build job."""
+    """Cancel a specific build job.
+
+    Requires authentication to prevent unauthorized build cancellation.
+    """
     try:
         # Cancel the flow build and check if it was successful
         cancellation_success = await cancel_flow_build(job_id=job_id, queue_service=queue_service)
@@ -275,6 +289,7 @@ async def build_vertex(
     top_level_vertices = []
     start_time = time.perf_counter()
     error_message = None
+    run_id = None
     try:
         graph: Graph = await chat_service.get_cache(flow_id_str)
     except KeyError as exc:
@@ -285,14 +300,19 @@ async def build_vertex(
         if isinstance(cache, CacheMiss):
             # If there's no cache
             await logger.awarning(f"No cache found for {flow_id_str}. Building graph starting at {vertex_id}")
-            graph = await build_graph_from_db(
-                flow_id=flow_id,
-                session=await anext(get_session()),
-                chat_service=chat_service,
-            )
+
+            async with session_scope() as session:
+                graph = await build_graph_from_db(
+                    flow_id=flow_id,
+                    session=session,
+                    chat_service=chat_service,
+                )
+            run_id = str(uuid.uuid4())
+            graph.set_run_id(run_id)
         else:
             graph = cache.get("result")
             await graph.initialize_run()
+            run_id = graph.run_id
         vertex = graph.get_vertex(vertex_id)
 
         try:
@@ -347,6 +367,14 @@ async def build_vertex(
             )
 
         timedelta = time.perf_counter() - start_time
+
+        # Use client_request_time if available for accurate end-to-end duration
+        if inputs and inputs.client_request_time:
+            # Convert client timestamp (ms) to seconds and calculate elapsed time
+            client_start_seconds = inputs.client_request_time / 1000
+            current_time_seconds = time.time()
+            timedelta = current_time_seconds - client_start_seconds
+
         duration = format_elapsed_time(timedelta)
         result_data_response.duration = duration
         result_data_response.timedelta = timedelta
@@ -380,9 +408,11 @@ async def build_vertex(
             telemetry_service.log_package_component,
             ComponentPayload(
                 component_name=vertex_id.split("-")[0],
+                component_id=vertex_id,
                 component_seconds=int(time.perf_counter() - start_time),
                 component_success=valid,
                 component_error_message=error_message,
+                component_run_id=run_id,
             ),
         )
     except Exception as exc:
@@ -390,9 +420,11 @@ async def build_vertex(
             telemetry_service.log_package_component,
             ComponentPayload(
                 component_name=vertex_id.split("-")[0],
+                component_id=vertex_id,
                 component_seconds=int(time.perf_counter() - start_time),
                 component_success=False,
                 component_error_message=str(exc),
+                component_run_id=run_id if "run_id" in locals() else None,
             ),
         )
         await logger.aexception("Error building Component")
@@ -488,6 +520,7 @@ async def _stream_vertex(flow_id: str, vertex_id: str, chat_service: ChatService
     "/build/{flow_id}/{vertex_id}/stream",
     response_class=StreamingResponse,
     deprecated=True,
+    dependencies=[Depends(get_current_active_user)],
 )
 async def build_vertex_stream(
     flow_id: uuid.UUID,

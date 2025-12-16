@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import ast
-import os
 from typing import TYPE_CHECKING, Any
 
 import pandas as pd
@@ -129,6 +128,8 @@ class ParameterHandler:
 
     def should_skip_field(self, field_name: str, field: dict, params: dict[str, Any]) -> bool:
         """Determine if field should be skipped."""
+        if field.get("override_skip"):
+            return False
         return (
             field.get("type") == "other"
             or field_name in params
@@ -137,7 +138,10 @@ class ParameterHandler:
         )
 
     def process_file_field(self, field_name: str, field: dict, params: dict[str, Any]) -> dict[str, Any]:
-        """Process file type fields."""
+        """Process file type fields.
+
+        Converts logical paths (flow_id/filename) to component-ready paths.
+        """
         if file_path := field.get("file_path"):
             try:
                 full_path: str | list[str] = ""
@@ -146,12 +150,11 @@ class ParameterHandler:
                     if isinstance(file_path, str):
                         file_path = [file_path]
                     for p in file_path:
-                        flow_id, file_name = os.path.split(p)
-                        path = self.storage_service.build_full_path(flow_id, file_name)
-                        full_path.append(path)
+                        resolved = self.storage_service.resolve_component_path(p)
+                        full_path.append(resolved)
                 else:
-                    flow_id, file_name = os.path.split(file_path)
-                    full_path = self.storage_service.build_full_path(flow_id, file_name)
+                    full_path = self.storage_service.resolve_component_path(file_path)
+
             except ValueError as e:
                 if "too many values to unpack" in str(e):
                     full_path = file_path
@@ -161,7 +164,7 @@ class ParameterHandler:
         elif field.get("required"):
             field_display_name = field.get("display_name")
             logger.warning(
-                "File path not found for {} in component {}. Setting to None.",
+                "File path not found for %s in component %s. Setting to None.",
                 field_display_name,
                 self.vertex.display_name,
             )
@@ -255,7 +258,7 @@ class ParameterHandler:
             else:
                 params[field_name] = ast.literal_eval(val) if val else None
         except Exception:  # noqa: BLE001
-            logger.debug("Error evaluating code for {}", field_name)
+            logger.debug("Error evaluating code for %s", field_name)
             params[field_name] = val
         return params
 

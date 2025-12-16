@@ -49,8 +49,6 @@ on:
         type: boolean
         default: true
 
-
-
 jobs:
   echo-inputs:
     name: Echo Workflow Inputs
@@ -73,9 +71,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
-          fetch-depth: 0 # Fetch all history - required for tags (?) 
+          fetch-depth: 0 # Fetch all history - required for tags (?)
       - name: Validate that input is a tag, not a branch
         run: |
           # Check if the input exists as a tag
@@ -129,7 +127,6 @@ jobs:
       runs-on: ubuntu-latest
     secrets: inherit
 
-
   build-base:
     name: Build Langflow Base
     needs: [ci]
@@ -140,7 +137,7 @@ jobs:
       skipped: ${{ steps.check-version.outputs.skipped }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.release_tag }}
       - name: Setup Environment
@@ -210,7 +207,7 @@ jobs:
       version: ${{ steps.check-version.outputs.version }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.release_tag }}
       - name: Setup Environment
@@ -230,7 +227,8 @@ jobs:
       - name: Check if pre-release
         if: inputs.pre_release
         run: |
-          version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//')
+          version="${{ inputs.release_tag }}"
+          echo "$version"
           if [[ "${version}" =~ ^([0-9]+\.)?([0-9]+\.)?[0-9]+((a|b|rc|dev|post)([0-9]+))$ ]]; then
             echo "Pre-release version detected. Continuing with the release."
           else
@@ -294,7 +292,6 @@ jobs:
       main-artifact-name: "dist-main"
       lfx-artifact-name: "${{ inputs.release_lfx && 'dist-lfx' || '' }}"
 
-
   publish-base:
     name: Publish Langflow Base to PyPI
     if: ${{ inputs.release_package_base }}
@@ -350,7 +347,7 @@ jobs:
       version: ${{ steps.check-version.outputs.version }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.release_tag }}
       - name: Setup Environment
@@ -462,6 +459,30 @@ jobs:
       push_to_registry: ${{ !inputs.dry_run }}
     secrets: inherit
 
+  call_docker_build_main_backend:
+    name: Call Docker Build Workflow for Langflow Backend
+    if: ${{ inputs.build_docker_main && !inputs.dry_run }}
+    needs: [call_docker_build_main]
+    uses: ./.github/workflows/docker-build-v2.yml
+    with:
+      ref: ${{ inputs.release_tag }}
+      release_type: main-backend
+      pre_release: ${{ inputs.pre_release }}
+      push_to_registry: ${{ !inputs.dry_run }}
+    secrets: inherit
+
+  call_docker_build_main_frontend:
+    name: Call Docker Build Workflow for Langflow Frontend
+    if: ${{ inputs.build_docker_main && !inputs.dry_run }}
+    needs: [call_docker_build_main]
+    uses: ./.github/workflows/docker-build-v2.yml
+    with:
+      ref: ${{ inputs.release_tag }}
+      release_type: main-frontend
+      pre_release: ${{ inputs.pre_release }}
+      push_to_registry: ${{ !inputs.dry_run }}
+    secrets: inherit
+
   call_docker_build_main_ep:
     name: Call Docker Build Workflow for Langflow with Entrypoint
     if: ${{ inputs.build_docker_main }}
@@ -485,8 +506,6 @@ jobs:
       pre_release: ${{ inputs.pre_release }}
       push_to_registry: ${{ !inputs.dry_run }}
     secrets: inherit
-
-
 
   create_release:
     name: Create Release

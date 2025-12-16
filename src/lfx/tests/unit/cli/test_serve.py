@@ -8,7 +8,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
-
 from lfx.cli.common import (
     flow_id_from_path,
     get_api_key,
@@ -57,7 +56,7 @@ def test_get_api_key_missing():
 
 def test_get_api_key_present():
     """Test API key retrieval when set."""
-    with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key-123"}):
+    with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key-123"}):  # pragma: allowlist secret
         assert get_api_key() == "test-key-123"
 
 
@@ -100,7 +99,7 @@ def test_flow_meta():
 
 def test_create_multi_serve_app_single_flow(mock_graph, test_flow_meta):
     """Test creating app for single flow."""
-    with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}):
+    with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}):  # pragma: allowlist secret
         app = create_multi_serve_app(
             root_dir=Path("/tmp"),
             graphs={"test-flow-id": mock_graph},
@@ -137,7 +136,7 @@ def test_create_multi_serve_app_multiple_flows(mock_graph, test_flow_meta):
         description="Second flow",
     )
 
-    with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}):
+    with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}):  # pragma: allowlist secret
         app = create_multi_serve_app(
             root_dir=Path("/tmp"),
             graphs={"test-flow-id": mock_graph, "flow-2": mock_graph},
@@ -188,13 +187,12 @@ def test_serve_command_json_file():
         # Mock the necessary dependencies
         with (
             patch("lfx.cli.commands.load_graph_from_path") as mock_load,
-            patch("lfx.cli.commands.uvicorn.run") as mock_uvicorn,
-            patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),
+            patch("lfx.cli.commands.uvicorn.Server.serve", new=AsyncMock(return_value=None)) as mock_uvicorn,
+            patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
         ):
             import typer
-            from typer.testing import CliRunner
-
             from lfx.cli.commands import serve_command
+            from typer.testing import CliRunner
 
             # Create a mock graph
             mock_graph = MagicMock()
@@ -247,13 +245,12 @@ def test_serve_command_inline_json():
 
     with (
         patch("lfx.cli.commands.load_graph_from_path") as mock_load,
-        patch("lfx.cli.commands.uvicorn.run") as mock_uvicorn,
-        patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),
+        patch("lfx.cli.commands.uvicorn.Server.serve", new=AsyncMock(return_value=None)) as mock_uvicorn,
+        patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
     ):
         import typer
-        from typer.testing import CliRunner
-
         from lfx.cli.commands import serve_command
+        from typer.testing import CliRunner
 
         # Create a mock graph
         mock_graph = MagicMock()
