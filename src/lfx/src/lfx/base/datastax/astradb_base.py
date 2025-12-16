@@ -214,11 +214,11 @@ class AstraDBBaseComponent(Component):
                         result[provider_name] = {"id": provider_id, "regions": []}
 
                     result[provider_name]["regions"].append(region)
-
-            return result
         except Exception as e:  # noqa: BLE001
             logger.debug("Error fetching cloud providers: %s", e)
             return {}
+        else:
+            return result
 
     @classmethod
     def get_vectorize_providers(cls, token: str, environment: str | None = None, api_endpoint: str | None = None):
@@ -372,11 +372,11 @@ class AstraDBBaseComponent(Component):
                     }
                 except Exception as e:  # noqa: BLE001
                     logger.debug("Failed to get metadata for database %s: %s", db.name, e)
-
-            return db_info_dict
         except Exception as e:  # noqa: BLE001
             logger.debug("Error fetching database list: %s", e)
             return {}
+        else:
+            return db_info_dict
 
     def get_database_list(self):
         return self.get_database_list_static(
