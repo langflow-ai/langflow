@@ -575,9 +575,7 @@ class FileComponent(BaseFileComponent):
         # Get file extension from S3 key
         file_extension = Path(self.s3_file_key).suffix or ""
 
-        with tempfile.NamedTemporaryFile(
-            mode="wb", suffix=file_extension, delete=False
-        ) as temp_file:
+        with tempfile.NamedTemporaryFile(mode="wb", suffix=file_extension, delete=False) as temp_file:
             temp_file_path = temp_file.name
             try:
                 s3_client.download_fileobj(self.bucket_name, self.s3_file_key, temp_file)

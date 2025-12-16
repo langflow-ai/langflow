@@ -574,17 +574,18 @@ class TestFileComponentToolMode:
     @patch("lfx.base.data.cloud_storage_utils.validate_aws_credentials")
     def test_s3_temp_file_cleanup_on_download_failure(self, mock_validate, mock_create_client):
         """Test that temp file is cleaned up when S3 download fails."""
-        import os
         from pathlib import Path
 
         component = FileComponent()
-        component.set_attributes({
-            "storage_location": [{"name": "AWS"}],
-            "aws_access_key_id": "test_key",
-            "aws_secret_access_key": "test_secret",
-            "bucket_name": "test-bucket",
-            "s3_file_key": "test-file.txt",
-        })
+        component.set_attributes(
+            {
+                "storage_location": [{"name": "AWS"}],
+                "aws_access_key_id": "test_key",
+                "aws_secret_access_key": "test_secret",
+                "bucket_name": "test-bucket",
+                "s3_file_key": "test-file.txt",
+            }
+        )
 
         # Mock S3 client to raise an exception during download
         mock_s3_client = MagicMock()
@@ -606,15 +607,16 @@ class TestFileComponentToolMode:
     @patch("lfx.base.data.cloud_storage_utils.create_google_drive_service")
     def test_google_drive_temp_file_cleanup_on_download_failure(self, mock_create_service):
         """Test that temp file is cleaned up when Google Drive download fails."""
-        import os
         from pathlib import Path
 
         component = FileComponent()
-        component.set_attributes({
-            "storage_location": [{"name": "Google Drive"}],
-            "service_account_key": '{"type": "service_account", "project_id": "test"}',
-            "file_id": "test-file-id",
-        })
+        component.set_attributes(
+            {
+                "storage_location": [{"name": "Google Drive"}],
+                "service_account_key": '{"type": "service_account", "project_id": "test"}',
+                "file_id": "test-file-id",
+            }
+        )
 
         # Mock Google Drive service
         mock_drive_service = MagicMock()
