@@ -5,6 +5,7 @@ import json
 import re
 import zipfile
 from datetime import datetime, timezone
+from pathlib import Path as StdlibPath
 from typing import Annotated
 from uuid import UUID
 
@@ -52,47 +53,54 @@ def _get_safe_flow_path(fs_path: str, user_id: UUID, storage_service: StorageSer
         raise HTTPException(status_code=400, detail="fs_path cannot be empty")
     
     # Reject directory traversal and null bytes
-    if ".." in fs_path or "\x00" in fs_path:
-        raise HTTPException(status_code=400, detail="Invalid fs_path: directory traversal and null bytes are not allowed")
+    if ".." in fs_path:
+        raise HTTPException(status_code=400, detail="Invalid fs_path: directory traversal (\"..\") is not allowed")
+    if "\x00" in fs_path:
+        raise HTTPException(status_code=400, detail="Invalid fs_path: null bytes (\"\x00\") are not allowed")
     
-    # Build the safe base directory: data_dir/flows/user_id
+    # Build the safe base directory path
     base_dir = storage_service.data_dir / "flows" / str(user_id)
+    base_dir_str = str(base_dir)
     
-    # Handle absolute vs relative paths
+    # Normalize base directory path (resolve to absolute, handle symlinks)
+    try:
+        base_dir_stdlib = StdlibPath(base_dir_str).resolve()
+        base_dir_resolved = str(base_dir_stdlib)
+    except (OSError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=f"Invalid base directory: {e}") from e
+    
     if fs_path.startswith("/") or (len(fs_path) > 1 and fs_path[1] == ":"):
-        # Absolute path - verify it's within the user's flows directory
+        # Absolute path - resolve and validate it's within base directory
         try:
-            requested_path = Path(fs_path)
-            resolved_requested = requested_path.resolve()
-            resolved_base = base_dir.resolve()
-            
-            # Check if the absolute path is within the base directory
+            requested_path = StdlibPath(fs_path).resolve()
+            requested_resolved = str(requested_path)
             try:
-                # Try to get relative path - if it fails, it's outside the base
-                resolved_requested.relative_to(resolved_base)
-                safe_path = resolved_requested
+                # Ensure it's a subpath of the base directory
+                requested_path.relative_to(base_dir_stdlib)
             except ValueError:
-                # Path is outside the allowed directory
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Absolute path must be within your flows directory: {resolved_base}",
+                    detail=f"Absolute path must be within your flows directory: {base_dir_resolved}",
                 ) from None
+            final_resolved = requested_resolved
         except (OSError, ValueError) as e:
-            raise HTTPException(status_code=400, detail=f"Invalid absolute path: {e}") from e
+            raise HTTPException(status_code=400, detail=f"Invalid file save path: {e}. Verify that the path is within your flows directory: {base_dir_resolved}") from e
     else:
-        # Relative path - build from base directory
-        safe_path = base_dir / fs_path.lstrip("/")
+        relative_part = fs_path.lstrip("/").replace("\\", "/")
+        safe_path_stdlib = base_dir_stdlib / relative_part if relative_part else base_dir_stdlib
+        try:
+            final_resolved = str(safe_path_stdlib.resolve())
+
+            # Ensure resolved path stays within base (prevent symlink attacks)
+            if not final_resolved.startswith(base_dir_resolved):
+                raise HTTPException(
+                    status_code=400,
+                    detail="Invalid path: resolves outside allowed directory",
+                )
+        except (OSError, ValueError) as e:
+            raise HTTPException(status_code=400, detail=f"Invalid path: {e}") from e
     
-    # Final check: ensure resolved path stays within base (prevent symlink attacks)
-    try:
-        resolved_path = safe_path.resolve()
-        resolved_base = base_dir.resolve()
-        if not str(resolved_path).startswith(str(resolved_base)):
-            raise HTTPException(status_code=400, detail="Invalid path: resolves outside allowed directory")
-    except (OSError, ValueError) as e:
-        raise HTTPException(status_code=400, detail=f"Invalid path: {e}") from e
-    
-    return safe_path
+    return Path(final_resolved)
 
 
 async def _verify_fs_path(path: str | None, user_id: UUID, storage_service: StorageService) -> None:
