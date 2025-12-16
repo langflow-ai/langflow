@@ -8,7 +8,7 @@ from langflow.services.database.models import Flow
 
 
 async def test_create_flow(client: AsyncClient, logged_in_headers):
-    flow_file = Path(tempfile.tempdir) / f"{uuid.uuid4()}.json"
+    flow_file = Path(tempfile.gettempdir()) / f"{uuid.uuid4()}.json"
     try:
         basic_case = {
             "name": "string",
@@ -122,7 +122,7 @@ async def test_update_flow(client: AsyncClient, logged_in_headers):
     response_ = await client.post("api/v1/flows/", json=basic_case, headers=logged_in_headers)
     id_ = response_.json()["id"]
 
-    flow_file = Path(tempfile.tempdir) / f"{uuid.uuid4()!s}.json"
+    flow_file = Path(tempfile.gettempdir()) / f"{uuid.uuid4()!s}.json"
     basic_case["name"] = updated_name
     basic_case["fs_path"] = str(flow_file)
 
