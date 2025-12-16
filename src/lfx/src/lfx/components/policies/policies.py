@@ -1,23 +1,37 @@
 from os.path import join
+from typing import Any
 
-from langflow.inputs import DropdownInput, MultilineInput
-from toolguard import LitellmModel, ToolGuardsCodeGenerationResult, ToolGuardSpec
-from toolguard.buildtime import generate_guard_specs, generate_guards_from_specs
-from toolguard.data_types import MelleaSessionData
-
-from lfx.components.policies.wrapped_tool import wrap_tool
+from lfx.base.models import LCModelComponent
 from lfx.custom.custom_component.component import Component
+
+from lfx.base.models.unified_models import (
+    get_language_model_options,
+    get_llm,
+    update_model_options_in_build_config,
+)
+from lfx.field_typing import LanguageModel
+
 from lfx.field_typing import Tool
 from lfx.inputs.inputs import BoolInput, MessageTextInput
-from lfx.io import HandleInput, MessageTextInput, Output, SecretStrInput, TabInput
+from lfx.io import HandleInput, MessageTextInput, Output, SecretStrInput, TabInput, SliderInput
+from toolguard import LitellmModel, ToolGuardsCodeGenerationResult, ToolGuardSpec, load_toolguards
+from toolguard.buildtime import generate_guard_specs, generate_guards_from_specs
+from lfx.field_typing.range_spec import RangeSpec
 
-MODEL_PROVIDERS_LIST = ["azure", "Anthropic", "OpenAI"]
+from toolguard.data_types import MelleaSessionData
+from toolguard.runtime import LangchainToolInvoker
+
+from lfx.io import ModelInput
+
+from langflow.inputs import DropdownInput, MultilineInput
+
+MODEL_PROVIDERS_LIST = ["Anthropic", "OpenAI"]
 MODEL = "gpt-4o-2024-08-06"
 STEP1 = "Step_1"
 STEP2 = "Step_2"
 
 
-class PoliciesComponent(Component):
+class PoliciesComponent(LCModelComponent):
     display_name = "Policies"
     description = "Component for building tool protection code from textual business policies and instructions."
     documentation: str = "https://github.com/IBM/toolguard"
@@ -27,60 +41,68 @@ class PoliciesComponent(Component):
 
     inputs = [
         BoolInput(
-            name="enabled",
-            display_name="Enable ToolGuards",
-            info="If true, invokes ToolGuard code prior to tool execution, ensuring that tool-related policies are enforced.",
-            value=True,
+            name="bypass_policies",
+            display_name="Bypass",
+            info="If false, invokes ToolGuard code prior to tool execution, ensuring that tool-related policies are enforced.",
+            value=False,
         ),
         TabInput(
             name="build_mode",
-            display_name="ToolGuard Build Mode",
-            options=["build", "use cache"],
+            display_name="Policies Build Mode",
+            options=["Build", "Use Cache"],
             info="Indicates whether to invoke buildtime (build), or use a cached code (use cache)",
-            value="build",
+            value="Build",
             real_time_refresh=True,
             tool_mode=True,
         ),
-        MultilineInput(
+        MessageTextInput(
             name="policies",
-            display_name="Business Policies",
-            info="Company business policies: concise, well-defined, self-contained policies, one in a line.",
-            value="<example: division by zero is prohibited>",
+            display_name="Policies",
+            info="Enter one or more clear, well-defined and self-contained business policies, by clicking the '+' button.",
+            is_list=True,
+            tool_mode=True,
+            placeholder="Add business policy...",
+            list_add_label="Add Policy",
+            input_types=[],
         ),
         MessageTextInput(
             name="guard_code_path",
             display_name="ToolGuards Generated Code Path",
             info="Automatically generated ToolGuards code",
             # show_if={"enable_tool_guard": True},
+            value='',  # todo: decide on the path
             advanced=True,
         ),
-        MessageTextInput(
+        ModelInput(
             name="model",
-            display_name="Model",
-            info="",
-            # show_if={"enable_tool_guard": True},
-            advanced=True,
-            value="gpt-4o-2024-08-06",
-        ),
-        DropdownInput(
-            name="model_provider",
-            display_name="Model Provider",
-            info="The provider of the language model that will be used to generate ToolGuards code.",
-            options=[*MODEL_PROVIDERS_LIST],
-            value=MODEL_PROVIDERS_LIST[0],
-            # real_time_refresh=True,
-            # refresh_button=False,
+            display_name="Language Model",
+            info="Select your model provider",
+            real_time_refresh=True,
             required=True,
-            input_types=[],
         ),
         SecretStrInput(
             name="api_key",
             display_name="API Key",
             info="Model Provider API key",
-            placeholder="model provider API key",
-            # required=True,
-            # real_time_refresh=True,
-            advanced=False,
+            required=False,
+            show=True,
+            real_time_refresh=True,
+            advanced=True,
+        ),
+        BoolInput(
+            name="stream",
+            display_name="Stream",
+            info="Whether to stream the response",
+            value=False,
+            advanced=True,
+        ),
+        SliderInput(
+            name="temperature",
+            display_name="Temperature",
+            value=0.1,
+            info="Controls randomness in responses",
+            range_spec=RangeSpec(min=0, max=1, step=0.01),
+            advanced=True,
         ),
         HandleInput(
             name="tools",
@@ -95,8 +117,30 @@ class PoliciesComponent(Component):
         Output(display_name="Guarded Tools", type_=Tool, name="guard_code", method="build_guards"),
     ]
 
+    def build_model(self) -> LanguageModel:
+        return get_llm(
+            model=self.model,
+            user_id=self.user_id,
+            api_key=self.api_key,
+            temperature=self.temperature,
+            stream=self.stream,
+        )
+
+    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
+        """Dynamically update build config with user-filtered model options."""
+        return update_model_options_in_build_config(
+            component=self,
+            build_config=build_config,
+            cache_key_prefix="language_model_options",
+            get_options_func=get_language_model_options,
+            field_name=field_name,
+            field_value=field_value,
+        )
+
     async def _build_guard_specs(self) -> list[ToolGuardSpec]:
-        llm = LitellmModel(self.model, self.llm_provider)
+        model = "gpt-4o-2024-08-06"  # FIXME
+        llm_provider = "azure"  # FIXME
+        llm = LitellmModel(model, llm_provider)
 
         toolguard_step1_dir = join(self.guard_code_path, STEP1)
         specs = await generate_guard_specs(
@@ -119,25 +163,73 @@ class PoliciesComponent(Component):
 
         self.log("🔒️ToolGuard: starting building toolguards...", name="info")
         self.log(f"🔒️ToolGuard: policies document: {self.policies}", name="info")
-        self.log(f"🔒️ToolGuard: model provider: {self.model_provider}, using model: {self.model}", name="info")
+        self.log(f"🔒️ToolGuard: model provider: {self.model_provider}, using model: <model name>", name="info")
         self.log(f"🔒️ToolGuard: input tools: {self.tools}", name="info")
 
         self.log("🔒️ToolGuard: please review the generated guard code at ...", name="info")
 
-        if self.enabled:
-            build_mode = getattr(self, "build_mode", "build")
-            if build_mode == "build":  # run buildtime steps
+        if not self.bypass_policies:
+            build_mode = getattr(self, "build_mode", "Build")
+            if build_mode == "Build":  # run buildtime steps
                 self.log("🔒️ToolGuard: execution (build) mode", name="info")
                 # specs  = await self._build_guard_specs()
                 # guards = await self._build_guards(specs)
+            else:  # build_mode == "use cache"
+                self.log("🔒️ToolGuard: run mode (cached code from path)", name="info")
+                # make sure self.guard_code_path contains the path to pre-built guards
+                # assert self.guard_code_path, "🔒️ToolGuard: guard path should be a valid code path!"
 
-            self.log("🔒️ToolGuard: run mode (cached code from path)", name="info")
-            # make sure self.guard_code_path contains the path to pre-built guards
-            self.guard_code_path = "/Users/davidboaz/Documents/GitHub/ToolGuardAgent/output/step2_claude4sonnet"
-            # assert self.guard_code_path, "🔒️ToolGuard: guard path should be a valid code path!"
-            # guarded_tools = [WrappedTool(tool, self.tools, self.guard_code_path) for tool in self.tools]
-            guarded_tools = [wrap_tool(tool, self.tools, self.guard_code_path) for tool in self.tools]
-            print(f"tool0={type(guarded_tools[0])}")
+            guards = None
+            guarded_tools = [WrappedTool(tool, self.tools, self.guard_code_path) for tool in self.tools]
             return guarded_tools  # type: ignore
 
         return self.tools
+
+
+from langchain_core.callbacks import CallbackManagerForToolRun
+from langchain_core.runnables import RunnableConfig
+
+
+class WrappedTool(Tool):
+    def __init__(self, tool: Tool, all_tools: list[Tool], tg_dir: str):
+        super().__init__(name=tool.name, func=tool.func, description=tool.description)
+        self._wrapped = tool
+        self._tool_invoker = LangchainToolInvoker(all_tools)
+        self._tg_dir = tg_dir
+
+    @property
+    def args(self) -> dict:
+        return self._wrapped.args
+
+    def _run(
+        self,
+        args: Any,
+        config: RunnableConfig,
+        run_manager: CallbackManagerForToolRun | None = None,
+        **kwargs: Any,
+    ) -> Any:
+        with load_toolguards(self._tg_dir) as toolguard:
+            from rt_toolguard.data_types import PolicyViolationException  # type: ignore
+
+            try:
+                toolguard.check_toolcall(self.name, args=args, delegate=self._tool_invoker)
+                return self._wrapped._run(args=args, config=config, run_manager=run_manager, **kwargs)
+            except PolicyViolationException as ex:
+                return f"Error: {ex.message}"
+
+    async def _arun(
+        self,
+        args: Any,
+        config: RunnableConfig,
+        run_manager: CallbackManagerForToolRun | None = None,
+        **kwargs: Any,
+    ) -> Any:
+        print(f"args={args}")
+        with load_toolguards(self._tg_dir) as toolguard:
+            from rt_toolguard.data_types import PolicyViolationException  # type: ignore
+
+            try:
+                toolguard.check_toolcall(self.name, *args, delegate=self._tool_invoker)
+                return await self._wrapped._arun(*args, config=config, run_manager=run_manager, **kwargs)
+            except PolicyViolationException as ex:
+                return f"Error: {ex.message}"
