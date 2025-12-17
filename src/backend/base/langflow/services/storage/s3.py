@@ -1,4 +1,8 @@
-"""S3-based storage service implementation using async boto3."""
+"""S3-based storage service implementation using async boto3.
+
+This service handles file storage operations with AWS S3, including
+file upload, download, deletion, and listing operations.
+"""
 
 from __future__ import annotations
 
