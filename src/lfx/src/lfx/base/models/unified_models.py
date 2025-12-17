@@ -200,7 +200,7 @@ def get_model_provider_metadata():
         if live_metadata:
             # Override static with live data for matching providers
             merged_metadata.update(live_metadata)
-    except Exception as e:
+    except (OSError, ValueError) as e:
         logger.debug(f"Failed to get live provider metadata: {e}")
 
     return merged_metadata
@@ -239,7 +239,7 @@ def get_live_models_as_groups() -> list[list[dict]]:
             provider_groups[provider].append(model)
 
         return list(provider_groups.values())
-    except Exception as e:
+    except (OSError, ValueError) as e:
         logger.debug(f"Failed to fetch live models: {e}")
         return []
 
@@ -307,8 +307,6 @@ def refresh_live_model_data() -> None:
 
     Note: This function modifies the global MODELS_DETAILED list in place.
     """
-    global MODELS_DETAILED
-
     # Clear the API cache
     clear_models_dev_cache()
 
