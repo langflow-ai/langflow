@@ -565,13 +565,13 @@ class SaveToFileComponent(Component):
             aws_access_key_id = aws_access_key_id.get_secret_value()
         if not aws_access_key_id:
             aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
-        
+
         aws_secret_access_key = getattr(self, "aws_secret_access_key", None)
         if aws_secret_access_key and hasattr(aws_secret_access_key, "get_secret_value"):
             aws_secret_access_key = aws_secret_access_key.get_secret_value()
         if not aws_secret_access_key:
             aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
-        
+
         bucket_name = getattr(self, "bucket_name", None)
         if not bucket_name:
             # Try to get from storage service settings
