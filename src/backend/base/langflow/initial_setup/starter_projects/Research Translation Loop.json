@@ -25,9 +25,9 @@
         "id": "reactflow__edge-ChatInput-Nd5TZ{œdataTypeœ:œChatInputœ,œidœ:œChatInput-Nd5TZœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ArXivComponent-noK1s{œfieldNameœ:œsearch_queryœ,œidœ:œArXivComponent-noK1sœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-Nd5TZ",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-Nd5TZœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-Nd5TZœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ArXivComponent-noK1s",
-        "targetHandle": "{œfieldNameœ:œsearch_queryœ,œidœ:œArXivComponent-noK1sœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œArXivComponent-noK1sœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -53,9 +53,9 @@
         "id": "reactflow__edge-ArXivComponent-noK1s{œdataTypeœ:œArXivComponentœ,œidœ:œArXivComponent-noK1sœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-LoopComponent-Ya395{œfieldNameœ:œdataœ,œidœ:œLoopComponent-Ya395œ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "ArXivComponent-noK1s",
-        "sourceHandle": "{œdataTypeœ:œArXivComponentœ,œidœ:œArXivComponent-noK1sœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œArXivComponentœ, œidœ: œArXivComponent-noK1sœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "LoopComponent-Ya395",
-        "targetHandle": "{œfieldNameœ:œdataœ,œidœ:œLoopComponent-Ya395œ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œLoopComponent-Ya395œ, œinputTypesœ: [œDataFrameœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -82,9 +82,9 @@
         "id": "reactflow__edge-LoopComponent-Ya395{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-Ya395œ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}-ParserComponent-U0KzU{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-U0KzUœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "LoopComponent-Ya395",
-        "sourceHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-Ya395œ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}",
+        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-Ya395œ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ]}",
         "target": "ParserComponent-U0KzU",
-        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-U0KzUœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-U0KzUœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -112,9 +112,9 @@
         "id": "reactflow__edge-LoopComponent-Ya395{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-Ya395œ,œnameœ:œdoneœ,œoutput_typesœ:[œDataFrameœ]}-ChatOutput-c99ub{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-c99ubœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "LoopComponent-Ya395",
-        "sourceHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-Ya395œ,œnameœ:œdoneœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-Ya395œ, œnameœ: œdoneœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "ChatOutput-c99ub",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-c99ubœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-c99ubœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "className": "",
@@ -138,9 +138,9 @@
         },
         "id": "xy-edge__ParserComponent-U0KzU{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-U0KzUœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-5Pg0Z{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-5Pg0Zœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "source": "ParserComponent-U0KzU",
-        "sourceHandle": "{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-U0KzUœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-U0KzUœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "LanguageModelComponent-5Pg0Z",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-5Pg0Zœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-5Pg0Zœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
@@ -165,9 +165,9 @@
         },
         "id": "xy-edge__LanguageModelComponent-5Pg0Z{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-5Pg0Zœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-LoopComponent-Ya395{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-Ya395œ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ,œMessageœ]}",
         "source": "LanguageModelComponent-5Pg0Z",
-        "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-5Pg0Zœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-5Pg0Zœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "LoopComponent-Ya395",
-        "targetHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-Ya395œ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ,œMessageœ]}"
+        "targetHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-Ya395œ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ, œMessageœ]}"
       }
     ],
     "nodes": [

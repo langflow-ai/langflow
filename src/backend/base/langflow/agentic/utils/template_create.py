@@ -15,6 +15,7 @@ from langflow.api.v1.flows import _new_flow, _save_flow_to_fs
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.database.models.flow.model import FlowCreate
 from langflow.services.database.models.folder.model import Folder
+from langflow.services.deps import get_storage_service
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -73,10 +74,11 @@ async def create_flow_from_template_and_get_link(
     )
 
     # 4) Use the same creation path as API
-    db_flow = await _new_flow(session=session, flow=new_flow, user_id=user_id)
+    storage_service = get_storage_service()
+    db_flow = await _new_flow(session=session, flow=new_flow, user_id=user_id, storage_service=storage_service)
     await session.commit()
     await session.refresh(db_flow)
-    await _save_flow_to_fs(db_flow)
+    await _save_flow_to_fs(db_flow, user_id, storage_service)
 
     # 5) Build relative UI link
     link = f"/flow/{db_flow.id}/folder/{folder_id}"
