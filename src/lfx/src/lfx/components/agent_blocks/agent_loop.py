@@ -21,6 +21,7 @@ from lfx.io import (
     BoolInput,
     HandleInput,
     IntInput,
+    MessageTextInput,
     ModelInput,
     MultilineInput,
     Output,
@@ -28,6 +29,7 @@ from lfx.io import (
     SliderInput,
 )
 from lfx.schema.content_block import ContentBlock
+from lfx.schema.dataframe import DataFrame
 from lfx.schema.dotdict import dotdict  # noqa: TC001
 from lfx.schema.message import Message
 from lfx.template.field.base import UNDEFINED
@@ -100,11 +102,26 @@ class AgentLoopComponent(Component):
             required=True,
         ),
         HandleInput(
-            name="initial_state",
+            name="message_history",
             display_name="Message History",
-            info="Optional conversation history (DataFrame) to provide context.",
+            info="Conversation history (DataFrame). Auto-fetches from session memory if not provided.",
             input_types=["DataFrame"],
             required=False,
+            advanced=True,
+        ),
+        IntInput(
+            name="n_messages",
+            display_name="Number of Messages",
+            value=100,
+            info="Number of messages to retrieve from session memory (when auto-fetching).",
+            advanced=True,
+        ),
+        MessageTextInput(
+            name="context_id",
+            display_name="Context ID",
+            info="Optional context ID for memory isolation within the same session.",
+            value="",
+            advanced=True,
         ),
         IntInput(
             name="max_iterations",
@@ -158,6 +175,45 @@ class AgentLoopComponent(Component):
             temperature=self.temperature,
             stream=True,
         )
+
+    async def get_memory_data(self) -> list[Message]:
+        """Retrieve chat history from Langflow's built-in session memory.
+
+        Returns:
+            List of Message objects representing chat history.
+        """
+        from lfx.memory import aget_messages
+
+        session_id = self.graph.session_id if hasattr(self, "graph") and self.graph else None
+        context_id = self.context_id if self.context_id else None
+
+        messages = await aget_messages(
+            session_id=session_id,
+            context_id=context_id,
+            limit=self.n_messages,
+            order="ASC",
+        )
+
+        # Filter out the current input message to avoid duplication
+        if messages and self.input_value:
+            input_id = getattr(self.input_value, "id", None)
+            messages = [m for m in messages if getattr(m, "id", None) != input_id]
+
+        return messages or []
+
+    def _messages_to_dataframe(self, messages: list[Message]) -> DataFrame | None:
+        """Convert a list of Messages to a DataFrame for the agent loop.
+
+        Args:
+            messages: List of Message objects
+
+        Returns:
+            DataFrame with message data, or None if no messages
+        """
+        if not messages:
+            return None
+
+        return DataFrame(messages)
 
     async def run_agent(self) -> Message:
         """Run the agent and return the final response.
@@ -214,8 +270,16 @@ class AgentLoopComponent(Component):
         }
         if self.input_value is not None:
             while_loop_config["input_value"] = self.input_value
-        if self.initial_state is not None:
-            while_loop_config["initial_state"] = self.initial_state
+
+        # Determine initial_state: explicit DataFrame takes precedence, otherwise fetch from session memory
+        if self.message_history is not None:
+            while_loop_config["initial_state"] = self.message_history
+        else:
+            # Fetch chat history from Langflow's session memory
+            memory_messages = await self.get_memory_data()
+            if memory_messages:
+                while_loop_config["initial_state"] = self._messages_to_dataframe(memory_messages)
+
         while_loop.set(**while_loop_config)
 
         # Configure AgentStep
