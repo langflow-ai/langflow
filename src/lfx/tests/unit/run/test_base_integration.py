@@ -7,7 +7,7 @@ reducing the need for extensive mocking while still maintaining test isolation.
 from pathlib import Path
 
 import pytest
-from lfx.run.base import run_flow
+from lfx.run.base import RunError, run_flow
 
 
 class TestRunFlowIntegrationMinimalMocking:
@@ -119,7 +119,7 @@ graph = Graph(chat_input, chat_output)
         # that will be converted to a temp file
         simple_json = '{"test": "data"}'  # This will fail at graph loading, but tests JSON processing
 
-        with pytest.raises(Exception):  # Will fail when trying to load the graph
+        with pytest.raises(RunError):  # Will fail when trying to load the graph
             await run_flow(flow_json=simple_json, verbose=False, check_variables=False)
 
     @pytest.mark.asyncio
@@ -136,7 +136,7 @@ graph = Graph(chat_input, chat_output)
         sys.stdin = StringIO(stdin_content)
 
         try:
-            with pytest.raises(Exception):  # Will fail at graph loading
+            with pytest.raises(RunError):  # Will fail at graph loading
                 await run_flow(stdin=True, verbose=False, check_variables=False)
         finally:
             sys.stdin = old_stdin
@@ -150,7 +150,7 @@ class TestRunFlowErrorHandlingIntegration:
         """Test error handling with non-existent script."""
         nonexistent = Path("/definitely/does/not/exist.py")
 
-        with pytest.raises(Exception):  # Should raise RunError
+        with pytest.raises(RunError):
             await run_flow(script_path=nonexistent)
 
     @pytest.mark.asyncio
@@ -159,7 +159,7 @@ class TestRunFlowErrorHandlingIntegration:
         invalid_file = tmp_path / "test.txt"
         invalid_file.write_text("not a script")
 
-        with pytest.raises(Exception):  # Should raise RunError
+        with pytest.raises(RunError):
             await run_flow(script_path=invalid_file)
 
 
