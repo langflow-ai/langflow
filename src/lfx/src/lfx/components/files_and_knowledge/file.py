@@ -130,6 +130,7 @@ class FileComponent(BaseFileComponent):
             info="AWS Access key ID.",
             show=False,
             advanced=False,
+            required=True,
         ),
         SecretStrInput(
             name="aws_secret_access_key",
@@ -137,6 +138,7 @@ class FileComponent(BaseFileComponent):
             info="AWS Secret Key.",
             show=False,
             advanced=False,
+            required=True,
         ),
         StrInput(
             name="bucket_name",
@@ -144,6 +146,7 @@ class FileComponent(BaseFileComponent):
             info="Enter the name of the S3 bucket.",
             show=False,
             advanced=False,
+            required=True,
         ),
         StrInput(
             name="aws_region",
@@ -158,6 +161,7 @@ class FileComponent(BaseFileComponent):
             info="The key (path) of the file in S3 bucket.",
             show=False,
             advanced=False,
+            required=True,
         ),
         # Google Drive specific inputs
         SecretStrInput(
@@ -166,14 +170,15 @@ class FileComponent(BaseFileComponent):
             info="Your Google Cloud Platform service account JSON key as a secret string (complete JSON content).",
             show=False,
             advanced=False,
+            required=True,
         ),
         StrInput(
             name="file_id",
             display_name="Google Drive File ID",
             info=("The Google Drive file ID to read. The file must be shared with the service account email."),
-            required=False,
             show=False,
             advanced=False,
+            required=True,
         ),
         BoolInput(
             name="advanced_mode",
