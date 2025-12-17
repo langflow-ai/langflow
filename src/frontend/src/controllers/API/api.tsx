@@ -9,6 +9,10 @@ import { IS_AUTO_LOGIN } from "@/constants/constants";
 import { baseURL } from "@/customization/constants";
 import { useCustomApiHeaders } from "@/customization/hooks/use-custom-api-headers";
 import { customGetAccessToken } from "@/customization/utils/custom-get-access-token";
+import {
+  getAxiosWithCredentials,
+  getFetchCredentials,
+} from "@/customization/utils/get-fetch-credentials";
 import useAuthStore from "@/stores/authStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { BuildStatus, type EventDeliveryType } from "../../constants/enums";
@@ -20,6 +24,7 @@ import { useLogout, useRefreshAccessToken } from "./queries/auth";
 // Create a new Axios instance
 const api: AxiosInstance = axios.create({
   baseURL: baseURL,
+  withCredentials: getAxiosWithCredentials(),
 });
 function ApiInterceptor() {
   const autoLogin = useAuthStore((state) => state.autoLogin);
@@ -298,13 +303,14 @@ async function performStreamingRequest({
     Connection: "close",
   };
 
-  const params = {
+  const params: RequestInit = {
     method: method,
     headers: headers,
     signal: buildController.signal,
+    credentials: getFetchCredentials(),
   };
   if (body) {
-    params["body"] = JSON.stringify(body);
+    params.body = JSON.stringify(body);
   }
   let current: string[] = [];
   const textDecoder = new TextDecoder();
