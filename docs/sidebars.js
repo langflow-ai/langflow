@@ -71,11 +71,6 @@ module.exports = {
           id: "Flows/concepts-flows-import",
           label: "Import and export flows"
         },
-        {
-          type: "doc",
-          id: "Flows/lfx",
-          label: "Run flows with Langflow Executor (LFX)"
-        },
       ],
     },
     {
