@@ -1,4 +1,4 @@
-import { memo, useState } from "react";
+import { memo, useCallback, useState } from "react";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import { EMPTY_INPUT_SEND_MESSAGE } from "@/constants/constants";
 import { useUpdateMessage } from "@/controllers/API/queries/messages";
@@ -17,6 +17,37 @@ export const UserMessage = memo(
     const setErrorData = useAlertStore((state) => state.setErrorData);
     const [editMessage, setEditMessage] = useState(false);
     const flow_id = useFlowsManagerStore((state) => state.currentFlowId);
+
+    const isPropertiesObject = (
+      value: unknown,
+    ): value is {
+      [key: string]: unknown;
+      icon?: unknown;
+      background_color?: unknown;
+      positive_feedback?: boolean | null;
+    } => typeof value === "object" && value !== null && !Array.isArray(value);
+
+    const properties = isPropertiesObject(chat.properties)
+      ? chat.properties
+      : undefined;
+
+    const icon =
+      properties && typeof properties.icon === "string"
+        ? properties.icon
+        : undefined;
+
+    const backgroundColor =
+      properties && typeof properties.background_color === "string"
+        ? properties.background_color
+        : undefined;
+
+    const positiveFeedback =
+      properties &&
+      "positive_feedback" in properties &&
+      (typeof properties.positive_feedback === "boolean" ||
+        properties.positive_feedback === null)
+        ? properties.positive_feedback
+        : undefined;
 
     const isAudioMessage = chat.category === "audio";
     const chatMessage = chat.message ? chat.message.toString() : "";
@@ -63,17 +94,21 @@ export const UserMessage = memo(
       updateMessageMutation(
         {
           message: {
-            ...chat,
+            id: chat.id,
             files: convertFiles(chat.files),
             sender_name: chat.sender_name ?? "User",
-            text: chat.message.toString(),
+            text: String(chat.message ?? ""),
             sender: "User",
             flow_id,
             session_id: chat.session ?? "",
             timestamp:
-              chat.timestamp?.toString?.() ?? String(chat.timestamp ?? ""),
+              chat.timestamp instanceof Date
+                ? chat.timestamp.toISOString()
+                : typeof chat.timestamp === "string"
+                  ? chat.timestamp
+                  : String(chat.timestamp ?? ""),
             properties: {
-              ...chat.properties,
+              ...(properties ?? {}),
               positive_feedback: evaluation,
             },
           },
@@ -89,13 +124,15 @@ export const UserMessage = memo(
       );
     };
 
+    const handleStartEdit = useCallback(() => setEditMessage(true), []);
+
     const editedFlag = chat.edit ? (
       <div className="text-sm text-muted-foreground">(Edited)</div>
     ) : null;
 
-    const isEmoji = chat.properties?.icon?.match(
-      /[\u2600-\u27BF\uD83C-\uDBFF\uDC00-\uDFFF]/,
-    );
+    const iconIsEmoji =
+      typeof icon === "string" &&
+      !!icon.match(/[\u2600-\u27BF\uD83C-\uDBFF\uDC00-\uDFFF]/);
 
     return (
       <>
@@ -109,18 +146,14 @@ export const UserMessage = memo(
             {/* Avatar */}
             <div
               className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded border border-border text-2xl hover:border-input"
-              style={
-                chat.properties?.background_color
-                  ? { backgroundColor: chat.properties.background_color }
-                  : {}
-              }
+              style={backgroundColor ? { backgroundColor } : undefined}
             >
               <div className="flex h-full w-full items-center justify-center">
-                {chat.properties?.icon ? (
-                  isEmoji ? (
-                    <div>{chat.properties.icon}</div>
+                {icon ? (
+                  iconIsEmoji ? (
+                    <div>{icon}</div>
                   ) : (
-                    <ForwardedIconComponent name={chat.properties.icon} />
+                    <ForwardedIconComponent name={icon} />
                   )
                 ) : (
                   <div className="h-full w-full [&>img]:h-full [&>img]:w-full [&>img]:object-cover">
@@ -175,13 +208,11 @@ export const UserMessage = memo(
               <div className="invisible absolute -top-4 right-0 group-hover:visible">
                 <EditMessageButton
                   onCopy={() => navigator.clipboard.writeText(chatMessage)}
-                  onEdit={
-                    playgroundPage ? undefined : () => setEditMessage(true)
-                  }
+                  onEdit={handleStartEdit}
                   className="h-fit group-hover:visible"
                   isBotMessage={false}
                   onEvaluate={handleEvaluateAnswer}
-                  evaluation={chat.properties?.positive_feedback}
+                  evaluation={positiveFeedback}
                   isAudioMessage={isAudioMessage}
                 />
               </div>

@@ -1,4 +1,4 @@
-import { memo, useMemo, useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import IconComponent, {
   ForwardedIconComponent,
@@ -93,6 +93,8 @@ export const BotMessage = memo(
         },
       );
     };
+
+    const handleStartEdit = useCallback(() => setEditMessage(true), []);
 
     const editedFlag = chat.edit ? (
       <div className="text-sm text-muted-foreground">(Edited)</div>
@@ -221,9 +223,7 @@ export const BotMessage = memo(
               <div className="invisible absolute -top-4 right-0 group-hover:visible">
                 <EditMessageButton
                   onCopy={() => navigator.clipboard.writeText(chatMessage)}
-                  onEdit={
-                    playgroundPage ? undefined : () => setEditMessage(true)
-                  }
+                  onEdit={handleStartEdit}
                   className="h-fit group-hover:visible"
                   isBotMessage={true}
                   onEvaluate={handleEvaluateAnswer}
