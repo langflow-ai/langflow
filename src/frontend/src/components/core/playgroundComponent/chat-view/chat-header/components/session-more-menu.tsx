@@ -9,8 +9,6 @@ import {
 } from "@/components/ui/select-custom";
 import { cn } from "@/utils/utils";
 
-const MENU_ITEM_CLASS = "cursor-pointer px-3 py-2 focus:bg-muted";
-
 interface SessionMoreMenuProps {
   onRename: () => void;
   onMessageLogs?: () => void;
@@ -59,10 +57,6 @@ export function SessionMoreMenu({
         onDelete();
         break;
     }
-    // Reset after a short delay to allow the select to close
-    setTimeout(() => {
-      setSelectValue("");
-    }, 100);
   };
 
   return (
@@ -98,7 +92,7 @@ export function SessionMoreMenu({
           sideOffset={sideOffset}
           className={cn("p-0", contentClassName)}
         >
-          <SelectItem value="rename" className={MENU_ITEM_CLASS}>
+          <SelectItem value="rename" className="session-more-menu-item">
             <div className="flex items-center">
               <ForwardedIconComponent
                 name="SquarePen"
@@ -108,7 +102,7 @@ export function SessionMoreMenu({
             </div>
           </SelectItem>
           {showMessageLogs && (
-            <SelectItem value="messageLogs" className={MENU_ITEM_CLASS}>
+            <SelectItem value="messageLogs" className="session-more-menu-item">
               <div className="flex items-center">
                 <ForwardedIconComponent
                   name="Scroll"
@@ -118,7 +112,7 @@ export function SessionMoreMenu({
               </div>
             </SelectItem>
           )}
-          <SelectItem value="delete" className={MENU_ITEM_CLASS}>
+          <SelectItem value="delete" className="session-more-menu-item">
             <div className="flex items-center text-status-red hover:text-status-red">
               <ForwardedIconComponent name="Trash2" className="mr-2 h-4 w-4" />
               Delete

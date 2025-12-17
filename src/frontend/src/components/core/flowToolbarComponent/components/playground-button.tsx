@@ -1,9 +1,9 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
-import { useSlidingContainerStore } from "@/components/core/playgroundComponent/sliding-container/stores/sliding-container-store";
 // import { CustomIOModal } from "@/customization/components/custom-new-modal";
 import { PLAYGROUND_BUTTON_NAME } from "@/constants/constants";
 import { ENABLE_PUBLISH } from "@/customization/feature-flags";
+import { usePlaygroundStore } from "@/stores/playgroundStore";
 
 interface PlaygroundButtonProps {
   hasIO: boolean;
@@ -59,11 +59,9 @@ const DisabledButton = () => (
 );
 
 const PlaygroundButton = ({ hasIO }: PlaygroundButtonProps) => {
-  const setIsOpen = useSlidingContainerStore((state) => state.setIsOpen);
-  const setIsFullscreen = useSlidingContainerStore(
-    (state) => state.setIsFullscreen,
-  );
-  const isOpen = useSlidingContainerStore((state) => state.isOpen);
+  const setIsOpen = usePlaygroundStore((state) => state.setIsOpen);
+  const setIsFullscreen = usePlaygroundStore((state) => state.setIsFullscreen);
+  const isOpen = usePlaygroundStore((state) => state.isOpen);
 
   const handleToggle = () => {
     // TODO: will be revert - bypass legacy modal and open sliding container
