@@ -318,11 +318,11 @@ async def initialize_agentic_user_variables(user_id: UUID | str, session: AsyncS
         variable_service = get_variable_service()
 
         # Define agentic variables with defaults
-        agentic_variables = {
-            "FLOW_ID": "",
-            "COMPONENT_ID": "",
-            "FIELD_NAME": "",
-        }
+        from lfx.services.settings.constants import AGENTIC_VARIABLES
+
+        # Create a dict with agentic variable names and default values as empty strings
+        agentic_variables = dict.fromkeys(AGENTIC_VARIABLES, "")
+        logger.adebug(f"Agentic variables: {agentic_variables}")
 
         existing_vars = await variable_service.list_variables(user_id, session)
 
