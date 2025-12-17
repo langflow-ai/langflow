@@ -121,6 +121,7 @@ class SaveToFileComponent(Component):
             info="AWS Access key ID.",
             show=False,
             advanced=True,
+            required=True,
         ),
         SecretStrInput(
             name="aws_secret_access_key",
@@ -128,6 +129,7 @@ class SaveToFileComponent(Component):
             info="AWS Secret Key.",
             show=False,
             advanced=True,
+            required=True,
         ),
         StrInput(
             name="bucket_name",
@@ -135,6 +137,7 @@ class SaveToFileComponent(Component):
             info="Enter the name of the S3 bucket.",
             show=False,
             advanced=True,
+            required=True,
         ),
         StrInput(
             name="aws_region",
@@ -157,6 +160,7 @@ class SaveToFileComponent(Component):
             info="Your Google Cloud Platform service account JSON key as a secret string (complete JSON content).",
             show=False,
             advanced=True,
+            required=True,
         ),
         StrInput(
             name="folder_id",
