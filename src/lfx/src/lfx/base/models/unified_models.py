@@ -214,7 +214,7 @@ def get_model_providers() -> list[str]:
 def get_unified_models_detailed(
     providers: list[str] | None = None,
     model_name: str | None = None,
-    model_type: str | None = None,
+    model_type: list[str] | None = None,
     *,
     include_unsupported: bool | None = None,
     include_deprecated: bool | None = None,
@@ -229,8 +229,9 @@ def get_unified_models_detailed(
         If given, only models from these providers are returned.
     model_name : str | None
         If given, only the model with this exact name is returned.
-    model_type : str | None
-        Optional. Restrict to models whose metadata "model_type" matches this value.
+    model_type : list[str] | None
+        Optional. Restrict to models whose metadata "model_type" matches any of these values.
+        Valid values: 'llms', 'embeddings', 'audio', 'video'.
     include_unsupported : bool
         When False (default) models whose metadata contains ``not_supported=True``
         are filtered out.
@@ -278,7 +279,7 @@ def get_unified_models_detailed(
             continue
         if model_name and md.get("name") != model_name:
             continue
-        if model_type and md.get("model_type") != model_type:
+        if model_type and md.get("model_type") not in model_type:
             continue
         # Match arbitrary metadata key/value pairs
         if any(md.get(k) != v for k, v in metadata_filters.items()):
@@ -437,14 +438,14 @@ def get_language_model_options(
     # Apply tool_calling filter if specified
     if tool_calling is not None:
         all_models = get_unified_models_detailed(
-            model_type="llm",
+            model_type=["llm"],
             include_deprecated=False,
             include_unsupported=False,
             tool_calling=tool_calling,
         )
     else:
         all_models = get_unified_models_detailed(
-            model_type="llm",
+            model_type=["llm"],
             include_deprecated=False,
             include_unsupported=False,
         )
@@ -630,7 +631,7 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
     """
     # Get all embedding models (excluding deprecated and unsupported by default)
     all_models = get_unified_models_detailed(
-        model_type="embeddings",
+        model_type=["embeddings"],
         include_deprecated=False,
         include_unsupported=False,
     )

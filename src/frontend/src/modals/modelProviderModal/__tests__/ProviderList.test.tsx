@@ -93,7 +93,7 @@ describe("ProviderList", () => {
         isFetching: false,
       });
 
-      render(<ProviderList modelType="all" />);
+      render(<ProviderList modelType={[]} />);
 
       expect(screen.getByTestId("provider-list-loading")).toBeInTheDocument();
       expect(screen.getByText("Loading providers")).toBeInTheDocument();
@@ -102,20 +102,20 @@ describe("ProviderList", () => {
 
   describe("Provider Display", () => {
     it("should render provider list container", () => {
-      render(<ProviderList modelType="all" />);
+      render(<ProviderList modelType={[]} />);
 
       expect(screen.getByTestId("provider-list")).toBeInTheDocument();
     });
 
     it("should render providers with all model types", () => {
-      render(<ProviderList modelType="all" />);
+      render(<ProviderList modelType={[]} />);
 
       expect(screen.getByTestId("provider-item-OpenAI")).toBeInTheDocument();
       expect(screen.getByTestId("provider-item-Anthropic")).toBeInTheDocument();
     });
 
     it("should filter providers by LLM model type", () => {
-      render(<ProviderList modelType="llm" />);
+      render(<ProviderList modelType={["llm"]} />);
 
       // Both providers have LLM models
       expect(screen.getByTestId("provider-item-OpenAI")).toBeInTheDocument();
@@ -123,7 +123,7 @@ describe("ProviderList", () => {
     });
 
     it("should filter providers by embeddings model type", () => {
-      render(<ProviderList modelType="embeddings" />);
+      render(<ProviderList modelType={["embeddings"]} />);
 
       // Only OpenAI has embedding models
       expect(screen.getByTestId("provider-item-OpenAI")).toBeInTheDocument();
@@ -138,7 +138,7 @@ describe("ProviderList", () => {
       const onProviderSelect = jest.fn();
 
       render(
-        <ProviderList modelType="all" onProviderSelect={onProviderSelect} />,
+        <ProviderList modelType={[]} onProviderSelect={onProviderSelect} />,
       );
 
       screen.getByTestId("provider-item-OpenAI").click();
@@ -147,7 +147,7 @@ describe("ProviderList", () => {
     });
 
     it("should pass selectedProviderName to items", () => {
-      render(<ProviderList modelType="all" selectedProviderName="OpenAI" />);
+      render(<ProviderList modelType={[]} selectedProviderName="OpenAI" />);
 
       const openaiItem = screen.getByTestId("provider-item-OpenAI");
       expect(openaiItem).toHaveAttribute("data-selected", "true");

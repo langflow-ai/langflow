@@ -22,10 +22,18 @@ import useAlertStore from "@/stores/alertStore";
 import { cn } from "@/utils/utils";
 import ModelSelection from "./components/ModelSelection";
 
+// Valid model types matching backend: 'llm', 'embeddings', 'image', 'audio', 'video'
+export type ModelTypeOption =
+  | "llm"
+  | "embeddings"
+  | "image"
+  | "audio"
+  | "video";
+
 interface ModelProviderModalProps {
   open: boolean;
   onClose: () => void;
-  modelType: "llm" | "embeddings" | "all";
+  modelType: ModelTypeOption[];
 }
 
 const ModelProviderModal = ({
