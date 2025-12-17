@@ -23,7 +23,6 @@ def setup_structlog():
         logger_factory=structlog.PrintLoggerFactory(),
         cache_logger_on_first_use=False,
     )
-    yield
 
 
 # Set up test data paths
