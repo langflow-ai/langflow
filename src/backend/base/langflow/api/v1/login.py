@@ -7,7 +7,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 
 from langflow.api.utils import DbSession
 from langflow.api.v1.schemas import Token
-from langflow.initial_setup.setup import create_or_update_agentic_flows, get_or_create_default_folder
+from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.auth.utils import (
     authenticate_user,
     create_refresh_token,
@@ -70,12 +70,14 @@ async def login_to_get_access_token(
         # Initialize agentic variables if agentic experience is enabled
         from langflow.api.utils.mcp.agentic_mcp import initialize_agentic_user_variables
 
-        if get_settings_service().settings.agentic_experience:
-            await initialize_agentic_user_variables(user.id, db)
         # Create default project for user if it doesn't exist
         _ = await get_or_create_default_folder(db, user.id)
-        # Create or update Langflow Assistant folder with agentic flows
-        await create_or_update_agentic_flows(db, user.id)
+
+        if get_settings_service().settings.agentic_experience:
+            await initialize_agentic_user_variables(user.id, db)
+            # await configure_agentic_mcp_server_for_user(user, db)
+            # Create or update Langflow Assistant folder with agentic flows
+            # await create_or_update_agentic_flows(db, user.id)
         return tokens
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -116,8 +118,11 @@ async def auto_login(response: Response, db: DbSession):
                 domain=auth_settings.COOKIE_DOMAIN,
             )
 
+            if get_settings_service().settings.agentic_experience:
+                from langflow.api.utils.mcp.agentic_mcp import initialize_agentic_user_variables
+                await initialize_agentic_user_variables(user.id, db)
             # Create or update Langflow Assistant folder with agentic flows
-            await create_or_update_agentic_flows(db, user_id)
+            # await create_or_update_agentic_flows(db, user_id)
 
         return tokens
 
