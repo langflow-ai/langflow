@@ -520,11 +520,16 @@ class TestRunFlowVerbosity:
     @pytest.mark.asyncio
     async def test_verbose_false_configures_critical_logging(self, tmp_path):
         """Test that verbose=False configures CRITICAL log level."""
+        import sys
+
         script_path = tmp_path / "test.py"
         script_path.write_text("graph = None")
 
+        # Get the actual module from sys.modules (not the instance exported by __init__.py)
+        log_module = sys.modules["lfx.log.logger"]
+
         with (
-            patch("lfx.log.logger.configure") as mock_configure,
+            patch.object(log_module, "configure") as mock_configure,
             patch("lfx.run.base.find_graph_variable") as mock_find,
         ):
             mock_find.return_value = None  # This will cause an error, but we check configure was called
@@ -539,11 +544,15 @@ class TestRunFlowVerbosity:
     @pytest.mark.asyncio
     async def test_verbose_true_configures_info_logging(self, tmp_path):
         """Test that verbose=True configures INFO log level."""
+        import sys
+
         script_path = tmp_path / "test.py"
         script_path.write_text("graph = None")
 
+        log_module = sys.modules["lfx.log.logger"]
+
         with (
-            patch("lfx.log.logger.configure") as mock_configure,
+            patch.object(log_module, "configure") as mock_configure,
             patch("lfx.run.base.find_graph_variable") as mock_find,
         ):
             mock_find.return_value = None
@@ -558,11 +567,15 @@ class TestRunFlowVerbosity:
     @pytest.mark.asyncio
     async def test_verbose_detailed_configures_debug_logging(self, tmp_path):
         """Test that verbose_detailed=True configures DEBUG log level."""
+        import sys
+
         script_path = tmp_path / "test.py"
         script_path.write_text("graph = None")
 
+        log_module = sys.modules["lfx.log.logger"]
+
         with (
-            patch("lfx.log.logger.configure") as mock_configure,
+            patch.object(log_module, "configure") as mock_configure,
             patch("lfx.run.base.find_graph_variable") as mock_find,
         ):
             mock_find.return_value = None
@@ -577,11 +590,15 @@ class TestRunFlowVerbosity:
     @pytest.mark.asyncio
     async def test_verbose_full_configures_debug_logging(self, tmp_path):
         """Test that verbose_full=True configures DEBUG log level."""
+        import sys
+
         script_path = tmp_path / "test.py"
         script_path.write_text("graph = None")
 
+        log_module = sys.modules["lfx.log.logger"]
+
         with (
-            patch("lfx.log.logger.configure") as mock_configure,
+            patch.object(log_module, "configure") as mock_configure,
             patch("lfx.run.base.find_graph_variable") as mock_find,
         ):
             mock_find.return_value = None
