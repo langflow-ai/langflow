@@ -118,6 +118,7 @@ async def auto_login(response: Response, db: DbSession):
 
             if get_settings_service().settings.agentic_experience:
                 from langflow.api.utils.mcp.agentic_mcp import initialize_agentic_user_variables
+
                 await initialize_agentic_user_variables(user.id, db)
 
 
