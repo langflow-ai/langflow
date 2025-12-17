@@ -54,6 +54,7 @@ _KNOWLEDGE_BASES_ROOT_PATH: Path | None = None
 # Error message to raise if we're in Astra cloud environment and the component is not supported.
 astra_error_msg = "Knowledge ingestion is not supported in Astra cloud environment."
 
+
 def _get_knowledge_bases_root_path() -> Path:
     """Lazy load the knowledge bases root path from settings."""
     global _KNOWLEDGE_BASES_ROOT_PATH  # noqa: PLW0603
