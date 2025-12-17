@@ -580,13 +580,22 @@ class SaveToFileComponent(Component):
 
         # Validate AWS credentials
         if not aws_access_key_id:
-            msg = "AWS Access Key ID is required for S3 storage. Provide it as a component input or set AWS_ACCESS_KEY_ID environment variable."
+            msg = (
+                "AWS Access Key ID is required for S3 storage. Provide it as a component input "
+                "or set AWS_ACCESS_KEY_ID environment variable."
+            )
             raise ValueError(msg)
         if not aws_secret_access_key:
-            msg = "AWS Secret Key is required for S3 storage. Provide it as a component input or set AWS_SECRET_ACCESS_KEY environment variable."
+            msg = (
+                "AWS Secret Key is required for S3 storage. Provide it as a component input "
+                "or set AWS_SECRET_ACCESS_KEY environment variable."
+            )
             raise ValueError(msg)
         if not bucket_name:
-            msg = "S3 Bucket Name is required for S3 storage. Provide it as a component input or set LANGFLOW_OBJECT_STORAGE_BUCKET_NAME environment variable."
+            msg = (
+                "S3 Bucket Name is required for S3 storage. Provide it as a component input "
+                "or set LANGFLOW_OBJECT_STORAGE_BUCKET_NAME environment variable."
+            )
             raise ValueError(msg)
 
         # Use S3 upload functionality
