@@ -2,21 +2,22 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ChatHeader } from "@/components/core/playgroundComponent/chat-view/chat-header/components/chat-header";
 import { ChatSidebar } from "@/components/core/playgroundComponent/chat-view/chat-header/components/chat-sidebar";
 import { useGetFlowId } from "@/components/core/playgroundComponent/hooks/use-get-flow-id";
+import { useSimpleSidebar } from "@/components/ui/simple-sidebar";
+import { SLIDING_TRANSITION_MS } from "@/constants/constants";
 import { useEditSessionInfo } from "../../chat-view/chat-header/hooks/use-edit-session-info";
 import { useGetAddSessions } from "../../chat-view/chat-header/hooks/use-get-add-sessions";
-import { useSlidingContainerStore } from "../stores/sliding-container-store";
 
-const TRANSITION_MS = 300;
+type FlowPageSlidingContainerContentProps = {
+  isFullscreen: boolean;
+  setIsFullscreen: (value: boolean) => void;
+};
 
-export function FlowPageSlidingContainerContent() {
+export function FlowPageSlidingContainerContent({
+  isFullscreen,
+  setIsFullscreen,
+}: FlowPageSlidingContainerContentProps) {
   const currentFlowId = useGetFlowId();
-  const isFullscreen = useSlidingContainerStore((state) => state.isFullscreen);
-  const setIsFullscreen = useSlidingContainerStore(
-    (state) => state.setIsFullscreen,
-  );
-  const setWidth = useSlidingContainerStore((state) => state.setWidth);
-  const setIsOpen = useSlidingContainerStore((state) => state.setIsOpen);
-  const isOpen = useSlidingContainerStore((state) => state.isOpen);
+  const { setOpen, setWidth, fullscreen } = useSimpleSidebar();
 
   const { sessions: fetchedSessions, addNewSession } = useGetAddSessions({
     flowId: currentFlowId,
@@ -46,7 +47,7 @@ export function FlowPageSlidingContainerContent() {
     transitionTimer.current = window.setTimeout(() => {
       setIsTransitioning(false);
       transitionTimer.current = null;
-    }, TRANSITION_MS);
+    }, SLIDING_TRANSITION_MS);
   };
 
   useEffect(
@@ -72,14 +73,14 @@ export function FlowPageSlidingContainerContent() {
     if (isTransitioning) return;
     startTransitionLock();
     setIsFullscreen(false);
-    setIsOpen(true);
+    setOpen(true);
     setWidth(300);
   };
 
   const handleClose = () => {
     if (isTransitioning) return;
     startTransitionLock();
-    setIsOpen(false);
+    setOpen(false);
     setIsFullscreen(false);
   };
 
@@ -113,7 +114,7 @@ export function FlowPageSlidingContainerContent() {
             className="border-r border-border bg-background overflow-hidden"
             style={{
               width: sidebarOpen ? "20%" : "0px",
-              minWidth: sidebarOpen ? "250px" : "0px",
+              minWidth: sidebarOpen ? "360px" : "0px",
               maxWidth: "280px",
               transition: "width 0.3s ease, min-width 0.3s ease",
             }}

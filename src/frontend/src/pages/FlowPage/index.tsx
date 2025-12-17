@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useBlocker, useParams } from "react-router-dom";
 import { FlowPageSlidingContainerContent } from "@/components/core/playgroundComponent/sliding-container/components/flow-page-sliding-container";
-import { useSlidingContainerStore } from "@/components/core/playgroundComponent/sliding-container/stores/sliding-container-store";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import {
   SimpleSidebar,
@@ -16,6 +15,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
 import { SaveChangesModal } from "@/modals/saveChangesModal";
 import useAlertStore from "@/stores/alertStore";
+import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { useTypesStore } from "@/stores/typesStore";
 import { customStringify } from "@/utils/reactflowUtils";
 import { cn } from "@/utils/utils";
@@ -168,19 +168,12 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   };
 
   const isMobile = useIsMobile();
-  const slidingContainerWidth = useSlidingContainerStore(
-    (state) => state.width,
-  );
-  const isSlidingContainerOpen = useSlidingContainerStore(
-    (state) => state.isOpen,
-  );
-  const setSlidingContainerOpen = useSlidingContainerStore(
+  const isSlidingContainerOpen = usePlaygroundStore((state) => state.isOpen);
+  const setSlidingContainerOpen = usePlaygroundStore(
     (state) => state.setIsOpen,
   );
-  const isFullscreen = useSlidingContainerStore((state) => state.isFullscreen);
-  const setIsFullscreen = useSlidingContainerStore(
-    (state) => state.setIsFullscreen,
-  );
+  const isFullscreen = usePlaygroundStore((state) => state.isFullscreen);
+  const setIsFullscreen = usePlaygroundStore((state) => state.setIsFullscreen);
 
   return (
     <>
@@ -209,7 +202,9 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
       */}
 
       <SimpleSidebarProvider
-        width={`${slidingContainerWidth}px`}
+        width="400px"
+        minWidth={0.22}
+        maxWidth={0.8}
         open={isSlidingContainerOpen || isFullscreen}
         onOpenChange={(open) => {
           setSlidingContainerOpen(open);
@@ -248,7 +243,10 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
                 </FlowSearchProvider>
               </SidebarProvider>
               <SimpleSidebar resizable={!isFullscreen} className="h-full">
-                <FlowPageSlidingContainerContent />
+                <FlowPageSlidingContainerContent
+                  isFullscreen={isFullscreen}
+                  setIsFullscreen={setIsFullscreen}
+                />
               </SimpleSidebar>
             </div>
           )}

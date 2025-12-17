@@ -57,7 +57,6 @@ export function SessionMoreMenu({
         onDelete();
         break;
     }
-    setSelectValue("");
   };
 
   return (
