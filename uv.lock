@@ -5933,7 +5933,7 @@ dev = [
 
 [[package]]
 name = "langflow-base"
-version = "1.7.0"
+version = "0.7.0"
 source = { editable = "src/backend/base" }
 dependencies = [
     { name = "aiofile" },
