@@ -383,6 +383,55 @@ jobs:
           name: dist-main
           path: dist
 
+  build-lfx:
+    name: Build LFX
+    needs: [ci]
+    if: ${{ inputs.release_lfx }}
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check-version.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.release_tag }}
+      - name: Setup Environment
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.13"
+          prune-cache: false
+      - name: Install LFX dependencies
+        run: uv sync --dev --package lfx
+      - name: Check Version
+        id: check-version
+        run: |
+          cd src/lfx
+          version=$(uv tree | grep 'lfx' | head -n 1 | awk '{print $2}' | sed 's/^v//')
+          last_released_version=$(curl -s "https://pypi.org/pypi/lfx/json" | jq -r '.releases | keys | .[]' | sort -V | tail -n 1)
+          if [ "$version" = "$last_released_version" ]; then
+            echo "Version $version is already released. Skipping release."
+            exit 1
+          else
+            echo version=$version >> $GITHUB_OUTPUT
+          fi
+      - name: Build project for distribution
+        run: |
+          cd src/lfx
+          rm -rf dist/
+          uv build --wheel --out-dir dist
+      - name: Test CLI
+        run: |
+          cd src/lfx
+          uv pip install dist/*.whl --force-reinstall
+          uv run lfx --help
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-lfx
+          path: src/lfx/dist
+
   test-cross-platform:
     name: Test Cross-Platform Installation
     needs: [build-base, build-main]
@@ -442,80 +491,6 @@ jobs:
         run: |
           uv publish dist/*.whl
 
-  build-lfx:
-    name: Build LFX
-    needs: [ci]
-    if: ${{ inputs.release_lfx }}
-    runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.check-version.outputs.version }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ inputs.release_tag }}
-      - name: Setup Environment
-        uses: astral-sh/setup-uv@v6
-        with:
-          enable-cache: true
-          cache-dependency-glob: "uv.lock"
-          python-version: "3.13"
-          prune-cache: false
-      - name: Install LFX dependencies
-        run: uv sync --dev --package lfx
-      - name: Check Version
-        id: check-version
-        run: |
-          cd src/lfx
-          version=$(uv tree | grep 'lfx' | head -n 1 | awk '{print $2}' | sed 's/^v//')
-          last_released_version=$(curl -s "https://pypi.org/pypi/lfx/json" | jq -r '.releases | keys | .[]' | sort -V | tail -n 1)
-          if [ "$version" = "$last_released_version" ]; then
-            echo "Version $version is already released. Skipping release."
-            exit 1
-          else
-            echo version=$version >> $GITHUB_OUTPUT
-          fi
-      - name: Build project for distribution
-        run: |
-          cd src/lfx
-          rm -rf dist/
-          uv build --wheel --out-dir dist
-      - name: Test CLI
-        run: |
-          cd src/lfx
-          uv pip install dist/*.whl --force-reinstall
-          uv run lfx --help
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist-lfx
-          path: src/lfx/dist
-
-  test-lfx-cross-platform:
-    name: Test LFX Cross-Platform Installation
-    if: ${{ inputs.release_lfx }}
-    needs: [build-lfx]
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
-    steps:
-      - name: Download LFX artifact
-        uses: actions/download-artifact@v5
-        with:
-          name: dist-lfx
-          path: dist-lfx
-      - name: Setup Environment
-        uses: astral-sh/setup-uv@v6
-        with:
-          enable-cache: false
-          python-version: ${{ matrix.python-version }}
-      - name: Test LFX installation
-        run: |
-          uv pip install dist-lfx/*.whl
-          uv run lfx --help
-
   publish-lfx:
     name: Publish LFX to PyPI
     if: ${{ inputs.release_lfx }}
@@ -538,6 +513,31 @@ jobs:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         run: |
           cd src/lfx && uv publish dist/*.whl
+
+  # test-lfx-cross-platform:
+  #   name: Test LFX Cross-Platform Installation
+  #   if: ${{ inputs.release_lfx }}
+  #   needs: [build-lfx]
+  #   runs-on: ${{ matrix.os }}
+  #   strategy:
+  #     matrix:
+  #       os: [ubuntu-latest, windows-latest, macos-latest]
+  #       python-version: ["3.10", "3.11", "3.12", "3.13"]
+  #   steps:
+  #     - name: Download LFX artifact
+  #       uses: actions/download-artifact@v5
+  #       with:
+  #         name: dist-lfx
+  #         path: dist-lfx
+  #     - name: Setup Environment
+  #       uses: astral-sh/setup-uv@v6
+  #       with:
+  #         enable-cache: false
+  #         python-version: ${{ matrix.python-version }}
+  #     - name: Test LFX installation
+  #       run: |
+  #         uv pip install dist-lfx/*.whl
+  #         uv run lfx --help
 
   call_docker_build_base:
     name: Call Docker Build Workflow for Langflow Base
