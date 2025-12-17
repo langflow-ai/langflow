@@ -82,7 +82,7 @@ This example asked about the sales data provided by the MCP Server, such as `Whi
 
 | Name | Type | Description |
 |------|------|-------------|
-| agent_llm | Dropdown | Model Provider for the agent. **Only OpenAI is supported.** Other providers (Gemini, Anthropic, etc.) are not supported and will result in errors. |
+| agent_llm | Dropdown | Model provider for the agent.|
 | instructions | Multiline String | Custom instructions that define the agent's planning and answers. Can be provided directly or through Markdown files. Formatting is important in order for the agent to understand the instructions. See [Use the CUGA component in a flow](#use-the-cuga-component-in-a-flow). |
 | n_messages | Integer | Number of chat history messages to retrieve. Useful for maintaining context in ongoing conversations identified by `session_id`. Default: `100`. |
 | format_instructions | Multiline String | Template for structured output. |
@@ -91,5 +91,5 @@ This example asked about the sales data provided by the MCP Server, such as `Whi
 | lite_mode | Boolean | Set to `true` to enable CugaLite mode for faster execution when using a smaller number of tools. Default: `true`. |
 | lite_mode_tool_threshold | Integer | The threshold to automatically enable CugaLite. If the CUGA component has fewer tools connected than this threshold, CugaLite is activated. Default: `25`. |
 | decomposition_strategy | Dropdown | Strategy for task decomposition. `flexible` allows multiple subtasks per app. `exact` enforces one subtask per app. Default: `flexible`. |
-| browser_enabled | Boolean | Enable a built-in browser for web scraping and search. Allows the agent to use general web search in its responses. **Note:** When enabled, CUGA always opens a browser, unlike the Langflow Agent with Playwright MCP tools which only opens a browser when needed. Disable (`false`) to restrict the agent to the context provided in the flow. Default: `false`. |
+| browser_enabled | Boolean | Enable a built-in browser for web scraping and search. Allows the agent to use general web search in its responses. Disable (`false`) to restrict the agent to the context provided in the flow. Default: `false`. |
 | web_apps | Multiline String | When `browser_enabled` is `true`, specify a single URL such as `https://example.com` that the agent can open with the built-in browser. The CUGA component can access both public and private internet resources. There is no built-in mechanism in the CUGA component to restrict access to only public internet resources. |
