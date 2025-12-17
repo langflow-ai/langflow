@@ -283,7 +283,7 @@ def set_fs_flows_polling_interval():
 
 @pytest.mark.usefixtures("set_fs_flows_polling_interval")
 async def test_sync_flows_from_fs(client: AsyncClient, logged_in_headers):
-    flow_file = Path(tempfile.tempdir) / f"{uuid.uuid4()}.json"
+    flow_file = Path(tempfile.gettempdir()) / f"{uuid.uuid4()}.json"
     try:
         basic_case = {
             "name": "string",
