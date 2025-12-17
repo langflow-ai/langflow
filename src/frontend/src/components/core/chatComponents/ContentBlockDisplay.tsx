@@ -171,7 +171,6 @@ export function ContentBlockDisplay({
                         <Markdown
                           className="text-sm font-semibold text-foreground"
                           remarkPlugins={[remarkGfm]}
-                          linkTarget="_blank"
                           rehypePlugins={[rehypeMathjax]}
                           components={{
                             p({ node, ...props }) {
