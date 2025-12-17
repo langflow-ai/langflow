@@ -23,17 +23,9 @@ MODELS_DEV_API_URL = "https://models.dev/api.json"
 CACHE_TTL_SECONDS = 3600  # 1 hour cache TTL
 CACHE_FILE_NAME = ".models_dev_cache.json"
 
-PROVIDER_NAME_MAP = {
-    "openai": "OpenAI",
-    "anthropic": "Anthropic",
-    "google": "Google",
-    "ollama": "Ollama",
-    "ibm-watsonx": "WatsonxAI",
-}
-
-# Provider icon mapping - keys from lazyIconImports.ts in frontend/src/icons/
-# Use "Bot" as fallback for providers without custom icons
-PROVIDER_ICON_MAP = {
+# Maps provider_id to display name and icon (icon names match display names)
+# Icon keys come from lazyIconImports.ts in frontend/src/icons/
+PROVIDER_MAP = {
     "openai": "OpenAI",
     "anthropic": "Anthropic",
     "google": "Google",
@@ -101,12 +93,6 @@ def fetch_models_dev_data(*, force_refresh: bool = False) -> dict[str, Any]:
             response = client.get(MODELS_DEV_API_URL)
             response.raise_for_status()
             data = response.json()
-
-        # Cache the result
-        _save_cache(data)
-        logger.info("Successfully fetched models.dev data")
-        return data
-
     except httpx.HTTPError as e:
         logger.warning(f"Failed to fetch models.dev data: {e}")
         # Try to return stale cache if available
@@ -115,9 +101,11 @@ def fetch_models_dev_data(*, force_refresh: bool = False) -> dict[str, Any]:
             logger.info("Using stale cache due to API error")
             return cached
         return {}
-    except Exception as e:
-        logger.error(f"Unexpected error fetching models.dev data: {e}")
-        return {}
+    else:
+        # Cache the result
+        _save_cache(data)
+        logger.info("Successfully fetched models.dev data")
+        return data
 
 
 def _determine_model_type(model_data: dict[str, Any]) -> str:
@@ -192,8 +180,8 @@ def transform_api_model_to_metadata(
     Returns:
         ModelMetadata object with transformed data
     """
-    provider_name = PROVIDER_NAME_MAP.get(provider_id, provider_data.get("name", provider_id.title()))
-    icon = PROVIDER_ICON_MAP.get(provider_id, "bot")  # Default to "bot" if no custom icon
+    provider_name = PROVIDER_MAP.get(provider_id, provider_data.get("name", provider_id.title()))
+    icon = PROVIDER_MAP.get(provider_id, "Bot")  # Default to "Bot" if no custom icon
 
     # Determine model type
     model_type = _determine_model_type(model_data)
@@ -303,8 +291,8 @@ def get_provider_metadata_from_api() -> dict[str, dict[str, Any]]:
 
     provider_metadata = {}
     for provider_id, provider_data in api_data.items():
-        provider_name = PROVIDER_NAME_MAP.get(provider_id, provider_data.get("name", provider_id.title()))
-        icon = PROVIDER_ICON_MAP.get(provider_id, "Bot")
+        provider_name = PROVIDER_MAP.get(provider_id, provider_data.get("name", provider_id.title()))
+        icon = PROVIDER_MAP.get(provider_id, "Bot")
 
         env_vars = provider_data.get("env", [])
         variable_name = env_vars[0] if env_vars else f"{provider_id.upper()}_API_KEY"
@@ -321,14 +309,18 @@ def get_provider_metadata_from_api() -> dict[str, dict[str, Any]]:
 
 
 def clear_cache() -> None:
-    """Clear the models.dev cache."""
+    """Clear the models.dev cache (both disk and in-memory)."""
     cache_path = _get_cache_path()
     try:
         if cache_path.exists():
             cache_path.unlink()
-            logger.info("Cleared models.dev cache")
+            logger.info("Cleared models.dev disk cache")
     except OSError as e:
-        logger.warning(f"Failed to clear cache: {e}")
+        logger.warning(f"Failed to clear disk cache: {e}")
+
+    # Also clear the in-memory lru_cache
+    get_provider_metadata_from_api.cache_clear()
+    logger.debug("Cleared models.dev in-memory cache")
 
 
 def get_models_by_provider(provider_id: str, *, force_refresh: bool = False) -> list[ModelMetadata]:
