@@ -8,6 +8,10 @@ import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
 <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
 
+:::warning Model Provider Limitations
+The **CUGA** component only supports **OpenAI** and **watsonx** models. To use other model providers, use the core [**Agent** component](/agents) instead.
+:::
+
 The **CUGA (ConfigUrable Generalist Agent)** component is an advanced AI agent that executes complex tasks using tools, optional browser automation, and structured output generation.
 
 The **CUGA** component can be used in flows in place of an [**Agent** component](/agents).
@@ -78,7 +82,7 @@ This example asked about the sales data provided by the MCP Server, such as `Whi
 
 | Name | Type | Description |
 |------|------|-------------|
-| agent_llm | Dropdown | Model Provider for the agent. |
+| agent_llm | Dropdown | Model provider for the agent.|
 | instructions | Multiline String | Custom instructions that define the agent's planning and answers. Can be provided directly or through Markdown files. Formatting is important in order for the agent to understand the instructions. See [Use the CUGA component in a flow](#use-the-cuga-component-in-a-flow). |
 | n_messages | Integer | Number of chat history messages to retrieve. Useful for maintaining context in ongoing conversations identified by `session_id`. Default: `100`. |
 | format_instructions | Multiline String | Template for structured output. |
