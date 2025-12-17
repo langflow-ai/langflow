@@ -6,18 +6,36 @@ from lfx.services.manager import ServiceManager
 from lfx.services.schema import ServiceType
 
 
+class MockSessionService(Service):
+    """Mock session service for testing."""
+
+    name = "session_service"
+
+    def __init__(self):
+        """Initialize mock session service."""
+        self.set_ready()
+
+    async def teardown(self) -> None:
+        """Teardown the mock session service."""
+
+
+@pytest.fixture
+def clean_manager():
+    """Create a clean ServiceManager instance with mock dependencies."""
+    manager = ServiceManager()
+
+    # Register mock SESSION_SERVICE so services with dependencies can be created
+    manager.register_service_class(ServiceType.SESSION_SERVICE, MockSessionService, override=True)
+
+    yield manager
+    # Cleanup
+    import asyncio
+
+    asyncio.run(manager.teardown())
+
+
 class TestCircularDependencyDetection:
     """Test detection and handling of circular dependencies."""
-
-    @pytest.fixture
-    def clean_manager(self):
-        """Create a clean ServiceManager instance."""
-        manager = ServiceManager()
-        yield manager
-        # Cleanup
-        import asyncio
-
-        asyncio.run(manager.teardown())
 
     def test_self_circular_dependency(self, clean_manager):
         """Test service that depends on itself."""
@@ -44,16 +62,6 @@ class TestCircularDependencyDetection:
 
 class TestServiceLifecycle:
     """Test service lifecycle management."""
-
-    @pytest.fixture
-    def clean_manager(self):
-        """Create a clean ServiceManager instance."""
-        manager = ServiceManager()
-        yield manager
-        # Cleanup
-        import asyncio
-
-        asyncio.run(manager.teardown())
 
     def test_service_ready_state(self, clean_manager):
         """Test service ready state tracking."""
@@ -135,16 +143,6 @@ class TestServiceLifecycle:
 class TestConfigParsingEdgeCases:
     """Test edge cases in configuration parsing."""
 
-    @pytest.fixture
-    def clean_manager(self):
-        """Create a clean ServiceManager instance."""
-        manager = ServiceManager()
-        yield manager
-        # Cleanup
-        import asyncio
-
-        asyncio.run(manager.teardown())
-
     def test_empty_config_file(self, clean_manager, tmp_path):
         """Test empty configuration file."""
         config_dir = tmp_path / "config"
@@ -155,7 +153,7 @@ class TestConfigParsingEdgeCases:
         # Should not raise
         clean_manager.discover_plugins(config_dir)
 
-        assert len(clean_manager.service_classes) == 0
+        assert len(clean_manager.service_classes) == 1  # MockSessionService from fixture
 
     def test_config_with_no_services_section(self, clean_manager, tmp_path):
         """Test config file with no [services] section."""
@@ -172,7 +170,7 @@ key = "value"
         # Should not raise
         clean_manager.discover_plugins(config_dir)
 
-        assert len(clean_manager.service_classes) == 0
+        assert len(clean_manager.service_classes) == 1  # MockSessionService from fixture
 
     def test_config_with_empty_services_section(self, clean_manager, tmp_path):
         """Test config with empty [services] section."""
@@ -188,7 +186,7 @@ key = "value"
         # Should not raise
         clean_manager.discover_plugins(config_dir)
 
-        assert len(clean_manager.service_classes) == 0
+        assert len(clean_manager.service_classes) == 1  # MockSessionService from fixture
 
     def test_config_with_malformed_import_path(self, clean_manager, tmp_path):
         """Test config with malformed import path."""
@@ -227,16 +225,6 @@ storage_service = "module:submodule:class:extra"
 
 class TestServiceRegistrationEdgeCases:
     """Test edge cases in service registration."""
-
-    @pytest.fixture
-    def clean_manager(self):
-        """Create a clean ServiceManager instance."""
-        manager = ServiceManager()
-        yield manager
-        # Cleanup
-        import asyncio
-
-        asyncio.run(manager.teardown())
 
     def test_register_non_service_class(self, clean_manager):
         """Test registering a class that doesn't inherit from Service."""
@@ -314,16 +302,6 @@ class TestServiceRegistrationEdgeCases:
 class TestDependencyInjectionEdgeCases:
     """Test edge cases in dependency injection."""
 
-    @pytest.fixture
-    def clean_manager(self):
-        """Create a clean ServiceManager instance."""
-        manager = ServiceManager()
-        yield manager
-        # Cleanup
-        import asyncio
-
-        asyncio.run(manager.teardown())
-
     def test_service_with_optional_dependencies(self, clean_manager):
         """Test service with optional parameters."""
 
@@ -390,16 +368,6 @@ class TestDependencyInjectionEdgeCases:
 class TestConcurrentAccess:
     """Test concurrent access to service manager."""
 
-    @pytest.fixture
-    def clean_manager(self):
-        """Create a clean ServiceManager instance."""
-        manager = ServiceManager()
-        yield manager
-        # Cleanup
-        import asyncio
-
-        asyncio.run(manager.teardown())
-
     def test_multiple_gets_return_same_instance(self, clean_manager):
         """Test that multiple get calls return same instance."""
 
@@ -427,16 +395,6 @@ class TestConcurrentAccess:
 
 class TestSettingsServiceProtection:
     """Test settings service protection mechanisms."""
-
-    @pytest.fixture
-    def clean_manager(self):
-        """Create a clean ServiceManager instance."""
-        manager = ServiceManager()
-        yield manager
-        # Cleanup
-        import asyncio
-
-        asyncio.run(manager.teardown())
 
     def test_cannot_register_settings_via_class(self, clean_manager):
         """Test that settings service cannot be registered via class."""

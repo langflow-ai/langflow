@@ -12,10 +12,27 @@ from lfx.services.tracing.service import TracingService
 from lfx.services.variable.service import VariableService
 
 
+class MockSessionService(Service):
+    """Mock session service for testing."""
+
+    name = "session_service"
+
+    def __init__(self):
+        """Initialize mock session service."""
+        self.set_ready()
+
+    async def teardown(self) -> None:
+        """Teardown the mock session service."""
+
+
 @pytest.fixture
 def service_manager():
-    """Create a fresh ServiceManager for each test."""
+    """Create a fresh ServiceManager for each test with mock dependencies."""
     manager = ServiceManager()
+
+    # Register mock SESSION_SERVICE so LocalStorageService can be created
+    manager.register_service_class(ServiceType.SESSION_SERVICE, MockSessionService, override=True)
+
     yield manager
     # Cleanup
     import asyncio
@@ -48,7 +65,7 @@ class TestServiceRegistration:
         service_manager.register_service_class(ServiceType.TRACING_SERVICE, TracingService, override=True)
         service_manager.register_service_class(ServiceType.VARIABLE_SERVICE, VariableService, override=True)
 
-        assert len(service_manager.service_classes) == 4
+        assert len(service_manager.service_classes) == 5  # 4 services + MockSessionService
         assert service_manager.service_classes[ServiceType.STORAGE_SERVICE] == LocalStorageService
         assert service_manager.service_classes[ServiceType.TELEMETRY_SERVICE] == TelemetryService
         assert service_manager.service_classes[ServiceType.TRACING_SERVICE] == TracingService
@@ -465,7 +482,7 @@ variable_service = "lfx.services.variable.service:VariableService"
         service_manager.discover_plugins(temp_config_dir)
 
         # All services should be registered
-        assert len(service_manager.service_classes) == 4
+        assert len(service_manager.service_classes) == 5  # 4 services + MockSessionService
 
         # Create and verify each service
         storage = service_manager.get(ServiceType.STORAGE_SERVICE)
