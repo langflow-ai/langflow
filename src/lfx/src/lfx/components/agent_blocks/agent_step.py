@@ -285,16 +285,13 @@ class AgentStepComponent(LCModelComponent):
         lf_message = await self.send_message(model_message)
 
         # If stream wasn't consumed (no event_manager), consume it
-        if hasattr(lf_message.text, "__anext__"):
+        # Note: We check model_message.text because lf_message is the stored message
+        # which may have lost the generator reference after serialization
+        if hasattr(model_message.text, "__anext__"):
             full_text = ""
-            async for chunk in lf_message.text:
-                if aggregated_chunk is None:
-                    aggregated_chunk = chunk
-                elif isinstance(aggregated_chunk, AIMessageChunk) and isinstance(chunk, AIMessageChunk):
-                    aggregated_chunk = aggregated_chunk + chunk
-                elif hasattr(chunk, "tool_calls") and chunk.tool_calls:
-                    aggregated_chunk = chunk
-
+            # Just consume the generator to accumulate text - aggregation already
+            # happens inside stream_and_capture() via the nonlocal aggregated_chunk
+            async for chunk in model_message.text:
                 if hasattr(chunk, "content"):
                     full_text += chunk.content or ""
             lf_message.text = full_text
