@@ -1,4 +1,5 @@
 import type { UseMutationResult } from "@tanstack/react-query";
+import { getFetchCredentials } from "@/customization/utils/get-fetch-credentials";
 import type { useMutationFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
@@ -24,6 +25,7 @@ export const useDuplicateFileV2: useMutationFunctionType<
         headers: {
           Accept: "*/*",
         },
+        credentials: getFetchCredentials(),
       },
     );
     const blob = await response.blob();
