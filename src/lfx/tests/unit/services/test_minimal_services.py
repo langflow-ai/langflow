@@ -1,6 +1,7 @@
 """Tests for minimal service implementations in LFX."""
 
 import os
+from unittest.mock import MagicMock
 
 import pytest
 from lfx.services.storage.local import LocalStorageService
@@ -9,13 +10,27 @@ from lfx.services.tracing.service import TracingService
 from lfx.services.variable.service import VariableService
 
 
+@pytest.fixture
+def mock_session_service():
+    """Create a mock session service."""
+    return MagicMock()
+
+
+@pytest.fixture
+def mock_settings_service(tmp_path):
+    """Create a mock settings service with config_dir."""
+    settings_service = MagicMock()
+    settings_service.settings.config_dir = tmp_path
+    return settings_service
+
+
 class TestLocalStorageService:
     """Tests for LocalStorageService."""
 
     @pytest.fixture
-    def storage(self, tmp_path):
+    def storage(self, mock_session_service, mock_settings_service):
         """Create a storage service with temp directory."""
-        return LocalStorageService(data_dir=tmp_path)
+        return LocalStorageService(mock_session_service, mock_settings_service)
 
     @pytest.mark.asyncio
     async def test_save_and_get_file(self, storage):
@@ -216,9 +231,9 @@ class TestMinimalServicesIntegration:
     """Integration tests for minimal services working together."""
 
     @pytest.mark.asyncio
-    async def test_all_minimal_services_initialize(self, tmp_path):
+    async def test_all_minimal_services_initialize(self, mock_session_service, mock_settings_service):
         """Test that all minimal services can be initialized."""
-        storage = LocalStorageService(data_dir=tmp_path)
+        storage = LocalStorageService(mock_session_service, mock_settings_service)
         telemetry = TelemetryService()
         tracing = TracingService()
         variables = VariableService()
@@ -229,9 +244,9 @@ class TestMinimalServicesIntegration:
         assert variables.ready
 
     @pytest.mark.asyncio
-    async def test_minimal_services_teardown_all(self, tmp_path):
+    async def test_minimal_services_teardown_all(self, mock_session_service, mock_settings_service):
         """Test tearing down all minimal services."""
-        storage = LocalStorageService(data_dir=tmp_path)
+        storage = LocalStorageService(mock_session_service, mock_settings_service)
         telemetry = TelemetryService()
         tracing = TracingService()
         variables = VariableService()
@@ -243,9 +258,9 @@ class TestMinimalServicesIntegration:
         await variables.teardown()
 
     @pytest.mark.asyncio
-    async def test_storage_with_tracing(self, tmp_path):
+    async def test_storage_with_tracing(self, mock_session_service, mock_settings_service):
         """Test using storage with tracing."""
-        storage = LocalStorageService(data_dir=tmp_path)
+        storage = LocalStorageService(mock_session_service, mock_settings_service)
         tracing = TracingService()
 
         tracing.add_log("storage_test", {"operation": "save", "flow_id": "123"})

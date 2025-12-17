@@ -1,5 +1,7 @@
 """Tests for decorator-based service registration."""
 
+from unittest.mock import MagicMock
+
 import pytest
 from lfx.services.base import Service
 from lfx.services.manager import ServiceManager
@@ -9,10 +11,27 @@ from lfx.services.telemetry.service import TelemetryService
 from lfx.services.tracing.service import TracingService
 
 
+class MockSessionService(Service):
+    """Mock session service for testing."""
+
+    name = "session_service"
+
+    def __init__(self):
+        """Initialize mock session service."""
+        self.set_ready()
+
+    async def teardown(self) -> None:
+        """Teardown the mock session service."""
+
+
 @pytest.fixture
 def clean_manager():
     """Create a fresh ServiceManager for testing decorators."""
     manager = ServiceManager()
+
+    # Register mock SESSION_SERVICE so services with dependencies can be created
+    manager.register_service_class(ServiceType.SESSION_SERVICE, MockSessionService, override=True)
+
     yield manager
     # Cleanup
     import asyncio
@@ -106,12 +125,15 @@ class TestDecoratorRegistration:
         tracing.add_log("test_trace", {"message": "test message"})
         assert len(tracing.messages) == 1
 
-    def test_decorator_preserves_class_functionality(self, clean_manager):
+    def test_decorator_preserves_class_functionality(self, clean_manager, tmp_path):
         """Test that decorator preserves all class functionality."""
         clean_manager.register_service_class(ServiceType.VARIABLE_SERVICE, LocalStorageService, override=True)
 
         # Class should still be usable directly (not just through manager)
-        direct_instance = LocalStorageService()
+        mock_session = MagicMock()
+        mock_settings = MagicMock()
+        mock_settings.settings.config_dir = tmp_path
+        direct_instance = LocalStorageService(mock_session, mock_settings)
         assert direct_instance.ready is True
         assert direct_instance.name == "storage_service"
 
@@ -121,8 +143,8 @@ class TestDecoratorRegistration:
         clean_manager.register_service_class(ServiceType.TELEMETRY_SERVICE, TelemetryService, override=True)
         clean_manager.register_service_class(ServiceType.TRACING_SERVICE, TracingService, override=True)
 
-        # All should be registered
-        assert len(clean_manager.service_classes) == 3
+        # All should be registered (plus MockSessionService from fixture)
+        assert len(clean_manager.service_classes) == 4
         assert ServiceType.STORAGE_SERVICE in clean_manager.service_classes
         assert ServiceType.TELEMETRY_SERVICE in clean_manager.service_classes
         assert ServiceType.TRACING_SERVICE in clean_manager.service_classes

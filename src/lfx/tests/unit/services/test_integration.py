@@ -8,6 +8,19 @@ from lfx.services.manager import ServiceManager
 from lfx.services.schema import ServiceType
 
 
+class MockSessionService(Service):
+    """Mock session service for testing."""
+
+    name = "session_service"
+
+    def __init__(self):
+        """Initialize mock session service."""
+        self.set_ready()
+
+    async def teardown(self) -> None:
+        """Teardown the mock session service."""
+
+
 class TestStandaloneLFX:
     """Test LFX running standalone without langflow."""
 
@@ -15,6 +28,10 @@ class TestStandaloneLFX:
     def clean_manager(self):
         """Create a clean ServiceManager instance."""
         manager = ServiceManager()
+
+        # Register mock SESSION_SERVICE so services with dependencies can be created
+        manager.register_service_class(ServiceType.SESSION_SERVICE, MockSessionService, override=True)
+
         yield manager
         # Cleanup
         import asyncio
