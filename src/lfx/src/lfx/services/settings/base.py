@@ -9,7 +9,6 @@ from typing import Any, Literal
 import orjson
 import yaml
 from aiofile import async_open
-from pydantic import Field, field_validator
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings, EnvSettingsSource, PydanticBaseSettingsSource, SettingsConfigDict
 from typing_extensions import override
@@ -19,6 +18,7 @@ from lfx.log.logger import logger
 from lfx.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
 from lfx.services.settings.constants import AGENTIC_VARIABLES, VARIABLES_TO_GET_FROM_ENVIRONMENT
 from lfx.utils.util_strings import is_valid_database_url
+from pydantic import Field, field_validator
 
 
 def is_list_of_any(field: FieldInfo) -> bool:
