@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException
 from lfx.log.logger import logger
 from lfx.run.base import run_flow
 
+# from langflow.agentic.mcp.server import visualize_flow_graph
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.services.deps import get_variable_service
 from langflow.services.variable.service import DatabaseVariableService
@@ -33,11 +34,7 @@ async def get_openai_api_key(variable_service: DatabaseVariableService, user_id:
 
 
 @router.post("/prompt")
-async def run_prompt_flow(
-    request: FlowRequest,
-    current_user: CurrentActiveUser,
-    session: DbSession
-) -> dict:
+async def run_prompt_flow(request: FlowRequest, current_user: CurrentActiveUser, session: DbSession) -> dict:
     """Execute the prompt flow with provided parameters."""
     variable_service = get_variable_service()
 
@@ -46,20 +43,23 @@ async def run_prompt_flow(
     logger.debug(f"USER ID: {user_id}")
     openai_key = await get_openai_api_key(variable_service, user_id, session)
 
+
     # Prepare global variables
-    global_vars = {
-        "FLOW_ID": request.flow_id,
-        "OPENAI_API_KEY": openai_key,
-        "USER_ID": str(user_id)
-    }
-    if request.component_id:
-        global_vars["COMPONENT_ID"] = request.component_id
-    if request.field_name:
-        global_vars["FIELD_NAME"] = request.field_name
+    global_vars = {"FLOW_ID": request.flow_id, "OPENAI_API_KEY": openai_key}
+    from langflow.agentic.mcp.server import get_flow_component_field_value, visualize_flow_graph
+    if request.flow_id and user_id is not None:
+        global_vars["FLOW_DETAILS"] = await visualize_flow_graph(flow_id_or_name=request.flow_id, user_id=str(user_id))
+    if request.field_name and request.component_id and request.flow_id and user_id is not None:
+        global_vars["FIELD_VALUE"] = await get_flow_component_field_value(
+            flow_id_or_name=request.flow_id,
+            component_id=request.component_id,
+            field_name=request.field_name,
+            user_id=str(user_id),
+        )
 
     logger.debug(f"GLOBAL VARIABLES: {global_vars}")
     # Path to the flow file
-    flow_path = Path(__file__).parent.parent / "flows" / "LFX_TEST3.json"
+    flow_path = Path(__file__).parent.parent / "flows" / "PromptGeneration.json"
     logger.debug(f"FLOW PATH: {flow_path}")
     if not flow_path.exists():
         raise HTTPException(status_code=404, detail=f"Flow {request.flow_id} not found")
@@ -71,7 +71,7 @@ async def run_prompt_flow(
             input_value=request.input_value,
             global_variables=global_vars,
             verbose=False,
-            check_variables=False
+            check_variables=False,
         )
         logger.debug("Flow execution completed")
         return result
@@ -82,11 +82,7 @@ async def run_prompt_flow(
 
 
 @router.post("/next_component")
-async def run_next_component_flow(
-    request: FlowRequest,
-    current_user: CurrentActiveUser,
-    session: DbSession
-) -> dict:
+async def run_next_component_flow(request: FlowRequest, current_user: CurrentActiveUser, session: DbSession) -> dict:
     """Execute the next component flow with provided parameters."""
     variable_service = get_variable_service()
 
@@ -95,11 +91,7 @@ async def run_next_component_flow(
     openai_key = await get_openai_api_key(variable_service, user_id, session)
 
     # Prepare global variables
-    global_vars = {
-        "FLOW_ID": request.flow_id,
-        "OPENAI_API_KEY": openai_key,
-        "USER_ID": str(user_id)
-    }
+    global_vars = {"FLOW_ID": request.flow_id, "OPENAI_API_KEY": openai_key, "USER_ID": str(user_id)}
     if request.component_id:
         global_vars["COMPONENT_ID"] = request.component_id
     if request.field_name:
@@ -118,7 +110,7 @@ async def run_next_component_flow(
             input_value=request.input_value,
             global_variables=global_vars,
             verbose=False,
-            check_variables=False
+            check_variables=False,
         )
         logger.debug("Flow execution completed")
         return result
@@ -130,21 +122,27 @@ async def run_next_component_flow(
 
 if __name__ == "__main__":
     import asyncio
-    flow_path = Path(__file__).parent.parent / "flows" / "LFX_TEST3.json"
+
+    flow_path = Path(__file__).parent.parent / "flows" / "PromptGeneration.json"
     logger.debug(f"FLOW PATH: {flow_path}")
+
 
     async def main():
         try:
             # Execute the flow
+            import os
+            openai_key = os.getenv("OPENAI_API_KEY")
+            print(f"OPENAI API KEY: {openai_key}")
             result = await run_flow(
                 script_path=flow_path,
                 input_value=None,
                 global_variables={
-                    "FLOW_ID": "LFX_TEST3",
-                    "OPENAI_API_KEY": "sk-proj-1234567890",
+                    "FLOW_DETAILS": "PromptGeneration",
+                    "FIELD_VALUE": "Dummy Value",
+                    "OPENAI_API_KEY": openai_key,
                 },
                 verbose=True,
-                check_variables=False
+                check_variables=False,
             )
             print(f"Result: {result}")
         except Exception as e:
