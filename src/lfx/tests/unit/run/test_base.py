@@ -885,7 +885,7 @@ class TestRunFlowExecutionErrors:
         mock_graph.prepare = MagicMock()
 
         async def failing_async_start():
-            msg="Execution failed"
+            msg = "Execution failed"
             raise ValueError(msg)
             yield  # Make it a generator
 
