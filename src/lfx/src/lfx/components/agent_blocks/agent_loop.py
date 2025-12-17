@@ -215,119 +215,108 @@ class AgentLoopComponent(Component):
 
         return DataFrame(messages)
 
-    async def run_agent(self) -> Message:
-        """Run the agent and return the final response.
+    async def _create_initial_message(self, execution_context) -> Message | None:
+        """Create and send initial message for UI feedback."""
+        if not execution_context.stream_to_playground:
+            return None
 
-        This method:
-        1. Creates and sends initial message IMMEDIATELY for UI feedback
-        2. Gathers execution context from the parent component
-        3. Builds the internal agent graph with all configuration
-        4. Executes the graph with event_manager for UI updates
-        5. Returns the final AI message from AgentStep's cached result
-        """
-        # Import here to avoid circular import
-        from lfx.base.agents.agent_graph import GraphExecutionContext
+        agent_message = Message(
+            sender=MESSAGE_SENDER_AI,
+            sender_name="AI",
+            properties={"icon": "Bot", "state": "partial"},
+            content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
+            session_id=execution_context.session_id,
+        )
+        return await self.send_message(agent_message)
+
+    def _build_internal_components(self, execution_context, agent_message: Message | None):
+        """Build and configure internal graph components."""
         from lfx.components.agent_blocks.agent_step import AgentStepComponent
         from lfx.components.agent_blocks.execute_tool import ExecuteToolComponent
         from lfx.components.flow_controls.while_loop import WhileLoopComponent
-        from lfx.graph.graph.base import Graph
 
-        # Gather execution context from this component
-        execution_context = GraphExecutionContext.from_component(self)
-
-        # Create and send the initial message IMMEDIATELY for UI feedback
-        # This follows the pattern from ALTKBaseAgentComponent
-        agent_message: Message | None = None
-        if execution_context.stream_to_playground:
-            agent_message = Message(
-                sender=MESSAGE_SENDER_AI,
-                sender_name="AI",
-                properties={"icon": "Bot", "state": "partial"},
-                content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
-                session_id=execution_context.session_id,
-            )
-            # Send immediately so UI shows the message right away
-            agent_message = await self.send_message(agent_message)
-
-        # Build components with unique IDs
         component_id_prefix = f"{self._id}_internal"
         while_loop = WhileLoopComponent(_id=f"{component_id_prefix}_while_loop")
         agent_step = AgentStepComponent(_id=f"{component_id_prefix}_agent_step")
         execute_tool = ExecuteToolComponent(_id=f"{component_id_prefix}_execute_tool")
 
-        # Set stream_to_playground on inner components based on parent's connection
-        # This enables streaming when AgentLoop is connected to ChatOutput
+        # Configure streaming on inner components
         for component in [while_loop, agent_step, execute_tool]:
             component._stream_to_playground = execution_context.stream_to_playground  # noqa: SLF001
-            # Pass the parent message so inner components can update it instead of creating new ones
             if agent_message:
                 component._parent_message = agent_message  # noqa: SLF001
 
-        # Configure WhileLoop
-        while_loop_config = {
+        return while_loop, agent_step, execute_tool
+
+    async def _configure_while_loop(self, while_loop, execute_tool):
+        """Configure WhileLoop with input and memory."""
+        config = {
             "max_iterations": self.max_iterations,
             "loop": execute_tool.execute_tools,
         }
         if self.input_value is not None:
-            while_loop_config["input_value"] = self.input_value
+            config["input_value"] = self.input_value
 
-        # Determine initial_state: explicit DataFrame takes precedence, otherwise fetch from session memory
+        # Use explicit message_history or fetch from session memory
         if self.message_history is not None:
-            while_loop_config["initial_state"] = self.message_history
+            config["initial_state"] = self.message_history
         else:
-            # Fetch chat history from Langflow's session memory
             memory_messages = await self.get_memory_data()
             if memory_messages:
-                while_loop_config["initial_state"] = self._messages_to_dataframe(memory_messages)
+                config["initial_state"] = self._messages_to_dataframe(memory_messages)
 
-        while_loop.set(**while_loop_config)
+        while_loop.set(**config)
 
-        # Configure AgentStep
-        tools = self.tools if self.tools else []
-        agent_step_config = {
+    def _configure_agent_step(self, agent_step, while_loop):
+        """Configure AgentStep with model and tools."""
+        tools = self.tools or []
+        config = {
             "system_message": self.system_message,
             "temperature": self.temperature,
             "include_think_tool": self.include_think_tool,
             "messages": while_loop.loop_output,
         }
         if self.model:
-            agent_step_config["model"] = self.model
+            config["model"] = self.model
         if self.api_key:
-            agent_step_config["api_key"] = self.api_key
+            config["api_key"] = self.api_key
         if tools:
-            agent_step_config["tools"] = tools
-        agent_step.set(**agent_step_config)
+            config["tools"] = tools
 
-        # Configure ExecuteTool
-        execute_tool_config = {"ai_message": agent_step.get_tool_calls}
-        if tools:
-            execute_tool_config["tools"] = tools
-        execute_tool.set(**execute_tool_config)
+        agent_step.set(**config)
 
-        # Extract context values for Graph construction
-        flow_id = execution_context.flow_id
+    def _configure_execute_tool(self, execute_tool, agent_step):
+        """Configure ExecuteTool with tools."""
+        config = {"ai_message": agent_step.get_tool_calls}
+        if self.tools:
+            config["tools"] = self.tools
+        execute_tool.set(**config)
+
+    def _build_graph(self, while_loop, agent_step, execution_context):
+        """Build the agent graph."""
+        from lfx.graph.graph.base import Graph
+
         flow_name = f"{execution_context.flow_name}_agent_loop" if execution_context.flow_name else "agent_loop"
-        user_id = execution_context.user_id
-        context = execution_context.context
 
-        # Create graph
         graph = Graph(
             start=while_loop,
             end=agent_step,
-            flow_id=flow_id,
+            flow_id=execution_context.flow_id,
             flow_name=flow_name,
-            user_id=user_id,
-            context=context,
+            user_id=execution_context.user_id,
+            context=execution_context.context,
         )
 
-        # Set session_id if available
         if execution_context.session_id:
             graph.session_id = execution_context.session_id
 
-        # Execute the graph
+        return graph
+
+    async def _execute_graph(self, graph, execution_context):
+        """Execute the graph and log progress."""
         iteration_count = 0
         async for result in graph.async_start(
-            max_iterations=self.max_iterations * 3,  # Allow for loop iterations
+            max_iterations=self.max_iterations * 3,
             config={"output": {"cache": False}},
             event_manager=execution_context.event_manager,
         ):
@@ -335,12 +324,10 @@ class AgentLoopComponent(Component):
             self.log(f"Graph iteration {iteration_count}: {type(result).__name__}")
 
         self.log(f"Graph completed after {iteration_count} iterations")
-        self.log(f"Graph vertices: {[v.id for v in graph.vertices]}")
-        self.log(f"Agent step outputs: {list(agent_step._outputs_map.keys())}")  # noqa: SLF001
 
-        # Get the result from agent_step's output
+    def _extract_result(self, agent_step, agent_message: Message | None) -> Message:
+        """Extract final result from agent_step output."""
         output = agent_step.get_output_by_method(agent_step.get_ai_message)
-        self.log(f"ai_message output value type: {type(output.value).__name__ if output else 'None'}")
 
         has_valid_output = (
             output is not None
@@ -348,14 +335,13 @@ class AgentLoopComponent(Component):
             and output.value is not None
             and output.value is not UNDEFINED
         )
+
         if has_valid_output:
             result = output.value
             if isinstance(result, Message):
-                # If we have a parent message, update it with final content and mark complete
                 if agent_message:
                     agent_message.text = result.text
                     agent_message.properties.state = "complete"
-                    # Merge content_blocks if result has any
                     if result.content_blocks:
                         agent_message.content_blocks = result.content_blocks
                     return agent_message
@@ -369,14 +355,34 @@ class AgentLoopComponent(Component):
             msg = f"Unexpected result type from agent_step: {type(result)}"
             raise TypeError(msg)
 
-        # Also check tool_calls output
-        tool_calls_output = agent_step.get_output_by_method(agent_step.get_tool_calls)
-        tc_type = type(tool_calls_output.value).__name__ if tool_calls_output else "None"
-        self.log(f"tool_calls output value type: {tc_type}")
-
-        # If we have a parent message but no result, mark it complete with error
+        # No valid output - return error message
         if agent_message:
             agent_message.text = "Agent completed without producing a response."
             agent_message.properties.state = "complete"
             return agent_message
         return Message(text="Agent completed without producing a response.")
+
+    async def run_agent(self) -> Message:
+        """Run the agent and return the final response."""
+        from lfx.base.agents.agent_graph import GraphExecutionContext
+
+        # 1. Gather execution context
+        execution_context = GraphExecutionContext.from_component(self)
+
+        # 2. Create initial UI message
+        agent_message = await self._create_initial_message(execution_context)
+
+        # 3. Build internal components
+        while_loop, agent_step, execute_tool = self._build_internal_components(execution_context, agent_message)
+
+        # 4. Configure components
+        await self._configure_while_loop(while_loop, execute_tool)
+        self._configure_agent_step(agent_step, while_loop)
+        self._configure_execute_tool(execute_tool, agent_step)
+
+        # 5. Build and execute graph
+        graph = self._build_graph(while_loop, agent_step, execution_context)
+        await self._execute_graph(graph, execution_context)
+
+        # 6. Extract and return result
+        return self._extract_result(agent_step, agent_message)
