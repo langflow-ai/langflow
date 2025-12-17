@@ -109,7 +109,22 @@ class Message(Data):
     def model_post_init(self, /, _context: Any) -> None:
         new_files: list[Any] = []
         for file in self.files or []:
-            if is_image_file(file):
+            # Skip if already an Image instance
+            if isinstance(file, Image):
+                new_files.append(file)
+            # Get the path string if file is a dict or has path attribute
+            elif isinstance(file, dict) and "path" in file:
+                file_path = file["path"]
+                if file_path and is_image_file(file_path):
+                    new_files.append(Image(path=file_path))
+                else:
+                    new_files.append(file_path if file_path else file)
+            elif hasattr(file, "path") and file.path:
+                if is_image_file(file.path):
+                    new_files.append(Image(path=file.path))
+                else:
+                    new_files.append(file.path)
+            elif isinstance(file, str) and is_image_file(file):
                 new_files.append(Image(path=file))
             else:
                 new_files.append(file)
@@ -286,7 +301,7 @@ class Message(Data):
     @classmethod
     async def create(cls, **kwargs):
         """If files are present, create the message in a separate thread as is_image_file is blocking."""
-        if "files" in kwargs:
+        if kwargs.get("files"):
             return await asyncio.to_thread(cls, **kwargs)
         return cls(**kwargs)
 

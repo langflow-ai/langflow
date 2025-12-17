@@ -21,8 +21,8 @@ async def test_get_version(client: AsyncClient):
     assert "package" in result, "The dictionary must contain a key called 'package'"
 
 
-async def test_get_config(client: AsyncClient):
-    response = await client.get("api/v1/config")
+async def test_get_config(client: AsyncClient, logged_in_headers: dict):
+    response = await client.get("api/v1/config", headers=logged_in_headers)
     result = response.json()
 
     assert response.status_code == status.HTTP_200_OK

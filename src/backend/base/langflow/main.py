@@ -303,8 +303,14 @@ def get_lifespan(*, fix_migration=False, version=None):
             # Allows the server to start first to avoid race conditions with MCP Server startup
             mcp_init_task = asyncio.create_task(delayed_init_mcp_servers())
 
-            yield
+            # v1 and project MCP server context managers
+            from langflow.api.v1.mcp import start_streamable_http_manager
+            from langflow.api.v1.mcp_projects import start_project_task_group
 
+            await start_streamable_http_manager()
+            await start_project_task_group()
+
+            yield
         except asyncio.CancelledError:
             await logger.adebug("Lifespan received cancellation signal")
         except Exception as exc:
@@ -334,6 +340,20 @@ def get_lifespan(*, fix_migration=False, version=None):
 
                 # Step 1: Cancelling Background Tasks
                 with shutdown_progress.step(1):
+                    from langflow.api.v1.mcp import stop_streamable_http_manager
+                    from langflow.api.v1.mcp_projects import stop_project_task_group
+
+                    # Shutdown MCP project servers
+                    try:
+                        await stop_project_task_group()
+                    except Exception as e:  # noqa: BLE001
+                        await logger.aerror(f"Failed to stop MCP Project servers: {e}")
+                    # Close MCP server streamable-http session manager .run() context manager
+                    try:
+                        await stop_streamable_http_manager()
+                    except Exception as e:  # noqa: BLE001
+                        await logger.aerror(f"Failed to stop MCP server streamable-http session manager: {e}")
+                    # Cancel background tasks
                     tasks_to_cancel = []
                     if sync_flows_from_fs_task:
                         sync_flows_from_fs_task.cancel()
