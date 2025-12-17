@@ -304,7 +304,7 @@ module.exports = {
             },
             {
               type: "category",
-              label: "Files and Knowledge",
+              label: "Files",
               items: [
                 "Components/directory",
                 "Components/read-file",
