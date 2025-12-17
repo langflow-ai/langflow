@@ -54,10 +54,6 @@ class LocalStorageService(StorageService, Service):
         flow_id, file_name = parts
         return self.build_full_path(flow_id, file_name)
 
-    async def teardown(self) -> None:
-        """Teardown the storage service."""
-        # No cleanup needed for local storage
-
     def build_full_path(self, flow_id: str, file_name: str) -> str:
         """Build the full path of a file in the local storage."""
         return str(self.data_dir / flow_id / file_name)
