@@ -11,7 +11,12 @@ The Langflow Executor (LFX) is a command-line tool that serves and runs flows st
 
 Running a flow with LFX is similar to running flows with the [`--backend-only` environment variable](/environment-variables#server) enabled, but even more lightweight because the Langflow package and all of its dependencies don't need to be installed.
 
-Use LFX to share flows with other developers, test flows in different environments, and run flows in production applications without requiring the full Langflow UI or database setup.
+Use LFX to share flows with other developers, test flows in different environments, and run flows in production applications without requiring the full Langflow UI or database.
+
+LFX uses a no-op database interface called [`NoopSession`](https://github.com/langflow-ai/langflow/blob/main/src/lfx/src/lfx/services/session.py) for all operations that require persistent state.
+There is no `langflow.db` database file when using LFX.
+You can run flows with the API, but any stateful operations that depend on the Langflow database, like saving flows, storing messages, or managing users **will not** persist data.
+Operations that depend on `langflow.db` will not work as they do in the full Langflow application.
 
 LFX includes two commands for executing flows:
 
