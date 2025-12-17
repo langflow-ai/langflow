@@ -126,8 +126,12 @@ class LambdaFilterComponent(Component):
         else:
             data = self.data
 
-        dump = json.dumps(data)
-        self.log(str(data))
+        # Keep only the actual payload (common for HTTP/API fetch components)
+        if isinstance(data, dict) and "result" in data and isinstance(data["result"], list):
+            data = {"_results": data["result"]}
+
+        dump = json.dumps(data, separators=(",", ":"), ensure_ascii=False)
+        self.log(str(dump))
 
         llm = self.llm
         instruction = self.filter_instruction
