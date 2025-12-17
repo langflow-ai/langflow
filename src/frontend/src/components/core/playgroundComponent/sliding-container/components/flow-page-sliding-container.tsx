@@ -6,6 +6,8 @@ import { useSimpleSidebar } from "@/components/ui/simple-sidebar";
 import { SLIDING_TRANSITION_MS } from "@/constants/constants";
 import { useEditSessionInfo } from "../../chat-view/chat-header/hooks/use-edit-session-info";
 import { useGetAddSessions } from "../../chat-view/chat-header/hooks/use-get-add-sessions";
+import { Messages } from "../../chat-view/messages/messages";
+
 
 type FlowPageSlidingContainerContentProps = {
   isFullscreen: boolean;
@@ -147,7 +149,10 @@ export function FlowPageSlidingContainerContent({
             onClose={handleClose}
           />
           <div className="flex-1 overflow-auto p-6">
-            {/* TODO: Add messages here */}
+            <Messages
+              visibleSession={currentSessionId ?? currentFlowId ?? null}
+              playgroundPage={true}
+            />
           </div>
         </div>
       </div>
