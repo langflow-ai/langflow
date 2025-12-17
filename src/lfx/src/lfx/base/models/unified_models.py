@@ -34,6 +34,87 @@ from lfx.utils.async_helpers import run_until_complete
 # When true, fetches model data from models.dev API instead of static constants
 USE_LIVE_MODEL_DATA = os.environ.get("LFX_USE_LIVE_MODEL_DATA", "false").lower() == "true"
 
+# Excluded providers - these providers will not be shown in the UI
+EXCLUDED_PROVIDERS: set[str] = {
+    "AIHubMix",
+    "Alibaba",
+    "Alibaba (China)",
+    "Amazon Bedrock",
+    "Anthropic",
+    "Azure",
+    "Azure Cognitive Services",
+    "Bailing",
+    "Baseten",
+    "Cerebras",
+    "Chutes",
+    "Cloudflare AI Gateway",
+    "Cloudflare Workers AI",
+    "Cohere",
+    "Cortecs",
+    "Deep Infra",
+    "DeepSeek",
+    "FastRouter",
+    "Fireworks AI",
+    "GitHub Copilot",
+    "GitHub Models",
+    "Google",
+    # "Google Generative AI",
+    "Groq",
+    "Helicone",
+    "Hugging Face",
+    # "IBM Watsonx",
+    "IO.NET",
+    "Inception",
+    "Inference",
+    "Kimi For Coding",
+    "Llama",
+    "LMStudio",
+    "LucidQuery AI",
+    "MiniMax",
+    "MiniMax (China)",
+    "Mistral",
+    "ModelScope",
+    "Moonshot AI",
+    "Moonshot AI (China)",
+    "Morph",
+    "Nebius Token Factory",
+    "Nvidia",
+    "Ollama",
+    "Ollama Cloud",
+    # "OpenAI",
+    "OpenCode Zen",
+    "OpenRouter",
+    "OVHcloud AI Endpoints",
+    "Perplexity",
+    "Poe",
+    "Requesty",
+    "SAP AI Core",
+    "Scaleway",
+    "SiliconFlow",
+    "SiliconFlow (China)",
+    "submodel",
+    "Synthetic",
+    "Together AI",
+    "Upstage",
+    "v0",
+    "Venice AI",
+    "Vercel AI Gateway",
+    "Vertex",
+    "Vertex (Anthropic)",
+    "Vultr",
+    "Weights & Biases",
+    "xAI",
+    "Z.AI",
+    "Z.AI Coding Plan",
+    "ZenMux",
+    "Zhipu AI",
+    "Zhipu AI Coding Plan",
+    "iFlow",
+}
+
+# Excluded models - these model names will not be shown in the UI
+EXCLUDED_MODELS: set[str] = set()
+
 
 @lru_cache(maxsize=1)
 def get_model_classes():
@@ -103,19 +184,26 @@ def get_static_model_provider_metadata():
 
 
 def get_model_provider_metadata():
-    """Get provider metadata from either static constants or live API."""
+    """Get provider metadata from either static constants or live API.
+
+    When USE_LIVE_MODEL_DATA is True, merges static and live metadata,
+    with live data overriding static data for matching providers.
+    """
     if not USE_LIVE_MODEL_DATA:
         return get_static_model_provider_metadata()
+
+    # Start with static metadata as the base
+    merged_metadata = dict(get_static_model_provider_metadata())
 
     try:
         live_metadata = get_provider_metadata_from_api()
         if live_metadata:
-            return live_metadata
+            # Override static with live data for matching providers
+            merged_metadata.update(live_metadata)
     except Exception as e:
         logger.debug(f"Failed to get live provider metadata: {e}")
 
-    # Fallback to static
-    return get_static_model_provider_metadata()
+    return merged_metadata
 
 
 model_provider_metadata = get_model_provider_metadata()
@@ -156,24 +244,56 @@ def get_live_models_as_groups() -> list[list[dict]]:
         return []
 
 
+def _merge_static_and_live_models(static_groups: list[list[dict]], live_groups: list[list[dict]]) -> list[list[dict]]:
+    """Merge static and live model data, with live data overriding static for matching providers.
+
+    Args:
+        static_groups: List of model groups from static constants
+        live_groups: List of model groups from live API
+
+    Returns:
+        Merged list of model groups
+    """
+    # Build a map of provider -> models from static data
+    provider_to_models: dict[str, list[dict]] = {}
+    for group in static_groups:
+        if group:
+            provider = group[0].get("provider", "Unknown")
+            provider_to_models[provider] = list(group)
+
+    # Override with live data for matching providers
+    for group in live_groups:
+        if group:
+            provider = group[0].get("provider", "Unknown")
+            # Live data completely replaces static data for this provider
+            provider_to_models[provider] = list(group)
+
+    return list(provider_to_models.values())
+
+
 def get_models_detailed():
     """Get model definitions from either static constants or live API.
 
-    When USE_LIVE_MODEL_DATA is True, fetches from models.dev API.
+    When USE_LIVE_MODEL_DATA is True, merges static and live model data,
+    with live data overriding static data for matching providers.
     When False (default), uses static constants.
-    Falls back to static if live API fails.
     """
     if not USE_LIVE_MODEL_DATA:
         return get_static_models_detailed()
 
+    # Get static data as the base
+    static_groups = get_static_models_detailed()
+
     # Try to get live data
     live_groups = get_live_models_as_groups()
+
     if live_groups:
-        return live_groups
+        # Merge static and live, with live taking precedence
+        return _merge_static_and_live_models(static_groups, live_groups)
 
     # Fallback to static if live fails
     logger.warning("Live model data unavailable, falling back to static constants")
-    return get_static_models_detailed()
+    return static_groups
 
 
 MODELS_DETAILED = get_models_detailed()
@@ -207,8 +327,11 @@ def get_model_provider_variable_mapping() -> dict[str, str]:
 
 
 def get_model_providers() -> list[str]:
-    """Return a sorted list of unique provider names."""
-    return sorted({md.get("provider", "Unknown") for group in MODELS_DETAILED for md in group})
+    """Return a sorted list of unique provider names, excluding any in EXCLUDED_PROVIDERS."""
+    all_providers = {md.get("provider", "Unknown") for group in MODELS_DETAILED for md in group}
+    # Filter out excluded providers
+    filtered_providers = {p for p in all_providers if p not in EXCLUDED_PROVIDERS}
+    return sorted(filtered_providers)
 
 
 def get_unified_models_detailed(
@@ -263,6 +386,16 @@ def get_unified_models_detailed(
     # Apply filters
     filtered_models: list[dict] = []
     for md in all_models:
+        # Skip excluded providers
+        provider_name = md.get("provider", "Unknown")
+        if provider_name in EXCLUDED_PROVIDERS:
+            continue
+
+        # Skip excluded models
+        current_model_name = md.get("name", "")
+        if current_model_name in EXCLUDED_MODELS:
+            continue
+
         # Skip models flagged as not_supported unless explicitly included
         if (not include_unsupported) and md.get("not_supported", False):
             continue

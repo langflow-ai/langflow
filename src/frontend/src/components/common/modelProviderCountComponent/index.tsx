@@ -43,7 +43,7 @@ export const ModelProviderCount = () => {
         <ModelProviderModal
           open={open}
           onClose={() => setOpen(false)}
-          modelType={["image", "audio", "video", "llm", "embeddings"]}
+          modelType={["llm", "embeddings"]}
         />
       )}
     </>
