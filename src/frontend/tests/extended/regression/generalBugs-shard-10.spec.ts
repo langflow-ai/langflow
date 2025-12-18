@@ -3,6 +3,7 @@ import path from "path";
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
 test(
   "freeze must work correctly",
@@ -51,6 +52,8 @@ test(
 
     await page.getByText("Check & Save").click();
 
+    await initialGPTsetup(page);
+
     await page.getByTestId("button_run_chat output").click();
 
     await page.waitForSelector("text=built successfully");
@@ -61,11 +64,13 @@ test(
       .getByTestId("div-chat-message")
       .allTextContents();
 
-    const concatAllText = textContents.join(" ");
+    // Get the first response
+    const firstResponseText = textContents[textContents.length - 1];
 
     await page.getByText("Close").last().click();
 
-    await page.getByText("Prompt", { exact: true }).last().click();
+    // Freeze the Chat Output node (not Prompt) so the entire response is cached
+    await page.getByText("Chat Output", { exact: true }).last().click();
 
     await page.waitForSelector('[data-testid="more-options-modal"]', {
       timeout: 1000,
@@ -78,6 +83,7 @@ test(
 
     expect(page.locator(".border-ring-frozen")).toHaveCount(1);
 
+    // Now change the prompt (this should have no effect since Chat Output is frozen)
     await page.getByTestId("button_open_prompt_modal").click();
 
     await page.waitForTimeout(500);
@@ -104,8 +110,12 @@ test(
       .getByTestId("div-chat-message")
       .allTextContents();
 
-    textContents2.forEach((text) => {
-      expect(text).toBe(concatAllText);
-    });
+    // Get the second response
+    const secondResponseText = textContents2[textContents2.length - 1];
+
+    // When the Chat Output node is frozen, it should return the cached output
+    // from the first run, so the second response should be identical
+    // to the first response even though we changed the prompt text
+    expect(secondResponseText).toBe(firstResponseText);
   },
 );
