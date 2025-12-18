@@ -1,5 +1,5 @@
 # ruff: noqa: PT018
-"""Integration tests for the agent graph builder module.
+"""Integration tests for agent graph execution.
 
 These tests require:
 - OPENAI_API_KEY environment variable
@@ -9,7 +9,6 @@ These tests require:
 import os
 
 import pytest
-from lfx.base.agents.agent_graph import build_agent_graph
 from lfx.components.agent_blocks.agent_step import AgentStepComponent
 from lfx.components.agent_blocks.execute_tool import ExecuteToolComponent
 from lfx.components.flow_controls.while_loop import WhileLoopComponent
@@ -86,15 +85,33 @@ class TestAgentGraphEndToEnd:
 
         api_key = os.environ.get("OPENAI_API_KEY")
 
-        # Build the agent graph with a tool
-        graph = build_agent_graph(
+        # Build the components directly
+        while_loop = WhileLoopComponent(_id="e2e_tool_test_while_loop")
+        agent_step = AgentStepComponent(_id="e2e_tool_test_agent_step")
+        execute_tool = ExecuteToolComponent(_id="e2e_tool_test_execute_tool")
+
+        # Configure WhileLoop
+        while_loop.set(
+            max_iterations=10,
+            loop=execute_tool.execute_tools,
+            input_value="Hello",
+        )
+
+        # Configure AgentStep
+        agent_step.set(
             model="gpt-5-nano",
             api_key=api_key,
-            tools=tools,
-            input_value="Hello",
             system_message="You are a helpful assistant.",
-            component_id_prefix="e2e_tool_test",
+            temperature=0.1,
+            tools=tools,
+            messages=while_loop.loop_output,
         )
+
+        # Configure ExecuteTool
+        execute_tool.set(ai_message=agent_step.get_tool_calls, tools=tools)
+
+        # Build the graph
+        graph = Graph(start=while_loop, end=agent_step)
 
         # Verify graph structure
         graph.prepare()
