@@ -13,9 +13,9 @@ Migrated database fields:
 - folder.auth_settings: MCP oauth_client_secret and api_key fields
 
 Usage:
-    python scripts/migrate_secret_key.py --help
-    python scripts/migrate_secret_key.py --dry-run
-    python scripts/migrate_secret_key.py --database-url postgresql://...
+    uv run python scripts/migrate_secret_key.py --help
+    uv run python scripts/migrate_secret_key.py --dry-run
+    uv run python scripts/migrate_secret_key.py --database-url postgresql://...
 """
 
 import argparse

@@ -163,7 +163,7 @@ Override with `LANGFLOW_CONFIG_DIR` environment variable or `--config-dir` flag.
 ### CLI Options
 
 ```
-python scripts/migrate_secret_key.py --help
+uv run python scripts/migrate_secret_key.py --help
 
 Options:
   --dry-run          Preview changes without modifying anything
