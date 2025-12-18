@@ -21,13 +21,36 @@ interface MessagesProps {
   closeChat?: () => void;
 }
 
+const areFilesEqual = (
+  a: ChatMessageType["files"],
+  b: ChatMessageType["files"],
+) => {
+  if (a === b) return true;
+  if (!Array.isArray(a) || !Array.isArray(b)) return false;
+  if (a.length !== b.length) return false;
+  return a.every((file, idx) => file === b[idx]);
+};
+
+const primitiveFields: Array<keyof ChatMessageType> = [
+  "id",
+  "message",
+  "session",
+  "category",
+  "isSend",
+  "edit",
+  "sender_name",
+  "timestamp",
+  "content_blocks",
+  "properties",
+];
+
+const areChatsEqual = (prev: ChatMessageType, next: ChatMessageType) =>
+  primitiveFields.every((field) => prev[field] === next[field]) &&
+  areFilesEqual(prev.files, next.files);
+
 const MemoizedChatMessage = memo(ChatMessage, (prevProps, nextProps) => {
   return (
-    prevProps.chat.message === nextProps.chat.message &&
-    prevProps.chat.id === nextProps.chat.id &&
-    prevProps.chat.session === nextProps.chat.session &&
-    prevProps.chat.content_blocks === nextProps.chat.content_blocks &&
-    prevProps.chat.properties === nextProps.chat.properties &&
+    areChatsEqual(prevProps.chat, nextProps.chat) &&
     prevProps.lastMessage === nextProps.lastMessage
   );
 });
