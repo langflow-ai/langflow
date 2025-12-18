@@ -388,7 +388,7 @@ async def process_agent_events(
     agent_message = await send_message_callback(message=agent_message)
     # Capture the original message id - this must stay consistent throughout if streaming
     # Message may not contain id if the Agent is not connected to a Chat Output (_should_skip_message is True)
-    initial_message_id = agent_message.id if hasattr(agent_message, "id") else None
+    initial_message_id = agent_message.get_id()
     try:
         # Create a mapping of run_ids to tool contents
         tool_blocks_map: dict[str, ToolContent] = {}
