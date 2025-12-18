@@ -29,7 +29,7 @@ from lfx.base.constants import (
 from lfx.log.logger import logger
 from lfx.template.field.prompt import DEFAULT_PROMPT_INTUT_TYPES
 from lfx.utils.util import escape_json_dump
-from sqlalchemy.exc import NoResultFound
+from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.orm import selectinload
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -1007,11 +1007,19 @@ async def load_bundles_from_urls() -> tuple[list[TemporaryDirectory], list[str]]
 
 
 async def upsert_flow_from_file(file_content: AnyStr, filename: str, session: AsyncSession, user_id: UUID) -> None:
-    flow = orjson.loads(file_content)
-    flow_endpoint_name = flow.get("endpoint_name")
+    """Upsert a flow from file content into the database.
+
+    This function handles race conditions that can occur when multiple pods try to
+    insert the same flow simultaneously in a Kubernetes environment. If an IntegrityError
+    occurs due to the unique_flow_name constraint, it will retry by fetching the existing
+    flow and updating it instead.
+    """
+    flow_data = orjson.loads(file_content)
+    flow_endpoint_name = flow_data.get("endpoint_name")
+    flow_name = flow_data.get("name")
     if _is_valid_uuid(filename):
-        flow["id"] = filename
-    flow_id = flow.get("id")
+        flow_data["id"] = filename
+    flow_id = flow_data.get("id")
 
     if isinstance(flow_id, str):
         try:
@@ -1020,11 +1028,12 @@ async def upsert_flow_from_file(file_content: AnyStr, filename: str, session: As
             await logger.aerror(f"Invalid UUID string: {flow_id}")
             return
 
-    existing = await find_existing_flow(session, flow_id, flow_endpoint_name)
+    # Include user_id and flow_name in the search to match the unique_flow_name constraint
+    existing = await find_existing_flow(session, flow_id, flow_endpoint_name, user_id, flow_name)
     if existing:
         await logger.adebug(f"Found existing flow: {existing.name}")
         await logger.ainfo(f"Updating existing flow: {flow_id} with endpoint name {flow_endpoint_name}")
-        for key, value in flow.items():
+        for key, value in flow_data.items():
             if hasattr(existing, key):
                 # flow dict from json and db representation are not 100% the same
                 setattr(existing, key, value)
@@ -1049,15 +1058,52 @@ async def upsert_flow_from_file(file_content: AnyStr, filename: str, session: As
 
         # Assign the newly created flow to the default folder
         folder = await get_or_create_default_folder(session, user_id)
-        flow["user_id"] = user_id
-        flow["folder_id"] = folder.id
-        flow = Flow.model_validate(flow)
-        flow.updated_at = datetime.now(tz=timezone.utc).astimezone()
+        flow_data["user_id"] = user_id
+        flow_data["folder_id"] = folder.id
+        new_flow = Flow.model_validate(flow_data)
+        new_flow.updated_at = datetime.now(tz=timezone.utc).astimezone()
 
-        session.add(flow)
+        try:
+            session.add(new_flow)
+            await session.flush()
+        except IntegrityError as e:
+            # Race condition: another pod inserted the flow between our check and insert
+            # Rollback and try to update the existing flow instead
+            await session.rollback()
+            if "unique_flow_name" in str(e) or "unique_flow_endpoint_name" in str(e):
+                await logger.ainfo(
+                    f"Flow '{flow_name}' was created by another process, fetching and updating instead"
+                )
+                # Re-fetch the existing flow that was created by the other process
+                existing = await find_existing_flow(session, flow_id, flow_endpoint_name, user_id, flow_name)
+                if existing:
+                    for key, value in flow_data.items():
+                        if hasattr(existing, key):
+                            setattr(existing, key, value)
+                    existing.updated_at = datetime.now(tz=timezone.utc).astimezone()
+                    session.add(existing)
+                else:
+                    await logger.aerror(
+                        f"Failed to find flow '{flow_name}' after IntegrityError - this should not happen"
+                    )
+            else:
+                # Re-raise if it's a different integrity error
+                raise
 
 
-async def find_existing_flow(session, flow_id, flow_endpoint_name):
+async def find_existing_flow(session, flow_id, flow_endpoint_name, user_id=None, flow_name=None):
+    """Find an existing flow by endpoint_name, id, or (user_id, name) combination.
+
+    Args:
+        session: Database session
+        flow_id: Flow UUID to search for
+        flow_endpoint_name: Endpoint name to search for
+        user_id: Optional user ID for (user_id, name) constraint check
+        flow_name: Optional flow name for (user_id, name) constraint check
+
+    Returns:
+        Existing Flow object if found, None otherwise
+    """
     if flow_endpoint_name:
         await logger.adebug(f"flow_endpoint_name: {flow_endpoint_name}")
         stmt = select(Flow).where(Flow.endpoint_name == flow_endpoint_name)
@@ -1065,10 +1111,19 @@ async def find_existing_flow(session, flow_id, flow_endpoint_name):
             await logger.adebug(f"Found existing flow by endpoint name: {existing.name}")
             return existing
 
-    stmt = select(Flow).where(Flow.id == flow_id)
-    if existing := (await session.exec(stmt)).first():
-        await logger.adebug(f"Found existing flow by id: {flow_id}")
-        return existing
+    if flow_id:
+        stmt = select(Flow).where(Flow.id == flow_id)
+        if existing := (await session.exec(stmt)).first():
+            await logger.adebug(f"Found existing flow by id: {flow_id}")
+            return existing
+
+    # Check by (user_id, name) combination to match the unique_flow_name constraint
+    if user_id and flow_name:
+        stmt = select(Flow).where(Flow.user_id == user_id, Flow.name == flow_name)
+        if existing := (await session.exec(stmt)).first():
+            await logger.adebug(f"Found existing flow by user_id and name: {flow_name}")
+            return existing
+
     return None
 
 
