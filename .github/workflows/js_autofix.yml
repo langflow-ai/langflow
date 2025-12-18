@@ -37,6 +37,7 @@ jobs:
         run: |
           cd src/frontend
           npm ci
+        if: ${{ steps.setup-node.outputs.cache-hit != 'true' }}
       - name: Run Biome
         run: |
           cd src/frontend
