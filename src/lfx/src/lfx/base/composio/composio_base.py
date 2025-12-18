@@ -1001,7 +1001,8 @@ class ComposioBaseComponent(Component):
                             info=(
                                 top_schema.get("description") or "Provide JSON for this parameter (object or array)."
                             ),
-                            required=is_required,  # Setting original schema
+                            required=is_required,
+                            advanced=not is_required,  # Only show required fields upfront
                         )
                     )
 
