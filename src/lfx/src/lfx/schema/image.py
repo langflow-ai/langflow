@@ -45,7 +45,7 @@ def get_file_paths(files: list[str | dict]):
                 file_path = file.path
             else:
                 file_path = file
-            
+
             if not file_path:  # Skip empty paths
                 continue
 
