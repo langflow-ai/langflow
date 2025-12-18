@@ -971,6 +971,9 @@ class Component(CustomComponent):
     def _map_parameters_on_frontend_node(self, frontend_node: ComponentFrontendNode) -> None:
         for name, value in self._parameters.items():
             frontend_node.set_field_value_in_template(name, value)
+            # Disable load_from_db for explicitly set parameters to prevent
+            # overwriting the value during graph execution
+            frontend_node.set_field_load_from_db_in_template(name, value=False)
 
     def _map_parameters_on_template(self, template: dict) -> None:
         for name, value in self._parameters.items():
@@ -1181,10 +1184,17 @@ class Component(CustomComponent):
     def _should_process_output(self, output):
         """Determines whether a given output should be processed based on vertex edge configuration.
 
-        Returns True if the component has no vertex or outgoing edges, or if the output's name is among
-        the vertex's source edge names.
+        Returns True if:
+        - The component has no vertex or outgoing edges
+        - The output is part of a grouped outputs (conditional routing) - these must always run
+          so the routing logic can execute and decide which branch to take
+        - The output's name is among the vertex's source edge names
         """
         if not self._vertex or not self._vertex.outgoing_edges:
+            return True
+        # Always process outputs with group_outputs=True (conditional routing outputs)
+        # These need to run so the routing logic can execute, even if not connected
+        if getattr(output, "group_outputs", False):
             return True
         return output.name in self._vertex.edges_source_names
 
@@ -1565,7 +1575,18 @@ class Component(CustomComponent):
         return has_chat_input(self.graph.get_vertex_neighbors(self._vertex))
 
     def _should_skip_message(self, message: Message) -> bool:
-        """Check if the message should be skipped based on vertex configuration and message type."""
+        """Check if the message should be skipped based on vertex configuration and message type.
+
+        Messages should NOT be skipped (i.e., should be sent) when:
+        - The vertex is an output or input vertex
+        - The component is connected to ChatOutput
+        - The component has _stream_to_playground=True (set by parent for inner graphs)
+        - The message is an ErrorMessage
+        """
+        # If parent explicitly enabled streaming for this inner graph component
+        if getattr(self, "_stream_to_playground", False):
+            return False
+
         return (
             self._vertex is not None
             and not (self._vertex.is_output or self._vertex.is_input)
@@ -1672,9 +1693,13 @@ class Component(CustomComponent):
 
     async def _send_message_event(self, message: Message, id_: str | None = None, category: str | None = None) -> None:
         if hasattr(self, "_event_manager") and self._event_manager:
-            data_dict = message.model_dump()["data"] if hasattr(message, "data") else message.model_dump()
-            if id_ and not data_dict.get("id"):
-                data_dict["id"] = id_
+            # Use full model_dump() to include all Message fields (content_blocks, properties, etc.)
+            data_dict = message.model_dump()
+            # The message ID is stored in message.data["id"], which ends up in data_dict["data"]["id"]
+            # But the frontend expects it at data_dict["id"], so we need to copy it to the top level
+            message_id = id_ or data_dict.get("data", {}).get("id") or getattr(message, "id", None)
+            if message_id and not data_dict.get("id"):
+                data_dict["id"] = message_id
             category = category or data_dict.get("category", None)
 
             def _send_event():

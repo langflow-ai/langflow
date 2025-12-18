@@ -78,6 +78,9 @@ dev = [
     "pytest-cov>=7.0.0",
     "ruff>=0.9.10",
 ]
+integration = [
+    "langchain-openai>=0.3.0",
+]
 
 [tool.coverage.run]
 branch = true

@@ -243,10 +243,10 @@ def has_output_vertex(vertices: dict[Vertex, int]):
 def has_chat_output(vertices: dict[Vertex, int]):
     from lfx.graph.schema import InterfaceComponentTypes
 
-    return any(InterfaceComponentTypes.ChatOutput in vertex.id for vertex in vertices)
+    return any(vertex.base_name == InterfaceComponentTypes.ChatOutput.value for vertex in vertices)
 
 
 def has_chat_input(vertices: dict[Vertex, int]):
     from lfx.graph.schema import InterfaceComponentTypes
 
-    return any(InterfaceComponentTypes.ChatInput in vertex.id for vertex in vertices)
+    return any(vertex.base_name == InterfaceComponentTypes.ChatInput.value for vertex in vertices)
