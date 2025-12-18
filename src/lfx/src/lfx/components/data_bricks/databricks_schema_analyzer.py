@@ -1,13 +1,9 @@
 import os
 
 from databricks import sql
-from dotenv import load_dotenv
 from langflow.custom.custom_component.component import Component
 from langflow.io import MessageTextInput, Output, SecretStrInput, StrInput
 from langflow.schema.data import Data
-
-# Load environment variables
-load_dotenv()
 
 
 class DataBricksSchemaAnalyzer(Component):
@@ -123,7 +119,7 @@ class DataBricksSchemaAnalyzer(Component):
 
                             # Get extended metadata using DESCRIBE TABLE EXTENDED
                             try:
-                                cursor.execute(f"DESCRIBE TABLE EXTENDED {catalog_name}.{schema_name}.{table_name}")
+                                cursor.execute(f"DESCRIBE TABLE EXTENDED `{catalog_name}`.`{schema_name}`.`{table_name}`")
                                 extended_result = cursor.fetchall()
 
                                 # Parse the extended metadata

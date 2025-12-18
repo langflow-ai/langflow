@@ -152,7 +152,14 @@ class DataBricksMetadataComponent(Component):
                                             "comment": col[6] if len(col) > 6 else None
                                         })
                                     table_count += 1
-                                except Exception:
+                                except Exception as col_err:
+                                    metadata["columns"].append({
+                                        "catalog_name": catalog_name,
+                                        "schema_name": schema_name,
+                                        "table_name": table_name,
+                                        "column_name": None,
+                                        "error": f"Failed to get columns: {e!s}"
+                                    })
                                     continue
                     except Exception as e:
                         metadata["columns"] = [{"error": f"Failed to get columns: {e!s}"}]
@@ -200,7 +207,7 @@ class DataBricksMetadataComponent(Component):
 
                             try:
                                 # Use DESCRIBE TABLE AS JSON for detailed metadata
-                                cursor.execute(f"DESCRIBE TABLE {catalog_name}.{schema_name}.{table_name} AS JSON")
+                                cursor.execute(f"DESCRIBE TABLE `{catalog_name}`.`{schema_name}`.`{table_name}` AS JSON")
                                 json_result = cursor.fetchall()
 
                                 # Parse the JSON result

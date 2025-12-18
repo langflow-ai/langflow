@@ -550,18 +550,6 @@ export const getNodeIcon = async (name: string) => {
   }
   const iconName = nodeIconToDisplayIconMap[name];
 
-  // Debug logging for DataBricks icon
-  if (name === "DataBricks" || iconName === "DataBricks") {
-    console.log("[Icon Debug] Looking up DataBricks icon:", {
-      name,
-      iconName,
-      inEagerMap: !!eagerLoadedIconsMap["DataBricks"],
-      eagerMapKeys: Object.keys(eagerLoadedIconsMap).filter(
-        (k) => k.includes("DataBricks") || k.includes("databricks"),
-      ),
-    });
-  }
-
   if (eagerLoadedIconsMap[iconName || name]) {
     return cacheAndReturn(eagerLoadedIconsMap[iconName || name]);
   }

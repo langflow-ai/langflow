@@ -278,7 +278,8 @@ class DataBricksModelComponent(LCModelComponent):
             # Initialize OpenAI client with Databricks endpoint
             client = OpenAI(
                 api_key=api_token,
-                base_url=base_url
+                base_url=base_url,
+                timeout=60.0
             )
 
             # Parse messages
@@ -375,7 +376,8 @@ class DataBricksModelComponent(LCModelComponent):
         except ImportError:
             return None
         if isinstance(e, BadRequestError):
-            message = e.body.get("message")
-            if message:
-                return message
+            if isinstance(e.body, dict):
+                message = e.body.get("message")
+                if message:
+                    return message
         return None

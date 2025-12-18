@@ -1,13 +1,10 @@
 import os
+from contextlib import contextmanager
 
 from databricks import sql
-from dotenv import load_dotenv
 from langflow.custom.custom_component.component import Component
 from langflow.io import MessageTextInput, Output, SecretStrInput, StrInput
 from langflow.schema.data import Data
-
-# Load environment variables
-load_dotenv()
 
 
 class DataBricksQueryComponent(Component):
@@ -51,24 +48,34 @@ class DataBricksQueryComponent(Component):
         Output(display_name="Row Count", name="row_count", method="get_row_count"),
     ]
 
+    @contextmanager
+    def _get_cursor(self):
+        """Context manager for Databricks connection and cursor.
+        
+        Yields a cursor that can be used for executing queries.
+        Automatically handles connection lifecycle.
+        """
+        with sql.connect(
+            server_hostname=self.server_hostname,
+            http_path=self.http_path,
+            access_token=self.access_token
+        ) as connection:
+            with connection.cursor() as cursor:
+                yield cursor
+
     def execute_query(self) -> Data:
         """Execute the SQL query and return results."""
         try:
-            with sql.connect(
-                server_hostname=self.server_hostname,
-                http_path=self.http_path,
-                access_token=self.access_token
-            ) as connection:
-                with connection.cursor() as cursor:
-                    cursor.execute(self.sql_query)
-                    result = cursor.fetchall()
+            with self._get_cursor() as cursor:
+                cursor.execute(self.sql_query)
+                result = cursor.fetchall()
 
-                    # Convert to list of dictionaries for better handling
-                    columns = [desc[0] for desc in cursor.description] if cursor.description else []
-                    data = [dict(zip(columns, row, strict=False)) for row in result]
+                # Convert to list of dictionaries for better handling
+                columns = [desc[0] for desc in cursor.description] if cursor.description else []
+                data = [dict(zip(columns, row, strict=False)) for row in result]
 
-                    self.status = f"Query executed successfully. Retrieved {len(data)} rows."
-                    return Data(value=data)
+                self.status = f"Query executed successfully. Retrieved {len(data)} rows."
+                return Data(value=data)
 
         except Exception as e:
             error_msg = f"Error executing query: {e!s}"
@@ -76,20 +83,17 @@ class DataBricksQueryComponent(Component):
             return Data(value={"error": error_msg})
 
     def get_row_count(self) -> Data:
-        """Get the number of rows returned by the query."""
+        """Get the number of rows returned by the query using COUNT(*)"""
         try:
-            with sql.connect(
-                server_hostname=self.server_hostname,
-                http_path=self.http_path,
-                access_token=self.access_token
-            ) as connection:
-                with connection.cursor() as cursor:
-                    cursor.execute(self.sql_query)
-                    result = cursor.fetchall()
-                    row_count = len(result)
+            with self._get_cursor() as cursor:
+                # Wrap query to count rows without fetching all data
+                count_query = f"SELECT COUNT(*) FROM ({self.sql_query}) AS subquery"
+                cursor.execute(count_query)
+                result = cursor.fetchone()
+                row_count = result[0] if result else 0
 
-                    self.status = f"Query returned {row_count} rows."
-                    return Data(value=row_count)
+                self.status = f"Query returned {row_count} rows."
+                return Data(value=row_count)
 
         except Exception as e:
             error_msg = f"Error getting row count: {e!s}"
