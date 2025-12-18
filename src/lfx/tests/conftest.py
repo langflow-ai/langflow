@@ -2,6 +2,27 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+import structlog
+
+
+@pytest.fixture(autouse=True, scope="session")
+def setup_structlog():
+    """Configure structlog before any tests run.
+
+    This ensures the logger is properly initialized and not None,
+    which prevents AttributeError when tests mock logger.configure.
+    """
+    structlog.configure(
+        processors=[
+            structlog.processors.add_log_level,
+            structlog.processors.TimeStamper(fmt="iso"),
+            structlog.dev.ConsoleRenderer(),
+        ],
+        wrapper_class=structlog.make_filtering_bound_logger(50),  # CRITICAL level
+        context_class=dict,
+        logger_factory=structlog.PrintLoggerFactory(),
+        cache_logger_on_first_use=False,
+    )
 
 
 # Set up test data paths

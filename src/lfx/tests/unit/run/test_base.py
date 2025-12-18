@@ -178,9 +178,8 @@ class TestRunFlowJsonInput:
             mock_graph.edges = []
             mock_graph.prepare = MagicMock()
 
-            async def mock_async_start():
-                return
-                yield  # Make it an async generator
+            async def mock_async_start(_inputs):
+                yield
 
             mock_graph.async_start = mock_async_start
             mock_load.return_value = mock_graph
@@ -267,9 +266,8 @@ class TestRunFlowGlobalVariables:
         mock_graph.edges = []
         mock_graph.prepare = MagicMock()
 
-        async def mock_async_start():
-            return
-            yield  # Make it an async generator
+        async def mock_async_start(_inputs):
+            yield
 
         mock_graph.async_start = mock_async_start
 
@@ -309,15 +307,8 @@ graph = Graph(chat_input, chat_output)
         mock_graph.edges = []
         mock_graph.prepare = MagicMock()
 
-        async def mock_async_start():
-            return
-            yield  # Make it an async generator
-
-        mock_graph.async_start = mock_async_start
-
-        async def mock_async_start():
-            return
-            yield  # Make it an async generator
+        async def mock_async_start(_inputs):
+            yield
 
         mock_graph.async_start = mock_async_start
 
@@ -357,9 +348,8 @@ class TestRunFlowOutputFormats:
         mock_graph.edges = []
         mock_graph.prepare = MagicMock()
 
-        async def mock_async_start():
-            return
-            yield  # Make it an async generator
+        async def mock_async_start(_inputs):
+            yield
 
         mock_graph.async_start = mock_async_start
         return mock_graph
@@ -471,7 +461,7 @@ class TestRunFlowTiming:
         mock_result.vertex.display_name = "TestComponent"
         mock_result.vertex.id = "test-id-123"
 
-        async def mock_async_start():
+        async def mock_async_start(_inputs):
             yield mock_result
 
         mock_graph.async_start = mock_async_start
@@ -530,11 +520,16 @@ class TestRunFlowVerbosity:
     @pytest.mark.asyncio
     async def test_verbose_false_configures_critical_logging(self, tmp_path):
         """Test that verbose=False configures CRITICAL log level."""
+        import sys
+
         script_path = tmp_path / "test.py"
         script_path.write_text("graph = None")
 
+        # Get the actual module from sys.modules (not the instance exported by __init__.py)
+        log_module = sys.modules["lfx.log.logger"]
+
         with (
-            patch("lfx.log.logger.configure") as mock_configure,
+            patch.object(log_module, "configure") as mock_configure,
             patch("lfx.run.base.find_graph_variable") as mock_find,
         ):
             mock_find.return_value = None  # This will cause an error, but we check configure was called
@@ -549,11 +544,15 @@ class TestRunFlowVerbosity:
     @pytest.mark.asyncio
     async def test_verbose_true_configures_info_logging(self, tmp_path):
         """Test that verbose=True configures INFO log level."""
+        import sys
+
         script_path = tmp_path / "test.py"
         script_path.write_text("graph = None")
 
+        log_module = sys.modules["lfx.log.logger"]
+
         with (
-            patch("lfx.log.logger.configure") as mock_configure,
+            patch.object(log_module, "configure") as mock_configure,
             patch("lfx.run.base.find_graph_variable") as mock_find,
         ):
             mock_find.return_value = None
@@ -568,11 +567,15 @@ class TestRunFlowVerbosity:
     @pytest.mark.asyncio
     async def test_verbose_detailed_configures_debug_logging(self, tmp_path):
         """Test that verbose_detailed=True configures DEBUG log level."""
+        import sys
+
         script_path = tmp_path / "test.py"
         script_path.write_text("graph = None")
 
+        log_module = sys.modules["lfx.log.logger"]
+
         with (
-            patch("lfx.log.logger.configure") as mock_configure,
+            patch.object(log_module, "configure") as mock_configure,
             patch("lfx.run.base.find_graph_variable") as mock_find,
         ):
             mock_find.return_value = None
@@ -587,11 +590,15 @@ class TestRunFlowVerbosity:
     @pytest.mark.asyncio
     async def test_verbose_full_configures_debug_logging(self, tmp_path):
         """Test that verbose_full=True configures DEBUG log level."""
+        import sys
+
         script_path = tmp_path / "test.py"
         script_path.write_text("graph = None")
 
+        log_module = sys.modules["lfx.log.logger"]
+
         with (
-            patch("lfx.log.logger.configure") as mock_configure,
+            patch.object(log_module, "configure") as mock_configure,
             patch("lfx.run.base.find_graph_variable") as mock_find,
         ):
             mock_find.return_value = None
@@ -649,9 +656,8 @@ class TestRunFlowVariableValidation:
         mock_graph.edges = []
         mock_graph.prepare = MagicMock()
 
-        async def mock_async_start():
-            return
-            yield  # Make it an async generator
+        async def mock_async_start(_inputs):
+            yield
 
         mock_graph.async_start = mock_async_start
 
@@ -686,9 +692,8 @@ class TestRunFlowInputValueHandling:
         mock_graph.edges = []
         mock_graph.prepare = MagicMock()
 
-        async def mock_async_start():
-            return
-            yield  # Make it an async generator
+        async def mock_async_start(_inputs):
+            yield
 
         mock_graph.async_start = mock_async_start
 
@@ -725,9 +730,8 @@ class TestRunFlowInputValueHandling:
         mock_graph.edges = []
         mock_graph.prepare = MagicMock()
 
-        async def mock_async_start():
-            return
-            yield  # Make it an async generator
+        async def mock_async_start(_inputs):
+            yield
 
         mock_graph.async_start = mock_async_start
 
@@ -783,9 +787,8 @@ class TestRunFlowJsonFileExecution:
         mock_graph.edges = []
         mock_graph.prepare = MagicMock()
 
-        async def mock_async_start():
-            return
-            yield  # Make it an async generator
+        async def mock_async_start(_inputs):
+            yield
 
         mock_graph.async_start = mock_async_start
 
@@ -884,10 +887,10 @@ class TestRunFlowExecutionErrors:
         mock_graph.edges = []
         mock_graph.prepare = MagicMock()
 
-        async def failing_async_start():
-            msg="Execution failed"
+        async def failing_async_start(_inputs):
+            msg = "Execution failed"
             raise ValueError(msg)
-            yield  # Make it a generator
+            yield  # Required to make it an async generator
 
         mock_graph.async_start = failing_async_start
 
