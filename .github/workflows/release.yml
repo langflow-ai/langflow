@@ -125,7 +125,6 @@ jobs:
   # This job checks if the required lfx version exists on PyPI and publishes it if not
   ensure-lfx-published:
     name: Ensure LFX Dependency is Published
-    needs: [ci]
     if: ${{ inputs.release_package_base }}
     runs-on: ubuntu-latest
     outputs:
@@ -233,7 +232,7 @@ jobs:
 
   build-base:
     name: Build Langflow Base
-    needs: [ci, ensure-lfx-published]
+    needs: [ensure-lfx-published]
     if: ${{ inputs.release_package_base }}
     runs-on: ubuntu-latest
     outputs:
@@ -434,7 +433,7 @@ jobs:
 
   test-cross-platform:
     name: Test Cross-Platform Installation
-    needs: [build-base, build-main, build-lfx]
+    needs: [build-base, build-main]
     if: |
       always() &&
       !cancelled() &&
@@ -542,7 +541,6 @@ jobs:
   call_docker_build_base:
     name: Call Docker Build Workflow for Langflow Base
     if: ${{ inputs.build_docker_base }}
-    needs: [ci]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}
@@ -554,7 +552,6 @@ jobs:
   call_docker_build_main:
     name: Call Docker Build Workflow for Langflow
     if: ${{ inputs.build_docker_main }}
-    needs: [ci]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}
@@ -590,7 +587,6 @@ jobs:
   call_docker_build_main_ep:
     name: Call Docker Build Workflow for Langflow with Entrypoint
     if: ${{ inputs.build_docker_main }}
-    needs: [ci]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}
@@ -602,7 +598,6 @@ jobs:
   call_docker_build_main_all:
     name: Call Docker Build Workflow for langflow-all
     if: ${{ inputs.build_docker_main }}
-    needs: [ci]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}
