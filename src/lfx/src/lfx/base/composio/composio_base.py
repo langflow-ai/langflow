@@ -1001,7 +1001,8 @@ class ComposioBaseComponent(Component):
                             info=(
                                 top_schema.get("description") or "Provide JSON for this parameter (object or array)."
                             ),
-                            required=is_required,  # Setting original schema
+                            required=is_required,
+                            advanced=not is_required,  # Only show required fields upfront
                         )
                     )
 
@@ -1059,11 +1060,14 @@ class ComposioBaseComponent(Component):
 
                 # Do not mutate input_types here; keep original configuration
 
-                inp_dict.setdefault("show", True)  # visible once action selected
-                # Preserve previously entered value if user already filled something
-                if inp.name in build_config:
+                inp_dict.setdefault("show", True)
+                
+                # Keep user-entered values (setdefault won't work since inp_dict already has "value")
+                if inp.name in build_config and isinstance(build_config[inp.name], dict):
                     existing_val = build_config[inp.name].get("value")
-                    inp_dict.setdefault("value", existing_val)
+                    if existing_val not in (None, "", False, []):
+                        inp_dict["value"] = existing_val
+                
                 build_config[inp.name] = inp_dict
 
         # Ensure _all_fields includes new ones
@@ -2150,6 +2154,19 @@ class ComposioBaseComponent(Component):
             if _is_cleared(field_value):
                 self._hide_all_action_fields(build_config)
                 return self.update_input_types(build_config)
+
+            # Get action key from selection
+            action_display_name = (
+                field_value[0].get("name") if isinstance(field_value, list) and field_value else field_value
+            )
+            action_key = self.desanitize_action_name(action_display_name) if action_display_name else None
+
+            # Skip recreating fields if they already exist (preserves user values)
+            if action_key and action_key in self._actions_data:
+                for field in self._get_action_fields(action_key):
+                    if field in build_config and build_config[field].get("show"):
+                        self.show_hide_fields(build_config, field_value)
+                        return self.update_input_types(build_config)
 
             self._update_action_config(build_config, field_value)
             # Keep the existing show/hide behaviour

@@ -45,7 +45,6 @@ export default function ToolsTable({
   const [sidebarName, setSidebarName] = useState<string>("");
   const [sidebarDescription, setSidebarDescription] = useState<string>("");
 
-  const editedSelection = useRef<boolean>(false);
   const applyingSelection = useRef<boolean>(false);
   const previousRowsCount = useRef<number>(0);
   const skipSelectionReapply = useRef<number>(0);
@@ -68,7 +67,6 @@ export default function ToolsTable({
     setData(initialData);
     const filter = initialData.filter((row) => row.status === true);
     setSelectedRows(filter);
-    editedSelection.current = false;
   }, [open]);
 
   useEffect(() => {
@@ -95,27 +93,44 @@ export default function ToolsTable({
   useEffect(() => {
     if (!agGrid.current?.api || !selectedRows || !open) return;
 
-    // Don't re-apply selection if we're just editing data fields (slug/description)
+    // Skip if editing data fields (slug/description)
     if (skipSelectionReapply.current > 0) {
       skipSelectionReapply.current--;
       return;
     }
 
     applyingSelection.current = true;
-    agGrid.current.api.setGridOption("suppressRowClickSelection", true);
 
-    const selectedIds = new Set(selectedRows.map((row) => row.name));
-    agGrid.current.api.forEachNode((node) => {
-      const shouldSelect = selectedIds.has(node.data.name);
-      if (node.isSelected() !== shouldSelect) {
-        node.setSelected(shouldSelect, false);
+    // Batch selection changes to prevent race conditions
+    requestAnimationFrame(() => {
+      if (!agGrid.current?.api) {
+        applyingSelection.current = false;
+        return;
       }
-    });
 
-    agGrid.current.api.setGridOption("suppressRowClickSelection", false);
-    setTimeout(() => {
-      applyingSelection.current = false;
-    }, 50);
+      const selectedIds = new Set(selectedRows.map((row) => row.name));
+      const nodesToSelect: any[] = [];
+      const nodesToDeselect: any[] = [];
+
+      agGrid.current.api.forEachNode((node) => {
+        const shouldSelect = selectedIds.has(node.data.name);
+        if (node.isSelected() !== shouldSelect) {
+          (shouldSelect ? nodesToSelect : nodesToDeselect).push(node);
+        }
+      });
+
+      // Batch updates prevent events from firing during programmatic changes
+      if (nodesToDeselect.length > 0) {
+        agGrid.current.api.setNodesSelected({ nodes: nodesToDeselect, newValue: false });
+      }
+      if (nodesToSelect.length > 0) {
+        agGrid.current.api.setNodesSelected({ nodes: nodesToSelect, newValue: true });
+      }
+
+      requestAnimationFrame(() => {
+        applyingSelection.current = false;
+      });
+    });
   }, [selectedRows, open]);
 
   useEffect(() => {
@@ -225,11 +240,21 @@ export default function ToolsTable({
     },
   ];
   const handleSelectionChanged = (event) => {
+    // Skip if modal closed or we're programmatically applying selection
     if (!open || applyingSelection.current) return;
 
     const selectedData = event.api.getSelectedRows();
-    editedSelection.current = true;
-    setSelectedRows(selectedData);
+
+    // Only update state if selection actually changed (prevents circular updates)
+    const newNames = new Set(selectedData.map((r: any) => r.name));
+    const oldNames = new Set((selectedRows || []).map((r: any) => r.name));
+    const sameContent =
+      newNames.size === oldNames.size &&
+      Array.from(newNames).every((name) => oldNames.has(name));
+
+    if (!sameContent) {
+      setSelectedRows(selectedData);
+    }
   };
 
   const handleSidebarInputChange = (
