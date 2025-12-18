@@ -65,19 +65,21 @@ test(
     await page.waitForTimeout(500);
 
     await tryDeleteEdge(page);
-    await page.locator(".react-flow__edge-path").nth(0).click();
+    await page.waitForTimeout(500);
+
+    await page.locator(".react-flow__edge-interaction").nth(0).click();
     await page.keyboard.press("Delete");
-    let numberOfEdges = await page.locator(".react-flow__edge-path").count();
+    let numberOfEdges = await page.locator(".react-flow__edge-interaction").count();
     expect(numberOfEdges).toBe(2);
 
-    await page.locator(".react-flow__edge-path").nth(0).click();
+    await page.locator(".react-flow__edge-interaction").nth(0).click();
     await page.keyboard.press("Delete");
-    numberOfEdges = await page.locator(".react-flow__edge-path").count();
+    numberOfEdges = await page.locator(".react-flow__edge-interaction").count();
     expect(numberOfEdges).toBe(1);
 
-    await page.locator(".react-flow__edge-path").nth(0).click();
+    await page.locator(".react-flow__edge-interaction").nth(0).click();
     await page.keyboard.press("Delete");
-    numberOfEdges = await page.locator(".react-flow__edge-path").count();
+    numberOfEdges = await page.locator(".react-flow__edge-interaction").count();
     expect(numberOfEdges).toBe(0);
 
     await tryConnectNodes(page);
@@ -100,7 +102,7 @@ test(
       )
       .click();
     await page.getByTestId("handle-chatoutput-shownode-inputs-left").click();
-    numberOfEdges = await page.locator(".react-flow__edge-path").count();
+    numberOfEdges = await page.locator(".react-flow__edge-interaction").count();
 
     expect(numberOfEdges).toBe(3);
   },
@@ -110,7 +112,7 @@ async function tryConnectNodes(page: Page) {
   await lockFlow(page);
 
   const numberOfTries = 5;
-  let numberOfEdges = await page.locator(".react-flow__edge-path").count();
+  let numberOfEdges = await page.locator(".react-flow__edge-interaction").count();
 
   for (let i = 0; i < numberOfTries; i++) {
     try {
@@ -118,7 +120,7 @@ async function tryConnectNodes(page: Page) {
         timeout: 500,
       });
     } catch (_e) {
-      numberOfEdges = await page.locator(".react-flow__edge-path").count();
+      numberOfEdges = await page.locator(".react-flow__edge-interaction").count();
       expect(numberOfEdges).toBe(0);
     }
 
@@ -131,7 +133,7 @@ async function tryConnectNodes(page: Page) {
           timeout: 500,
         });
     } catch (_e) {
-      numberOfEdges = await page.locator(".react-flow__edge-path").count();
+      numberOfEdges = await page.locator(".react-flow__edge-interaction").count();
       expect(numberOfEdges).toBe(0);
     }
   }
@@ -141,20 +143,17 @@ async function tryConnectNodes(page: Page) {
 async function tryDeleteEdge(page: Page) {
   await lockFlow(page);
 
-  const numberOfEdges = await page.locator(".react-flow__edge-path").count();
+  let numberOfEdges = await page.locator(".react-flow__edge-interaction").count();
   expect(numberOfEdges).toBe(3);
   const numberOfTries = 5;
 
+  // When locked, clicking edges and pressing delete should not remove them
   for (let i = 0; i < numberOfTries; i++) {
-    await expect(
-      page.locator(".react-flow__edge-path").nth(0).click({ timeout: 500 }),
-    ).rejects.toThrow();
-    await expect(
-      page.locator(".react-flow__edge-path").nth(1).click({ timeout: 500 }),
-    ).rejects.toThrow();
-    await expect(
-      page.locator(".react-flow__edge-path").nth(2).click({ timeout: 500 }),
-    ).rejects.toThrow();
+    await page.locator(".react-flow__edge-interaction").nth(0).click();
+    await page.keyboard.press("Delete");
+    await page.waitForTimeout(100);
+
+    numberOfEdges = await page.locator(".react-flow__edge-interaction").count();
     expect(numberOfEdges).toBe(3);
   }
   await unlockFlow(page);
