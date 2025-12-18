@@ -221,6 +221,7 @@ def test_message_with_image_object_direct():
 
         # After model_post_init, files should contain Image objects
         from lfx.schema.image import Image
+
         assert len(message.files) == 1
         assert isinstance(message.files[0], Image)
         assert message.files[0].path == tmp_path
