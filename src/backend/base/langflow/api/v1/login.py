@@ -121,7 +121,6 @@ async def auto_login(response: Response, db: DbSession):
 
                 await initialize_agentic_user_variables(user.id, db)
 
-
         return tokens
 
     raise HTTPException(

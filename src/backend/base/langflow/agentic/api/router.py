@@ -6,12 +6,12 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException
 from lfx.log.logger import logger
 from lfx.run.base import run_flow
+from pydantic import BaseModel
 
 # from langflow.agentic.mcp.server import visualize_flow_graph
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.services.deps import get_variable_service
 from langflow.services.variable.service import DatabaseVariableService
-from pydantic import BaseModel
 
 
 class FlowRequest(BaseModel):
@@ -43,10 +43,10 @@ async def run_prompt_flow(request: FlowRequest, current_user: CurrentActiveUser,
     logger.debug(f"USER ID: {user_id}")
     openai_key = await get_openai_api_key(variable_service, user_id, session)
 
-
     # Prepare global variables
     global_vars = {"FLOW_ID": request.flow_id, "OPENAI_API_KEY": openai_key}
     from langflow.agentic.mcp.server import get_flow_component_field_value, visualize_flow_graph
+
     if request.flow_id and user_id is not None:
         global_vars["FLOW_DETAILS"] = await visualize_flow_graph(flow_id_or_name=request.flow_id, user_id=str(user_id))
     if request.field_name and request.component_id and request.flow_id and user_id is not None:
@@ -127,11 +127,11 @@ if __name__ == "__main__":
     flow_path = Path(__file__).parent.parent / "flows" / "PromptGeneration.json"
     logger.debug(f"FLOW PATH: {flow_path}")
 
-
     async def main():
         try:
             # Execute the flow
             import os
+
             openai_key = os.getenv("OPENAI_API_KEY")
             print(f"OPENAI API KEY: {openai_key}")
             result = await run_flow(
