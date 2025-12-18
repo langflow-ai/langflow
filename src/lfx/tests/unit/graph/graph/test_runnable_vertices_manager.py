@@ -34,32 +34,40 @@ def test_from_dict(data):
     assert isinstance(result, RunnableVerticesManager)
 
 
-def test_from_dict_without_run_map__bad_case(data):
+def test_from_dict_without_run_map__uses_default(data):
+    """Test that from_dict uses empty default when run_map is missing."""
     data.pop("run_map")
 
-    with pytest.raises(KeyError):
-        RunnableVerticesManager.from_dict(data)
+    result = RunnableVerticesManager.from_dict(data)
+    # Should use empty defaultdict instead of raising
+    assert result.run_map == {}
 
 
-def test_from_dict_without_run_predecessors__bad_case(data):
+def test_from_dict_without_run_predecessors__uses_default(data):
+    """Test that from_dict uses empty default when run_predecessors is missing."""
     data.pop("run_predecessors")
 
-    with pytest.raises(KeyError):
-        RunnableVerticesManager.from_dict(data)
+    result = RunnableVerticesManager.from_dict(data)
+    # Should use empty defaultdict instead of raising
+    assert result.run_predecessors == {}
 
 
-def test_from_dict_without_vertices_to_run__bad_case(data):
+def test_from_dict_without_vertices_to_run__uses_default(data):
+    """Test that from_dict uses empty default when vertices_to_run is missing."""
     data.pop("vertices_to_run")
 
-    with pytest.raises(KeyError):
-        RunnableVerticesManager.from_dict(data)
+    result = RunnableVerticesManager.from_dict(data)
+    # Should use empty set instead of raising
+    assert result.vertices_to_run == set()
 
 
-def test_from_dict_without_vertices_being_run__bad_case(data):
+def test_from_dict_without_vertices_being_run__uses_default(data):
+    """Test that from_dict uses empty default when vertices_being_run is missing."""
     data.pop("vertices_being_run")
 
-    with pytest.raises(KeyError):
-        RunnableVerticesManager.from_dict(data)
+    result = RunnableVerticesManager.from_dict(data)
+    # Should use empty set instead of raising
+    assert result.vertices_being_run == set()
 
 
 def test_pickle(data):
