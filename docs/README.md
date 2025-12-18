@@ -88,7 +88,7 @@ Here's how versioning works in practice:
 
 See the [Docusaurus docs](https://docusaurus.io/docs/versioning) for more info.
 
-1. Use the Docusaurus CLI command to create a version. You can use `yarn` instead of `npm`:
+1. Use the Docusaurus CLI command to create a version.
 
 ```bash
 # Create version 1.7.0 from current docs
@@ -105,7 +105,7 @@ This command will:
 ```javascript
 docs: {
   // ... other config
-  lastVersion: '1.7.0', // Make 1.7.0 the latest version
+  lastVersion: '1.7.0',
   versions: {
     current: {
       label: 'Next', // Work-in-progress version (will become 1.8.0)
@@ -116,7 +116,7 @@ docs: {
       path: '1.7.0',
     },
   },
-  onlyIncludeVersions: ['current', '1.7.0'], // Include both versions
+  onlyIncludeVersions: ['current', '1.7.0'],
 },
 ```
 

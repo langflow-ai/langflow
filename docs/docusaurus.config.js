@@ -106,15 +106,14 @@ const config = {
           sidebarPath: require.resolve("./sidebars.js"), // Use sidebars.js file
           sidebarCollapsed: true,
           // Versioning configuration
-          lastVersion: '1.7.0', // Make 1.7.0 the latest released version
+          lastVersion: '1.7.0',
           versions: {
             current: {
-              label: 'Next', // Work-in-progress version (will become 1.8.0)
+              label: 'Next', // Work-in-progress version (will become next release)
               path: 'next',
             },
             '1.7.0': {
               label: '1.7.0',
-              path: '1.7.0',
             },
           },
           onlyIncludeVersions: ['current', '1.7.0'], // Include both versions
@@ -181,6 +180,7 @@ const config = {
     [
       "@docusaurus/plugin-client-redirects",
       {
+        // Docusaurus automatically resolves redirects to the version set by lastVersion
         redirects: [
           {
             to: "/",
@@ -390,8 +390,8 @@ const config = {
           }
           // add more redirects like this
           // {
-          //   to: '/docs/anotherpage',
-          //   from: ['/docs/legacypage1', '/docs/legacypage2'],
+          //   to: '/anotherpage',
+          //   from: ['/legacypage1', '/legacypage2'],
           // },
         ],
       },
