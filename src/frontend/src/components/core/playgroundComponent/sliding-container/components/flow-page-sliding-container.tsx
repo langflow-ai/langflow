@@ -8,7 +8,6 @@ import { useEditSessionInfo } from "../../chat-view/chat-header/hooks/use-edit-s
 import { useGetAddSessions } from "../../chat-view/chat-header/hooks/use-get-add-sessions";
 import { Messages } from "../../chat-view/messages/messages";
 
-
 type FlowPageSlidingContainerContentProps = {
   isFullscreen: boolean;
   setIsFullscreen: (value: boolean) => void;
