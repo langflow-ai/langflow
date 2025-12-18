@@ -138,33 +138,77 @@ test(
     // check rename session
     await page.mouse.move(0, 0);
     await page.getByTestId("session-selector").first().hover();
-    await page.getByTestId("session-selector").first().getByTestId("icon-MoreHorizontal").click();
+    await page
+      .getByTestId("session-selector")
+      .first()
+      .getByTestId("icon-MoreHorizontal")
+      .click();
     await page.getByLabel("Rename").click();
-    await page.getByTestId("session-selector").first().getByRole("textbox").fill("new name");
+    await page
+      .getByTestId("session-selector")
+      .first()
+      .getByRole("textbox")
+      .fill("new name");
     await page.getByTestId("icon-Check").click();
     await page.waitForTimeout(500);
 
-    await page.getByTestId("session-selector").getByText("new name").first().click();
+    await page
+      .getByTestId("session-selector")
+      .getByText("new name")
+      .first()
+      .click();
     // check cancel rename
     await page.mouse.move(0, 0);
     await page.getByTestId("session-selector").first().hover();
-    await page.getByTestId("session-selector").first().getByTestId("icon-MoreHorizontal").click();
+    await page
+      .getByTestId("session-selector")
+      .first()
+      .getByTestId("icon-MoreHorizontal")
+      .click();
     await page.getByLabel("Rename").click();
-    await page.getByTestId("session-selector").first().getByRole("textbox").fill("cancel name");
-    await page.getByTestId("session-selector").first().getByTestId("icon-X").click();
-    await page.getByTestId("session-selector").getByText("new name").first().click();
+    await page
+      .getByTestId("session-selector")
+      .first()
+      .getByRole("textbox")
+      .fill("cancel name");
+    await page
+      .getByTestId("session-selector")
+      .first()
+      .getByTestId("icon-X")
+      .click();
+    await page
+      .getByTestId("session-selector")
+      .getByText("new name")
+      .first()
+      .click();
     // check cancel rename blur
     await page.mouse.move(0, 0);
     await page.getByTestId("session-selector").first().hover();
-    await page.getByTestId("session-selector").first().getByTestId("icon-MoreHorizontal").click();
+    await page
+      .getByTestId("session-selector")
+      .first()
+      .getByTestId("icon-MoreHorizontal")
+      .click();
     await page.getByLabel("Rename").click();
-    await page.getByTestId("session-selector").first().getByRole("textbox").fill("cancel_blur");
+    await page
+      .getByTestId("session-selector")
+      .first()
+      .getByRole("textbox")
+      .fill("cancel_blur");
     await page.getByText("PlaygroundChat").click();
-    await page.getByTestId("session-selector").getByText("new name").first().click();
+    await page
+      .getByTestId("session-selector")
+      .getByText("new name")
+      .first()
+      .click();
     // check delete session
     await page.mouse.move(0, 0);
     await page.getByTestId("session-selector").first().hover();
-    await page.getByTestId("session-selector").first().getByTestId("icon-MoreHorizontal").click();
+    await page
+      .getByTestId("session-selector")
+      .first()
+      .getByTestId("icon-MoreHorizontal")
+      .click();
     await page.getByLabel("Delete").click();
     await page.getByTestId("new-chat").click();
     // check new session

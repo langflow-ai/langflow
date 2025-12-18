@@ -121,7 +121,9 @@ export const ErrorView = ({
                                       children,
                                       ...props
                                     }) => {
-                                      const inline = !(props as any).hasOwnProperty("data-language");
+                                      const inline = !(
+                                        props as any
+                                      ).hasOwnProperty("data-language");
                                       let content = children as string;
                                       if (
                                         Array.isArray(children) &&
