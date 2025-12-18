@@ -1205,8 +1205,10 @@ class ProjectMCPServer:
     def __init__(self, project_id: UUID):
         self.project_id = project_id
         self.server = Server(f"langflow-mcp-project-{project_id}")
-        # TODO: implement an environment variable to enable/disable stateless mode
-        self.session_manager = StreamableHTTPSessionManager(self.server, stateless=True)
+        settings = get_settings_service().settings
+        self.session_manager = StreamableHTTPSessionManager(
+            app=self.server, stateless=settings.mcp_streamable_http_stateless
+        )
         # since we lazily initialize the session manager's lifecycle
         # via .run(), which can only be called once, otherwise an error is raised,
         # we use the lock to prevent race conditions on concurrent requests to prevent such an error
