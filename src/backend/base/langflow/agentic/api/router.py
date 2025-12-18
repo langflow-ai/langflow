@@ -48,14 +48,21 @@ async def run_prompt_flow(request: FlowRequest, current_user: CurrentActiveUser,
     from langflow.agentic.mcp.server import get_flow_component_field_value, visualize_flow_graph
 
     if request.flow_id and user_id is not None:
-        global_vars["FLOW_DETAILS"] = await visualize_flow_graph(flow_id_or_name=request.flow_id, user_id=str(user_id))
+        flow_details = await visualize_flow_graph(flow_id_or_name=request.flow_id, user_id=str(user_id))
+        flow_summary = {
+            "flow_name": flow_details.get("flow_name"),
+            "flow_description": flow_details.get("flow_description"),
+            "text_repr": flow_details.get("text_repr"),
+        }
+        global_vars["FLOW_DETAILS"] = flow_summary
     if request.field_name and request.component_id and request.flow_id and user_id is not None:
-        global_vars["FIELD_VALUE"] = await get_flow_component_field_value(
+        field_value = await get_flow_component_field_value(
             flow_id_or_name=request.flow_id,
             component_id=request.component_id,
             field_name=request.field_name,
             user_id=str(user_id),
         )
+        global_vars["FIELD_VALUE"] = field_value.get("value","")
 
     logger.debug(f"GLOBAL VARIABLES: {global_vars}")
     # Path to the flow file
@@ -70,7 +77,9 @@ async def run_prompt_flow(request: FlowRequest, current_user: CurrentActiveUser,
             script_path=flow_path,
             input_value=request.input_value,
             global_variables=global_vars,
-            verbose=False,
+            verbose=True,
+            verbose_detailed=True,
+            verbose_full=True,
             check_variables=False,
         )
 

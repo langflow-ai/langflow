@@ -82,12 +82,12 @@ async def get_flow_graph_representations(
         return {
             "flow_id": flow_id_str,
             "flow_name": flow.name,
+            "flow_description": flow.description or "",
             "ascii_graph": ascii_graph,
             "text_repr": text_repr,
             "vertex_count": len(graph.vertices),
             "edge_count": len(graph.edges),
             "tags": flow.tags,
-            "description": flow.description,
         }
 
     except Exception as e:  # noqa: BLE001

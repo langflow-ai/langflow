@@ -59,7 +59,7 @@
       },
       {
         "animated": false,
-        "className": "not-running",
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "LanguageModelComponent",
@@ -319,7 +319,7 @@
                 "tool_mode": false,
                 "trace_as_input": true,
                 "type": "prompt",
-                "value": "Generate a high-quality message or prompt for the selected field based on the following context:\n\n# Flow Details\n\n{flow_metadata}\n\n# Selected Field Details\n\n{component_data}\n\nYour output should only include the generated message or prompt text, without explanations or additional formatting. Focus on clarity, relevance, and coherence with the given flow and field context.\n\nCustom Instruction:\n{custom_instructions}"
+                "value": "Generate a high-quality message or prompt for the selected field.\n\n# Flow Context, containing the flow name and description of the flow\n{flow_metadata}\n\n# Target Field existing value\n{component_data}\n\n# Instructions\n- Output only the generated text, no explanations\n- Ensure coherence with the flow's purpose, derived from flow context.\n- Match the field's expected format and type\n\n{custom_instructions}"
               },
               "tool_placeholder": {
                 "_input_type": "MessageTextInput",
@@ -1159,7 +1159,7 @@
                 "type": "str",
                 "value": ""
               },
-              "is_refresh": false,
+              "is_refresh": true,
               "model": {
                 "_input_type": "ModelInput",
                 "advanced": false,
@@ -1177,9 +1177,7 @@
                   }
                 },
                 "info": "Select your model provider",
-                "input_types": [
-                  "LanguageModel"
-                ],
+                "input_types": [],
                 "list": false,
                 "list_add_label": "Add More",
                 "model_type": "language",
@@ -1409,7 +1407,7 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": false,
                 "type": "str",
-                "value": "You are a Prompt Generation Assistant designed to craft precise, context-aware prompts or text messages for AI workflows. Given the details below, generate a single, clear, and relevant prompt for the specified field."
+                "value": "You are an expert Prompt Generation Assistant for AI workflow automation.\n\nCORE CAPABILITIES:\n• Analyze workflow structure to understand context and intent\n• Generate field-appropriate content (prompts, messages, parameters)\n• Apply prompt engineering best practices automatically\n\nCONTEXT ALIGNMENT:\n• The flow name indicates the workflow's primary purpose—align generated content accordingly\n• The flow description provides additional context about expected behavior and use case\n• Generated content must directly support the flow's stated objective\n• Use terminology and tone consistent with the flow's domain\n\nGENERATION RULES:\n• Output ONLY the generated content—no explanations or wrappers\n• Match content format to field type (system prompt, user input, template, etc.)\n• Ensure coherence with the flow's name, description, and connected components\n• Be specific and actionable, never generic\n• Reference the flow's purpose when crafting prompts for ambiguous fields\n\nPRIORITIES:\n1. User's custom instructions (highest)\n2. Flow name and Flow description alignment from the flow data. Prompts need to take that into consideration\n3. Field context and type requirements\n4. Component relationship coherence\n5. Best practices defaults (lowest)"
               },
               "temperature": {
                 "_input_type": "SliderInput",
@@ -1549,7 +1547,7 @@
                 ],
                 "list": false,
                 "list_add_label": "Add More",
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "input_value",
                 "override_skip": false,
                 "placeholder": "",
@@ -1561,7 +1559,7 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": false,
                 "type": "str",
-                "value": ""
+                "value": "FLOW_DETAILS"
               }
             },
             "tool_mode": false
@@ -1670,7 +1668,7 @@
                 ],
                 "list": false,
                 "list_add_label": "Add More",
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "input_value",
                 "override_skip": false,
                 "placeholder": "",
@@ -1682,7 +1680,7 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": false,
                 "type": "str",
-                "value": ""
+                "value": "FIELD_VALUE"
               }
             },
             "tool_mode": false
