@@ -40,18 +40,14 @@ def _normalize_for_determinism(obj):
 def _strip_dynamic_fields(obj):
     """Recursively remove dynamic fields that change with external dependencies.
 
-    Fields like 'options' populated from external packages (litellm, etc.) should
-    not be included in the index as they change independently of component code.
-    These are loaded dynamically at runtime instead.
-
     This prevents unnecessary hash changes and git history bloat when dependencies update.
     """
     # List of field names that are dynamically populated from external sources
     # or contain runtime-specific data
-    dyanmic_fields = {"options", "timestamp"}
+    dynamic_field_names = {"timestamp"}
 
     if isinstance(obj, dict):
-        return {k: _strip_dynamic_fields(v) for k, v in obj.items() if k not in dyanmic_fields}
+        return {k: _strip_dynamic_fields(v) for k, v in obj.items() if k not in dynamic_field_names}
     if isinstance(obj, list):
         return [_strip_dynamic_fields(item) for item in obj]
     return obj
