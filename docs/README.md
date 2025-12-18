@@ -42,99 +42,15 @@ If you are using GitHub pages for hosting, this command is a convenient way to b
 
 ## Docusaurus Versioning
 
-Docs versioning is currently **DISABLED** but configured and ready to enable. The configuration is found in `docusaurus.config.js` with commented-out sections.
-
-### To enable versioning:
-
-1. Open `docusaurus.config.js`
-2. Find the versioning configuration section (around line 104)
-3. Uncomment the versioning configuration:
-
-```javascript
-docs: {
-  // ... other config
-  lastVersion: 'current', // Use 'current' to make ./docs the latest version
-  versions: {
-    current: {
-      label: 'Next', // What users see
-      path: 'next',  // URL path for this version
-    },
-  },
-  onlyIncludeVersions: ['current'], // Limit versions for faster builds
-},
-```
+The versioning configuration is found in `docusaurus.config.js`.
 
 The version key `'current'` is a special Docusaurus keyword that refers to the work-in-progress docs. You can't change this key, but you can customize the `label`.
 
-### Typical Release Workflow
+Versioning example for release version 1.7.0:
 
-Here's how versioning works in practice:
-
-**Example: Releasing version 1.7.0**
-
-1. **Before release**: `current` contains work-in-progress docs (ahead of 1.7.0)
-2. **When ready to release 1.7.0**: Run `yarn docusaurus docs:version 1.7.0` to snapshot current docs
-3. **After 1.7.0 release**: Update config with `lastVersion: '1.7.0'` - this makes 1.7.0 the "latest" released version
-4. **`current` continues**: The `current` version remains as work-in-progress (will become 1.8.0)
-5. **When 1.8.0 launches**: Run `yarn docusaurus docs:version 1.8.0` to snapshot current docs
-
-**Key points:**
-- `current` = always the work-in-progress docs from `main` branch (ahead of all releases)
-  - The version key must be `'current'` (Docusaurus keyword), but you can customize the `label` shown to users..
-- `lastVersion` = the most recent released version (shown as "latest" in the UI)
-- Each release snapshots `current` at that point in time
-
-### Create docs versions
-
-See the [Docusaurus docs](https://docusaurus.io/docs/versioning) for more info.
-
-1. Use the Docusaurus CLI command to create a version.
-
-```bash
-# Create version 1.7.0 from current docs
-yarn docusaurus docs:version 1.7.0
-```
-
-This command will:
-- Copy the full `docs/` folder contents into `versioned_docs/version-1.7.0/`
-- Create a versioned sidebar file at `versioned_sidebars/version-1.7.0-sidebars.json`
-- Append the new version to `versions.json`
-
-2. After creating a version, update the Docusaurus configuration to include multiple versions. `lastVersion: '1.7.0'` makes the '1.7.0' release the latest version. `current` is the work-in-progress docset, accessible at `/docs/next`. To remove a version, remove it from `onlyIncludeVersions`.
-
-```javascript
-docs: {
-  // ... other config
-  lastVersion: '1.7.0',
-  versions: {
-    current: {
-      label: 'Next', // Work-in-progress version (will become 1.8.0)
-      path: 'next',
-    },
-    '1.7.0': {
-      label: '1.7.0',
-      path: '1.7.0',
-    },
-  },
-  onlyIncludeVersions: ['current', '1.7.0'],
-},
-```
-
-3. Test the deployment locally:
-
-```bash
-yarn build
-yarn serve
-```
-
-4. To add subsequent versions, repeat the process, first running the CLI command then updating `docusaurus.config.js`:
-
-```bash
-# Create version 1.8.0 from current docs
-yarn docusaurus docs:version 1.8.0
-```
-
-After creating a new version, update `docusaurus.config.js`:
+1. Before release, the `current` version contains work-in-progress docs that are ahead of version 1.7.0.
+2. When ready to release 1.7.0, create a branch and run `yarn docusaurus docs:version 1.7.0` to snapshot the current docs.
+3. After creating a new version, update `docusaurus.config.js`:
 
 ```javascript
 docs: {
@@ -157,11 +73,27 @@ docs: {
 },
 ```
 
+4. Test the deployment locally:
+
+```bash
+yarn build
+yarn serve
+```
+
+5. Create a pull request to main, and merge to create your new release.
+6. To create version 1.8.0, repeat the process by creating a branch, running `yarn docusaurus docs:version 1.8.0`, updating `docusaurus.config.js`, and merging to main.
+
+- `current` = always the work-in-progress docs from `main` branch (ahead of all releases)
+  - The version key must be `'current'` (Docusaurus keyword), but you can customize the `label` shown to users..
+- `lastVersion` = the most recent released version (shown as "latest" in the UI)
+
+See the [Docusaurus docs](https://docusaurus.io/docs/versioning) for more info.
+
 ### Disable versioning
 
-1. Remove the versions configuration from `docusaurus.config.js`
-2. Delete the `docs/versioned_docs/` and `docs/versioned_sidebars/` directories
-3. Delete `docs/versions.json`
+1. Remove the versions configuration from `docusaurus.config.js`.
+2. Delete the `docs/versioned_docs/` and `docs/versioned_sidebars/` directories.
+3. Delete `docs/versions.json`.
 
 ### References
 

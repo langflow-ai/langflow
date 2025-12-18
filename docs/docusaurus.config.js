@@ -390,8 +390,8 @@ const config = {
           }
           // add more redirects like this
           // {
-          //   to: '/anotherpage',
-          //   from: ['/legacypage1', '/legacypage2'],
+          //   to: '/docs/anotherpage',
+          //   from: ['/docs/legacypage1', '/docs/legacypage2'],
           // },
         ],
       },
