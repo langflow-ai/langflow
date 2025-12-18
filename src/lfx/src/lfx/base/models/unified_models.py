@@ -34,82 +34,13 @@ from lfx.utils.async_helpers import run_until_complete
 # When true, fetches model data from models.dev API instead of static constants
 USE_LIVE_MODEL_DATA = os.environ.get("LFX_USE_LIVE_MODEL_DATA", "false").lower() == "true"
 
-# Excluded providers - these providers will not be shown in the UI
-EXCLUDED_PROVIDERS: set[str] = {
-    "AIHubMix",
-    "Alibaba",
-    "Alibaba (China)",
-    "Amazon Bedrock",
+# Validated providers - only these providers will be shown in the UI, refer to https://models.dev/ for provider names
+VALIDATED_PROVIDERS: set[str] = {
     "Anthropic",
-    "Azure",
-    "Azure Cognitive Services",
-    "Bailing",
-    "Baseten",
-    "Cerebras",
-    "Chutes",
-    "Cloudflare AI Gateway",
-    "Cloudflare Workers AI",
-    "Cohere",
-    "Cortecs",
-    "Deep Infra",
-    "DeepSeek",
-    "FastRouter",
-    "Fireworks AI",
-    "GitHub Copilot",
-    "GitHub Models",
-    "Google",
-    # "Google Generative AI",
-    "Groq",
-    "Helicone",
-    "Hugging Face",
-    # "IBM Watsonx",
-    "IO.NET",
-    "Inception",
-    "Inference",
-    "Kimi For Coding",
-    "Llama",
-    "LMStudio",
-    "LucidQuery AI",
-    "MiniMax",
-    "MiniMax (China)",
-    "Mistral",
-    "ModelScope",
-    "Moonshot AI",
-    "Moonshot AI (China)",
-    "Morph",
-    "Nebius Token Factory",
-    "Nvidia",
+    "Google Generative AI",
+    "IBM Watsonx",
     "Ollama",
-    "Ollama Cloud",
-    # "OpenAI",
-    "OpenCode Zen",
-    "OpenRouter",
-    "OVHcloud AI Endpoints",
-    "Perplexity",
-    "Poe",
-    "Requesty",
-    "SAP AI Core",
-    "Scaleway",
-    "SiliconFlow",
-    "SiliconFlow (China)",
-    "submodel",
-    "Synthetic",
-    "Together AI",
-    "Upstage",
-    "v0",
-    "Venice AI",
-    "Vercel AI Gateway",
-    "Vertex",
-    "Vertex (Anthropic)",
-    "Vultr",
-    "Weights & Biases",
-    "xAI",
-    "Z.AI",
-    "Z.AI Coding Plan",
-    "ZenMux",
-    "Zhipu AI",
-    "Zhipu AI Coding Plan",
-    "iFlow",
+    "OpenAI",
 }
 
 # Excluded models - these model names will not be shown in the UI
@@ -325,10 +256,10 @@ def get_model_provider_variable_mapping() -> dict[str, str]:
 
 
 def get_model_providers() -> list[str]:
-    """Return a sorted list of unique provider names, excluding any in EXCLUDED_PROVIDERS."""
+    """Return a sorted list of unique provider names, including only those in VALIDATED_PROVIDERS."""
     all_providers = {md.get("provider", "Unknown") for group in MODELS_DETAILED for md in group}
-    # Filter out excluded providers
-    filtered_providers = {p for p in all_providers if p not in EXCLUDED_PROVIDERS}
+    # Filter to only validated providers
+    filtered_providers = {p for p in all_providers if p in VALIDATED_PROVIDERS}
     return sorted(filtered_providers)
 
 
@@ -384,9 +315,9 @@ def get_unified_models_detailed(
     # Apply filters
     filtered_models: list[dict] = []
     for md in all_models:
-        # Skip excluded providers
+        # Skip non-validated providers
         provider_name = md.get("provider", "Unknown")
-        if provider_name in EXCLUDED_PROVIDERS:
+        if provider_name not in VALIDATED_PROVIDERS:
             continue
 
         # Skip excluded models
