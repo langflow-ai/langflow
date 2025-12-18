@@ -22,6 +22,7 @@ from .model_metadata import ModelCost, ModelLimits, ModelMetadata, ModelModaliti
 MODELS_DEV_API_URL = "https://models.dev/api.json"
 CACHE_TTL_SECONDS = 3600  # 1 hour cache TTL
 CACHE_FILE_NAME = ".models_dev_cache.json"
+MAX_EMBEDDING_OUTPUT_LIMIT = 4096  # Embedding dimensions are typically <= 4096
 
 # Maps provider_id to display name and icon (icon names match display names)
 # Icon keys come from lazyIconImports.ts in frontend/src/icons/
@@ -137,15 +138,13 @@ def _is_embedding_model(model_data: dict[str, Any]) -> bool:
     # Skip this check for known embedding patterns (data may have incorrect limits)
     limit = model_data.get("limit", {})
     output_limit = limit.get("output", 0)
-    has_small_output_limit = output_limit <= 4096
+    has_small_output_limit = output_limit <= MAX_EMBEDDING_OUTPUT_LIMIT
 
     # Known embedding pattern + at least one other signal (ignore output limit for these)
     if has_embed_in_name and (has_zero_output_cost or has_no_tool_call or has_no_temperature):
         return True
     # Zero output cost + no tool calling + reasonable output limit
-    if has_zero_output_cost and has_no_tool_call and has_small_output_limit:
-        return True
-    return False
+    return has_zero_output_cost and has_no_tool_call and has_small_output_limit
 
 
 def _determine_model_type(model_data: dict[str, Any]) -> str:
