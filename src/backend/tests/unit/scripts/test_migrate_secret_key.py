@@ -792,3 +792,61 @@ class TestDryRunMode:
             # Can still decrypt with old key
             decrypted = migrate_module.decrypt_with_key(result[0], old_key)
             assert decrypted == original_value
+
+
+class TestVerifyMigration:
+    """Tests for post-migration verification."""
+
+    def test_verify_migration_success(self, migrate_module, sqlite_db, new_key):
+        """Test verification passes when data is correctly migrated."""
+        user_id = str(uuid4())
+        var_id = str(uuid4())
+        original_value = "test-secret-value"
+
+        # Create data encrypted with new key (simulating successful migration)
+        encrypted_value = migrate_module.encrypt_with_key(original_value, new_key)
+
+        with sqlite_db.connect() as conn:
+            conn.execute(
+                text('INSERT INTO "user" (id, store_api_key) VALUES (:id, :key)'),
+                {"id": user_id, "key": encrypted_value},
+            )
+            conn.execute(
+                text("INSERT INTO variable (id, name, value, type) VALUES (:id, :name, :value, :type)"),
+                {"id": var_id, "name": "test_var", "value": encrypted_value, "type": CREDENTIAL_TYPE},
+            )
+            conn.commit()
+
+        # Verify migration
+        with sqlite_db.connect() as conn:
+            verified, failed = migrate_module.verify_migration(conn, new_key)
+            assert verified == 2  # 1 user + 1 variable
+            assert failed == 0
+
+    def test_verify_migration_failure(self, migrate_module, sqlite_db, old_key, new_key):
+        """Test verification fails when data is encrypted with wrong key."""
+        user_id = str(uuid4())
+        original_value = "test-secret-value"
+
+        # Create data encrypted with old key (simulating failed migration)
+        encrypted_value = migrate_module.encrypt_with_key(original_value, old_key)
+
+        with sqlite_db.connect() as conn:
+            conn.execute(
+                text('INSERT INTO "user" (id, store_api_key) VALUES (:id, :key)'),
+                {"id": user_id, "key": encrypted_value},
+            )
+            conn.commit()
+
+        # Verify migration with new key should fail
+        with sqlite_db.connect() as conn:
+            verified, failed = migrate_module.verify_migration(conn, new_key)
+            assert verified == 0
+            assert failed == 1
+
+    def test_verify_migration_empty_tables(self, migrate_module, sqlite_db, new_key):
+        """Test verification handles empty tables gracefully."""
+        with sqlite_db.connect() as conn:
+            verified, failed = migrate_module.verify_migration(conn, new_key)
+            assert verified == 0
+            assert failed == 0

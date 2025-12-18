@@ -35,6 +35,8 @@ from sqlalchemy import create_engine, text
 
 MINIMUM_KEY_LENGTH = 32
 SENSITIVE_AUTH_FIELDS = ["oauth_client_secret", "api_key"]
+# Must match langflow.services.variable.constants.CREDENTIAL_TYPE
+CREDENTIAL_TYPE = "Credential"
 
 
 def get_default_config_dir() -> Path:
@@ -96,6 +98,10 @@ def ensure_valid_key(s: str) -> bytes:
     For keys shorter than MINIMUM_KEY_LENGTH (32), generates a deterministic
     key by seeding random with the input string. For longer keys, pads with
     '=' to ensure valid base64 encoding.
+
+    NOTE: This function is duplicated from langflow.services.auth.utils.ensure_valid_key
+    to keep the migration script self-contained (can run without full Langflow installation).
+    Keep in sync if encryption logic changes.
     """
     if len(s) < MINIMUM_KEY_LENGTH:
         random.seed(s)
@@ -147,6 +153,58 @@ def migrate_auth_settings(auth_settings: dict, old_key: str, new_key: str) -> tu
             else:
                 failed_fields.append(field)
     return result, failed_fields
+
+
+def verify_migration(conn, new_key: str) -> tuple[int, int]:
+    """Verify migrated data can be decrypted with the new key.
+
+    Samples records from each table and attempts decryption.
+
+    Returns:
+        Tuple of (verified_count, failed_count).
+    """
+    verified, failed = 0, 0
+
+    # Verify user.store_api_key (sample up to 3)
+    users = conn.execute(
+        text('SELECT id, store_api_key FROM "user" WHERE store_api_key IS NOT NULL LIMIT 3')
+    ).fetchall()
+    for _, encrypted_key in users:
+        try:
+            decrypt_with_key(encrypted_key, new_key)
+            verified += 1
+        except InvalidToken:
+            failed += 1
+
+    # Verify variable.value (sample up to 3)
+    variables = conn.execute(
+        text("SELECT id, value FROM variable WHERE type = :type AND value IS NOT NULL LIMIT 3"),
+        {"type": CREDENTIAL_TYPE},
+    ).fetchall()
+    for _, encrypted_value in variables:
+        try:
+            decrypt_with_key(encrypted_value, new_key)
+            verified += 1
+        except InvalidToken:
+            failed += 1
+
+    # Verify folder.auth_settings (sample up to 3)
+    folders = conn.execute(
+        text("SELECT id, auth_settings FROM folder WHERE auth_settings IS NOT NULL LIMIT 3")
+    ).fetchall()
+    for _, auth_settings in folders:
+        if not auth_settings:
+            continue
+        try:
+            settings_dict = auth_settings if isinstance(auth_settings, dict) else json.loads(auth_settings)
+            for field in SENSITIVE_AUTH_FIELDS:
+                if settings_dict.get(field):
+                    decrypt_with_key(settings_dict[field], new_key)
+                    verified += 1
+        except (InvalidToken, json.JSONDecodeError):
+            failed += 1
+
+    return verified, failed
 
 
 def get_default_database_url(config_dir: Path) -> str | None:
@@ -243,9 +301,12 @@ def migrate(
         total_migrated += migrated
         total_failed += failed
 
-        # Migrate variable.value
-        print("\n2. Migrating variable values...")
-        variables = conn.execute(text("SELECT id, name, value FROM variable")).fetchall()
+        # Migrate variable.value (only Credential type variables are encrypted)
+        print("\n2. Migrating credential variable values...")
+        variables = conn.execute(
+            text("SELECT id, name, value FROM variable WHERE type = :type"),
+            {"type": CREDENTIAL_TYPE},
+        ).fetchall()
 
         migrated, failed, skipped = 0, 0, 0
         for var_id, var_name, encrypted_value in variables:
@@ -299,6 +360,20 @@ def migrate(
         total_migrated += migrated
         total_failed += failed
 
+        # Verify migrated data can be decrypted with new key
+        if total_migrated > 0:
+            print("\n4. Verifying migration...")
+            verified, verify_failed = verify_migration(conn, new_key)
+            if verify_failed > 0:
+                print(f"   ERROR: {verify_failed} records failed verification!")
+                print("   Rolling back transaction...")
+                conn.rollback()
+                sys.exit(1)
+            if verified > 0:
+                print(f"   Verified {verified} sample records can be decrypted with new key")
+            else:
+                print("   No records to verify (all tables empty)")
+
         # Rollback if dry run (transaction will auto-commit on exit otherwise)
         if dry_run:
             conn.rollback()
@@ -307,12 +382,12 @@ def migrate(
     if not dry_run:
         backup_file = config_dir / f"secret_key.backup.{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
         write_secret_key_to_file(config_dir, old_key, backup_file.name)
-        print(f"\n4. Backed up old key to: {backup_file}")
+        print(f"\n5. Backed up old key to: {backup_file}")
         write_secret_key_to_file(config_dir, new_key)
-        print(f"5. Saved new secret key to: {config_dir / 'secret_key'}")
+        print(f"6. Saved new secret key to: {config_dir / 'secret_key'}")
     else:
-        print("\n4. [DRY RUN] Would backup old key")
-        print(f"5. [DRY RUN] Would save new key to: {config_dir / 'secret_key'}")
+        print("\n5. [DRY RUN] Would backup old key")
+        print(f"6. [DRY RUN] Would save new key to: {config_dir / 'secret_key'}")
 
     # Summary
     print("\n" + "=" * 50)
