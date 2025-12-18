@@ -207,6 +207,7 @@ def test_message_with_image_object_direct():
     """
     # Create a temporary image file
     import tempfile
+
     with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
         image_content = base64.b64decode(
             "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg=="
@@ -216,11 +217,7 @@ def test_message_with_image_object_direct():
 
     try:
         # Create message with absolute path
-        message = Message(
-            text="Test with absolute path",
-            sender=MESSAGE_SENDER_USER,
-            files=[tmp_path]
-        )
+        message = Message(text="Test with absolute path", sender=MESSAGE_SENDER_USER, files=[tmp_path])
 
         # After model_post_init, files should contain Image objects
         from lfx.schema.image import Image
