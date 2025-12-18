@@ -427,7 +427,6 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "height": 347,
         "id": "Prompt-rQ5Up",
         "measured": {
           "height": 347,
@@ -442,8 +441,7 @@
           "y": 839.0423490089254
         },
         "selected": false,
-        "type": "genericNode",
-        "width": 320
+        "type": "genericNode"
       },
       {
         "data": {
@@ -697,7 +695,6 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "height": 234,
         "id": "ChatInput-iYW45",
         "measured": {
           "height": 234,
@@ -712,8 +709,7 @@
           "y": 756.7423476254241
         },
         "selected": false,
-        "type": "genericNode",
-        "width": 320
+        "type": "genericNode"
       },
       {
         "data": {
@@ -878,7 +874,6 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "height": 433,
         "id": "Prompt-aHVYv",
         "measured": {
           "height": 433,
@@ -893,8 +888,7 @@
           "y": 434.061360540584
         },
         "selected": false,
-        "type": "genericNode",
-        "width": 320
+        "type": "genericNode"
       },
       {
         "data": {
@@ -1047,7 +1041,6 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "height": 260,
         "id": "Prompt-F8cZX",
         "measured": {
           "height": 260,
@@ -1062,8 +1055,7 @@
           "y": 550.2148817052229
         },
         "selected": false,
-        "type": "genericNode",
-        "width": 320
+        "type": "genericNode"
       },
       {
         "data": {
@@ -1179,7 +1171,6 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "height": 260,
         "id": "Prompt-TbFFl",
         "measured": {
           "height": 260,
@@ -1194,8 +1185,7 @@
           "y": 889.7491088138673
         },
         "selected": false,
-        "type": "genericNode",
-        "width": 320
+        "type": "genericNode"
       },
       {
         "data": {

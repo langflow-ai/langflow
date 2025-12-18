@@ -15,6 +15,7 @@ import {
   usePostGlobalVariables,
 } from "@/controllers/API/queries/variables";
 import { useDebounce } from "@/hooks/use-debounce";
+import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
 import ProviderList from "@/modals/modelProviderModal/components/ProviderList";
 import { Provider } from "@/modals/modelProviderModal/components/types";
 import useAlertStore from "@/stores/alertStore";
@@ -51,6 +52,7 @@ const ModelProviderModal = ({
     usePatchGlobalVariables();
   const { data: globalVariables = [] } = useGetGlobalVariables();
   const { mutate: updateEnabledModels } = useUpdateEnabledModels();
+  const { refreshAllModelInputs } = useRefreshModelInputs();
 
   const isPending = isCreating || isUpdating;
 
@@ -240,8 +242,13 @@ const ModelProviderModal = ({
     }
   };
 
+  const handleClose = () => {
+    refreshAllModelInputs({ silent: true });
+    onClose();
+  };
+
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
       <DialogContent className="flex flex-col overflow-hidden rounded-xl p-0 max-w-[768px] h-[560px] gap-0">
         <DialogHeader className="flex w-full border-b px-4 py-3">
           <div className="flex justify-start items-center gap-3">

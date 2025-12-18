@@ -319,7 +319,6 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "height": 693,
         "id": "Prompt-fkLY7",
         "measured": {
           "height": 693,
@@ -334,8 +333,7 @@
           "y": 347.90475109976467
         },
         "selected": false,
-        "type": "genericNode",
-        "width": 320
+        "type": "genericNode"
       },
       {
         "data": {
@@ -609,7 +607,6 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "height": 234,
         "id": "ChatOutput-Bdpjz",
         "measured": {
           "height": 234,
@@ -624,8 +621,7 @@
           "y": 355.16302699218204
         },
         "selected": false,
-        "type": "genericNode",
-        "width": 320
+        "type": "genericNode"
       },
       {
         "data": {

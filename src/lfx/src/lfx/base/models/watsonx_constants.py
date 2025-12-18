@@ -5,21 +5,25 @@ WATSONX_DEFAULT_EMBEDDING_MODELS = [
         provider="IBM Watsonx",
         name="sentence-transformers/all-minilm-l12-v2",
         icon="WatsonxAI",
+        model_type="embeddings",
     ),
     create_model_metadata(
         provider="IBM Watsonx",
         name="ibm/slate-125m-english-rtrvr-v2",
         icon="WatsonxAI",
+        model_type="embeddings",
     ),
     create_model_metadata(
         provider="IBM Watsonx",
         name="ibm/slate-30m-english-rtrvr-v2",
         icon="WatsonxAI",
+        model_type="embeddings",
     ),
     create_model_metadata(
         provider="IBM Watsonx",
         name="intfloat/multilingual-e5-large",
         icon="WatsonxAI",
+        model_type="embeddings",
     ),
 ]
 
