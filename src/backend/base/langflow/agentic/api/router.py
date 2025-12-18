@@ -54,7 +54,11 @@ async def run_prompt_flow(request: FlowRequest, current_user: CurrentActiveUser,
             "flow_description": flow_details.get("flow_description"),
             "text_repr": flow_details.get("text_repr"),
         }
-        global_vars["FLOW_DETAILS"] = flow_summary
+        flow_summary_str = ""
+        for k, v in flow_summary.items():
+            flow_summary_str += f"{k}: {v}\n"
+        
+        global_vars["FLOW_DETAILS"] = flow_summary_str
     if request.field_name and request.component_id and request.flow_id and user_id is not None:
         field_value = await get_flow_component_field_value(
             flow_id_or_name=request.flow_id,

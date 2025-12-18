@@ -156,8 +156,8 @@
             "conditional_paths": [],
             "custom_fields": {
               "template": [
-                "flow_metadata",
                 "component_data",
+                "flow_metadata",
                 "custom_instructions"
               ]
             },
@@ -319,7 +319,7 @@
                 "tool_mode": false,
                 "trace_as_input": true,
                 "type": "prompt",
-                "value": "Generate a high-quality message or prompt for the selected field.\n\n# Flow Context, containing the flow name and description of the flow\n{flow_metadata}\n\n# Target Field existing value\n{component_data}\n\n# Instructions\n- Output only the generated text, no explanations\n- Ensure coherence with the flow's purpose, derived from flow context.\n- Match the field's expected format and type\n\n{custom_instructions}"
+                "value": "Generate a high-quality message or prompt for the selected field.\n\n# Target Field existing value\n{component_data}\n\n# Flow Context, containing the flow name and description of the flow\n{flow_metadata}\nEnsure the prompt is aligned with the flow details.\n# Instructions\n- Output only the generated text, no explanations\n- Ensure coherence with the flow's purpose, derived from flow context.\n- Match the field's expected format and type\n\n{custom_instructions}"
               },
               "tool_placeholder": {
                 "_input_type": "MessageTextInput",
@@ -1456,7 +1456,7 @@
           "x": -922.126342053279,
           "y": 2581.729493523352
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode"
       },
       {
@@ -1577,7 +1577,7 @@
           "x": -1869.4339919591403,
           "y": 2858.19784756774
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode"
       },
       {
