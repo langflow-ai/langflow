@@ -307,6 +307,8 @@ class Settings(BaseSettings):
     """If set to False, Langflow will not start the MCP Composer service."""
     mcp_composer_version: str = "==0.1.0.8.10"
     """Version constraint for mcp-composer when using uvx. Uses PEP 440 syntax."""
+    mcp_streamable_http_stateless: bool = True
+    """If set to True, the Langflow MCP server will use its Streamable HTTP Session Manager in stateless mode."""
 
     # Agentic Experience
     agentic_experience: bool = False
