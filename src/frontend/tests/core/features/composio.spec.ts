@@ -59,7 +59,9 @@ test(
       timeout: 30000,
     });
 
-    await page.getByTestId("output-inspection-dataframe-composiogmailapicomponent").click();
+    await page
+      .getByTestId("output-inspection-dataframe-composiogmailapicomponent")
+      .click();
 
     const colNumber: number = await page.getByRole("gridcell").count();
     expect(colNumber).toBeGreaterThan(1);

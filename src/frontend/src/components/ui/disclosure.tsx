@@ -141,7 +141,9 @@ const DisclosureTrigger = memo(function DisclosureTrigger({
       {React.Children.map(children, (child) => {
         if (!React.isValidElement(child)) return child;
 
-        const childElement = child as React.ReactElement<{ className?: string }>;
+        const childElement = child as React.ReactElement<{
+          className?: string;
+        }>;
         return React.cloneElement(childElement, {
           ...childProps,
           className: cn(className, childElement.props.className),

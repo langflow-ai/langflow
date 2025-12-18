@@ -171,7 +171,9 @@ export default function ContentDisplay({
                   return <ul className="max-w-full">{props.children}</ul>;
                 },
                 code: ({ node, className, children, ...props }) => {
-                  const inline = !(props as any).hasOwnProperty("data-language");
+                  const inline = !(props as any).hasOwnProperty(
+                    "data-language",
+                  );
                   const match = /language-(\w+)/.exec(className || "");
                   return !inline ? (
                     <SimplifiedCodeTabComponent
