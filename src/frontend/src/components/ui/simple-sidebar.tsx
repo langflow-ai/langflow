@@ -92,9 +92,9 @@ const SimpleSidebarProvider = React.forwardRef<
           );
         }
 
-        _setOpen(value);
+        _setOpen(typeof value === "function" ? value(_open) : value);
       },
-      [setOpenProp, open],
+      [setOpenProp, open, _open],
     );
 
     const setWidth = React.useCallback(

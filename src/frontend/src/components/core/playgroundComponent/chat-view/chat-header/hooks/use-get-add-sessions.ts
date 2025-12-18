@@ -7,7 +7,7 @@ interface UseGetAddSessionsProps {
 }
 
 type UseGetAddSessionsReturnType = (props: UseGetAddSessionsProps) => {
-  addNewSession: (() => string) | undefined;
+  addNewSession: () => string;
   sessions: string[];
 };
 
@@ -17,7 +17,7 @@ export const useGetAddSessions: UseGetAddSessionsReturnType = ({ flowId }) => {
   });
   const sessions = dbSessionsResponse?.sessions ?? [];
 
-  const addNewSession: (() => string) | undefined = () => {
+  const addNewSession: () => string = () => {
     const newSessionId = `${NEW_SESSION_NAME} ${sessions.length}`;
     return newSessionId;
   };

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 interface UseRenameSessionParams {
   currentSessionId?: string;
@@ -13,25 +13,26 @@ export const useRenameSession = ({
 }: UseRenameSessionParams) => {
   const [isEditing, setIsEditing] = useState(false);
 
-  const handleEditSave = async (newSessionId: string) => {
-    if (
-      !currentSessionId ||
-      !newSessionId.trim() ||
-      newSessionId.trim() === currentSessionId
-    ) {
+  const handleEditSave = useCallback(
+    async (newSessionId: string) => {
+      if (
+        !currentSessionId ||
+        !newSessionId.trim() ||
+        newSessionId.trim() === currentSessionId
+      ) {
+        setIsEditing(false);
+        return;
+      }
+      await handleRename(currentSessionId, newSessionId.trim());
+      onSessionSelect?.(newSessionId.trim());
       setIsEditing(false);
-      return;
-    }
-    await handleRename(currentSessionId, newSessionId.trim());
-    onSessionSelect?.(newSessionId.trim());
-    setIsEditing(false);
-  };
+    },
+    [currentSessionId, handleRename, onSessionSelect],
+  );
 
-  const handleEditStart = () => {
-    setTimeout(() => {
-      setIsEditing(true);
-    }, 10);
-  };
+  const handleEditStart = useCallback(() => {
+    setIsEditing(true);
+  }, []);
 
   return {
     isEditing,

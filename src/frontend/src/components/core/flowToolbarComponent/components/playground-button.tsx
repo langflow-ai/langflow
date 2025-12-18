@@ -7,9 +7,6 @@ import { usePlaygroundStore } from "@/stores/playgroundStore";
 
 interface PlaygroundButtonProps {
   hasIO: boolean;
-  open?: boolean;
-  setOpen?: (open: boolean) => void;
-  canvasOpen?: boolean;
 }
 
 const PlayIcon = ({
