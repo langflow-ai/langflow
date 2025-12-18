@@ -98,7 +98,7 @@ class OpenAIModelComponent(LCModelComponent):
         # Handle api_key - it can be string or SecretStr
         api_key_value = None
         if self.api_key:
-            logger.debug(f"API key type: {type(self.api_key)}, value: {self.api_key!r}")
+            logger.debug(f"API key type: {type(self.api_key)}, value: {'***' if self.api_key else None}")
             if isinstance(self.api_key, SecretStr):
                 api_key_value = self.api_key.get_secret_value()
             else:
