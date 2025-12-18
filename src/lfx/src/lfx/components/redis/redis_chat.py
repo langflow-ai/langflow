@@ -29,15 +29,26 @@ class RedisIndexChatMemory(LCChatMemoryComponent):
         MessageTextInput(
             name="session_id", display_name="Session ID", info="Session ID for the message.", advanced=True
         ),
+        IntInput(
+            name="ttl",
+            display_name="TTL",
+            value=3600,
+            info="Time to live in seconds. Set to 0 for no expiration.",
+            advanced=False,
+        ),
     ]
 
     def build_message_history(self) -> Memory:
         kwargs = {}
+        if self.ttl < 0:
+            raise ValueError("TTL must be non-negative")
         password: str | None = self.password
         if self.key_prefix:
             kwargs["key_prefix"] = self.key_prefix
+        if self.ttl is not None:
+            kwargs["ttl"] = self.ttl
         if password:
             password = parse.quote_plus(password)
 
-        url = f"redis://{self.username}:{self.password}@{self.host}:{self.port}/{self.database}"
+        url = f"redis://{self.username}:{password}@{self.host}:{self.port}/{self.database}"
         return RedisChatMessageHistory(session_id=self.session_id, url=url, **kwargs)
