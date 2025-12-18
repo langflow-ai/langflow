@@ -1,12 +1,10 @@
 import asyncio
 import json
-import warnings
 from contextlib import suppress
 from typing import Any
 from urllib.parse import urljoin
 
 import httpx
-from langchain_core.messages import AIMessage
 from langchain_ollama import ChatOllama
 
 from lfx.base.models.model import LCModelComponent
@@ -28,7 +26,6 @@ from lfx.io import (
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
-from lfx.schema.message import Message
 from lfx.schema.table import EditMode
 from lfx.utils.util import transform_localhost_url
 
@@ -236,83 +233,6 @@ class ChatOllamaComponent(LCModelComponent):
         Output(display_name="Data", name="data_output", method="build_data_output"),
         Output(display_name="DataFrame", name="dataframe_output", method="build_dataframe_output"),
     ]
-
-    async def _get_chat_result(
-        self,
-        *,
-        runnable: LanguageModel,
-        stream: bool,
-        input_value: str | Message,
-        system_message: str | None = None,
-    ) -> Message:
-        """Override to pass model_name for multimodal support.
-
-        Ollama requires the actual model name (e.g., 'llama3.2-vision') to be passed
-        when converting messages with images, not the component name.
-        """
-        from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
-
-        from lfx.schema.message import Message
-
-        messages: list[BaseMessage] = []
-        if not input_value and not system_message:
-            msg = "The message you want to send to the model is empty."
-            raise ValueError(msg)
-        system_message_added = False
-        message = None
-        if input_value:
-            if isinstance(input_value, Message):
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore")
-                    if "prompt" in input_value:
-                        prompt = input_value.load_lc_prompt()
-                        if system_message:
-                            prompt.messages = [
-                                SystemMessage(content=system_message),
-                                *prompt.messages,  # type: ignore[has-type]
-                            ]
-                            system_message_added = True
-                        runnable = prompt | runnable
-                    else:
-                        # Pass the actual model_name for multimodal support
-                        messages.append(input_value.to_lc_message(self.model_name))
-            else:
-                messages.append(HumanMessage(content=input_value))
-
-        if system_message and not system_message_added:
-            messages.insert(0, SystemMessage(content=system_message))
-        inputs: list | dict = messages or {}
-        lf_message = None
-        try:
-            # TODO: Depreciated Feature to be removed in upcoming release
-            if hasattr(self, "output_parser") and self.output_parser is not None:
-                runnable |= self.output_parser
-
-            runnable = runnable.with_config(
-                {
-                    "run_name": self.display_name,
-                    "project_name": self.get_project_name(),
-                    "callbacks": self.get_langchain_callbacks(),
-                }
-            )
-            if stream:
-                lf_message, result = await self._handle_stream(runnable, inputs)
-            else:
-                message = await runnable.ainvoke(inputs)
-                result = message.content if hasattr(message, "content") else message
-            if isinstance(message, AIMessage):
-                status_message = self.build_status_message(message)
-                self.status = status_message
-            elif isinstance(result, dict):
-                result = json.dumps(result, indent=4)
-                self.status = result
-            else:
-                self.status = result
-        except Exception as e:
-            if message := self._get_exception_message(e):
-                raise ValueError(message) from e
-            raise
-        return lf_message or Message(text=result)
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         # Mapping mirostat settings to their corresponding values
