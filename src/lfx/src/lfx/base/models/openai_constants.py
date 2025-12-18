@@ -16,6 +16,7 @@ OPENAI_MODELS_DETAILED = [
         icon="OpenAI",
         tool_calling=True,
         reasoning=True,
+        default=True,
     ),
     create_model_metadata(
         provider="OpenAI",
@@ -23,6 +24,7 @@ OPENAI_MODELS_DETAILED = [
         icon="OpenAI",
         tool_calling=True,
         reasoning=True,
+        default=True,
     ),
     create_model_metadata(
         provider="OpenAI",
@@ -30,6 +32,7 @@ OPENAI_MODELS_DETAILED = [
         icon="OpenAI",
         tool_calling=True,
         reasoning=True,
+        default=True,
     ),
     create_model_metadata(
         provider="OpenAI",
@@ -39,29 +42,45 @@ OPENAI_MODELS_DETAILED = [
         reasoning=True,
     ),
     # Regular OpenAI Models
-    create_model_metadata(provider="OpenAI", name="gpt-4o-mini", icon="OpenAI", tool_calling=True),
-    create_model_metadata(provider="OpenAI", name="gpt-4o", icon="OpenAI", tool_calling=True),
-    create_model_metadata(provider="OpenAI", name="gpt-4.1", icon="OpenAI", tool_calling=True),
-    create_model_metadata(provider="OpenAI", name="gpt-4.1-mini", icon="OpenAI", tool_calling=True),
-    create_model_metadata(provider="OpenAI", name="gpt-4.1-nano", icon="OpenAI", tool_calling=True),
+    create_model_metadata(provider="OpenAI", name="gpt-4o-mini", icon="OpenAI", tool_calling=True, default=True),
+    create_model_metadata(provider="OpenAI", name="gpt-4o", icon="OpenAI", tool_calling=True, default=True),
+    create_model_metadata(
+        provider="OpenAI", name="gpt-4.1", icon="OpenAI", tool_calling=True, preview=True, not_supported=True
+    ),
+    create_model_metadata(
+        provider="OpenAI", name="gpt-4.1-mini", icon="OpenAI", tool_calling=True, preview=True, not_supported=True
+    ),
+    create_model_metadata(
+        provider="OpenAI", name="gpt-4.1-nano", icon="OpenAI", tool_calling=True, preview=True, not_supported=True
+    ),
     create_model_metadata(
         provider="OpenAI", name="gpt-4.5-preview", icon="OpenAI", tool_calling=True, preview=True, not_supported=True
     ),
     create_model_metadata(provider="OpenAI", name="gpt-4-turbo", icon="OpenAI", tool_calling=True),
     create_model_metadata(
-        provider="OpenAI", name="gpt-4-turbo-preview", icon="OpenAI", tool_calling=True, preview=True
+        provider="OpenAI", name="gpt-4-turbo-preview", icon="OpenAI", tool_calling=True, preview=True, deprecated=True
     ),
     create_model_metadata(provider="OpenAI", name="gpt-4", icon="OpenAI", tool_calling=True),
-    create_model_metadata(provider="OpenAI", name="gpt-3.5-turbo", icon="OpenAI", tool_calling=True),
+    create_model_metadata(provider="OpenAI", name="gpt-3.5-turbo", icon="OpenAI", tool_calling=True, deprecated=True),
     # Reasoning Models
     create_model_metadata(provider="OpenAI", name="o1", icon="OpenAI", reasoning=True),
     create_model_metadata(provider="OpenAI", name="o1-mini", icon="OpenAI", reasoning=True, not_supported=True),
     create_model_metadata(provider="OpenAI", name="o1-pro", icon="OpenAI", reasoning=True, not_supported=True),
-    create_model_metadata(provider="OpenAI", name="o3-mini", icon="OpenAI", reasoning=True),
-    create_model_metadata(provider="OpenAI", name="o3", icon="OpenAI", reasoning=True),
-    create_model_metadata(provider="OpenAI", name="o3-pro", icon="OpenAI", reasoning=True),
-    create_model_metadata(provider="OpenAI", name="o4-mini", icon="OpenAI", reasoning=True),
-    create_model_metadata(provider="OpenAI", name="o4-mini-high", icon="OpenAI", reasoning=True),
+    create_model_metadata(
+        provider="OpenAI", name="o3-mini", icon="OpenAI", reasoning=True, preview=True, not_supported=True
+    ),
+    create_model_metadata(
+        provider="OpenAI", name="o3", icon="OpenAI", reasoning=True, preview=True, not_supported=True
+    ),
+    create_model_metadata(
+        provider="OpenAI", name="o3-pro", icon="OpenAI", reasoning=True, preview=True, not_supported=True
+    ),
+    create_model_metadata(
+        provider="OpenAI", name="o4-mini", icon="OpenAI", reasoning=True, preview=True, not_supported=True
+    ),
+    create_model_metadata(
+        provider="OpenAI", name="o4-mini-high", icon="OpenAI", reasoning=True, preview=True, not_supported=True
+    ),
     # Search Models
     create_model_metadata(
         provider="OpenAI",
@@ -122,6 +141,18 @@ OPENAI_EMBEDDING_MODEL_NAMES = [
     "text-embedding-3-small",
     "text-embedding-3-large",
     "text-embedding-ada-002",
+]
+
+# Embedding models as detailed metadata
+OPENAI_EMBEDDING_MODELS_DETAILED = [
+    create_model_metadata(
+        provider="OpenAI",
+        name=name,
+        icon="OpenAI",
+        model_type="embeddings",
+        default=(name == "text-embedding-3-small"),  # Mark the most efficient as default
+    )
+    for name in OPENAI_EMBEDDING_MODEL_NAMES
 ]
 
 # Backwards compatibility

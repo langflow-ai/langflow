@@ -99,7 +99,7 @@ describe("AuthModal OAuth Port Synchronization", () => {
     expect(serverUrlInput).toHaveValue("http://example.com:8080");
   });
 
-  it("should auto-sync Callback Path when Port is changed", async () => {
+  it("should auto-sync Callback URL when Port is changed", async () => {
     const user = userEvent.setup();
 
     renderWithTooltip(<AuthModal {...defaultProps} />);
@@ -113,14 +113,14 @@ describe("AuthModal OAuth Port Synchronization", () => {
     await user.clear(portInput);
     await user.type(portInput, "9001");
 
-    // Check that Callback Path was auto-updated
-    const callbackPathInput = screen.getByLabelText(/Callback Path/i);
-    expect(callbackPathInput).toHaveValue(
+    // Check that Callback URL was auto-updated
+    const callbackUrlInput = screen.getByLabelText(/Callback URL/i);
+    expect(callbackUrlInput).toHaveValue(
       "http://localhost:9001/auth/idaas/callback",
     );
   });
 
-  it("should auto-sync both Server URL and Callback Path when Host changes", async () => {
+  it("should auto-sync both Server URL and Callback URL when Host changes", async () => {
     const user = userEvent.setup();
 
     renderWithTooltip(<AuthModal {...defaultProps} />);
@@ -142,9 +142,9 @@ describe("AuthModal OAuth Port Synchronization", () => {
     const serverUrlInput = screen.getByLabelText(/Server URL/i);
     expect(serverUrlInput).toHaveValue("http://192.168.1.100:9002");
 
-    // Verify Callback Path
-    const callbackPathInput = screen.getByLabelText(/Callback Path/i);
-    expect(callbackPathInput).toHaveValue(
+    // Verify Callback URL
+    const callbackUrlInput = screen.getByLabelText(/Callback URL/i);
+    expect(callbackUrlInput).toHaveValue(
       "http://192.168.1.100:9002/auth/idaas/callback",
     );
   });
@@ -190,7 +190,7 @@ describe("AuthModal OAuth Port Synchronization", () => {
         oauth_host: "localhost",
         oauth_port: "9001",
         oauth_server_url: "http://localhost:9001",
-        oauth_callback_path: "http://localhost:9001/auth/idaas/callback",
+        oauth_callback_url: "http://localhost:9001/auth/idaas/callback",
         oauth_client_id: "test-client-id",
         oauth_client_secret: "test-secret",
         oauth_auth_url: "http://localhost:9001/auth/authorize",
@@ -254,7 +254,7 @@ describe("AuthModal OAuth Port Synchronization", () => {
     expect(screen.getByLabelText(/Server URL/i)).toHaveValue(
       "http://existing.host.com:8080",
     );
-    expect(screen.getByLabelText(/Callback Path/i)).toHaveValue(
+    expect(screen.getByLabelText(/Callback URL/i)).toHaveValue(
       "http://existing.host.com:8080/auth/idaas/callback",
     );
   });

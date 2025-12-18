@@ -239,4 +239,4 @@ async def test_create_variable(service, session: AsyncSession):
     assert result.default_fields == []
     assert result.type == CREDENTIAL_TYPE
     assert isinstance(result.created_at, datetime)
-    assert isinstance(result.updated_at, datetime)
+    assert result.updated_at is None  # Should be None on creation

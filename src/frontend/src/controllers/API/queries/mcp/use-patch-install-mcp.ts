@@ -12,8 +12,11 @@ interface PatchInstallMCPResponse {
   message: string;
 }
 
+export type MCPTransport = "sse" | "streamablehttp";
+
 interface PatchInstallMCPBody {
   client: string;
+  transport?: MCPTransport;
 }
 
 export const usePatchInstallMCP: useMutationFunctionType<
