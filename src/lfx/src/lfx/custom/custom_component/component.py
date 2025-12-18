@@ -1566,20 +1566,20 @@ class Component(CustomComponent):
 
     def _should_skip_message(self, message: Message) -> bool:
         """Check if the message should be skipped based on vertex configuration and message type.
-        
+
         When a message is skipped:
         - It is NOT stored in the database
         - It will NOT have an ID (message.get_id() will return None)
         - It is still returned to the caller, but no events are sent to the frontend
-        
+
         Messages are skipped when:
         - The component is not an input or output vertex
         - The component is not connected to a Chat Output
         - The message is not an ErrorMessage
-        
+
         This prevents intermediate components from cluttering the database with messages
         that aren't meant to be displayed in the chat UI.
-        
+
         Returns:
             bool: True if the message should be skipped, False otherwise
         """
