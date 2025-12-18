@@ -31,6 +31,7 @@ from lfx.template.field.prompt import DEFAULT_PROMPT_INTUT_TYPES
 from lfx.utils.util import escape_json_dump
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.orm import selectinload
+from sqlalchemy.orm.exc import StaleDataError
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -1052,7 +1053,13 @@ async def upsert_flow_from_file(file_content: AnyStr, filename: str, session: As
                 await logger.aerror(f"Invalid UUID string: {existing.id}")
                 return
 
-        session.add(existing)
+        try:
+            session.add(existing)
+            await session.flush()
+        except StaleDataError:
+            # Another process already updated this flow - that's fine, skip
+            await logger.ainfo(f"Flow '{flow_name}' was already updated by another process, skipping")
+            await session.rollback()
     else:
         await logger.ainfo(f"Creating new flow: {flow_id} with endpoint name {flow_endpoint_name}")
 
