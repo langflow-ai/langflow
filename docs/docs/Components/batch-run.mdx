@@ -1,0 +1,65 @@
+---
+title: Batch Run
+slug: /batch-run
+---
+
+import Icon from "@site/src/components/icon";
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialDevModeWindows from '@site/docs/_partial-dev-mode-windows.mdx';
+
+The **Batch Run** component runs a language model over _each row of one text column_ in a [`DataFrame`](/data-types#dataframe), and then returns a new `DataFrame` with the original text and an LLM response.
+The output contains the following columns:
+
+* `text_input`: The original text from the input `DataFrame`
+* `model_response`: The model's response for each input
+* `batch_index`: The 0-indexed processing order for all rows in the `DataFrame`
+* `metadata` (optional): Additional information about the processing
+
+## Use the Batch Run component in a flow
+
+If you pass the **Batch Run** output to a [**Parser** component](/parser), you can use variables in the parsing template to reference these keys, such as `{text_input}` and `{model_response}`.
+This is demonstrated in the following example.
+
+![A batch run component connected to OpenAI and a Parser](/img/component-batch-run.png)
+
+1. Connect any language model component to a **Batch Run** component's **Language model** port.
+
+2. Connect `DataFrame` output from another component to the **Batch Run** component's **DataFrame** input.
+For example, you could connect a **Read File** component with a CSV file.
+
+3. In the **Batch Run** component's **Column Name** field, enter the name of the column in the incoming `DataFrame` that contains the text to process.
+For example, if you want to extract text from a `name` column in a CSV file, enter `name` in the **Column Name** field.
+
+4. Connect the **Batch Run** component's **Batch Results** output to a **Parser** component's **DataFrame** input.
+
+5. Optional: In the **Batch Run** [component's header menu](/concepts-components#component-menus), click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**, enable the **System Message** parameter, click **Close**, and then enter an instruction for how you want the LLM to process each cell extracted from the file.
+For example, `Create a business card for each name.`
+
+6. In the **Parser** component's **Template** field, enter a template for processing the **Batch Run** component's new `DataFrame` columns (`text_input`, `model_response`, and `batch_index`):
+
+    For example, this template uses three columns from the resulting, post-batch `DataFrame`:
+
+    ```text
+    record_number: {batch_index}, name: {text_input}, summary: {model_response}
+    ```
+
+7. To test the processing, click the **Parser** component, click <Icon name="Play" aria-hidden="true" /> **Run component**, and then click <Icon name="TextSearch" aria-hidden="true" /> **Inspect output** to view the final `DataFrame`.
+
+    You can also connect a **Chat Output** component to the **Parser** component if you want to see the output in the **Playground**.
+
+## Batch Run parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| model | HandleInput | Input parameter. Connect the 'Language Model' output from a language model component. Required. |
+| system_message | MultilineInput | Input parameter. A multi-line system instruction for all rows in the DataFrame. |
+| df | DataFrameInput | Input parameter. The DataFrame whose column is treated as text messages, as specified by 'column_name'. Required. |
+| column_name | MessageTextInput | Input parameter. The name of the DataFrame column to treat as text messages. If empty, all columns are formatted in TOML. |
+| output_column_name | MessageTextInput | Input parameter. Name of the column where the model's response is stored. Default=`model_response`. |
+| enable_metadata | BoolInput | Input parameter. If `True`, add metadata to the output DataFrame. |
+| batch_results | DataFrame | Output parameter. A DataFrame with all original columns plus the model's response column. |
+

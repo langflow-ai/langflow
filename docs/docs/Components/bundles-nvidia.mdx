@@ -71,7 +71,7 @@ For more information about using embedding model components in flows, see [Embed
 :::tip Tokenization considerations
 Be aware of your embedding model's chunk size limit.
 Tokenization errors can occur if your text chunks are too large.
-For more information, see [Tokenization errors due to chunk size](/components-processing#chunk-size).
+For more information, see [Tokenization errors due to chunk size](/split-text#chunk-size).
 :::
 
 ## NVIDIA Rerank
@@ -153,7 +153,7 @@ For more information, see the [NV-Ingest documentation](https://nvidia.github.io
 | extract_infographics | Extract Infographics | Extract infographics from document. Default: `false`. |
 | text_depth | Text Depth | The level at which text is extracted. Options: 'document', 'page', 'block', 'line', 'span'. Default: `page`. |
 | split_text | Split Text | Split text into smaller chunks. Default: `true`. |
-| chunk_size | Chunk Size | The number of tokens per chunk. Default: `500`. Make sure the chunk size is compatible with your embedding model. For more information, see [Tokenization errors due to chunk size](/components-processing#chunk-size). |
+| chunk_size | Chunk Size | The number of tokens per chunk. Default: `500`. Make sure the chunk size is compatible with your embedding model. For more information, see [Tokenization errors due to chunk size](/split-text#chunk-size). |
 | chunk_overlap | Chunk Overlap | Number of tokens to overlap from previous chunk. Default: `150`. |
 | filter_images | Filter Images | Filter images (see advanced options for filtering criteria). Default: `false`. |
 | min_image_size | Minimum Image Size Filter | Minimum image width/length in pixels. Default: `128`. |

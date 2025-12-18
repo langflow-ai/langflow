@@ -43,7 +43,7 @@ The following example uses a language model component in a chatbot flow similar 
 
 6. Connect the **Prompt Template** component's output to the **Language Model** component's **System Message** input.
 
-7. Add [**Chat Input** and **Chat Output** components](/components-io#chat-io) to your flow.
+7. Add [**Chat Input** and **Chat Output** components](/chat-input-and-output) to your flow.
 These components are required for direct chat interaction with an LLM.
 
 8. Connect the **Chat Input** component to the **Language Model** component's **Input**, and then connect the **Language Model** component's **Message** output to the **Chat Output** component.
@@ -95,7 +95,7 @@ For example, if you are using the **Language Model** core component, you could t
 
 Some components use a language model component to perform LLM-driven actions.
 Typically, these components prepare data for further processing by downstream components, rather than emitting direct chat output.
-For an example, see the [**Smart Function** component](/components-processing#smart-transform).
+For an example, see the [**Smart Transform** component](/smart-transform).
 
 A component must accept a `LanguageModel` input to use a language model component as a driver, and you must set the language model component's output type to `LanguageModel`.
 For more information, see [Language Model output types](#language-model-output-types).
@@ -155,10 +155,10 @@ Language model components, including the core component and bundled components, 
 * **Model Response**: The default output type emits the model's generated response as [`Message` data](/data-types#message).
 Use this output type when you want the typical LLM interaction where the LLM produces a text response based on given input.
 
-* **Language Model**: Change the language model component's output type to [`LanguageModel`](/data-types#languagemodel) when you need to attach an LLM to another component in your flow, such as an **Agent** or **Smart Function** component.
+* **Language Model**: Change the language model component's output type to [`LanguageModel`](/data-types#languagemodel) when you need to attach an LLM to another component in your flow, such as an **Agent** or **Smart Transform** component.
 
     With this configuration, the language model component supports an action completed by another component, rather than a direct chat interaction.
-    For an example, the **Smart Function** component uses an LLM to create a function from natural language input.
+    For an example, the **Smart Transform** component uses an LLM to create a function from natural language input.
 
 ## Additional language models
 

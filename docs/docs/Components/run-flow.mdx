@@ -1,0 +1,28 @@
+---
+title: Run Flow
+slug: /run-flow
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+The **Run Flow** component runs another Langflow flow as a subprocess of the current flow.
+
+You can use this component to chain flows together, run flows conditionally, and attach flows to [**Agent** components](/components-agents) as [tools for agents](/agents-tools) to run as needed.
+
+When used with an agent, the `name` and `description` metadata that the agent uses to register the tool are created automatically.
+
+When you select a flow for the **Run Flow** component, it uses the target flow's graph structure to dynamically generate input and output fields on the **Run Flow** component.
+
+## Run Flow parameters
+
+<PartialParams />
+
+| Name              | Type     | Description                                                    |
+|-------------------|----------|----------------------------------------------------------------|
+| flow_name_selected| Dropdown | Input parameter. The name of the flow to run.                  |
+| session_id        | String   | Input parameter. The session ID for the flow run, if you want to pass a custom session ID for the subflow. |
+| flow_tweak_data   | Dict     | Input parameter. Dictionary of tweaks to customize the flow's behavior. Available tweaks depend on the selected flow. |
+| dynamic inputs    | Various  | Input parameter. Additional inputs are generated based on the selected flow. |
+| run_outputs  | A `List` of types (`Data`, `Message`, or `DataFrame`)  | Output parameter. All outputs are generated from running the flow.  |
+

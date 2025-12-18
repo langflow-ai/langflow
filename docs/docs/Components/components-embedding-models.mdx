@@ -19,7 +19,7 @@ This flow loads a text file, splits the text into chunks, generates embeddings f
 
 ![A semantic search flow that uses Embedding Model, File, Split Text, Chroma DB, Chat Input, and Chat Output components](/img/component-embedding-models-add-chat.png)
 
-1. Create a flow, add a **File** component, and then select a file containing text data, such as a PDF, that you can use to test the flow.
+1. Create a flow, add a **Read File** component, and then select a file containing text data, such as a PDF, that you can use to test the flow.
 
 2. Add the **Embedding Model** core component, and then provide a valid OpenAI API key.
 You can enter the API key directly or use a <Icon name="Globe" aria-hidden="true"/> [global variable](/configuration-global-variables).
@@ -30,7 +30,7 @@ You can enter the API key directly or use a <Icon name="Globe" aria-hidden="true
     Browse <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) or <Icon name="Search" aria-hidden="true" /> **Search** for your preferred provider to find additional embedding models, such as the [**Hugging Face Embeddings Inference** component](/bundles-huggingface#hugging-face-embeddings-inference).
     :::
 
-3. Add a [**Split Text** component](/components-processing#split-text) to your flow.
+3. Add a [**Split Text** component](/split-text) to your flow.
 This component splits text input into smaller chunks to be processed into embeddings.
 
 4. Add a vector store component, such as the **Chroma DB** component, to your flow, and then configure the component to connect to your vector database.
@@ -38,11 +38,11 @@ This component stores the generated embeddings so they can be used for similarit
 
 5. Connect the components:
 
-    * Connect the **File** component's **Loaded Files** output to the **Split Text** component's **Data or DataFrame** input.
+    * Connect the **Read File** component's **Loaded Files** output to the **Split Text** component's **Data or DataFrame** input.
     * Connect the **Split Text** component's **Chunks** output to the vector store component's **Ingest Data** input.
     * Connect the **Embedding Model** component's **Embeddings** output to the vector store component's **Embedding** input.
 
-6. To query the vector store, add [**Chat Input and Output** components](/components-io#chat-io):
+6. To query the vector store, add [**Chat Input and Output** components](/chat-input-and-output):
 
     * Connect the **Chat Input** component to the vector store component's **Search Query** input.
     * Connect the vector store component's **Search Results** output to the **Chat Output** component.
