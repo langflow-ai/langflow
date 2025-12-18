@@ -6,6 +6,7 @@ import time
 import uuid
 from http import HTTPStatus
 
+import requests
 from locust import HttpUser, between, events, task
 
 logger = logging.getLogger(__name__)
@@ -25,9 +26,103 @@ def _(parser):
         default="{}",
         help="JSON mapping of custom headers",
     )
-    parser.add_argument(
-        "--print-responses", action="store_true", help="Print full response bodies"
-    )
+
+
+# Global storage for tools to be fetched once
+GLOBAL_AVAILABLE_TOOLS = []
+
+
+@events.test_start.add_listener
+def fetch_global_tools(environment, **_kwargs):
+    """Fetch tools once at the start of the test and store in global variable."""
+    global GLOBAL_AVAILABLE_TOOLS
+
+    logger.info("Initializing: Fetching global tools list...")
+
+    project_id = environment.parsed_options.project_id
+    if not project_id:
+        logger.error("Missing --project-id argument, cannot fetch tools.")
+        return
+
+    # Parse custom headers just for this request
+    custom_headers_str = environment.parsed_options.custom_headers
+    try:
+        custom_headers = json.loads(custom_headers_str)
+    except json.JSONDecodeError:
+        logger.warning("Invalid JSON for --custom-headers during global fetch")
+        custom_headers = {}
+
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json, text/event-stream",
+    }
+    headers.update(custom_headers)
+
+    # Ensure we have a host to make the request to
+    host = environment.host
+    if not host:
+        logger.warning("No host specified in environment, skipping global tool fetch.")
+        return
+
+    # Handle potentially missing protocol in host or ensure it is clean
+    if not host.startswith("http"):
+        host = "http://" + host
+
+    endpoint = f"{host}/api/v1/mcp/project/{project_id}/streamable"
+
+    payload = {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "tools/list",
+        "params": {
+            "protocolVersion": "2024-11-05",
+            "capabilities": {},
+            "clientInfo": {"name": "locust-global-client", "version": "1.0.0"},
+        },
+    }
+
+    try:
+        # We use requests directly here since we don't need User stats for setup
+        with requests.post(
+            endpoint,
+            json=payload,
+            headers=headers,
+            timeout=30.0,
+            stream=True
+        ) as response:
+            if response.status_code != HTTPStatus.OK:
+                logger.error(
+                    f"Failed to fetch global tools: {response.status_code} - "
+                    f"{response.text}"
+                )
+                return
+
+            # Parse SSE response
+            for line in response.iter_lines():
+                if not line:
+                    continue
+                decoded_line = line.decode("utf-8")
+                if not decoded_line.startswith("data: "):
+                    continue
+
+                try:
+                    data = json.loads(decoded_line[6:])
+                    if "result" in data and "tools" in data["result"]:
+                        GLOBAL_AVAILABLE_TOOLS = data["result"]["tools"]
+                        logger.info(f"Successfully fetched {len(GLOBAL_AVAILABLE_TOOLS)} tools globally.")
+                        return
+                except Exception:
+                    logger.debug(
+                        "Failed to parse SSE line during global fetch",
+                        exc_info=True
+                    )
+                    continue
+
+            if not GLOBAL_AVAILABLE_TOOLS:
+                logger.warning("No tools found in global fetch response.")
+
+    except Exception:
+        logger.exception("Exception during global tool fetch")
 
 
 class MCPProjectUser(HttpUser):
@@ -49,11 +144,6 @@ class MCPProjectUser(HttpUser):
             self.environment.runner.quit()
             return
 
-        self.print_responses = self.environment.parsed_options.print_responses
-        # Force log level to INFO if printing responses is requested
-        if self.print_responses:
-            logging.getLogger().setLevel(logging.INFO)
-
         # Parse custom headers
         custom_headers_str = self.environment.parsed_options.custom_headers
         try:
@@ -69,19 +159,32 @@ class MCPProjectUser(HttpUser):
         self.headers.update(self.custom_headers)
 
         self.session_id = f"locust_{uuid.uuid4()}"
-        self.available_tools = []
+
+        # Use the globally fetched tools
+        self.available_tools = list(GLOBAL_AVAILABLE_TOOLS)
         self.selected_tools = []
 
-        # Fetch available tools
-        self.fetch_tools()
+        if not self.available_tools:
+            logger.warning(
+                "No global tools available. "
+                "Retrying fetch or tools list is empty."
+            )
 
         # Select 1-2 tools for this user to execute repeatedly
         if self.available_tools:
             # Use SystemRandom for secure random numbers to satisfy linter
             secure_random = random.SystemRandom()
-            num_tools = min(len(self.available_tools), secure_random.randint(1, 2))
-            self.selected_tools = secure_random.sample(self.available_tools, num_tools)
-            logger.info(f"User selected tools: {[t['name'] for t in self.selected_tools]}")
+            num_tools = min(
+                len(self.available_tools),
+                secure_random.randint(1, 2)
+                )
+            self.selected_tools = secure_random.sample(
+                self.available_tools,
+                num_tools
+                )
+            logger.debug(
+                f"User selected tools: {[t['name'] for t in self.selected_tools]}"
+            )
         else:
             logger.warning("No tools available to execute.")
 
@@ -89,70 +192,6 @@ class MCPProjectUser(HttpUser):
         """Helper method to log errors in a format Locust expects."""
         self.environment.stats.log_error("ERROR", name, str(exc))
         self.environment.stats.log_request("ERROR", name, response_time, 0)
-
-    def fetch_tools(self):
-        """Fetch list of tools from the MCP server."""
-        endpoint = f"/api/v1/mcp/project/{self.project_id}/streamable"
-
-        payload = {
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "tools/list",
-            "params": {
-                "protocolVersion": "2024-11-05",
-                "capabilities": {},
-                "clientInfo": {"name": "locust-client", "version": "1.0.0"},
-            },
-        }
-
-        if self.print_responses:
-            logger.info(f"Fetching tools from {endpoint}")
-
-        start_time = time.time()
-        try:
-            with self.client.post(
-                endpoint,
-                json=payload,
-                headers=self.headers,
-                catch_response=True,
-                timeout=self.connection_timeout,
-                stream=True
-            ) as response:
-                response_time = (time.time() - start_time) * 1000
-
-                if response.status_code != HTTPStatus.OK:
-                    response.failure(f"Failed to fetch tools: {response.status_code}")
-                    return
-
-                # Parse SSE response
-                tools_found = False
-                for line in response.iter_lines():
-                    if not line:
-                        continue
-
-                    decoded_line = line.decode("utf-8")
-                    if decoded_line.startswith("data: "):
-                        json_str = decoded_line[6:]
-                        try:
-                            data = json.loads(json_str)
-                            if "result" in data and "tools" in data["result"]:
-                                self.available_tools = data["result"]["tools"]
-                                tools_found = True
-                                if self.print_responses:
-                                    logger.info(f"Tools found: {len(self.available_tools)}")
-                        except json.JSONDecodeError as e:
-                            logger.warning(f"Failed to decode JSON from SSE line: {decoded_line}")
-                            self.log_error(endpoint, e, response_time)
-
-                if not tools_found:
-                    logger.warning("No tool list found in response")
-
-        except Exception as e:
-            response_time = (time.time() - start_time) * 1000
-            logger.exception("Exception during fetch_tools")
-            self.log_error(endpoint, e, response_time)
-            # We can't fail the response object here as it's out of context if the exception happened outside.
-            # But the task will fail implicitly by exception.
 
     @task
     def run_tool(self):
@@ -179,7 +218,7 @@ class MCPProjectUser(HttpUser):
             "how are you?",
             "hi, can you help me?",
             "i'm sorry, i'm not sure i understand you",
-            "i'm sorry, i'm not sure i can help you with that",
+            "write a one-page essay about the benefits of using langflow",
         ])
 
         endpoint = f"/api/v1/mcp/project/{self.project_id}/streamable"
@@ -194,8 +233,7 @@ class MCPProjectUser(HttpUser):
             },
         }
 
-        if self.print_responses:
-            logger.info(f"Calling tool '{tool_name}' at {endpoint}")
+        logger.debug(f"Calling tool '{tool_name}' at {endpoint}")
 
         start_time = time.time()
         try:
@@ -208,53 +246,48 @@ class MCPProjectUser(HttpUser):
                 stream=True
             ) as response:
                 response_time = (time.time() - start_time) * 1000
-
-                if response.status_code == HTTPStatus.OK:
-                    # We need to read the stream to confirm success and get result
-                    # Ideally we check for "result" in the JSON-RPC response
-                    success = False
-                    error_msg = ""
-                    collected_response = []
-
-                    # Using delimiter='\n' to ensure we get lines, though default is usually fine.
-                    # chunk_size=None means it will yield chunks as they arrive, but iter_lines handles buffering.
-                    for line in response.iter_lines():
-                        if not line:
-                            continue
-                        decoded_line = line.decode("utf-8")
-                        collected_response.append(decoded_line)
-                        if decoded_line.startswith("data: "):
-                            json_str = decoded_line[6:]
-                            try:
-                                data = json.loads(json_str)
-                                # Check for JSON-RPC error
-                                if "error" in data:
-                                    error_msg = json.dumps(data["error"])
-                                    break
-
-                                # Check for result (successful execution)
-                                if "result" in data:
-                                    success = True
-                            except json.JSONDecodeError as e:
-                                self.log_error(endpoint, e, response_time)
-
-                    if self.print_responses:
-                        logger.info("[%s] Full Response:\n%s", tool_name, "\n".join(collected_response))
-
-                    if success:
-                        response.success()
-                    else:
-                        failure_msg = error_msg if error_msg else "No result in SSE stream"
-                        response.failure(f"Tool execution failed: {failure_msg}")
-                        self.log_error(endpoint, Exception(failure_msg), response_time)
-                else:
-                    error_text = response.text or "No response text"
-                    error_msg = f"HTTP Error {response.status_code}: {error_text[:200]}"
+                if response.status_code != HTTPStatus.OK:
+                    error_msg = (
+                        f"HTTP Error {response.status_code}: "
+                        f"{response.text or 'No response text'}"
+                        )
                     response.failure(error_msg)
                     self.log_error(endpoint, Exception(error_msg), response_time)
+                    return
+
+                success = False
+                error_msg = ""
+                for line in response.iter_lines():
+                    if not line:
+                        continue
+
+                    decoded_line = line.decode("utf-8")
+
+                    if not decoded_line.startswith("data: "):
+                        continue
+
+                    try:
+                        data = json.loads(decoded_line[6:])
+                        logger.debug(
+                            "[%s] Result Data:\n%s",
+                            tool_name,
+                            json.dumps(data, indent=2)
+                            )
+                        if "error" in data:
+                            error_msg = json.dumps(data["error"])
+                            break
+                        if "result" in data: # note: the tool itself might fail
+                            success = True
+                    except Exception as e:
+                        self.log_error(endpoint, e, response_time)
+
+                if not success:
+                    failure_msg = error_msg or "No result in stream response"
+                    response.failure(f"Tool execution failed: {failure_msg}")
+                    self.log_error(endpoint, Exception(failure_msg), response_time)
+                    return
+
+                response.success()
         except Exception as e:
             response_time = (time.time() - start_time) * 1000
             self.log_error(endpoint, e, response_time)
-            # Cannot call response.failure here as context is closed
-            # But the task will fail implicitly by exception.
-
