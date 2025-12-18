@@ -38,7 +38,14 @@ def get_file_paths(files: list[str | dict]):
             if not file:  # Skip empty/None files
                 continue
 
-            file_path = file["path"] if isinstance(file, dict) and "path" in file else file
+            # Handle Image objects, dicts, and strings
+            if isinstance(file, dict) and "path" in file:
+                file_path = file["path"]
+            elif hasattr(file, "path") and file.path:
+                file_path = file.path
+            else:
+                file_path = file
+            
             if not file_path:  # Skip empty paths
                 continue
 
