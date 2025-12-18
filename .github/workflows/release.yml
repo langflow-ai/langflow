@@ -232,7 +232,6 @@ jobs:
 
   build-base:
     name: Build Langflow Base
-    needs: [ensure-lfx-published]
     if: ${{ inputs.release_package_base }}
     runs-on: ubuntu-latest
     outputs:
@@ -447,7 +446,7 @@ jobs:
   publish-base:
     name: Publish Langflow Base to PyPI
     if: ${{ inputs.release_package_base }}
-    needs: [build-base, test-cross-platform]
+    needs: [build-base]
     runs-on: ubuntu-latest
     steps:
       - name: Download base artifact
@@ -470,7 +469,7 @@ jobs:
   publish-main:
     name: Publish Langflow Main to PyPI
     if: ${{ inputs.release_package_main }}
-    needs: [build-main, test-cross-platform, publish-base]
+    needs: [build-main, publish-base]
     runs-on: ubuntu-latest
     steps:
       - name: Download main artifact
@@ -493,7 +492,7 @@ jobs:
   publish-lfx:
     name: Publish LFX to PyPI
     if: ${{ inputs.release_lfx }}
-    needs: [build-lfx, test-cross-platform]
+    needs: [build-lfx]
     runs-on: ubuntu-latest
     steps:
       - name: Download LFX artifact
