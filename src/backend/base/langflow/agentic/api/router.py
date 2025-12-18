@@ -66,7 +66,7 @@ async def run_prompt_flow(request: FlowRequest, current_user: CurrentActiveUser,
             field_name=request.field_name,
             user_id=str(user_id),
         )
-        global_vars["FIELD_VALUE"] = field_value.get("value","")
+        global_vars["FIELD_VALUE"] = field_value.get("value", "")
 
     logger.debug(f"GLOBAL VARIABLES: {global_vars}")
     # Path to the flow file
