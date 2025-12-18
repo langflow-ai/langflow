@@ -1,9 +1,9 @@
-import { useMemo } from "react";
-import LoadingTextComponent from "@/components/common/loadingTextComponent";
-import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
-import { ModelTypeOption } from "@/modals/modelProviderModal";
-import ProviderListItem from "./ProviderListItem";
-import { Provider } from "./types";
+import { useMemo } from 'react';
+import LoadingTextComponent from '@/components/common/loadingTextComponent';
+import { useGetModelProviders } from '@/controllers/API/queries/models/use-get-model-providers';
+import { ModelTypeOption } from '@/modals/modelProviderModal';
+import ProviderListItem from './ProviderListItem';
+import { Provider } from './types';
 
 // Supported model types for filtering providers
 type ModelType = ModelTypeOption[];
@@ -25,11 +25,13 @@ const ProviderList = ({
     isFetching,
   } = useGetModelProviders({});
 
+  console.log('rawProviders', rawProviders);
+
   const filteredProviders: Provider[] = useMemo(() => {
     return rawProviders
-      .map((provider) => {
+      .map(provider => {
         const matchingModels =
-          provider?.models?.filter((model) => {
+          provider?.models?.filter(model => {
             // If modelType is empty or not provided, show all models
             if (!modelType || modelType.length === 0) return true;
             // Check if model's type is in the array of allowed types
@@ -45,7 +47,7 @@ const ProviderList = ({
           documentation_url: provider.documentation_url,
         };
       })
-      .filter((provider) => provider.model_count > 0);
+      .filter(provider => provider.model_count > 0);
   }, [rawProviders, modelType]);
 
   const handleProviderSelect = (provider: Provider) => {
@@ -68,7 +70,7 @@ const ProviderList = ({
 
   return (
     <div className="flex flex-col gap-1" data-testid="provider-list">
-      {filteredProviders.map((provider) => (
+      {filteredProviders.map(provider => (
         <ProviderListItem
           key={provider.provider}
           provider={provider}

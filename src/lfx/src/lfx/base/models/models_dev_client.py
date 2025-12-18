@@ -108,8 +108,48 @@ def fetch_models_dev_data(*, force_refresh: bool = False) -> dict[str, Any]:
         return data
 
 
+def _is_embedding_model(model_data: dict[str, Any]) -> bool:
+    """Determine if a model is an embedding model based on multiple signals.
+
+    We require multiple signals to avoid false positives (e.g., user defaulting
+    output cost to 0 without knowing actual cost).
+
+    Embedding model characteristics (from data analysis):
+    - Zero output cost (embeddings produce vectors, not text)
+    - No tool_call support (embeddings never call tools)
+    - Small output limit (embedding dimensions are typically <= 4096)
+    - No temperature support (not always reliable)
+    - Model ID contains "embed" or "bge" (known embedding patterns)
+    """
+    model_id = model_data.get("id", "").lower()
+    # Check for known embedding model patterns in name
+    has_embed_in_name = "embed" in model_id or "bge" in model_id
+
+    cost = model_data.get("cost", {})
+    has_zero_output_cost = cost.get("output", -1) == 0
+
+    has_no_tool_call = model_data.get("tool_call") is False
+
+    has_no_temperature = model_data.get("temperature") is False or "temperature" not in model_data
+
+    # Output limit check - embedding dimensions are typically <= 4096
+    # LLM output limits are typically 8192+
+    # Skip this check for known embedding patterns (data may have incorrect limits)
+    limit = model_data.get("limit", {})
+    output_limit = limit.get("output", 0)
+    has_small_output_limit = output_limit <= 4096
+
+    # Known embedding pattern + at least one other signal (ignore output limit for these)
+    if has_embed_in_name and (has_zero_output_cost or has_no_tool_call or has_no_temperature):
+        return True
+    # Zero output cost + no tool calling + reasonable output limit
+    if has_zero_output_cost and has_no_tool_call and has_small_output_limit:
+        return True
+    return False
+
+
 def _determine_model_type(model_data: dict[str, Any]) -> str:
-    """Determine the model type based on modalities."""
+    """Determine the model type based on modalities and cost structure."""
     modalities = model_data.get("modalities", {})
     output_types = modalities.get("output", ["text"])
 
@@ -119,8 +159,7 @@ def _determine_model_type(model_data: dict[str, Any]) -> str:
         return "audio"
     if "video" in output_types:
         return "video"
-    # Check if it's an embedding model (no output or just returns vectors)
-    if model_data.get("id", "").lower().find("embed") != -1:
+    if _is_embedding_model(model_data):
         return "embeddings"
     return "llm"
 

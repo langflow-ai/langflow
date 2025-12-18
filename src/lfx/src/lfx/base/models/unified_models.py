@@ -37,10 +37,12 @@ USE_LIVE_MODEL_DATA = os.environ.get("LFX_USE_LIVE_MODEL_DATA", "false").lower()
 # Validated providers - only these providers will be shown in the UI, refer to https://models.dev/ for provider names
 VALIDATED_PROVIDERS: set[str] = {
     "Anthropic",
+    "Amazon Bedrock",
     "Google Generative AI",
     "IBM Watsonx",
     "Ollama",
     "OpenAI",
+    "Cloudflare AI Gateway",
 }
 
 # Excluded models - these model names will not be shown in the UI
