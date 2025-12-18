@@ -37,6 +37,26 @@ def _normalize_for_determinism(obj):
     return obj
 
 
+def _strip_dynamic_fields(obj):
+    """Recursively remove dynamic fields that change with external dependencies.
+
+    Fields like 'options' populated from external packages (litellm, etc.) should
+    not be included in the index as they change independently of component code.
+    These are loaded dynamically at runtime instead.
+
+    This prevents unnecessary hash changes and git history bloat when dependencies update.
+    """
+    # List of field names that are dynamically populated from external sources
+    # or contain runtime-specific data
+    dyanmic_fields = {"options", "timestamp"}
+
+    if isinstance(obj, dict):
+        return {k: _strip_dynamic_fields(v) for k, v in obj.items() if k not in dyanmic_fields}
+    if isinstance(obj, list):
+        return [_strip_dynamic_fields(item) for item in obj]
+    return obj
+
+
 def build_component_index():
     """Build the component index by scanning all modules in lfx.components.
 
@@ -79,6 +99,11 @@ def build_component_index():
         },
         "entries": entries,
     }
+
+    # Strip dynamic fields from component templates BEFORE normalization
+    # This prevents changes in external dependencies (like litellm model lists) from changing the hash
+    print("\nStripping dynamic fields from component metadata...")
+    index = _strip_dynamic_fields(index)
 
     # Normalize the entire structure for deterministic output
     index = _normalize_for_determinism(index)
