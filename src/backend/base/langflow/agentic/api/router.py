@@ -73,12 +73,13 @@ async def run_prompt_flow(request: FlowRequest, current_user: CurrentActiveUser,
             verbose=False,
             check_variables=False,
         )
-        logger.debug("Flow execution completed")
-        return result
 
     except Exception as e:
         logger.error(f"Error executing flow: {e}")
         raise HTTPException(status_code=500, detail=f"Error executing flow: {e}") from e
+    else:
+        logger.debug("Flow execution completed successfully")
+        return result
 
 
 @router.post("/next_component")
