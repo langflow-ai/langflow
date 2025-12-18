@@ -451,13 +451,32 @@ class BaseFileComponent(Component, ABC):
         if not data_list:
             return Data()
 
-        # Grab the JSON data
-        json_data = data_list[0].data[data_list[0].text_key]
-        json_data = self.parse_string_to_dict(json_data)
+        # Grab the JSON data - check for text_key first, then try common alternatives
+        first_data = data_list[0]
+        text_key = first_data.text_key
+        
+        # Try to get data from text_key, or fallback to common keys
+        if text_key in first_data.data:
+            json_data = first_data.data[text_key]
+        elif "text" in first_data.data:
+            json_data = first_data.data["text"]
+        elif "exported_content" in first_data.data:
+            json_data = first_data.data["exported_content"]
+        elif hasattr(first_data, "text") and first_data.text:
+            json_data = first_data.text
+        else:
+            # If no text found, use the entire data dict
+            json_data = first_data.data
+        
+        # If json_data is a dict or list, use it directly; otherwise parse as string
+        if isinstance(json_data, (dict, list)):
+            parsed_data = json_data
+        else:
+            parsed_data = self.parse_string_to_dict(str(json_data))
 
-        self.status = Data(data=json_data)
+        self.status = Data(data=parsed_data)
 
-        return Data(data=json_data)
+        return Data(data=parsed_data)
 
     def load_files(self) -> DataFrame:
         """Load files and return as DataFrame.

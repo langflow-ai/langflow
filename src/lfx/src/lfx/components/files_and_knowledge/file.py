@@ -25,12 +25,18 @@ from lfx.base.data.storage_utils import parse_storage_path, read_file_bytes, val
 from lfx.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_file_to_data
 from lfx.inputs.inputs import DropdownInput, MessageTextInput, StrInput
 from lfx.io import BoolInput, FileInput, IntInput, Output
+from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame  # noqa: TC001
 from lfx.schema.message import Message
 from lfx.services.deps import get_settings_service, get_storage_service
 from lfx.utils.async_helpers import run_until_complete
 
+# Module-level log to verify code is loaded
+try:
+    logger.info("[Read File] FileComponent module loaded - code version with debug logs")
+except Exception as e:
+    print(f"[Read File] ERROR: Failed to log at module level: {e}")
 
 class FileComponent(BaseFileComponent):
     """File component with optional Docling processing (isolated in a subprocess)."""
@@ -81,6 +87,21 @@ class FileComponent(BaseFileComponent):
     EXPORT_FORMAT = "Markdown"
     IMAGE_MODE = "placeholder"
 
+    def __init__(self, *args, **kwargs):
+        """Initialize FileComponent with logging."""
+        # Force write to file to verify execution
+        try:
+            with open("/tmp/langflow_filecomponent_debug.txt", "a") as f:
+                f.write(f"[Read File] FileComponent.__init__ called at {__import__('time').time()}\n")
+        except Exception:
+            pass
+        try:
+            logger.info("[Read File] FileComponent.__init__ called - component instance created")
+            print("[Read File] FileComponent.__init__ called - component instance created (print fallback)")
+        except Exception as e:
+            print(f"[Read File] ERROR in __init__ logging: {e}")
+        super().__init__(*args, **kwargs)
+
     _base_inputs = deepcopy(BaseFileComponent.get_base_inputs())
 
     for input_item in _base_inputs:
@@ -122,6 +143,7 @@ class FileComponent(BaseFileComponent):
             options=["standard", "vlm"],
             value="standard",
             advanced=True,
+            show=False,
             real_time_refresh=True,
         ),
         DropdownInput(
@@ -377,6 +399,7 @@ class FileComponent(BaseFileComponent):
         1. file_path_str (if provided by the tool call)
         2. path (uploaded file from UI)
         """
+        logger.info("[Read File] _validate_and_resolve_paths called")
         # Check if file_path_str is provided (from tool mode)
         file_path_str = getattr(self, "file_path_str", None)
         if file_path_str:
@@ -446,25 +469,34 @@ class FileComponent(BaseFileComponent):
                               if this is a temporary file that should be cleaned up
         """
         settings = get_settings_service().settings
+        logger.info(f"[Read File] _get_local_file_for_docling: file_path={file_path}, storage_type={settings.storage_type}")
+        
         if settings.storage_type == "local":
+            logger.debug(f"Using local file path: {file_path}")
             return file_path, False
 
         # S3 storage - download to temp file
+        logger.debug(f"S3 storage detected, parsing path: {file_path}")
         parsed = parse_storage_path(file_path)
         if not parsed:
             msg = f"Invalid S3 path format: {file_path}. Expected 'flow_id/filename'"
+            logger.debug(f"Failed to parse S3 path: {msg}")
             raise ValueError(msg)
 
         storage_service = get_storage_service()
         flow_id, filename = parsed
+        logger.debug(f"Parsed S3 path - flow_id={flow_id}, filename={filename}")
 
         # Get file content from S3
+        logger.debug(f"Downloading file from S3: flow_id={flow_id}, filename={filename}")
         content = await storage_service.get_file(flow_id, filename)
+        logger.debug(f"Downloaded {len(content)} bytes from S3")
 
         suffix = Path(filename).suffix
         with NamedTemporaryFile(mode="wb", suffix=suffix, delete=False) as tmp_file:
             tmp_file.write(content)
             temp_path = tmp_file.name
+        logger.debug(f"Created temporary file for Docling: {temp_path}")
 
         return temp_path, True
 
@@ -476,21 +508,43 @@ class FileComponent(BaseFileComponent):
 
         For S3 storage, the file is downloaded to a temp file first.
         """
+        logger.info(f"[Read File] _process_docling_in_subprocess: file_path={file_path}")
+        
         if not file_path:
+            logger.debug("Empty file_path, returning None")
             return None
 
         settings = get_settings_service().settings
+        logger.debug(f"Storage type: {settings.storage_type}, advanced_mode={self.advanced_mode}, pipeline={self.pipeline}")
+        
         if settings.storage_type == "s3":
+            logger.debug("S3 storage: downloading file for Docling processing")
             local_path, should_delete = run_until_complete(self._get_local_file_for_docling(file_path))
+            logger.debug(f"S3 file downloaded to: {local_path}, should_delete={should_delete}")
         else:
             local_path = file_path
             should_delete = False
+            logger.debug(f"Local storage: using path directly: {local_path}")
 
         try:
-            return self._process_docling_subprocess_impl(local_path, file_path)
+            logger.debug(f"Calling Docling subprocess with local_path={local_path}, original_path={file_path}")
+            result = self._process_docling_subprocess_impl(local_path, file_path)
+            if result:
+                payload = getattr(result, "data", {}) or {}
+                has_error = "error" in payload
+                has_doc = "doc" in payload
+                has_text = hasattr(result, "text") and result.text
+                logger.debug(
+                    f"Docling subprocess returned: has_error={has_error}, "
+                    f"has_doc={has_doc}, has_text={has_text}, file_path in payload={payload.get('file_path')}"
+                )
+            else:
+                logger.debug("Docling subprocess returned None")
+            return result
         finally:
             # Clean up temp file if we created one
             if should_delete:
+                logger.debug(f"Cleaning up temporary file: {local_path}")
                 with contextlib.suppress(Exception):
                     Path(local_path).unlink()  # Ignore cleanup errors
 
@@ -696,21 +750,28 @@ class FileComponent(BaseFileComponent):
         if not isinstance(args["file_path"], str) or any(c in args["file_path"] for c in [";", "|", "&", "$", "`"]):
             return Data(data={"error": "Unsafe file path detected.", "file_path": args["file_path"]})
 
+        logger.info(f"[Read File] Starting Docling subprocess with args: pipeline={args['pipeline']}, markdown={args['markdown']}")
         proc = subprocess.run(  # noqa: S603
             [sys.executable, "-u", "-c", child_script],
             input=json.dumps(args).encode("utf-8"),
             capture_output=True,
             check=False,
         )
+        logger.debug(f"Docling subprocess completed: returncode={proc.returncode}")
 
         if not proc.stdout:
             err_msg = proc.stderr.decode("utf-8", errors="replace") if proc.stderr else "no output from child process"
+            logger.debug(f"Docling subprocess produced no stdout. stderr: {err_msg}")
             return Data(data={"error": f"Docling subprocess error: {err_msg}", "file_path": original_file_path})
 
         try:
-            result = json.loads(proc.stdout.decode("utf-8"))
+            stdout_text = proc.stdout.decode("utf-8")
+            logger.debug(f"Docling subprocess stdout length: {len(stdout_text)} bytes")
+            result = json.loads(stdout_text)
+            logger.debug(f"Parsed Docling result: ok={result.get('ok')}, mode={result.get('mode')}")
         except Exception as e:  # noqa: BLE001
             err_msg = proc.stderr.decode("utf-8", errors="replace")
+            logger.debug(f"Failed to parse Docling JSON output: {e}, stderr: {err_msg}")
             return Data(
                 data={
                     "error": f"Invalid JSON from Docling subprocess: {e}. stderr={err_msg}",
@@ -720,6 +781,7 @@ class FileComponent(BaseFileComponent):
 
         if not result.get("ok"):
             error_msg = result.get("error", "Unknown Docling error")
+            logger.debug(f"Docling processing failed: {error_msg}")
             # Override meta file_path with original_file_path to ensure correct path matching
             meta = result.get("meta", {})
             meta["file_path"] = original_file_path
@@ -728,15 +790,23 @@ class FileComponent(BaseFileComponent):
         meta = result.get("meta", {})
         # Override meta file_path with original_file_path to ensure correct path matching
         # The subprocess returns the temp file path, but we need the original S3/local path for rollup_data
+        original_meta_path = meta.get("file_path")
         meta["file_path"] = original_file_path
+        logger.debug(
+            f"Overriding meta file_path: {original_meta_path} -> {original_file_path} "
+            f"(original_file_path={original_file_path})"
+        )
+        
         if result.get("mode") == "markdown":
             exported_content = str(result.get("text", ""))
+            logger.debug(f"Returning markdown mode result, content length: {len(exported_content)}")
             return Data(
                 text=exported_content,
                 data={"exported_content": exported_content, "export_format": self.EXPORT_FORMAT, **meta},
             )
 
         rows = list(result.get("doc", []))
+        logger.debug(f"Returning structured mode result, rows count: {len(rows)}")
         return Data(data={"doc": rows, "export_format": self.EXPORT_FORMAT, **meta})
 
     def process_files(
@@ -748,6 +818,7 @@ class FileComponent(BaseFileComponent):
         - advanced_mode => Docling in a separate process.
         - Otherwise => standard parsing in current process (optionally threaded).
         """
+        logger.info(f"[Read File] process_files called with {len(file_list)} file(s)")
         if not file_list:
             msg = "No files to process."
             raise ValueError(msg)
@@ -808,31 +879,43 @@ class FileComponent(BaseFileComponent):
                 return None
 
         docling_compatible = all(self._is_docling_compatible(str(f.path)) for f in file_list)
+        logger.info(
+            f"[Read File] process_files called: advanced_mode={self.advanced_mode}, "
+            f"docling_compatible={docling_compatible}, file_count={len(file_list)}"
+        )
 
         # Advanced path: Check if ALL files are compatible with Docling
         if self.advanced_mode and docling_compatible:
+            logger.info("[Read File] Entering advanced mode processing path")
             final_return: list[BaseFileComponent.BaseFile] = []
             for file in file_list:
                 file_path = str(file.path)
+                logger.info(f"[Read File] Processing file in advanced mode: {file_path}, BaseFile.path={file.path}")
                 advanced_data: Data | None = self._process_docling_in_subprocess(file_path)
 
                 # Handle None case - Docling processing failed or returned None
                 if advanced_data is None:
+                    logger.debug(f"advanced_data is None for file: {file_path}")
                     error_data = Data(
                         data={
                             "file_path": file_path,
                             "error": "Docling processing returned no result. Check logs for details.",
                         },
                     )
-                    final_return.extend(self.rollup_data([file], [error_data]))
+                    logger.debug(f"Calling rollup_data with file.path={file.path}, error_data.file_path={error_data.data.get('file_path')}")
+                    rolled = self.rollup_data([file], [error_data])
+                    logger.debug(f"rollup_data returned {len(rolled)} BaseFile objects")
+                    final_return.extend(rolled)
                     continue
 
                 # --- UNNEST: expand each element in `doc` to its own Data row
                 payload = getattr(advanced_data, "data", {}) or {}
+                logger.debug(f"Processing advanced_data payload: keys={list(payload.keys())}")
 
                 # Check for errors first
                 if "error" in payload:
                     error_msg = payload.get("error", "Unknown error")
+                    logger.debug(f"Error in payload: {error_msg}")
                     error_data = Data(
                         data={
                             "file_path": file_path,
@@ -840,12 +923,18 @@ class FileComponent(BaseFileComponent):
                             **{k: v for k, v in payload.items() if k not in ("error", "file_path")},
                         },
                     )
-                    final_return.extend(self.rollup_data([file], [error_data]))
+                    logger.debug(f"Calling rollup_data with error_data: file.path={file.path}, error_data.file_path={error_data.data.get('file_path')}")
+                    rolled = self.rollup_data([file], [error_data])
+                    logger.debug(f"rollup_data returned {len(rolled)} BaseFile objects")
+                    final_return.extend(rolled)
                     continue
 
                 doc_rows = payload.get("doc")
+                logger.debug(f"doc_rows type: {type(doc_rows)}, is_list: {isinstance(doc_rows, list)}, length: {len(doc_rows) if isinstance(doc_rows, list) else 'N/A'}")
+                
                 if isinstance(doc_rows, list) and doc_rows:
                     # Non-empty list of structured rows
+                    logger.debug(f"Processing {len(doc_rows)} doc rows")
                     rows: list[Data | None] = [
                         Data(
                             data={
@@ -855,11 +944,14 @@ class FileComponent(BaseFileComponent):
                         )
                         for item in doc_rows
                     ]
-                    final_return.extend(self.rollup_data([file], rows))
+                    logger.debug(f"Created {len(rows)} Data objects, calling rollup_data with file.path={file.path}")
+                    rolled = self.rollup_data([file], rows)
+                    logger.debug(f"rollup_data returned {len(rolled)} BaseFile objects")
+                    final_return.extend(rolled)
                 elif isinstance(doc_rows, list) and not doc_rows:
                     # Empty list - file was processed but no text content found
                     # Create a Data object indicating no content was extracted
-                    self.log(f"No text extracted from '{file_path}', creating placeholder data")
+                    logger.debug(f"Empty doc_rows list for file: {file_path}, creating placeholder data")
                     empty_data = Data(
                         data={
                             "file_path": file_path,
@@ -868,10 +960,14 @@ class FileComponent(BaseFileComponent):
                             **{k: v for k, v in payload.items() if k != "doc"},
                         },
                     )
-                    final_return.extend(self.rollup_data([file], [empty_data]))
+                    logger.debug(f"Calling rollup_data with empty_data: file.path={file.path}, empty_data.file_path={empty_data.data.get('file_path')}")
+                    rolled = self.rollup_data([file], [empty_data])
+                    logger.debug(f"rollup_data returned {len(rolled)} BaseFile objects")
+                    final_return.extend(rolled)
                 else:
                     # If not structured, keep as-is (e.g., markdown export or error dict)
                     # Ensure file_path is set for proper rollup matching
+                    logger.debug(f"Non-list doc_rows, payload file_path: {payload.get('file_path')}")
                     if not payload.get("file_path"):
                         payload["file_path"] = file_path
                         # Create new Data with file_path
@@ -879,10 +975,15 @@ class FileComponent(BaseFileComponent):
                             data=payload,
                             text=getattr(advanced_data, "text", None),
                         )
-                    final_return.extend(self.rollup_data([file], [advanced_data]))
+                    logger.debug(f"Calling rollup_data with advanced_data: file.path={file.path}, payload.file_path={payload.get('file_path')}")
+                    rolled = self.rollup_data([file], [advanced_data])
+                    logger.debug(f"rollup_data returned {len(rolled)} BaseFile objects")
+                    final_return.extend(rolled)
+            logger.debug(f"Advanced mode processing complete, returning {len(final_return)} BaseFile objects")
             return final_return
 
         # Standard multi-file (or single non-advanced) path
+        logger.info(f"[Read File] Using standard processing path (advanced_mode={self.advanced_mode}, docling_compatible={docling_compatible})")
         concurrency = 1 if not self.use_multithreading else max(1, self.concurrency_multithreading)
 
         file_paths = [str(f.path) for f in file_list]
@@ -897,12 +998,39 @@ class FileComponent(BaseFileComponent):
 
     # ------------------------------ Output helpers -----------------------------------
 
+    def load_files_core(self) -> list[Data]:
+        """Override base class method to add logging."""
+        logger.info("[Read File] load_files_core called")
+        return super().load_files_core()
+
+    def load_files_message(self) -> Message:
+        """Override base class method to add logging."""
+        logger.info("[Read File] load_files_message called")
+        return super().load_files_message()
+
+    def load_files(self) -> DataFrame:
+        """Override base class method to add logging."""
+        logger.info("[Read File] load_files called (base class method)")
+        return super().load_files()
+
     def load_files_helper(self) -> DataFrame:
+        logger.info("[Read File] load_files_helper called")
         result = self.load_files()
 
         # Result is a DataFrame - check if it has any rows
         if result.empty:
+            # Get more context about why it's empty
+            data_list = self.load_files_core()
+            logger.debug(f"DataFrame is empty. load_files_core returned {len(data_list)} Data objects")
+            if data_list:
+                logger.debug(f"First Data object keys: {list(data_list[0].data.keys()) if data_list[0].data else 'No data'}")
+                logger.debug(f"First Data object file_path: {data_list[0].data.get('file_path', 'MISSING')}")
+            
             msg = "Could not extract content from the provided file(s)."
+            # Check if there are any errors in the result that caused it to be empty
+            if "error" in result.columns and not result["error"].dropna().empty:
+                first_error = result["error"].dropna().iloc[0]
+                msg = f"Error processing file: {first_error}"
             raise ValueError(msg)
 
         # Check for error column with error messages
@@ -915,11 +1043,13 @@ class FileComponent(BaseFileComponent):
 
     def load_files_dataframe(self) -> DataFrame:
         """Load files using advanced Docling processing and export to DataFrame format."""
+        logger.info("[Read File] load_files_dataframe called")
         self.markdown = False
         return self.load_files_helper()
 
     def load_files_markdown(self) -> Message:
         """Load files using advanced Docling processing and export to Markdown format."""
+        logger.info("[Read File] load_files_markdown called")
         self.markdown = True
         result = self.load_files_helper()
 
