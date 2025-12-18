@@ -7,8 +7,11 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import Icon from "@site/src/components/icon";
 import PartialDevModeWindows from '@site/docs/_partial-dev-mode-windows.mdx';
+import PartialDockerDoclingDeps from '@site/docs/_partial-docker-docling-deps.mdx';
 
-Langflow integrates with [Docling](https://docling-project.github.io/docling/) through a bundle of components for parsing documents.
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+Langflow integrates with [Docling](https://docling-project.github.io/docling/) through a bundle of components for parsing and chunking documents.
 
 ## Prerequisites
 
@@ -28,6 +31,8 @@ The Docling dependency is required to use the Docling components in Langflow.
     For Langflow Desktop, add the Docling dependency to Langflow Desktop's `requirements.txt`.
     For more information, see [Install custom dependencies](/install-custom-dependencies).
 
+<PartialDockerDoclingDeps />
+
 ## Use Docling components in a flow
 
 :::tip
@@ -36,7 +41,7 @@ To learn more about content extraction with Docling, see the video tutorial [Doc
 
 This example demonstrates how to use Docling components to split a PDF in a flow:
 
-1. Connect a **Docling** and an **Export DoclingDocument** component to a [**Split Text** component](/components-processing#split-text).
+1. Connect a **Docling** and an **Export DoclingDocument** component to a [**Split Text** component](/split-text).
 
     The **Docling** component loads the document, and the **Export DoclingDocument** component converts the `DoclingDocument` into the format you select. This example converts the document to Markdown, with images represented as placeholders.
     The **Split Text** component will split the Markdown into chunks for the vector database to store in the next part of the flow.
@@ -56,9 +61,9 @@ This example demonstrates how to use Docling components to split a PDF in a flow
 
 The following sections describe the purpose and configuration options for each component in the **Docling** bundle.
 
-### Docling language model
+### Docling local model
 
-The **Docling** language model component ingest documents, and then uses Docling to process them by running the Docling models locally.
+The **Docling** component ingests documents, and then uses Docling to process them by running a local Docling model.
 
 It outputs `files`, which is the processed files with `DoclingDocument` data.
 
@@ -74,7 +79,7 @@ For more information, see the [Docling IBM models project repository](https://gi
 
 ### Docling Serve
 
-The **Docling Serve** component runs Docling as an API service.
+The **Docling Serve** component ingests documents and processes them with a Docling API service rather than a local model.
 
 It outputs `files`, which is the processed files with `DoclingDocument` data.
 
@@ -93,7 +98,7 @@ For more information, see the [Docling serve project repository](https://github.
 
 ### Chunk DoclingDocument
 
-The **Chunk DoclingDocument** component uses the `DoclingDocument` chunkers to split a document into chunks.
+The **Chunk DoclingDocument** component splits `DoclingDocument` objects into chunks.
 
 It outputs the chunked documents as a [`DataFrame`](/data-types#dataframe).
 
@@ -132,4 +137,4 @@ For more information, see the [Docling core project repository](https://github.c
 
 ## See also
 
-* [**File** component](/components-data#file)
+* [**Read File** component](/read-file)
