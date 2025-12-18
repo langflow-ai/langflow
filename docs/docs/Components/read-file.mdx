@@ -1,0 +1,172 @@
+---
+title: Read File
+slug: /read-file
+---
+
+import Icon from "@site/src/components/icon";
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialDevModeWindows from '@site/docs/_partial-dev-mode-windows.mdx';
+import PartialDockerDoclingDeps from '@site/docs/_partial-docker-docling-deps.mdx';
+
+In Langflow version 1.7.0, this component was renamed from **File** to **Read File**.
+
+The **Read File** component loads and parses files, converts the content into a `Data`, `DataFrame`, or `Message` object.
+It supports multiple file types, provides parameters for parallel processing and error handling, and supports advanced parsing with the Docling library.
+
+You can add files to the **Read File** component in the visual editor or at runtime, and you can upload multiple files at once.
+For more information about uploading files and working with files in flows, see [File management](/concepts-file-management) and [Create a chatbot that can ingest files](/chat-with-files).
+
+## File type and size limits
+
+By default, the maximum file size is 1024 MB.
+To modify this value, change the `LANGFLOW_MAX_FILE_SIZE_UPLOAD` [environment variable](/environment-variables).
+
+<details>
+<summary>Supported file types</summary>
+
+The following file types are supported by the **Read File** component.
+Use archive and compressed formats to bundle multiple files together, or use the [**Directory** component](/directory) to load all files in a directory.
+
+- `.bz2`
+- `.csv`
+- `.docx`
+- `.gz`
+- `.htm`
+- `.html`
+- `.json`
+- `.js`
+- `.md`
+- `.mdx`
+- `.pdf`
+- `.py`
+- `.sh`
+- `.sql`
+- `.tar`
+- `.tgz`
+- `.ts`
+- `.tsx`
+- `.txt`
+- `.xml`
+- `.yaml`
+- `.yml`
+- `.zip`
+
+</details>
+
+If you need to load an unsupported file type, you must use a different component that supports that file type and, potentially, parses it outside Langflow, or you must convert it to a supported type before uploading it.
+
+For images, see [Upload images](/concepts-file-management#upload-images).
+
+For videos, see the **Twelve Labs** and **YouTube** <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components).
+
+## File parameters
+
+<PartialParams />
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| path | Files | Input parameter. The path to files to load. Can be local or in [Langflow file management](/concepts-file-management). Supports individual files and bundled archives. |
+| file_path | Server File Path | Input parameter. A `Data` object with a `file_path` property pointing to a file in [Langflow file management](/concepts-file-management) or a `Message` object with a path to the file. Supersedes **Files** (`path`) but supports the same file types. |
+| separator | Separator | Input parameter. The separator to use between multiple outputs in `Message` format. |
+| silent_errors | Silent Errors | Input parameter. If `true`, errors in the component don't raise an exception. Default: Disabled (`false`). |
+| delete_server_file_after_processing | Delete Server File After Processing | Input parameter. If `true` (default), the **Server File Path** (`file_path`) is deleted after processing. |
+| ignore_unsupported_extensions | Ignore Unsupported Extensions | Input parameter. If enabled (`true`), files with unsupported extensions are accepted but not processed. If disabled (`false`), the **Read File** component either can throw an error if an unsupported file type is provided. The default is `true`. |
+| ignore_unspecified_files | Ignore Unspecified Files | Input parameter. If `true`, `Data` with no `file_path` property is ignored. If `false` (default), the component errors when a file isn't specified. |
+| concurrency_multithreading | Processing Concurrency | Input parameter. The number of files to process concurrently if multiple files are uploaded. Default is 1. Values greater than 1 enable parallel processing for 2 or more files. Ignored for single-file uploads and advanced parsing. |
+| advanced_parser | Advanced Parser | Input parameter. If `true`, enables [advanced parsing](#advanced-parsing). Only available for single-file uploads of compatible file types. Default: Disabled (`false`). |
+
+## Advanced parsing
+
+Starting in Langflow version 1.6, the **Read File** component supports advanced document parsing using the [Docling](https://docling-project.github.io/docling/) library for supported file types.
+
+To use advanced parsing, do the following:
+
+1. Complete the following prerequisites, if applicable:
+
+    * **Install Langflow version 1.6 or later**: Earlier versions don't support advanced parsing with the **Read File** component. For upgrade guidance, see the [Release notes](/release-notes).
+
+    * **Install Docling dependency on macOS Intel (x86_64)**: The Docling dependency isn't installed by default for macOS Intel (x86_64). Use the [Docling installation guide](https://docling-project.github.io/docling/installation/) to install the Docling dependency.
+
+        For all other operating systems, the Docling dependency is installed by default.
+
+    <PartialDockerDoclingDeps />
+
+    * **Enable Developer Mode for Windows**:
+    <PartialDevModeWindows />
+
+        Developer Mode isn't required for Langflow OSS on Windows.
+
+2. Add one valid file to the **Read File** component.
+
+    :::info Advanced parsing limitations
+    * Advanced parsing processes only one file.
+    If you select multiple files, the **Read File** component processes the first file only, ignoring any additional files.
+    To process multiple files with advanced parsing, pass each file to a separate **Read File** components, or use the dedicated [**Docling** components](/bundles-docling).
+
+    * Advanced parsing can process any of the **Read File** component's supported file types except `.csv`, `.xlsx`, and `.parquet` files because it is designed for document processing, such as extracting text from PDFs.
+    For structured data analysis, use the [**Parser** component](/parser).
+    :::
+
+3. Enable **Advanced Parsing**.
+
+4. Click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus) to configure advanced parsing parameters, which are hidden by default:
+
+    | Name | Display Name | Info |
+    |------|--------------|------|
+    | pipeline | Pipeline | Input parameter, advanced parsing. The Docling pipeline to use, either `standard` (default, recommended) or `vlm` (may produce inconsistent results). |
+    | ocr_engine | OCR Engine | Input parameter, advanced parsing. The OCR parser to use if `pipeline` is `standard`. Options are `None` (default) or [`EasyOCR`](https://pypi.org/project/easyocr/). `None` means that no OCR engine is used, and this can produce inconsistent or broken results for some documents. This setting has no effect with the `vlm` pipeline. |
+    | md_image_placeholder | Markdown Image Placeholder | Input parameter, advanced parsing. Defines the placeholder for image files if the output type is **Markdown**. Default: `<!-- image -->`. |
+    | md_page_break_placeholder | Markdown Page Break Placeholder | Input parameter, advanced parsing. Defines the placeholder for page breaks if the output type is **Markdown**. Default: `""` (empty string). |
+    | doc_key | Document Key | Input parameter, advanced parsing. The key to use for the `DoclingDocument` column, which holds the structured information extracted from the source document. See [Docling Document](https://docling-project.github.io/docling/concepts/docling_document/) for details. Default: `doc`. |
+
+    :::tip
+    For additional Docling features, including other components and OCR parsers, use the [**Docling** bundle](/bundles-docling).
+    :::
+
+## File output
+
+The output of the **Read File** component depends on the number of files loaded and whether advanced parsing is enabled.
+If multiple options are available, you can set the output type near the component's output port.
+
+<Tabs>
+<TabItem value="zero" label="No files">
+
+If you run the **Read File** component with no file selected, it throws an error, or, if **Silent Errors** is enabled, produces no output.
+
+</TabItem>
+<TabItem value="one-false" label="One file without advanced parsing">
+
+If advanced parsing is disabled and you upload one file, the following output types are available:
+
+- **Structured Content**: Available only for `.csv`, `.xlsx`, `.parquet`, and `.json` files.
+
+    - For `.csv` files, produces a [`DataFrame`](/data-types#dataframe) representing the table data.
+    - For `.json` files, produces a [`Data`](/data-types#data) object with the parsed JSON data.
+
+- **Raw Content**: A [`Message`](/data-types#message) containing the file's raw text content.
+
+- **File Path**: A [`Message`](/data-types#message) containing the path to the file in [Langflow file management](/concepts-file-management).
+
+</TabItem>
+<TabItem value="one-true" label="One file with advanced parsing">
+
+If advanced parsing is enabled and you upload one file, the following output types are available:
+
+- **Structured Output**: A [`DataFrame`](/data-types#dataframe) containing the Docling-processed document data with text elements, page numbers, and metadata.
+
+- **Markdown**: A [`Message`](/data-types#message) containing the uploaded document contents in Markdown format with image placeholders.
+
+- **File Path**: A [`Message`](/data-types#message) containing the path to the file in [Langflow file management](/concepts-file-management).
+
+</TabItem>
+<TabItem value="multi" label="Multiple files">
+
+If you upload multiple files, the component outputs **Files**, which is a [`DataFrame`](/data-types#dataframe) containing the content and metadata of all selected files.
+
+[Advanced parsing](#advanced-parsing) doesn't support multiple files; it processes only the first file.
+
+</TabItem>
+</Tabs>
+
