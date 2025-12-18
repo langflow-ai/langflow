@@ -25,8 +25,6 @@ const ProviderList = ({
     isFetching,
   } = useGetModelProviders({});
 
-  console.log('rawProviders', rawProviders);
-
   const filteredProviders: Provider[] = useMemo(() => {
     return rawProviders
       .map(provider => {
