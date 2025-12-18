@@ -55,7 +55,26 @@ if TYPE_CHECKING:
 
 
 class Graph:
-    """A class representing a graph of vertices and edges."""
+    """A class representing a graph of vertices and edges.
+
+    The Graph class manages the execution of a directed acyclic graph (DAG) of components.
+    It supports:
+    - Async execution via async_start() that yields results as vertices complete
+    - Checkpoint/restore for pausing and resuming execution mid-flow
+    - Breakpoints for debugging that pause execution before specific vertices
+    - Context sharing between components via the graph.context dict
+
+    Breakpoint Usage:
+        graph.add_breakpoint("vertex_id")  # Pause before this vertex
+        async for result in graph.async_start():
+            if graph.is_paused:
+                # Execution paused at breakpoint
+                checkpoint = graph.get_breakpoint_checkpoint()
+                break
+        graph.resume()  # Continue from breakpoint
+        async for result in graph.async_start():
+            pass  # Complete execution
+    """
 
     def __init__(
         self,
@@ -133,6 +152,13 @@ class Graph:
         self._mutation_step: int = 0  # Global mutation counter
         self._enable_events: bool = False  # Auto-enabled when observer registered
         self._observer_errors: list[tuple[Exception, str]] = []  # Collect observer errors
+
+        # Breakpoint system
+        self._breakpoints: set[str] = set()  # Set of vertex IDs to pause at
+        self._is_paused: bool = False  # Whether execution is currently paused
+        self._breakpoint_checkpoint: dict[str, Any] | None = None  # Checkpoint at pause point
+        self._skip_breakpoint_for: str | None = None  # Skip breakpoint check for this vertex (after resume)
+        self._is_resuming: bool = False  # Explicit flag for resuming from breakpoint
 
         if context and not isinstance(context, dict):
             msg = "Context must be a dictionary"
@@ -276,20 +302,183 @@ class Graph:
                 self._observer_errors.append((e, f"Event: {event_type}, step: {event.step}"))
 
     def _get_graph_snapshot(self) -> dict[str, Any]:
-        """Get current graph state for event context.
+        """Get current graph execution state as a JSON-serializable dictionary.
+
+        This captures the execution state needed to resume graph execution from
+        the current point. It does NOT capture breakpoint configuration - breakpoints
+        are ephemeral session state that must be re-added after restore if desired.
 
         Returns:
-            Dictionary with complete graph state
+            Dictionary with execution state (run_manager, queue, context, etc.)
         """
         return {
             "run_manager": self.run_manager.to_dict(),
             "queue": list(self._run_queue) if hasattr(self, "_run_queue") else [],
             "vertices_layers": self.vertices_layers.copy() if self.vertices_layers else [],
             "context": dict(self.context) if hasattr(self, "context") else {},
-            "inactivated_vertices": self.inactivated_vertices.copy(),
-            "activated_vertices": self.activated_vertices.copy(),
-            "conditionally_excluded": self.conditionally_excluded_vertices.copy(),
+            # Convert sets to lists for JSON serialization
+            "inactivated_vertices": list(self.inactivated_vertices),
+            "activated_vertices": list(self.activated_vertices),
+            "conditionally_excluded": list(self.conditionally_excluded_vertices),
+            "mutation_step": self._mutation_step,
         }
+
+    def restore_from_snapshot(self, snapshot: dict[str, Any]) -> None:
+        """Restore graph execution state from a snapshot.
+
+        This enables resuming graph execution after a pause (e.g., for human approval).
+        The graph must already be prepared before calling this method.
+
+        Note: This restores execution state only. Vertex outputs must still be in memory
+        (i.e., process has not restarted). For full persistence across restarts,
+        vertex outputs would also need to be serialized/restored.
+
+        Args:
+            snapshot: Dictionary from _get_graph_snapshot() containing:
+                - run_manager: RunnableVerticesManager state
+                - queue: Current run queue
+                - context: Graph context
+                - inactivated_vertices: Set of inactive vertex IDs
+                - activated_vertices: List of active vertex IDs
+                - conditionally_excluded: Set of excluded vertex IDs
+                - mutation_step: Current mutation counter
+
+        Raises:
+            ValueError: If snapshot is missing required keys or contains invalid vertex IDs
+        """
+        # Validate snapshot structure
+        required_keys = {"run_manager", "queue"}
+        missing = required_keys - set(snapshot.keys())
+        if missing:
+            msg = f"Invalid snapshot: missing required keys {missing}"
+            raise ValueError(msg)
+
+        # Validate vertex IDs in queue exist in current graph
+        queue_vertices = set(snapshot.get("queue", []))
+        if self.vertex_map:  # Only validate if graph has vertices
+            invalid_vertices = queue_vertices - set(self.vertex_map.keys())
+            if invalid_vertices:
+                msg = f"Cannot restore snapshot: vertices {invalid_vertices} not found in current graph"
+                raise ValueError(msg)
+
+        # Restore run manager state
+        self.run_manager = RunnableVerticesManager.from_dict(snapshot["run_manager"])
+
+        # Restore run queue
+        self._run_queue = deque(snapshot.get("queue", []))
+
+        # Restore vertices layers
+        self.vertices_layers = snapshot.get("vertices_layers", [])
+
+        # Restore context
+        self._context = dotdict(snapshot.get("context", {}))
+
+        # Restore vertex activation states
+        self.inactivated_vertices = set(snapshot.get("inactivated_vertices", set()))
+        self.activated_vertices = list(snapshot.get("activated_vertices", []))
+        self.conditionally_excluded_vertices = set(snapshot.get("conditionally_excluded", set()))
+
+        # Restore mutation counter
+        self._mutation_step = snapshot.get("mutation_step", 0)
+
+    # Breakpoint methods
+
+    @property
+    def breakpoints(self) -> set[str]:
+        """Get the set of breakpoint vertex IDs.
+
+        Note:
+            Breakpoints persist across multiple graph executions until
+            explicitly removed with remove_breakpoint() or clear_breakpoints().
+            Each async_start() call will pause at configured breakpoints.
+        """
+        return self._breakpoints
+
+    @property
+    def is_paused(self) -> bool:
+        """Check if execution is currently paused at a breakpoint."""
+        return self._is_paused
+
+    def add_breakpoint(self, vertex_id: str) -> None:
+        """Add a breakpoint at the specified vertex.
+
+        When execution reaches this vertex, it will pause before executing it.
+
+        Note:
+            Breakpoints only work with async_start() sequential execution.
+            They are not supported in parallel execution mode (process(), astream_log()).
+
+        Args:
+            vertex_id: The ID of the vertex to break at
+
+        Raises:
+            ValueError: If the vertex_id does not exist in the graph
+        """
+        if vertex_id not in self.vertex_map:
+            msg = f"Cannot add breakpoint: vertex '{vertex_id}' not found in graph"
+            raise ValueError(msg)
+        self._breakpoints.add(vertex_id)
+
+    def remove_breakpoint(self, vertex_id: str) -> None:
+        """Remove a breakpoint from the specified vertex.
+
+        Args:
+            vertex_id: The ID of the vertex to remove the breakpoint from
+        """
+        self._breakpoints.discard(vertex_id)
+
+    def clear_breakpoints(self) -> None:
+        """Remove all breakpoints."""
+        self._breakpoints.clear()
+
+    def resume(self) -> None:
+        """Resume execution after a breakpoint pause.
+
+        This clears the paused state so execution can continue from where it
+        left off. The next vertex (which triggered the breakpoint) will be
+        executed without triggering the breakpoint again.
+
+        Note: Calling resume() when not paused is safe but has no effect.
+        """
+        if not self._is_paused:
+            return  # Not paused, nothing to do
+
+        self._is_paused = False
+        self._is_resuming = True  # Explicit flag for async_start to skip prepare()
+
+        # Only skip if the next vertex actually has a breakpoint
+        try:
+            next_vertex = self._run_queue[0]
+            if next_vertex in self._breakpoints:
+                self._skip_breakpoint_for = next_vertex
+        except IndexError:
+            # Queue is empty - no vertex to skip
+            pass
+
+        self._breakpoint_checkpoint = None
+
+    def get_breakpoint_checkpoint(self) -> dict[str, Any] | None:
+        """Get the checkpoint saved when execution paused at a breakpoint.
+
+        Returns:
+            The checkpoint dict, or None if not paused at a breakpoint
+        """
+        return self._breakpoint_checkpoint
+
+    def _pause_at_breakpoint(self) -> None:
+        """Internal method to pause execution and save checkpoint."""
+        self._is_paused = True
+        self._breakpoint_checkpoint = self._get_graph_snapshot()
+
+    def _reset_breakpoint_state(self) -> None:
+        """Reset all breakpoint-related state.
+
+        Called when graph execution completes to ensure clean state for next run.
+        """
+        self._is_paused = False
+        self._skip_breakpoint_for = None
+        self._breakpoint_checkpoint = None
+        self._is_resuming = False
 
     @property
     def state_model(self):
@@ -477,10 +666,39 @@ class Graph:
         *,
         reset_output_values: bool = True,
     ):
-        self.prepare()
-        if reset_output_values:
-            self._reset_all_output_values()
-            self._reset_loop_components()
+        """Start or resume asynchronous graph execution.
+
+        This async generator yields VertexBuildResult for each completed vertex,
+        and yields Finish() when the graph completes.
+
+        Breakpoint Behavior:
+            If a breakpoint is set on a vertex, execution will pause before that
+            vertex executes and the generator will return (not yield). Check
+            graph.is_paused to detect this. Call graph.resume() then call
+            async_start() again to continue.
+
+        Args:
+            inputs: Optional list of input dictionaries to set on input vertices
+            max_iterations: Maximum number of iterations per vertex (prevents infinite loops)
+            config: Configuration dict to apply to outputs
+            event_manager: Event manager for build events
+            reset_output_values: If True, reset all output values before starting
+
+        Yields:
+            VertexBuildResult for each completed vertex, then Finish() on completion
+
+        Raises:
+            ValueError: If max_iterations is exceeded
+        """
+        # Use explicit flag to detect resuming from breakpoint
+        if not self._is_resuming:
+            self.prepare()
+            if reset_output_values:
+                self._reset_all_output_values()
+                self._reset_loop_components()
+        else:
+            # Clear the resuming flag - it's a one-shot
+            self._is_resuming = False
 
         # The idea is for this to return a generator that yields the result of
         # each step call and raise StopIteration when the graph is done
@@ -490,16 +708,41 @@ class Graph:
         # has been yielded
         yielded_counts: dict[str, int] = defaultdict(int)
 
-        while should_continue(yielded_counts, max_iterations):
-            result = await self.astep(event_manager=event_manager, inputs=inputs, user_id=self.user_id)
-            yield result
-            if isinstance(result, Finish):
-                return
-            if hasattr(result, "vertex"):
-                yielded_counts[result.vertex.id] += 1
+        try:
+            while should_continue(yielded_counts, max_iterations):
+                # Check if execution is paused at a breakpoint
+                if self._is_paused:
+                    return
 
-        msg = "Max iterations reached"
-        raise ValueError(msg)
+                # Check if next vertex has a breakpoint
+                if self._run_queue:
+                    next_vertex = self._run_queue[0]
+
+                    # Check if we should skip this breakpoint (just resumed from it)
+                    should_skip = next_vertex == self._skip_breakpoint_for
+                    if should_skip:
+                        self._skip_breakpoint_for = None  # Clear immediately
+
+                    # Pause at breakpoint unless we're skipping
+                    if next_vertex in self._breakpoints and not should_skip:
+                        self._pause_at_breakpoint()
+                        return
+
+                result = await self.astep(event_manager=event_manager, inputs=inputs, user_id=self.user_id)
+                yield result
+                if isinstance(result, Finish):
+                    # Clean up breakpoint state on completion
+                    self._reset_breakpoint_state()
+                    return
+                if hasattr(result, "vertex"):
+                    yielded_counts[result.vertex.id] += 1
+
+            msg = "Max iterations reached"
+            raise ValueError(msg)
+        except Exception:
+            # Clean up breakpoint state on any error to ensure clean state for next run
+            self._reset_breakpoint_state()
+            raise
 
     def _snapshot(self):
         return {
