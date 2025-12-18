@@ -364,7 +364,7 @@ class AgentLoopComponent(Component):
 
     async def run_agent(self) -> Message:
         """Run the agent and return the final response."""
-        from lfx.base.agents.agent_graph import GraphExecutionContext
+        from lfx.graph import GraphExecutionContext
 
         # 1. Gather execution context
         execution_context = GraphExecutionContext.from_component(self)
