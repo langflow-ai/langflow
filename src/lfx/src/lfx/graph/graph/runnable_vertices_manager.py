@@ -99,8 +99,8 @@ class RunnableVerticesManager:
             return is_loop and pending_set <= self.cycle_vertices
         return False
 
-    def remove_from_predecessors(self, vertex_id: str) -> None:
-        """Removes a vertex from the predecessor list of its successors."""
+    async def remove_from_predecessors(self, vertex_id: str) -> None:
+        """Removes a vertex from the predecessor list of its successors (async)."""
         predecessors = self.run_map.get(vertex_id, [])
         for predecessor in predecessors:
             if vertex_id in self.run_predecessors[predecessor]:
@@ -122,9 +122,10 @@ class RunnableVerticesManager:
         else:
             self.vertices_being_run.discard(vertex_id)
 
-    def remove_vertex_from_runnables(self, v_id) -> None:
+    async def remove_vertex_from_runnables(self, v_id) -> None:
+        """Remove vertex from runnables (async)."""
         self.update_vertex_run_state(v_id, is_runnable=False)
-        self.remove_from_predecessors(v_id)
+        await self.remove_from_predecessors(v_id)
 
     def add_to_vertices_being_run(self, v_id) -> None:
         self.vertices_being_run.add(v_id)

@@ -320,6 +320,22 @@ def _handle_module_attributes(imported_module, node, module_name, exec_globals):
             exec_globals[alias.name] = importlib.import_module(full_module_path)
 
 
+def _is_type_checking_block(node: ast.If) -> bool:
+    """Check if an If node is a TYPE_CHECKING block.
+
+    Args:
+        node: AST If node to check
+
+    Returns:
+        True if this is a TYPE_CHECKING guard block
+    """
+    # TYPE_CHECKING blocks look like: if TYPE_CHECKING:
+    if isinstance(node.test, ast.Name) and node.test.id == "TYPE_CHECKING":
+        return True
+    # Also handle: if typing.TYPE_CHECKING:
+    return isinstance(node.test, ast.Attribute) and node.test.attr == "TYPE_CHECKING"
+
+
 def prepare_global_scope(module):
     """Prepares the global scope with necessary imports from the provided code module.
 
@@ -344,6 +360,15 @@ def prepare_global_scope(module):
             import_froms.append(node)
         elif isinstance(node, ast.ClassDef | ast.FunctionDef | ast.Assign):
             definitions.append(node)
+        elif isinstance(node, ast.If) and _is_type_checking_block(node):
+            # Handle TYPE_CHECKING blocks - extract imports from inside
+            # TYPE_CHECKING blocks contain imports only needed for type hints
+            # but we need them available at runtime for get_type_hints() to work
+            for inner_node in node.body:
+                if isinstance(inner_node, ast.Import):
+                    imports.append(inner_node)
+                elif isinstance(inner_node, ast.ImportFrom) and inner_node.module is not None:
+                    import_froms.append(inner_node)
 
     for node in imports:
         for alias in node.names:

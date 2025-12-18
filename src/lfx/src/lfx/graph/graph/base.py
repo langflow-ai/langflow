@@ -128,6 +128,12 @@ class Graph:
         self._snapshots: list[dict[str, Any]] = []
         self._end_trace_tasks: set[asyncio.Task] = set()
 
+        # Graph mutation event system
+        self._observers: list[Any] = []  # List of GraphObserver functions
+        self._mutation_step: int = 0  # Global mutation counter
+        self._enable_events: bool = False  # Auto-enabled when observer registered
+        self._observer_errors: list[tuple[Exception, str]] = []  # Collect observer errors
+
         if context and not isinstance(context, dict):
             msg = "Context must be a dictionary"
             raise TypeError(msg)
@@ -171,6 +177,119 @@ class Graph:
     @session_id.setter
     def session_id(self, value: str):
         self._session_id = value
+
+    def get_run_queue(self) -> list[str]:
+        """Get current run queue (for debugging/observation).
+
+        Returns:
+            List of vertex IDs in the queue
+        """
+        return list(self._run_queue) if hasattr(self, "_run_queue") else []
+
+    def get_context_dict(self) -> dict[str, Any]:
+        """Get context as plain dict (for debugging/observation).
+
+        Returns:
+            Context dictionary
+        """
+        return dict(self.context) if hasattr(self, "context") else {}
+
+    # ===== Graph Mutation Observer System =====
+
+    def register_observer(self, observer: Any) -> None:
+        """Register an async observer for graph mutations.
+
+        Observers receive GraphMutationEvent for every state change.
+
+        Args:
+            observer: Async function (GraphObserver) that receives GraphMutationEvent
+        """
+        self._observers.append(observer)
+        self._enable_events = True
+
+    def unregister_observer(self, observer: Any) -> None:
+        """Remove an observer.
+
+        Args:
+            observer: Observer to remove
+        """
+        if observer in self._observers:
+            self._observers.remove(observer)
+        if not self._observers:
+            self._enable_events = False
+
+    def get_observer_errors(self) -> list[tuple[Exception, str]]:
+        """Get any errors that occurred in observers.
+
+        Returns:
+            List of (exception, context_message) tuples
+        """
+        return self._observer_errors.copy()
+
+    async def _emit_event(
+        self,
+        event_type: str,
+        vertex_id: str | None,
+        state_before: dict[str, Any],
+        state_after: dict[str, Any],
+        changes: dict[str, Any],
+        timing: str = "after",
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
+        """Emit event to all observers.
+
+        Args:
+            event_type: Type of mutation (e.g., "queue_extended")
+            vertex_id: Vertex that triggered change (None for graph-level)
+            state_before: State before mutation
+            state_after: State after mutation
+            changes: Structured description of changes
+            timing: "before" or "after" mutation
+            metadata: Additional context
+        """
+        if not self._enable_events or not self._observers:
+            return
+
+        from lfx.debug.events import GraphMutationEvent
+
+        event = GraphMutationEvent(
+            event_type=event_type,
+            vertex_id=vertex_id,
+            state_before=state_before,
+            state_after=state_after,
+            changes=changes,
+            graph_snapshot=self._get_graph_snapshot(),
+            step=self._mutation_step,
+            timing=timing,
+            metadata=metadata or {},
+        )
+
+        self._mutation_step += 1
+
+        # Notify all observers, collect errors
+        for observer in self._observers:
+            try:
+                await observer(event)
+            except Exception as e:  # noqa: BLE001
+                # Log and collect error (per requirement: A/C)
+                await logger.aerror(f"Observer error: {e}")
+                self._observer_errors.append((e, f"Event: {event_type}, step: {event.step}"))
+
+    def _get_graph_snapshot(self) -> dict[str, Any]:
+        """Get current graph state for event context.
+
+        Returns:
+            Dictionary with complete graph state
+        """
+        return {
+            "run_manager": self.run_manager.to_dict(),
+            "queue": list(self._run_queue) if hasattr(self, "_run_queue") else [],
+            "vertices_layers": self.vertices_layers.copy() if self.vertices_layers else [],
+            "context": dict(self.context) if hasattr(self, "context") else {},
+            "inactivated_vertices": self.inactivated_vertices.copy(),
+            "activated_vertices": self.activated_vertices.copy(),
+            "conditionally_excluded": self.conditionally_excluded_vertices.copy(),
+        }
 
     @property
     def state_model(self):
@@ -361,6 +480,7 @@ class Graph:
         self.prepare()
         if reset_output_values:
             self._reset_all_output_values()
+            self._reset_loop_components()
 
         # The idea is for this to return a generator that yields the result of
         # each step call and raise StopIteration when the graph is done
@@ -371,7 +491,7 @@ class Graph:
         yielded_counts: dict[str, int] = defaultdict(int)
 
         while should_continue(yielded_counts, max_iterations):
-            result = await self.astep(event_manager=event_manager, inputs=inputs)
+            result = await self.astep(event_manager=event_manager, inputs=inputs, user_id=self.user_id)
             yield result
             if isinstance(result, Finish):
                 return
@@ -403,6 +523,24 @@ class Graph:
             if vertex.custom_component is None:
                 continue
             vertex.custom_component.reset_all_output_values()
+
+    def _reset_loop_components(self) -> None:
+        """Reset all loop components to fresh state.
+
+        This ensures loops start from index 0 when async_start is called
+        with fresh inputs or multiple times. This is necessary because loop
+        components maintain state in the graph context that persists across
+        async_start invocations.
+
+        Only components that have a reset_loop_state method will be reset.
+        Currently this applies to LoopComponent.
+        """
+        for vertex in self.vertices:
+            if vertex.custom_component is None:
+                continue
+            # Check if component has reset_loop_state method
+            if hasattr(vertex.custom_component, "reset_loop_state"):
+                vertex.custom_component.reset_loop_state()
 
     def start(
         self,
@@ -913,11 +1051,10 @@ class Graph:
         self.in_degree_map = self.build_in_degree(edges)
         self.parent_child_map = self.build_parent_child_map(vertices)
 
-    def reset_inactivated_vertices(self) -> None:
-        """Resets the inactivated vertices in the graph."""
+    async def reset_inactivated_vertices(self) -> None:
+        """Resets the inactivated vertices in the graph (async)."""
         for vertex_id in self.inactivated_vertices.copy():
-            self.mark_vertex(vertex_id, "ACTIVE")
-        self.inactivated_vertices = set()
+            await self.mark_vertex(vertex_id, "ACTIVE")
         self.inactivated_vertices = set()
 
     def mark_all_vertices(self, state: str) -> None:
@@ -925,21 +1062,66 @@ class Graph:
         for vertex in self.vertices:
             vertex.set_state(state)
 
-    def mark_vertex(self, vertex_id: str, state: str) -> None:
-        """Marks a vertex in the graph."""
+    async def mark_vertex(self, vertex_id: str, state: str) -> None:
+        """Marks a vertex in the graph (async with events).
+
+        Args:
+            vertex_id: Vertex to mark
+            state: New state (VertexStates.ACTIVE, INACTIVE, etc.)
+        """
         vertex = self.get_vertex(vertex_id)
+
+        if not self._enable_events:
+            # Fast path
+            vertex.set_state(state)
+            if state == VertexStates.INACTIVE:
+                await self.run_manager.remove_from_predecessors(vertex_id)
+            return
+
+        # Capture before
+        before_state_value = vertex.state if hasattr(vertex, "state") else None
+        before_state = {"vertex_state": before_state_value}
+
+        # Emit before event
+        await self._emit_event(
+            event_type="vertex_marked",
+            vertex_id=vertex_id,
+            state_before=before_state,
+            state_after=before_state,
+            changes={"about_to_mark": state},
+            timing="before",
+        )
+
+        # Make change
         vertex.set_state(state)
         if state == VertexStates.INACTIVE:
-            self.run_manager.remove_from_predecessors(vertex_id)
+            await self.run_manager.remove_from_predecessors(vertex_id)
 
-    def _mark_branch(
+        # Capture after
+        after_state_value = vertex.state if hasattr(vertex, "state") else None
+        after_state = {"vertex_state": after_state_value}
+
+        # Emit after event
+        await self._emit_event(
+            event_type="vertex_marked",
+            vertex_id=vertex_id,
+            state_before=before_state,
+            state_after=after_state,
+            changes={
+                "old_state": before_state_value,
+                "new_state": state,
+            },
+            timing="after",
+        )
+
+    async def _mark_branch(
         self, vertex_id: str, state: str, visited: set | None = None, output_name: str | None = None
     ) -> set:
-        """Marks a branch of the graph."""
+        """Marks a branch of the graph (async)."""
         if visited is None:
             visited = set()
         else:
-            self.mark_vertex(vertex_id, state)
+            await self.mark_vertex(vertex_id, state)
         if vertex_id in visited:
             return visited
         visited.add(vertex_id)
@@ -951,11 +1133,22 @@ class Graph:
                 edge = self.get_edge(vertex_id, child_id)
                 if edge and edge.source_handle.name != output_name:
                     continue
-            self._mark_branch(child_id, state, visited)
+            await self._mark_branch(child_id, state, visited)
         return visited
 
-    def mark_branch(self, vertex_id: str, state: str, output_name: str | None = None) -> None:
-        visited = self._mark_branch(vertex_id=vertex_id, state=state, output_name=output_name)
+    def mark_branch_sync(self, vertex_id: str, state: str, output_name: str | None = None) -> None:
+        """Marks an entire branch (sync wrapper, no events).
+
+        For hybrid compatibility (requirement C).
+        """
+        # Use sync version of mark_vertex
+        from lfx.utils.async_helpers import run_until_complete
+
+        run_until_complete(self.mark_branch(vertex_id, state, output_name))
+
+    async def mark_branch(self, vertex_id: str, state: str, output_name: str | None = None) -> None:
+        """Marks an entire branch in the graph (async)."""
+        visited = await self._mark_branch(vertex_id=vertex_id, state=state, output_name=output_name)
         new_predecessor_map, _ = self.build_adjacency_maps(self.edges)
         new_predecessor_map = {k: v for k, v in new_predecessor_map.items() if k in visited}
         if vertex_id in self.cycle_vertices:
@@ -1384,13 +1577,191 @@ class Graph:
         msg = f"Vertex {vertex_id} is not a top level vertex or no root vertex found"
         raise ValueError(msg)
 
-    def get_next_in_queue(self):
+    async def get_next_in_queue(self) -> str | None:
+        """Get and remove next vertex from queue (async with before/after events).
+
+        Returns:
+            Next vertex ID or None if queue empty
+        """
+        if not self._run_queue:
+            return None
+
+        if not self._enable_events:
+            # Fast path - no observers
+            return self._run_queue.popleft()
+
+        # Capture before
+        before_queue = list(self._run_queue)
+        before_state = {"queue": before_queue}
+
+        # Get what we're about to dequeue
+        vertex_id = self._run_queue[0] if self._run_queue else None
+
+        # Emit "before" event
+        await self._emit_event(
+            event_type="queue_dequeued",
+            vertex_id=vertex_id,
+            state_before=before_state,
+            state_after=before_state,  # Not yet mutated
+            changes={"about_to_remove": vertex_id},
+            timing="before",
+        )
+
+        # Make mutation
+        vertex_id = self._run_queue.popleft()
+
+        # Capture after
+        after_queue = list(self._run_queue)
+        after_state = {"queue": after_queue}
+
+        # Emit "after" event
+        await self._emit_event(
+            event_type="queue_dequeued",
+            vertex_id=vertex_id,
+            state_before=before_state,
+            state_after=after_state,
+            changes={
+                "removed": vertex_id,
+                "queue_size_before": len(before_queue),
+                "queue_size_after": len(after_queue),
+            },
+            timing="after",
+        )
+
+        return vertex_id
+
+    def get_next_in_queue_sync(self) -> str | None:
+        """Sync wrapper for get_next_in_queue (for backward compatibility).
+
+        Use async version when possible. This wrapper runs without events.
+        """
         if not self._run_queue:
             return None
         return self._run_queue.popleft()
 
-    def extend_run_queue(self, vertices: list[str]) -> None:
+    async def extend_run_queue(self, vertices: list[str]) -> None:
+        """Add vertices to run queue (async with before/after events).
+
+        Args:
+            vertices: Vertex IDs to add to queue
+        """
+        if not self._enable_events:
+            # Fast path - no observers
+            self._run_queue.extend(vertices)
+            return
+
+        # Capture state before mutation
+        before_queue = list(self._run_queue)
+        before_state = {"queue": before_queue}
+
+        # Emit "before" event
+        await self._emit_event(
+            event_type="queue_extended",
+            vertex_id=None,
+            state_before=before_state,
+            state_after=before_state,  # Not yet mutated
+            changes={"about_to_add": vertices},
+            timing="before",
+        )
+
+        # Make the mutation
         self._run_queue.extend(vertices)
+
+        # Capture state after mutation
+        after_queue = list(self._run_queue)
+        after_state = {"queue": after_queue}
+
+        # Emit "after" event
+        await self._emit_event(
+            event_type="queue_extended",
+            vertex_id=None,
+            state_before=before_state,
+            state_after=after_state,
+            changes={
+                "added": vertices,
+                "queue_size_before": len(before_queue),
+                "queue_size_after": len(after_queue),
+            },
+            timing="after",
+        )
+
+    async def add_dynamic_dependency(
+        self,
+        vertex_id: str,
+        predecessor_id: str,
+    ) -> None:
+        """Add a dynamic dependency between vertices (centralized with events).
+
+        This ensures run_predecessors and run_map stay synchronized.
+        Components should use this instead of directly modifying run_manager.
+
+        Args:
+            vertex_id: The vertex that will wait
+            predecessor_id: The vertex to wait for
+        """
+        if not self._enable_events:
+            # Fast path - no observers
+            if predecessor_id not in self.run_manager.run_predecessors[vertex_id]:
+                self.run_manager.run_predecessors[vertex_id].append(predecessor_id)
+                if vertex_id not in self.run_manager.run_map[predecessor_id]:
+                    self.run_manager.run_map[predecessor_id].append(vertex_id)
+            return
+
+        # Capture before state
+        before_pred = self.run_manager.run_predecessors[vertex_id].copy()
+        before_map = self.run_manager.run_map[predecessor_id].copy()
+        before_state = {
+            "run_predecessors": {vertex_id: before_pred},
+            "run_map": {predecessor_id: before_map},
+        }
+
+        # Track what will actually change
+        pred_will_change = predecessor_id not in before_pred
+        map_will_change = vertex_id not in before_map
+
+        # Emit "before" event
+        await self._emit_event(
+            event_type="dependency_added",
+            vertex_id=vertex_id,
+            state_before=before_state,
+            state_after=before_state,  # Not yet mutated
+            changes={
+                "vertex": vertex_id,
+                "predecessor": predecessor_id,
+                "will_change_predecessors": pred_will_change,
+                "will_change_run_map": map_will_change,
+            },
+            timing="before",
+        )
+
+        # Make the mutations
+        if pred_will_change:
+            self.run_manager.run_predecessors[vertex_id].append(predecessor_id)
+        if map_will_change:
+            self.run_manager.run_map[predecessor_id].append(vertex_id)
+
+        # Capture after state
+        after_pred = self.run_manager.run_predecessors[vertex_id].copy()
+        after_map = self.run_manager.run_map[predecessor_id].copy()
+        after_state = {
+            "run_predecessors": {vertex_id: after_pred},
+            "run_map": {predecessor_id: after_map},
+        }
+
+        # Emit "after" event
+        await self._emit_event(
+            event_type="dependency_added",
+            vertex_id=vertex_id,
+            state_before=before_state,
+            state_after=after_state,
+            changes={
+                "vertex": vertex_id,
+                "predecessor": predecessor_id,
+                "run_predecessors_changed": pred_will_change,
+                "run_map_changed": map_will_change,
+            },
+            timing="after",
+        )
 
     async def astep(
         self,
@@ -1405,7 +1776,7 @@ class Graph:
         if not self._run_queue:
             self._end_all_traces_async()
             return Finish()
-        vertex_id = self.get_next_in_queue()
+        vertex_id = await self.get_next_in_queue()
         if not vertex_id:
             msg = "No vertex to run"
             raise ValueError(msg)
@@ -1438,8 +1809,8 @@ class Graph:
         )
         if self.stop_vertex and self.stop_vertex in next_runnable_vertices:
             next_runnable_vertices = [self.stop_vertex]
-        self.extend_run_queue(next_runnable_vertices)
-        self.reset_inactivated_vertices()
+        await self.extend_run_queue(next_runnable_vertices)
+        await self.reset_inactivated_vertices()
         self.reset_activated_vertices()
 
         if chat_service is not None:
@@ -1718,7 +2089,7 @@ class Graph:
         v_successors_ids = vertex.successors_ids
         self.run_manager.ran_at_least_once.add(v_id)
         async with lock:
-            self.run_manager.remove_vertex_from_runnables(v_id)
+            await self.run_manager.remove_vertex_from_runnables(v_id)
             next_runnable_vertices = self.find_next_runnable_vertices(v_successors_ids)
 
             for next_v_id in set(next_runnable_vertices):  # Use set to avoid duplicates
@@ -1820,7 +2191,7 @@ class Graph:
             # set all executed vertices as non-runnable to not run them again.
             # they could be calculated as predecessor or successors of parallel vertices
             # This could usually happen with input vertices like ChatInput
-            self.run_manager.remove_vertex_from_runnables(v.id)
+            await self.run_manager.remove_vertex_from_runnables(v.id)
 
             await logger.adebug(f"Vertex {v.id}, result: {v.built_result}, object: {v.built_object}")
 
@@ -2240,11 +2611,13 @@ class Graph:
             find_runnable_predecessors(predecessor_id)
         return runnable_vertices
 
-    def remove_from_predecessors(self, vertex_id: str) -> None:
-        self.run_manager.remove_from_predecessors(vertex_id)
+    async def remove_from_predecessors(self, vertex_id: str) -> None:
+        """Remove vertex from predecessor lists (async)."""
+        await self.run_manager.remove_from_predecessors(vertex_id)
 
-    def remove_vertex_from_runnables(self, vertex_id: str) -> None:
-        self.run_manager.remove_vertex_from_runnables(vertex_id)
+    async def remove_vertex_from_runnables(self, vertex_id: str) -> None:
+        """Remove vertex from runnables (async)."""
+        await self.run_manager.remove_vertex_from_runnables(vertex_id)
 
     def get_top_level_vertices(self, vertices_ids):
         """Retrieves the top-level vertices from the given graph based on the provided vertex IDs.

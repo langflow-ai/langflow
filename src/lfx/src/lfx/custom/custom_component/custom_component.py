@@ -148,7 +148,7 @@ class CustomComponent(BaseComponent):
             msg = "Vertex is not set"
             raise ValueError(msg)
         try:
-            self.graph.mark_branch(vertex_id=self._vertex.id, output_name=output_name, state="INACTIVE")
+            self.graph.mark_branch_sync(vertex_id=self._vertex.id, output_name=output_name, state="INACTIVE")
         except Exception as e:
             msg = f"Error stopping {self.display_name}: {e}"
             raise ValueError(msg) from e
@@ -163,7 +163,7 @@ class CustomComponent(BaseComponent):
             msg = "Vertex is not set"
             raise ValueError(msg)
         try:
-            self.graph.mark_branch(vertex_id=self._vertex.id, output_name=output_name, state="ACTIVE")
+            self.graph.mark_branch_sync(vertex_id=self._vertex.id, output_name=output_name, state="ACTIVE")
         except Exception as e:
             msg = f"Error starting {self.display_name}: {e}"
             raise ValueError(msg) from e
