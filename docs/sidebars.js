@@ -250,6 +250,11 @@ module.exports = {
             },
           ]
         },
+        {
+          type: "doc",
+          id: "Deployment/security",
+          label: "Security",
+        },
       ],
     },
     {
@@ -305,7 +310,7 @@ module.exports = {
             "Components/bundles-clickhouse",
             "Components/bundles-cloudflare",
             "Components/bundles-cohere",
-            "Components/bundles-cometapi",
+            "Components/bundles-composio",
             "Components/bundles-couchbase",
             "Components/bundles-datastax",
             "Components/bundles-deepseek",
@@ -343,6 +348,7 @@ module.exports = {
             "Components/bundles-serper",
             "Components/bundles-supabase",
             "Components/bundles-upstash",
+            "Components/bundles-vllm",
             "Components/bundles-vectara",
             "Components/bundles-vertexai",
             "Components/bundles-weaviate",

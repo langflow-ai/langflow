@@ -8,7 +8,6 @@ from unittest.mock import patch
 import pytest
 from asgi_lifespan import LifespanManager
 from httpx import ASGITransport, AsyncClient
-
 from lfx.cli.serve_app import FlowMeta, StreamRequest, create_multi_serve_app
 
 
@@ -246,7 +245,7 @@ class TestMultiServeStreaming:
                 try:
                     msg = "Test error during streaming"
                     raise RuntimeError(msg)
-                except Exception as e:  # noqa: BLE001
+                except Exception as e:
                     # Properly handle the error like the real function does
                     event_manager.on_error(data={"error": str(e)})
                 finally:

@@ -1,5 +1,4 @@
 import pytest
-
 from lfx.components.input_output.chat import ChatInput
 from lfx.schema.message import Message
 

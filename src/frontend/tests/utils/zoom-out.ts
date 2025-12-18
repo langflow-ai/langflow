@@ -14,6 +14,6 @@ export async function zoomOut(page: Page, times: number = 2) {
     await page.getByTestId("zoom_out").click();
   }
   if (zoomOutButton > 0) {
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await page.getByTestId("canvas_controls_dropdown").click({ force: true });
   }
 }

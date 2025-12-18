@@ -65,7 +65,7 @@ class ComponentVertex(Vertex):
                 self.built_object, self.artifacts = result
             elif len(result) == 3:  # noqa: PLR2004
                 self.custom_component, self.built_object, self.artifacts = result
-                self.logs = self.custom_component._output_logs
+                self.logs = self.custom_component.get_output_logs()
                 for key in self.artifacts:
                     if self.artifacts_raw is None:
                         self.artifacts_raw = {}

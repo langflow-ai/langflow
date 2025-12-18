@@ -2,8 +2,6 @@ import { test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
-import { zoomOut } from "../../utils/zoom-out";
-
 test(
   "select and delete a flow",
   { tag: ["@release", "@mainpage"] },

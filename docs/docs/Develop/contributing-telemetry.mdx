@@ -66,3 +66,12 @@ This telemetry event is sent for each component execution.
 - **Seconds**: Time taken by the component to execute, offering performance metrics.
 - **Success**: Whether the component operated successfully, which helps in quality control.
 - **ErrorMessage**: Details of any errors encountered, crucial for debugging and improvement.
+
+### Exception
+
+This telemetry event is sent when an unhandled exception is captured by Langflow's lifecycle or global exception handler.
+
+- **Type**: The exception class name, such as `ValueError`.
+- **Message**: The exception message that was raised.
+- **Context**: Additional contextual information related to where the exception occurred, such as route, component, or operation details, when available.
+- **StackTraceHash**: A hash of the stack trace used to group similar exceptions for easier analysis.

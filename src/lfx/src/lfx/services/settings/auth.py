@@ -27,6 +27,16 @@ class AuthSettings(BaseSettings):
     API_KEY_ALGORITHM: str = "HS256"
     API_V1_STR: str = "/api/v1"
 
+    # API Key Source Configuration
+    API_KEY_SOURCE: Literal["db", "env"] = Field(
+        default="db",
+        description=(
+            "Source for API key validation. "
+            "'db' validates against database-stored API keys (default behavior). "
+            "'env' validates against the LANGFLOW_API_KEY environment variable."
+        ),
+    )
+
     AUTO_LOGIN: bool = Field(
         default=True,  # TODO: Set to False in v2.0
         description=(
@@ -115,19 +125,16 @@ class AuthSettings(BaseSettings):
             logger.debug("Secret key provided")
             secret_value = value.get_secret_value() if isinstance(value, SecretStr) else value
             write_secret_to_file(secret_key_path, secret_value)
-        else:
-            logger.debug("No secret key provided, generating a random one")
-
-            if secret_key_path.exists():
-                value = read_secret_from_file(secret_key_path)
-                logger.debug("Loaded secret key")
-                if not value:
-                    value = secrets.token_urlsafe(32)
-                    write_secret_to_file(secret_key_path, value)
-                    logger.debug("Saved secret key")
-            else:
+        elif secret_key_path.exists():
+            value = read_secret_from_file(secret_key_path)
+            logger.debug("Loaded secret key")
+            if not value:
                 value = secrets.token_urlsafe(32)
                 write_secret_to_file(secret_key_path, value)
                 logger.debug("Saved secret key")
+        else:
+            value = secrets.token_urlsafe(32)
+            write_secret_to_file(secret_key_path, value)
+            logger.debug("Saved secret key")
 
         return value if isinstance(value, SecretStr) else SecretStr(value).get_secret_value()

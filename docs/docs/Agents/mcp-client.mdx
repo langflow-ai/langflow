@@ -5,6 +5,7 @@ slug: /mcp-client
 
 import Icon from "@site/src/components/icon";
 import McpIcon from '@site/static/logos/mcp-icon.svg';
+import PartialMcpNodeTip from '@site/docs/_partial-mcp-node-tip.mdx';
 
 Langflow integrates with the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) as both an MCP server and an MCP client.
 
@@ -35,11 +36,8 @@ This component has two modes, depending on the type of server you want to access
     * **SSE**: Enter your Langflow MCP server's **Name**, **SSE URL**, and any **Headers** and **Environment Variables** the server uses, and then click **Add Server**.
     The default **SSE URL** is `http://localhost:7860/api/v1/mcp/sse`. For more information, see [Use SSE mode](#mcp-sse-mode).
 
-    :::tip
-    `uvx` is included with `uv` in the Langflow package.
-    To use `npx` server commands, you must first install an LTS release of [Node.js](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).
-    For an example of an `npx` MCP server in Langflow, see [Connect an Astra DB MCP server to Langflow](/mcp-component-astra).
-    :::
+    <PartialMcpNodeTip />
+
 
 3. To use environment variables in your server command, enter each variable in the **Env** fields as key-value pairs.
 

@@ -6,7 +6,7 @@ from lfx.schema.message import Message
 class TextOutputComponent(TextComponent):
     display_name = "Text Output"
     description = "Sends text output via API."
-    documentation: str = "https://docs.langflow.org/components-io#text-output"
+    documentation: str = "https://docs.langflow.org/text-input-and-output"
     icon = "type"
     name = "TextOutput"
 
