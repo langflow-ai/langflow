@@ -31,7 +31,11 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.api.utils import CurrentActiveMCPUser, extract_global_variables_from_headers
+from langflow.api.utils import (
+    CurrentActiveMCPUser,
+    extract_global_variables_from_headers,
+    raise_error_if_astra_cloud_env,
+)
 from langflow.api.utils.mcp import (
     auto_configure_starter_projects_mcp,
     get_composer_streamable_http_url,
@@ -305,12 +309,21 @@ async def list_project_tools(
 ########################################################
 
 
-@router.head("/{project_id}/sse", response_class=HTMLResponse, include_in_schema=False)
+@router.head(
+    "/{project_id}/sse",
+    response_class=HTMLResponse,
+    include_in_schema=False,
+    dependencies=[Depends(raise_error_if_astra_cloud_env)],
+)
 async def im_alive(project_id: str):  # noqa: ARG001
     return Response()
 
 
-@router.get("/{project_id}/sse", response_class=HTMLResponse)
+@router.get(
+    "/{project_id}/sse",
+    response_class=HTMLResponse,
+    dependencies=[Depends(raise_error_if_astra_cloud_env)],
+)
 async def handle_project_sse(
     project_id: UUID,
     request: Request,
@@ -387,8 +400,8 @@ async def _handle_project_sse_messages(
         current_request_variables_ctx.reset(req_vars_token)
 
 
-@router.post("/{project_id}")
-@router.post("/{project_id}/")
+@router.post("/{project_id}", dependencies=[Depends(raise_error_if_astra_cloud_env)])
+@router.post("/{project_id}/", dependencies=[Depends(raise_error_if_astra_cloud_env)])
 async def handle_project_messages(
     project_id: UUID,
     request: Request,

@@ -345,7 +345,6 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "height": 779,
         "id": "Prompt-KS0e2",
         "measured": {
           "height": 779,
@@ -360,8 +359,7 @@
           "y": 189.70442453076902
         },
         "selected": false,
-        "type": "genericNode",
-        "width": 320
+        "type": "genericNode"
       },
       {
         "data": {
@@ -512,7 +510,6 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "height": 260,
         "id": "Prompt-YWJzc",
         "measured": {
           "height": 260,
@@ -527,8 +524,7 @@
           "y": 991.0702563306074
         },
         "selected": false,
-        "type": "genericNode",
-        "width": 320
+        "type": "genericNode"
       },
       {
         "data": {
@@ -793,7 +789,6 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "height": 234,
         "id": "ChatOutput-S7Bzs",
         "measured": {
           "height": 234,
@@ -808,8 +803,7 @@
           "y": 623.4799714496987
         },
         "selected": false,
-        "type": "genericNode",
-        "width": 320
+        "type": "genericNode"
       },
       {
         "data": {
