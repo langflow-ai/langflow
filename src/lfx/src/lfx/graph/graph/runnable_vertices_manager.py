@@ -11,22 +11,28 @@ class RunnableVerticesManager:
         self.ran_at_least_once: set[str] = set()  # Set of vertices that have been run at least once
 
     def to_dict(self) -> dict:
+        """Convert to dict suitable for JSON serialization."""
         return {
-            "run_map": self.run_map,
-            "run_predecessors": self.run_predecessors,
-            "vertices_to_run": self.vertices_to_run,
-            "vertices_being_run": self.vertices_being_run,
-            "ran_at_least_once": self.ran_at_least_once,
+            "run_map": dict(self.run_map),
+            "run_predecessors": dict(self.run_predecessors),
+            # Convert sets to lists for JSON compatibility
+            "vertices_to_run": list(self.vertices_to_run),
+            "vertices_being_run": list(self.vertices_being_run),
+            "cycle_vertices": list(self.cycle_vertices),
+            "ran_at_least_once": list(self.ran_at_least_once),
         }
 
     @classmethod
     def from_dict(cls, data: dict) -> "RunnableVerticesManager":
         instance = cls()
-        instance.run_map = data["run_map"]
-        instance.run_predecessors = data["run_predecessors"]
-        instance.vertices_to_run = data["vertices_to_run"]
-        instance.vertices_being_run = data["vertices_being_run"]
-        instance.ran_at_least_once = data.get("ran_at_least_once", set())
+        # run_map and run_predecessors are dicts with list values - these survive JSON fine
+        instance.run_map = defaultdict(list, data.get("run_map", {}))
+        instance.run_predecessors = defaultdict(list, data.get("run_predecessors", {}))
+        # Sets become lists in JSON, need to convert back
+        instance.vertices_to_run = set(data.get("vertices_to_run", []))
+        instance.vertices_being_run = set(data.get("vertices_being_run", []))
+        instance.cycle_vertices = set(data.get("cycle_vertices", []))
+        instance.ran_at_least_once = set(data.get("ran_at_least_once", []))
         return instance
 
     def __getstate__(self) -> object:
