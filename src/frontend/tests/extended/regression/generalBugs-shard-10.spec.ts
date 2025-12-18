@@ -57,11 +57,21 @@ test(
 
     await page.getByTestId("playground-btn-flow-io").click();
 
+    // Wait for chat messages to be fully loaded/streamed
+    await page.waitForSelector('[data-testid="div-chat-message"]', {
+      timeout: 30000,
+    });
+    // Wait for streaming to complete
+    await page.waitForTimeout(1000);
+
     const textContents = await page
       .getByTestId("div-chat-message")
       .allTextContents();
 
     const concatAllText = textContents.join(" ");
+
+    // Ensure we captured a non-empty response
+    expect(concatAllText.length).toBeGreaterThan(0);
 
     await page.getByText("Close").last().click();
 
@@ -98,12 +108,18 @@ test(
 
     await page.getByTestId("playground-btn-flow-io").click();
 
-    await page.waitForTimeout(500);
+    // Wait for chat messages to be fully loaded/streamed
+    await page.waitForSelector('[data-testid="div-chat-message"]', {
+      timeout: 30000,
+    });
+    // Wait for streaming to complete
+    await page.waitForTimeout(1000);
 
     const textContents2 = await page
       .getByTestId("div-chat-message")
       .allTextContents();
 
+    // The frozen node should return the same cached output
     textContents2.forEach((text) => {
       expect(text).toBe(concatAllText);
     });
