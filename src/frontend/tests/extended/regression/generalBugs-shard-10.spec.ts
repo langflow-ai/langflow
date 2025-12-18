@@ -60,12 +60,22 @@ test(
 
     await page.getByTestId("playground-btn-flow-io").click();
 
+    // Wait for chat messages to be fully loaded/streamed
+    await page.waitForSelector('[data-testid="div-chat-message"]', {
+      timeout: 30000,
+    });
+    // Wait for streaming to complete
+    await page.waitForTimeout(1000);
+
     const textContents = await page
       .getByTestId("div-chat-message")
       .allTextContents();
 
     // Get the first response
     const firstResponseText = textContents[textContents.length - 1];
+
+    // Ensure we captured a non-empty response
+    expect(concatAllText.length).toBeGreaterThan(0);
 
     await page.getByText("Close").last().click();
 
@@ -104,18 +114,20 @@ test(
 
     await page.getByTestId("playground-btn-flow-io").click();
 
-    await page.waitForTimeout(500);
+    // Wait for chat messages to be fully loaded/streamed
+    await page.waitForSelector('[data-testid="div-chat-message"]', {
+      timeout: 30000,
+    });
+    // Wait for streaming to complete
+    await page.waitForTimeout(1000);
 
     const textContents2 = await page
       .getByTestId("div-chat-message")
       .allTextContents();
 
-    // Get the second response
-    const secondResponseText = textContents2[textContents2.length - 1];
-
-    // When the Chat Output node is frozen, it should return the cached output
-    // from the first run, so the second response should be identical
-    // to the first response even though we changed the prompt text
-    expect(secondResponseText).toBe(firstResponseText);
+    // The frozen node should return the same cached output
+    textContents2.forEach((text) => {
+      expect(text).toBe(concatAllText);
+    });
   },
 );
