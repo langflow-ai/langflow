@@ -1,6 +1,10 @@
 import type { UseMutationResult } from "@tanstack/react-query";
 import type { useMutationFunctionType } from "@/types/api";
-import type { AuthSettingsType, MCPSettingsType } from "@/types/mcp";
+import type {
+  AuthSettingsType,
+  ComposerUrlResponseType,
+  MCPSettingsType,
+} from "@/types/mcp";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -16,12 +20,7 @@ interface PatchFlowMCPRequest {
 
 interface PatchFlowMCPResponse {
   message: string;
-  result?: {
-    project_id: string;
-    sse_url?: string;
-    uses_composer: boolean;
-    error_message?: string;
-  };
+  result?: ComposerUrlResponseType;
 }
 
 export const usePatchFlowsMCP: useMutationFunctionType<

@@ -98,7 +98,8 @@ async def fetch_file_object(file_id: uuid.UUID, current_user: CurrentActiveUser,
 
     # Make sure the user has access to the file
     if file.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="You don't have access to this file")
+        # Return 404 to prevent information disclosure about resource existence
+        raise HTTPException(status_code=404, detail="File not found")
 
     return file
 
@@ -225,8 +226,8 @@ async def upload_user_file(
             # S3 bucket doesn't exist or file not found, or file was uploaded but can't be found
             raise HTTPException(status_code=404, detail=str(e)) from e
         except PermissionError as e:
-            # Access denied or invalid credentials
-            raise HTTPException(status_code=403, detail=str(e)) from e
+            # Access denied or invalid credentials - return 500 as this is a server config issue
+            raise HTTPException(status_code=500, detail="Error accessing storage") from e
         except Exception as e:
             # General error saving file or getting file size
             raise HTTPException(status_code=500, detail=f"Error accessing file: {e}") from e
@@ -583,17 +584,16 @@ async def download_file(
                 raise HTTPException(status_code=404, detail="File not found")
             return await read_file_content(file_content, decode=True)
 
-        # For streaming, use the appropriate method based on storage type
-        if hasattr(storage_service, "get_file_stream"):
-            # S3 storage - use streaming method
-            file_stream = storage_service.get_file_stream(flow_id=str(current_user.id), file_name=file_name)
-            byte_stream = file_stream
-        else:
-            # Local storage - get file and convert to stream
-            file_content = await storage_service.get_file(flow_id=str(current_user.id), file_name=file_name)
-            if file_content is None:
-                raise HTTPException(status_code=404, detail="File not found")
-            byte_stream = byte_stream_generator(file_content)
+        # Check file exists before streaming (to catch errors before response headers are sent)
+        # This is important because once StreamingResponse starts, we can't change the status code
+        try:
+            await storage_service.get_file_size(flow_id=str(current_user.id), file_name=file_name)
+        except FileNotFoundError as e:
+            raise HTTPException(status_code=404, detail=f"File not found: {e}") from e
+
+        # Wrap the async generator in byte_stream_generator to ensure proper iteration
+        file_stream = storage_service.get_file_stream(flow_id=str(current_user.id), file_name=file_name)
+        byte_stream = byte_stream_generator(file_stream)
 
         # Create the filename with extension
         file_extension = Path(file.path).suffix

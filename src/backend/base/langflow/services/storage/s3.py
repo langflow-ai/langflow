@@ -74,6 +74,36 @@ class S3StorageService(StorageService):
         # note: prefix already contains the / at the end
         return f"{self.prefix}{flow_id}/{file_name}"
 
+    def parse_file_path(self, full_path: str) -> tuple[str, str]:
+        """Parse a full S3 path to extract flow_id and file_name.
+
+        Args:
+            full_path: S3 path, may or may not include prefix
+                e.g., "files/user_123/image.png" or "user_123/image.png"
+
+        Returns:
+            tuple[str, str]: A tuple of (flow_id, file_name)
+
+        Examples:
+            >>> parse_file_path("files/user_123/image.png")  # with prefix
+            ("user_123", "image.png")
+            >>> parse_file_path("user_123/image.png")  # without prefix
+            ("user_123", "image.png")
+        """
+        # Remove prefix if present (but don't require it)
+        path_without_prefix = full_path
+        if self.prefix and full_path.startswith(self.prefix):
+            path_without_prefix = full_path[len(self.prefix) :]
+
+        # Split from the right to get the filename
+        # Everything before the last "/" is the flow_id
+        if "/" not in path_without_prefix:
+            return "", path_without_prefix
+
+        # Use rsplit to split from the right, limiting to 1 split
+        flow_id, file_name = path_without_prefix.rsplit("/", 1)
+        return flow_id, file_name
+
     def resolve_component_path(self, logical_path: str) -> str:
         """Return logical path as-is for S3 storage.
 

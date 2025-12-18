@@ -78,6 +78,7 @@ export const MemoizedSidebarTrigger = memo(() => {
             data-testid={`sidebar-trigger-${item.id}`}
             iconName={item.icon}
             iconClasses={item.id === "mcp" ? "h-8 w-8" : ""}
+            key={item.id}
             tooltipText={item.tooltip}
             onClick={() => {
               setActiveSection(item.id);
