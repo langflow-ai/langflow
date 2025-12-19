@@ -17,6 +17,7 @@ type IconComponentType = React.ComponentType<{
   style?: React.CSSProperties;
   ref?: React.Ref<unknown>;
   "data-testid"?: string;
+  isDark?: boolean;
 }>;
 
 export const ForwardedIconComponent = memo(
@@ -117,56 +118,52 @@ export const ForwardedIconComponent = memo(
 
       // Check if TargetIcon is a valid React component (function, class, or lazy component)
       // In React 19, lazy components have $$typeof Symbol, and forwardRef components have render property
-      const targetIconObj = TargetIcon as {
-        $$typeof?: unknown;
-        render?: unknown;
-        _payload?: unknown;
-        type?: unknown;
-      };
       const isValidComponent =
         typeof TargetIcon === "function" ||
-        (TargetIcon &&
-          typeof TargetIcon === "object" &&
-          // Check for various React component types:
-          // - $$typeof: lazy, forwardRef, memo components (Symbol.for('react.lazy'), etc.)
-          // - render: forwardRef components in some React versions
-          // - _payload: lazy component internals
-          // - type: wrapped components (memo wrapping forwardRef)
-          (targetIconObj.$$typeof ||
-            targetIconObj.render ||
-            targetIconObj._payload ||
-            targetIconObj.type));
+        (typeof TargetIcon === "object" &&
+          TargetIcon !== null &&
+          (() => {
+            const targetIconObj = TargetIcon as {
+              $$typeof?: unknown;
+              render?: unknown;
+              _payload?: unknown;
+              type?: unknown;
+            };
+            return (
+              targetIconObj.$$typeof ||
+              targetIconObj.render ||
+              targetIconObj._payload ||
+              targetIconObj.type
+            );
+          })());
+      // Check for various React component types:
+      // - $$typeof: lazy, forwardRef, memo components (Symbol.for('react.lazy'), etc.)
+      // - render: forwardRef components in some React versions
+      // - _payload: lazy component internals
+      // - type: wrapped components (memo wrapping forwardRef))
+
+      const baseProps = {
+        className,
+        style,
+        "data-testid": dataTestId
+          ? dataTestId
+          : id
+            ? `${id}-${name}`
+            : `icon-${name}`,
+      };
+
+      const componentProps = {
+        ...baseProps,
+        ref,
+      };
 
       return (
         <Suspense fallback={skipFallback ? undefined : fallback}>
           <ErrorBoundary onError={handleError}>
             {isValidComponent ? (
-              <TargetIcon
-                className={className}
-                style={style}
-                ref={ref}
-                data-testid={
-                  dataTestId
-                    ? dataTestId
-                    : id
-                      ? `${id}-${name}`
-                      : `icon-${name}`
-                }
-              />
+              <TargetIcon {...componentProps} isDark={isDark} />
             ) : (
-              <div
-                className={className}
-                style={style}
-                data-testid={
-                  dataTestId
-                    ? dataTestId
-                    : id
-                      ? `${id}-${name}`
-                      : `icon-${name}`
-                }
-              >
-                {TargetIcon}
-              </div>
+              <div {...baseProps}>{TargetIcon}</div>
             )}
           </ErrorBoundary>
         </Suspense>
