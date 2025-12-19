@@ -438,6 +438,8 @@ publish_testpypi: ## build the frontend static files and package the project and
 ######################
 
 build_component_index: ## build the component index with dynamic loading
+	@echo 'Installing backend dependencies for building component index'
+	@make install_backend
 	@echo 'Building component index'
 	LFX_DEV=1 uv run python scripts/build_component_index.py
 
