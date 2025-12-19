@@ -83,9 +83,10 @@ def test():
     test_func = exec_globals["test"]
     result = test_func()
 
-    # Should return False or True but not affect real builtins
-    # Verify real builtins wasn't modified
-    assert not hasattr(builtins, "ESCAPE_TEST")
+    # Sandboxed code should see its own isolated builtins (modification succeeds in sandbox)
+    # But real builtins should not be affected
+    assert result is True  # Sandboxed code successfully modified its isolated builtins
+    assert not hasattr(builtins, "ESCAPE_TEST")  # Real builtins was not modified
     assert len(dir(builtins)) == original_builtins_len
 
 
@@ -145,17 +146,16 @@ def test():
 
 
 def test_sandbox_isolated_imports():
-    """Test that imports in sandbox are isolated from parent scope."""
-    # Set up a mock module in parent scope (simulating server state)
-    import sys
-
-    original_modules = set(sys.modules.keys())
+    """Test that imports in sandbox cannot access parent scope variables."""
+    # Set a variable at module level that shadows an import name
+    json = "this_is_not_the_json_module"
 
     code = """
 import json
 def test():
-    # Import json - should be isolated
-    return json.__name__
+    # If isolation were broken, json would be the parent's variable
+    # But it should be the actual json module
+    return type(json).__name__
 """
     code_obj = compile(code, "<test>", "exec")
     exec_globals = {}
@@ -166,14 +166,10 @@ def test():
     test_func = exec_globals["test"]
     result = test_func()
 
-    # Should work but json import should be isolated
-    assert result == "json"
-
-    # Verify we didn't accidentally modify sys.modules in a way that persists
-    # (though importlib.import_module does modify sys.modules, the key is that
-    # the sandbox's view of modules is isolated)
-    current_modules = set(sys.modules.keys())
-    # New modules might be added, but that's expected for imports
+    # Should return 'module' (the json module), not 'str' (parent's json variable)
+    assert result == "module"
+    # Verify parent's json variable was not accessed
+    assert json == "this_is_not_the_json_module"
 
 
 def test_sandbox_function_definition_time_isolation():
@@ -218,3 +214,53 @@ def test():
     # Should raise NameError because parent_var is not accessible
     with pytest.raises(NameError):
         execute_in_sandbox(code_obj, exec_globals)
+
+
+# Module-level variable to test that sandbox cannot access module globals
+MODULE_LEVEL_VAR = "should_not_be_accessible_from_sandbox"
+
+
+def test_sandbox_cannot_access_module_globals():
+    """Test that sandboxed code cannot access module-level globals."""
+    code = """
+def test():
+    # Try to access MODULE_LEVEL_VAR from module scope
+    # If isolation were broken, this would work
+    return MODULE_LEVEL_VAR
+"""
+    code_obj = compile(code, "<test>", "exec")
+    exec_globals = {}
+
+    execute_in_sandbox(code_obj, exec_globals)
+
+    # Call the function - should fail because MODULE_LEVEL_VAR is not accessible
+    test_func = exec_globals["test"]
+    with pytest.raises(NameError):
+        test_func()
+
+
+def test_sandbox_cannot_escape_via_globals():
+    """Test that sandboxed code cannot escape via globals() function."""
+    # Set a variable at module level
+    module_var = "should_not_be_accessible"
+
+    code = """
+def test():
+    # Try to access parent globals via globals() function
+    # If isolation were broken, this could access the parent's globals
+    g = globals()
+    # Try to access a variable that would be in parent's globals
+    # The sandbox's globals() should only return sandbox globals, not parent's
+    return 'module_var' in g
+"""
+    code_obj = compile(code, "<test>", "exec")
+    exec_globals = {}
+
+    execute_in_sandbox(code_obj, exec_globals)
+
+    # Call the function
+    test_func = exec_globals["test"]
+    result = test_func()
+
+    # Should return False - sandbox's globals() should not contain parent's variables
+    assert result is False
