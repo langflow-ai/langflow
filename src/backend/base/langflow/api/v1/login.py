@@ -214,6 +214,7 @@ async def get_session(
             except ValueError as _:  # Replace ValueError with the specific exception expected
                 # If decryption fails, log the exception
                 import logging
+
                 logger = logging.getLogger(__name__)
                 logger.exception("Decryption of stored API key failed")
 

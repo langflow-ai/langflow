@@ -27,6 +27,7 @@ from langflow.services.deps import get_settings_service
 if TYPE_CHECKING:
     from langflow.services.database.models.api_key.model import ApiKey
 
+
 class OAuth2PasswordBearerCookie(OAuth2PasswordBearer):
     """Custom OAuth2 scheme that checks cookies first, then Authorization header.
 
