@@ -56,6 +56,14 @@ const Trigger: React.FC<TriggerProps> = ({
   disable,
   className,
 }) => {
+  // Ensure a valid element for Radix asChild (fragments can't receive props)
+  const triggerChild =
+    React.isValidElement(children) && children.type !== React.Fragment ? (
+      children
+    ) : (
+      <span />
+    );
+
   return (
     <DialogTrigger
       className={asChild ? "" : cn("w-full", className)}
@@ -63,7 +71,7 @@ const Trigger: React.FC<TriggerProps> = ({
       disabled={disable}
       asChild={asChild}
     >
-      {children}
+      {triggerChild}
     </DialogTrigger>
   );
 };
@@ -267,7 +275,6 @@ function BaseModal({
           {dialogContentWithouFixed ? (
             <DialogContentWithouFixed
               onClick={(e) => e.stopPropagation()}
-              onOpenAutoFocus={(event) => event.preventDefault()}
               onEscapeKeyDown={onEscapeKeyDown}
               className={contentClasses}
               closeButtonClassName={closeButtonClassName}
@@ -289,7 +296,6 @@ function BaseModal({
           ) : (
             <DialogContent
               onClick={(e) => e.stopPropagation()}
-              onOpenAutoFocus={(event) => event.preventDefault()}
               onEscapeKeyDown={onEscapeKeyDown}
               className={contentClasses}
               closeButtonClassName={closeButtonClassName}

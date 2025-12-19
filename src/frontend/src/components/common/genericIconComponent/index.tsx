@@ -33,7 +33,14 @@ export const ForwardedIconComponent = memo(
 
       const [showFallback, setShowFallback] = useState(false);
       const [iconError, setIconError] = useState(false);
-      const [TargetIcon, setTargetIcon] = useState<any>(getCachedIcon(name));
+      const [TargetIcon, setTargetIcon] = useState<
+        React.ComponentType<{
+          className?: string;
+          style?: React.CSSProperties;
+          ref?: React.Ref<unknown>;
+          "data-testid"?: string;
+        }>
+      >(getCachedIcon(name) as React.ComponentType);
 
       useEffect(() => {
         setIconError(false);
@@ -130,7 +137,6 @@ export const ForwardedIconComponent = memo(
                 className={className}
                 style={style}
                 ref={ref}
-                isDark={isDark}
                 data-testid={
                   dataTestId
                     ? dataTestId
