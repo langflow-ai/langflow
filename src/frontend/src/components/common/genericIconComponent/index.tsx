@@ -12,6 +12,13 @@ import { IconComponentProps } from "../../../types/components";
 import { getCachedIcon, getNodeIcon } from "../../../utils/styleUtils";
 import { cn } from "../../../utils/utils";
 
+type IconComponentType = React.ComponentType<{
+  className?: string;
+  style?: React.CSSProperties;
+  ref?: React.Ref<unknown>;
+  "data-testid"?: string;
+}>;
+
 export const ForwardedIconComponent = memo(
   forwardRef(
     (
@@ -33,12 +40,9 @@ export const ForwardedIconComponent = memo(
 
       const [showFallback, setShowFallback] = useState(false);
       const [iconError, setIconError] = useState(false);
-      const [TargetIcon, setTargetIcon] = useState<React.ComponentType<{
-        className?: string;
-        style?: React.CSSProperties;
-        ref?: React.Ref<unknown>;
-        "data-testid"?: string;
-      }> | null>(getCachedIcon(name) as React.ComponentType | null);
+      const [TargetIcon, setTargetIcon] = useState<IconComponentType | null>(
+        getCachedIcon(name) as IconComponentType | null,
+      );
 
       useEffect(() => {
         setIconError(false);
