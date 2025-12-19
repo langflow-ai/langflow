@@ -40,7 +40,6 @@ export const MenuBar = memo((): JSX.Element => {
     currentFlowGradient,
   } = useFlowStore(
     useShallow((state) => ({
-      isFlowLocked: state.currentFlow?.locked,
       currentFlowName: state.currentFlow?.name,
       currentFlowId: state.currentFlow?.id,
       currentFlowFolderId: state.currentFlow?.folder_id,
