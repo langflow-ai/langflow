@@ -152,20 +152,17 @@ export const ForwardedIconComponent = memo(
             : `icon-${name}`,
       };
 
-      const componentProps = {
-        ...baseProps,
-        ref,
-      };
+      const componentProps = { ...baseProps, ref };
+
+      const content = isValidComponent ? (
+        <TargetIcon {...componentProps} isDark={isDark} />
+      ) : (
+        <div {...baseProps}>{TargetIcon}</div>
+      );
 
       return (
         <Suspense fallback={skipFallback ? undefined : fallback}>
-          <ErrorBoundary onError={handleError}>
-            {isValidComponent ? (
-              <TargetIcon {...componentProps} isDark={isDark} />
-            ) : (
-              <div {...baseProps}>{TargetIcon}</div>
-            )}
-          </ErrorBoundary>
+          <ErrorBoundary onError={handleError}>{content}</ErrorBoundary>
         </Suspense>
       );
     },
