@@ -209,9 +209,6 @@ export default function PublishDropdown({
           )}
         </DropdownMenuContent>
       </DropdownMenu>
-      <ApiModal open={openApiModal} setOpen={setOpenApiModal}>
-        {null}
-      </ApiModal>
       <EmbedModal
         open={openEmbedModal}
         setOpen={setOpenEmbedModal}

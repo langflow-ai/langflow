@@ -33,14 +33,12 @@ export const ForwardedIconComponent = memo(
 
       const [showFallback, setShowFallback] = useState(false);
       const [iconError, setIconError] = useState(false);
-      const [TargetIcon, setTargetIcon] = useState<
-        React.ComponentType<{
-          className?: string;
-          style?: React.CSSProperties;
-          ref?: React.Ref<unknown>;
-          "data-testid"?: string;
-        }>
-      >(getCachedIcon(name) as React.ComponentType);
+      const [TargetIcon, setTargetIcon] = useState<React.ComponentType<{
+        className?: string;
+        style?: React.CSSProperties;
+        ref?: React.Ref<unknown>;
+        "data-testid"?: string;
+      }> | null>(getCachedIcon(name) as React.ComponentType | null);
 
       useEffect(() => {
         setIconError(false);
@@ -115,19 +113,25 @@ export const ForwardedIconComponent = memo(
 
       // Check if TargetIcon is a valid React component (function, class, or lazy component)
       // In React 19, lazy components have $$typeof Symbol, and forwardRef components have render property
+      const targetIconObj = TargetIcon as {
+        $$typeof?: unknown;
+        render?: unknown;
+        _payload?: unknown;
+        type?: unknown;
+      };
       const isValidComponent =
         typeof TargetIcon === "function" ||
-        (typeof TargetIcon === "object" &&
-          TargetIcon !== null &&
+        (TargetIcon &&
+          typeof TargetIcon === "object" &&
           // Check for various React component types:
           // - $$typeof: lazy, forwardRef, memo components (Symbol.for('react.lazy'), etc.)
           // - render: forwardRef components in some React versions
           // - _payload: lazy component internals
           // - type: wrapped components (memo wrapping forwardRef)
-          (TargetIcon.$$typeof ||
-            TargetIcon.render ||
-            TargetIcon._payload ||
-            TargetIcon.type));
+          (targetIconObj.$$typeof ||
+            targetIconObj.render ||
+            targetIconObj._payload ||
+            targetIconObj.type));
 
       return (
         <Suspense fallback={skipFallback ? undefined : fallback}>

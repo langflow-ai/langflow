@@ -56,9 +56,23 @@ const Trigger: React.FC<TriggerProps> = ({
   disable,
   className,
 }) => {
+  const childCount = React.Children.count(children);
+  const isEmptyFragment =
+    React.isValidElement(children) &&
+    children.type === React.Fragment &&
+    React.Children.count(
+      // children.props is unknown by default; narrow with a type guard
+      (children.props as { children?: React.ReactNode }).children,
+    ) === 0;
+
+  // Only show the trigger as “visible” when there is usable child content
+  const hasUsableChild = childCount > 0 && !isEmptyFragment;
+
   // Ensure a valid element for Radix asChild (fragments can't receive props)
   const triggerChild =
-    React.isValidElement(children) && children.type !== React.Fragment ? (
+    hasUsableChild &&
+    React.isValidElement(children) &&
+    children.type !== React.Fragment ? (
       children
     ) : (
       <span />
@@ -67,7 +81,7 @@ const Trigger: React.FC<TriggerProps> = ({
   return (
     <DialogTrigger
       className={asChild ? "" : cn("w-full", className)}
-      hidden={children ? false : true}
+      hidden={!hasUsableChild}
       disabled={disable}
       asChild={asChild}
     >

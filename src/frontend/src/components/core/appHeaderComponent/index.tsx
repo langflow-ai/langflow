@@ -87,7 +87,7 @@ export default function AppHeader(): JSX.Element {
       >
         {true && <ModelProviderCount />}
         {LANGFLOW_AGENTIC_EXPERIENCE && <AssistantButton type="header" />}
-        <div className="hidden items-center whitespace-nowrap pr-2 lg:inline">
+        <div className="hidden pr-2 whitespace-nowrap lg:inline-flex lg:items-center">
           <CustomLangflowCounts />
         </div>
         <AlertDropdown
