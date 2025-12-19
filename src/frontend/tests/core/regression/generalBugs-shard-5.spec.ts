@@ -87,7 +87,7 @@ test(
       });
     //connection 1
     const elementCombineTextOutput0 = page
-      .getByTestId("div-handle-combinetext-shownode-combined text-right")
+      .getByTestId("handle-combinetext-shownode-combined text-right")
       .nth(0);
     await elementCombineTextOutput0.click();
 
@@ -169,10 +169,34 @@ test(
 
     await adjustScreenView(page, { numberOfZoomOut: 2 });
 
-    await page
-      .getByTestId("title-Combine Text")
-      .first()
-      .click({ modifiers: ["ControlOrMeta"] });
+    // Select both Combine Text nodes using box selection (Shift+drag)
+    // Note: Ctrl/Meta+click doesn't work reliably in Playwright with ReactFlow
+    const combineTextNodes = page.locator(".react-flow__node").filter({
+      has: page.getByTestId("title-Combine Text"),
+    });
+
+    const firstBox = await combineTextNodes.first().boundingBox();
+    const secondBox = await combineTextNodes.nth(1).boundingBox();
+
+    if (firstBox && secondBox) {
+      // Calculate area to drag-select both nodes
+      const startX = Math.min(firstBox.x, secondBox.x) - 50;
+      const startY = Math.min(firstBox.y, secondBox.y) - 50;
+      const endX =
+        Math.max(firstBox.x + firstBox.width, secondBox.x + secondBox.width) +
+        50;
+      const endY =
+        Math.max(firstBox.y + firstBox.height, secondBox.y + secondBox.height) +
+        50;
+
+      // Use Shift+drag for box selection
+      await page.keyboard.down("Shift");
+      await page.mouse.move(startX, startY);
+      await page.mouse.down();
+      await page.mouse.move(endX, endY, { steps: 10 });
+      await page.mouse.up();
+      await page.keyboard.up("Shift");
+    }
 
     await page.waitForSelector('[data-testid="group-node"]', {
       timeout: 3000,
