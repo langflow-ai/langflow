@@ -58,7 +58,7 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
 ### Known issue: Data not accessible when upgrading to version 1.7.0 {#v170-data-loss}
 
-A critical issue was identified during the upgrade process to version 1.7.0. While the package updates correctly, there is a total loss of persisted state, including flows, projects, and global variables.
+A critical issue was identified during the upgrade process to version 1.7.0.
 
 Flows, projects, and global variables are **not** deleted or corrupted. The data still exists, but version 1.7.0 cannot find it due to a path change in how flows are located.
 Only Langflow versions 1.6.8 and 1.6.9 upgrading to 1.7.0 are affected.
