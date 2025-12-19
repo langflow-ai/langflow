@@ -92,9 +92,9 @@ const SimpleSidebarProvider = React.forwardRef<
           );
         }
 
-        _setOpen(typeof value === "function" ? value(_open) : value);
+        _setOpen(value);
       },
-      [setOpenProp, open, _open],
+      [setOpenProp, open],
     );
 
     const setWidth = React.useCallback(
@@ -374,7 +374,7 @@ const SimpleSidebar = React.forwardRef<
     }, [open, fullscreen, side]);
 
     const transitionDuration = React.useMemo(() => {
-      return isResizing && !fullscreen ? 0 : 0.3;
+      return isResizing && !fullscreen ? 0 : 3;
     }, [isResizing, fullscreen]);
 
     return (

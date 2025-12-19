@@ -78,7 +78,7 @@ export function FlowPageSlidingContainerContent({
         {isFullscreen && (
           <AnimatedConditional
             isOpen={sidebarOpen}
-            className="border-r border-border bg-background overflow-hidden w-[20%] min-w-[360px] max-w-[420px]"
+            className="border-r border-border bg-background overflow-hidden w-[20%] min-w-[0px] max-w-[420px]"
           >
             <div className="h-full overflow-y-auto">
               <div className="p-4 pt-[15px]">
