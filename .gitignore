@@ -288,3 +288,5 @@ member_servers.json
 
 # data files used for desktop registration
 data/user
+# Auto-generated component index
+src/lfx/src/lfx/_assets/component_index.json
