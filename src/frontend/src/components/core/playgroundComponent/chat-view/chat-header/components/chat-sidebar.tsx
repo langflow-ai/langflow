@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
@@ -55,19 +55,17 @@ export function ChatSidebar({
             <div className="text-mmd font-normal">Sessions</div>
           </div>
           <ShadTooltip styleClasses="z-50" content="New Chat">
-            <div>
-              <Button
-                data-testid="new-chat"
-                variant="ghost"
-                className="flex h-8 w-8 items-center justify-center !p-0 hover:bg-secondary-hover"
-                onClick={onNewChat}
-              >
-                <ForwardedIconComponent
-                  name="Plus"
-                  className="h-[18px] w-[18px] text-ring"
-                />
-              </Button>
-            </div>
+            <Button
+              data-testid="new-chat"
+              variant="ghost"
+              className="flex h-8 w-8 items-center justify-center !p-0 hover:bg-secondary-hover"
+              onClick={onNewChat}
+            >
+              <ForwardedIconComponent
+                name="Plus"
+                className="h-[18px] w-[18px] text-ring"
+              />
+            </Button>
           </ShadTooltip>
         </div>
       </div>
@@ -79,7 +77,7 @@ export function ChatSidebar({
         <div className="flex flex-col" style={{ gap: "0.5rem" }}>
           {sessionIds.map((session, index) => (
             <SessionSelector
-              key={index}
+              key={session}
               session={session}
               currentFlowId={currentFlowId}
               deleteSession={handleDeleteSession}
