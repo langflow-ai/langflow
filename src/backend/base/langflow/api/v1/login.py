@@ -4,6 +4,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
+from pydantic import BaseModel
 
 from langflow.api.utils import DbSession
 from langflow.api.v1.schemas import Token
@@ -15,9 +16,18 @@ from langflow.services.auth.utils import (
     create_user_tokens,
 )
 from langflow.services.database.models.user.crud import get_user_by_id
+from langflow.services.database.models.user.model import UserRead
 from langflow.services.deps import get_settings_service, get_variable_service
 
 router = APIRouter(tags=["Login"])
+
+
+class SessionResponse(BaseModel):
+    """Session validation response."""
+
+    authenticated: bool
+    user: UserRead | None = None
+    store_api_key: str | None = None
 
 
 @router.post("/login", response_model=Token)
@@ -168,6 +178,53 @@ async def refresh_token(
         detail="Invalid refresh token",
         headers={"WWW-Authenticate": "Bearer"},
     )
+
+
+@router.get("/session")
+async def get_session(
+    request: Request,
+    db: DbSession,
+) -> SessionResponse:
+    """Validate session and return user information.
+
+    This endpoint checks if the user is authenticated via cookie or Authorization header.
+    It does not raise an error if unauthenticated, allowing the frontend to gracefully
+    handle the session state.
+    """
+    from langflow.services.auth.utils import get_current_user_by_jwt, oauth2_login
+
+    # Try to get the token from the request (cookie or Authorization header)
+    try:
+        token = await oauth2_login(request)
+        if not token:
+            return SessionResponse(authenticated=False)
+
+        # Validate the token and get user
+        user = await get_current_user_by_jwt(token, db)
+        if not user or not user.is_active:
+            return SessionResponse(authenticated=False)
+
+        # Get decrypted store API key if available
+        store_api_key = None
+        if user.store_api_key:
+            try:
+                from langflow.services.auth.utils import decrypt_api_key
+
+                store_api_key = decrypt_api_key(user.store_api_key, get_settings_service())
+            except ValueError as _:  # Replace ValueError with the specific exception expected
+                # If decryption fails, log the exception
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.exception("Decryption of stored API key failed")
+
+        return SessionResponse(
+            authenticated=True,
+            user=UserRead.model_validate(user, from_attributes=True),
+            store_api_key=store_api_key,
+        )
+    except (HTTPException, ValueError) as _:
+        # Any authentication error means not authenticated
+        return SessionResponse(authenticated=False)
 
 
 @router.post("/logout")

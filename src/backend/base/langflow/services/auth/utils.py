@@ -9,6 +9,7 @@ from uuid import UUID
 from cryptography.fernet import Fernet
 from fastapi import Depends, HTTPException, Request, Security, WebSocketException, status
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
+from fastapi.security.utils import get_authorization_scheme_param
 from jose import JWTError, jwt
 from lfx.log.logger import logger
 from lfx.services.deps import injectable_session_scope, session_scope
@@ -26,7 +27,31 @@ from langflow.services.deps import get_settings_service
 if TYPE_CHECKING:
     from langflow.services.database.models.api_key.model import ApiKey
 
-oauth2_login = OAuth2PasswordBearer(tokenUrl="api/v1/login", auto_error=False)
+class OAuth2PasswordBearerCookie(OAuth2PasswordBearer):
+    """Custom OAuth2 scheme that checks cookies first, then Authorization header.
+
+    This allows the application to work with HttpOnly cookies while maintaining
+    backward compatibility with Authorization header-based authentication.
+    """
+
+    async def __call__(self, request: Request) -> str | None:
+        # First, try to get token from cookie (for HttpOnly cookie support)
+        token = request.cookies.get("access_token_lf")
+        if token:
+            return token
+
+        # Fall back to Authorization header (for backward compatibility)
+        authorization = request.headers.get("Authorization")
+        scheme, param = get_authorization_scheme_param(authorization)
+        if scheme.lower() == "bearer":
+            return param
+
+        # If auto_error is True, this would raise an exception
+        # Since we set auto_error=False, return None
+        return None
+
+
+oauth2_login = OAuth2PasswordBearerCookie(tokenUrl="api/v1/login", auto_error=False)
 
 API_KEY_NAME = "x-api-key"
 

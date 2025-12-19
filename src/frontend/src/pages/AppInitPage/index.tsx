@@ -1,6 +1,7 @@
-import { useEffect } from "react";
+import { useContext, useEffect } from "react";
 import { Outlet } from "react-router-dom";
-import { useGetAutoLogin } from "@/controllers/API/queries/auth";
+import { AuthContext } from "@/contexts/authContext";
+import { useGetAuthSession, useGetAutoLogin } from "@/controllers/API/queries/auth";
 import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
 import { useGetBasicExamplesQuery } from "@/controllers/API/queries/flows/use-get-basic-examples";
 import { useGetFoldersQuery } from "@/controllers/API/queries/folders/use-get-folders";
@@ -9,6 +10,7 @@ import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import { useGetVersionQuery } from "@/controllers/API/queries/version";
 import { CustomLoadingPage } from "@/customization/components/custom-loading-page";
 import { useCustomPrimaryLoading } from "@/customization/hooks/use-custom-primary-loading";
+import useAuthStore from "@/stores/authStore";
 import { useDarkStore } from "@/stores/darkStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { LoadingPage } from "../LoadingPage";
@@ -19,8 +21,14 @@ export function AppInitPage() {
     (state) => state.refreshDiscordCount,
   );
   const isLoading = useFlowsManagerStore((state) => state.isLoading);
+  const { setUserData, storeApiKey } = useContext(AuthContext);
+  const setIsAuthenticated = useAuthStore((state) => state.setIsAuthenticated);
+  const setIsAdmin = useAuthStore((state) => state.setIsAdmin);
 
   const { isFetched: isLoaded } = useCustomPrimaryLoading();
+
+  // Validate session on app init to restore auth state from HttpOnly cookies
+  const { data: sessionData } = useGetAuthSession({ enabled: isLoaded });
 
   const { isFetched } = useGetAutoLogin({ enabled: isLoaded });
   useGetVersionQuery({ enabled: isFetched });
@@ -30,6 +38,21 @@ export function AppInitPage() {
   useGetFoldersQuery({ enabled: isFetched });
   const { isFetched: isExamplesFetched, refetch: refetchExamples } =
     useGetBasicExamplesQuery();
+
+  // Update auth state when session data is available
+  useEffect(() => {
+    if (sessionData?.authenticated && sessionData.user) {
+      setUserData(sessionData.user);
+      setIsAuthenticated(true);
+      setIsAdmin(sessionData.user.is_superuser || false);
+      if (sessionData.store_api_key) {
+        storeApiKey(sessionData.store_api_key);
+      }
+    } else if (sessionData && !sessionData.authenticated) {
+      // Explicitly not authenticated
+      setIsAuthenticated(false);
+    }
+  }, [sessionData]);
 
   useEffect(() => {
     if (isFetched) {
