@@ -5530,7 +5530,7 @@ wheels = [
 
 [[package]]
 name = "langflow"
-version = "1.7.0"
+version = "1"
 source = { editable = "." }
 dependencies = [
     { name = "agent-lifecycle-toolkit" },
@@ -5935,7 +5935,7 @@ dev = [
 
 [[package]]
 name = "langflow-base"
-version = "0.7.0"
+version = "0.7.1"
 source = { editable = "src/backend/base" }
 dependencies = [
     { name = "aiofile" },
@@ -6394,7 +6394,7 @@ wheels = [
 
 [[package]]
 name = "lfx"
-version = "0.2.0"
+version = "0.2.1"
 source = { editable = "src/lfx" }
 dependencies = [
     { name = "aiofile" },
