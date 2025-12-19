@@ -21,6 +21,45 @@ from lfx.services.settings.constants import AGENTIC_VARIABLES, VARIABLES_TO_GET_
 from lfx.utils.util_strings import is_valid_database_url
 
 
+def _get_old_langflow_db_paths(db_file_name: str, pre_db_file_name: str) -> tuple[Path | None, Path | None]:
+    """Get database paths from the old langflow package location (v1.6.x compatibility).
+
+    Returns:
+        Tuple of (old_langflow_db_path, old_langflow_pre_db_path) or (None, None) if not found.
+    """
+    try:
+        import langflow
+        old_langflow_pkg_dir = Path(langflow.__file__).parent
+        old_db_path = old_langflow_pkg_dir / db_file_name
+        old_pre_db_path = old_langflow_pkg_dir / pre_db_file_name
+        logger.debug(f"Found langflow package at {old_langflow_pkg_dir}, checking for old database")
+        return old_db_path, old_pre_db_path
+    except (ImportError, AttributeError):
+        logger.debug("Could not import langflow package to check for old database location")
+        return None, None
+
+
+def _migrate_database(source_path: Path, dest_path: str) -> bool:
+    """Migrate database from source to destination.
+
+    Args:
+        source_path: Source database path
+        dest_path: Destination database path
+
+    Returns:
+        True if migration succeeded, False otherwise.
+    """
+    logger.debug(f"Found database from previous Langflow version at {source_path}")
+    logger.debug(f"Migrating database to new location: {dest_path}")
+    try:
+        copy2(source_path, dest_path)
+        logger.debug(f"Successfully migrated database to {dest_path}")
+        return True
+    except OSError:
+        logger.exception("Failed to migrate database from old location")
+        return False
+
+
 def is_list_of_any(field: FieldInfo) -> bool:
     """Check if the given field is a list or an optional list of any type.
 
@@ -503,6 +542,12 @@ class Settings(BaseSettings):
             db_file_name = "langflow.db"
             new_pre_path = f"{database_dir}/{pre_db_file_name}"
             new_path = f"{database_dir}/{db_file_name}"
+
+            # Get old langflow package paths for v1.6.x -> v1.7.x migration
+            old_langflow_db_path, old_langflow_pre_db_path = _get_old_langflow_db_paths(
+                db_file_name, pre_db_file_name
+            )
+
             final_path = None
             if is_pre_release:
                 if Path(new_pre_path).exists():
@@ -516,6 +561,13 @@ class Settings(BaseSettings):
                     logger.debug("Copying existing database to new location")
                     copy2(f"./{db_file_name}", new_pre_path)
                     logger.debug(f"Copied existing database to {new_pre_path}")
+                # Check old langflow location for v1.6.x -> v1.7.x migration (pre-release)
+                elif old_langflow_pre_db_path is not None and old_langflow_pre_db_path.exists():
+                    _migrate_database(old_langflow_pre_db_path, new_pre_path)
+                    final_path = new_pre_path
+                elif old_langflow_db_path is not None and old_langflow_db_path.exists():
+                    _migrate_database(old_langflow_db_path, new_pre_path)
+                    final_path = new_pre_path
                 else:
                     logger.debug(f"Creating new database at {new_pre_path}")
                     final_path = new_pre_path
@@ -529,6 +581,11 @@ class Settings(BaseSettings):
                 except OSError:
                     logger.exception("Failed to copy database, using default path")
                     new_path = f"./{db_file_name}"
+            # Check old langflow location for v1.6.x -> v1.7.x migration
+            elif old_langflow_db_path is not None and old_langflow_db_path.exists():
+                if not _migrate_database(old_langflow_db_path, new_path):
+                    # Fall back to using old path directly if migration fails
+                    new_path = str(old_langflow_db_path)
             else:
                 final_path = new_path
 
