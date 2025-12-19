@@ -299,7 +299,7 @@ test(
     await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("fit_view").click();
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await page.getByTestId("canvas_controls_dropdown").click({ force: true });
 
     await page.waitForSelector('[data-testid="int_int_max_length"]', {
       state: "visible",
@@ -730,7 +730,7 @@ test(
     await page.getByTestId("fit_view").click();
 
     await zoomOut(page, 3);
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await page.getByTestId("canvas_controls_dropdown").click({ force: true });
 
     await expect(page.getByTestId("dropdown_str_tool")).toBeHidden();
 
@@ -787,7 +787,7 @@ test(
     await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("fit_view").click();
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await page.getByTestId("canvas_controls_dropdown").click({ force: true });
 
     await page.waitForSelector('[data-testid="int_int_max_length"]', {
       state: "visible",

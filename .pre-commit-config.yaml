@@ -25,6 +25,21 @@ repos:
         language: system
         types_or: [python, pyi]
         args: [--config, pyproject.toml]
+      - id: validate-migrations
+        name: Validate Alembic Migrations (Expand-Contract)
+        entry: python src/backend/base/langflow/alembic/migration_validator.py
+        language: python
+        files: (alembic|migrations)/versions/.*\.py$
+        additional_dependencies: [sqlalchemy, alembic]
+        pass_filenames: true
+        always_run: false
+        verbose: true
+      - id: check-migration-phase
+        name: Check Migration Phase Documentation
+        entry: python -c "import sys, re; content = open(sys.argv[1]).read(); sys.exit(0 if re.search(r'Phase:\s*(EXPAND|MIGRATE|CONTRACT)', content) else 1)"
+        language: python
+        files: (alembic|migrations)/versions/.*\.py$
+        pass_filenames: true
   - repo: https://github.com/Yelp/detect-secrets
     rev: v1.5.0
     hooks:
@@ -55,3 +70,9 @@ repos:
         files: ^src/backend/base/langflow/initial_setup/starter_projects/.*\.json$
         pass_filenames: false
         args: [--security-check]
+      - id: check-deprecated-imports
+        name: Check for deprecated langchain imports
+        entry: uv run python scripts/check_deprecated_imports.py
+        language: system
+        files: ^src/lfx/src/lfx/components/.*\.py$
+        pass_filenames: false

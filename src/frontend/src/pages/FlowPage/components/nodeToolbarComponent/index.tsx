@@ -266,8 +266,9 @@ const NodeToolbarComponent = memo(
         });
       } catch (error) {
         console.error("Error downloading node:", error);
+        const nodeName = flowComponent?.name || "Node";
         setErrorData({
-          title: "Failed to download node",
+          title: `Failed to download ${nodeName}`,
           list: [error instanceof Error ? error.message : "Unknown error"],
         });
       }

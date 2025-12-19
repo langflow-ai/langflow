@@ -10,34 +10,44 @@ Notes:
 
 from __future__ import annotations
 
+import contextlib
 import json
 import subprocess
 import sys
 import textwrap
 from copy import deepcopy
+from pathlib import Path
+from tempfile import NamedTemporaryFile
 from typing import Any
 
 from lfx.base.data.base_file import BaseFileComponent
+from lfx.base.data.storage_utils import parse_storage_path, read_file_bytes, validate_image_content_type
 from lfx.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_file_to_data
 from lfx.inputs.inputs import DropdownInput, MessageTextInput, StrInput
 from lfx.io import BoolInput, FileInput, IntInput, Output
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame  # noqa: TC001
 from lfx.schema.message import Message
+from lfx.services.deps import get_settings_service, get_storage_service
+from lfx.utils.async_helpers import run_until_complete
 
 
 class FileComponent(BaseFileComponent):
     """File component with optional Docling processing (isolated in a subprocess)."""
 
     display_name = "Read File"
-    description = "Loads content from one or more files."
-    documentation: str = "https://docs.langflow.org/components-data#file"
+    # description is now a dynamic property - see get_tool_description()
+    _base_description = "Loads content from one or more files."
+    documentation: str = "https://docs.langflow.org/read-file"
     icon = "file-text"
     name = "File"
+    add_tool_output = True  # Enable tool mode toggle without requiring tool_mode inputs
 
-    # Docling-supported/compatible extensions; TEXT_FILE_TYPES are supported by the base loader.
-    VALID_EXTENSIONS = [
-        *TEXT_FILE_TYPES,
+    # Extensions that can be processed without Docling (using standard text parsing)
+    TEXT_EXTENSIONS = TEXT_FILE_TYPES
+
+    # Extensions that require Docling for processing (images, advanced office formats, etc.)
+    DOCLING_ONLY_EXTENSIONS = [
         "adoc",
         "asciidoc",
         "asc",
@@ -61,6 +71,12 @@ class FileComponent(BaseFileComponent):
         "webp",
     ]
 
+    # Docling-supported/compatible extensions; TEXT_FILE_TYPES are supported by the base loader.
+    VALID_EXTENSIONS = [
+        *TEXT_EXTENSIONS,
+        *DOCLING_ONLY_EXTENSIONS,
+    ]
+
     # Fixed export settings used when markdown export is requested.
     EXPORT_FORMAT = "Markdown"
     IMAGE_MODE = "placeholder"
@@ -70,10 +86,24 @@ class FileComponent(BaseFileComponent):
     for input_item in _base_inputs:
         if isinstance(input_item, FileInput) and input_item.name == "path":
             input_item.real_time_refresh = True
+            input_item.tool_mode = False  # Disable tool mode for file upload input
+            input_item.required = False  # Make it optional so it doesn't error in tool mode
             break
 
     inputs = [
         *_base_inputs,
+        StrInput(
+            name="file_path_str",
+            display_name="File Path",
+            info=(
+                "Path to the file to read. Used when component is called as a tool. "
+                "If not provided, will use the uploaded file from 'path' input."
+            ),
+            show=False,
+            advanced=True,
+            tool_mode=True,  # Required for Toolset toggle, but _get_tools() ignores this parameter
+            required=False,
+        ),
         BoolInput(
             name="advanced_mode",
             display_name="Advanced Parser",
@@ -152,8 +182,86 @@ class FileComponent(BaseFileComponent):
     ]
 
     outputs = [
-        Output(display_name="Raw Content", name="message", method="load_files_message"),
+        Output(display_name="Raw Content", name="message", method="load_files_message", tool_mode=True),
     ]
+
+    # ------------------------------ Tool description with file names --------------
+
+    def get_tool_description(self) -> str:
+        """Return a dynamic description that includes the names of uploaded files.
+
+        This helps the Agent understand which files are available to read.
+        """
+        base_description = "Loads and returns the content from uploaded files."
+
+        # Get the list of uploaded file paths
+        file_paths = getattr(self, "path", None)
+        if not file_paths:
+            return base_description
+
+        # Ensure it's a list
+        if not isinstance(file_paths, list):
+            file_paths = [file_paths]
+
+        # Extract just the file names from the paths
+        file_names = []
+        for fp in file_paths:
+            if fp:
+                name = Path(fp).name
+                file_names.append(name)
+
+        if file_names:
+            files_str = ", ".join(file_names)
+            return f"{base_description} Available files: {files_str}. Call this tool to read these files."
+
+        return base_description
+
+    @property
+    def description(self) -> str:
+        """Dynamic description property that includes uploaded file names."""
+        return self.get_tool_description()
+
+    async def _get_tools(self) -> list:
+        """Override to create a tool without parameters.
+
+        The Read File component should use the files already uploaded via UI,
+        not accept file paths from the Agent (which wouldn't know the internal paths).
+        """
+        from langchain_core.tools import StructuredTool
+        from pydantic import BaseModel
+
+        # Empty schema - no parameters needed
+        class EmptySchema(BaseModel):
+            """No parameters required - uses pre-uploaded files."""
+
+        async def read_files_tool() -> str:
+            """Read the content of uploaded files."""
+            try:
+                result = self.load_files_message()
+                if hasattr(result, "get_text"):
+                    return result.get_text()
+                if hasattr(result, "text"):
+                    return result.text
+                return str(result)
+            except (FileNotFoundError, ValueError, OSError, RuntimeError) as e:
+                return f"Error reading files: {e}"
+
+        description = self.get_tool_description()
+
+        tool = StructuredTool(
+            name="load_files_message",
+            description=description,
+            coroutine=read_files_tool,
+            args_schema=EmptySchema,
+            handle_tool_error=True,
+            tags=["load_files_message"],
+            metadata={
+                "display_name": "Read File",
+                "display_description": description,
+            },
+        )
+
+        return [tool]
 
     # ------------------------------ UI helpers --------------------------------------
 
@@ -213,38 +321,83 @@ class FileComponent(BaseFileComponent):
             file_path = paths[0] if field_name == "path" else frontend_node["template"]["path"]["file_path"][0]
             if file_path.endswith((".csv", ".xlsx", ".parquet")):
                 frontend_node["outputs"].append(
-                    Output(display_name="Structured Content", name="dataframe", method="load_files_structured"),
+                    Output(
+                        display_name="Structured Content",
+                        name="dataframe",
+                        method="load_files_structured",
+                        tool_mode=True,
+                    ),
                 )
             elif file_path.endswith(".json"):
                 frontend_node["outputs"].append(
-                    Output(display_name="Structured Content", name="json", method="load_files_json"),
+                    Output(display_name="Structured Content", name="json", method="load_files_json", tool_mode=True),
                 )
 
             advanced_mode = frontend_node.get("template", {}).get("advanced_mode", {}).get("value", False)
             if advanced_mode:
                 frontend_node["outputs"].append(
-                    Output(display_name="Structured Output", name="advanced_dataframe", method="load_files_dataframe"),
+                    Output(
+                        display_name="Structured Output",
+                        name="advanced_dataframe",
+                        method="load_files_dataframe",
+                        tool_mode=True,
+                    ),
                 )
                 frontend_node["outputs"].append(
-                    Output(display_name="Markdown", name="advanced_markdown", method="load_files_markdown"),
+                    Output(
+                        display_name="Markdown", name="advanced_markdown", method="load_files_markdown", tool_mode=True
+                    ),
                 )
                 frontend_node["outputs"].append(
-                    Output(display_name="File Path", name="path", method="load_files_path"),
+                    Output(display_name="File Path", name="path", method="load_files_path", tool_mode=True),
                 )
             else:
                 frontend_node["outputs"].append(
-                    Output(display_name="Raw Content", name="message", method="load_files_message"),
+                    Output(display_name="Raw Content", name="message", method="load_files_message", tool_mode=True),
                 )
                 frontend_node["outputs"].append(
-                    Output(display_name="File Path", name="path", method="load_files_path"),
+                    Output(display_name="File Path", name="path", method="load_files_path", tool_mode=True),
                 )
         else:
             # Multiple files => DataFrame output; advanced parser disabled
-            frontend_node["outputs"].append(Output(display_name="Files", name="dataframe", method="load_files"))
+            frontend_node["outputs"].append(
+                Output(display_name="Files", name="dataframe", method="load_files", tool_mode=True)
+            )
 
         return frontend_node
 
     # ------------------------------ Core processing ----------------------------------
+
+    def _validate_and_resolve_paths(self) -> list[BaseFileComponent.BaseFile]:
+        """Override to handle file_path_str input from tool mode.
+
+        When called as a tool, the file_path_str parameter can be set.
+        If not provided, it will fall back to using the path FileInput (uploaded file).
+        Priority:
+        1. file_path_str (if provided by the tool call)
+        2. path (uploaded file from UI)
+        """
+        # Check if file_path_str is provided (from tool mode)
+        file_path_str = getattr(self, "file_path_str", None)
+        if file_path_str:
+            # Use the string path from tool mode
+            from pathlib import Path
+
+            from lfx.schema.data import Data
+
+            resolved_path = Path(self.resolve_path(file_path_str))
+            if not resolved_path.exists():
+                msg = f"File or directory not found: {file_path_str}"
+                self.log(msg)
+                if not self.silent_errors:
+                    raise ValueError(msg)
+                return []
+
+            data_obj = Data(data={self.SERVER_FILE_PATH_FIELDNAME: str(resolved_path)})
+            return [BaseFileComponent.BaseFile(data_obj, resolved_path, delete_after_processing=False)]
+
+        # Otherwise use the default implementation (uses path FileInput)
+        return super()._validate_and_resolve_paths()
 
     def _is_docling_compatible(self, file_path: str) -> bool:
         """Lightweight extension gate for Docling-compatible types."""
@@ -282,17 +435,76 @@ class FileComponent(BaseFileComponent):
         )
         return file_path.lower().endswith(docling_exts)
 
+    async def _get_local_file_for_docling(self, file_path: str) -> tuple[str, bool]:
+        """Get a local file path for Docling processing, downloading from S3 if needed.
+
+        Args:
+            file_path: Either a local path or S3 key (format "flow_id/filename")
+
+        Returns:
+            tuple[str, bool]: (local_path, should_delete) where should_delete indicates
+                              if this is a temporary file that should be cleaned up
+        """
+        settings = get_settings_service().settings
+        if settings.storage_type == "local":
+            return file_path, False
+
+        # S3 storage - download to temp file
+        parsed = parse_storage_path(file_path)
+        if not parsed:
+            msg = f"Invalid S3 path format: {file_path}. Expected 'flow_id/filename'"
+            raise ValueError(msg)
+
+        storage_service = get_storage_service()
+        flow_id, filename = parsed
+
+        # Get file content from S3
+        content = await storage_service.get_file(flow_id, filename)
+
+        suffix = Path(filename).suffix
+        with NamedTemporaryFile(mode="wb", suffix=suffix, delete=False) as tmp_file:
+            tmp_file.write(content)
+            temp_path = tmp_file.name
+
+        return temp_path, True
+
     def _process_docling_in_subprocess(self, file_path: str) -> Data | None:
         """Run Docling in a separate OS process and map the result to a Data object.
 
         We avoid multiprocessing pickling by launching `python -c "<script>"` and
         passing JSON config via stdin. The child prints a JSON result to stdout.
+
+        For S3 storage, the file is downloaded to a temp file first.
         """
         if not file_path:
             return None
 
+        settings = get_settings_service().settings
+        if settings.storage_type == "s3":
+            local_path, should_delete = run_until_complete(self._get_local_file_for_docling(file_path))
+        else:
+            local_path = file_path
+            should_delete = False
+
+        try:
+            return self._process_docling_subprocess_impl(local_path, file_path)
+        finally:
+            # Clean up temp file if we created one
+            if should_delete:
+                with contextlib.suppress(Exception):
+                    Path(local_path).unlink()  # Ignore cleanup errors
+
+    def _process_docling_subprocess_impl(self, local_file_path: str, original_file_path: str) -> Data | None:
+        """Implementation of Docling subprocess processing.
+
+        Args:
+            local_file_path: Path to local file to process
+            original_file_path: Original file path to include in metadata
+        Returns:
+            Data object with processed content
+        """
         args: dict[str, Any] = {
-            "file_path": file_path,
+            "file_path": local_file_path,
             "markdown": bool(self.markdown),
             "image_mode": str(self.IMAGE_MODE),
             "md_image_placeholder": str(self.md_image_placeholder),
@@ -302,9 +514,6 @@ class FileComponent(BaseFileComponent):
                 self.ocr_engine if self.ocr_engine and self.ocr_engine != "None" and self.pipeline != "vlm" else None
             ),
         }
-
-        self.log(f"Starting Docling subprocess for file: {file_path}")
-        self.log(args)
 
         # Child script for isolating the docling processing
         child_script = textwrap.dedent(
@@ -495,21 +704,31 @@ class FileComponent(BaseFileComponent):
         )
 
         if not proc.stdout:
-            err_msg = proc.stderr.decode("utf-8", errors="replace") or "no output from child process"
-            return Data(data={"error": f"Docling subprocess error: {err_msg}", "file_path": file_path})
+            err_msg = proc.stderr.decode("utf-8", errors="replace") if proc.stderr else "no output from child process"
+            return Data(data={"error": f"Docling subprocess error: {err_msg}", "file_path": original_file_path})
 
         try:
             result = json.loads(proc.stdout.decode("utf-8"))
         except Exception as e:  # noqa: BLE001
             err_msg = proc.stderr.decode("utf-8", errors="replace")
             return Data(
-                data={"error": f"Invalid JSON from Docling subprocess: {e}. stderr={err_msg}", "file_path": file_path},
+                data={
+                    "error": f"Invalid JSON from Docling subprocess: {e}. stderr={err_msg}",
+                    "file_path": original_file_path,
+                },
             )
 
         if not result.get("ok"):
-            return Data(data={"error": result.get("error", "Unknown Docling error"), **result.get("meta", {})})
+            error_msg = result.get("error", "Unknown Docling error")
+            # Override meta file_path with original_file_path to ensure correct path matching
+            meta = result.get("meta", {})
+            meta["file_path"] = original_file_path
+            return Data(data={"error": error_msg, **meta})
 
         meta = result.get("meta", {})
+        # Override meta file_path with original_file_path to ensure correct path matching
+        # The subprocess returns the temp file path, but we need the original S3/local path for rollup_data
+        meta["file_path"] = original_file_path
         if result.get("mode") == "markdown":
             exported_content = str(result.get("text", ""))
             return Data(
@@ -532,6 +751,47 @@ class FileComponent(BaseFileComponent):
         if not file_list:
             msg = "No files to process."
             raise ValueError(msg)
+
+        # Validate image files to detect content/extension mismatches
+        # This prevents API errors like "Image does not match the provided media type"
+        image_extensions = {"jpeg", "jpg", "png", "gif", "webp", "bmp", "tiff"}
+        settings = get_settings_service().settings
+        for file in file_list:
+            extension = file.path.suffix[1:].lower()
+            if extension in image_extensions:
+                # Read bytes based on storage type
+                try:
+                    if settings.storage_type == "s3":
+                        # For S3 storage, use storage service to read file bytes
+                        file_path_str = str(file.path)
+                        content = run_until_complete(read_file_bytes(file_path_str))
+                    else:
+                        # For local storage, read bytes directly from filesystem
+                        content = file.path.read_bytes()
+
+                    is_valid, error_msg = validate_image_content_type(
+                        str(file.path),
+                        content=content,
+                    )
+                    if not is_valid:
+                        self.log(error_msg)
+                        if not self.silent_errors:
+                            raise ValueError(error_msg)
+                except (OSError, FileNotFoundError) as e:
+                    self.log(f"Could not read file for validation: {e}")
+                    # Continue - let it fail later with better error
+
+        # Validate that files requiring Docling are only processed when advanced mode is enabled
+        if not self.advanced_mode:
+            for file in file_list:
+                extension = file.path.suffix[1:].lower()
+                if extension in self.DOCLING_ONLY_EXTENSIONS:
+                    msg = (
+                        f"File '{file.path.name}' has extension '.{extension}' which requires "
+                        f"Advanced Parser mode. Please enable 'Advanced Parser' to process this file."
+                    )
+                    self.log(msg)
+                    raise ValueError(msg)
 
         def process_file_standard(file_path: str, *, silent_errors: bool = False) -> Data | None:
             try:
@@ -556,10 +816,36 @@ class FileComponent(BaseFileComponent):
                 file_path = str(file.path)
                 advanced_data: Data | None = self._process_docling_in_subprocess(file_path)
 
+                # Handle None case - Docling processing failed or returned None
+                if advanced_data is None:
+                    error_data = Data(
+                        data={
+                            "file_path": file_path,
+                            "error": "Docling processing returned no result. Check logs for details.",
+                        },
+                    )
+                    final_return.extend(self.rollup_data([file], [error_data]))
+                    continue
+
                 # --- UNNEST: expand each element in `doc` to its own Data row
                 payload = getattr(advanced_data, "data", {}) or {}
+
+                # Check for errors first
+                if "error" in payload:
+                    error_msg = payload.get("error", "Unknown error")
+                    error_data = Data(
+                        data={
+                            "file_path": file_path,
+                            "error": error_msg,
+                            **{k: v for k, v in payload.items() if k not in ("error", "file_path")},
+                        },
+                    )
+                    final_return.extend(self.rollup_data([file], [error_data]))
+                    continue
+
                 doc_rows = payload.get("doc")
-                if isinstance(doc_rows, list):
+                if isinstance(doc_rows, list) and doc_rows:
+                    # Non-empty list of structured rows
                     rows: list[Data | None] = [
                         Data(
                             data={
@@ -569,14 +855,36 @@ class FileComponent(BaseFileComponent):
                         )
                         for item in doc_rows
                     ]
-                    final_return.extend(self.rollup_data(file_list, rows))
+                    final_return.extend(self.rollup_data([file], rows))
+                elif isinstance(doc_rows, list) and not doc_rows:
+                    # Empty list - file was processed but no text content found
+                    # Create a Data object indicating no content was extracted
+                    self.log(f"No text extracted from '{file_path}', creating placeholder data")
+                    empty_data = Data(
+                        data={
+                            "file_path": file_path,
+                            "text": "(No text content extracted from image)",
+                            "info": "Image processed successfully but contained no extractable text",
+                            **{k: v for k, v in payload.items() if k != "doc"},
+                        },
+                    )
+                    final_return.extend(self.rollup_data([file], [empty_data]))
                 else:
                     # If not structured, keep as-is (e.g., markdown export or error dict)
-                    final_return.extend(self.rollup_data(file_list, [advanced_data]))
+                    # Ensure file_path is set for proper rollup matching
+                    if not payload.get("file_path"):
+                        payload["file_path"] = file_path
+                        # Create new Data with file_path
+                        advanced_data = Data(
+                            data=payload,
+                            text=getattr(advanced_data, "text", None),
+                        )
+                    final_return.extend(self.rollup_data([file], [advanced_data]))
             return final_return
 
         # Standard multi-file (or single non-advanced) path
         concurrency = 1 if not self.use_multithreading else max(1, self.concurrency_multithreading)
+
         file_paths = [str(f.path) for f in file_list]
         self.log(f"Starting parallel processing of {len(file_paths)} files with concurrency: {concurrency}.")
         my_data = parallel_load_data(
@@ -592,12 +900,16 @@ class FileComponent(BaseFileComponent):
     def load_files_helper(self) -> DataFrame:
         result = self.load_files()
 
-        # Error condition - raise error if no text and an error is present
-        if not hasattr(result, "text"):
-            if hasattr(result, "error"):
-                raise ValueError(result.error[0])
+        # Result is a DataFrame - check if it has any rows
+        if result.empty:
             msg = "Could not extract content from the provided file(s)."
             raise ValueError(msg)
+
+        # Check for error column with error messages
+        if "error" in result.columns:
+            errors = result["error"].dropna().tolist()
+            if errors and not any(col in result.columns for col in ["text", "doc", "exported_content"]):
+                raise ValueError(errors[0])
 
         return result
 
@@ -610,4 +922,17 @@ class FileComponent(BaseFileComponent):
         """Load files using advanced Docling processing and export to Markdown format."""
         self.markdown = True
         result = self.load_files_helper()
-        return Message(text=str(result.text[0]))
+
+        # Result is a DataFrame - check for text or exported_content columns
+        if "text" in result.columns and not result["text"].isna().all():
+            text_values = result["text"].dropna().tolist()
+            if text_values:
+                return Message(text=str(text_values[0]))
+
+        if "exported_content" in result.columns and not result["exported_content"].isna().all():
+            content_values = result["exported_content"].dropna().tolist()
+            if content_values:
+                return Message(text=str(content_values[0]))
+
+        # Return empty message with info that no text was found
+        return Message(text="(No text content extracted from file)")

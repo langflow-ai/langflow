@@ -90,10 +90,6 @@ test(
         targetPosition: { x: 720, y: 400 },
       });
 
-    await page
-      .getByTestId("handle-parsercomponent-shownode-parsed text-right")
-      .click();
-
     const _loopItemInput = await page
       .getByTestId("handle-loopcomponent-shownode-item-left")
       .first()
@@ -160,7 +156,7 @@ test(
     await page.getByTestId("canvas_controls_dropdown").click();
 
     await zoomOut(page, 2);
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await page.getByTestId("canvas_controls_dropdown").click({ force: true });
 
     await page.getByTestId("div-generic-node").nth(5).click();
 

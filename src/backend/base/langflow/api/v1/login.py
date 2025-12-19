@@ -67,8 +67,15 @@ async def login_to_get_access_token(
             domain=auth_settings.COOKIE_DOMAIN,
         )
         await get_variable_service().initialize_user_variables(user.id, db)
+        # Initialize agentic variables if agentic experience is enabled
+        from langflow.api.utils.mcp.agentic_mcp import initialize_agentic_user_variables
+
         # Create default project for user if it doesn't exist
         _ = await get_or_create_default_folder(db, user.id)
+
+        if get_settings_service().settings.agentic_experience:
+            await initialize_agentic_user_variables(user.id, db)
+
         return tokens
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -108,6 +115,11 @@ async def auto_login(response: Response, db: DbSession):
                 expires=None,  # Set to None to make it a session cookie
                 domain=auth_settings.COOKIE_DOMAIN,
             )
+
+            if get_settings_service().settings.agentic_experience:
+                from langflow.api.utils.mcp.agentic_mcp import initialize_agentic_user_variables
+
+                await initialize_agentic_user_variables(user.id, db)
 
         return tokens
 

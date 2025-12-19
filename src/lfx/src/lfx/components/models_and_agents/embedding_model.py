@@ -1,16 +1,13 @@
 from typing import Any
 
-import requests
-from ibm_watsonx_ai.metanames import EmbedTextParamsMetaNames
-from langchain_openai import OpenAIEmbeddings
-
 from lfx.base.embeddings.model import LCEmbeddingsModel
-from lfx.base.models.model_utils import get_ollama_models, is_valid_ollama_url
-from lfx.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
-from lfx.base.models.watsonx_constants import (
-    IBM_WATSONX_URLS,
-    WATSONX_EMBEDDING_MODEL_NAMES,
+from lfx.base.models.unified_models import (
+    get_api_key_for_provider,
+    get_embedding_classes,
+    get_embedding_model_options,
+    update_model_options_in_build_config,
 )
+from lfx.base.models.watsonx_constants import IBM_WATSONX_URLS
 from lfx.field_typing import Embeddings
 from lfx.io import (
     BoolInput,
@@ -19,19 +16,9 @@ from lfx.io import (
     FloatInput,
     IntInput,
     MessageTextInput,
+    ModelInput,
     SecretStrInput,
 )
-from lfx.log.logger import logger
-from lfx.schema.dotdict import dotdict
-from lfx.utils.util import transform_localhost_url
-
-# Ollama API constants
-HTTP_STATUS_OK = 200
-JSON_MODELS_KEY = "models"
-JSON_NAME_KEY = "name"
-JSON_CAPABILITIES_KEY = "capabilities"
-DESIRED_CAPABILITY = "embedding"
-DEFAULT_OLLAMA_URL = "http://localhost:11434"
 
 
 class EmbeddingModelComponent(LCEmbeddingsModel):
@@ -42,15 +29,33 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
     name = "EmbeddingModel"
     category = "models"
 
+    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
+        """Dynamically update build config with user-filtered model options."""
+        return update_model_options_in_build_config(
+            component=self,
+            build_config=build_config,
+            cache_key_prefix="embedding_model_options",
+            get_options_func=get_embedding_model_options,
+            field_name=field_name,
+            field_value=field_value,
+        )
+
     inputs = [
-        DropdownInput(
-            name="provider",
-            display_name="Model Provider",
-            options=["OpenAI", "Ollama", "IBM watsonx.ai"],
-            value="OpenAI",
-            info="Select the embedding model provider",
+        ModelInput(
+            name="model",
+            display_name="Embedding Model",
+            info="Select your model provider",
             real_time_refresh=True,
-            options_metadata=[{"icon": "OpenAI"}, {"icon": "Ollama"}, {"icon": "WatsonxAI"}],
+            required=True,
+            model_type="embedding",
+            input_types=["Embeddings"],  # Override default to accept Embeddings instead of LanguageModel
+        ),
+        SecretStrInput(
+            name="api_key",
+            display_name="API Key",
+            info="Model Provider API key",
+            real_time_refresh=True,
+            advanced=True,
         ),
         MessageTextInput(
             name="api_base",
@@ -58,15 +63,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             info="Base URL for the API. Leave empty for default.",
             advanced=True,
         ),
-        MessageTextInput(
-            name="ollama_base_url",
-            display_name="Ollama API URL",
-            info=f"Endpoint of the Ollama API (Ollama only). Defaults to {DEFAULT_OLLAMA_URL}",
-            value=DEFAULT_OLLAMA_URL,
-            show=False,
-            real_time_refresh=True,
-            load_from_db=True,
-        ),
+        # Watson-specific inputs
         DropdownInput(
             name="base_url_ibm_watsonx",
             display_name="watsonx API Endpoint",
@@ -76,24 +73,6 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             show=False,
             real_time_refresh=True,
         ),
-        DropdownInput(
-            name="model",
-            display_name="Model Name",
-            options=OPENAI_EMBEDDING_MODEL_NAMES,
-            value=OPENAI_EMBEDDING_MODEL_NAMES[0],
-            info="Select the embedding model to use",
-            real_time_refresh=True,
-            refresh_button=True,
-        ),
-        SecretStrInput(
-            name="api_key",
-            display_name="OpenAI API Key",
-            info="Model Provider API key",
-            required=True,
-            show=True,
-            real_time_refresh=True,
-        ),
-        # Watson-specific inputs
         MessageTextInput(
             name="project_id",
             display_name="Project ID",
@@ -107,10 +86,28 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             "Only supported by certain models.",
             advanced=True,
         ),
-        IntInput(name="chunk_size", display_name="Chunk Size", advanced=True, value=1000),
-        FloatInput(name="request_timeout", display_name="Request Timeout", advanced=True),
-        IntInput(name="max_retries", display_name="Max Retries", advanced=True, value=3),
-        BoolInput(name="show_progress_bar", display_name="Show Progress Bar", advanced=True),
+        IntInput(
+            name="chunk_size",
+            display_name="Chunk Size",
+            advanced=True,
+            value=1000,
+        ),
+        FloatInput(
+            name="request_timeout",
+            display_name="Request Timeout",
+            advanced=True,
+        ),
+        IntInput(
+            name="max_retries",
+            display_name="Max Retries",
+            advanced=True,
+            value=3,
+        ),
+        BoolInput(
+            name="show_progress_bar",
+            display_name="Show Progress Bar",
+            advanced=True,
+        ),
         DictInput(
             name="model_kwargs",
             display_name="Model Kwargs",
@@ -133,221 +130,122 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
         ),
     ]
 
-    @staticmethod
-    def fetch_ibm_models(base_url: str) -> list[str]:
-        """Fetch available models from the watsonx.ai API."""
-        try:
-            endpoint = f"{base_url}/ml/v1/foundation_model_specs"
-            params = {
-                "version": "2024-09-16",
-                "filters": "function_embedding,!lifecycle_withdrawn:and",
-            }
-            response = requests.get(endpoint, params=params, timeout=10)
-            response.raise_for_status()
-            data = response.json()
-            models = [model["model_id"] for model in data.get("resources", [])]
-            return sorted(models)
-        except Exception:  # noqa: BLE001
-            logger.exception("Error fetching models")
-            return WATSONX_EMBEDDING_MODEL_NAMES
-
     def build_embeddings(self) -> Embeddings:
-        provider = self.provider
-        model = self.model
-        api_key = self.api_key
-        api_base = self.api_base
-        base_url_ibm_watsonx = self.base_url_ibm_watsonx
-        ollama_base_url = self.ollama_base_url
-        dimensions = self.dimensions
-        chunk_size = self.chunk_size
-        request_timeout = self.request_timeout
-        max_retries = self.max_retries
-        show_progress_bar = self.show_progress_bar
-        model_kwargs = self.model_kwargs or {}
+        """Build and return an embeddings instance based on the selected model."""
+        # If an Embeddings object is directly connected, return it
+        try:
+            from langchain_core.embeddings import Embeddings as BaseEmbeddings
 
-        if provider == "OpenAI":
-            if not api_key:
-                msg = "OpenAI API key is required when using OpenAI provider"
-                raise ValueError(msg)
-            return OpenAIEmbeddings(
-                model=model,
-                dimensions=dimensions or None,
-                base_url=api_base or None,
-                api_key=api_key,
-                chunk_size=chunk_size,
-                max_retries=max_retries,
-                timeout=request_timeout or None,
-                show_progress_bar=show_progress_bar,
-                model_kwargs=model_kwargs,
+            if isinstance(self.model, BaseEmbeddings):
+                return self.model
+        except ImportError:
+            pass
+
+        # Safely extract model configuration
+        if not self.model or not isinstance(self.model, list):
+            msg = "Model must be a non-empty list"
+            raise ValueError(msg)
+
+        model = self.model[0]
+        model_name = model.get("name")
+        provider = model.get("provider")
+        metadata = model.get("metadata", {})
+
+        # Get API key from user input or global variables
+        api_key = get_api_key_for_provider(self.user_id, provider, self.api_key)
+
+        # Validate required fields (Ollama doesn't require API key)
+        if not api_key and provider != "Ollama":
+            msg = (
+                f"{provider} API key is required. "
+                f"Please provide it in the component or configure it globally as "
+                f"{provider.upper().replace(' ', '_')}_API_KEY."
+            )
+            raise ValueError(msg)
+
+        if not model_name:
+            msg = "Model name is required"
+            raise ValueError(msg)
+
+        # Get embedding class
+        embedding_class_name = metadata.get("embedding_class")
+        if not embedding_class_name:
+            msg = f"No embedding class defined in metadata for {model_name}"
+            raise ValueError(msg)
+
+        embedding_class = get_embedding_classes().get(embedding_class_name)
+        if not embedding_class:
+            msg = f"Unknown embedding class: {embedding_class_name}"
+            raise ValueError(msg)
+
+        # Build kwargs using parameter mapping
+        kwargs = self._build_kwargs(model, metadata)
+
+        return embedding_class(**kwargs)
+
+    def _build_kwargs(self, model: dict[str, Any], metadata: dict[str, Any]) -> dict[str, Any]:
+        """Build kwargs dictionary using parameter mapping."""
+        param_mapping = metadata.get("param_mapping", {})
+        if not param_mapping:
+            msg = "Parameter mapping not found in metadata"
+            raise ValueError(msg)
+
+        kwargs = {}
+
+        # Required parameters - handle both "model" and "model_id" (for watsonx)
+        if "model" in param_mapping:
+            kwargs[param_mapping["model"]] = model.get("name")
+        elif "model_id" in param_mapping:
+            kwargs[param_mapping["model_id"]] = model.get("name")
+        if "api_key" in param_mapping:
+            kwargs[param_mapping["api_key"]] = get_api_key_for_provider(
+                self.user_id,
+                model.get("provider"),
+                self.api_key,
             )
 
-        if provider == "Ollama":
-            try:
-                from langchain_ollama import OllamaEmbeddings
-            except ImportError:
-                try:
-                    from langchain_community.embeddings import OllamaEmbeddings
-                except ImportError:
-                    msg = "Please install langchain-ollama: pip install langchain-ollama"
-                    raise ImportError(msg) from None
+        # Optional parameters with their values
+        provider = model.get("provider")
+        optional_params = {
+            "api_base": self.api_base if self.api_base else None,
+            "dimensions": int(self.dimensions) if self.dimensions else None,
+            "chunk_size": int(self.chunk_size) if self.chunk_size else None,
+            "request_timeout": float(self.request_timeout) if self.request_timeout else None,
+            "max_retries": int(self.max_retries) if self.max_retries else None,
+            "show_progress_bar": self.show_progress_bar if hasattr(self, "show_progress_bar") else None,
+            "model_kwargs": self.model_kwargs if self.model_kwargs else None,
+        }
 
-            transformed_base_url = transform_localhost_url(ollama_base_url)
-
-            # Check if URL contains /v1 suffix (OpenAI-compatible mode)
-            if transformed_base_url and transformed_base_url.rstrip("/").endswith("/v1"):
-                # Strip /v1 suffix and log warning
-                transformed_base_url = transformed_base_url.rstrip("/").removesuffix("/v1")
-                logger.warning(
-                    "Detected '/v1' suffix in base URL. The Ollama component uses the native Ollama API, "
-                    "not the OpenAI-compatible API. The '/v1' suffix has been automatically removed. "
-                    "If you want to use the OpenAI-compatible API, please use the OpenAI component instead. "
-                    "Learn more at https://docs.ollama.com/openai#openai-compatibility"
+        # Watson-specific parameters
+        if provider in {"IBM WatsonX", "IBM watsonx.ai"}:
+            # Map base_url_ibm_watsonx to "url" parameter for watsonx
+            if "url" in param_mapping:
+                url_value = (
+                    self.base_url_ibm_watsonx
+                    if hasattr(self, "base_url_ibm_watsonx") and self.base_url_ibm_watsonx
+                    else "https://us-south.ml.cloud.ibm.com"
                 )
+                kwargs[param_mapping["url"]] = url_value
+            # Map project_id for watsonx
+            if hasattr(self, "project_id") and self.project_id and "project_id" in param_mapping:
+                kwargs[param_mapping["project_id"]] = self.project_id
 
-            return OllamaEmbeddings(
-                model=model,
-                base_url=transformed_base_url or "http://localhost:11434",
-                **model_kwargs,
-            )
+        # Ollama-specific parameters
+        if provider == "Ollama" and "base_url" in param_mapping:
+            # Map api_base to "base_url" parameter for Ollama
+            base_url_value = self.api_base if hasattr(self, "api_base") and self.api_base else "http://localhost:11434"
+            kwargs[param_mapping["base_url"]] = base_url_value
 
-        if provider == "IBM watsonx.ai":
-            try:
-                from langchain_ibm import WatsonxEmbeddings
-            except ImportError:
-                msg = "Please install langchain-ibm: pip install langchain-ibm"
-                raise ImportError(msg) from None
-
-            if not api_key:
-                msg = "IBM watsonx.ai API key is required when using IBM watsonx.ai provider"
-                raise ValueError(msg)
-
-            project_id = self.project_id
-
-            if not project_id:
-                msg = "Project ID is required for IBM watsonx.ai provider"
-                raise ValueError(msg)
-
-            from ibm_watsonx_ai import APIClient, Credentials
-
-            credentials = Credentials(
-                api_key=self.api_key,
-                url=base_url_ibm_watsonx or "https://us-south.ml.cloud.ibm.com",
-            )
-
-            api_client = APIClient(credentials)
-
-            params = {
-                EmbedTextParamsMetaNames.TRUNCATE_INPUT_TOKENS: self.truncate_input_tokens,
-                EmbedTextParamsMetaNames.RETURN_OPTIONS: {"input_text": self.input_text},
-            }
-
-            return WatsonxEmbeddings(
-                model_id=model,
-                params=params,
-                watsonx_client=api_client,
-                project_id=project_id,
-            )
-
-        msg = f"Unknown provider: {provider}"
-        raise ValueError(msg)
-
-    async def update_build_config(
-        self, build_config: dotdict, field_value: Any, field_name: str | None = None
-    ) -> dotdict:
-        if field_name == "provider":
-            if field_value == "OpenAI":
-                build_config["model"]["options"] = OPENAI_EMBEDDING_MODEL_NAMES
-                build_config["model"]["value"] = OPENAI_EMBEDDING_MODEL_NAMES[0]
-                build_config["api_key"]["display_name"] = "OpenAI API Key"
-                build_config["api_key"]["required"] = True
-                build_config["api_key"]["show"] = True
-                build_config["api_base"]["display_name"] = "OpenAI API Base URL"
-                build_config["api_base"]["advanced"] = True
-                build_config["api_base"]["show"] = True
-                build_config["ollama_base_url"]["show"] = False
-                build_config["project_id"]["show"] = False
-                build_config["base_url_ibm_watsonx"]["show"] = False
-                build_config["truncate_input_tokens"]["show"] = False
-                build_config["input_text"]["show"] = False
-            elif field_value == "Ollama":
-                build_config["ollama_base_url"]["show"] = True
-
-                if await is_valid_ollama_url(url=self.ollama_base_url):
-                    try:
-                        models = await get_ollama_models(
-                            base_url_value=self.ollama_base_url,
-                            desired_capability=DESIRED_CAPABILITY,
-                            json_models_key=JSON_MODELS_KEY,
-                            json_name_key=JSON_NAME_KEY,
-                            json_capabilities_key=JSON_CAPABILITIES_KEY,
-                        )
-                        build_config["model"]["options"] = models
-                        build_config["model"]["value"] = models[0] if models else ""
-                    except ValueError:
-                        build_config["model"]["options"] = []
-                        build_config["model"]["value"] = ""
+        # Add optional parameters if they have values and are mapped
+        for param_name, param_value in optional_params.items():
+            if param_value is not None and param_name in param_mapping:
+                # Special handling for request_timeout with Google provider
+                if param_name == "request_timeout":
+                    if provider == "Google" and isinstance(param_value, (int, float)):
+                        kwargs[param_mapping[param_name]] = {"timeout": param_value}
+                    else:
+                        kwargs[param_mapping[param_name]] = param_value
                 else:
-                    build_config["model"]["options"] = []
-                    build_config["model"]["value"] = ""
-                build_config["truncate_input_tokens"]["show"] = False
-                build_config["input_text"]["show"] = False
-                build_config["api_key"]["display_name"] = "API Key (Optional)"
-                build_config["api_key"]["required"] = False
-                build_config["api_key"]["show"] = False
-                build_config["api_base"]["show"] = False
-                build_config["project_id"]["show"] = False
-                build_config["base_url_ibm_watsonx"]["show"] = False
+                    kwargs[param_mapping[param_name]] = param_value
 
-            elif field_value == "IBM watsonx.ai":
-                build_config["model"]["options"] = self.fetch_ibm_models(base_url=self.base_url_ibm_watsonx)
-                build_config["model"]["value"] = self.fetch_ibm_models(base_url=self.base_url_ibm_watsonx)[0]
-                build_config["api_key"]["display_name"] = "IBM watsonx.ai API Key"
-                build_config["api_key"]["required"] = True
-                build_config["api_key"]["show"] = True
-                build_config["api_base"]["show"] = False
-                build_config["ollama_base_url"]["show"] = False
-                build_config["base_url_ibm_watsonx"]["show"] = True
-                build_config["project_id"]["show"] = True
-                build_config["truncate_input_tokens"]["show"] = True
-                build_config["input_text"]["show"] = True
-        elif field_name == "base_url_ibm_watsonx":
-            build_config["model"]["options"] = self.fetch_ibm_models(base_url=field_value)
-            build_config["model"]["value"] = self.fetch_ibm_models(base_url=field_value)[0]
-        elif field_name == "ollama_base_url":
-            # # Refresh Ollama models when base URL changes
-            # if hasattr(self, "provider") and self.provider == "Ollama":
-            # Use field_value if provided, otherwise fall back to instance attribute
-            ollama_url = self.ollama_base_url
-            if await is_valid_ollama_url(url=ollama_url):
-                try:
-                    models = await get_ollama_models(
-                        base_url_value=ollama_url,
-                        desired_capability=DESIRED_CAPABILITY,
-                        json_models_key=JSON_MODELS_KEY,
-                        json_name_key=JSON_NAME_KEY,
-                        json_capabilities_key=JSON_CAPABILITIES_KEY,
-                    )
-                    build_config["model"]["options"] = models
-                    build_config["model"]["value"] = models[0] if models else ""
-                except ValueError:
-                    await logger.awarning("Failed to fetch Ollama embedding models.")
-                    build_config["model"]["options"] = []
-                    build_config["model"]["value"] = ""
-
-        elif field_name == "model" and self.provider == "Ollama":
-            ollama_url = self.ollama_base_url
-            if await is_valid_ollama_url(url=ollama_url):
-                try:
-                    models = await get_ollama_models(
-                        base_url_value=ollama_url,
-                        desired_capability=DESIRED_CAPABILITY,
-                        json_models_key=JSON_MODELS_KEY,
-                        json_name_key=JSON_NAME_KEY,
-                        json_capabilities_key=JSON_CAPABILITIES_KEY,
-                    )
-                    build_config["model"]["options"] = models
-                except ValueError:
-                    await logger.awarning("Failed to refresh Ollama embedding models.")
-                    build_config["model"]["options"] = []
-
-        return build_config
+        return kwargs

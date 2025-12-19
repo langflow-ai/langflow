@@ -1,32 +1,33 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from http import HTTPStatus
 from typing import TYPE_CHECKING
-
-from fastapi import HTTPException
-from lfx.log.logger import logger
 
 from langflow.services.schema import ServiceType
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
-    from lfx.services.settings.service import SettingsService
     from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.services.cache.service import AsyncBaseCacheService, CacheService
     from langflow.services.chat.service import ChatService
     from langflow.services.database.service import DatabaseService
-    from langflow.services.job_queue.service import JobQueueService
     from langflow.services.session.service import SessionService
     from langflow.services.state.service import StateService
-    from langflow.services.storage.service import StorageService
     from langflow.services.store.service import StoreService
     from langflow.services.task.service import TaskService
-    from langflow.services.telemetry.service import TelemetryService
     from langflow.services.tracing.service import TracingService
     from langflow.services.variable.service import VariableService
+
+# These imports MUST be outside TYPE_CHECKING because FastAPI uses eval_str=True
+# to evaluate type annotations, and these types are used as return types for
+# dependency functions that FastAPI evaluates at module load time.
+from lfx.services.settings.service import SettingsService  # noqa: TC002
+
+from langflow.services.job_queue.service import JobQueueService  # noqa: TC001
+from langflow.services.storage.service import StorageService  # noqa: TC001
+from langflow.services.telemetry.service import TelemetryService  # noqa: TC001
 
 
 def get_service(service_type: ServiceType, default=None):
@@ -150,14 +151,8 @@ def get_db_service() -> DatabaseService:
 
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
-    """Retrieves an async session from the database service.
-
-    Yields:
-        AsyncSession: An async session object.
-
-    """
-    async with session_scope() as session:
-        yield session
+    msg = "get_session is deprecated, use session_scope instead"
+    raise NotImplementedError(msg)
 
 
 @asynccontextmanager
@@ -175,27 +170,10 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
         Exception: If an error occurs during the session scope.
 
     """
-    db_service = get_db_service()
-    async with db_service.with_session() as session:
-        try:
-            yield session
-            await session.commit()
-        except Exception as e:
-            await session.rollback()
+    from lfx.services.deps import session_scope as lfx_session_scope
 
-            # Log at appropriate level based on error type
-            if isinstance(e, HTTPException):
-                if HTTPStatus.BAD_REQUEST.value <= e.status_code < HTTPStatus.INTERNAL_SERVER_ERROR.value:
-                    # Client errors (4xx) - log at info level
-                    await logger.ainfo(f"Client error during session scope: {e.status_code}: {e.detail}")
-                else:
-                    # Server errors (5xx) or other - log at error level
-                    await logger.aexception("An error occurred during the session scope.", exception=e)
-            else:
-                # Non-HTTP exceptions - log at error level
-                await logger.aexception("An error occurred during the session scope.", exception=e)
-
-            raise
+    async with lfx_session_scope() as session:
+        yield session
 
 
 def get_cache_service() -> CacheService | AsyncBaseCacheService:

@@ -140,6 +140,7 @@ const router = createBrowserRouter(
                     element={<GlobalVariablesPage />}
                   />
                   <Route path="mcp-servers" element={<MCPServersPage />} />
+
                   <Route path="api-keys" element={<ApiKeysPage />} />
                   <Route
                     path="general/:scrollId?"

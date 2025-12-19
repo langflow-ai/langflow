@@ -94,6 +94,20 @@ class PlaceholderGraph(NamedTuple):
     context: dict
     flow_name: str | None
 
+    def get_vertex_neighbors(self, _vertex) -> dict:
+        """Returns an empty dictionary since PlaceholderGraph has no edges or neighbors.
+
+        This method exists for compatibility with real Graph objects, allowing components
+        to check graph connectivity even when running in isolation (e.g., in tests).
+
+        Args:
+            _vertex: The vertex to check neighbors for (ignored in placeholder context).
+
+        Returns:
+            An empty dictionary, indicating no neighbors exist.
+        """
+        return {}
+
 
 class Component(CustomComponent):
     inputs: list[InputTypes] = []
@@ -577,7 +591,10 @@ class Component(CustomComponent):
         self._validate_outputs()
 
     async def run_and_validate_update_outputs(self, frontend_node: dict, field_name: str, field_value: Any):
-        frontend_node = self.update_outputs(frontend_node, field_name, field_value)
+        if inspect.iscoroutinefunction(self.update_outputs):
+            frontend_node = await self.update_outputs(frontend_node, field_name, field_value)
+        else:
+            frontend_node = self.update_outputs(frontend_node, field_name, field_value)
         if field_name == "tool_mode" or frontend_node.get("tool_mode"):
             is_tool_mode = field_value or frontend_node.get("tool_mode")
             frontend_node["outputs"] = [self._build_tool_output()] if is_tool_mode else frontend_node["outputs"]
@@ -1538,6 +1555,14 @@ class Component(CustomComponent):
         from lfx.graph.utils import has_chat_output
 
         return has_chat_output(self.graph.get_vertex_neighbors(self._vertex))
+
+    def is_connected_to_chat_input(self) -> bool:
+        # Lazy import to avoid circular dependency
+        from lfx.graph.utils import has_chat_input
+
+        if self.graph is None:
+            return False
+        return has_chat_input(self.graph.get_vertex_neighbors(self._vertex))
 
     def _should_skip_message(self, message: Message) -> bool:
         """Check if the message should be skipped based on vertex configuration and message type."""

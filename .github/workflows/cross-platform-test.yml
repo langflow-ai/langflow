@@ -33,7 +33,7 @@ jobs:
       main-artifact-name: ${{ steps.set-names.outputs.main-artifact-name }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
       - name: Setup Environment
         uses: astral-sh/setup-uv@v6
         with:
@@ -189,7 +189,7 @@ jobs:
           find ./base-dist -name "*.whl" -type f
           WHEEL_FILE=$(find ./base-dist -name "*.whl" -type f | head -1)
           if [ -n "$WHEEL_FILE" ]; then
-            uv pip install --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
+            uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
           else
             echo "No wheel file found in ./base-dist/"
             exit 1
@@ -231,7 +231,7 @@ jobs:
           find ./base-dist -name "*.whl" -type f
           WHEEL_FILE=$(find ./base-dist -name "*.whl" -type f | head -1)
           if [ -n "$WHEEL_FILE" ]; then
-            uv pip install --python ./test-env/bin/python "$WHEEL_FILE"
+            uv pip install --prerelease=allow --python ./test-env/bin/python "$WHEEL_FILE"
           else
             echo "No wheel file found in ./base-dist/"
             exit 1
@@ -475,7 +475,7 @@ jobs:
           find ./base-dist -name "*.whl" -type f
           WHEEL_FILE=$(find ./base-dist -name "*.whl" -type f | head -1)
           if [ -n "$WHEEL_FILE" ]; then
-            uv pip install --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
+            uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
           else
             echo "No wheel file found in ./base-dist/"
             exit 1
@@ -489,7 +489,7 @@ jobs:
           find ./main-dist -name "*.whl" -type f
           WHEEL_FILE=$(find ./main-dist -name "*.whl" -type f | head -1)
           if [ -n "$WHEEL_FILE" ]; then
-            uv pip install --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
+            uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
           else
             echo "No wheel file found in ./main-dist/"
             exit 1
@@ -517,7 +517,7 @@ jobs:
           find ./base-dist -name "*.whl" -type f
           WHEEL_FILE=$(find ./base-dist -name "*.whl" -type f | head -1)
           if [ -n "$WHEEL_FILE" ]; then
-            uv pip install --python ./test-env/bin/python "$WHEEL_FILE"
+            uv pip install --prerelease=allow --python ./test-env/bin/python "$WHEEL_FILE"
           else
             echo "No wheel file found in ./base-dist/"
             exit 1
