@@ -25,9 +25,9 @@
         "id": "reactflow__edge-ChatInput-nr0Vp{œdataTypeœ:œChatInputœ,œidœ:œChatInput-nr0Vpœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ArXivComponent-tAHR5{œfieldNameœ:œsearch_queryœ,œidœ:œArXivComponent-tAHR5œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-nr0Vp",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-nr0Vpœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-nr0Vpœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ArXivComponent-tAHR5",
-        "targetHandle": "{œfieldNameœ:œsearch_queryœ,œidœ:œArXivComponent-tAHR5œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œArXivComponent-tAHR5œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
@@ -52,9 +52,9 @@
         },
         "id": "xy-edge__LoopComponent-GtPZT{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-GtPZTœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}-ParserComponent-pXAMb{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-pXAMbœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "source": "LoopComponent-GtPZT",
-        "sourceHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-GtPZTœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}",
+        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-GtPZTœ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ]}",
         "target": "ParserComponent-pXAMb",
-        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-pXAMbœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-pXAMbœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "className": "",
@@ -78,9 +78,9 @@
         },
         "id": "xy-edge__ParserComponent-pXAMb{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-pXAMbœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-XKvly{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-XKvlyœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "source": "ParserComponent-pXAMb",
-        "sourceHandle": "{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-pXAMbœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-pXAMbœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "LanguageModelComponent-XKvly",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-XKvlyœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-XKvlyœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
@@ -105,9 +105,9 @@
         },
         "id": "xy-edge__LanguageModelComponent-XKvly{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-XKvlyœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-LoopComponent-GtPZT{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-GtPZTœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ,œMessageœ]}",
         "source": "LanguageModelComponent-XKvly",
-        "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-XKvlyœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-XKvlyœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "LoopComponent-GtPZT",
-        "targetHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-GtPZTœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ,œMessageœ]}"
+        "targetHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-GtPZTœ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ, œMessageœ]}"
       },
       {
         "className": "",
@@ -131,9 +131,9 @@
         },
         "id": "xy-edge__ArXivComponent-tAHR5{œdataTypeœ:œArXivComponentœ,œidœ:œArXivComponent-tAHR5œ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-LoopComponent-GtPZT{œfieldNameœ:œdataœ,œidœ:œLoopComponent-GtPZTœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}",
         "source": "ArXivComponent-tAHR5",
-        "sourceHandle": "{œdataTypeœ:œArXivComponentœ,œidœ:œArXivComponent-tAHR5œ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œArXivComponentœ, œidœ: œArXivComponent-tAHR5œ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "LoopComponent-GtPZT",
-        "targetHandle": "{œfieldNameœ:œdataœ,œidœ:œLoopComponent-GtPZTœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œLoopComponent-GtPZTœ, œinputTypesœ: [œDataFrameœ], œtypeœ: œotherœ}"
       },
       {
         "className": "",
@@ -159,9 +159,9 @@
         },
         "id": "xy-edge__LoopComponent-GtPZT{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-GtPZTœ,œnameœ:œdoneœ,œoutput_typesœ:[œDataFrameœ]}-ChatOutput-YAED9{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-YAED9œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "source": "LoopComponent-GtPZT",
-        "sourceHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-GtPZTœ,œnameœ:œdoneœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-GtPZTœ, œnameœ: œdoneœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "ChatOutput-YAED9",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-YAED9œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-YAED9œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
