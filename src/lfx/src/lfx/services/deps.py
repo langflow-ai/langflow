@@ -7,7 +7,6 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING
 
 from fastapi import HTTPException
-from sqlalchemy.exc import InvalidRequestError
 
 from lfx.log.logger import logger
 from lfx.services.schema import ServiceType
@@ -164,6 +163,8 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
 
             # Only rollback if session is still in a valid state
             if session.is_active:
+                from sqlalchemy.exc import InvalidRequestError
+
                 with suppress(InvalidRequestError):
                     # Session was already rolled back by SQLAlchemy
                     await session.rollback()
