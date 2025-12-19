@@ -174,7 +174,11 @@ test(
 
     await page.getByTestId("div-generic-node").nth(2).click();
 
-    await page.getByTestId("button_open_list_selection").click();
+    await page
+      .getByTestId("div-generic-node")
+      .nth(2)
+      .getByTestId("button_open_list_selection")
+      .click();
 
     await page.getByTestId("list_item_append_or_update").click();
 
