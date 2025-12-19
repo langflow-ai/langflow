@@ -361,7 +361,7 @@ class Settings(BaseSettings):
     an isolated sandbox environment and cannot access server Python variables.
     
     WARNING: Setting this to True reduces security. Only enable if you understand the risks
-    and have other security measures in place. Controlled by LANGFLOW_ALLOW_DANGEROUS_CODE_VALIDATION env variable."""
+    and have other security measures in place. Controlled by LANGFLOW_SANDBOX_SECURITY_LEVEL env variable."""
 
     @field_validator("cors_origins", mode="before")
     @classmethod
