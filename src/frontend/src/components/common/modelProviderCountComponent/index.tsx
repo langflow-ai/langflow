@@ -43,7 +43,7 @@ export const ModelProviderCount = () => {
         <ModelProviderModal
           open={open}
           onClose={() => setOpen(false)}
-          modelType="all"
+          modelType={["llm", "embeddings"]}
         />
       )}
     </>

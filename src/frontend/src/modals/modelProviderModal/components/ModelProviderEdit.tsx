@@ -1,6 +1,5 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Input } from "@/components/ui/input";
-import { PROVIDER_VARIABLE_MAPPING } from "@/constants/providerConstants";
 
 export interface ModelProviderEditProps {
   authName: string;
@@ -10,6 +9,7 @@ export interface ModelProviderEditProps {
   apiBase: string;
   onApiBaseChange: (value: string) => void;
   providerName?: string;
+  variableName?: string;
 }
 
 /**
@@ -24,6 +24,7 @@ const ModelProviderEdit = ({
   apiBase,
   onApiBaseChange,
   providerName, // Reserved for future provider-specific behavior
+  variableName,
 }: ModelProviderEditProps) => {
   return (
     <div className="flex flex-col gap-4 p-4" data-testid="model-provider-edit">
@@ -36,11 +37,7 @@ const ModelProviderEdit = ({
       </div>
       <Input
         placeholder="Authorization Name"
-        value={
-          providerName
-            ? PROVIDER_VARIABLE_MAPPING[providerName]
-            : "UNKNOWN_API_KEY"
-        }
+        value={variableName || "UNKNOWN_API_KEY"}
         disabled
         onChange={(e) => onAuthNameChange(e.target.value)}
         data-testid="auth-name-input"

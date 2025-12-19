@@ -142,8 +142,8 @@ class ModelInputMixin(BaseModel):
     """Mixin for model input fields."""
     model_name: str | None = None
     """Name of the model to be used in the input."""
-    model_type: str | None = "language"
-    """Type of model: 'language' or 'embedding'. Defaults to 'language'."""
+    model_type: list[str] | None = Field(default_factory=lambda: ["llm"])
+    """Types of models to show: 'llm', 'embeddings', 'image', 'audio', 'video'. Defaults to ['llm']."""
     model_options: list[dict[str, Any]] | None = Field(
         default=None,
         validation_alias="options",

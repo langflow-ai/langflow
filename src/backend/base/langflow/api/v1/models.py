@@ -105,7 +105,9 @@ async def list_models(
     *,
     provider: Annotated[list[str] | None, Query(description="Repeat to include multiple providers")] = None,
     model_name: str | None = None,
-    model_type: str | None = None,
+    model_type: Annotated[
+        list[str] | None, Query(description="Repeat to include multiple model types: llms, embeddings, audio, video")
+    ] = None,
     include_unsupported: bool = False,
     include_deprecated: bool = False,
     # common metadata filters

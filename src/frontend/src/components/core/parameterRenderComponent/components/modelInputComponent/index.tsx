@@ -5,7 +5,9 @@ import LoadingTextComponent from "@/components/common/loadingTextComponent";
 import { RECEIVING_INPUT_VALUE } from "@/constants/constants";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
-import ModelProviderModal from "@/modals/modelProviderModal";
+import ModelProviderModal, {
+  ModelTypeOption,
+} from "@/modals/modelProviderModal";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import { useTypesStore } from "@/stores/typesStore";
@@ -76,10 +78,22 @@ export default function ModelInputComponent({
     node: (nodeClass as APIClassType) || null,
   });
 
-  const modelType =
-    nodeClass?.template?.model?.model_type === "language"
-      ? "llm"
-      : "embeddings";
+  // Get model_type from template - now supports arrays
+  const modelType: ModelTypeOption[] = (() => {
+    const templateModelType = nodeClass?.template?.model?.model_type;
+    // If it's already an array, use it directly
+    if (Array.isArray(templateModelType)) {
+      return templateModelType as ModelTypeOption[];
+    }
+    // Handle legacy string values
+    if (templateModelType === "language") return ["llm"] as ModelTypeOption[];
+    if (templateModelType === "embedding")
+      return ["embeddings"] as ModelTypeOption[];
+    if (typeof templateModelType === "string")
+      return [templateModelType] as ModelTypeOption[];
+    // Default to llm
+    return ["llm"] as ModelTypeOption[];
+  })();
 
   const { data: providersData = [] } = useGetModelProviders({});
 
@@ -361,7 +375,7 @@ export default function ModelInputComponent({
       <div className="flex w-full flex-col">
         <PopoverTrigger asChild>
           <Button
-            disabled={disabled || options.length === 0}
+            disabled={disabled}
             variant="primary"
             size="xs"
             role="combobox"
@@ -529,8 +543,13 @@ export default function ModelInputComponent({
     </PopoverContentWithoutPortal>
   );
 
-  // Loading state
-  if (!options || options.length === 0 || refreshOptions) {
+  // Loading state - only show loading if we haven't processed empty options yet
+  // This distinguishes between "still loading" vs "loaded but empty"
+  if (
+    (!options || options?.length === 0) &&
+    hasEnabledProviders &&
+    !hasProcessedEmptyRef.current
+  ) {
     return <div className="w-full">{renderLoadingButton()}</div>;
   }
 
@@ -546,7 +565,7 @@ export default function ModelInputComponent({
         <ModelProviderModal
           open={openManageProvidersDialog}
           onClose={handleManageProvidersDialogClose}
-          modelType={modelType || "llm"}
+          modelType={modelType}
         />
       )}
     </>

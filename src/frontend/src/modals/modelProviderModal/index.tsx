@@ -5,9 +5,9 @@ import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   NO_API_KEY_PROVIDERS,
-  PROVIDER_VARIABLE_MAPPING,
   VARIABLE_CATEGORY,
 } from "@/constants/providerConstants";
+import { useGetProviderVariableMapping } from "@/controllers/API/queries/models/use-get-provider-variable-mapping";
 import { useUpdateEnabledModels } from "@/controllers/API/queries/models/use-update-enabled-models";
 import {
   useGetGlobalVariables,
@@ -22,10 +22,18 @@ import useAlertStore from "@/stores/alertStore";
 import { cn } from "@/utils/utils";
 import ModelSelection from "./components/ModelSelection";
 
+// Valid model types matching backend: 'llm', 'embeddings', 'image', 'audio', 'video'
+export type ModelTypeOption =
+  | "llm"
+  | "embeddings"
+  | "image"
+  | "audio"
+  | "video";
+
 interface ModelProviderModalProps {
   open: boolean;
   onClose: () => void;
-  modelType: "llm" | "embeddings" | "all";
+  modelType: ModelTypeOption[];
 }
 
 const ModelProviderModal = ({
@@ -53,6 +61,8 @@ const ModelProviderModal = ({
   const { data: globalVariables = [] } = useGetGlobalVariables();
   const { mutate: updateEnabledModels } = useUpdateEnabledModels();
   const { refreshAllModelInputs } = useRefreshModelInputs();
+  const { data: providerVariableMapping = {} } =
+    useGetProviderVariableMapping();
 
   const isPending = isCreating || isUpdating;
 
@@ -128,7 +138,7 @@ const ModelProviderModal = ({
     if (!selectedProvider) return;
 
     // Map provider name to its corresponding global variable name
-    const variableName = PROVIDER_VARIABLE_MAPPING[selectedProvider.provider];
+    const variableName = providerVariableMapping[selectedProvider.provider];
     if (!variableName) {
       setErrorData({
         title: "Invalid Provider",
@@ -187,7 +197,7 @@ const ModelProviderModal = ({
   const handleConfigureProvider = () => {
     if (!selectedProvider || !apiKey.trim()) return;
 
-    const variableName = PROVIDER_VARIABLE_MAPPING[selectedProvider.provider];
+    const variableName = providerVariableMapping[selectedProvider.provider];
     if (!variableName) {
       setErrorData({
         title: "Invalid Provider",
@@ -259,7 +269,7 @@ const ModelProviderModal = ({
         <div className="flex flex-row w-full overflow-hidden">
           <div
             className={cn(
-              "flex border-r p-2 flex-col transition-all duration-300 h-[513px] ease-in-out",
+              "flex border-r p-2 flex-col transition-all duration-300 h-[513px] ease-in-out overflow-y-auto",
               selectedProvider ? "w-1/3" : "w-full",
             )}
           >
@@ -292,9 +302,20 @@ const ModelProviderModal = ({
                 {requiresApiKey ? (
                   <>
                     Add your{" "}
-                    <span className="underline cursor-pointer hover:text-primary">
-                      {selectedProvider?.provider} API key
-                    </span>{" "}
+                    {selectedProvider?.documentation_url ? (
+                      <a
+                        href={selectedProvider.documentation_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="underline cursor-pointer hover:text-primary"
+                      >
+                        {selectedProvider?.provider} API key
+                      </a>
+                    ) : (
+                      <span className="underline cursor-pointer hover:text-primary">
+                        {selectedProvider?.provider} API key
+                      </span>
+                    )}{" "}
                     to enable these models
                   </>
                 ) : (
