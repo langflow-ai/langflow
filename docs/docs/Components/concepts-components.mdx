@@ -98,7 +98,7 @@ For information about the programmatic representation of each data type, see [La
 * In the workspace, hover over a port to see connection details for that port.
 Click a port to <Icon name="Search" aria-hidden="true" /> **Search** for compatible components.
 
-* If two components have incompatible data types, you can use a processing component like the [**Type Convert** component](/components-processing#type-convert) to convert the data between components.
+* If two components have incompatible data types, you can use a processing component like the [**Type Convert** component](/type-convert) to convert the data between components.
 :::
 
 ### Dynamic ports
@@ -120,7 +120,7 @@ Some components can produce multiple types of output:
 
 For example, a language model component can output _either_ a **Model Response** or **Language Model**.
 The **Model Response** output produces [`Message`](/data-types#message) data that can be passed to another component's `Message` port.
-The **Language Model** output must be connected to a component with a **Language Model** input, such as the [**Structured Output** component](/components-processing#structured-output), that uses the attached LLM to power the receiving component's reasoning.
+The **Language Model** output must be connected to a component with a **Language Model** input, such as the [**Structured Output** component](/structured-output), that uses the attached LLM to power the receiving component's reasoning.
 
 ![Output type selection in the Language Model component](/img/select-output.png)
 
@@ -155,7 +155,7 @@ In the context of creating and running flows, component code does the following:
 * Passes results to the next component in the flow.
 
 All components inherit from a base `Component` class that defines the component's interface and behavior.
-For example, the [**Recursive Character Text Splitter** component](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/components/langchain_utilities/recursive_character.py) is a child of the [`LCTextSplitterComponent`](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/base/textsplitters/model.py) class.
+For example, the [**Recursive Character Text Splitter** component](https://github.com/langflow-ai/langflow/blob/main/src/lfx/src/lfx/components/langchain_utilities/recursive_character.py) is a child of the [`LCTextSplitterComponent`](https://github.com/langflow-ai/langflow/blob/main/src/lfx/src/lfx/base/textsplitters/model.py) class.
 
 Each component's code includes definitions for inputs and outputs, which are represented in the workspace as [component ports](#component-ports).
 For example, the `RecursiveCharacterTextSplitter` has four inputs. Each input definition specifies the input type, such as `IntInput`, as well as the encoded name, display name, description, and other parameters for that specific input.
