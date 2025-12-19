@@ -35,6 +35,7 @@ from lfx.schema.artifact import get_artifact_type, post_process_raw
 from lfx.schema.data import Data
 from lfx.schema.log import Log
 from lfx.schema.message import ErrorMessage, Message
+from lfx.schema.message_utils import get_message_id, has_message_id, require_message_id
 from lfx.schema.properties import Source
 from lfx.serialization.serialization import serialize
 from lfx.template.field.base import UNDEFINED, Input, Output
@@ -1566,20 +1567,39 @@ class Component(CustomComponent):
 
     def _should_skip_message(self, message: Message) -> bool:
         """Check if the message should be skipped based on vertex configuration and message type.
+<<<<<<< Updated upstream
 
         When a message is skipped:
         - It is NOT stored in the database
         - It will NOT have an ID (message.get_id() will return None)
         - It is still returned to the caller, but no events are sent to the frontend
 
+=======
+        
+        When a message is skipped:
+        - It is NOT stored in the database
+        - It will NOT have an ID (get_message_id() will return None)
+        - It is still returned to the caller, but no events are sent to the frontend
+        
+>>>>>>> Stashed changes
         Messages are skipped when:
         - The component is not an input or output vertex
         - The component is not connected to a Chat Output
         - The message is not an ErrorMessage
+<<<<<<< Updated upstream
 
         This prevents intermediate components from cluttering the database with messages
         that aren't meant to be displayed in the chat UI.
 
+=======
+        
+        This prevents intermediate components from cluttering the database with messages
+        that aren't meant to be displayed in the chat UI.
+        
+        Important: When a message is skipped, code that accesses message.id will fail.
+        Always use message_utils.get_message_id() or has_message_id() for safe access.
+        
+>>>>>>> Stashed changes
         Returns:
             bool: True if the message should be skipped, False otherwise
         """
@@ -1619,6 +1639,7 @@ class Component(CustomComponent):
 
     async def send_message(self, message: Message, id_: str | None = None, *, skip_db_update: bool = False):
         """Send a message with optional database update control.
+<<<<<<< Updated upstream
 
         This is the central method for sending messages in Langflow. It handles:
         - Message storage in the database (unless skipped)
@@ -1632,11 +1653,27 @@ class Component(CustomComponent):
         - Always use message.get_id() or message.has_id() to safely check for ID existence
         - Never access message.id directly without checking if it exists first
 
+=======
+        
+        This is the central method for sending messages in Langflow. It handles:
+        - Message storage in the database (unless skipped via _should_skip_message)
+        - Event emission to the frontend
+        - Streaming support
+        - Error handling and cleanup
+        
+        Message ID Rules:
+        - Messages only have an ID after being stored in the database
+        - If _should_skip_message() returns True, the message is not stored and will NOT have an ID
+        - Always use message_utils.get_message_id() or has_message_id() to safely check for ID
+        - Never access message.id directly - use the utilities in lfx.schema.message_utils
+        
+>>>>>>> Stashed changes
         Args:
             message: The message to send
             id_: Optional message ID (used for event emission, not database storage)
             skip_db_update: If True, only update in-memory and send event, skip DB write.
                            Useful during streaming to avoid excessive DB round-trips.
+<<<<<<< Updated upstream
                            Note: When skip_db_update=True, the message must already have an ID
                            (i.e., it must have been stored previously).
 
@@ -1645,6 +1682,13 @@ class Component(CustomComponent):
 
         Raises:
             ValueError: If skip_db_update=True but message doesn't have an ID
+=======
+                           Note: When skip_db_update=True, the message should already have an ID
+                           (i.e., it must have been stored previously).
+        
+        Returns:
+            Message: The stored message (with ID if stored in database, without ID if skipped)
+>>>>>>> Stashed changes
         """
         if self._should_skip_message(message):
             return message
@@ -1657,6 +1701,7 @@ class Component(CustomComponent):
 
         # If skip_db_update is True and message already has an ID, skip the DB write
         # This path is used during agent streaming to avoid excessive DB round-trips
+<<<<<<< Updated upstream
         # When skip_db_update=True, we require the message to already have an ID
         # because we're updating an existing message, not creating a new one
         if skip_db_update:
@@ -1669,6 +1714,15 @@ class Component(CustomComponent):
             # Create a fresh Message instance for consistency with normal flow
             stored_message = await Message.create(**message.model_dump())
             self._stored_message_id = stored_message.get_id()
+=======
+        # Use safe ID access - message may not have ID if component is between agent and chat output
+        message_id = get_message_id(message)
+        if skip_db_update and message_id:
+            # Create a fresh Message instance for consistency with normal flow
+            stored_message = await Message.create(**message.model_dump())
+            # After Message.create, the ID should be preserved
+            self._stored_message_id = get_message_id(stored_message) or message_id
+>>>>>>> Stashed changes
             # Still send the event to update the client in real-time
             # Note: If this fails, we don't need DB cleanup since we didn't write to DB
             await self._send_message_event(stored_message, id_=id_)
@@ -1677,8 +1731,13 @@ class Component(CustomComponent):
             stored_message = await self._store_message(message)
 
             # After _store_message, the message should always have an ID
+<<<<<<< Updated upstream
             # but we use get_id() for safety
             self._stored_message_id = stored_message.get_id()
+=======
+            # Use safe access for defensive programming
+            self._stored_message_id = require_message_id(stored_message)
+>>>>>>> Stashed changes
             try:
                 complete_message = ""
                 if (
@@ -1699,8 +1758,13 @@ class Component(CustomComponent):
                     await self._send_message_event(stored_message, id_=id_)
             except Exception:
                 # remove the message from the database
+<<<<<<< Updated upstream
                 # Only delete if the message has an ID
                 message_id = stored_message.get_id()
+=======
+                # Only delete if the message has an ID (was successfully stored)
+                message_id = get_message_id(stored_message)
+>>>>>>> Stashed changes
                 if message_id:
                     await delete_message(id_=message_id)
                 raise
@@ -1748,7 +1812,11 @@ class Component(CustomComponent):
         return bool(
             hasattr(self, "_event_manager")
             and self._event_manager
+<<<<<<< Updated upstream
             and stored_message.has_id()
+=======
+            and has_message_id(stored_message)
+>>>>>>> Stashed changes
             and not isinstance(original_message.text, str)
         )
 
@@ -1775,12 +1843,18 @@ class Component(CustomComponent):
             msg = "The message must be an iterator or an async iterator."
             raise TypeError(msg)
 
+<<<<<<< Updated upstream
         # Get message ID safely - streaming requires an ID
         message_id = message.get_id()
         if not message_id:
             msg = "Message must have an ID to stream. Messages only have IDs after being stored in the database."
             raise ValueError(msg)
 
+=======
+        # Streaming requires a message ID - use require_message_id to get clear error if missing
+        message_id = require_message_id(message)
+        
+>>>>>>> Stashed changes
         if isinstance(iterator, AsyncIterator):
             return await self._handle_async_iterator(iterator, message_id, message)
         try:

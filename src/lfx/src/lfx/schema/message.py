@@ -33,6 +33,7 @@ if TYPE_CHECKING:
 
 class Message(Data):
     """Message schema for Langflow.
+<<<<<<< Updated upstream
 
     Message ID Semantics:
     - Messages only have an ID after being stored in the database
@@ -52,6 +53,28 @@ class Message(Data):
             do_something_with_id(message_id)
     """
 
+=======
+    
+    Message ID Semantics:
+    - Messages only have an ID after being stored in the database
+    - Messages that are skipped (via Component._should_skip_message) will NOT have an ID
+    - Always use utilities from lfx.schema.message_utils to safely access message IDs
+    - Never access message.id directly - use get_message_id(), has_message_id(), or require_message_id()
+    
+    Safe ID Access Patterns:
+    - Use message_utils.get_message_id() when ID may or may not exist (returns None if missing)
+    - Use message_utils.has_message_id() to check if ID exists before operations that require it
+    - Use message_utils.require_message_id() when ID is required (raises ValueError if missing)
+    
+    Example:
+        from lfx.schema.message_utils import get_message_id, has_message_id
+        
+        message_id = get_message_id(message)  # Safe: returns None if no ID
+        if has_message_id(message):
+            # Safe to use message_id
+            do_something_with_id(message_id)
+    """
+>>>>>>> Stashed changes
     model_config = ConfigDict(arbitrary_types_allowed=True)
     # Helper class to deal with image data
     text_key: str = "text"
@@ -238,8 +261,8 @@ class Message(Data):
         return value
 
     # Keep this async method for backwards compatibility
-    def get_file_content_dicts(self, model_name: str | None = None):
-        content_dicts = []
+    def get_file_content_dicts(self, model_name: str | None = None) -> list[dict]:
+        content_dicts: list[dict] = []
         try:
             files = get_file_paths(self.files)
         except Exception as e:  # noqa: BLE001

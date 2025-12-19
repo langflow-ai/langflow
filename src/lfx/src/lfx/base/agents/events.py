@@ -12,6 +12,7 @@ from lfx.schema.content_block import ContentBlock
 from lfx.schema.content_types import TextContent, ToolContent
 from lfx.schema.log import OnTokenFunctionType, SendMessageFunctionType
 from lfx.schema.message import Message
+from lfx.schema.message_utils import get_message_id
 
 
 class ExceptionWithMessageError(Exception):
@@ -388,7 +389,12 @@ async def process_agent_events(
     agent_message = await send_message_callback(message=agent_message)
     # Capture the original message id - this must stay consistent throughout if streaming
     # Message may not contain id if the Agent is not connected to a Chat Output (_should_skip_message is True)
+<<<<<<< Updated upstream
     initial_message_id = agent_message.get_id()
+=======
+    # Use safe access pattern from message_utils
+    initial_message_id = get_message_id(agent_message)
+>>>>>>> Stashed changes
     try:
         # Create a mapping of run_ids to tool contents
         tool_blocks_map: dict[str, ToolContent] = {}

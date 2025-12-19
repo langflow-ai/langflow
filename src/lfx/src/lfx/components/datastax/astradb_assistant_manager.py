@@ -18,6 +18,7 @@ from lfx.log.logger import logger
 from lfx.memory import delete_message
 from lfx.schema.content_block import ContentBlock
 from lfx.schema.message import Message
+from lfx.schema.message_utils import get_message_id
 from lfx.template.field.base import Output
 from lfx.utils.constants import MESSAGE_SENDER_AI
 
@@ -300,7 +301,11 @@ class AstraAssistantManager(ComponentWithCache):
                 self.status = processed_result
         except ExceptionWithMessageError as e:
             # Only delete message from database if it has an ID (was stored)
+<<<<<<< Updated upstream
             msg_id = e.agent_message.get_id()
+=======
+            msg_id = get_message_id(e.agent_message)
+>>>>>>> Stashed changes
             if msg_id:
                 await delete_message(id_=msg_id)
             await self._send_message_event(e.agent_message, category="remove_message")

@@ -35,6 +35,7 @@ if TYPE_CHECKING:
     from lfx.schema.log import SendMessageFunctionType
 
 from lfx.schema.message import Message
+from lfx.schema.message_utils import get_message_id
 from lfx.utils.constants import MESSAGE_SENDER_AI
 
 
@@ -380,7 +381,11 @@ class ALTKBaseAgentComponent(AgentComponent):
         except ExceptionWithMessageError as e:
             # Only delete message from database if it has an ID (was stored)
             if hasattr(e, "agent_message"):
+<<<<<<< Updated upstream
                 msg_id = e.agent_message.get_id()
+=======
+                msg_id = get_message_id(e.agent_message)
+>>>>>>> Stashed changes
                 if msg_id:
                     await delete_message(id_=msg_id)
             await self._send_message_event(e.agent_message, category="remove_message")
