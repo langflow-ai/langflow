@@ -18,6 +18,7 @@ import useAlertStore from "@/stores/alertStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { useTypesStore } from "@/stores/typesStore";
 import { customStringify } from "@/utils/reactflowUtils";
+import { cn } from "@/utils/utils";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import {
@@ -227,7 +228,14 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
               >
                 <FlowSearchProvider>
                   {!view && <FlowSidebarComponent isLoading={isLoading} />}
-                  <main className="flex w-full overflow-hidden">
+                  <main
+                    className={cn(
+                      "flex flex-1 min-w-0 overflow-hidden transition-all duration-300",
+                      isSlidingContainerOpen &&
+                        !isFullscreen &&
+                        "rounded-xl m-2 mr-0",
+                    )}
+                  >
                     <div className="h-full w-full">
                       <Page setIsLoading={setIsLoading} />
                     </div>
