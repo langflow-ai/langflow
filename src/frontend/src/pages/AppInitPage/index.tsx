@@ -1,7 +1,10 @@
 import { useContext, useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import { AuthContext } from "@/contexts/authContext";
-import { useGetAuthSession, useGetAutoLogin } from "@/controllers/API/queries/auth";
+import {
+  useGetAuthSession,
+  useGetAutoLogin,
+} from "@/controllers/API/queries/auth";
 import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
 import { useGetBasicExamplesQuery } from "@/controllers/API/queries/flows/use-get-basic-examples";
 import { useGetFoldersQuery } from "@/controllers/API/queries/folders/use-get-folders";
