@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useState } from "react";
 import { Input } from "@/components/ui/input";
 
 type SessionRenameProps = {
@@ -10,16 +10,6 @@ type SessionRenameProps = {
 
 export function SessionRename({ sessionId, onSave }: SessionRenameProps) {
   const [value, setValue] = useState(sessionId);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    setValue(sessionId);
-  }, [sessionId]);
-
-  useEffect(() => {
-    inputRef.current?.focus();
-    inputRef.current?.select();
-  }, []);
 
   const handleSave = async () => {
     const trimmed = value.trim();
@@ -41,7 +31,8 @@ export function SessionRename({ sessionId, onSave }: SessionRenameProps) {
 
   return (
     <Input
-      ref={inputRef}
+      autoFocus
+      onFocus={(e) => e.currentTarget.select()}
       value={value}
       onChange={(e) => setValue(e.target.value)}
       onKeyDown={handleKeyDown}
