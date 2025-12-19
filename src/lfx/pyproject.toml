@@ -38,6 +38,7 @@ dependencies = [
     "structlog>=25.4.0,<26.0.0",
     "loguru>=0.7.3,<1.0.0",
     "langchain~=1.2.0",
+    "langchain-classic~=1.0.0",
     "validators>=0.34.0,<1.0.0",
     "filelock>=3.20.0",
     "pypdf>=5.1.0",
