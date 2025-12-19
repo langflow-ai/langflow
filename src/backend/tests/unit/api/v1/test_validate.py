@@ -225,5 +225,3 @@ def test():
     # Should execute without errors - lfx.* modules are allowed
     assert len(result["imports"]["errors"]) == 0
     assert len(result["function"]["errors"]) == 0
-
-
