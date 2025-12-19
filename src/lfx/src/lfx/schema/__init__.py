@@ -1,9 +1,12 @@
 """Schema modules for lfx package."""
 
 __all__ = [
+    "ComponentOutput",
     "Data",
     "DataFrame",
+    "ErrorDetail",
     "InputValue",
+    "JobStatus",
     "Message",
     "OpenAIErrorResponse",
     "OpenAIResponsesRequest",
@@ -11,6 +14,13 @@ __all__ = [
     "OpenAIResponsesStreamChunk",
     "Tweaks",
     "UUIDstr",
+    "WorkflowExecutionRequest",
+    "WorkflowExecutionResponse",
+    "WorkflowJobResponse",
+    "WorkflowStatusResponse",
+    "WorkflowStopRequest",
+    "WorkflowStopResponse",
+    "WorkflowStreamEvent",
     "dotdict",
 ]
 
@@ -61,6 +71,46 @@ def __getattr__(name: str):
         from .openai_responses_schemas import OpenAIErrorResponse
 
         return OpenAIErrorResponse
+    if name == "WorkflowExecutionRequest":
+        from .workflow import WorkflowExecutionRequest
+
+        return WorkflowExecutionRequest
+    if name == "WorkflowExecutionResponse":
+        from .workflow import WorkflowExecutionResponse
+
+        return WorkflowExecutionResponse
+    if name == "WorkflowJobResponse":
+        from .workflow import WorkflowJobResponse
+
+        return WorkflowJobResponse
+    if name == "WorkflowStreamEvent":
+        from .workflow import WorkflowStreamEvent
+
+        return WorkflowStreamEvent
+    if name == "WorkflowStatusResponse":
+        from .workflow import WorkflowStatusResponse
+
+        return WorkflowStatusResponse
+    if name == "WorkflowStopRequest":
+        from .workflow import WorkflowStopRequest
+
+        return WorkflowStopRequest
+    if name == "WorkflowStopResponse":
+        from .workflow import WorkflowStopResponse
+
+        return WorkflowStopResponse
+    if name == "JobStatus":
+        from .workflow import JobStatus
+
+        return JobStatus
+    if name == "ErrorDetail":
+        from .workflow import ErrorDetail
+
+        return ErrorDetail
+    if name == "ComponentOutput":
+        from .workflow import ComponentOutput
+
+        return ComponentOutput
 
     msg = f"module '{__name__}' has no attribute '{name}'"
     raise AttributeError(msg)
