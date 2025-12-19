@@ -42,6 +42,19 @@ We appreciate your efforts in helping us maintain a secure platform and look for
 
 ## Known Vulnerabilities
 
+### Server-Side Request Forgery (SSRF) in API Request Component (Fixed in 1.7.1)
+
+Langflow's [API Request component](https://docs.langflow.org/api-request) allows arbitrary HTTP requests within a flow. In versions < 1.7.1, this component did not block private IP ranges (`127.0.0.1`, `10/172/192` ranges) or cloud metadata endpoints (`169.254.169.254`), enabling Server-Side Request Forgery (SSRF) attacks.
+
+**Potential security impact:**
+- Attackers with API key access can access internal administrative endpoints, metadata services, and internal databases/services
+- Foothold for attacking internal services by abusing inter-service trust
+- Non-blind SSRF: Response bodies are returned to the client, enabling immediate data exfiltration
+
+**CVE**: [CVE-2025-68477](https://nvd.nist.gov/vuln/detail/CVE-2025-68477)
+**GitHub Advisory**: [GHSA-5993-7p27-66g5](https://github.com/langflow-ai/langflow/security/advisories/GHSA-5993-7p27-66g5)
+**Fixed in**: Langflow >= 1.7.1
+
 ### Environment Variable Loading Bug (Fixed in 1.6.4)
 
 Langflow versions `1.6.0` through `1.6.3` have a critical bug where environment variables from `.env` files are not being read. This affects all deployments using environment variables for configuration, including security settings.
