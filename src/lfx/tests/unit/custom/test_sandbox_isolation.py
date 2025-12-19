@@ -5,7 +5,6 @@ server resources. They prove isolation by showing that access attempts fail.
 """
 
 import pytest
-
 from lfx.custom.sandbox import execute_in_sandbox
 
 
@@ -288,6 +287,7 @@ def test():
 
 def test_sandbox_cannot_escape_via_locals():
     """Test that sandboxed code cannot escape via locals() function."""
+
     # Set a variable in function scope
     def test_function():
         _local_var = "should_not_be_accessible"
@@ -371,5 +371,3 @@ def test():
     assert result == "SecurityViolationError"
     # Verify real builtins wasn't accessed
     assert hasattr(real_builtins, "eval")
-
-

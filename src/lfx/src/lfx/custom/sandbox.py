@@ -353,10 +353,10 @@ def execute_in_sandbox(code_obj: Any, exec_globals: dict[str, Any]) -> None:
         sandbox_globals.update(
             {k: v for k, v in exec_globals.items() if k not in sandbox_infrastructure_keys},
         )
-    except SecurityViolationError:  # noqa: TRY302
+    except SecurityViolationError:  # noqa: TRY203
         # Re-raise security violations
         raise
-    except Exception:  # noqa: TRY302
+    except Exception:  # noqa: TRY203
         # Re-raise all other exceptions as-is (validation errors, syntax errors, etc.)
         # These are expected and should be reported to the user
         raise
