@@ -1,6 +1,7 @@
 import json
 from collections.abc import AsyncIterator, Iterator
 from pathlib import Path
+from typing import Any
 
 import orjson
 import pandas as pd
@@ -556,15 +557,45 @@ class SaveToFileComponent(Component):
 
     async def _save_to_aws(self) -> Message:
         """Save file to AWS S3 using S3 functionality."""
+        import os
+
+        # Get AWS credentials from component inputs or fall back to environment variables
+        aws_access_key_id = getattr(self, "aws_access_key_id", None)
+        if aws_access_key_id and hasattr(aws_access_key_id, "get_secret_value"):
+            aws_access_key_id = aws_access_key_id.get_secret_value()
+        if not aws_access_key_id:
+            aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
+
+        aws_secret_access_key = getattr(self, "aws_secret_access_key", None)
+        if aws_secret_access_key and hasattr(aws_secret_access_key, "get_secret_value"):
+            aws_secret_access_key = aws_secret_access_key.get_secret_value()
+        if not aws_secret_access_key:
+            aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+
+        bucket_name = getattr(self, "bucket_name", None)
+        if not bucket_name:
+            # Try to get from storage service settings
+            settings = get_settings_service().settings
+            bucket_name = settings.object_storage_bucket_name
+
         # Validate AWS credentials
-        if not getattr(self, "aws_access_key_id", None):
-            msg = "AWS Access Key ID is required for S3 storage"
+        if not aws_access_key_id:
+            msg = (
+                "AWS Access Key ID is required for S3 storage. Provide it as a component input "
+                "or set AWS_ACCESS_KEY_ID environment variable."
+            )
             raise ValueError(msg)
-        if not getattr(self, "aws_secret_access_key", None):
-            msg = "AWS Secret Key is required for S3 storage"
+        if not aws_secret_access_key:
+            msg = (
+                "AWS Secret Key is required for S3 storage. Provide it as a component input "
+                "or set AWS_SECRET_ACCESS_KEY environment variable."
+            )
             raise ValueError(msg)
-        if not getattr(self, "bucket_name", None):
-            msg = "S3 Bucket Name is required for S3 storage"
+        if not bucket_name:
+            msg = (
+                "S3 Bucket Name is required for S3 storage. Provide it as a component input "
+                "or set LANGFLOW_OBJECT_STORAGE_BUCKET_NAME environment variable."
+            )
             raise ValueError(msg)
 
         # Use S3 upload functionality
@@ -575,13 +606,17 @@ class SaveToFileComponent(Component):
             raise ImportError(msg) from e
 
         # Create S3 client
-        client_config = {
-            "aws_access_key_id": self.aws_access_key_id,
-            "aws_secret_access_key": self.aws_secret_access_key,
+        client_config: dict[str, Any] = {
+            "aws_access_key_id": str(aws_access_key_id),
+            "aws_secret_access_key": str(aws_secret_access_key),
         }
 
-        if hasattr(self, "aws_region") and self.aws_region:
-            client_config["region_name"] = self.aws_region
+        # Get region from component input, environment variable, or settings
+        aws_region = getattr(self, "aws_region", None)
+        if not aws_region:
+            aws_region = os.getenv("AWS_DEFAULT_REGION") or os.getenv("AWS_REGION")
+        if aws_region:
+            client_config["region_name"] = str(aws_region)
 
         s3_client = boto3.client("s3", **client_config)
 
@@ -605,8 +640,8 @@ class SaveToFileComponent(Component):
 
         try:
             # Upload to S3
-            s3_client.upload_file(temp_file_path, self.bucket_name, file_path)
-            s3_url = f"s3://{self.bucket_name}/{file_path}"
+            s3_client.upload_file(temp_file_path, bucket_name, file_path)
+            s3_url = f"s3://{bucket_name}/{file_path}"
             return Message(text=f"File successfully uploaded to {s3_url}")
         finally:
             # Clean up temp file
