@@ -161,6 +161,20 @@ OLLAMA_MODELS_DETAILED = [
         icon="Ollama",
         tool_calling=True,
     ),
+    create_model_metadata(
+        provider="Ollama",
+        name="gpt-oss:20b",
+        icon="Ollama",
+        tool_calling=True,
+        default=True,
+    ),
+    create_model_metadata(
+        provider="Ollama",
+        name="qwen3-vl:4b",
+        icon="Ollama",
+        tool_calling=True,
+        default=True,
+    ),
 ]
 
 # Filter lists based on metadata properties
