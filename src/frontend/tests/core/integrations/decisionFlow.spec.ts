@@ -355,8 +355,8 @@ test(
     if (isApiKeyInputVisible) {
       await apiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
     }
-    await page.getByTestId("dropdown_str_model_name").click();
-    await page.getByTestId("gpt-4o-1-option").click();
+    await page.getByTestId("model_model").click();
+    await page.getByTestId("gpt-4o-mini-option").click();
     await adjustScreenView(page);
 
     await page.getByRole("button", { name: "Playground", exact: true }).click();
