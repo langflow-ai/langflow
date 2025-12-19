@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.32.4",
+    "framer-motion": "^11.11.11",
     "react-cookie": "^7.1.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
