@@ -60,8 +60,12 @@ class SwitchComponent(Component):
         output_name = None
         for index, case in enumerate(self.cases):
             if value == case:
-                output_name = f"output_{index + 1}"
+                output_name = f"output_{index+1}"
                 break
+
+        if output_name is None:
+            msg = f"No matching case found for value: {value}"
+            raise ValueError(msg)
 
         for output in self._get_outputs_to_process():
             if output.name == output_name:
