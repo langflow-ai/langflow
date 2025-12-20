@@ -13,7 +13,7 @@ const FlowToolbarOptions = ({
   const hasIO = useFlowStore((state) => state.hasIO);
 
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex items-center gap-1">
       <PlaygroundButton hasIO={hasIO} />
       <PublishDropdown
         openApiModal={openApiModal}

@@ -75,24 +75,22 @@ export function FlowPageSlidingContainerContent({
   return (
     <div className="h-full w-full bg-background border-l border-transparent shadow-lg flex flex-col relative z-[50]">
       <div className="flex-1 flex overflow-hidden">
-        {isFullscreen && (
-          <AnimatedConditional
-            isOpen={sidebarOpen}
-            className="border-r border-border bg-background overflow-hidden w-[20%] min-w-[0px] max-w-[420px]"
-          >
-            <div className="h-full overflow-y-auto">
-              <div className="p-4 pt-[15px]">
-                <ChatSidebar
-                  sessions={sessions}
-                  onNewChat={handleNewChat}
-                  onSessionSelect={handleSessionSelect}
-                  currentSessionId={currentSessionId}
-                  onDeleteSession={handleDeleteSession}
-                />
-              </div>
+        <AnimatedConditional
+          isOpen={sidebarOpen}
+          className="border-r border-border bg-background overflow-hidden w-[20%] min-w-[0px] max-w-[420px]"
+        >
+          <div className="h-full overflow-y-auto">
+            <div className="p-4 pt-[15px]">
+              <ChatSidebar
+                sessions={sessions}
+                onNewChat={handleNewChat}
+                onSessionSelect={handleSessionSelect}
+                currentSessionId={currentSessionId}
+                onDeleteSession={handleDeleteSession}
+              />
             </div>
-          </AnimatedConditional>
-        )}
+          </div>
+        </AnimatedConditional>
         <div className="flex-1 flex flex-col overflow-hidden">
           <ChatHeader
             sessions={sessions}
