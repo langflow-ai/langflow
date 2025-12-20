@@ -80,7 +80,7 @@ class SwitchComponent(Component):
 
     def update_outputs(self, frontend_node: dict, field_name: str, _field_value: Any) -> dict:
         target_count = len(self.cases)
-        if field_name == "cases" and target_count != len(frontend_node):
+        if field_name == "cases" and target_count != len(frontend_node.get("outputs", [])):
             frontend_node["outputs"] = []
             for i in range(target_count):
                 new_output = Output(
