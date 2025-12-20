@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "parser",
-            "id": "parser-a0EyN",
+            "id": "parser-tsqQI",
             "name": "parsed_text",
             "output_types": [
               "Message"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "LanguageModelComponent-8ok1G",
+            "id": "LanguageModelComponent-kiTPL",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-parser-a0EyN{œdataTypeœ:œparserœ,œidœ:œparser-a0EyNœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-8ok1G{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-8ok1Gœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-parser-tsqQI{œdataTypeœ:œparserœ,œidœ:œparser-tsqQIœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-kiTPL{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-kiTPLœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "parser-a0EyN",
-        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-a0EyNœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LanguageModelComponent-8ok1G",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-8ok1Gœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "parser-tsqQI",
+        "sourceHandle": "{œdataTypeœ:œparserœ,œidœ:œparser-tsqQIœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "LanguageModelComponent-kiTPL",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-kiTPLœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "TextInput",
-            "id": "TextInput-8jAnq",
+            "id": "TextInput-y6Hxj",
             "name": "text",
             "output_types": [
               "Message"
@@ -43,19 +43,19 @@
           },
           "targetHandle": {
             "fieldName": "system_message",
-            "id": "LanguageModelComponent-8ok1G",
+            "id": "LanguageModelComponent-kiTPL",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-TextInput-8jAnq{œdataTypeœ:œTextInputœ,œidœ:œTextInput-8jAnqœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-8ok1G{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-8ok1Gœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-TextInput-y6Hxj{œdataTypeœ:œTextInputœ,œidœ:œTextInput-y6Hxjœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-kiTPL{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-kiTPLœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "TextInput-8jAnq",
-        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-8jAnqœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LanguageModelComponent-8ok1G",
-        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œLanguageModelComponent-8ok1Gœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "TextInput-y6Hxj",
+        "sourceHandle": "{œdataTypeœ:œTextInputœ,œidœ:œTextInput-y6Hxjœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "LanguageModelComponent-kiTPL",
+        "targetHandle": "{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-kiTPLœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -63,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "LanguageModelComponent",
-            "id": "LanguageModelComponent-8ok1G",
+            "id": "LanguageModelComponent-kiTPL",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -71,7 +71,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-V6P1G",
+            "id": "ChatOutput-KnHDm",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -80,12 +80,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-LanguageModelComponent-8ok1G{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-8ok1Gœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-V6P1G{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-V6P1Gœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-LanguageModelComponent-kiTPL{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-kiTPLœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-KnHDm{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-KnHDmœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "LanguageModelComponent-8ok1G",
-        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-8ok1Gœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-V6P1G",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-V6P1Gœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "LanguageModelComponent-kiTPL",
+        "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-kiTPLœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-KnHDm",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-KnHDmœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -93,7 +93,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "StructuredOutput",
-            "id": "StructuredOutput-c9Vep",
+            "id": "StructuredOutput-GJE9p",
             "name": "dataframe_output",
             "output_types": [
               "DataFrame"
@@ -101,7 +101,7 @@
           },
           "targetHandle": {
             "fieldName": "input_data",
-            "id": "parser-a0EyN",
+            "id": "parser-tsqQI",
             "inputTypes": [
               "DataFrame",
               "Data"
@@ -109,18 +109,20 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-StructuredOutput-c9Vep{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-c9Vepœ,œnameœ:œdataframe_outputœ,œoutput_typesœ:[œDataFrameœ]}-parser-a0EyN{œfieldNameœ:œinput_dataœ,œidœ:œparser-a0EyNœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-StructuredOutput-GJE9p{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-GJE9pœ,œnameœ:œdataframe_outputœ,œoutput_typesœ:[œDataFrameœ]}-parser-tsqQI{œfieldNameœ:œinput_dataœ,œidœ:œparser-tsqQIœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "StructuredOutput-c9Vep",
-        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-c9Vepœ, œnameœ: œdataframe_outputœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "parser-a0EyN",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-a0EyNœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
+        "source": "StructuredOutput-GJE9p",
+        "sourceHandle": "{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-GJE9pœ,œnameœ:œdataframe_outputœ,œoutput_typesœ:[œDataFrameœ]}",
+        "target": "parser-tsqQI",
+        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œparser-tsqQIœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
       },
       {
+        "animated": false,
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "File",
-            "id": "File-BptHw",
+            "id": "File-Ln2gO",
             "name": "message",
             "output_types": [
               "Message"
@@ -128,24 +130,25 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "StructuredOutput-c9Vep",
+            "id": "StructuredOutput-GJE9p",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__File-BptHw{œdataTypeœ:œFileœ,œidœ:œFile-BptHwœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-c9Vep{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-c9Vepœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "File-BptHw",
-        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-BptHwœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "StructuredOutput-c9Vep",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutput-c9Vepœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-File-Ln2gO{œdataTypeœ:œFileœ,œidœ:œFile-Ln2gOœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-GJE9p{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-GJE9pœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "File-Ln2gO",
+        "sourceHandle": "{œdataTypeœ:œFileœ,œidœ:œFile-Ln2gOœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "StructuredOutput-GJE9p",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-GJE9pœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "TextInput-8jAnq",
+          "id": "TextInput-y6Hxj",
           "node": {
             "base_classes": [
               "Message"
@@ -251,7 +254,7 @@
           "type": "TextInput"
         },
         "dragging": false,
-        "id": "TextInput-8jAnq",
+        "id": "TextInput-y6Hxj",
         "measured": {
           "height": 204,
           "width": 320
@@ -265,7 +268,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-V6P1G",
+          "id": "ChatOutput-KnHDm",
           "node": {
             "base_classes": [
               "Message"
@@ -538,7 +541,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-V6P1G",
+        "id": "ChatOutput-KnHDm",
         "measured": {
           "height": 48,
           "width": 192
@@ -552,7 +555,7 @@
       },
       {
         "data": {
-          "id": "note-qZOig",
+          "id": "note-MZGLD",
           "node": {
             "description": "### 💡 Upload your resume here",
             "display_name": "",
@@ -565,7 +568,7 @@
         },
         "dragging": false,
         "height": 358,
-        "id": "note-qZOig",
+        "id": "note-MZGLD",
         "measured": {
           "height": 358,
           "width": 346
@@ -581,7 +584,7 @@
       },
       {
         "data": {
-          "id": "note-MGOQm",
+          "id": "note-8Zjd4",
           "node": {
             "description": "## 📝 Portfolio Website Code Generator\n\nYour uploaded resume is parsed into a structured format, and output as HTML/CSS code for your own resume website!\n\n✅ **Accepted Formats:** PDF or TXT  \n✅ To ensure readability, provide clear headings, bullet points, and proper formatting. \n### 📌 Structured output fields:\n1. 🏷 **Full Name** - Candidate's full name  \n2. 📧 **Email** - A valid email address  \n3. 📞 **Phone Number** - Contact number  \n4. 🔗 **LinkedIn** - LinkedIn profile URL  \n5. 🖥 **GitHub** - GitHub profile URL (if applicable)  \n6. 🌐 **Portfolio** - Personal website or portfolio URL  \n7. 🛂 **Visa Status** - Work authorization details (if applicable)  \n8. 📝 **Summary** - A brief professional summary or objective statement  \n9. 💼 **Experience** - Work experience details (in dictionary format)  \n10. 🎓 **Education** - Education details (in dictionary format)  \n11. 🛠 **Skills** - Skills mentioned in the resume (comma-separated)  \n12. 🚀 **Projects** - Titles, descriptions, and details of projects.",
             "display_name": "",
@@ -592,7 +595,7 @@
         },
         "dragging": false,
         "height": 621,
-        "id": "note-MGOQm",
+        "id": "note-8Zjd4",
         "measured": {
           "height": 621,
           "width": 478
@@ -608,7 +611,7 @@
       },
       {
         "data": {
-          "id": "note-WILL8",
+          "id": "note-7jRmc",
           "node": {
             "description": "### 💡 Click **Open table** to view the schema",
             "display_name": "",
@@ -621,7 +624,7 @@
         },
         "dragging": false,
         "height": 438,
-        "id": "note-WILL8",
+        "id": "note-7jRmc",
         "measured": {
           "height": 438,
           "width": 359
@@ -637,7 +640,7 @@
       },
       {
         "data": {
-          "id": "note-xFuIo",
+          "id": "note-PLSHf",
           "node": {
             "description": "### 💡 Add your OpenAI API key here",
             "display_name": "",
@@ -650,7 +653,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-xFuIo",
+        "id": "note-PLSHf",
         "measured": {
           "height": 324,
           "width": 362
@@ -666,7 +669,7 @@
       },
       {
         "data": {
-          "id": "note-OQCbH",
+          "id": "note-2qzrm",
           "node": {
             "description": "### 💡 Add your Anthropic API key here",
             "display_name": "",
@@ -679,7 +682,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-OQCbH",
+        "id": "note-2qzrm",
         "measured": {
           "height": 324,
           "width": 344
@@ -695,7 +698,7 @@
       },
       {
         "data": {
-          "id": "parser-a0EyN",
+          "id": "parser-tsqQI",
           "node": {
             "base_classes": [
               "Message"
@@ -857,7 +860,7 @@
           "type": "parser"
         },
         "dragging": false,
-        "id": "parser-a0EyN",
+        "id": "parser-tsqQI",
         "measured": {
           "height": 278,
           "width": 320
@@ -871,7 +874,7 @@
       },
       {
         "data": {
-          "id": "LanguageModelComponent-8ok1G",
+          "id": "LanguageModelComponent-kiTPL",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -927,6 +930,7 @@
                 "cache": true,
                 "display_name": "Model Response",
                 "group_outputs": false,
+                "hidden": null,
                 "loop_types": null,
                 "method": "text_response",
                 "name": "text_output",
@@ -944,6 +948,7 @@
                 "cache": true,
                 "display_name": "Language Model",
                 "group_outputs": false,
+                "hidden": null,
                 "loop_types": null,
                 "method": "build_model",
                 "name": "model_output",
@@ -961,7 +966,7 @@
             "priority": 0,
             "template": {
               "_frontend_node_flow_id": {
-                "value": "5fb84ecc-207e-4474-9237-001d6e5b038a"
+                "value": "89c8132e-a746-460b-b091-24b7b9279147"
               },
               "_frontend_node_folder_id": {
                 "value": "34260300-cae1-43f3-8b14-1272b8cffe4c"
@@ -1062,7 +1067,7 @@
                 "type": "str",
                 "value": ""
               },
-              "is_refresh": false,
+              "is_refresh": true,
               "model": {
                 "_input_type": "ModelInput",
                 "advanced": false,
@@ -1080,9 +1085,7 @@
                   }
                 },
                 "info": "Select your model provider",
-                "input_types": [
-                  "LanguageModel"
-                ],
+                "input_types": [],
                 "list": false,
                 "list_add_label": "Add More",
                 "model_type": "language",
@@ -1350,7 +1353,7 @@
           "type": "LanguageModelComponent"
         },
         "dragging": false,
-        "id": "LanguageModelComponent-8ok1G",
+        "id": "LanguageModelComponent-kiTPL",
         "measured": {
           "height": 369,
           "width": 320
@@ -1364,7 +1367,7 @@
       },
       {
         "data": {
-          "id": "note-rWCy3",
+          "id": "note-s01cs",
           "node": {
             "description": "### 💡 Add your OpenAI API key here",
             "display_name": "",
@@ -1376,7 +1379,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-rWCy3",
+        "id": "note-s01cs",
         "measured": {
           "height": 324,
           "width": 324
@@ -1390,7 +1393,7 @@
       },
       {
         "data": {
-          "id": "StructuredOutput-c9Vep",
+          "id": "StructuredOutput-GJE9p",
           "node": {
             "base_classes": [
               "Data",
@@ -1444,8 +1447,12 @@
                 "cache": true,
                 "display_name": "Structured Output",
                 "group_outputs": false,
+                "hidden": null,
+                "loop_types": null,
                 "method": "build_structured_output",
                 "name": "structured_output",
+                "options": null,
+                "required_inputs": null,
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
@@ -1458,8 +1465,12 @@
                 "cache": true,
                 "display_name": "Structured Output",
                 "group_outputs": false,
+                "hidden": null,
+                "loop_types": null,
                 "method": "build_structured_dataframe",
                 "name": "dataframe_output",
+                "options": null,
+                "required_inputs": null,
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
@@ -1470,6 +1481,12 @@
             ],
             "pinned": false,
             "template": {
+              "_frontend_node_flow_id": {
+                "value": "89c8132e-a746-460b-b091-24b7b9279147"
+              },
+              "_frontend_node_folder_id": {
+                "value": "34260300-cae1-43f3-8b14-1272b8cffe4c"
+              },
               "_type": "Component",
               "api_key": {
                 "_input_type": "SecretStrInput",
@@ -1534,6 +1551,7 @@
                 "type": "str",
                 "value": ""
               },
+              "is_refresh": true,
               "model": {
                 "_input_type": "ModelInput",
                 "advanced": false,
@@ -1551,9 +1569,7 @@
                   }
                 },
                 "info": "Select your model provider",
-                "input_types": [
-                  "LanguageModel"
-                ],
+                "input_types": [],
                 "list": false,
                 "list_add_label": "Add More",
                 "model_type": "language",
@@ -1883,7 +1899,7 @@
           "type": "StructuredOutput"
         },
         "dragging": false,
-        "id": "StructuredOutput-c9Vep",
+        "id": "StructuredOutput-GJE9p",
         "measured": {
           "height": 387,
           "width": 320
@@ -1897,7 +1913,7 @@
       },
       {
         "data": {
-          "id": "File-BptHw",
+          "id": "File-Ln2gO",
           "node": {
             "base_classes": [
               "Message"
@@ -1938,7 +1954,7 @@
             ],
             "frozen": false,
             "icon": "file-text",
-            "last_updated": "2025-12-20T16:49:55.979Z",
+            "last_updated": "2025-12-20T17:34:46.873Z",
             "legacy": false,
             "metadata": {
               "code_hash": "9d57e0bfda44",
@@ -1973,8 +1989,11 @@
                 "cache": true,
                 "display_name": "Raw Content",
                 "group_outputs": false,
+                "loop_types": null,
                 "method": "load_files_message",
                 "name": "message",
+                "options": null,
+                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1985,6 +2004,12 @@
             ],
             "pinned": false,
             "template": {
+              "_frontend_node_flow_id": {
+                "value": "89c8132e-a746-460b-b091-24b7b9279147"
+              },
+              "_frontend_node_folder_id": {
+                "value": "34260300-cae1-43f3-8b14-1272b8cffe4c"
+              },
               "_type": "Component",
               "advanced_mode": {
                 "_input_type": "BoolInput",
@@ -2275,6 +2300,7 @@
                 "type": "bool",
                 "value": true
               },
+              "is_refresh": false,
               "markdown": {
                 "_input_type": "BoolInput",
                 "advanced": false,
@@ -2575,7 +2601,14 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": false,
                 "type": "sortableList",
-                "value": ""
+                "value": [
+                  {
+                    "chosen": false,
+                    "icon": "hard-drive",
+                    "name": "Local",
+                    "selected": false
+                  }
+                ]
               },
               "use_multithreading": {
                 "_input_type": "BoolInput",
@@ -2604,28 +2637,28 @@
           "type": "File"
         },
         "dragging": false,
-        "id": "File-BptHw",
+        "id": "File-Ln2gO",
         "measured": {
-          "height": 355,
+          "height": 341,
           "width": 320
         },
         "position": {
           "x": 939.716428493645,
           "y": 648.3992877545212
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": -292.14051127066796,
-      "y": -82.0740405424873,
-      "zoom": 0.5769192650379789
+      "x": -109.59928978699065,
+      "y": 92.33264934787798,
+      "zoom": 0.42585711094575973
     }
   },
   "description": "This template transforms PDF or TXT resume documents into structured JSON, generating a portfolio website HTML code from the structured data.",
   "endpoint_name": null,
-  "id": "5fb84ecc-207e-4474-9237-001d6e5b038a",
+  "id": "89c8132e-a746-460b-b091-24b7b9279147",
   "is_component": false,
   "last_tested_version": "1.7.0",
   "name": "Portfolio Website Code Generator",
