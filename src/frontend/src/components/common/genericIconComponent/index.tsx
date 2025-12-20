@@ -106,10 +106,26 @@ export const ForwardedIconComponent = memo(
         <div className={className}></div>
       );
 
+      // Check if TargetIcon is a valid React component (function, class, or lazy component)
+      // In React 19, lazy components have $$typeof Symbol, and forwardRef components have render property
+      const isValidComponent =
+        typeof TargetIcon === "function" ||
+        (typeof TargetIcon === "object" &&
+          TargetIcon !== null &&
+          // Check for various React component types:
+          // - $$typeof: lazy, forwardRef, memo components (Symbol.for('react.lazy'), etc.)
+          // - render: forwardRef components in some React versions
+          // - _payload: lazy component internals
+          // - type: wrapped components (memo wrapping forwardRef)
+          (TargetIcon.$$typeof ||
+            TargetIcon.render ||
+            TargetIcon._payload ||
+            TargetIcon.type));
+
       return (
         <Suspense fallback={skipFallback ? undefined : fallback}>
           <ErrorBoundary onError={handleError}>
-            {TargetIcon?.render || TargetIcon?._payload ? (
+            {isValidComponent ? (
               <TargetIcon
                 className={className}
                 style={style}
@@ -146,15 +162,30 @@ export const ForwardedIconComponent = memo(
 );
 
 // Simple error boundary component for catching lazy load errors
-class ErrorBoundary extends React.Component<{
-  children: React.ReactNode;
-  onError: () => void;
-}> {
-  componentDidCatch(error: any) {
+class ErrorBoundary extends React.Component<
+  {
+    children: React.ReactNode;
+    onError: () => void;
+  },
+  { hasError: boolean }
+> {
+  constructor(props: { children: React.ReactNode; onError: () => void }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(_error: Error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error) {
     this.props.onError();
   }
 
   render() {
+    if (this.state.hasError) {
+      return null;
+    }
     return this.props.children;
   }
 }
