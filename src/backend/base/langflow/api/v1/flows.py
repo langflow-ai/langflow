@@ -36,7 +36,8 @@ from langflow.services.database.models.flow.model import (
 from langflow.services.database.models.flow.utils import get_webhook_component_in_flow
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
-from langflow.services.deps import get_settings_service, get_storage_service
+from langflow.services.deps import get_service, get_settings_service, get_storage_service
+from langflow.services.schema import ServiceType
 from langflow.services.storage.service import StorageService
 from langflow.utils.compression import compress_response
 
@@ -689,3 +690,55 @@ async def read_basic_examples(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post("/{flow_id}/versions", status_code=201)
+async def publish_flow_version(
+    *,
+    session: DbSession,
+    flow_id: UUID,
+    current_user: CurrentActiveUser,
+):
+    """
+    Publish the flow to S3.
+    """
+    flow = await _read_flow(session=session, flow_id=flow_id, user_id=current_user.id)
+    if not flow:
+        raise HTTPException(status_code=404, detail="Flow not found")
+
+    try:
+        publish_service = get_service(ServiceType.PUBLISH_SERVICE)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Publish service not available") from e
+
+    try:
+        flow_json = flow.model_dump_json()
+        await publish_service.publish_flow(
+            user_id=str(current_user.id),
+            flow_id=str(flow.id),
+            flow_data=flow_json,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to publish flow: {str(e)}") from e
+
+    return {"message": "Flow published successfully", "flow_id": flow_id}
+
+
+@router.get("/{flow_id}/versions", status_code=200)
+async def get_published_flow(
+    *,
+    flow_id: UUID,
+    current_user: CurrentActiveUser,
+):
+    """
+    Retrieve the published flow from S3.
+    """
+    try:
+        publish_service = get_service(ServiceType.PUBLISH_SERVICE)
+        flow_data = await publish_service.get_flow(
+            user_id=str(current_user.id),
+            flow_id=str(flow_id),
+        )
+        return orjson.loads(flow_data)
+    except Exception as e:
+        raise HTTPException(status_code=404, detail="Published flow not found") from e
