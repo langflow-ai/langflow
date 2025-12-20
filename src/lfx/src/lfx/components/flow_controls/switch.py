@@ -78,7 +78,7 @@ class SwitchComponent(Component):
     def build_output(self):
         return self.switch.data
 
-    def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:
+    def update_outputs(self, frontend_node: dict, field_name: str, _field_value: Any) -> dict:
         target_count = len(self.cases)
         if field_name == "cases" and target_count != len(frontend_node):
             frontend_node["outputs"] = []
