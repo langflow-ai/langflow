@@ -84,8 +84,8 @@ class SwitchComponent(Component):
             frontend_node["outputs"] = []
             for i in range(target_count):
                 new_output = Output(
-                    display_name=f"Output {i + 1}",
-                    name=f"output_{i + 1}",
+                    display_name=f"Output {i+1}",
+                    name=f"output_{i+1}",
                     method="build_output",
                     group_outputs=True,
                 )
