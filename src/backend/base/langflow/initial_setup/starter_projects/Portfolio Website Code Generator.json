@@ -25,9 +25,9 @@
         "id": "reactflow__edge-parser-a0EyN{œdataTypeœ:œparserœ,œidœ:œparser-a0EyNœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-8ok1G{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-8ok1Gœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "parser-a0EyN",
-        "sourceHandle": "{œdataTypeœ:œparserœ,œidœ:œparser-a0EyNœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-a0EyNœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "LanguageModelComponent-8ok1G",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-8ok1Gœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-8ok1Gœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -53,9 +53,9 @@
         "id": "reactflow__edge-TextInput-8jAnq{œdataTypeœ:œTextInputœ,œidœ:œTextInput-8jAnqœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-8ok1G{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-8ok1Gœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "TextInput-8jAnq",
-        "sourceHandle": "{œdataTypeœ:œTextInputœ,œidœ:œTextInput-8jAnqœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-8jAnqœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "target": "LanguageModelComponent-8ok1G",
-        "targetHandle": "{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-8ok1Gœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œLanguageModelComponent-8ok1Gœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -83,9 +83,9 @@
         "id": "reactflow__edge-LanguageModelComponent-8ok1G{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-8ok1Gœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-V6P1G{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-V6P1Gœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "LanguageModelComponent-8ok1G",
-        "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-8ok1Gœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-8ok1Gœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-V6P1G",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-V6P1Gœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-V6P1Gœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -112,9 +112,9 @@
         "id": "reactflow__edge-StructuredOutput-c9Vep{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-c9Vepœ,œnameœ:œdataframe_outputœ,œoutput_typesœ:[œDataFrameœ]}-parser-a0EyN{œfieldNameœ:œinput_dataœ,œidœ:œparser-a0EyNœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "StructuredOutput-c9Vep",
-        "sourceHandle": "{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-c9Vepœ,œnameœ:œdataframe_outputœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-c9Vepœ, œnameœ: œdataframe_outputœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "parser-a0EyN",
-        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œparser-a0EyNœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-a0EyNœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "data": {
@@ -137,9 +137,9 @@
         },
         "id": "xy-edge__File-BptHw{œdataTypeœ:œFileœ,œidœ:œFile-BptHwœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-c9Vep{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-c9Vepœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "source": "File-BptHw",
-        "sourceHandle": "{œdataTypeœ:œFileœ,œidœ:œFile-BptHwœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-BptHwœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "StructuredOutput-c9Vep",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-c9Vepœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutput-c9Vepœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -1444,11 +1444,8 @@
                 "cache": true,
                 "display_name": "Structured Output",
                 "group_outputs": false,
-                "loop_types": null,
                 "method": "build_structured_output",
                 "name": "structured_output",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
@@ -1461,11 +1458,8 @@
                 "cache": true,
                 "display_name": "Structured Output",
                 "group_outputs": false,
-                "loop_types": null,
                 "method": "build_structured_dataframe",
                 "name": "dataframe_output",
-                "options": null,
-                "required_inputs": null,
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
@@ -1476,12 +1470,6 @@
             ],
             "pinned": false,
             "template": {
-              "_frontend_node_flow_id": {
-                "value": "5fb84ecc-207e-4474-9237-001d6e5b038a"
-              },
-              "_frontend_node_folder_id": {
-                "value": "34260300-cae1-43f3-8b14-1272b8cffe4c"
-              },
               "_type": "Component",
               "api_key": {
                 "_input_type": "SecretStrInput",
@@ -1546,7 +1534,6 @@
                 "type": "str",
                 "value": ""
               },
-              "is_refresh": false,
               "model": {
                 "_input_type": "ModelInput",
                 "advanced": false,
@@ -1986,11 +1973,8 @@
                 "cache": true,
                 "display_name": "Raw Content",
                 "group_outputs": false,
-                "loop_types": null,
                 "method": "load_files_message",
                 "name": "message",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -2001,12 +1985,6 @@
             ],
             "pinned": false,
             "template": {
-              "_frontend_node_flow_id": {
-                "value": "5fb84ecc-207e-4474-9237-001d6e5b038a"
-              },
-              "_frontend_node_folder_id": {
-                "value": "34260300-cae1-43f3-8b14-1272b8cffe4c"
-              },
               "_type": "Component",
               "advanced_mode": {
                 "_input_type": "BoolInput",
@@ -2297,7 +2275,6 @@
                 "type": "bool",
                 "value": true
               },
-              "is_refresh": false,
               "markdown": {
                 "_input_type": "BoolInput",
                 "advanced": false,

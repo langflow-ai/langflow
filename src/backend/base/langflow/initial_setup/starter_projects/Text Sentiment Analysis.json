@@ -25,9 +25,9 @@
         "id": "reactflow__edge-Prompt-cdQOP{œdataTypeœ:œPromptœ,œidœ:œPrompt-cdQOPœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-kT1GE{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-kT1GEœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-cdQOP",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-cdQOPœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-cdQOPœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "LanguageModelComponent-kT1GE",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-kT1GEœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-kT1GEœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -53,9 +53,9 @@
         "id": "reactflow__edge-LanguageModelComponent-kT1GE{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-kT1GEœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-wdKKc{œfieldNameœ:œsummaryœ,œidœ:œPrompt-wdKKcœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "LanguageModelComponent-kT1GE",
-        "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-kT1GEœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-kT1GEœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-wdKKc",
-        "targetHandle": "{œfieldNameœ:œsummaryœ,œidœ:œPrompt-wdKKcœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsummaryœ, œidœ: œPrompt-wdKKcœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -81,9 +81,9 @@
         "id": "reactflow__edge-Prompt-wdKKc{œdataTypeœ:œPromptœ,œidœ:œPrompt-wdKKcœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-Vxvfh{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-Vxvfhœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-wdKKc",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-wdKKcœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-wdKKcœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "LanguageModelComponent-Vxvfh",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-Vxvfhœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-Vxvfhœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -111,9 +111,9 @@
         "id": "reactflow__edge-LanguageModelComponent-Vxvfh{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-Vxvfhœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-DVM1k{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-DVM1kœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "LanguageModelComponent-Vxvfh",
-        "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-Vxvfhœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-Vxvfhœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-DVM1k",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-DVM1kœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-DVM1kœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -139,9 +139,9 @@
         "id": "reactflow__edge-Prompt-7LIEq{œdataTypeœ:œPromptœ,œidœ:œPrompt-7LIEqœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-NZit4{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-NZit4œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-7LIEq",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-7LIEqœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-7LIEqœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "LanguageModelComponent-NZit4",
-        "targetHandle": "{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-NZit4œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œLanguageModelComponent-NZit4œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -169,9 +169,9 @@
         "id": "reactflow__edge-LanguageModelComponent-NZit4{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-NZit4œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-oDwzs{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-oDwzsœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "LanguageModelComponent-NZit4",
-        "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-NZit4œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-NZit4œ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-oDwzs",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-oDwzsœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-oDwzsœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -197,9 +197,9 @@
         "id": "xy-edge__File-NBjao{œdataTypeœ:œFileœ,œidœ:œFile-NBjaoœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-cdQOP{œfieldNameœ:œtextœ,œidœ:œPrompt-cdQOPœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "File-NBjao",
-        "sourceHandle": "{œdataTypeœ:œFileœ,œidœ:œFile-NBjaoœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-NBjaoœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-cdQOP",
-        "targetHandle": "{œfieldNameœ:œtextœ,œidœ:œPrompt-cdQOPœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œtextœ, œidœ: œPrompt-cdQOPœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -224,9 +224,9 @@
         "id": "xy-edge__File-NBjao{œdataTypeœ:œFileœ,œidœ:œFile-NBjaoœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-NZit4{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-NZit4œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "File-NBjao",
-        "sourceHandle": "{œdataTypeœ:œFileœ,œidœ:œFile-NBjaoœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-NBjaoœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "LanguageModelComponent-NZit4",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-NZit4œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-NZit4œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -2893,11 +2893,8 @@
                 "cache": true,
                 "display_name": "Raw Content",
                 "group_outputs": false,
-                "loop_types": null,
                 "method": "load_files_message",
                 "name": "message",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -2908,12 +2905,6 @@
             ],
             "pinned": false,
             "template": {
-              "_frontend_node_flow_id": {
-                "value": "da2845ed-4e66-4010-ace6-62e27615f84d"
-              },
-              "_frontend_node_folder_id": {
-                "value": "34260300-cae1-43f3-8b14-1272b8cffe4c"
-              },
               "_type": "Component",
               "advanced_mode": {
                 "_input_type": "BoolInput",
@@ -3204,7 +3195,6 @@
                 "type": "bool",
                 "value": true
               },
-              "is_refresh": false,
               "markdown": {
                 "_input_type": "BoolInput",
                 "advanced": false,
