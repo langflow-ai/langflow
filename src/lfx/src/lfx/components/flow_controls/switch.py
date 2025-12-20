@@ -17,7 +17,7 @@ class SwitchComponent(Component):
             name="switch",
             display_name="Input",
             info="Input is Data or Message",
-            input_types=["Data","Message"],
+            input_types=["Data", "Message"],
             required=True,
         ),
         MessageTextInput(
@@ -36,9 +36,9 @@ class SwitchComponent(Component):
 
     outputs = [
         Output(
-            display_name=f"Output 1",
-            name=f"output_1",
-            method=f"build_output",
+            display_name="Output 1",
+            name="output_1",
+            method="build_output",
             group_outputs=True,
         )
     ]
@@ -53,14 +53,14 @@ class SwitchComponent(Component):
         if isinstance(self.switch, Message):
             value = self.switch.text
         elif isinstance(self.switch, Data):
-            if self.switch_key is None or self.switch_key == '':
+            if self.switch_key is None or self.switch_key == "":
                 raise ValueError("Data must specify a ‘case’ key.")
             value = self.switch.data.get(self.switch_key)
 
         output_name = None
         for index, case in enumerate(self.cases):
             if value == case:
-                output_name = f"output_{index+1}"
+                output_name = f"output_{index + 1}"
                 break
 
         for output in self._get_outputs_to_process():
@@ -84,9 +84,9 @@ class SwitchComponent(Component):
             frontend_node["outputs"] = []
             for i in range(target_count):
                 new_output = Output(
-                    display_name=f"Output {i+1}",
-                    name=f"output_{i+1}",
-                    method=f"build_output",
+                    display_name=f"Output {i + 1}",
+                    name=f"output_{i + 1}",
+                    method="build_output",
                     group_outputs=True,
                 )
                 frontend_node["outputs"].append(new_output.to_dict())
