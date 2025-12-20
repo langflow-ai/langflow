@@ -199,6 +199,12 @@ class Settings(BaseSettings):
     object_storage_tags: dict[str, str] | None = None
     """Object storage tags for file storage."""
 
+    # Publish Configuration
+    publish_backend: str = "s3"
+    """The backend to use for publishing flows (e.g., 's3')."""
+    publish_backend_bucket_name: str | None = "langflow-publish"
+    """The bucket name for the publish backend."""
+
     celery_enabled: bool = False
 
     fallback_to_env_var: bool = True
