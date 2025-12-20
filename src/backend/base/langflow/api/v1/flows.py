@@ -699,9 +699,7 @@ async def publish_flow_version(
     flow_id: UUID,
     current_user: CurrentActiveUser,
 ):
-    """
-    Publish the flow to S3.
-    """
+    """Publish the flow to S3."""
     flow = await _read_flow(session=session, flow_id=flow_id, user_id=current_user.id)
     if not flow:
         raise HTTPException(status_code=404, detail="Flow not found")
@@ -730,9 +728,7 @@ async def get_published_flow(
     flow_id: UUID,
     current_user: CurrentActiveUser,
 ):
-    """
-    Retrieve the published flow from S3.
-    """
+    """Retrieve the published flow from S3."""
     try:
         publish_service = get_service(ServiceType.PUBLISH_SERVICE)
         flow_data = await publish_service.get_flow(
