@@ -9,4 +9,6 @@ export interface ChatHeaderProps {
   onDeleteSession?: (sessionId: string) => void;
   onClose?: () => void;
   className?: string;
+  openLogsModal?: boolean;
+  setOpenLogsModal?: (open: boolean) => void;
 }

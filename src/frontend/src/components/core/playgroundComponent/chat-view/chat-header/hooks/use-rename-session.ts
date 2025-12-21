@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 interface UseRenameSessionParams {
   currentSessionId?: string;
@@ -13,30 +13,32 @@ export const useRenameSession = ({
 }: UseRenameSessionParams) => {
   const [isEditing, setIsEditing] = useState(false);
 
-  const handleEditSave = useCallback(
-    async (newSessionId: string) => {
-      if (
-        !currentSessionId ||
-        !newSessionId.trim() ||
-        newSessionId.trim() === currentSessionId
-      ) {
-        setIsEditing(false);
-        return;
-      }
-      await handleRename(currentSessionId, newSessionId.trim());
-      onSessionSelect?.(newSessionId.trim());
-      setIsEditing(false);
-    },
-    [currentSessionId, handleRename, onSessionSelect],
-  );
+  // Reset edit state when the active session changes.
+  useEffect(() => {
+    setIsEditing(false);
+  }, [currentSessionId]);
 
   const handleEditStart = useCallback(() => {
     setIsEditing(true);
   }, []);
 
-  return {
-    isEditing,
-    handleEditSave,
-    handleEditStart,
-  };
+  const handleEditCancel = useCallback(() => {
+    setIsEditing(false);
+  }, []);
+
+  const handleEditSave = useCallback(
+    async (newSessionId: string) => {
+      const trimmed = newSessionId.trim();
+      if (!currentSessionId || !trimmed || trimmed === currentSessionId) {
+        setIsEditing(false);
+        return;
+      }
+      await handleRename(currentSessionId, trimmed);
+      onSessionSelect?.(trimmed);
+      setIsEditing(false);
+    },
+    [currentSessionId, handleRename, onSessionSelect],
+  );
+
+  return { isEditing, handleEditStart, handleEditCancel, handleEditSave };
 };

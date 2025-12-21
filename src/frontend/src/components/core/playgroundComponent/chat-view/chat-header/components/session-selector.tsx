@@ -39,44 +39,31 @@ export function SessionSelector({
     (state) => state.setNewSessionCloseVoiceAssistant,
   );
 
-  const handleEditClick = (e?: React.MouseEvent<HTMLDivElement>) => {
-    e?.stopPropagation();
+  const handleEditClick = () => {
     setIsEditing(true);
   };
 
   const handleRenameSave = (newSessionId: string) => {
     setIsEditing(false);
-    if (newSessionId.trim() !== session && newSessionId.trim()) {
-      updateSessionName(
-        { old_session_id: session, new_session_id: newSessionId.trim() },
-        {
-          onSuccess: () => {
-            if (isVisible) {
-              updateVisibleSession(newSessionId.trim());
-            }
-            if (
-              selectedView?.type === "Session" &&
-              selectedView?.id === session &&
-              setSelectedView
-            ) {
-              setSelectedView({ type: "Session", id: newSessionId.trim() });
-            }
-          },
+    const trimmed = newSessionId.trim();
+    if (!trimmed || trimmed === session) return;
+    updateSessionName(
+      { old_session_id: session, new_session_id: trimmed },
+      {
+        onSuccess: () => {
+          if (isVisible) {
+            updateVisibleSession(trimmed);
+          }
+          if (
+            selectedView?.type === "Session" &&
+            selectedView?.id === session &&
+            setSelectedView
+          ) {
+            setSelectedView({ type: "Session", id: trimmed });
+          }
         },
-      );
-    }
-  };
-
-  const handleRename = () => {
-    handleEditClick();
-  };
-
-  const handleMessageLogs = () => {
-    inspectSession?.(session);
-  };
-
-  const handleDelete = () => {
-    deleteSession(session);
+      },
+    );
   };
 
   return (
@@ -92,31 +79,45 @@ export function SessionSelector({
         isVisible ? "bg-accent font-semibold" : "font-normal",
       )}
     >
-      <div className="flex w-full items-center justify-between overflow-hidden px-2 py-1 align-middle">
+      <div className="flex w-full items-center justify-between overflow-hidden px-2 py-1 align-middle w-[218px]">
         <div className="flex w/full min-w-0 items-center">
           {isEditing ? (
-            <SessionRename sessionId={session} onSave={handleRenameSave} />
+            <div
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              onMouseUp={(e) => e.stopPropagation()}
+              className="w-full"
+            >
+              <SessionRename
+                sessionId={session}
+                onSave={handleRenameSave}
+                onDone={() => {
+                  setIsEditing(false);
+                }}
+              />
+            </div>
           ) : (
             <ShadTooltip styleClasses="z-50" content={session}>
               <div className="relative w-full overflow-hidden">
-                <span className="w-full truncate bg-transparent">
+                <span className="w-full truncate bg-transparent text-[13px] font-medium leading-4">
                   {session === currentFlowId ? "Default Session" : session}
                 </span>
               </div>
             </ShadTooltip>
           )}
         </div>
+
         <SessionMoreMenu
-          onRename={handleRename}
-          onMessageLogs={handleMessageLogs}
-          onDelete={handleDelete}
-          showMessageLogs={!!inspectSession}
-          side="right"
-          align="start"
-          isVisible={isVisible}
-          tooltipContent="Options"
-          tooltipSide="right"
-          triggerClassName="w-fit"
+          onRename={handleEditClick}
+          onMessageLogs={() => inspectSession?.(session)}
+          onDelete={() => deleteSession(session)}
+          side="bottom"
+          align="end"
+          sideOffset={4}
+          contentClassName="z-[100] [&>div.p-1]:!h-auto [&>div.p-1]:!min-h-0"
+          isVisible={true}
+          tooltipContent="More options"
+          tooltipSide="left"
         />
       </div>
     </div>

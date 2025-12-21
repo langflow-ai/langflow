@@ -1,6 +1,6 @@
 import React from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import { cn } from "@/utils/utils";
+import { Button } from "@/components/ui/button";
 
 interface ChatHeaderActionsProps {
   isFullscreen: boolean;
@@ -19,42 +19,32 @@ export function ChatHeaderActions({
     return null;
   }
 
+  const actionButtonClasses =
+    "h-8 w-8 p-2 text-muted-foreground hover:text-foreground hover:bg-accent rounded transition-colors overflow-hidden no-focus-visible";
+
   return (
-    <div
-      className={cn("relative flex items-center gap-2 w-[64px] justify-end")}
-    >
+    <div className="relative flex items-center gap-2 w-[120px] justify-end">
       {renderPrefix && <div className="shrink-0">{renderPrefix()}</div>}
-      <button
-        type="button"
+      <Button
         onClick={onToggleFullscreen}
-        className="relative p-2 hover:bg-accent rounded transition-colors overflow-hidden"
+        variant="ghost"
+        size="icon"
+        className={actionButtonClasses}
         title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
         aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
       >
-        <span
-          className={cn(
-            "absolute inset-0 flex items-center justify-center",
-            isFullscreen ? "opacity-0" : "opacity-100 translate-x-0",
-          )}
+        <ForwardedIconComponent
+          name={isFullscreen ? "Shrink" : "Expand"}
+          className="h-4 w-4"
           aria-hidden="true"
-        >
-          <ForwardedIconComponent name="Expand" className="h-4 w-4" />
-        </span>
-        <span
-          className={cn(
-            "absolute inset-0 flex items-center justify-center",
-            isFullscreen ? "opacity-100" : "opacity-0",
-          )}
-          aria-hidden="true"
-        >
-          <ForwardedIconComponent name="Shrink" className="h-4 w-4" />
-        </span>
-      </button>
+        />
+      </Button>
       {isFullscreen && onClose && (
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={onClose}
-          className="p-2 hover:bg-accent rounded transition-colors overflow-hidden"
+          className={actionButtonClasses}
           title="Close and go back to flow"
           aria-label="Close and go back to flow"
         >
@@ -63,7 +53,7 @@ export function ChatHeaderActions({
             className="h-4 w-4"
             aria-hidden="true"
           />
-        </button>
+        </Button>
       )}
     </div>
   );

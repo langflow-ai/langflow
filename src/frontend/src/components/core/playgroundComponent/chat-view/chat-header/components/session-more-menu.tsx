@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/select-custom";
 import { cn } from "@/utils/utils";
 
-interface SessionMoreMenuProps {
+export interface SessionMoreMenuProps {
   onRename: () => void;
   onMessageLogs?: () => void;
   onDelete: () => void;
@@ -70,7 +70,7 @@ export function SessionMoreMenu({
         >
           <SelectTrigger
             className={cn(
-              "h-8 w-8 border-none bg-transparent p-2 focus:ring-0",
+              "h-8 w-8 border-none bg-transparent p-2 rounded transition-colors text-muted-foreground hover:bg-accent hover:text-foreground focus:ring-0",
               !isVisible && "invisible group-hover:visible",
               triggerClassName,
             )}

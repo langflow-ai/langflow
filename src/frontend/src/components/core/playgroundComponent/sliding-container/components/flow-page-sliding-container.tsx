@@ -17,7 +17,7 @@ export function FlowPageSlidingContainerContent({
   setIsFullscreen,
 }: FlowPageSlidingContainerContentProps) {
   const currentFlowId = useGetFlowId();
-  const { setOpen, setWidth, fullscreen } = useSimpleSidebar();
+  const { setOpen, setWidth } = useSimpleSidebar();
 
   const { sessions: fetchedSessions, addNewSession } = useGetAddSessions({
     flowId: currentFlowId,
@@ -27,12 +27,22 @@ export function FlowPageSlidingContainerContent({
   const [currentSessionId, setCurrentSessionId] = useState<string | undefined>(
     currentFlowId,
   );
+  const [openLogsModal, setOpenLogsModal] = useState(false);
 
   const sessions = useMemo(() => {
-    const base = new Set<string>(fetchedSessions);
-    if (currentFlowId) base.add(currentFlowId);
-    if (currentSessionId) base.add(currentSessionId);
-    return Array.from(base);
+    const ordered: string[] = [];
+    const seen = new Set<string>();
+    const push = (id?: string | null) => {
+      const trimmed = id?.trim();
+      if (!trimmed || seen.has(trimmed)) return;
+      seen.add(trimmed);
+      ordered.push(trimmed);
+    };
+    // Always keep the current flow id first to avoid duplicate "Default Session"
+    push(currentFlowId);
+    if (fetchedSessions?.length) fetchedSessions.forEach(push);
+    push(currentSessionId);
+    return ordered;
   }, [fetchedSessions, currentFlowId, currentSessionId]);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -72,6 +82,11 @@ export function FlowPageSlidingContainerContent({
     }
   };
 
+  const handleOpenLogs = (sessionId: string) => {
+    setCurrentSessionId(sessionId);
+    setOpenLogsModal(true);
+  };
+
   return (
     <div className="h-full w-full bg-background shadow-lg flex flex-col relative z-[50]">
       <div className="flex-1 flex overflow-hidden">
@@ -84,11 +99,12 @@ export function FlowPageSlidingContainerContent({
                 onSessionSelect={handleSessionSelect}
                 currentSessionId={currentSessionId}
                 onDeleteSession={handleDeleteSession}
+                onOpenLogs={handleOpenLogs}
               />
             </div>
           </div>
         </AnimatedConditional>
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden pt-2">
           <ChatHeader
             sessions={sessions}
             onNewChat={handleNewChat}
@@ -101,6 +117,8 @@ export function FlowPageSlidingContainerContent({
             isFullscreen={isFullscreen}
             onDeleteSession={handleDeleteSession}
             onClose={handleClose}
+            openLogsModal={openLogsModal}
+            setOpenLogsModal={setOpenLogsModal}
           />
           <div className="flex-1 overflow-auto p-6">
             {/* TODO: Add messages here */}

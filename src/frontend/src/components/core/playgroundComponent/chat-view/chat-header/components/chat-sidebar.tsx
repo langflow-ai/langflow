@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ interface ChatSidebarProps {
   onSessionSelect?: (sessionId: string) => void;
   currentSessionId?: string;
   onDeleteSession?: (sessionId: string) => void;
+  onOpenLogs?: (sessionId: string) => void;
 }
 
 export function ChatSidebar({
@@ -20,11 +21,12 @@ export function ChatSidebar({
   onSessionSelect,
   currentSessionId,
   onDeleteSession,
+  onOpenLogs,
 }: ChatSidebarProps) {
   const currentFlowId = useGetFlowId();
   const { handleDelete } = useEditSessionInfo({ flowId: currentFlowId });
 
-  const sessionIds = React.useMemo(() => sessions, [sessions]);
+  const sessionIds = useMemo(() => sessions, [sessions]);
 
   const visibleSession = currentSessionId;
 
@@ -47,12 +49,14 @@ export function ChatSidebar({
         className="flex flex-col pb-2"
         style={{ gap: "var(--space-4, 16px)" }}
       >
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between p-2">
           <div
             className="flex items-center"
             style={{ gap: "var(--space-4, 16px)" }}
           >
-            <div className="text-mmd font-normal">Sessions</div>
+            <div className="text-xs font-semibold leading-4 text-muted-foreground">
+              Sessions
+            </div>
           </div>
           <ShadTooltip styleClasses="z-50" content="New Chat">
             <Button
@@ -84,9 +88,7 @@ export function ChatSidebar({
               toggleVisibility={() => handleSessionClick(session)}
               isVisible={visibleSession === session}
               updateVisibleSession={handleSessionClick}
-              inspectSession={() => {
-                // TODO: Implement session inspection
-              }}
+              inspectSession={onOpenLogs}
               setActiveSession={() => {
                 // TODO: Implement active session
               }}

@@ -1,9 +1,10 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { AnimatedConditional } from "@/components/ui/animated-close";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/utils/utils";
 import { useEditSessionInfo } from "../hooks/use-edit-session-info";
 import { useRenameSession } from "../hooks/use-rename-session";
+import { useSessionMoreMenuHandlers } from "../hooks/use-session-more-menu-handlers";
 import type { ChatHeaderProps } from "../types/chat-header.types";
 import { getSessionTitle } from "../utils/get-session-title";
 import { ChatHeaderActions } from "./chat-header-actions";
@@ -23,6 +24,8 @@ export function ChatHeader({
   onDeleteSession,
   className,
   onClose,
+  openLogsModal,
+  setOpenLogsModal,
 }: ChatHeaderProps & { sessions: string[] }) {
   // Determine the title based on the current session
   const sessionTitle = useMemo(
@@ -34,32 +37,36 @@ export function ChatHeader({
   const { handleRename, handleDelete } = useEditSessionInfo({
     flowId: currentFlowId,
   });
-  const { isEditing, handleEditSave, handleEditStart } = useRenameSession({
-    currentSessionId,
-    handleRename,
-    onSessionSelect,
-  });
 
-  const [openLogsModal, setOpenLogsModal] = useState(false);
-  const isMobile = useIsMobile();
-  const isSessionDropdownVisible = !isFullscreen || isMobile;
-  const handleMessageLogs = () => {
-    if (currentSessionId) {
-      setOpenLogsModal(true);
-    }
+  const { isEditing, handleEditStart, handleEditCancel, handleEditSave } =
+    useRenameSession({
+      currentSessionId,
+      handleRename,
+      onSessionSelect,
+    });
+  const handleEditStartLogged = () => {
+    handleEditStart();
   };
 
+  const isMobile = useIsMobile();
+  // Keep session actions (including logs) available in fullscreen
+  const isSessionDropdownVisible = true;
   const handleDeleteSessionInternal = () => {
     if (!currentSessionId) return;
     handleDelete(currentSessionId);
     onDeleteSession?.(currentSessionId);
   };
 
+  const { onMessageLogs } = useSessionMoreMenuHandlers({
+    currentSessionId,
+    onOpenLogs: () => setOpenLogsModal?.(true),
+  });
+
   const moreMenu = (
     <AnimatedConditional isOpen={isSessionDropdownVisible}>
       <SessionMoreMenu
-        onRename={handleEditStart}
-        onMessageLogs={handleMessageLogs}
+        onRename={handleEditStartLogged}
+        onMessageLogs={onMessageLogs}
         onDelete={handleDeleteSessionInternal}
         side="bottom"
         align="end"
@@ -75,8 +82,8 @@ export function ChatHeader({
   return (
     <div
       className={cn(
-        "flex items-center border-b border-transparent p-4 bg-background relative overflow-visible",
-        "justify-between",
+        "flex items-center border-b border-transparent bg-background relative overflow-visible",
+        "justify-between px-4 py-3",
         className,
       )}
     >
@@ -91,22 +98,26 @@ export function ChatHeader({
             />
           </AnimatedConditional>
           <ChatHeaderTitle
+            key={currentSessionId ?? "header-title"}
             sessionTitle={sessionTitle}
             isEditing={isEditing}
             currentSessionId={currentSessionId}
             isFullscreen={isFullscreen}
             onRenameSave={handleEditSave}
+            onCancel={handleEditCancel}
           />
         </div>
       )}
       {isFullscreen && (
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <ChatHeaderTitle
+            key={currentSessionId ?? "header-title-full"}
             sessionTitle={sessionTitle}
             isEditing={isEditing}
             currentSessionId={currentSessionId}
             isFullscreen={isFullscreen}
             onRenameSave={handleEditSave}
+            onCancel={handleEditCancel}
           />
         </div>
       )}
@@ -131,8 +142,8 @@ export function ChatHeader({
         <SessionLogsModal
           sessionId={currentSessionId}
           flowId={currentFlowId}
-          open={openLogsModal}
-          setOpen={setOpenLogsModal}
+          open={openLogsModal ?? false}
+          setOpen={setOpenLogsModal ?? (() => {})}
         />
       )}
     </div>
