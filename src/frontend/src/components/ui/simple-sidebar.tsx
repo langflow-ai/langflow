@@ -79,6 +79,7 @@ const SimpleSidebarProvider = React.forwardRef<
     );
     const [_isResizing, _setIsResizing] = React.useState(false);
     const [_parentWidth, _setParentWidth] = React.useState(10000);
+    const [_wasDragged, _setWasDragged] = React.useState(false);
 
     // Internal ref for tracking parent width
     const internalRef = React.useRef<HTMLDivElement>(null);
@@ -99,6 +100,7 @@ const SimpleSidebarProvider = React.forwardRef<
 
     const setWidth = React.useCallback(
       (newWidth: number) => {
+        _setWasDragged(true);
         const minWidthPx = _parentWidth * minWidth;
         const maxWidthPx = _parentWidth * maxWidth;
 
@@ -125,15 +127,19 @@ const SimpleSidebarProvider = React.forwardRef<
       return setOpen((prev) => !prev);
     }, [setOpen]);
 
-    // Reset width and isResizing when fullscreen is true
+    // Reset width and isResizing when fullscreen is true (unless user dragged)
     React.useEffect(() => {
       if (fullscreen) {
-        _setWidth(
-          typeof width === "string" ? parseInt(width.replace("px", "")) : width,
-        );
+        if (!_wasDragged) {
+          _setWidth(
+            typeof width === "string"
+              ? parseInt(width.replace("px", ""))
+              : width,
+          );
+        }
         _setIsResizing(false);
       }
-    }, [fullscreen, width]);
+    }, [fullscreen, width, _wasDragged]);
 
     // Track parent width using ResizeObserver
     React.useEffect(() => {
