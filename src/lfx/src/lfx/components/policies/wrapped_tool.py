@@ -1,6 +1,7 @@
 import json
-from typing import Any, TypeVar
+from typing import Any, Dict, List, TypeVar
 
+from langchain_core.language_models.chat_models import BaseChatModel
 from pydantic import BaseModel
 from toolguard import IToolInvoker, load_toolguards
 
@@ -30,42 +31,42 @@ class ToolInvoker(IToolInvoker):
         raise ValueError(f"unknown tool {toolname}")
 
 
-def wrap_tool(tool: Tool, all_tools: list[Tool], guard_code_path: str) -> Tool:
-    invoker = ToolInvoker(all_tools)
+# def wrap_tool(tool: Tool, all_tools: list[Tool], guard_code_path: str) -> Tool:
+#     invoker = ToolInvoker(all_tools)
 
-    def func(*args: dict, **kwargs):
-        with load_toolguards(guard_code_path) as toolguard:
-            from rt_toolguard.data_types import PolicyViolationException  # type: ignore
+#     def func(*args: dict, **kwargs):
+#         with load_toolguards(guard_code_path) as toolguard:
+#             from rt_toolguard.data_types import PolicyViolationException  # type: ignore
 
-            try:
-                toolguard.check_toolcall(tool.name, args=kwargs, delegate=invoker)
-                return tool._orig_func(*args, **kwargs)
-            except PolicyViolationException as ex:
-                return f"Error: {ex.message}"
-            except Exception as ex:
-                logger.exception("Unhandled exception in WrappedTool._arun", exc_info=ex)
-                raise ex
+#             try:
+#                 toolguard.check_toolcall(tool.name, args=kwargs, delegate=invoker)
+#                 return tool._orig_func(*args, **kwargs)
+#             except PolicyViolationException as ex:
+#                 return f"Error: {ex.message}"
+#             except Exception as ex:
+#                 logger.exception("Unhandled exception in WrappedTool._arun", exc_info=ex)
+#                 raise ex
 
-    async def coro(*args: dict, **kwargs):
-        with load_toolguards(guard_code_path) as toolguard:
-            from rt_toolguard.data_types import PolicyViolationException  # type: ignore
+#     async def coro(*args: dict, **kwargs):
+#         with load_toolguards(guard_code_path) as toolguard:
+#             from rt_toolguard.data_types import PolicyViolationException  # type: ignore
 
-            try:
-                toolguard.check_toolcall(tool.name, args=kwargs, delegate=invoker)
-                return await tool._orig_coro(*args, **kwargs)
-            except PolicyViolationException as ex:
-                return f"Error: {ex.message}"
-            except Exception as ex:
-                logger.exception("Unhandled exception in WrappedTool._arun", exc_info=ex)
-                raise ex
+#             try:
+#                 toolguard.check_toolcall(tool.name, args=kwargs, delegate=invoker)
+#                 return await tool._orig_coro(*args, **kwargs)
+#             except PolicyViolationException as ex:
+#                 return f"Error: {ex.message}"
+#             except Exception as ex:
+#                 logger.exception("Unhandled exception in WrappedTool._arun", exc_info=ex)
+#                 raise ex
 
-    tool._orig_func = tool.func
-    tool.func = func
+#     tool._orig_func = tool.func
+#     tool.func = func
 
-    tool._orig_coro = tool.coroutine
-    tool.coroutine = coro
+#     tool._orig_coro = tool.coroutine
+#     tool.coroutine = coro
 
-    return tool
+#     return tool
 
 
 class WrappedTool(Tool):
@@ -131,3 +132,23 @@ class WrappedTool(Tool):
             except Exception as ex:
                 logger.exception("Unhandled exception in WrappedTool._arun", exc_info=ex)
                 raise ex
+            
+
+# from toolguard import LitellmModel
+# from langchain_core.messages import messages_from_dict, messages_to_dict
+# class LangchainModelWrapper(LitellmModel):
+# 	def __init__(self, langchain_model:BaseChatModel):
+# 		self.langchain_model = langchain_model
+
+# 	async def generate(self, messages: List[Dict])->str:
+# 		messages = [{
+# 		    'type': 'human' if msg['role'] == 'user' else 'system', 
+# 		    'data':{
+#                 'content': msg['content']
+#             }
+# 		} for msg in messages]
+# 		lc_messages = messages_from_dict(messages)
+# 		response = await self.langchain_model.agenerate(
+# 			messages=[lc_messages],
+# 		)
+# 		return response.generations[0][0].message.content

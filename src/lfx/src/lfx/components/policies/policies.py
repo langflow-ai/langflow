@@ -10,6 +10,7 @@ from os.path import join
 from typing import Any
 
 from lfx.base.models import LCModelComponent
+from lfx.components.policies.wrapped_tool import WrappedTool
 from lfx.custom.custom_component.component import Component
 
 from lfx.base.models.unified_models import (
@@ -23,15 +24,16 @@ from lfx.field_typing import Tool
 from lfx.inputs.inputs import BoolInput, MessageTextInput
 from lfx.io import HandleInput, MessageTextInput, Output, SecretStrInput
 
-MODEL_PROVIDERS_LIST = ["Anthropic", "OpenAI"]
-MODEL = "gpt-4o-2024-08-06"
 STEP1 = "Step_1"
 STEP2 = "Step_2"
+BUILD_MODE_GENERATE = "Generate"
+BUILD_MODE_CACHE = "Use Cache"
 
 
 class PoliciesComponent(LCModelComponent):
     display_name = "Policies"
-    description = "Component for building tool protection code from textual business policies and instructions."
+    description = """Component for building tool protection code from textual business policies and instructions.
+Powered by [ToolGuard](https://github.com/IBM/toolguard)"""
     documentation: str = "https://github.com/IBM/toolguard"
     icon = "clipboard-check"  # consider also file-text
     name = "policies"
@@ -41,15 +43,15 @@ class PoliciesComponent(LCModelComponent):
         BoolInput(
             name="bypass_policies",
             display_name="Bypass",
-            info="If false, invokes ToolGuard code prior to tool execution, ensuring that tool-related policies are enforced.",
+            info="If `true` - skip policy validation. If `false`, invokes ToolGuard code prior to tool execution, ensuring that tool-related policies are enforced.",
             value=False,
         ),
         TabInput(
             name="build_mode",
             display_name="Policies Build Mode",
-            options=["Build", "Use Cache"],
+            options=[BUILD_MODE_GENERATE, BUILD_MODE_CACHE],
             info="Indicates whether to invoke buildtime (build), or use a cached code (use cache)",
-            value="Build",
+            value=BUILD_MODE_GENERATE,
             real_time_refresh=True,
             tool_mode=True,
         ),
@@ -68,7 +70,7 @@ class PoliciesComponent(LCModelComponent):
             display_name="ToolGuards Generated Code Path",
             info="Automatically generated ToolGuards code",
             # show_if={"enable_tool_guard": True},
-            value='',  # todo: decide on the path
+            value='tmp',  # todo: decide on the path
             advanced=True,
         ),
         DropdownInput(
@@ -91,7 +93,7 @@ class PoliciesComponent(LCModelComponent):
             advanced=False,
         ),
         HandleInput(
-            name="tools",
+            name="in_tools",
             display_name="Tools",
             input_types=["Tool"],
             is_list=True,
@@ -110,18 +112,31 @@ class PoliciesComponent(LCModelComponent):
 
         toolguard_step1_dir = join(self.guard_code_path, STEP1)
         specs = await generate_guard_specs(
-            policy_text=self.policies, tools=self.tools, llm=llm, work_dir=toolguard_step1_dir
+            policy_text=self.policies, tools=self.in_tools, llm=llm, work_dir=toolguard_step1_dir
         )
+        logger.info(f"🔒️ToolGuard: Step 1 Done")
         return specs
 
+    def mellea_session(self )->MelleaSessionData: 
+        return MelleaSessionData(
+            backend_name=self.model[0].get("provider").lower(),
+            model_id=self.model[0].get("name"),
+            kw_args={
+                "base_url": "",
+                "api_key": self.api_key
+            }
+        )
+    
     async def _build_guards(self, specs: list[ToolGuardSpec]) -> ToolGuardsCodeGenerationResult:
+        logger.info(f"🔒️ToolGuard: Starting step 2")
         out_dir = join(self.guard_code_path, STEP2)
         gen_result = await generate_guards_from_specs(
-            tools=self.tools,
+            tools=self.in_tools,
             tool_specs=specs,
             work_dir=out_dir,
-            llm_data=MelleaSessionData(),  # FIXME
+            llm_data=self.mellea_session()
         )
+        logger.info(f"🔒️ToolGuard: Step 2 Done")
         return gen_result
 
     async def build_guards(self) -> list[Tool]:
