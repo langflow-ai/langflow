@@ -33,7 +33,8 @@ STEP2 = "Step_2"
 
 class PoliciesComponent(LCModelComponent):
     display_name = "Policies"
-    description = "Component for building tool protection code from textual business policies and instructions."
+    description = "Component for building tool protection code from textual business policies and instructions. " \
+                  "Powered by [ToolGuard](https://github.com/IBM/toolguard)."
     documentation: str = "https://github.com/IBM/toolguard"
     icon = "clipboard-check"  # consider also file-text
     name = "policies"
@@ -49,9 +50,9 @@ class PoliciesComponent(LCModelComponent):
         TabInput(
             name="build_mode",
             display_name="Policies Build Mode",
-            options=["Build", "Use Cache"],
+            options=["Generate", "Use Cache"],
             info="Indicates whether to invoke buildtime (build), or use a cached code (use cache)",
-            value="Build",
+            value="Generate",
             real_time_refresh=True,
             tool_mode=True,
         ),
@@ -168,8 +169,8 @@ class PoliciesComponent(LCModelComponent):
         self.log("🔒️ToolGuard: please review the generated guard code at ...", name="info")
 
         if not self.bypass_policies:
-            build_mode = getattr(self, "build_mode", "Build")
-            if build_mode == "Build":  # run buildtime steps
+            build_mode = getattr(self, "build_mode", "Generate")
+            if build_mode == "Generate":  # run buildtime steps
                 self.log("🔒️ToolGuard: execution (build) mode", name="info")
                 # specs  = await self._build_guard_specs()
                 # guards = await self._build_guards(specs)
