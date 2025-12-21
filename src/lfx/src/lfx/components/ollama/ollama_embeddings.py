@@ -5,7 +5,6 @@ import httpx
 from langchain_ollama import OllamaEmbeddings
 
 from lfx.base.models.model import LCModelComponent
-from lfx.base.models.ollama_constants import OLLAMA_EMBEDDING_MODELS
 from lfx.field_typing import Embeddings
 from lfx.io import DropdownInput, MessageTextInput, Output
 from lfx.utils.util import transform_localhost_url
@@ -79,14 +78,10 @@ class OllamaEmbeddingsComponent(LCModelComponent):
                 data = response.json()
 
             model_ids = [model["name"] for model in data.get("models", [])]
-            # this to ensure that not embedding models are included.
-            # not even the base models since models can have 1b 2b etc
-            # handles cases when embeddings models have tags like :latest - etc.
-            model_ids = [
-                model
-                for model in model_ids
-                if any(model.startswith(f"{embedding_model}") for embedding_model in OLLAMA_EMBEDDING_MODELS)
-            ]
+            # Return all available models from Ollama.
+            # Ollama supports custom embedding models and models with various naming conventions
+            # (e.g., gemma3:4b, deepseek-r1:8b), so we show all models and let users choose.
+            # The Ollama API will handle validation when the model is actually used.
 
         except (ImportError, ValueError, httpx.RequestError) as e:
             msg = "Could not get model names from Ollama."
