@@ -11,7 +11,7 @@ from langflow.services.auth import utils as auth_utils
 from langflow.services.base import Service
 from langflow.services.database.models.variable.model import Variable, VariableCreate, VariableRead, VariableUpdate
 from langflow.services.variable.base import VariableService
-from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
+from langflow.services.variable.constants import CREDENTIAL_TYPE
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -193,9 +193,7 @@ class DatabaseVariableService(VariableService, Service):
                 try:
                     value = auth_utils.decrypt_api_key(variable.value, settings_service=self.settings_service)
                 except Exception as e:  # noqa: BLE001
-                    await logger.adebug(
-                        f"Decryption of {variable.type} failed for variable '{variable.name}': {e}."
-                    )
+                    await logger.adebug(f"Decryption of {variable.type} failed for variable '{variable.name}': {e}.")
                     value = None  # Don't expose potentially corrupted credential data
             else:
                 # Generic and other types are stored as plaintext
