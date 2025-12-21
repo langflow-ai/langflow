@@ -30,6 +30,7 @@ from lfx.schema.dataframe import DataFrame  # noqa: TC001
 from lfx.schema.message import Message
 from lfx.services.deps import get_settings_service, get_storage_service
 from lfx.utils.async_helpers import run_until_complete
+from lfx.utils.validate_cloud import is_astra_cloud_environment
 
 
 class FileComponent(BaseFileComponent):
@@ -113,7 +114,7 @@ class FileComponent(BaseFileComponent):
                 "Enable advanced document processing and export with Docling for PDFs, images, and office documents. "
                 "Note that advanced document processing can consume significant resources."
             ),
-            show=True,
+            show=not is_astra_cloud_environment(),  # Disabled in cloud - Docling/EasyOCR not validated on Graviton ARM64
         ),
         DropdownInput(
             name="pipeline",
@@ -281,12 +282,21 @@ class FileComponent(BaseFileComponent):
 
             # If all files can be processed by docling, do so
             allow_advanced = all(not file_path.endswith((".csv", ".xlsx", ".parquet")) for file_path in paths)
-            build_config["advanced_mode"]["show"] = allow_advanced
-            if not allow_advanced:
+            # Disable in cloud environments - Docling/EasyOCR not validated on Graviton ARM64
+            if is_astra_cloud_environment():
+                build_config["advanced_mode"]["show"] = False
                 build_config["advanced_mode"]["value"] = False
+                # Hide all related fields in cloud
                 for f in ("pipeline", "ocr_engine", "doc_key", "md_image_placeholder", "md_page_break_placeholder"):
                     if f in build_config:
                         build_config[f]["show"] = False
+            else:
+                build_config["advanced_mode"]["show"] = allow_advanced
+                if not allow_advanced:
+                    build_config["advanced_mode"]["value"] = False
+                    for f in ("pipeline", "ocr_engine", "doc_key", "md_image_placeholder", "md_page_break_placeholder"):
+                        if f in build_config:
+                            build_config[f]["show"] = False
 
         # Docling Processing
         elif field_name == "advanced_mode":
@@ -786,10 +796,16 @@ class FileComponent(BaseFileComponent):
             for file in file_list:
                 extension = file.path.suffix[1:].lower()
                 if extension in self.DOCLING_ONLY_EXTENSIONS:
-                    msg = (
-                        f"File '{file.path.name}' has extension '.{extension}' which requires "
-                        f"Advanced Parser mode. Please enable 'Advanced Parser' to process this file."
-                    )
+                    if is_astra_cloud_environment():
+                        msg = (
+                            f"File '{file.path.name}' has extension '.{extension}' which requires "
+                            f"Advanced Parser mode. Advanced Parser is not available in cloud environments."
+                        )
+                    else:
+                        msg = (
+                            f"File '{file.path.name}' has extension '.{extension}' which requires "
+                            f"Advanced Parser mode. Please enable 'Advanced Parser' to process this file."
+                        )
                     self.log(msg)
                     raise ValueError(msg)
 
