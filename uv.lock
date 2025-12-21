@@ -6443,6 +6443,9 @@ dev = [
     { name = "pytest-cov" },
     { name = "ruff" },
 ]
+integration = [
+    { name = "langchain-openai" },
+]
 
 [package.metadata]
 requires-dist = [
@@ -6492,6 +6495,7 @@ dev = [
     { name = "pytest-cov", specifier = ">=7.0.0" },
     { name = "ruff", specifier = ">=0.9.10" },
 ]
+integration = [{ name = "langchain-openai", specifier = ">=0.3.0" }]
 
 [[package]]
 name = "libcst"

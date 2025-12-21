@@ -156,18 +156,33 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
       const name = parsedSourceHandle.name;
 
       if (sourceNode.type == "genericNode") {
-        const output =
-          sourceNode.data.node!.outputs?.find(
-            (output) => output.name === sourceNode.data.selected_output,
-          ) ??
-          sourceNode.data.node!.outputs?.find(
-            (output) =>
-              (output.selected ||
-                (sourceNode.data.node!.outputs?.filter(
-                  (output) => !output.group_outputs,
-                )?.length ?? 0) <= 1) &&
-              output.name === name,
-          );
+        // Check if any output has group_outputs=true (means all outputs are shown independently)
+        const hasGroupOutputs = sourceNode.data.node!.outputs?.some(
+          (output) => output.group_outputs,
+        );
+
+        // For group_outputs components, each output has its own independent edge.
+        // We must find the output by the edge's stored name, not by selected_output.
+        // Otherwise, if selected_output points to a different output than the edge,
+        // we'd reconstruct the wrong handle and incorrectly remove the edge.
+        //
+        // For regular components (single output or dropdown selection), use selected_output
+        // or fallback to finding by name.
+        const output = hasGroupOutputs
+          ? sourceNode.data.node!.outputs?.find(
+              (output) => output.name === name,
+            )
+          : (sourceNode.data.node!.outputs?.find(
+              (output) => output.name === sourceNode.data.selected_output,
+            ) ??
+            sourceNode.data.node!.outputs?.find(
+              (output) =>
+                (output.selected ||
+                  (sourceNode.data.node!.outputs?.filter(
+                    (output) => !output.group_outputs,
+                  )?.length ?? 0) <= 1) &&
+                output.name === name,
+            ));
 
         if (output) {
           const outputTypes =
@@ -182,7 +197,8 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
 
           // Skip edge cleanup for outputs with allows_loop=true
           const hasAllowsLoop = output?.allows_loop === true;
-          if (scapedJSONStringfy(id) !== sourceHandle && !hasAllowsLoop) {
+          const reconstructedHandle = scapedJSONStringfy(id);
+          if (reconstructedHandle !== sourceHandle && !hasAllowsLoop) {
             newEdges = newEdges.filter((e) => e.id !== edge.id);
           }
         } else {

@@ -358,7 +358,9 @@ class Graph:
         *,
         reset_output_values: bool = True,
     ):
-        self.prepare()
+        # Preserve start_component_id from constructor if available
+        start_component_id = self._start.get_id() if self._start else None
+        self.prepare(start_component_id=start_component_id)
         if reset_output_values:
             self._reset_all_output_values()
 
@@ -377,6 +379,20 @@ class Graph:
                 return
             if hasattr(result, "vertex"):
                 yielded_counts[result.vertex.id] += 1
+                # Emit on_end_vertex event for each completed vertex
+                if event_manager is not None:
+                    result_data_dict = None
+                    if hasattr(result, "result_dict") and result.result_dict:
+                        try:
+                            result_data_dict = result.result_dict.model_dump()
+                        except (AttributeError, TypeError):
+                            result_data_dict = result.result_dict
+                    build_data = {
+                        "id": result.vertex.id,
+                        "valid": result.valid if hasattr(result, "valid") else True,
+                        "data": result_data_dict,
+                    }
+                    event_manager.on_end_vertex(data={"build_data": build_data})
 
         msg = "Max iterations reached"
         raise ValueError(msg)
@@ -2276,6 +2292,38 @@ class Graph:
             if vertex.id not in in_degree:
                 in_degree[vertex.id] = 0
         return in_degree
+
+    def create_subgraph(self, vertex_ids: set[str]) -> Graph:
+        """Create an isolated subgraph containing only specified vertices.
+
+        This creates a new Graph instance with only the vertices and edges
+        that connect the specified vertices. The subgraph shares the same
+        flow_id and user_id but gets its own context copy.
+
+        Args:
+            vertex_ids: Set of vertex IDs to include in the subgraph
+
+        Returns:
+            A new Graph instance containing only the specified vertices
+        """
+        # Filter nodes to only include specified vertex IDs
+        subgraph_nodes = [n for n in self._vertices if n["id"] in vertex_ids]
+
+        # Filter edges to only include those connecting vertices in the subgraph
+        subgraph_edges = [e for e in self._edges if e["source"] in vertex_ids and e["target"] in vertex_ids]
+
+        # Create new graph instance with copied context
+        subgraph = Graph(
+            flow_id=self.flow_id,
+            flow_name=f"{self.flow_name}_subgraph" if self.flow_name else "subgraph",
+            user_id=self.user_id,
+            context=dict(self.context) if self.context else None,
+        )
+
+        # Add the filtered nodes and edges
+        subgraph.add_nodes_and_edges(subgraph_nodes, subgraph_edges)
+
+        return subgraph
 
     @staticmethod
     def build_adjacency_maps(edges: list[CycleEdge]) -> tuple[dict[str, list[str]], dict[str, list[str]]]:
