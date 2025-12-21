@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState } from "react";
-import { Input } from "@/components/ui/input";
+import React from "react";
 import { cn } from "@/utils/utils";
+import { SessionRename } from "./session-rename";
 
 type ChatHeaderTitleProps = {
   sessionTitle?: string;
@@ -21,45 +21,7 @@ export function ChatHeaderTitle({
   onCancel,
   className,
 }: ChatHeaderTitleProps) {
-  const [value, setValue] = useState(sessionTitle ?? "");
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [hasFocused, setHasFocused] = useState(false);
-
-  useEffect(() => {
-    setValue(sessionTitle ?? "");
-  }, [sessionTitle]);
-
-  useEffect(() => {
-    if (isEditing) {
-      inputRef.current?.focus();
-      inputRef.current?.select();
-      setHasFocused(false);
-    }
-  }, [isEditing]);
-
-  const commit = async () => {
-    const next = value.trim();
-    // If unchanged or empty, just exit edit mode
-    if (!next || next === currentSessionId || next === sessionTitle?.trim()) {
-      onCancel?.();
-      setValue(sessionTitle ?? "");
-      return;
-    }
-    await onRenameSave(next);
-    onCancel?.();
-  };
-
-  const handleKeyDown = async (
-    event: React.KeyboardEvent<HTMLInputElement>,
-  ) => {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      await commit();
-    } else if (event.key === "Escape") {
-      setValue(sessionTitle ?? "");
-      onCancel?.();
-    }
-  };
+  const displayTitle = sessionTitle ?? "Default Session";
 
   return (
     <div
@@ -70,24 +32,19 @@ export function ChatHeaderTitle({
       )}
     >
       {isEditing ? (
-        <Input
-          ref={inputRef}
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          onKeyDown={handleKeyDown}
-          onFocus={() => setHasFocused(true)}
-          onBlur={() => {
-            if (!hasFocused) return;
-            void commit();
+        <SessionRename
+          sessionId={currentSessionId ?? ""}
+          onSave={(val) => {
+            void onRenameSave(val);
           }}
-          className="h-8 w-full min-w-0"
+          onDone={onCancel}
         />
       ) : (
         <div
           className="truncate text-[13px] font-medium leading-4 text-[#CCC]"
-          title={sessionTitle}
+          title={displayTitle}
         >
-          {sessionTitle ?? "Default Session"}
+          {displayTitle}
         </div>
       )}
     </div>
