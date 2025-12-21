@@ -25,6 +25,7 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
 
     @patch("lfx.components.ollama.ollama_embeddings.OllamaEmbeddings")
     def test_build_embeddings(self, mock_ollama_embeddings, component_class, default_kwargs):
+        """Test that build_embeddings creates an OllamaEmbeddings instance with correct parameters."""
         mock_instance = MagicMock()
         mock_ollama_embeddings.return_value = mock_instance
         component = component_class(**default_kwargs)
@@ -37,6 +38,7 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
 
     @patch("lfx.components.ollama.ollama_embeddings.OllamaEmbeddings")
     def test_build_embeddings_connection_error(self, mock_ollama_embeddings, component_class, default_kwargs):
+        """Test that build_embeddings raises ValueError when connection fails."""
         mock_ollama_embeddings.side_effect = Exception("connection error")
         component = component_class(**default_kwargs)
         with pytest.raises(ValueError, match=re.escape("Unable to connect to the Ollama API.")):

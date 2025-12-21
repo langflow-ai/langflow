@@ -43,6 +43,14 @@ class OllamaEmbeddingsComponent(LCModelComponent):
     ]
 
     def build_embeddings(self) -> Embeddings:
+        """Build and return an OllamaEmbeddings instance.
+
+        Returns:
+            Embeddings: An OllamaEmbeddings instance configured with the specified model and base URL.
+
+        Raises:
+            ValueError: If unable to connect to the Ollama API or if the model is not available.
+        """
         transformed_base_url = transform_localhost_url(self.base_url)
         try:
             output = OllamaEmbeddings(model=self.model_name, base_url=transformed_base_url)
@@ -55,6 +63,19 @@ class OllamaEmbeddingsComponent(LCModelComponent):
         return output
 
     async def update_build_config(self, build_config: dict, _field_value: Any, field_name: str | None = None):
+        """Update the build configuration based on field changes.
+
+        Args:
+            build_config: The current build configuration dictionary.
+            _field_value: The new value of the field (unused).
+            field_name: The name of the field that was changed.
+
+        Returns:
+            dict: The updated build configuration.
+
+        Raises:
+            ValueError: If the Ollama base URL is invalid or Ollama is not running.
+        """
         if field_name in {"base_url", "model_name"} and not await self.is_valid_ollama_url(self.base_url):
             msg = "Ollama is not running on the provided base URL. Please start Ollama and try again."
             raise ValueError(msg)
@@ -67,7 +88,21 @@ class OllamaEmbeddingsComponent(LCModelComponent):
         return build_config
 
     async def get_model(self, base_url_value: str) -> list[str]:
-        """Get the model names from Ollama."""
+        """Get the model names from Ollama.
+
+        Fetches all available models from the Ollama API and returns their names.
+        This method returns all models without filtering, allowing users to select
+        any model including custom ones.
+
+        Args:
+            base_url_value: The base URL of the Ollama API instance.
+
+        Returns:
+            list[str]: A list of model names available in Ollama.
+
+        Raises:
+            ValueError: If unable to connect to Ollama or parse the response.
+        """
         model_ids = []
         try:
             base_url_value = transform_localhost_url(base_url_value)
@@ -90,6 +125,14 @@ class OllamaEmbeddingsComponent(LCModelComponent):
         return model_ids
 
     async def is_valid_ollama_url(self, url: str) -> bool:
+        """Check if the provided URL is a valid Ollama instance.
+
+        Args:
+            url: The URL to validate.
+
+        Returns:
+            bool: True if the URL points to a valid Ollama instance, False otherwise.
+        """
         try:
             async with httpx.AsyncClient() as client:
                 url = transform_localhost_url(url)
