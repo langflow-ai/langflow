@@ -8,53 +8,27 @@ import requests
 from langchain_core.tools import StructuredTool, Tool
 from pydantic import BaseModel, Field, create_model
 
+from lfx.base.datastax.astradb_base import AstraDBBaseComponent
 from lfx.base.langchain_utilities.model import LCToolComponent
-from lfx.io import DictInput, IntInput, SecretStrInput, StrInput, TableInput
+from lfx.io import DictInput, IntInput, StrInput, TableInput
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.table import EditMode
 
 
-class AstraDBCQLToolComponent(LCToolComponent):
+class AstraDBCQLToolComponent(AstraDBBaseComponent, LCToolComponent):
     display_name: str = "Astra DB CQL"
     description: str = "Create a tool to get transactional data from DataStax Astra DB CQL Table"
-    documentation: str = "https://docs.langflow.org/Components/components-tools#astra-db-cql-tool"
+    documentation: str = "https://docs.langflow.org/bundles-datastax"
     icon: str = "AstraDB"
 
     inputs = [
+        *AstraDBBaseComponent.inputs,
         StrInput(name="tool_name", display_name="Tool Name", info="The name of the tool.", required=True),
         StrInput(
             name="tool_description",
             display_name="Tool Description",
             info="The tool description to be passed to the model.",
-            required=True,
-        ),
-        StrInput(
-            name="keyspace",
-            display_name="Keyspace",
-            value="default_keyspace",
-            info="The keyspace name within Astra DB where the data is stored.",
-            required=True,
-            advanced=True,
-        ),
-        StrInput(
-            name="table_name",
-            display_name="Table Name",
-            info="The name of the table within Astra DB where the data is stored.",
-            required=True,
-        ),
-        SecretStrInput(
-            name="token",
-            display_name="Astra DB Application Token",
-            info="Authentication token for accessing Astra DB.",
-            value="ASTRA_DB_APPLICATION_TOKEN",
-            required=True,
-        ),
-        StrInput(
-            name="api_endpoint",
-            display_name="API Endpoint",
-            info="API endpoint URL for the Astra DB service.",
-            value="ASTRA_DB_API_ENDPOINT",
             required=True,
         ),
         StrInput(
@@ -204,7 +178,7 @@ class AstraDBCQLToolComponent(LCToolComponent):
 
     def astra_rest(self, args):
         headers = {"Accept": "application/json", "X-Cassandra-Token": f"{self.token}"}
-        astra_url = f"{self.api_endpoint}/api/rest/v2/keyspaces/{self.keyspace}/{self.table_name}/"
+        astra_url = f"{self.get_api_endpoint()}/api/rest/v2/keyspaces/{self.get_keyspace()}/{self.collection_name}/"
         where = {}
 
         for param in self.tools_params:

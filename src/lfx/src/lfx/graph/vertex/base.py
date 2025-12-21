@@ -735,7 +735,10 @@ class Vertex:
                 self.build_inactive()
                 return None
 
-            if self.frozen and self.built:
+            # Loop components should always run, even when frozen,
+            # because they need to iterate through their data
+            is_loop_component = self.display_name == "Loop" or self.is_loop
+            if self.frozen and self.built and not is_loop_component:
                 return await self.get_requester_result(requester)
             if self.built and requester is not None:
                 # This means that the vertex has already been built

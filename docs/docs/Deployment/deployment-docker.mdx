@@ -3,6 +3,10 @@ title: Deploy Langflow on Docker
 slug: /deployment-docker
 ---
 
+import PartialPodmanAlt from '@site/docs/_partial-podman-alt.mdx';
+
+<PartialPodmanAlt />
+
 Running applications in Docker containers ensures consistent behavior across different systems and eliminates dependency conflicts.
 
 You can use the Langflow Docker image to start a Langflow container.
@@ -159,7 +163,7 @@ FROM langflowai/langflow:latest
 WORKDIR /app
 
 # Copy your modified memory component
-COPY src/backend/base/langflow/components/helpers/memory.py /tmp/memory.py
+COPY src/lfx/src/lfx/components/helpers/memory.py /tmp/memory.py
 
 # Find the site-packages directory where langflow is installed
 RUN python -c "import site; print(site.getsitepackages()[0])" > /tmp/site_packages.txt
@@ -194,7 +198,7 @@ To use this custom Dockerfile, do the following:
 In this example, Langflow expects `memory.py` to exist in the `/helpers` directory, so you create a directory in that location.
 
     ```bash
-    mkdir -p src/backend/base/langflow/components/helpers
+    mkdir -p src/lfx/src/lfx/components/helpers
     ```
 
 3. Place your modified `memory.py` file in the `/helpers` directory.

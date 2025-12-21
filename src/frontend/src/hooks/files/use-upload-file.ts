@@ -57,8 +57,12 @@ const useUploadFile = ({
         filesIds.push(res.path);
       }
       return filesIds;
-    } catch (e) {
-      throw e;
+    } catch (e: any) {
+      const errorMessage =
+        e?.response?.data?.detail ||
+        e?.message ||
+        "An error occurred while uploading the file";
+      throw new Error(errorMessage);
     }
   };
 

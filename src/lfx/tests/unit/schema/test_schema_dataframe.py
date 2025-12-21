@@ -1,7 +1,6 @@
 import pandas as pd
 import pytest
 from langchain_core.documents import Document
-
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 

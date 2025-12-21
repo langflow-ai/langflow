@@ -224,7 +224,7 @@ def validate_script_path(script_path: Path | str, verbose_print) -> tuple[str, P
     return file_extension, script_path
 
 
-def load_graph_from_path(script_path: Path, file_extension: str, verbose_print, *, verbose: bool = False):
+async def load_graph_from_path(script_path: Path, file_extension: str, verbose_print, *, verbose: bool = False):
     """Load a graph from a Python script or JSON file.
 
     Args:
@@ -259,7 +259,7 @@ def load_graph_from_path(script_path: Path, file_extension: str, verbose_print, 
                 raise ValueError(error_msg)
 
             verbose_print("Loading graph...")
-            graph = load_graph_from_script(script_path)
+            graph = await load_graph_from_script(script_path)
         else:  # .json
             verbose_print("Loading JSON flow...")
             graph = load_flow_from_json(script_path, disable_logs=not verbose)

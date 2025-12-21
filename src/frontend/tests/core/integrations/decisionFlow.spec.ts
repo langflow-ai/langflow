@@ -151,11 +151,14 @@ test(
     //---------------------------------- PROMPT
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("prompt");
-    await page.waitForSelector('[data-testid="processingPrompt Template"]', {
-      timeout: 2000,
-    });
+    await page.waitForSelector(
+      '[data-testid="models_and_agentsPrompt Template"]',
+      {
+        timeout: 2000,
+      },
+    );
     await page
-      .getByTestId("processingPrompt Template")
+      .getByTestId("models_and_agentsPrompt Template")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 350, y: 300 },
       });
@@ -175,11 +178,11 @@ test(
     //---------------------------------- CONDITIONAL ROUTER
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("if else");
-    await page.waitForSelector('[data-testid="logicIf-Else"]', {
+    await page.waitForSelector('[data-testid="flow_controlsIf-Else"]', {
       timeout: 2000,
     });
     await page
-      .getByTestId("logicIf-Else")
+      .getByTestId("flow_controlsIf-Else")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 650, y: 300 },
       });
@@ -352,8 +355,8 @@ test(
     if (isApiKeyInputVisible) {
       await apiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
     }
-    await page.getByTestId("dropdown_str_model_name").click();
-    await page.getByTestId("gpt-4o-1-option").click();
+    await page.getByTestId("model_model").click();
+    await page.getByTestId("gpt-4o-mini-option").click();
     await adjustScreenView(page);
 
     await page.getByRole("button", { name: "Playground", exact: true }).click();

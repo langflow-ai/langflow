@@ -21,7 +21,7 @@ This option offers more control over the environment, dependencies, and versioni
 ## Install and run Langflow Desktop
 
 Langflow Desktop is a desktop version of Langflow that simplifies dependency management and upgrades.
-However, some features aren't available for Langflow Desktop, such as the **Shareable Playground**.
+However, some features aren't available for Langflow Desktop, such as the **Shareable Playground** and **Voice Mode**.
 
 <Tabs>
 <TabItem value="macos" label="macOS" default>
@@ -87,6 +87,8 @@ For more information, see [Deploy Langflow on Docker](/deployment-docker).
     - Sufficient infrastructure:
        - Minimum: Dual-core CPU and 2 GB RAM
        - Recommended: Multi-core CPU and at least 4 GB RAM
+    - Browser:
+       - Google Chrome is recommended but not required
 
 2. Create a virtual environment with [uv](https://docs.astral.sh/uv/pip/environments).
 
@@ -169,7 +171,7 @@ For more information, see [Deploy Langflow on Docker](/deployment-docker).
     uv pip install langflow
     ```
 
-    To install a specific version of the Langflow package by adding the required version to the command, such as `uv pip install langflow==1.4.22`.
+    To install a specific version of the Langflow package, add the required version to the command, such as `uv pip install langflow==1.4.22`.
 
     <details>
     <summary>Reinstall or upgrade Langflow</summary>

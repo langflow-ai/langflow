@@ -1,6 +1,6 @@
 [project]
 name = "langflow"
-version = "1.6.0"
+version = "1.7.0"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.14"
 license = "MIT"
@@ -17,7 +17,7 @@ maintainers = [
 ]
 # Define your main dependencies here
 dependencies = [
-    "langflow-base~=0.6.0",
+    "langflow-base~=0.7.0",
     "beautifulsoup4==4.12.3",
     "google-search-results>=2.4.1,<3.0.0",
     "google-api-python-client==2.154.0",
@@ -27,7 +27,7 @@ dependencies = [
     "pyarrow==19.0.0",
     "wikipedia==1.4.0",
     "qdrant-client==1.9.2",
-    "weaviate-client==4.10.2",
+    "weaviate-client>=4.10.2,<5.0.0",
     "faiss-cpu==1.9.0.post1",
     "types-cachetools>=5.5.0.20240820,<6.0.0",
     "pymongo==4.10.1",
@@ -37,7 +37,7 @@ dependencies = [
     'fastavro>=1.9.8,<2.0.0; python_version >= "3.13"',
     "redis>=5.2.1,<6.0.0",
     "metaphor-python==0.1.23",
-    'pywin32==307; sys_platform == "win32"',
+    'pywin32>=307,<400; sys_platform == "win32"',
     "langfuse==2.53.9",
     "metal_sdk==2.5.1",
     "MarkupSafe==3.0.2",
@@ -54,7 +54,7 @@ dependencies = [
     "litellm>=1.60.2,<2.0.0",
     "chromadb>=1.0.0,<2.0.0",
     "zep-python==2.0.2",
-    "youtube-transcript-api==0.6.3",
+    "youtube-transcript-api>=1.0.0,<2.0.0",
     "Markdown==3.7",
     "upstash-vector==0.6.0",
     "GitPython==3.1.43",
@@ -65,8 +65,8 @@ dependencies = [
     "yfinance==0.2.50",
     "wolframalpha==5.1.3",
     "astra-assistants[tools]>=2.2.13,<3.0.0",
-    "composio==0.8.5",
-    "composio-langchain==0.8.5",
+    "composio==0.9.2",
+    "composio-langchain==0.9.2",
     "spider-client==0.1.24",
     "nltk==3.9.1",
     "lark==1.2.2",
@@ -75,7 +75,7 @@ dependencies = [
     "duckduckgo_search==7.2.1",
     "opensearch-py==2.8.0",
     "langchain-google-genai==2.0.6",
-    "langchain-cohere==0.3.3",
+    "langchain-cohere>=0.3.3,<1.0.0",
     "langchain-huggingface==0.3.1",
     "langchain-anthropic==0.3.14",
     "langchain-astradb>=0.6.1,<1.0.0",
@@ -85,15 +85,15 @@ dependencies = [
     "langchain-pinecone>=0.2.8,<1.0.0",
     "langchain-mistralai==0.2.3",
     "langchain-chroma>=0.2.6,<1.0.0",
-    "langchain-aws==0.2.33",
+    "langchain-aws>=0.2.33,<1.0.0",
     "langchain-unstructured==0.1.5",
     "langchain-milvus==0.1.7",
     "langchain-mongodb==0.7.0",
     "langchain-nvidia-ai-endpoints==0.3.8",
     "langchain-google-calendar-tools==0.0.1",
-    "langchain-google-community==2.0.3",
-    "langchain-elasticsearch==0.3.0",
-    "langchain-ollama==0.2.1",
+    "langchain-google-community>=2.0.3,<3.0.0",
+    "langchain-elasticsearch>=0.3.0,<1.0.0",
+    "langchain-ollama==0.3.10",
     "langchain-sambanova==0.1.0",
     "langchain-community>=0.3.21,<1.0.0",
     "sqlalchemy[aiosqlite]>=2.0.38,<3.0.0",
@@ -105,7 +105,8 @@ dependencies = [
     "arize-phoenix-otel>=0.6.1,<1.0.0",
     "openinference-instrumentation-langchain>=0.1.29,<0.1.52",
     # "crewai>=0.126.0",
-    "mcp>=1.10.1,<2.0.0",
+    "fastmcp==2.13.0",
+    "mcp>=1.17.0,<2.0.0",
     "uv==0.7.20",
     "scipy>=1.14.1,<1.16.2",
     "scrapegraph-py>=1.12.0,<2.0.0",
@@ -123,8 +124,8 @@ dependencies = [
     "twelvelabs>=0.4.7,<1.0.0",
     "docling-core>=2.36.1,<3.0.0",
     "docling>=2.36.1,<3.0.0; sys_platform != 'darwin' or platform_machine != 'x86_64'",
-    "mlx>=0.29.0; sys_platform == 'darwin' and python_version >= '3.12'",
-    "mlx-vlm==0.3.3; sys_platform == 'darwin' and python_version >= '3.12'",
+    "mlx>=0.29.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version >= '3.12'",
+    "mlx-vlm==0.3.3; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version >= '3.12'",
     "easyocr>=1.7.2,<2.0.0; sys_platform != 'darwin' or platform_machine != 'x86_64'",
     "filelock>=3.18.0,<4.0.0",
     "jigsawstack==0.2.7",
@@ -133,7 +134,14 @@ dependencies = [
     "aiosqlite==0.21.0",
     "fastparquet>=2024.11.0,<2025.0.0",
     "traceloop-sdk>=0.43.1,<1.0.0",
+    "vlmrun[all]>=0.2.0",
+    "cuga~=0.2.6",
+    "langchain-mcp-adapters>=0.1.14,<0.2.0",  # Pin to avoid incompatibility with langchain-core<1.0.0
+    "agent-lifecycle-toolkit~=0.4.4",
+    "astrapy>=2.1.0,<3.0.0",
+    "aioboto3>=15.2.0,<16.0.0"
 ]
+
 
 [dependency-groups]
 dev = [
@@ -173,7 +181,7 @@ dev = [
     "types-aiofiles>=24.1.0.20240626",
     "codeflash>=0.8.4",
     "hypothesis>=6.123.17",
-    "locust>=2.32.9",
+    "locust~=2.40.5",
     "pytest-rerunfailures>=15.0",
     "scrapegraph-py>=1.10.2",
     "pydantic-ai>=0.0.19",
@@ -215,6 +223,7 @@ docling = [
 audio = [
     "webrtcvad>=2.0.10",
 ]
+
 
 couchbase = [
     "couchbase>=4.2.1"
@@ -305,10 +314,23 @@ directory = "coverage"
 
 
 [tool.ruff]
-exclude = ["src/backend/base/langflow/alembic/*", "src/frontend/tests/assets/*"]
+target-version = "py310"
+exclude = ["src/backend/base/langflow/alembic/*", "src/frontend/tests/assets/*", "src/lfx/src/lfx/_assets/component_index.json"]
 line-length = 120
 
 [tool.ruff.lint]
+flake8-annotations.mypy-init-return = true
+flake8-bugbear.extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.File",
+    "fastapi.Query",
+    "typer.Option",
+]
+flake8-type-checking.runtime-evaluated-base-classes = [
+    "pydantic.BaseModel",
+    "typing.TypedDict",  # Needed by fastapi
+    "typing_extensions.TypedDict",  # Needed by fastapi
+]
 pydocstyle.convention = "google"
 select = ["ALL"]
 ignore = [
@@ -337,12 +359,134 @@ external = ["RUF027"]
 [tool.ruff.lint.per-file-ignores]
 "scripts/*" = ["D1", "INP", "T201"]
 "src/backend/base/langflow/alembic/versions/*" = ["INP001", "D415", "PGH003"]
+"src/backend/base/langflow/custom/__init__.py" = [
+    "I001",  # Import order affects initialization - must import custom module first
+]
+"src/backend/base/langflow/api/v1/*" = [
+    "TCH",  # FastAPI needs to evaluate types at runtime
+]
+"src/backend/base/langflow/api/v2/*" = [
+    "TCH",  # FastAPI needs to evaluate types at runtime
+]
+"src/backend/base/langflow/__main__.py" = [
+    "B008",  # Typer CLI requires function calls in defaults
+]
+"src/backend/base/langflow/services/cache/*" = [
+    "S301",  # Pickle usage is intentional for caching
+]
+"src/backend/base/langflow/services/tracing/*" = [
+    "SLF001",  # Third-party library private member access (langwatch, opik)
+]
+"src/lfx/src/lfx/base/curl/parse.py" = [
+    "S105",  # False positive: 'token' variable name, not a password
+]
+"src/lfx/src/lfx/base/mcp/util.py" = [
+    "SLF001",  # MCP library private member access
+]
+"src/lfx/src/lfx/cli/common.py" = [
+    "S104",  # Intentional binding to all interfaces for server
+    "S105",  # False positive: GITHUB_TOKEN_ENV is an env var name
+]
+"src/lfx/src/lfx/components/__init__.py" = [
+    "SLF001",  # Accessing _dynamic_imports from modules
+]
+"src/lfx/src/lfx/components/data/save_file.py" = [
+    "SLF001",  # Google API client private member access
+]
+"src/lfx/src/lfx/components/datastax/astradb_vectorstore.py" = [
+    "S110",  # Try-except-pass for optional metadata
+]
+"src/lfx/src/lfx/components/google/google_generative_ai_embeddings.py" = [
+    "SLF001",  # Google AI library private member access
+]
+"src/lfx/src/lfx/components/knowledge_bases/retrieval.py" = [
+    "SLF001",  # Chroma client private member access
+]
+"src/lfx/src/lfx/components/mongodb/mongodb_atlas.py" = [
+    "SLF001",  # MongoDB collection private member access
+]
+"src/lfx/src/lfx/components/tools/{python_code_structured_tool.py,searxng.py}" = [
+    "S102",  # Use of exec/eval for dynamic code execution
+    "SLF001",  # Component internal member access
+]
+"src/lfx/src/lfx/components/vectorstores/astradb.py" = [
+    "S110",  # Try-except-pass for optional metadata
+]
+"src/lfx/src/lfx/custom/{code_parser/code_parser.py,validate.py}" = [
+    "S102",  # Use of exec for code validation
+]
+"src/lfx/src/lfx/custom/custom_component/component.py" = [
+    "SLF001",  # Component internal state management
+]
+"src/lfx/src/lfx/custom/directory_reader/directory_reader.py" = [
+    "SLF001",  # Component introspection
+]
+"src/lfx/src/lfx/custom/utils.py" = [
+    "SLF001",  # Component code analysis
+]
+"src/lfx/src/lfx/graph/graph/ascii.py" = [
+    "SLF001",  # Grandalf library private member access
+]
+"src/lfx/src/lfx/inputs/input_mixin.py" = [
+    "S105",  # False positive: PASSWORD is a type constant
+]
+"src/lfx/src/lfx/schema/table.py" = [
+    "S105",  # False positive: PASSWORD is a formatter type
+]
+"src/lfx/src/lfx/services/mcp_composer/service.py" = [
+    "S104",  # Intentional binding to all interfaces for server
+    "S110",  # Try-except-pass for optional error logging
+]
 "src/backend/tests/*" = [
     "D1",
     "PLR2004",
     "S101",
     "SLF001",
     "BLE001",  # allow broad-exception catching in tests
+]
+"src/backend/base/langflow/tests/*" = [
+    "D1",
+    "PLR2004",
+    "S101",
+    "SLF001",
+    "BLE001",  # allow broad-exception catching in tests
+]
+"src/lfx/tests/*" = [
+    "D1",
+    "PLR2004",
+    "S101",
+    "SLF001",
+    "BLE001",  # allow broad-exception catching in tests
+    "S104",    # Binding to all interfaces (test servers)
+    "S108",    # Insecure temp file usage (safe in tests)
+]
+"src/backend/tests/locust/*" = [
+    "D1",      # Missing docstrings (CLI tools don't need full docstrings)
+    "T201",    # Print statements (needed for CLI output)
+    "S603",    # Subprocess calls (needed for running commands)
+    "S607",    # Starting process with partial executable path
+    "S104",    # Binding to all interfaces (needed for Langflow server)
+    "S105",    # Hardcoded passwords (test credentials)
+    "FBT001",  # Boolean-typed positional arguments (common in CLI)
+    "FBT002",  # Boolean default arguments (common in CLI tools)
+    "TRY002",  # Custom exceptions (generic exceptions OK for CLI)
+    "TRY003",  # Long exception messages (descriptive errors for users)
+    "TRY300",  # Consider moving to else block (return patterns)
+    "EM101",   # String literals in exceptions (user-facing messages)
+    "EM102",   # F-string literals in exceptions (user-facing messages)
+    "EXE001",  # Shebang without executable (may be run via python)
+    "D415",    # First line punctuation (CLI docstrings)
+    "F401",    # Unused imports (imports for availability checking)
+    "PTH123",  # Use Path.open (open() is fine for simple cases)
+    "PTH107",  # Use Path.unlink (os.remove is fine for simple cases)
+    "PTH207",  # Use Path.glob (glob.glob is fine for simple cases)
+    "B007",    # Unused loop variables (tuple unpacking)
+    "PLW0602", # Global variable usage (needed for locust state)
+    "PLW0603", # Global variable updates (needed for locust state)
+    "DTZ005",  # Datetime without timezone (local time is fine for logs)
+    "G004",    # Logging f-strings (detailed error logging)
+    "SIM102",  # Nested if statements (readability over optimization)
+    "E501",    # Line too long (some CLI commands are naturally long)
 ]
 
 [tool.ruff.lint.flake8-builtins]

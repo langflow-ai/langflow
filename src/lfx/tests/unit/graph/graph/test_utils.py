@@ -1,7 +1,6 @@
 import copy
 
 import pytest
-
 from lfx.graph.graph import utils
 
 

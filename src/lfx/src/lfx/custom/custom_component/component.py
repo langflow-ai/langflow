@@ -36,6 +36,7 @@ from lfx.schema.data import Data
 from lfx.schema.log import Log
 from lfx.schema.message import ErrorMessage, Message
 from lfx.schema.properties import Source
+from lfx.serialization.serialization import serialize
 from lfx.template.field.base import UNDEFINED, Input, Output
 from lfx.template.frontend_node.custom_components import ComponentFrontendNode
 from lfx.utils.async_helpers import run_until_complete
@@ -93,6 +94,20 @@ class PlaceholderGraph(NamedTuple):
     context: dict
     flow_name: str | None
 
+    def get_vertex_neighbors(self, _vertex) -> dict:
+        """Returns an empty dictionary since PlaceholderGraph has no edges or neighbors.
+
+        This method exists for compatibility with real Graph objects, allowing components
+        to check graph connectivity even when running in isolation (e.g., in tests).
+
+        Args:
+            _vertex: The vertex to check neighbors for (ignored in placeholder context).
+
+        Returns:
+            An empty dictionary, indicating no neighbors exist.
+        """
+        return {}
+
 
 class Component(CustomComponent):
     inputs: list[InputTypes] = []
@@ -121,6 +136,7 @@ class Component(CustomComponent):
         self._components: list[Component] = []
         self._event_manager: EventManager | None = None
         self._state_model = None
+        self._telemetry_input_values: dict[str, Any] | None = None
 
         # Process input kwargs
         inputs = {}
@@ -154,7 +170,7 @@ class Component(CustomComponent):
             self.trace_type = "chain"
 
         # Setup inputs and outputs
-        self._reset_all_output_values()
+        self.reset_all_output_values()
         if self.inputs is not None:
             self.map_inputs(self.inputs)
         self.map_outputs()
@@ -330,7 +346,8 @@ class Component(CustomComponent):
     def set_event_manager(self, event_manager: EventManager | None = None) -> None:
         self._event_manager = event_manager
 
-    def _reset_all_output_values(self) -> None:
+    def reset_all_output_values(self) -> None:
+        """Reset all output values to UNDEFINED."""
         if isinstance(self._outputs_map, dict):
             for output in self._outputs_map.values():
                 output.value = UNDEFINED
@@ -527,6 +544,8 @@ class Component(CustomComponent):
             ValueError: If the input name is None.
 
         """
+        telemetry_values = {}
+
         for input_ in inputs:
             if input_.name is None:
                 msg = self.build_component_error_message("Input name cannot be None")
@@ -535,6 +554,28 @@ class Component(CustomComponent):
                 self._inputs[input_.name] = deepcopy(input_)
             except TypeError:
                 self._inputs[input_.name] = input_
+
+            # Build telemetry data during existing iteration (no performance impact)
+            if self._should_track_input(input_):
+                telemetry_values[input_.name] = serialize(input_.value)
+
+        # Cache for later O(1) retrieval
+        self._telemetry_input_values = telemetry_values if telemetry_values else None
+
+    def _should_track_input(self, input_obj: InputTypes) -> bool:
+        """Check if input should be tracked in telemetry."""
+        from lfx.inputs.input_mixin import SENSITIVE_FIELD_TYPES
+
+        # Respect opt-in flag (default: False for privacy)
+        if not getattr(input_obj, "track_in_telemetry", False):
+            return False
+        # Auto-exclude sensitive field types
+        return not (hasattr(input_obj, "field_type") and input_obj.field_type in SENSITIVE_FIELD_TYPES)
+
+    def get_telemetry_input_values(self) -> dict[str, Any] | None:
+        """Get cached telemetry input values. O(1) lookup, no iteration."""
+        # Return all values including descriptive strings and None
+        return self._telemetry_input_values if self._telemetry_input_values else None
 
     def validate(self, params: dict) -> None:
         """Validates the component parameters.
@@ -550,7 +591,10 @@ class Component(CustomComponent):
         self._validate_outputs()
 
     async def run_and_validate_update_outputs(self, frontend_node: dict, field_name: str, field_value: Any):
-        frontend_node = self.update_outputs(frontend_node, field_name, field_value)
+        if inspect.iscoroutinefunction(self.update_outputs):
+            frontend_node = await self.update_outputs(frontend_node, field_name, field_value)
+        else:
+            frontend_node = self.update_outputs(frontend_node, field_name, field_value)
         if field_name == "tool_mode" or frontend_node.get("tool_mode"):
             is_tool_mode = field_value or frontend_node.get("tool_mode")
             frontend_node["outputs"] = [self._build_tool_output()] if is_tool_mode else frontend_node["outputs"]
@@ -1512,6 +1556,14 @@ class Component(CustomComponent):
 
         return has_chat_output(self.graph.get_vertex_neighbors(self._vertex))
 
+    def is_connected_to_chat_input(self) -> bool:
+        # Lazy import to avoid circular dependency
+        from lfx.graph.utils import has_chat_input
+
+        if self.graph is None:
+            return False
+        return has_chat_input(self.graph.get_vertex_neighbors(self._vertex))
+
     def _should_skip_message(self, message: Message) -> bool:
         """Check if the message should be skipped based on vertex configuration and message type."""
         return (
@@ -1548,7 +1600,16 @@ class Component(CustomComponent):
         if not message.sender_name:
             message.sender_name = MESSAGE_SENDER_NAME_AI
 
-    async def send_message(self, message: Message, id_: str | None = None):
+    async def send_message(self, message: Message, id_: str | None = None, *, skip_db_update: bool = False):
+        """Send a message with optional database update control.
+
+        Args:
+            message: The message to send
+            id_: Optional message ID
+            skip_db_update: If True, only update in-memory and send event, skip DB write.
+                           Useful during streaming to avoid excessive DB round-trips.
+                           Note: This assumes the message already exists in the database with message.id set.
+        """
         if self._should_skip_message(message):
             return message
 
@@ -1558,26 +1619,42 @@ class Component(CustomComponent):
         # Ensure required fields for message storage are set
         self._ensure_message_required_fields(message)
 
-        stored_message = await self._store_message(message)
+        # If skip_db_update is True and message already has an ID, skip the DB write
+        # This path is used during agent streaming to avoid excessive DB round-trips
+        if skip_db_update and message.id:
+            # Create a fresh Message instance for consistency with normal flow
+            stored_message = await Message.create(**message.model_dump())
+            self._stored_message_id = stored_message.id
+            # Still send the event to update the client in real-time
+            # Note: If this fails, we don't need DB cleanup since we didn't write to DB
+            await self._send_message_event(stored_message, id_=id_)
+        else:
+            # Normal flow: store/update in database
+            stored_message = await self._store_message(message)
 
-        self._stored_message_id = stored_message.id
-        try:
-            complete_message = ""
-            if (
-                self._should_stream_message(stored_message, message)
-                and message is not None
-                and isinstance(message.text, AsyncIterator | Iterator)
-            ):
-                complete_message = await self._stream_message(message.text, stored_message)
-                stored_message.text = complete_message
-                stored_message = await self._update_stored_message(stored_message)
-            else:
-                # Only send message event for non-streaming messages
-                await self._send_message_event(stored_message, id_=id_)
-        except Exception:
-            # remove the message from the database
-            await delete_message(stored_message.id)
-            raise
+            self._stored_message_id = stored_message.id
+            try:
+                complete_message = ""
+                if (
+                    self._should_stream_message(stored_message, message)
+                    and message is not None
+                    and isinstance(message.text, AsyncIterator | Iterator)
+                ):
+                    complete_message = await self._stream_message(message.text, stored_message)
+                    stored_message.text = complete_message
+                    if complete_message:
+                        stored_message.properties.state = "complete"
+                    stored_message = await self._update_stored_message(stored_message)
+                    # Note: We intentionally do NOT send a message event here with state="complete"
+                    # The frontend already has all the content from streaming tokens
+                    # Only the database is updated with the complete state
+                else:
+                    # Only send message event for non-streaming messages
+                    await self._send_message_event(stored_message, id_=id_)
+            except Exception:
+                # remove the message from the database
+                await delete_message(stored_message.id)
+                raise
         self.status = stored_message
         return stored_message
 

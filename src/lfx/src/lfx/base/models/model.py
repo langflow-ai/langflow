@@ -229,7 +229,7 @@ class LCModelComponent(Component):
                             system_message_added = True
                         runnable = prompt | runnable
                     else:
-                        messages.append(input_value.to_lc_message())
+                        messages.append(input_value.to_lc_message(self.name))
             else:
                 messages.append(HumanMessage(content=input_value))
 
@@ -296,7 +296,7 @@ class LCModelComponent(Component):
             )
             model_message.properties.source = self._build_source(self._id, self.display_name, self)
             lf_message = await self.send_message(model_message)
-            result = lf_message.text
+            result = lf_message.text or ""
         else:
             message = await runnable.ainvoke(inputs)
             result = message.content if hasattr(message, "content") else message

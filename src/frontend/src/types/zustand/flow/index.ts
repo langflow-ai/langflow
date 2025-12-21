@@ -74,7 +74,7 @@ export type FlowStoreType = {
     [key: number]: number;
   }) => void;
   fitViewNode: (nodeId: string) => void;
-  autoSaveFlow: (() => void) | undefined;
+  autoSaveFlow: ((flow?: FlowType) => void) | undefined;
   componentsToUpdate: ComponentsToUpdateType[];
   setComponentsToUpdate: (
     update:
@@ -156,6 +156,8 @@ export type FlowStoreType = {
   getFilterEdge: any[];
   setFilterComponent: (newState) => void;
   getFilterComponent: string;
+  rightClickedNodeId: string | null;
+  setRightClickedNodeId: (nodeId: string | null) => void;
   onConnect: (connection: Connection) => void;
   unselectAll: () => void;
   playgroundPage: boolean;

@@ -3,7 +3,7 @@ import random
 import warnings
 from collections.abc import Coroutine
 from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING, Annotated
+from typing import TYPE_CHECKING, Annotated, Final
 from uuid import UUID
 
 from cryptography.fernet import Fernet
@@ -11,15 +11,17 @@ from fastapi import Depends, HTTPException, Request, Security, WebSocketExceptio
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
 from jose import JWTError, jwt
 from lfx.log.logger import logger
+from lfx.services.deps import injectable_session_scope, session_scope
 from lfx.services.settings.service import SettingsService
 from sqlalchemy.exc import IntegrityError
 from sqlmodel.ext.asyncio.session import AsyncSession
 from starlette.websockets import WebSocket
 
+from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.services.database.models.api_key.crud import check_key
 from langflow.services.database.models.user.crud import get_user_by_id, get_user_by_username, update_user_last_login_at
 from langflow.services.database.models.user.model import User, UserRead
-from langflow.services.deps import get_db_service, get_session, get_settings_service, session_scope
+from langflow.services.deps import get_settings_service
 
 if TYPE_CHECKING:
     from langflow.services.database.models.api_key.model import ApiKey
@@ -38,6 +40,9 @@ AUTO_LOGIN_ERROR = (
     "Set LANGFLOW_SKIP_AUTH_AUTO_LOGIN=true to skip this check. "
     "Please update your authentication method."
 )
+
+REFRESH_TOKEN_TYPE: Final[str] = "refresh"  # noqa: S105
+ACCESS_TOKEN_TYPE: Final[str] = "access"  # noqa: S105
 
 
 # Source: https://github.com/mrtolkien/fastapi_simple_security/blob/master/fastapi_simple_security/security_api_key.py
@@ -144,7 +149,7 @@ async def get_current_user(
     token: Annotated[str, Security(oauth2_login)],
     query_param: Annotated[str, Security(api_key_query)],
     header_param: Annotated[str, Security(api_key_header)],
-    db: Annotated[AsyncSession, Depends(get_session)],
+    db: Annotated[AsyncSession, Depends(injectable_session_scope)],
 ) -> User:
     if token:
         return await get_current_user_by_jwt(token, db)
@@ -183,6 +188,14 @@ async def get_current_user_by_jwt(
             payload = jwt.decode(token, secret_key, algorithms=[settings_service.auth_settings.ALGORITHM])
         user_id: UUID = payload.get("sub")  # type: ignore[assignment]
         token_type: str = payload.get("type")  # type: ignore[assignment]
+
+        if token_type != ACCESS_TOKEN_TYPE:
+            logger.error(f"Token type is invalid: {token_type}. Expected: {ACCESS_TOKEN_TYPE}.")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token is invalid.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
         if expires := payload.get("exp", None):
             expires_datetime = datetime.fromtimestamp(expires, timezone.utc)
             if datetime.now(timezone.utc) > expires_datetime:
@@ -275,8 +288,6 @@ async def get_webhook_user(flow_id: str, request: Request) -> UserRead:
     Raises:
         HTTPException: If authentication fails or user doesn't have permission
     """
-    from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
-
     settings_service = get_settings_service()
 
     if not settings_service.auth_settings.WEBHOOK_AUTH_ENABLE:
@@ -304,7 +315,7 @@ async def get_webhook_user(flow_id: str, request: Request) -> UserRead:
 
     try:
         # Validate API key directly without AUTO_LOGIN fallback
-        async with get_db_service().with_session() as db:
+        async with session_scope() as db:
             result = await check_key(db, api_key)
             if not result:
                 logger.warning("Invalid API key provided for webhook")
@@ -413,7 +424,7 @@ async def create_user_longterm_token(db: AsyncSession) -> tuple[UUID, dict]:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Super user hasn't been created")
     access_token_expires_longterm = timedelta(days=365)
     access_token = create_token(
-        data={"sub": str(super_user.id), "type": "access"},
+        data={"sub": str(super_user.id), "type": ACCESS_TOKEN_TYPE},
         expires_delta=access_token_expires_longterm,
     )
 
@@ -449,13 +460,13 @@ async def create_user_tokens(user_id: UUID, db: AsyncSession, *, update_last_log
 
     access_token_expires = timedelta(seconds=settings_service.auth_settings.ACCESS_TOKEN_EXPIRE_SECONDS)
     access_token = create_token(
-        data={"sub": str(user_id), "type": "access"},
+        data={"sub": str(user_id), "type": ACCESS_TOKEN_TYPE},
         expires_delta=access_token_expires,
     )
 
     refresh_token_expires = timedelta(seconds=settings_service.auth_settings.REFRESH_TOKEN_EXPIRE_SECONDS)
     refresh_token = create_token(
-        data={"sub": str(user_id), "type": "refresh"},
+        data={"sub": str(user_id), "type": REFRESH_TOKEN_TYPE},
         expires_delta=refresh_token_expires,
     )
 
@@ -485,7 +496,7 @@ async def create_refresh_token(refresh_token: str, db: AsyncSession):
         user_id: UUID = payload.get("sub")  # type: ignore[assignment]
         token_type: str = payload.get("type")  # type: ignore[assignment]
 
-        if user_id is None or token_type != "refresh":  # noqa: S105
+        if user_id is None or token_type != REFRESH_TOKEN_TYPE:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
 
         user_exists = await get_user_by_id(db, user_id)
@@ -587,7 +598,7 @@ async def get_current_user_mcp(
     token: Annotated[str, Security(oauth2_login)],
     query_param: Annotated[str, Security(api_key_query)],
     header_param: Annotated[str, Security(api_key_header)],
-    db: Annotated[AsyncSession, Depends(get_session)],
+    db: Annotated[AsyncSession, Depends(injectable_session_scope)],
 ) -> User:
     """MCP-specific user authentication that always allows fallback to username lookup.
 
