@@ -176,25 +176,30 @@ class DatabaseVariableService(VariableService, Service):
             )
             raise TypeError(msg)
 
-        # we decrypt the value
-        return auth_utils.decrypt_api_key(variable.value, settings_service=self.settings_service)
+        # Only decrypt CREDENTIAL_TYPE variables - others are stored as plaintext
+        if variable.type == CREDENTIAL_TYPE:
+            return auth_utils.decrypt_api_key(variable.value, settings_service=self.settings_service)
+        return variable.value
 
     async def get_all(self, user_id: UUID | str, session: AsyncSession) -> list[VariableRead]:
         stmt = select(Variable).where(Variable.user_id == user_id)
         variables = list((await session.exec(stmt)).all())
-        # For variables of type 'Generic', attempt to decrypt the value.
-        # If decryption fails, assume the value is already plaintext.
+        # Only CREDENTIAL_TYPE variables are encrypted; Generic variables are stored as plaintext
         variables_read = []
         for variable in variables:
             value = None
-            if variable.type == GENERIC_TYPE:
+            if variable.type == CREDENTIAL_TYPE:
+                # Decrypt credential variables
                 try:
                     value = auth_utils.decrypt_api_key(variable.value, settings_service=self.settings_service)
                 except Exception as e:  # noqa: BLE001
                     await logger.adebug(
-                        f"Decryption of {variable.type} failed for variable '{variable.name}': {e}. Assuming plaintext."
+                        f"Decryption of {variable.type} failed for variable '{variable.name}': {e}."
                     )
-                    value = variable.value
+                    value = None  # Don't expose potentially corrupted credential data
+            else:
+                # Generic and other types are stored as plaintext
+                value = variable.value
             variable_read = VariableRead.model_validate(variable, from_attributes=True)
             variable_read.value = value
             variables_read.append(variable_read)
