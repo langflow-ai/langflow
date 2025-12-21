@@ -130,10 +130,12 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
     @patch("lfx.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
     async def test_update_build_config_invalid_url(self, mock_get):
         """Test that update_build_config raises error for invalid URL."""
+        import httpx
+
         component = OllamaEmbeddingsComponent()
         component.base_url = "http://invalid-url:11434"
 
-        mock_get.side_effect = Exception("Connection failed")
+        mock_get.side_effect = httpx.RequestError("Connection failed", request=None)
 
         build_config = {
             "model_name": {"options": []},
