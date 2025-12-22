@@ -197,7 +197,7 @@ def get_unified_models_detailed(
     # Mark the first 5 models in each provider as default (based on list order)
     # and optionally filter to only defaults
     for prov, models in provider_map.items():
-        for i, model in enumerate(models[:5]):
+        for _, model in enumerate(models[:5]):
             model["metadata"]["default"] = True
 
         # If only_defaults is True, filter to only default models
