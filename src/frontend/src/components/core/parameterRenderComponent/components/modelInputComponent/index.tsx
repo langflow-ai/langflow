@@ -408,7 +408,7 @@ export default function ModelInputComponent({
     );
 
   const footerButtonClass =
-    "w-full flex cursor-pointer items-center justify-start gap-2 truncate py-3 text-xs text-muted-foreground px-3 hover:bg-accent group";
+    "w-full flex cursor-pointer items-center justify-start gap-2 truncate py-2 text-xs text-muted-foreground px-3 hover:bg-accent group";
 
   const renderFooterButton = (
     label: string,
