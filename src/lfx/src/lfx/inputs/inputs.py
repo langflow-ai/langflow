@@ -207,7 +207,7 @@ class ModelInput(BaseInputMixin, ModelInputMixin, ListableInputMixin, InputTrace
     @model_validator(mode="after")
     def set_defaults(self):
         """Handle connection mode and set defaults.
-        
+
         When value is "connect_other_models", set input_types to ["LanguageModel"]
         to enable the connection handle. Otherwise, keep input_types empty.
         """
@@ -217,7 +217,7 @@ class ModelInput(BaseInputMixin, ModelInputMixin, ListableInputMixin, InputTrace
             # Use object.__setattr__ to avoid triggering validation recursion
             if not self.input_types or len(self.input_types) == 0:
                 object.__setattr__(self, "input_types", ["LanguageModel"])
-        
+
         # Set external_options if not explicitly provided
         if self.external_options is None or len(self.external_options) == 0:
             object.__setattr__(
