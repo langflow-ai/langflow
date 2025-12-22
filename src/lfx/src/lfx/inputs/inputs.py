@@ -125,22 +125,26 @@ class CodeInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMix
 
 
 class ModelInput(BaseInputMixin, ModelInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMixin):
-    """Represents a model input field with automatic LanguageModel connection support.
+    """Represents a model input field with optional LanguageModel connection support.
 
-    Automatically includes:
-    - input_types=["LanguageModel"] for connection support
+    By default:
+    - input_types=[] (no handle shown)
     - external_options with "Connect other models" button
-    - refresh_button=True by default
+    - refresh_button=True
+
+    When "Connect other models" is selected (value="connect_other_models"):
+    - input_types is set to ["LanguageModel"] to show the connection handle
 
     Value format:
     - Can be a list of dicts: [{'name': 'gpt-4o', 'provider': 'OpenAI', ...}]
     - Can be a simple list of strings: ['gpt-4o', 'gpt-4o-mini'] (auto-converted)
     - Can be a single string: 'gpt-4o' (auto-converted to list)
+    - Can be "connect_other_models" string to enable connection mode
     """
 
     field_type: SerializableFieldTypes = FieldTypes.MODEL
     placeholder: str | None = "Setup Provider"
-    input_types: list[str] = Field(default_factory=lambda: ["LanguageModel"])
+    input_types: list[str] = Field(default_factory=list)  # Empty by default, no handle shown
     refresh_button: bool | None = True
     external_options: dict = Field(
         default_factory=lambda: {
@@ -165,9 +169,14 @@ class ModelInput(BaseInputMixin, ModelInputMixin, ListableInputMixin, InputTrace
         - 'gpt-4o' -> [{'name': 'gpt-4o', ...}]
         - ['gpt-4o', 'claude-3'] -> [{'name': 'gpt-4o', ...}, {'name': 'claude-3', ...}]
         - [{'name': 'gpt-4o'}] -> [{'name': 'gpt-4o'}] (unchanged)
+        - 'connect_other_models' -> 'connect_other_models' (special value, keep as string)
         """
         # Handle empty or None values
         if v is None or v == "":
+            return v
+
+        # Special case: keep "connect_other_models" as a string to enable connection mode
+        if v == "connect_other_models":
             return v
 
         # If it's not a list or string, return as-is (could be a BaseLanguageModel)
@@ -197,24 +206,35 @@ class ModelInput(BaseInputMixin, ModelInputMixin, ListableInputMixin, InputTrace
 
     @model_validator(mode="after")
     def set_defaults(self):
-        """Ensure input_types and external_options are set even if inherited as None."""
-        # Set input_types if not explicitly provided
-        if self.input_types is None or len(self.input_types) == 0:
-            self.input_types = ["LanguageModel"]
-
+        """Handle connection mode and set defaults.
+        
+        When value is "connect_other_models", set input_types to ["LanguageModel"]
+        to enable the connection handle. Otherwise, keep input_types empty.
+        """
+        # Check if we're in connection mode (user selected "Connect other models")
+        if self.value == "connect_other_models":
+            # Enable connection handle by setting input_types
+            # Use object.__setattr__ to avoid triggering validation recursion
+            if not self.input_types or len(self.input_types) == 0:
+                object.__setattr__(self, "input_types", ["LanguageModel"])
+        
         # Set external_options if not explicitly provided
         if self.external_options is None or len(self.external_options) == 0:
-            self.external_options = {
-                "fields": {
-                    "data": {
-                        "node": {
-                            "name": "connect_other_models",
-                            "display_name": "Connect other models",
-                            "icon": "CornerDownLeft",
+            object.__setattr__(
+                self,
+                "external_options",
+                {
+                    "fields": {
+                        "data": {
+                            "node": {
+                                "name": "connect_other_models",
+                                "display_name": "Connect other models",
+                                "icon": "CornerDownLeft",
+                            }
                         }
-                    }
+                    },
                 },
-            }
+            )
         return self
 
 

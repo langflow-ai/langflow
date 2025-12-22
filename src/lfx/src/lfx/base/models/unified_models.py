@@ -1036,20 +1036,17 @@ def update_model_options_in_build_config(
             if default_model:
                 build_config["model"]["value"] = [default_model]
 
-    # Simple logic: ONLY hide the handle when we're explicitly setting a model value
-    # Check if field_value is a model selection (list with model dict)
-    if (
-        isinstance(field_value, list)
-        and len(field_value) > 0
-        and isinstance(field_value[0], dict)
-        and "name" in field_value[0]
-    ):
-        # User is selecting a model, hide the handle
-        build_config["model"]["input_types"] = []
-    # Otherwise (including when field_value is "connect_other_models" or anything else), restore default input_types
-    elif cache_key_prefix == "embedding_model_options":
-        build_config["model"]["input_types"] = ["Embeddings"]
+    # Handle visibility logic:
+    # - Show handle ONLY when field_value is "connect_other_models"
+    # - Hide handle in all other cases (default, model selection, etc.)
+    if field_value == "connect_other_models":
+        # User explicitly selected "Connect other models", show the handle
+        if cache_key_prefix == "embedding_model_options":
+            build_config["model"]["input_types"] = ["Embeddings"]
+        else:
+            build_config["model"]["input_types"] = ["LanguageModel"]
     else:
-        build_config["model"]["input_types"] = ["LanguageModel"]
+        # Default case or model selection: hide the handle
+        build_config["model"]["input_types"] = []
 
     return build_config
