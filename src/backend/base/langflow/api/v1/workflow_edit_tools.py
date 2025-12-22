@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import secrets
 import string
 from dataclasses import dataclass
@@ -1476,7 +1477,7 @@ def _apply_add_node(
     """Add a new node to the workflow payload."""
     nodes = _ensure_list(payload.get("nodes", []), name="nodes")
 
-    node_data = template.copy()
+    node_data = copy.deepcopy(template)
     display_name = node_data.get("display_name", component_type)
 
     new_node = {
@@ -1866,6 +1867,41 @@ WORKFLOW_MCP_TOOLS: list[WorkflowMcpTool] = [
                 },
             },
             "required": ["flow_id", "node_id", "field_name"],
+        },
+    ),
+    WorkflowMcpTool(
+        name="lf_documentation",
+        description=(
+            "Access Langflow documentation. Use this to learn about Langflow concepts, components, "
+            "data types, deployment, and best practices. "
+            "Actions: "
+            "'index' - list all documentation categories and pages; "
+            "'search' - search documentation by query (e.g., 'how to create custom component'); "
+            "'read' - get full content of a specific documentation page by slug or filename. "
+            "ALWAYS use this tool when you need detailed information about Langflow features!"
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["index", "search", "read"],
+                    "description": "Action to perform: 'index' for listing, 'search' for finding, 'read' for full content",
+                },
+                "query": {
+                    "type": "string",
+                    "description": "Search query (for 'search' action) or page identifier (for 'read' action)",
+                },
+                "category": {
+                    "type": "string",
+                    "description": "Filter by category (optional, for 'index' action)",
+                },
+                "max_results": {
+                    "type": "integer",
+                    "description": "Maximum number of search results (default: 5, for 'search' action)",
+                },
+            },
+            "required": ["action"],
         },
     ),
 ]
@@ -2282,5 +2318,103 @@ async def call_workflow_tool(
                 result["external_options"] = external_options
 
             return [types.TextContent(type="text", text=_json_dumps(result))]
+
+    if tool_name == "lf_documentation":
+        from langflow.api.v1.documentation import (
+            get_category_description,
+            get_documentation_index,
+            get_documentation_page,
+            search_documentation,
+        )
+
+        action = str(arguments.get("action", "")).strip()
+        if not action:
+            raise WorkflowEditError("action is required (one of: 'index', 'search', 'read')")
+
+        if action == "index":
+            category_filter = (arguments.get("category") or "").strip().lower()
+            full_index = get_documentation_index()
+
+            if category_filter:
+                # Filter to specific category
+                if category_filter in full_index:
+                    result = {
+                        "category": category_filter,
+                        "description": get_category_description(category_filter),
+                        "pages": full_index[category_filter],
+                    }
+                else:
+                    available = list(full_index.keys())
+                    raise WorkflowEditError(
+                        f"Category '{category_filter}' not found. Available categories: {', '.join(sorted(available))}"
+                    )
+            else:
+                # Return full index with category descriptions
+                result = {
+                    "categories": {
+                        cat: {
+                            "description": get_category_description(cat),
+                            "page_count": len(pages),
+                            "pages": pages,
+                        }
+                        for cat, pages in full_index.items()
+                    },
+                    "total_pages": sum(len(pages) for pages in full_index.values()),
+                }
+
+            return [types.TextContent(type="text", text=_json_dumps(result))]
+
+        if action == "search":
+            query = (arguments.get("query") or "").strip()
+            if not query:
+                raise WorkflowEditError("query is required for search action")
+
+            max_results = int(arguments.get("max_results", 5))
+            max_results = min(max(1, max_results), 20)  # Clamp between 1 and 20
+
+            results = search_documentation(query, max_results=max_results)
+
+            if not results:
+                return [
+                    types.TextContent(
+                        type="text",
+                        text=_json_dumps(
+                            {
+                                "query": query,
+                                "results": [],
+                                "message": f"No documentation found for '{query}'. Try different keywords.",
+                            }
+                        ),
+                    )
+                ]
+
+            return [
+                types.TextContent(
+                    type="text",
+                    text=_json_dumps(
+                        {
+                            "query": query,
+                            "results_count": len(results),
+                            "results": results,
+                        }
+                    ),
+                )
+            ]
+
+        if action == "read":
+            identifier = (arguments.get("query") or "").strip()
+            if not identifier:
+                raise WorkflowEditError("query (page slug or filename) is required for read action")
+
+            page = get_documentation_page(identifier)
+            if not page:
+                raise WorkflowEditError(
+                    f"Documentation page '{identifier}' not found. "
+                    "Use 'index' action to list available pages or 'search' to find by topic."
+                )
+
+            return [types.TextContent(type="text", text=_json_dumps(page))]
+
+        raise WorkflowEditError(f"Unknown action '{action}'. Use 'index', 'search', or 'read'.")
 
     raise WorkflowEditError(f"Unknown workflow tool '{tool_name}'")

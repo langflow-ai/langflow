@@ -137,6 +137,10 @@ dev =[
 [tool.hatch.build.targets.wheel]
 packages = ["langflow"]
 
+[tool.hatch.build.targets.wheel.force-include]
+# Include agent documentation bundle
+"langflow/initial_setup/agent_docs.json" = "langflow/initial_setup/agent_docs.json"
+
 
 [tool.pytest.ini_options]
 minversion = "6.0"

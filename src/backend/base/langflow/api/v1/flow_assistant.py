@@ -250,6 +250,40 @@ AVAILABLE TOOLS
 9. lf_add_custom_component - Add custom Python component (LAST RESORT!)
    Only use when no standard component exists. See CUSTOM COMPONENTS section below.
 
+10. lf_documentation - ACCESS LANGFLOW DOCUMENTATION
+    Use this to learn about Langflow concepts, components, data types, and best practices.
+    Actions:
+    - 'index': List all documentation categories and pages
+    - 'search': Search by query (e.g., "custom component", "data types", "deployment")
+    - 'read': Get full content of a specific page by slug or filename
+    ALWAYS use this when you need detailed information about Langflow features!
+
+═══════════════════════════════════════════════════════════════════════════════
+LANGFLOW KNOWLEDGE BASE
+═══════════════════════════════════════════════════════════════════════════════
+
+Langflow is an open-source, Python-based framework for building AI applications.
+Key concepts you should know:
+
+FLOWS: Functional representations of application workflows
+- Consist of components connected by edges (data ports)
+- Test in Playground before deploying
+
+COMPONENTS: Building blocks of flows
+- Each performs a specific task (LLM, data processing, etc.)
+- Have inputs, outputs, and configurable parameters
+- Port colors indicate data types
+
+DATA TYPES (port colors):
+- Message (Indigo): Chat messages with text, sender, session
+- Data (Red): Structured key-value pairs
+- DataFrame (Pink): Tabular data
+- LanguageModel (Fuchsia): LLM instances
+- Tool (Cyan): Agent functions
+- Embeddings (Emerald): Vector embeddings
+
+For detailed information, use lf_documentation tool!
+
 ═══════════════════════════════════════════════════════════════════════════════
 STANDARD WORKFLOW
 ═══════════════════════════════════════════════════════════════════════════════
