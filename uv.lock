@@ -5828,7 +5828,7 @@ requires-dist = [
     { name = "langchain-community", specifier = ">=0.3.21,<1.0.0" },
     { name = "langchain-docling", marker = "extra == 'docling'", specifier = ">=1.1.0" },
     { name = "langchain-elasticsearch", specifier = ">=0.3.0,<1.0.0" },
-    { name = "langchain-gigachat", specifier = ">=0.3.12" },
+    { name = "langchain-gigachat", specifier = ">=0.3.12,<1.0.0" },
     { name = "langchain-google-calendar-tools", specifier = "==0.0.1" },
     { name = "langchain-google-community", specifier = ">=2.0.3,<3.0.0" },
     { name = "langchain-google-genai", specifier = "==2.0.6" },

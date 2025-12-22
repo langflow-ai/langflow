@@ -140,7 +140,7 @@ dependencies = [
     "agent-lifecycle-toolkit~=0.4.4",
     "astrapy>=2.1.0,<3.0.0",
     "aioboto3>=15.2.0,<16.0.0",
-    "langchain-gigachat>=0.3.12",
+    "langchain-gigachat>=0.3.12,<1.0.0",
 ]
 
 
