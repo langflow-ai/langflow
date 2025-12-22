@@ -48,12 +48,11 @@ async def get_message_sessions(
     flow_id: Annotated[UUID | None, Query()] = None,
 ) -> list[str]:
     try:
+        # Use JOIN instead of subquery for better performance
         stmt = select(MessageTable.session_id).distinct()
+        stmt = stmt.join(Flow, MessageTable.flow_id == Flow.id)
         stmt = stmt.where(col(MessageTable.session_id).isnot(None))
-
-        # Filter by user's flows
-        user_flows_stmt = select(Flow.id).where(Flow.user_id == current_user.id)
-        stmt = stmt.where(col(MessageTable.flow_id).in_(user_flows_stmt))
+        stmt = stmt.where(Flow.user_id == current_user.id)
 
         if flow_id:
             stmt = stmt.where(MessageTable.flow_id == flow_id)
@@ -75,11 +74,10 @@ async def get_messages(
     order_by: Annotated[str | None, Query()] = "timestamp",
 ) -> list[MessageResponse]:
     try:
+        # Use JOIN instead of subquery for better performance
         stmt = select(MessageTable)
-
-        # Filter by user's flows
-        user_flows_stmt = select(Flow.id).where(Flow.user_id == current_user.id)
-        stmt = stmt.where(col(MessageTable.flow_id).in_(user_flows_stmt))
+        stmt = stmt.join(Flow, MessageTable.flow_id == Flow.id)
+        stmt = stmt.where(Flow.user_id == current_user.id)
 
         if flow_id:
             stmt = stmt.where(MessageTable.flow_id == flow_id)
