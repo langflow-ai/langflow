@@ -26,8 +26,8 @@ __all__ = [
     "DirectoryComponent",
     "FileComponent",
     "KnowledgeIngestionComponent",
-    "LoadFileComponent",
     "KnowledgeRetrievalComponent",
+    "LoadFileComponent",
     "SaveToFileComponent",
 ]
 

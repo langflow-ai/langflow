@@ -33,10 +33,10 @@ def _get_storage_location_options():
 
 class LoadFileComponent(BaseFileComponent):
     """Load File component - loads files without parsing.
-    
+
     This component loads files and returns raw file paths without any parsing operations.
     Files are returned in the Message.files field, ready to be passed to downstream
-    components (e.g., LLM components for image processing) 
+    components (e.g., LLM components for image processing)
 
     """
 
@@ -50,15 +50,62 @@ class LoadFileComponent(BaseFileComponent):
     # This includes text, images, documents, and other common formats
     VALID_EXTENSIONS = [
         # Text files
-        "txt", "md", "mdx", "csv", "json", "yaml", "yml", "xml", "html", "htm", "xhtml",
+        "txt",
+        "md",
+        "mdx",
+        "csv",
+        "json",
+        "yaml",
+        "yml",
+        "xml",
+        "html",
+        "htm",
+        "xhtml",
         # Documents
-        "pdf", "docx", "doc", "docm", "dotx", "dotm", "xls", "xlsx", "ppt", "pptx", "pptm", "potx", "ppsx", "potm", "ppsm",
+        "pdf",
+        "docx",
+        "doc",
+        "docm",
+        "dotx",
+        "dotm",
+        "xls",
+        "xlsx",
+        "ppt",
+        "pptx",
+        "pptm",
+        "potx",
+        "ppsx",
+        "potm",
+        "ppsm",
         # Images
-        "jpg", "jpeg", "png", "gif", "bmp", "tiff", "webp", "svg",
+        "jpg",
+        "jpeg",
+        "png",
+        "gif",
+        "bmp",
+        "tiff",
+        "webp",
+        "svg",
         # Code
-        "py", "js", "ts", "tsx", "sh", "sql", "java", "cpp", "c", "h",
+        "py",
+        "js",
+        "ts",
+        "tsx",
+        "sh",
+        "sql",
+        "java",
+        "cpp",
+        "c",
+        "h",
         # Other
-        "zip", "tar", "tgz", "bz2", "gz", "adoc", "asciidoc", "asc",
+        "zip",
+        "tar",
+        "tgz",
+        "bz2",
+        "gz",
+        "adoc",
+        "asciidoc",
+        "asc",
     ]
 
     _base_inputs = deepcopy(BaseFileComponent.get_base_inputs())
@@ -307,11 +354,11 @@ class LoadFileComponent(BaseFileComponent):
 
     def process_files(self, file_list: list[BaseFileComponent.BaseFile]) -> list[BaseFileComponent.BaseFile]:
         """Process input files - no-op since we're not parsing, just returning file paths.
-        
+
         We ensure each file has a Data object with the file_path, but we don't parse the content.
         """
         from lfx.schema.data import Data
-        
+
         # Ensure each file has proper data structure with file_path
         for file in file_list:
             if not file.data or len(file.data) == 0:
@@ -323,7 +370,7 @@ class LoadFileComponent(BaseFileComponent):
                 for data_item in file.data:
                     if self.SERVER_FILE_PATH_FIELDNAME not in data_item.data:
                         data_item.data[self.SERVER_FILE_PATH_FIELDNAME] = str(file.path)
-        
+
         return file_list
 
     def load_files_raw(self) -> Message:
@@ -439,4 +486,3 @@ class LoadFileComponent(BaseFileComponent):
                 build_config["path"]["show"] = True
 
         return build_config
-
