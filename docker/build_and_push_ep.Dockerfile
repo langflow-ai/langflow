@@ -76,6 +76,7 @@ RUN apt-get update \
     && apt-get upgrade -y \
     && apt-get install --no-install-recommends -y \
         curl \
+        git \
         # Add PostgreSQL client libraries
         libpq5 \
     && apt-get clean \
