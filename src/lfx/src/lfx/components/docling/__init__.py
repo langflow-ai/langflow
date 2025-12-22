@@ -52,7 +52,7 @@ def _get_dynamic_imports() -> dict[str, str]:
 
 
 # Dynamically set __all__ and _dynamic_imports based on cloud environment
-__all__: list[str] = _get_available_components()
+__all__: list[str] = _get_available_components()  # noqa: PLE0605
 _dynamic_imports: dict[str, str] = _get_dynamic_imports()
 
 
