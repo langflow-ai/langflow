@@ -574,10 +574,28 @@ EOF
   fi
 }
 
+ensure_certbot_deploy_hook() {
+  step "Ensuring Certbot deploy hook reloads Nginx"
+  local hook_dir="/etc/letsencrypt/renewal-hooks/deploy"
+  local hook_file="${hook_dir}/000-reload-nginx.sh"
+
+  mkdir -p "${hook_dir}"
+
+  cat > "${hook_file}" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+systemctl reload nginx
+EOF
+
+  chmod +x "${hook_file}"
+  ok "Certbot deploy hook installed: ${hook_file}"
+}
+
 issue_cert_if_needed() {
   if [[ -f "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" ]]; then
     ok "TLS certificate already exists"
     ensure_certbot_timer
+    ensure_certbot_deploy_hook
     step "Verifying certbot timer"
     if systemctl is-active --quiet certbot.timer || \
        systemctl is-active --quiet snap.certbot.renew.timer || \
@@ -600,6 +618,7 @@ issue_cert_if_needed() {
   ensure_nginx
 
   ensure_certbot_timer
+  ensure_certbot_deploy_hook
   step "Verifying certbot timer"
   if systemctl is-active --quiet certbot.timer || \
      systemctl is-active --quiet snap.certbot.renew.timer || \
