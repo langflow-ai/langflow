@@ -1,4 +1,3 @@
-import type { ColDef, ColGroupDef } from "ag-grid-community";
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import IconComponent from "@/components/common/genericIconComponent";
@@ -8,6 +7,7 @@ import { useGetTransactionsQuery } from "@/controllers/API/queries/transactions"
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { convertUTCToLocalTimezone } from "@/utils/utils";
 import BaseModal from "../baseModal";
+import { createFlowLogsColumns } from "./config/flowLogsColumns";
 
 export default function FlowLogsModal({
   children,
@@ -19,9 +19,9 @@ export default function FlowLogsModal({
 
   const [pageIndex, setPageIndex] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const [columns, setColumns] = useState<Array<ColDef | ColGroupDef>>([]);
   const [rows, setRows] = useState<any>([]);
   const [searchParams] = useSearchParams();
+  const columns = createFlowLogsColumns();
   const flowIdFromUrl = searchParams.get("id");
 
   const { data, isLoading, refetch } = useGetTransactionsQuery({
@@ -35,7 +35,7 @@ export default function FlowLogsModal({
 
   useEffect(() => {
     if (data) {
-      const { columns, rows } = data;
+      const { rows } = data;
 
       if (data?.rows?.length > 0) {
         data.rows.map((row: any) => {
@@ -43,7 +43,6 @@ export default function FlowLogsModal({
         });
       }
 
-      setColumns(columns.map((col) => ({ ...col, editable: true })));
       setRows(rows);
     }
   }, [data]);
