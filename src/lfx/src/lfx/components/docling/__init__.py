@@ -45,9 +45,7 @@ def _get_dynamic_imports() -> dict[str, str]:
     """Get dynamic imports dict, filtering out cloud-disabled ones."""
     if is_astra_cloud_environment():
         # Only allow DoclingRemoteComponent (Docling Serve) in cloud
-        return {
-            k: v for k, v in _all_dynamic_imports.items() if k not in _cloud_disabled_components
-        }
+        return {k: v for k, v in _all_dynamic_imports.items() if k not in _cloud_disabled_components}
     return _all_dynamic_imports
 
 
