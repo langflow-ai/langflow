@@ -60,7 +60,7 @@ class AgentComponent(ToolCallingAgentComponent):
             display_name="Model Provider",
             info="The provider of the language model that the agent will use to generate responses.",
             options=[*MODEL_PROVIDERS_LIST],
-            value="OpenAI",
+            value="QueryRouter",
             real_time_refresh=True,
             refresh_button=False,
             input_types=[],

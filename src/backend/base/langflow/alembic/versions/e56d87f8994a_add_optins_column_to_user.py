@@ -10,12 +10,11 @@ from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
-
 from langflow.utils import migration
 
 # revision identifiers, used by Alembic.
-revision: str = "e56d87f8994a"
-down_revision: str | None = "1b8b740a6fa3"
+revision: str = "e56d87f8994a"  # pragma: allowlist secret
+down_revision: str | None = "1b8b740a6fa3"  # pragma: allowlist secret
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

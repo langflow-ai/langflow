@@ -7,7 +7,11 @@ const TextOutputView = ({
   left: boolean | undefined;
   value: any;
 }) => {
-  if (typeof value === "object" && Object.keys(value).includes("text")) {
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    Object.keys(value).includes("text")
+  ) {
     value = value.text;
   }
 

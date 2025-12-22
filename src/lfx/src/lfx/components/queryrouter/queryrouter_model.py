@@ -48,9 +48,13 @@ class QueryRouterModelComponent(LCModelComponent):
     ]
 
     def fetch_models(self) -> list[dict]:
-        """Fetch available models from QueryRouter."""
+        """Fetch available models from QueryRouter.
+
+        Returns list of models with slug as identifier (not id, which is technical field).
+        Each model dict contains: slug, name, context_length, vendor, price info, etc.
+        """
         try:
-            # Prepare headers with API key if available
+            # Prepare headers with API key if available (API doesn't require auth, but we include it for future compatibility)
             headers = {}
             if self.api_key:
                 if isinstance(self.api_key, SecretStr):
@@ -62,28 +66,64 @@ class QueryRouterModelComponent(LCModelComponent):
             response = httpx.get("https://api.queryrouter.ru/v1/models", headers=headers, timeout=10.0)
             response.raise_for_status()
             models = response.json().get("data", [])
-            return sorted(
-                [
+
+            result = []
+            for m in models:
+                # Use slug as identifier, fallback to id only if slug is missing
+                slug = m.get("slug") or m.get("id")
+                if not slug:
+                    continue
+
+                display_name = m.get("display_name") or m.get("name", slug)
+                context_length = m.get("context_length", 0)
+                vendor = m.get("vendor") or m.get("owned_by", "")
+                price_in = m.get("price_in_per_1k")
+                price_out = m.get("price_out_per_1k")
+                model_type = m.get("model_type", "chat")
+
+                result.append(
                     {
-                        "id": m["id"],
-                        "name": m.get("display_name") or m.get("name", m["id"]),
-                        "context": m.get("context_length", 0),
+                        "slug": slug,
+                        "name": display_name,
+                        "context": context_length,
+                        "vendor": vendor,
+                        "price_in": price_in,
+                        "price_out": price_out,
+                        "model_type": model_type,
                     }
-                    for m in models
-                    if m.get("id")
-                ],
-                key=lambda x: x["name"],
-            )
+                )
+
+            return sorted(result, key=lambda x: x["name"])
         except (httpx.RequestError, httpx.HTTPStatusError) as e:
             self.log(f"Error fetching models: {e}")
             return []
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:  # noqa: ARG002
-        """Update model options."""
+        """Update model options using slug as identifier."""
         models = self.fetch_models()
         if models:
-            build_config["model_name"]["options"] = [m["id"] for m in models]
-            build_config["model_name"]["tooltips"] = {m["id"]: f"{m['name']} ({m['context']:,} tokens)" for m in models}
+            build_config["model_name"]["options"] = [m["slug"] for m in models]
+
+            # Build tooltips with model information
+            tooltips = {}
+            for m in models:
+                tooltip_parts = [m["name"]]
+                if m["context"]:
+                    tooltip_parts.append(f"{m['context']:,} tokens")
+                if m["vendor"]:
+                    tooltip_parts.append(f"Vendor: {m['vendor']}")
+                if m["price_in"] or m["price_out"]:
+                    price_info = []
+                    if m["price_in"]:
+                        price_info.append(f"in: {m['price_in']}₽/1K")
+                    if m["price_out"]:
+                        price_info.append(f"out: {m['price_out']}₽/1K")
+                    if price_info:
+                        tooltip_parts.append(" | ".join(price_info))
+
+                tooltips[m["slug"]] = " | ".join(tooltip_parts)
+
+            build_config["model_name"]["tooltips"] = tooltips
         else:
             build_config["model_name"]["options"] = ["Failed to load models"]
         return build_config

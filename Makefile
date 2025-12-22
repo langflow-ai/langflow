@@ -317,12 +317,14 @@ build: setup_env ## build the frontend static files and package the project
 ifdef base
 	make install_frontendci
 	make build_frontend
+	make build_agent_docs
 	make build_langflow_base args="$(args)"
 endif
 
 ifdef main
 	make install_frontendci
 	make build_frontend
+	make build_agent_docs
 	make build_langflow_base args="$(args)"
 	make build_langflow args="$(args)"
 endif
@@ -468,6 +470,20 @@ lfx_lint: ## lint LFX code
 lfx_clean: ## clean LFX build artifacts
 	@echo 'Cleaning LFX build artifacts'
 	@cd src/lfx && make clean
+
+######################
+# AGENT DOCUMENTATION
+######################
+
+build_agent_docs: ## Build documentation bundle for Flow Assistant
+	@echo "$(GREEN)Building Agent Documentation Bundle...$(NC)"
+	@uv run python scripts/build_agent_docs.py
+	@echo "$(GREEN)Agent documentation built successfully.$(NC)"
+
+clean_agent_docs: ## Remove agent documentation bundle
+	@echo "$(YELLOW)Cleaning agent documentation bundle...$(NC)"
+	@rm -f src/backend/base/langflow/api/v1/agent_docs.json
+	@echo "$(GREEN)Agent documentation bundle removed.$(NC)"
 
 lfx_docker_build: ## build LFX production Docker image
 	@echo 'Building LFX Docker image'
@@ -867,6 +883,10 @@ help_backend: ## show backend-specific commands
 	@echo "  $(GREEN)make lfx_docker_build$(NC)    - Build LFX Docker image"
 	@echo "  $(GREEN)make lfx_docker_dev$(NC)      - Start LFX development environment"
 	@echo "  $(GREEN)make lfx_docker_test$(NC)     - Run LFX tests in Docker"
+	@echo ''
+	@echo "$(GREEN)Agent Documentation:$(NC)"
+	@echo "  $(GREEN)make build_agent_docs$(NC)    - Build documentation bundle for Flow Assistant"
+	@echo "  $(GREEN)make clean_agent_docs$(NC)    - Remove agent documentation bundle"
 	@echo ''
 	@echo "$(GREEN)═══════════════════════════════════════════════════════════════════$(NC)"
 	@echo ''

@@ -199,9 +199,37 @@ def _get_sambanova_inputs_and_fields():
     return sambanova_inputs, create_input_fields_dict(sambanova_inputs, "")
 
 
+def _get_queryrouter_inputs_and_fields():
+    try:
+        from lfx.components.queryrouter.queryrouter_model import QueryRouterModelComponent
+
+        queryrouter_inputs = get_filtered_inputs(QueryRouterModelComponent, provider_name="QueryRouter")
+    except ImportError as e:
+        msg = "QueryRouter component is not available."
+        raise ImportError(msg) from e
+    return queryrouter_inputs, create_input_fields_dict(queryrouter_inputs, "")
+
+
 MODEL_PROVIDERS_DICT: dict[str, ModelProvidersDict] = {}
 
 # Try to add each provider
+
+# QueryRouter - preferred provider with unified access to 100+ models
+try:
+    from lfx.components.queryrouter.queryrouter_model import QueryRouterModelComponent
+
+    queryrouter_inputs, queryrouter_fields = _get_queryrouter_inputs_and_fields()
+    MODEL_PROVIDERS_DICT["QueryRouter"] = {
+        "fields": queryrouter_fields,
+        "inputs": queryrouter_inputs,
+        "prefix": "",
+        "component_class": QueryRouterModelComponent(),
+        "icon": QueryRouterModelComponent.icon,
+        "is_active": True,
+    }
+except ImportError:
+    pass
+
 try:
     from lfx.components.openai.openai_chat_model import OpenAIModelComponent
 
@@ -373,6 +401,6 @@ MODEL_DYNAMIC_UPDATE_FIELDS = [
 
 MODELS_METADATA = {name: {"icon": prov["icon"]} for name, prov in ACTIVE_MODEL_PROVIDERS_DICT.items()}
 
-MODEL_PROVIDERS_LIST = ["Anthropic", "Google Generative AI", "OpenAI", "IBM watsonx.ai", "Ollama"]
+MODEL_PROVIDERS_LIST = ["QueryRouter", "Anthropic", "Google Generative AI", "OpenAI", "IBM watsonx.ai", "Ollama"]
 
 MODEL_OPTIONS_METADATA = [MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST if key in MODELS_METADATA]

@@ -21,6 +21,7 @@ from sqlmodel import select
 
 from langflow.api.v1.endpoints import simple_run_flow
 from langflow.api.v1.schemas import SimplifiedAPIRequest
+from langflow.api.v1.workflow_edit_tools import WORKFLOW_MCP_TOOLS, call_workflow_tool
 from langflow.helpers.flow import json_schema_from_flow
 from langflow.schema.message import Message
 from langflow.services.database.models import Flow
@@ -180,6 +181,10 @@ async def handle_call_tool(
     request_variables = current_request_variables_ctx.get()
     exec_context = {"request_variables": request_variables} if request_variables else None
 
+    workflow_tool_names = {t.name for t in WORKFLOW_MCP_TOOLS}
+    if name in workflow_tool_names:
+        return await call_workflow_tool(tool_name=name, arguments=arguments, user_id=current_user.id)
+
     async def execute_tool(session):
         # Get flow id from name
         flow = await get_flow_snake_case(name, current_user.id, session, is_action=is_action)
@@ -290,9 +295,15 @@ async def handle_list_tools(project_id=None, *, mcp_enabled_only=False):
         project_id: Optional project ID to filter tools by project
         mcp_enabled_only: Whether to filter for MCP-enabled flows only
     """
-    tools = []
+    tools: list[types.Tool] = []
     try:
         async with session_scope() as session:
+            existing_names: set[str] = set()
+
+            for tool_def in WORKFLOW_MCP_TOOLS:
+                tools.append(tool_def.to_mcp_tool())
+                existing_names.add(tool_def.name)
+
             # Build query based on parameters
             if project_id:
                 # Filter flows by project and optionally by MCP enabled status
@@ -305,7 +316,6 @@ async def handle_list_tools(project_id=None, *, mcp_enabled_only=False):
 
             flows = (await session.exec(flows_query)).all()
 
-            existing_names = set()
             for flow in flows:
                 if flow.user_id is None:
                     continue

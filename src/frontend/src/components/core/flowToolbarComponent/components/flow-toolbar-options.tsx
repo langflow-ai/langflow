@@ -1,5 +1,6 @@
 import type { Dispatch, SetStateAction } from "react";
 import useFlowStore from "@/stores/flowStore";
+import AssistantButton from "./assistant-button";
 import PublishDropdown from "./deploy-dropdown";
 import PlaygroundButton from "./playground-button";
 
@@ -26,6 +27,7 @@ const FlowToolbarOptions = ({
           setOpen={setOpen}
           canvasOpen
         />
+        <AssistantButton />
       </div>
       <PublishDropdown
         openApiModal={openApiModal}

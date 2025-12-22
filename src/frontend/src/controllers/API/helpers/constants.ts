@@ -29,6 +29,9 @@ export const URLs = {
   PUBLIC_FLOW: `flows/public_flow`,
   MCP: `mcp/project`,
   MCP_SERVERS: `mcp/servers`,
+  FLOW_ASSISTANT: `flow-assistant/chat`,
+  FLOW_ASSISTANT_STREAM: `flow-assistant/chat/stream`,
+  FLOW_ASSISTANT_MODELS: `flow-assistant/models`,
   KNOWLEDGE_BASES: `knowledge_bases`,
 } as const;
 
@@ -36,7 +39,7 @@ export const URLs = {
 
 export function getURL(
   key: keyof typeof URLs,
-  params: any = {},
+  params: Record<string, unknown> = {},
   v2: boolean = false,
 ) {
   let url = URLs[key];
