@@ -650,7 +650,7 @@ class TestFileComponentCloudEnvironment:
     """Test FileComponent behavior in cloud environments."""
 
     def test_advanced_mode_disabled_in_cloud(self, monkeypatch):
-        """Test that advanced_mode and all Docling fields are disabled when ASTRA_CLOUD_DISABLE_COMPONENT env var is set to true."""
+        """Test that advanced_mode and all Docling fields are disabled when ASTRA_CLOUD_DISABLE_COMPONENT is set."""
         # Set the environment variable to simulate cloud environment
         monkeypatch.setenv("ASTRA_CLOUD_DISABLE_COMPONENT", "true")
 
@@ -692,7 +692,7 @@ class TestFileComponentCloudEnvironment:
             "md_page_break_placeholder": {"show": False},
         }
 
-        result = component.update_build_config(build_config, True, "advanced_mode")
+        result = component.update_build_config(build_config, field_value=True, field_name="advanced_mode")
 
         # Even if advanced_mode is toggled to True, it should be disabled in cloud
         assert result["advanced_mode"]["show"] is False
