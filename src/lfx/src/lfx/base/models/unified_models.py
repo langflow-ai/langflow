@@ -199,7 +199,7 @@ def get_unified_models_detailed(
     for prov, models in provider_map.items():
         for i, model in enumerate(models[:5]):
             model["metadata"]["default"] = True
-        
+
         # If only_defaults is True, filter to only default models
         if only_defaults:
             provider_map[prov] = [m for m in models if m["metadata"].get("default", False)]
