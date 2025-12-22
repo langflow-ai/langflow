@@ -190,20 +190,6 @@ class ModelInput(BaseInputMixin, ModelInputMixin, ListableInputMixin, InputTrace
         # If it's a string or list of strings, convert to dict format
         if isinstance(v, str) or (isinstance(v, list) and all(isinstance(item, str) for item in v)):
             # Avoid circular import by importing the module directly (not through package __init__)
-            try:
-                from lfx.base.models.unified_models import normalize_model_names_to_dicts
-
-                return normalize_model_names_to_dicts(v)
-            except Exception:  # noqa: BLE001
-                # Fallback if import or normalization fails
-                # This can happen during module initialization or in test environments
-                if isinstance(v, str):
-                    return [{"name": v}]
-                return [{"name": item} for item in v]
-
-        # Mixed list or unexpected format, return as-is
-        return v
-
     @model_validator(mode="after")
     def set_defaults(self):
         """Handle connection mode and set defaults.
@@ -212,11 +198,10 @@ class ModelInput(BaseInputMixin, ModelInputMixin, ListableInputMixin, InputTrace
         to enable the connection handle. Otherwise, keep input_types empty.
         """
         # Check if we're in connection mode (user selected "Connect other models")
-        if self.value == "connect_other_models":
+        if self.value == "connect_other_models" and not self.input_types:
             # Enable connection handle by setting input_types
             # Use object.__setattr__ to avoid triggering validation recursion
-            if not self.input_types or len(self.input_types) == 0:
-                object.__setattr__(self, "input_types", ["LanguageModel"])
+            object.__setattr__(self, "input_types", ["LanguageModel"])
 
         # Set external_options if not explicitly provided
         if self.external_options is None or len(self.external_options) == 0:
