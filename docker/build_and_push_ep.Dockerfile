@@ -87,15 +87,6 @@ RUN apt-get update \
     && useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data -s /usr/bin/false \
     && mkdir /data && chown -R 1000:0 /data
 
-# Install uv for mcp-composer - download binary directly (no shell needed)
-# uv is a standalone binary executable, doesn't require shell access
-RUN curl -LsSf https://astral.sh/uv/install.sh -o /tmp/install-uv.sh \
-    && chmod +x /tmp/install-uv.sh \
-    && /tmp/install-uv.sh \
-    && mv /root/.cargo/bin/uv /usr/local/bin/uv 2>/dev/null || cp /root/.local/bin/uv /usr/local/bin/uv 2>/dev/null || true \
-    && ln -sf /usr/local/bin/uv /usr/local/bin/uvx \
-    && rm -rf /tmp/install-uv.sh /root/.cargo /root/.local
-
 COPY --from=builder --chown=1000 /app/.venv /app/.venv
 
 # Remove shell binaries to completely disable shell access
