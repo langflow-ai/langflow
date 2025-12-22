@@ -153,7 +153,10 @@ class LambdaFilterComponent(Component):
         else:
             data = self.data
 
-        dump = json.dumps(data)
+        # Keep only the actual payload (common for HTTP/API fetch components)
+        if isinstance(data, dict) and "result" in data and isinstance(data["result"], list):
+            data = {"_results": data["result"]}
+        dump = json.dumps(data, separators=(",", ":"), ensure_ascii=False)
         self.log(str(data))
 
         llm = get_llm(model=self.model, user_id=self.user_id, api_key=self.api_key)
