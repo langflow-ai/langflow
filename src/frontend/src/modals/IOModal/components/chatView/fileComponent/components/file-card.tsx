@@ -10,6 +10,19 @@ import DownloadButton from "./download-button";
 
 const imgTypes = new Set(["png", "jpg", "jpeg", "gif", "webp", "image"]);
 
+/**
+ * Determines if a file is an image based on type or path extension
+ */
+function isImageFile(fileType: string | undefined, path: string): boolean {
+  // First check the fileType directly
+  if (fileType && imgTypes.has(fileType.toLowerCase())) {
+    return true;
+  }
+  // If fileType is generic (like "file") or undefined, extract extension from path
+  const extension = path.split(".").pop()?.toLowerCase() || "";
+  return imgTypes.has(extension);
+}
+
 export default function FileCard({
   fileName,
   path,
@@ -33,7 +46,7 @@ export default function FileCard({
   const imgSrc = `${getBaseUrl()}files/images/${path}`;
 
   if (showFile) {
-    if (imgTypes.has(fileType)) {
+    if (isImageFile(fileType, path)) {
       return (
         <div
           className="inline-block w-full rounded-lg transition-all"

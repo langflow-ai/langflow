@@ -29,10 +29,9 @@ export default function IOFileInput({ field, updateValue }: IOFileInputProps) {
   }, [filePath]);
 
   useEffect(() => {
-    if (field) {
-      const fileName = field.split("/")[1];
-      const flowFileId = currentFlowId.toString();
-      const imageUrl = `${getBaseUrl()}files/images/${flowFileId}/${fileName}`;
+    if (field && typeof field === "string") {
+      // Use the path directly from field (format: flowId/filename)
+      const imageUrl = `${getBaseUrl()}files/images/${field}`;
 
       // Fetch image with authentication
       api
@@ -45,7 +44,7 @@ export default function IOFileInput({ field, updateValue }: IOFileInputProps) {
           console.error("Failed to fetch authenticated image:", err);
         });
     }
-  }, []);
+  }, [field]);
 
   const dragOver = (e) => {
     e.preventDefault();

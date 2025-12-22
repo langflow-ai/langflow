@@ -2,9 +2,9 @@ import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { StickToBottom } from "use-stick-to-bottom";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import { TextEffectPerChar } from "@/components/ui/textAnimation";
-import CustomChatInput from "@/customization/components/custom-chat-input";
 import { ENABLE_IMAGE_ON_PLAYGROUND } from "@/customization/feature-flags";
-import useCustomUseFileHandler from "@/customization/hooks/use-custom-use-file-handler";
+import ChatInput from "../chatInput/chat-input";
+import { useFileHandler } from "../chatInput/hooks/use-file-handler";
 import { track } from "@/customization/utils/analytics";
 import { useGetFlowId } from "@/modals/IOModal/hooks/useGetFlowId";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
@@ -133,7 +133,7 @@ export default function ChatView({
       });
   }
 
-  const { files, setFiles, handleFiles } = useCustomUseFileHandler(realFlowId);
+  const { files, setFiles, handleFiles } = useFileHandler(realFlowId);
   const [isDragging, setIsDragging] = useState(false);
 
   const { dragOver, dragEnter, dragLeave } = useDragAndDrop(
@@ -230,7 +230,7 @@ export default function ChatView({
       </StickToBottom.Content>
 
       <div className="m-auto w-full max-w-[768px] md:w-5/6">
-        <CustomChatInput
+        <ChatInput
           playgroundPage={!!playgroundPage}
           noInput={!inputTypes.includes("ChatInput")}
           sendMessage={async ({ repeat, files }) => {

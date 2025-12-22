@@ -5,7 +5,7 @@ import TableNodeComponent from "@/components/core/parameterRenderComponent/compo
 import TabComponent from "@/components/core/parameterRenderComponent/components/tabComponent";
 import { TEXT_FIELD_TYPES } from "@/constants/constants";
 import CustomConnectionComponent from "@/customization/components/custom-connectionComponent";
-import CustomInputFileComponent from "@/customization/components/custom-input-file";
+import InputFileComponent from "./components/inputFileComponent";
 import CustomLinkComponent from "@/customization/components/custom-linkComponent";
 import type { APIClassType, InputFieldType } from "@/types/api";
 import DictComponent from "./components/dictComponent";
@@ -170,7 +170,7 @@ export function ParameterRenderComponent({
         );
       case "file":
         return (
-          <CustomInputFileComponent
+          <InputFileComponent
             {...baseInputProps}
             fileTypes={templateData.fileTypes}
             file_path={templateData.file_path}
