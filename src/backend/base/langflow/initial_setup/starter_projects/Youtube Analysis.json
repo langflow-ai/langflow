@@ -25,9 +25,9 @@
         "id": "reactflow__edge-Prompt-2lY00{œdataTypeœ:œPromptœ,œidœ:œPrompt-2lY00œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-2FN2V{œfieldNameœ:œinput_valueœ,œidœ:œAgent-2FN2Vœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-2lY00",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-2lY00œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-2lY00œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-2FN2V",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-2FN2Vœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-2FN2Vœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -55,9 +55,9 @@
         "id": "reactflow__edge-Agent-2FN2V{œdataTypeœ:œAgentœ,œidœ:œAgent-2FN2Vœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-JZAp9{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-JZAp9œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Agent-2FN2V",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-2FN2Vœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-2FN2Vœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-JZAp9",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-JZAp9œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-JZAp9œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -83,9 +83,9 @@
         "id": "reactflow__edge-YouTubeTranscripts-fnDOA{œdataTypeœ:œYouTubeTranscriptsœ,œidœ:œYouTubeTranscripts-fnDOAœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-2FN2V{œfieldNameœ:œtoolsœ,œidœ:œAgent-2FN2Vœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "YouTubeTranscripts-fnDOA",
-        "sourceHandle": "{œdataTypeœ:œYouTubeTranscriptsœ,œidœ:œYouTubeTranscripts-fnDOAœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œYouTubeTranscriptsœ, œidœ: œYouTubeTranscripts-fnDOAœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-2FN2V",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-2FN2Vœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-2FN2Vœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -111,9 +111,9 @@
         "id": "reactflow__edge-parser-ogxGV{œdataTypeœ:œparserœ,œidœ:œparser-ogxGVœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-2lY00{œfieldNameœ:œanalysisœ,œidœ:œPrompt-2lY00œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "parser-ogxGV",
-        "sourceHandle": "{œdataTypeœ:œparserœ,œidœ:œparser-ogxGVœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-ogxGVœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-2lY00",
-        "targetHandle": "{œfieldNameœ:œanalysisœ,œidœ:œPrompt-2lY00œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œanalysisœ, œidœ: œPrompt-2lY00œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -139,9 +139,9 @@
         "id": "reactflow__edge-ChatInput-1LEQy{œdataTypeœ:œChatInputœ,œidœ:œChatInput-1LEQyœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-YouTubeCommentsComponent-ZkD9X{œfieldNameœ:œvideo_urlœ,œidœ:œYouTubeCommentsComponent-ZkD9Xœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-1LEQy",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-1LEQyœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-1LEQyœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "YouTubeCommentsComponent-ZkD9X",
-        "targetHandle": "{œfieldNameœ:œvideo_urlœ,œidœ:œYouTubeCommentsComponent-ZkD9Xœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œvideo_urlœ, œidœ: œYouTubeCommentsComponent-ZkD9Xœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -167,9 +167,9 @@
         "id": "reactflow__edge-ChatInput-1LEQy{œdataTypeœ:œChatInputœ,œidœ:œChatInput-1LEQyœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-2lY00{œfieldNameœ:œurlœ,œidœ:œPrompt-2lY00œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-1LEQy",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-1LEQyœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-1LEQyœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-2lY00",
-        "targetHandle": "{œfieldNameœ:œurlœ,œidœ:œPrompt-2lY00œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œurlœ, œidœ: œPrompt-2lY00œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -195,9 +195,9 @@
         "id": "xy-edge__YouTubeCommentsComponent-ZkD9X{œdataTypeœ:œYouTubeCommentsComponentœ,œidœ:œYouTubeCommentsComponent-ZkD9Xœ,œnameœ:œcommentsœ,œoutput_typesœ:[œDataFrameœ]}-BatchRunComponent-hJ8qJ{œfieldNameœ:œdfœ,œidœ:œBatchRunComponent-hJ8qJœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "YouTubeCommentsComponent-ZkD9X",
-        "sourceHandle": "{œdataTypeœ:œYouTubeCommentsComponentœ,œidœ:œYouTubeCommentsComponent-ZkD9Xœ,œnameœ:œcommentsœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œYouTubeCommentsComponentœ, œidœ: œYouTubeCommentsComponent-ZkD9Xœ, œnameœ: œcommentsœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "BatchRunComponent-hJ8qJ",
-        "targetHandle": "{œfieldNameœ:œdfœ,œidœ:œBatchRunComponent-hJ8qJœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œdfœ, œidœ: œBatchRunComponent-hJ8qJœ, œinputTypesœ: [œDataFrameœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -490,11 +490,8 @@
                 "cache": true,
                 "display_name": "Response",
                 "group_outputs": false,
-                "loop_types": null,
                 "method": "message_response",
                 "name": "response",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -505,14 +502,6 @@
             ],
             "pinned": false,
             "template": {
-              "_frontend_node_flow_id": {
-                "input_types": [],
-                "value": "ec8fea99-360e-46e0-a4c5-46d10defb57b"
-              },
-              "_frontend_node_folder_id": {
-                "input_types": [],
-                "value": "34260300-cae1-43f3-8b14-1272b8cffe4c"
-              },
               "_type": "Component",
               "add_current_date_tool": {
                 "_input_type": "BoolInput",
@@ -589,7 +578,6 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -701,7 +689,6 @@
                 "type": "str",
                 "value": ""
               },
-              "is_refresh": false,
               "max_iterations": {
                 "_input_type": "IntInput",
                 "advanced": true,
@@ -1633,12 +1620,6 @@
             ],
             "pinned": false,
             "template": {
-              "_frontend_node_flow_id": {
-                "value": "ec8fea99-360e-46e0-a4c5-46d10defb57b"
-              },
-              "_frontend_node_folder_id": {
-                "value": "34260300-cae1-43f3-8b14-1272b8cffe4c"
-              },
               "_type": "Component",
               "chunk_size_seconds": {
                 "_input_type": "IntInput",
@@ -1676,7 +1657,6 @@
                 "type": "code",
                 "value": "import re\n\nimport pandas as pd\nfrom youtube_transcript_api import NoTranscriptFound, TranscriptsDisabled, YouTubeTranscriptApi\n\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.inputs.inputs import DropdownInput, IntInput, MultilineInput\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.schema.message import Message\nfrom lfx.template.field.base import Output\n\n\nclass YouTubeTranscriptsComponent(Component):\n    \"\"\"A component that extracts spoken content from YouTube videos as transcripts.\"\"\"\n\n    display_name: str = \"YouTube Transcripts\"\n    description: str = \"Extracts spoken content from YouTube videos with multiple output options.\"\n    icon: str = \"YouTube\"\n    name = \"YouTubeTranscripts\"\n\n    inputs = [\n        MultilineInput(\n            name=\"url\",\n            display_name=\"Video URL\",\n            info=\"Enter the YouTube video URL to get transcripts from.\",\n            tool_mode=True,\n            required=True,\n        ),\n        IntInput(\n            name=\"chunk_size_seconds\",\n            display_name=\"Chunk Size (seconds)\",\n            value=60,\n            info=\"The size of each transcript chunk in seconds.\",\n        ),\n        DropdownInput(\n            name=\"translation\",\n            display_name=\"Translation Language\",\n            advanced=True,\n            options=[\"\", \"en\", \"es\", \"fr\", \"de\", \"it\", \"pt\", \"ru\", \"ja\", \"ko\", \"hi\", \"ar\", \"id\"],\n            info=\"Translate the transcripts to the specified language. Leave empty for no translation.\",\n        ),\n    ]\n\n    outputs = [\n        Output(name=\"dataframe\", display_name=\"Chunks\", method=\"get_dataframe_output\"),\n        Output(name=\"message\", display_name=\"Transcript\", method=\"get_message_output\"),\n        Output(name=\"data_output\", display_name=\"Transcript + Source\", method=\"get_data_output\"),\n    ]\n\n    def _extract_video_id(self, url: str) -> str:\n        \"\"\"Extract video ID from YouTube URL.\"\"\"\n        patterns = [\n            r\"(?:youtube\\.com\\/watch\\?v=|youtu\\.be\\/|youtube\\.com\\/embed\\/)([^&\\n?#]+)\",\n            r\"youtube\\.com\\/watch\\?.*?v=([^&\\n?#]+)\",\n        ]\n        for pattern in patterns:\n            match = re.search(pattern, url)\n            if match:\n                return match.group(1)\n        msg = f\"Could not extract video ID from URL: {url}\"\n        raise ValueError(msg)\n\n    def _load_transcripts(self, *, as_chunks: bool = True):\n        \"\"\"Internal method to load transcripts from YouTube.\"\"\"\n        try:\n            video_id = self._extract_video_id(self.url)\n        except ValueError as e:\n            msg = f\"Invalid YouTube URL: {e}\"\n            raise ValueError(msg) from e\n\n        try:\n            # Use new v1.0+ API - create instance\n            api = YouTubeTranscriptApi()\n            transcript_list = api.list(video_id)\n\n            # Get transcript in specified language or default to English\n            if self.translation:\n                # Get any available transcript and translate it\n                transcript = transcript_list.find_transcript([\"en\"])\n                transcript = transcript.translate(self.translation)\n            else:\n                # Try to get transcript in available languages\n                try:\n                    transcript = transcript_list.find_transcript([\"en\"])\n                except NoTranscriptFound:\n                    # Try auto-generated English\n                    transcript = transcript_list.find_generated_transcript([\"en\"])\n\n            # Fetch the transcript data\n            transcript_data = api.fetch(transcript.video_id, [transcript.language_code])\n\n        except (TranscriptsDisabled, NoTranscriptFound) as e:\n            error_type = type(e).__name__\n            msg = (\n                f\"Could not retrieve transcripts for video '{video_id}'. \"\n                \"Possible reasons:\\n\"\n                \"1. This video does not have captions/transcripts enabled\\n\"\n                \"2. The video is private, restricted, or deleted\\n\"\n                f\"\\nTechnical error ({error_type}): {e}\"\n            )\n            raise RuntimeError(msg) from e\n        except Exception as e:\n            error_type = type(e).__name__\n            msg = (\n                f\"Could not retrieve transcripts for video '{video_id}'. \"\n                \"Possible reasons:\\n\"\n                \"1. This video does not have captions/transcripts enabled\\n\"\n                \"2. The video is private, restricted, or deleted\\n\"\n                \"3. YouTube is blocking automated requests\\n\"\n                f\"\\nTechnical error ({error_type}): {e}\"\n            )\n            raise RuntimeError(msg) from e\n\n        if as_chunks:\n            # Group into chunks based on chunk_size_seconds\n            return self._chunk_transcript(transcript_data)\n        # Return as continuous text\n        return transcript_data\n\n    def _chunk_transcript(self, transcript_data):\n        \"\"\"Group transcript segments into time-based chunks.\"\"\"\n        chunks = []\n        current_chunk = []\n        chunk_start = 0\n\n        for segment in transcript_data:\n            # Handle both dict (old API) and object (new API) formats\n            segment_start = segment.start if hasattr(segment, \"start\") else segment[\"start\"]\n\n            # If this segment starts beyond the current chunk window, start a new chunk\n            if segment_start - chunk_start >= self.chunk_size_seconds and current_chunk:\n                chunk_text = \" \".join(s.text if hasattr(s, \"text\") else s[\"text\"] for s in current_chunk)\n                chunks.append({\"start\": chunk_start, \"text\": chunk_text})\n                current_chunk = []\n                chunk_start = segment_start\n\n            current_chunk.append(segment)\n\n        # Add the last chunk\n        if current_chunk:\n            chunk_text = \" \".join(s.text if hasattr(s, \"text\") else s[\"text\"] for s in current_chunk)\n            chunks.append({\"start\": chunk_start, \"text\": chunk_text})\n\n        return chunks\n\n    def get_dataframe_output(self) -> DataFrame:\n        \"\"\"Provides transcript output as a DataFrame with timestamp and text columns.\"\"\"\n        try:\n            chunks = self._load_transcripts(as_chunks=True)\n\n            # Create DataFrame with timestamp and text columns\n            data = []\n            for chunk in chunks:\n                start_seconds = int(chunk[\"start\"])\n                start_minutes = start_seconds // 60\n                start_seconds_remainder = start_seconds % 60\n                timestamp = f\"{start_minutes:02d}:{start_seconds_remainder:02d}\"\n                data.append({\"timestamp\": timestamp, \"text\": chunk[\"text\"]})\n\n            return DataFrame(pd.DataFrame(data))\n\n        except (TranscriptsDisabled, NoTranscriptFound, RuntimeError, ValueError) as exc:\n            error_msg = f\"Failed to get YouTube transcripts: {exc!s}\"\n            return DataFrame(pd.DataFrame({\"error\": [error_msg]}))\n\n    def get_message_output(self) -> Message:\n        \"\"\"Provides transcript output as continuous text.\"\"\"\n        try:\n            transcript_data = self._load_transcripts(as_chunks=False)\n            # Handle both dict (old API) and object (new API) formats\n            result = \" \".join(\n                segment.text if hasattr(segment, \"text\") else segment[\"text\"] for segment in transcript_data\n            )\n            return Message(text=result)\n\n        except (TranscriptsDisabled, NoTranscriptFound, RuntimeError, ValueError) as exc:\n            error_msg = f\"Failed to get YouTube transcripts: {exc!s}\"\n            return Message(text=error_msg)\n\n    def get_data_output(self) -> Data:\n        \"\"\"Creates a structured data object with transcript and metadata.\n\n        Returns a Data object containing transcript text, video URL, and any error\n        messages that occurred during processing. The object includes:\n        - 'transcript': continuous text from the entire video (concatenated if multiple parts)\n        - 'video_url': the input YouTube URL\n        - 'error': error message if an exception occurs\n        \"\"\"\n        default_data = {\"transcript\": \"\", \"video_url\": self.url, \"error\": None}\n\n        try:\n            transcript_data = self._load_transcripts(as_chunks=False)\n            if not transcript_data:\n                default_data[\"error\"] = \"No transcripts found.\"\n                return Data(data=default_data)\n\n            # Combine all transcript segments - handle both dict and object formats\n            full_transcript = \" \".join(\n                segment.text if hasattr(segment, \"text\") else segment[\"text\"] for segment in transcript_data\n            )\n            return Data(data={\"transcript\": full_transcript, \"video_url\": self.url})\n\n        except (TranscriptsDisabled, NoTranscriptFound, RuntimeError, ValueError) as exc:\n            default_data[\"error\"] = str(exc)\n            return Data(data=default_data)\n"
               },
-              "is_refresh": false,
               "tools_metadata": {
                 "_input_type": "ToolsInput",
                 "advanced": false,
@@ -2373,11 +2353,8 @@
                 "cache": true,
                 "display_name": "LLM Results",
                 "group_outputs": false,
-                "loop_types": null,
                 "method": "run_batch",
                 "name": "batch_results",
-                "options": null,
-                "required_inputs": null,
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
@@ -2388,12 +2365,6 @@
             ],
             "pinned": false,
             "template": {
-              "_frontend_node_flow_id": {
-                "value": "ec8fea99-360e-46e0-a4c5-46d10defb57b"
-              },
-              "_frontend_node_folder_id": {
-                "value": "34260300-cae1-43f3-8b14-1272b8cffe4c"
-              },
               "_type": "Component",
               "api_key": {
                 "_input_type": "SecretStrInput",
@@ -2502,7 +2473,6 @@
                 "type": "bool",
                 "value": false
               },
-              "is_refresh": false,
               "model": {
                 "_input_type": "ModelInput",
                 "advanced": false,
