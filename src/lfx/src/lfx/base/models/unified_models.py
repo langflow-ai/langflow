@@ -138,8 +138,9 @@ def get_unified_models_detailed(
         When False (default) models whose metadata contains ``deprecated=True``
         are filtered out.
     only_defaults : bool
-        When True, only models marked as default (default=True) are returned.
-        Defaults to False to maintain backward compatibility.
+        When True, only models marked as default are returned.
+        The first 5 models from each provider (in list order) are automatically
+        marked as default. Defaults to False to maintain backward compatibility.
     **metadata_filters
         Arbitrary key/value pairs to match against the model's metadata.
         Example: ``get_unified_models_detailed(size="4k", context_window=8192)``
@@ -170,10 +171,6 @@ def get_unified_models_detailed(
         if (not include_deprecated) and md.get("deprecated", False):
             continue
 
-        # Skip models not marked as default if only_defaults is True
-        if only_defaults and not md.get("default", False):
-            continue
-
         if providers and md.get("provider") not in providers:
             continue
         if model_name and md.get("name") != model_name:
@@ -196,6 +193,16 @@ def get_unified_models_detailed(
                 "metadata": {k: v for k, v in metadata.items() if k not in ("provider", "name")},
             }
         )
+
+    # Mark the first 5 models in each provider as default (based on list order)
+    # and optionally filter to only defaults
+    for prov, models in provider_map.items():
+        for i, model in enumerate(models[:5]):
+            model["metadata"]["default"] = True
+        
+        # If only_defaults is True, filter to only default models
+        if only_defaults:
+            provider_map[prov] = [m for m in models if m["metadata"].get("default", False)]
 
     # Format as requested
     return [

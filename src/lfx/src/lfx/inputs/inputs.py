@@ -190,6 +190,20 @@ class ModelInput(BaseInputMixin, ModelInputMixin, ListableInputMixin, InputTrace
         # If it's a string or list of strings, convert to dict format
         if isinstance(v, str) or (isinstance(v, list) and all(isinstance(item, str) for item in v)):
             # Avoid circular import by importing the module directly (not through package __init__)
+            try:
+                from lfx.base.models.unified_models import normalize_model_names_to_dicts
+
+                return normalize_model_names_to_dicts(v)
+            except Exception:  # noqa: BLE001
+                # Fallback if import or normalization fails
+                # This can happen during module initialization or in test environments
+                if isinstance(v, str):
+                    return [{"name": v}]
+                return [{"name": item} for item in v]
+
+        # Return as-is for all other cases
+        return v
+
     @model_validator(mode="after")
     def set_defaults(self):
         """Handle connection mode and set defaults.
