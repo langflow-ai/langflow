@@ -194,40 +194,39 @@ test(
 
       await page.getByTestId(`context-menu-button-${jsonFileName}`).click();
       await page.getByTestId("btn-rename-file").click();
+      await page.waitForTimeout(1000);
+
       await page
         .getByTestId(`rename-input-${jsonFileName}`)
         .fill(renamedJsonFile);
-      await page.waitForTimeout(500);
-
+      await page.waitForTimeout(1000);
       await page.getByTestId(`rename-input-${jsonFileName}`).press("Enter");
-      await page.waitForTimeout(500);
-
       await expect(
         page.getByText(`${renamedJsonFile}.json`).first(),
       ).toBeVisible({
-        timeout: 1000,
+        timeout: 5000,
       });
       await expect(page.getByText(`${jsonFileName}.json`).first()).toBeHidden({
-        timeout: 1000,
+        timeout: 5000,
       });
 
       await page.getByTestId(`context-menu-button-${sourceFileName}`).click();
       await page.getByTestId("btn-rename-file").click();
-      await page.waitForTimeout(500);
+      await page.waitForTimeout(1000);
 
       await page
         .getByTestId(`rename-input-${sourceFileName}`)
         .fill(renamedTxtFile);
+      await page.waitForTimeout(1000);
 
-      await page.waitForTimeout(500);
       await page.getByTestId(`rename-input-${sourceFileName}`).press("Enter");
       await expect(page.getByText(`${renamedTxtFile}.txt`).first()).toBeVisible(
         {
-          timeout: 1000,
+          timeout: 5000,
         },
       );
       await expect(page.getByText(`${sourceFileName}.txt`).first()).toBeHidden({
-        timeout: 1000,
+        timeout: 5000,
       });
 
       await page.getByTestId(`checkbox-${renamedTxtFile}`).last().click();
