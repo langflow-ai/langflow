@@ -41,7 +41,11 @@ class LoadFileComponent(BaseFileComponent):
     """
 
     display_name = "Load File"
-    description = "Loads files and returns raw file paths without parsing. Image files in the files field will be automatically converted to image content when passed to LLM components. Non-image files are passed as-is."
+    description = (
+        "Loads files and returns raw file paths without parsing. "
+        "Image files in the files field will be automatically converted to image content "
+        "when passed to LLM components. Non-image files are passed as-is."
+    )
     documentation: str = "https://docs.langflow.org/load-file"
     icon = "file"
     name = "LoadFile"
@@ -207,7 +211,7 @@ class LoadFileComponent(BaseFileComponent):
 
     outputs = [
         Output(display_name="File Paths", name="message", method="load_files_raw"),
-        Output(display_name="File Path", name="path", method="load_files_path"),
+        Output(display_name="File Path", name="loaded_file_path", method="load_files_path"),
     ]
 
     def _get_selected_storage_location(self) -> str:
