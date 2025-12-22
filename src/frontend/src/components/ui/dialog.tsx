@@ -65,6 +65,10 @@ const DialogContent = React.forwardRef<
     const hasDialogTitle = React.Children.toArray(children).some(
       (child) => React.isValidElement(child) && child.type === DialogTitle,
     );
+    const hasDialogDescription = React.Children.toArray(children).some(
+      (child) =>
+        React.isValidElement(child) && child.type === DialogDescription,
+    );
 
     return (
       <DialogPortal>
@@ -80,6 +84,11 @@ const DialogContent = React.forwardRef<
           {!hasDialogTitle && (
             <VisuallyHidden>
               <DialogTitle>Dialog</DialogTitle>
+            </VisuallyHidden>
+          )}
+          {!hasDialogDescription && (
+            <VisuallyHidden>
+              <DialogDescription />
             </VisuallyHidden>
           )}
           {children}
