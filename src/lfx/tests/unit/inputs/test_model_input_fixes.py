@@ -6,7 +6,6 @@ This module tests the following bug fixes:
 2. Model defaults (cb6208f0ab): The first 5 models from each provider should be marked as default.
 """
 
-import pytest
 from lfx.base.models.unified_models import get_unified_models_detailed
 from lfx.inputs.inputs import ModelInput
 
