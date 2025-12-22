@@ -275,9 +275,7 @@ const ModelProvidersContent = ({
             <span className="text-[13px] font-semibold mr-auto">
               {selectedProvider?.provider || "Unknown Provider"}
               {requiresApiKey && " API Key"}
-              {requiresApiKey && (
-                <span className="text-red-500 ml-1">*</span>
-              )}
+              {requiresApiKey && <span className="text-red-500 ml-1">*</span>}
             </span>
           </div>
           <span className="text-[13px] text-muted-foreground pt-1 pb-2">
@@ -290,9 +288,7 @@ const ModelProvidersContent = ({
                 to enable these models
               </>
             ) : (
-              <>
-                Activate {selectedProvider?.provider} to enable these models
-              </>
+              <>Activate {selectedProvider?.provider} to enable these models</>
             )}
           </span>
           {requiresApiKey ? (
