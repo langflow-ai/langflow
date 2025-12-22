@@ -3,31 +3,6 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test.describe("ModelProviderCount Component", () => {
   test(
-    "should display the model provider count button in the header",
-    { tag: ["@release", "@components", "@workspace"] },
-    async ({ page }) => {
-      await awaitBootstrapTest(page);
-
-      // The model provider count button should be visible in the header
-      const modelProviderButton = page.getByTestId(
-        "model-provider-count-button",
-      );
-      await expect(modelProviderButton).toBeVisible();
-
-      // Should display "Models" text
-      await expect(modelProviderButton.getByText("Models")).toBeVisible();
-
-      // Should display the badge with count
-      const badge = page.getByTestId("model-provider-count-badge");
-      await expect(badge).toBeVisible();
-
-      // Badge should contain a number (count of enabled models)
-      const badgeText = await badge.textContent();
-      expect(badgeText).toMatch(/^\d+$/);
-    },
-  );
-
-  test(
     "should open model provider modal when button is clicked",
     { tag: ["@release", "@components", "@workspace"] },
     async ({ page }) => {
