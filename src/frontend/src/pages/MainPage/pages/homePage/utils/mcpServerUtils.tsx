@@ -85,11 +85,11 @@ export const getAuthHeaders = ({
 }): string => {
   if (!enableComposer) {
     if (isAutoLogin) return "";
-    return `"--headers","x-api-key","${apiKey ?? "YOUR_API_KEY"}"`;
+    return `"--headers","x-api-key","${apiKey || "YOUR_API_KEY"}"`;
   }
   if (!authType || authType === "none") return "";
   if (authType === "apikey")
-    return `"--headers","x-api-key","${apiKey ?? "YOUR_API_KEY"}"`;
+    return `"--headers","x-api-key","${apiKey || "YOUR_API_KEY"}"`;
   return "";
 };
 
