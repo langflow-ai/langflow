@@ -6,10 +6,10 @@ from lfx.components._importing import import_mod
 from lfx.utils.validate_cloud import is_astra_cloud_environment
 
 if TYPE_CHECKING:
-    from .chunk_docling_document import ChunkDoclingDocumentComponent
-    from .docling_inline import DoclingInlineComponent
-    from .docling_remote import DoclingRemoteComponent
-    from .export_docling_document import ExportDoclingDocumentComponent
+    from .chunk_docling_document import ChunkDoclingDocumentComponent  # noqa: F401
+    from .docling_inline import DoclingInlineComponent  # noqa: F401
+    from .docling_remote import DoclingRemoteComponent  # noqa: F401
+    from .export_docling_document import ExportDoclingDocumentComponent  # noqa: F401
 
 _all_components = [
     "ChunkDoclingDocumentComponent",
@@ -52,8 +52,8 @@ def _get_dynamic_imports() -> dict[str, str]:
 
 
 # Dynamically set __all__ and _dynamic_imports based on cloud environment
-__all__ = _get_available_components()
-_dynamic_imports = _get_dynamic_imports()
+__all__: list[str] = _get_available_components()
+_dynamic_imports: dict[str, str] = _get_dynamic_imports()
 
 
 def __getattr__(attr_name: str) -> Any:
