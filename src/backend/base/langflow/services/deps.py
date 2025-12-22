@@ -182,9 +182,12 @@ def get_cache_service() -> Union[CacheService, AsyncBaseCacheService]:  # noqa: 
     Returns:
         The cache service instance.
     """
-    from langflow.services.cache.factory import CacheServiceFactory
+    if not hasattr(get_cache_service, "_factory"):
+        from langflow.services.cache.factory import CacheServiceFactory
 
-    return get_service(ServiceType.CACHE_SERVICE, CacheServiceFactory())
+        get_cache_service._factory = CacheServiceFactory()
+
+    return get_service(ServiceType.CACHE_SERVICE, get_cache_service._factory)
 
 
 def get_shared_component_cache_service() -> CacheService:
