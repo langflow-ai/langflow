@@ -1,0 +1,105 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: queryrouter
+      POSTGRES_USER: queryrouter
+      POSTGRES_PASSWORD: test_password  # pragma: allowlist secret
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U queryrouter"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres-setup:
+    image: postgres:16-alpine
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: test_password  # pragma: allowlist secret
+    command: |  # pragma: allowlist secret
+      sh -c "
+        psql -h postgres -U queryrouter -c \"CREATE DATABASE langflow;\" || true
+        psql -h postgres -U queryrouter -c \"CREATE USER langflow WITH PASSWORD 'langflow_pass';\" || true  # pragma: allowlist secret
+        psql -h postgres -U queryrouter -d langflow -c \"GRANT ALL PRIVILEGES ON DATABASE langflow TO langflow;\"
+        psql -h postgres -U queryrouter -d langflow -c \"GRANT ALL PRIVILEGES ON SCHEMA public TO langflow;\"
+        psql -h postgres -U queryrouter -d langflow -c \"ALTER DATABASE langflow OWNER TO langflow;\"
+      "
+
+  broker:
+    image: rabbitmq:3-management
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  result_backend:
+    image: redis:7
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+
+  langflow:
+    build:
+      context: .
+      dockerfile: docker/build_and_push.Dockerfile
+      args:
+        FRONTEND_PREBUILT: 0
+    environment:
+      - LANGFLOW_DATABASE_URL=postgresql://langflow:langflow_pass@postgres:5432/langflow
+      - LANGFLOW_HOST=0.0.0.0
+      - LANGFLOW_PORT=7860
+      - LANGFLOW_SECRET_KEY=test_secret_key_change_in_production
+      - LANGFLOW_AUTO_LOGIN=false
+      - LANGFLOW_NEW_USER_IS_ACTIVE=false
+      - LANGFLOW_SUPERUSER=admin
+      - LANGFLOW_SUPERUSER_PASSWORD=admin123
+      - LANGFLOW_CELERY_ENABLED=true
+      - BROKER_URL=amqp://admin:admin@broker:5672//
+      - RESULT_BACKEND=redis://result_backend:6379/0
+      - LANGFLOW_CACHE_TYPE=memory
+      - LANGFLOW_REFRESH_SECURE=false
+      - LANGFLOW_REFRESH_SAME_SITE=lax
+    ports:
+      - "7861:7860"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      postgres-setup:
+        condition: service_completed_successfully
+      broker:
+        condition: service_started
+      result_backend:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:7860/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  celeryworker:
+    build:
+      context: .
+      dockerfile: docker/build_and_push.Dockerfile
+      args:
+        FRONTEND_PREBUILT: 0
+    environment:
+      - LANGFLOW_DATABASE_URL=postgresql://langflow:langflow_pass@postgres:5432/langflow
+      - LANGFLOW_CELERY_ENABLED=true
+      - BROKER_URL=amqp://admin:admin@broker:5672//
+      - RESULT_BACKEND=redis://result_backend:6379/0
+    command: ["/bin/sh", "-c", "python -m celery -A langflow.worker.celery_app worker --loglevel=INFO --concurrency=1 -n lf-worker@%h -P eventlet"]
+    depends_on:
+      - broker
+      - result_backend
+      - postgres
+      - postgres-setup
+

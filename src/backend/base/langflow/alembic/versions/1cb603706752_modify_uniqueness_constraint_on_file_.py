@@ -10,17 +10,17 @@ from __future__ import annotations
 import logging
 import re
 import time
-from typing import Sequence, Union, Iterable, Optional, Set, Tuple
+from collections.abc import Iterable, Sequence
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy import inspect
 
 # revision identifiers, used by Alembic.
-revision: str = "1cb603706752"
-down_revision: Union[str, None] = "3162e83e485f"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+revision: str = "1cb603706752"  # pragma: allowlist secret
+down_revision: str | None = "3162e83e485f"  # pragma: allowlist secret
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 logger = logging.getLogger(__name__)
 
@@ -29,9 +29,7 @@ DUPLICATE_SUFFIX_START = 2  # first suffix to use, e.g., "name_2.ext"
 BATCH_SIZE = 1000  # Process duplicates in batches for large datasets
 
 
-def _get_unique_constraints_by_columns(
-    inspector, table: str, expected_cols: Iterable[str]
-) -> Optional[str]:
+def _get_unique_constraints_by_columns(inspector, table: str, expected_cols: Iterable[str]) -> str | None:
     """Return the name of a unique constraint that matches the exact set of expected columns."""
     expected = set(expected_cols)
     for c in inspector.get_unique_constraints(table):
@@ -41,7 +39,7 @@ def _get_unique_constraints_by_columns(
     return None
 
 
-def _split_base_ext(name: str) -> Tuple[str, str]:
+def _split_base_ext(name: str) -> tuple[str, str]:
     """Split a filename into (base, ext) where ext does not include the leading dot; ext may be ''."""
     if "." in name:
         base, ext = name.rsplit(".", 1)
@@ -59,29 +57,31 @@ def _like_for_suffixes(base: str, ext: str) -> str:
     if ext:
         ex = ext.replace("%", r"\%").replace("_", r"\_")
         return f"{eb}\\_%." + ex  # literal underscore
-    else:
-        return f"{eb}\\_%"
+    return f"{eb}\\_%"
 
 
 def _next_available_name(conn, user_id: str, base_name: str) -> str:
-    """
-    Compute the next available non-conflicting name for a given user.
+    """Compute the next available non-conflicting name for a given user.
     Handles names with or without extensions and existing _N suffixes.
     """
     base, ext = _split_base_ext(base_name)
 
     # Load all sibling names once
-    rows = conn.execute(
-        sa.text("""
+    rows = (
+        conn.execute(
+            sa.text("""
             SELECT name
             FROM file
             WHERE user_id = :uid
             AND (name = :base_name OR name LIKE :like ESCAPE '\\')
         """),
-        {"uid": user_id, "base_name": base_name, "like": _like_for_suffixes(base, ext)},
-    ).scalars().all()
+            {"uid": user_id, "base_name": base_name, "like": _like_for_suffixes(base, ext)},
+        )
+        .scalars()
+        .all()
+    )
 
-    taken: Set[str] = set(rows)
+    taken: set[str] = set(rows)
 
     # Pattern to detect base_N(.ext) and capture N
     if ext:
@@ -104,8 +104,7 @@ def _next_available_name(conn, user_id: str, base_name: str) -> str:
 
 
 def _handle_duplicates_before_upgrade(conn) -> None:
-    """
-    Ensure (user_id, name) is unique by renaming older duplicates before adding the composite unique constraint.
+    """Ensure (user_id, name) is unique by renaming older duplicates before adding the composite unique constraint.
     Keeps the most recently updated/created/id-highest record; renames the rest with _N suffix.
     """
     logger.info("Scanning for duplicate file names per user...")
@@ -125,7 +124,7 @@ def _handle_duplicates_before_upgrade(conn) -> None:
         return
 
     logger.info("Found %d duplicate sets. Resolving...", len(duplicates))
-    
+
     # Add progress indicator for large datasets
     if len(duplicates) > 100:
         logger.info("Large number of duplicates detected. This may take several minutes...")
@@ -136,25 +135,30 @@ def _handle_duplicates_before_upgrade(conn) -> None:
         for batch_start in range(0, len(duplicates), BATCH_SIZE):
             batch_end = min(batch_start + BATCH_SIZE, len(duplicates))
             batch = duplicates[batch_start:batch_end]
-            
+
             if len(duplicates) > BATCH_SIZE:
-                logger.info("Processing batch %d-%d of %d duplicate sets...", 
-                           batch_start + 1, batch_end, len(duplicates))
-            
+                logger.info(
+                    "Processing batch %d-%d of %d duplicate sets...", batch_start + 1, batch_end, len(duplicates)
+                )
+
             for user_id, name, cnt in batch:
                 logger.debug("Resolving duplicates for user=%s, name=%r (count=%s)", user_id, name, cnt)
 
-                file_ids = conn.execute(
-                    sa.text(
-                        """
+                file_ids = (
+                    conn.execute(
+                        sa.text(
+                            """
                         SELECT id
                         FROM file
                         WHERE user_id = :uid AND name = :name
                         ORDER BY updated_at DESC, created_at DESC, id DESC
                         """
-                    ),
-                    {"uid": user_id, "name": name},
-                ).scalars().all()
+                        ),
+                        {"uid": user_id, "name": name},
+                    )
+                    .scalars()
+                    .all()
+                )
 
                 # Keep the first (most recent), rename the rest
                 for file_id in file_ids[1:]:
@@ -164,11 +168,15 @@ def _handle_duplicates_before_upgrade(conn) -> None:
                         {"new_name": new_name, "fid": file_id},
                     )
                     logger.debug("Renamed id=%s: %r -> %r", file_id, name, new_name)
-            
+
             # Progress update for large batches
             if len(duplicates) > BATCH_SIZE and batch_end < len(duplicates):
-                logger.info("Completed %d of %d duplicate sets (%.1f%%)", 
-                           batch_end, len(duplicates), (batch_end / len(duplicates)) * 100)
+                logger.info(
+                    "Completed %d of %d duplicate sets (%.1f%%)",
+                    batch_end,
+                    len(duplicates),
+                    (batch_end / len(duplicates)) * 100,
+                )
 
     logger.info("Duplicate resolution completed.")
 
@@ -184,7 +192,7 @@ def upgrade() -> None:
     duplicate_start = time.time()
     _handle_duplicates_before_upgrade(conn)
     duplicate_duration = time.time() - duplicate_start
-    
+
     if duplicate_duration > 1.0:  # Only log if it took more than 1 second
         logger.info("Duplicate resolution completed in %.2f seconds", duplicate_duration)
 
@@ -208,7 +216,7 @@ def upgrade() -> None:
             batch_op.create_unique_constraint("file_name_user_id_key", ["name", "user_id"])
         else:
             logger.info("Composite unique already present: %s", composite_uc)
-    
+
     constraint_duration = time.time() - constraint_start
     if constraint_duration > 1.0:  # Only log if it took more than 1 second
         logger.info("Constraint operations completed in %.2f seconds", constraint_duration)
@@ -227,7 +235,7 @@ def downgrade() -> None:
     # 1) Ensure no cross-user duplicates on name (since we'll enforce global uniqueness on name)
     logger.info("Checking for cross-user duplicate names prior to downgrade...")
     validation_start = time.time()
-    
+
     dup_names = conn.execute(
         sa.text(
             """
@@ -270,7 +278,7 @@ def downgrade() -> None:
             batch_op.create_unique_constraint("file_name_key", ["name"])
         else:
             logger.info("Single-column unique already present: %s", single_name_uc)
-    
+
     constraint_duration = time.time() - constraint_start
     if constraint_duration > 1.0:  # Only log if it took more than 1 second
         logger.info("Constraint operations completed in %.2f seconds", constraint_duration)

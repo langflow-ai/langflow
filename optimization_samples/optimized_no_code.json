@@ -1,0 +1,1307 @@
+{
+  "nodes": [
+    {
+      "id": "note-4kgnh",
+      "type": "noteNode",
+      "position": {
+        "x": 637.5791433882063,
+        "y": 32.76769637325184
+      },
+      "data": {
+        "id": "note-4kgnh",
+        "type": "note",
+        "display_name": null,
+        "description": "# \ud83d\udcd6 README\nRun an Agent with URL and Calculator tools available for its use. \nThe Agent decides which tool to use to solve a problem.\n## Quick start\n\n1. Add your OpenAI API key to the Agent.\n2. Open the Playground and chat with the Agent. Request some information about a recipe, and then ask to add two numbers together. In the responses, the Agent will use different tools to solve different problems.\n\n## Next steps\nConnect more tools to the Agent to create your perfect assistant.\n\nFor more, see the [Langflow docs](https://docs.langflow.org/agents-tool-calling-agent-component).",
+        "node": {
+          "template": {
+            "backgroundColor": "neutral"
+          },
+          "display_name": "",
+          "description": "# \ud83d\udcd6 README\nRun an Agent with URL and Calculator tools available for its use. \nThe Agent decides which tool to use to solve a problem.\n## Quick start\n\n1. Add your OpenAI API key to the Agent.\n2. Open the Playground and chat with the Agent. Request some information about a recipe, and then ask to add two numbers together. In the responses, the Agent will use different tools to solve different problems.\n\n## Next steps\nConnect more tools to the Agent to create your perfect assistant.\n\nFor more, see the [Langflow docs](https://docs.langflow.org/agents-tool-calling-agent-component).",
+          "outputs": []
+        }
+      }
+    },
+    {
+      "id": "note-aAVZ8",
+      "type": "noteNode",
+      "position": {
+        "x": 1648.6876745095624,
+        "y": 253.8646618156497
+      },
+      "data": {
+        "id": "note-aAVZ8",
+        "type": "note",
+        "display_name": null,
+        "description": "### \ud83d\udca1 Add your OpenAI API key here\ud83d\udc47",
+        "node": {
+          "template": {
+            "backgroundColor": "transparent"
+          },
+          "display_name": "",
+          "description": "### \ud83d\udca1 Add your OpenAI API key here\ud83d\udc47",
+          "outputs": []
+        }
+      }
+    },
+    {
+      "id": "ChatInput-EJIbT",
+      "type": "genericNode",
+      "position": {
+        "x": 510.4438021450576,
+        "y": 900.0239066296323
+      },
+      "data": {
+        "id": "ChatInput-EJIbT",
+        "type": "ChatInput",
+        "display_name": null,
+        "description": "Get chat inputs from the Playground.",
+        "node": {
+          "template": {
+            "context_id": {
+              "type": "str",
+              "display_name": "Context ID",
+              "required": false,
+              "advanced": true,
+              "show": true,
+              "input_types": [
+                "Message"
+              ],
+              "info": "The context ID of the chat. Adds an extra layer to the local memory."
+            },
+            "files": {
+              "type": "file",
+              "display_name": "Files",
+              "required": false,
+              "advanced": true,
+              "show": true,
+              "info": "Files to be sent with the message."
+            },
+            "input_value": {
+              "type": "str",
+              "display_name": "Input Text",
+              "required": false,
+              "advanced": false,
+              "show": true,
+              "value": "Hello, how are you?",
+              "input_types": [],
+              "info": "Message to be passed as input."
+            },
+            "sender": {
+              "type": "str",
+              "display_name": "Sender Type",
+              "required": false,
+              "advanced": true,
+              "show": true,
+              "value": "User",
+              "info": "Type of sender."
+            },
+            "sender_name": {
+              "type": "str",
+              "display_name": "Sender Name",
+              "required": false,
+              "advanced": true,
+              "show": true,
+              "value": "User",
+              "input_types": [
+                "Message"
+              ],
+              "info": "Name of the sender."
+            },
+            "session_id": {
+              "type": "str",
+              "display_name": "Session ID",
+              "required": false,
+              "advanced": true,
+              "show": true,
+              "input_types": [
+                "Message"
+              ],
+              "info": "The session ID of the chat. If empty, the current session ID parameter will be used."
+            },
+            "should_store_message": {
+              "type": "bool",
+              "display_name": "Store Messages",
+              "required": false,
+              "advanced": true,
+              "show": true,
+              "value": true,
+              "info": "Store the message in the history."
+            }
+          },
+          "display_name": "Chat Input",
+          "description": "Get chat inputs from the Playground.",
+          "outputs": [
+            {
+              "allows_loop": false,
+              "cache": true,
+              "display_name": "Chat Message",
+              "group_outputs": false,
+              "method": "message_response",
+              "name": "message",
+              "selected": "Message",
+              "tool_mode": true,
+              "types": [
+                "Message"
+              ],
+              "value": "__UNDEFINED__"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "ChatOutput-zEdlb",
+      "type": "genericNode",
+      "position": {
+        "x": 988.5509536667132,
+        "y": 1874.477618045726
+      },
+      "data": {
+        "id": "ChatOutput-zEdlb",
+        "type": "ChatOutput",
+        "display_name": null,
+        "description": "Display a chat message in the Playground.",
+        "node": {
+          "template": {
+            "clean_data": {
+              "type": "bool",
+              "display_name": "Basic Clean Data",
+              "required": false,
+              "advanced": true,
+              "show": true,
+              "value": true,
+              "info": "Whether to clean data before converting to string."
+            },
+            "context_id": {
+              "type": "str",
+              "display_name": "Context ID",
+              "required": false,
+              "advanced": true,
+              "show": true,
+              "input_types": [
+                "Message"
+              ],
+              "info": "The context ID of the chat. Adds an extra layer to the local memory."
+            },
+            "data_template": {
+              "type": "str",
+              "display_name": "Data Template",
+              "required": false,
+              "advanced": true,
+              "show": true,
+              "value": "{text}",
+              "input_types": [
+                "Message"
+              ],
+              "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key."
+            },
+            "input_value": {
+              "type": "other",
+              "display_name": "Inputs",
+              "required": true,
+              "advanced": false,
+              "show": true,
+              "input_types": [
+                "Data",
+                "DataFrame",
+                "Message"
+              ],
+              "info": "Message to be passed as output."
+            },
+            "sender": {
+              "type": "str",
+              "display_name": "Sender Type",
+              "required": false,
+              "advanced": true,
+              "show": true,
+              "value": "Machine",
+              "info": "Type of sender."
+            },
+            "sender_name": {
+              "type": "str",
+              "display_name": "Sender Name",
+              "required": false,
+              "advanced": true,
+              "show": true,
+              "value": "AI",
+              "input_types": [
+                "Message"
+              ],
+              "info": "Name of the sender."
+            },
+            "session_id": {
+              "type": "str",
+              "display_name": "Session ID",
+              "required": false,
+              "advanced": true,
+              "show": true,
+              "input_types": [
+                "Message"
+              ],
+              "info": "The session ID of the chat. If empty, the current session ID parameter will be used."
+            },
+            "should_store_message": {
+              "type": "bool",
+              "display_name": "Store Messages",
+              "required": false,
+              "advanced": true,
+              "show": true,
+              "value": true,
+              "info": "Store the message in the history."
+            }
+          },
+          "display_name": "Chat Output",
+          "description": "Display a chat message in the Playground.",
+          "outputs": [
+            {
+              "allows_loop": false,
+              "cache": true,
+              "display_name": "Output Message",
+              "group_outputs": false,
+              "method": "message_response",
+              "name": "message",
+              "selected": "Message",
+              "tool_mode": true,
+              "types": [
+                "Message"
+              ],
+              "value": "__UNDEFINED__"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "URLComponent-LQWkb",
+      "type": "genericNode",
+      "position": {
+        "x": 1241.645826777893,
+        "y": -34.70663041492506
+      },
+      "data": {
+        "id": "URLComponent-LQWkb",
+        "type": "URLComponent",
+        "display_name": null,
+        "description": "Fetch content from one or more web pages, following links recursively.",
+        "node": {
+          "template": {
+            "autoset_encoding": {
+              "type": "bool",
+              "display_name": "Autoset Encoding",
+              "required": false,
+              "advanced": true,
+              "show": true,
+              "value": true,
+              "info": "If enabled, automatically sets the encoding of the request."
+            },
+            "check_response_status": {
+              "type": "bool",
+              "display_name": "Check Response Status",
+              "required": false,
+              "advanced": true,
+              "show": true,
+              "info": "If enabled, checks the response status of the request."
+            },
+            "continue_on_failure": {
+              "type": "bool",
+              "display_name": "Continue on Failure",
+              "required": false,
+              "advanced": true,
+              "show": true,
+              "value": true,
+              "info": "If enabled, continues crawling even if some requests fail."
+            },
+            "filter_text_html": {
+              "type": "bool",
+              "display_name": "Filter Text/HTML",
+              "required": false,
+              "advanced": true,
+              "show": true,
+              "value": true,
+              "info": "If enabled, filters out text/css content type from the results."
+            },
+            "format": {
+              "type": "str",
+              "display_name": "Output Format",
+              "required": false,
+              "advanced": true,
+              "show": true,
+              "value": "Text",
+              "info": "Output Format. Use 'Text' to extract the text from the HTML or 'HTML' for the raw HTML content."
+            },
+            "headers": {
+              "type": "table",
+              "display_name": "Headers",
+              "required": false,
+              "advanced": true,
+              "show": true,
+              "value": [
+                {
+                  "key": "User-Agent",
+                  "value": "langflow"
+                }
+              ],
+              "input_types": [
+                "DataFrame"
+              ],
+              "info": "The headers to send with the request"
+            },
+            "max_depth": {
+              "type": "slider",
+              "display_name": "Depth",
+              "required": false,
+              "advanced": false,
+              "show": true,
+              "value": 1
+            },
+            "prevent_outside": {
+              "type": "bool",
+              "display_name": "Prevent Outside",
+              "required": false,
+              "advanced": true,
+              "show": true,
+              "value": true,
+              "info": "If enabled, only crawls URLs within the same domain as the root URL. This helps prevent the crawler from going to external websites."
+            },
+            "timeout": {
+              "type": "int",
+              "display_name": "Timeout",
+              "required": false,
+              "advanced": true,
+              "show": true,
+              "value": 30,
+              "info": "Timeout for the request in seconds."
+            },
+            "tools_metadata": {
+              "type": "tools",
+              "display_name": "Actions",
+              "required": false,
+              "advanced": false,
+              "show": true,
+              "value": [
+                {
+                  "args": {
+                    "urls": {
+                      "default": "",
+                      "description": "Enter one or more URLs to crawl recursively, by clicking the '+' button.",
+                      "items": {
+                        "type": "string"
+                      },
+                      "title": "Urls",
+                      "type": "array"
+                    }
+                  },
+                  "description": "Fetch content from one or more web pages, following links recursively.",
+                  "display_description": "Fetch content from one or more web pages, following links recursively.",
+                  "display_name": "fetch_content",
+                  "name": "fetch_content",
+                  "readonly": false,
+                  "status": true,
+                  "tags": [
+                    "fetch_content"
+                  ]
+                }
+              ],
+              "info": "Modify tool names and descriptions to help agents understand when to use each tool."
+            },
+            "urls": {
+              "type": "str",
+              "display_name": "URLs",
+              "required": false,
+              "advanced": false,
+              "show": true,
+              "input_types": [],
+              "info": "Enter one or more URLs to crawl recursively, by clicking the '+' button."
+            },
+            "use_async": {
+              "type": "bool",
+              "display_name": "Use Async",
+              "required": false,
+              "advanced": true,
+              "show": true,
+              "value": true,
+              "info": "If enabled, uses asynchronous loading which can be significantly faster but might use more system resources."
+            }
+          },
+          "display_name": "URL",
+          "description": "Fetch content from one or more web pages, following links recursively.",
+          "outputs": [
+            {
+              "allows_loop": false,
+              "cache": true,
+              "display_name": "Toolset",
+              "group_outputs": false,
+              "hidden": null,
+              "method": "to_toolkit",
+              "name": "component_as_tool",
+              "options": null,
+              "required_inputs": null,
+              "selected": "Tool",
+              "tool_mode": true,
+              "types": [
+                "Tool"
+              ],
+              "value": "__UNDEFINED__"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "CustomComponent-ndntH",
+      "type": "genericNode",
+      "position": {
+        "x": 1140.942955401594,
+        "y": 1276.4989762128548
+      },
+      "data": {
+        "id": "CustomComponent-ndntH",
+        "type": "TelegramSetWebhook",
+        "display_name": null,
+        "description": "\u0423\u0441\u0442\u0430\u043d\u0430\u0432\u043b\u0438\u0432\u0430\u0435\u0442 webhook URL \u0434\u043b\u044f \u043f\u0440\u0438\u0435\u043c\u0430 \u0432\u0445\u043e\u0434\u044f\u0449\u0438\u0445 \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0439 \u0447\u0435\u0440\u0435\u0437 \u0438\u0441\u0445\u043e\u0434\u044f\u0449\u0438\u0439 webhook. Telegram \u0431\u0443\u0434\u0435\u0442 \u043e\u0442\u043f\u0440\u0430\u0432\u043b\u044f\u0442\u044c POST \u0437\u0430\u043f\u0440\u043e\u0441\u044b \u043d\u0430 \u044d\u0442\u043e\u0442 URL \u043f\u0440\u0438 \u043a\u0430\u0436\u0434\u043e\u043c \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0438 \u0434\u043b\u044f \u0431\u043e\u0442\u0430. \u041d\u0430\u0441\u0442\u0440\u043e\u0439\u0442\u0435 \u043e\u0434\u0438\u043d \u0440\u0430\u0437, \u0437\u0430\u0442\u0435\u043c \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u0443\u0439\u0442\u0435 \u043a\u043e\u043c\u043f\u043e\u043d\u0435\u043d\u0442 TelegramWebhook \u0432 \u0432\u0430\u0448\u0435\u043c \u043f\u043e\u0442\u043e\u043a\u0435 \u0434\u043b\u044f \u043e\u0431\u0440\u0430\u0431\u043e\u0442\u043a\u0438 \u0432\u0445\u043e\u0434\u044f\u0449\u0438\u0445 \u0441\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u0439.",
+        "node": {
+          "template": {
+            "allowed_updates": {
+              "type": "str",
+              "display_name": "\u0420\u0430\u0437\u0440\u0435\u0448\u0435\u043d\u043d\u044b\u0435 \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u044f",
+              "required": false,
+              "advanced": true,
+              "show": true,
+              "info": "\u0421\u043f\u0438\u0441\u043e\u043a \u0442\u0438\u043f\u043e\u0432 \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0439, \u043d\u0430 \u043a\u043e\u0442\u043e\u0440\u044b\u0435 \u043f\u043e\u0434\u043f\u0438\u0441\u0430\u043d \u0431\u043e\u0442, \u0440\u0430\u0437\u0434\u0435\u043b\u0435\u043d\u043d\u044b\u0445 \u0437\u0430\u043f\u044f\u0442\u044b\u043c\u0438. \u041f\u043e \u0443\u043c\u043e\u043b\u0447\u0430\u043d\u0438\u044e \u0432\u0441\u0435 \u0442\u0438\u043f\u044b \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0439."
+            },
+            "auto_generate_secret": {
+              "type": "bool",
+              "display_name": "\u0410\u0432\u0442\u043e\u043c\u0430\u0442\u0438\u0447\u0435\u0441\u043a\u0438 \u0433\u0435\u043d\u0435\u0440\u0438\u0440\u043e\u0432\u0430\u0442\u044c secret token",
+              "required": false,
+              "advanced": true,
+              "show": true,
+              "info": "\u0415\u0441\u043b\u0438 \u0432\u043a\u043b\u044e\u0447\u0435\u043d\u043e, secret token \u0431\u0443\u0434\u0435\u0442 \u0430\u0432\u0442\u043e\u043c\u0430\u0442\u0438\u0447\u0435\u0441\u043a\u0438 \u0441\u0433\u0435\u043d\u0435\u0440\u0438\u0440\u043e\u0432\u0430\u043d \u043d\u0430 \u043e\u0441\u043d\u043e\u0432\u0435 flow_id \u0438 node_id (\u0432 \u0441\u0442\u0438\u043b\u0435 n8n). \u0415\u0441\u043b\u0438 \u0432\u044b\u043a\u043b\u044e\u0447\u0435\u043d\u043e, \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u0443\u0439\u0442\u0435 \u043f\u043e\u043b\u0435 '\u0421\u0435\u043a\u0440\u0435\u0442\u043d\u044b\u0439 \u0442\u043e\u043a\u0435\u043d' \u0434\u043b\u044f \u0440\u0443\u0447\u043d\u043e\u0439 \u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438."
+            },
+            "bot_token": {
+              "type": "str",
+              "display_name": "\u0422\u043e\u043a\u0435\u043d \u0431\u043e\u0442\u0430",
+              "required": true,
+              "advanced": false,
+              "show": true,
+              "input_types": [],
+              "info": "\u0422\u043e\u043a\u0435\u043d \u0432\u0430\u0448\u0435\u0433\u043e Telegram \u0431\u043e\u0442\u0430, \u043f\u043e\u043b\u0443\u0447\u0435\u043d\u043d\u044b\u0439 \u043e\u0442 @BotFather"
+            },
+            "certificate": {
+              "type": "str",
+              "display_name": "\u041f\u0443\u0442\u044c \u043a \u0444\u0430\u0439\u043b\u0443 \u0441\u0435\u0440\u0442\u0438\u0444\u0438\u043a\u0430\u0442\u0430",
+              "required": false,
+              "advanced": true,
+              "show": true,
+              "info": "\u041f\u0443\u0442\u044c \u043a \u0444\u0430\u0439\u043b\u0443 \u043f\u0443\u0431\u043b\u0438\u0447\u043d\u043e\u0433\u043e \u043a\u043b\u044e\u0447\u0430 \u0441\u0435\u0440\u0442\u0438\u0444\u0438\u043a\u0430\u0442\u0430 (\u0444\u043e\u0440\u043c\u0430\u0442 PEM). \u0422\u043e\u043b\u044c\u043a\u043e \u0434\u043b\u044f \u0441\u0430\u043c\u043e\u043f\u043e\u0434\u043f\u0438\u0441\u0430\u043d\u043d\u044b\u0445 \u0441\u0435\u0440\u0442\u0438\u0444\u0438\u043a\u0430\u0442\u043e\u0432."
+            },
+            "drop_pending_updates": {
+              "type": "bool",
+              "display_name": "\u0423\u0434\u0430\u043b\u0438\u0442\u044c \u043e\u0436\u0438\u0434\u0430\u044e\u0449\u0438\u0435 \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u044f",
+              "required": false,
+              "advanced": true,
+              "show": true,
+              "info": "\u0423\u0441\u0442\u0430\u043d\u043e\u0432\u0438\u0442\u0435 True \u0434\u043b\u044f \u0443\u0434\u0430\u043b\u0435\u043d\u0438\u044f \u0432\u0441\u0435\u0445 \u043e\u0436\u0438\u0434\u0430\u044e\u0449\u0438\u0445 \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0439"
+            },
+            "max_connections": {
+              "type": "int",
+              "display_name": "\u041c\u0430\u043a\u0441\u0438\u043c\u0443\u043c \u0441\u043e\u0435\u0434\u0438\u043d\u0435\u043d\u0438\u0439",
+              "required": false,
+              "advanced": true,
+              "show": true,
+              "value": 40,
+              "info": "\u041c\u0430\u043a\u0441\u0438\u043c\u0430\u043b\u044c\u043d\u043e \u0434\u043e\u043f\u0443\u0441\u0442\u0438\u043c\u043e\u0435 \u043a\u043e\u043b\u0438\u0447\u0435\u0441\u0442\u0432\u043e \u043e\u0434\u043d\u043e\u0432\u0440\u0435\u043c\u0435\u043d\u043d\u044b\u0445 HTTPS \u0441\u043e\u0435\u0434\u0438\u043d\u0435\u043d\u0438\u0439 \u043a webhook \u0434\u043b\u044f \u0434\u043e\u0441\u0442\u0430\u0432\u043a\u0438 \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0439, 1-100. \u041f\u043e \u0443\u043c\u043e\u043b\u0447\u0430\u043d\u0438\u044e 40."
+            },
+            "secret_token": {
+              "type": "str",
+              "display_name": "\u0421\u0435\u043a\u0440\u0435\u0442\u043d\u044b\u0439 \u0442\u043e\u043a\u0435\u043d",
+              "required": false,
+              "advanced": true,
+              "show": true,
+              "input_types": [
+                "Message"
+              ]
+            },
+            "url": {
+              "type": "str",
+              "display_name": "Webhook URL",
+              "required": true,
+              "advanced": false,
+              "show": true,
+              "value": "https://langflow.queryrouter.ru/api/v1/webhook/16a7019b-db5a-4d18-82ef-ee027b3d070b",
+              "input_types": [
+                "Message"
+              ]
+            }
+          },
+          "display_name": "Telegram \u0423\u0441\u0442\u0430\u043d\u043e\u0432\u0438\u0442\u044c Webhook",
+          "description": "\u0423\u0441\u0442\u0430\u043d\u0430\u0432\u043b\u0438\u0432\u0430\u0435\u0442 webhook URL \u0434\u043b\u044f \u043f\u0440\u0438\u0435\u043c\u0430 \u0432\u0445\u043e\u0434\u044f\u0449\u0438\u0445 \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0439 \u0447\u0435\u0440\u0435\u0437 \u0438\u0441\u0445\u043e\u0434\u044f\u0449\u0438\u0439 webhook. Telegram \u0431\u0443\u0434\u0435\u0442 \u043e\u0442\u043f\u0440\u0430\u0432\u043b\u044f\u0442\u044c POST \u0437\u0430\u043f\u0440\u043e\u0441\u044b \u043d\u0430 \u044d\u0442\u043e\u0442 URL \u043f\u0440\u0438 \u043a\u0430\u0436\u0434\u043e\u043c \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0438 \u0434\u043b\u044f \u0431\u043e\u0442\u0430. \u041d\u0430\u0441\u0442\u0440\u043e\u0439\u0442\u0435 \u043e\u0434\u0438\u043d \u0440\u0430\u0437, \u0437\u0430\u0442\u0435\u043c \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u0443\u0439\u0442\u0435 \u043a\u043e\u043c\u043f\u043e\u043d\u0435\u043d\u0442 TelegramWebhook \u0432 \u0432\u0430\u0448\u0435\u043c \u043f\u043e\u0442\u043e\u043a\u0435 \u0434\u043b\u044f \u043e\u0431\u0440\u0430\u0431\u043e\u0442\u043a\u0438 \u0432\u0445\u043e\u0434\u044f\u0449\u0438\u0445 \u0441\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u0439.",
+          "outputs": [
+            {
+              "allows_loop": false,
+              "cache": true,
+              "display_name": "\u041e\u0442\u0432\u0435\u0442",
+              "group_outputs": false,
+              "hidden": null,
+              "method": "build_output",
+              "name": "response",
+              "options": null,
+              "required_inputs": null,
+              "selected": "Data",
+              "tool_mode": true,
+              "types": [
+                "Data"
+              ],
+              "value": "__UNDEFINED__"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "CustomComponent-Gkxq4",
+      "type": "genericNode",
+      "position": {
+        "x": 1549.4836921285782,
+        "y": 1610.7040330351347
+      },
+      "data": {
+        "id": "CustomComponent-Gkxq4",
+        "type": "TelegramSendMessage",
+        "display_name": null,
+        "description": "\u041e\u0442\u043f\u0440\u0430\u0432\u043b\u044f\u0435\u0442 \u0442\u0435\u043a\u0441\u0442\u043e\u0432\u043e\u0435 \u0441\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u0435 \u0432 \u0443\u043a\u0430\u0437\u0430\u043d\u043d\u044b\u0439 Telegram \u0447\u0430\u0442 \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u0443\u044f Bot API. \u0418\u0441\u043f\u043e\u043b\u044c\u0437\u0443\u0439\u0442\u0435 \u0441 TelegramWebhook \u0434\u043b\u044f \u043e\u0442\u0432\u0435\u0442\u0430 \u043d\u0430 \u0432\u0445\u043e\u0434\u044f\u0449\u0438\u0435 \u0441\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u044f.",
+        "node": {
+          "template": {
+            "bot_token": {
+              "type": "str",
+              "display_name": "\u0422\u043e\u043a\u0435\u043d \u0431\u043e\u0442\u0430",
+              "required": true,
+              "advanced": false,
+              "show": true,
+              "input_types": [],
+              "info": "\u0422\u043e\u043a\u0435\u043d \u0432\u0430\u0448\u0435\u0433\u043e Telegram \u0431\u043e\u0442\u0430, \u043f\u043e\u043b\u0443\u0447\u0435\u043d\u043d\u044b\u0439 \u043e\u0442 @BotFather"
+            },
+            "chat_id": {
+              "type": "str",
+              "display_name": "ID \u0447\u0430\u0442\u0430",
+              "required": true,
+              "advanced": false,
+              "show": true,
+              "input_types": [
+                "Message"
+              ],
+              "info": "\u0423\u043d\u0438\u043a\u0430\u043b\u044c\u043d\u044b\u0439 \u0438\u0434\u0435\u043d\u0442\u0438\u0444\u0438\u043a\u0430\u0442\u043e\u0440 \u0446\u0435\u043b\u0435\u0432\u043e\u0433\u043e \u0447\u0430\u0442\u0430 \u0438\u043b\u0438 username \u043a\u0430\u043d\u0430\u043b\u0430 (\u0432 \u0444\u043e\u0440\u043c\u0430\u0442\u0435 @channelusername). \u041c\u043e\u0436\u043d\u043e \u043f\u043e\u0434\u043a\u043b\u044e\u0447\u0438\u0442\u044c \u0438\u0437 \u0432\u044b\u0445\u043e\u0434\u0430 chat_info \u043a\u043e\u043c\u043f\u043e\u043d\u0435\u043d\u0442\u0430 TelegramWebhook (chat_info.id)."
+            },
+            "disable_notification": {
+              "type": "bool",
+              "display_name": "\u041e\u0442\u043a\u043b\u044e\u0447\u0438\u0442\u044c \u0443\u0432\u0435\u0434\u043e\u043c\u043b\u0435\u043d\u0438\u0435",
+              "required": false,
+              "advanced": true,
+              "show": true,
+              "info": "\u041e\u0442\u043f\u0440\u0430\u0432\u043b\u044f\u0435\u0442 \u0441\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u0435 \u0442\u0438\u0445\u043e. \u041f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u0438 \u043f\u043e\u043b\u0443\u0447\u0430\u0442 \u0443\u0432\u0435\u0434\u043e\u043c\u043b\u0435\u043d\u0438\u0435 \u0431\u0435\u0437 \u0437\u0432\u0443\u043a\u0430"
+            },
+            "disable_web_page_preview": {
+              "type": "bool",
+              "display_name": "\u041e\u0442\u043a\u043b\u044e\u0447\u0438\u0442\u044c \u043f\u0440\u0435\u0432\u044c\u044e \u0441\u0441\u044b\u043b\u043e\u043a",
+              "required": false,
+              "advanced": true,
+              "show": true,
+              "info": "\u041e\u0442\u043a\u043b\u044e\u0447\u0430\u0435\u0442 \u043f\u0440\u0435\u0432\u044c\u044e \u0441\u0441\u044b\u043b\u043e\u043a \u0432 \u044d\u0442\u043e\u043c \u0441\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u0438"
+            },
+            "parse_mode": {
+              "type": "str",
+              "display_name": "\u0420\u0435\u0436\u0438\u043c \u043f\u0430\u0440\u0441\u0438\u043d\u0433\u0430",
+              "required": false,
+              "advanced": true,
+              "show": true,
+              "input_types": [
+                "Message"
+              ],
+              "info": "\u0420\u0435\u0436\u0438\u043c \u043f\u0430\u0440\u0441\u0438\u043d\u0433\u0430 \u0441\u0443\u0449\u043d\u043e\u0441\u0442\u0435\u0439 \u0432 \u0442\u0435\u043a\u0441\u0442\u0435 \u0441\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u044f. \u041c\u043e\u0436\u0435\u0442 \u0431\u044b\u0442\u044c 'HTML', 'Markdown' \u0438\u043b\u0438 'MarkdownV2'"
+            },
+            "reply_to_message_id": {
+              "type": "int",
+              "display_name": "ID \u0441\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u044f \u0434\u043b\u044f \u043e\u0442\u0432\u0435\u0442\u0430",
+              "required": false,
+              "advanced": true,
+              "show": true,
+              "info": "\u0415\u0441\u043b\u0438 \u0441\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u0435 \u044f\u0432\u043b\u044f\u0435\u0442\u0441\u044f \u043e\u0442\u0432\u0435\u0442\u043e\u043c, ID \u0438\u0441\u0445\u043e\u0434\u043d\u043e\u0433\u043e \u0441\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u044f"
+            },
+            "text": {
+              "type": "str",
+              "display_name": "\u0422\u0435\u043a\u0441\u0442 \u0441\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u044f",
+              "required": true,
+              "advanced": false,
+              "show": true,
+              "input_types": [
+                "Message"
+              ],
+              "info": "\u0422\u0435\u043a\u0441\u0442 \u0441\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u044f \u0434\u043b\u044f \u043e\u0442\u043f\u0440\u0430\u0432\u043a\u0438, 1-4096 \u0441\u0438\u043c\u0432\u043e\u043b\u043e\u0432 \u043f\u043e\u0441\u043b\u0435 \u043f\u0430\u0440\u0441\u0438\u043d\u0433\u0430 \u0441\u0443\u0449\u043d\u043e\u0441\u0442\u0435\u0439"
+            }
+          },
+          "display_name": "Telegram \u041e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u044c \u0421\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u0435",
+          "description": "\u041e\u0442\u043f\u0440\u0430\u0432\u043b\u044f\u0435\u0442 \u0442\u0435\u043a\u0441\u0442\u043e\u0432\u043e\u0435 \u0441\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u0435 \u0432 \u0443\u043a\u0430\u0437\u0430\u043d\u043d\u044b\u0439 Telegram \u0447\u0430\u0442 \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u0443\u044f Bot API. \u0418\u0441\u043f\u043e\u043b\u044c\u0437\u0443\u0439\u0442\u0435 \u0441 TelegramWebhook \u0434\u043b\u044f \u043e\u0442\u0432\u0435\u0442\u0430 \u043d\u0430 \u0432\u0445\u043e\u0434\u044f\u0449\u0438\u0435 \u0441\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u044f.",
+          "outputs": [
+            {
+              "allows_loop": false,
+              "cache": true,
+              "display_name": "\u041e\u0442\u0432\u0435\u0442",
+              "group_outputs": false,
+              "hidden": null,
+              "method": "build_output",
+              "name": "response",
+              "options": null,
+              "required_inputs": null,
+              "selected": "Data",
+              "tool_mode": true,
+              "types": [
+                "Data"
+              ],
+              "value": "__UNDEFINED__"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "Webhook-yGzSo",
+      "type": "genericNode",
+      "position": {
+        "x": 127.63224607426451,
+        "y": 1333.3717499838594
+      },
+      "data": {
+        "id": "Webhook-yGzSo",
+        "type": "Webhook",
+        "display_name": null,
+        "description": "",
+        "node": {
+          "template": {
+            "data": {
+              "type": "str",
+              "display_name": "Payload",
+              "required": false,
+              "advanced": true,
+              "show": true,
+              "input_types": [
+                "Message"
+              ],
+              "info": "Receives a payload from external systems via HTTP POST."
+            }
+          },
+          "display_name": "Webhook",
+          "description": "",
+          "outputs": [
+            {
+              "allows_loop": false,
+              "cache": true,
+              "display_name": "Data",
+              "group_outputs": false,
+              "method": "build_data",
+              "name": "output_data",
+              "selected": "Data",
+              "tool_mode": true,
+              "types": [
+                "Data"
+              ],
+              "value": "__UNDEFINED__"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "DataOperations-8cK7p",
+      "type": "genericNode",
+      "position": {
+        "x": 660.1563483017146,
+        "y": 1232.113774294168
+      },
+      "data": {
+        "id": "DataOperations-8cK7p",
+        "type": "DataOperations",
+        "display_name": null,
+        "description": "Perform various operations on a Data object.",
+        "node": {
+          "template": {
+            "append_update_data": {
+              "type": "dict",
+              "display_name": "Append or Update",
+              "required": false,
+              "advanced": false,
+              "show": false,
+              "value": {
+                "key": "value"
+              },
+              "info": "Data to append or update the existing data with. Only top-level keys are checked."
+            },
+            "data": {
+              "type": "other",
+              "display_name": "Data",
+              "required": true,
+              "advanced": false,
+              "show": true,
+              "input_types": [
+                "Data"
+              ],
+              "info": "Data object to filter."
+            },
+            "filter_key": {
+              "type": "str",
+              "display_name": "Filter Key",
+              "required": false,
+              "advanced": false,
+              "show": false,
+              "input_types": [
+                "Message"
+              ],
+              "info": "Name of the key containing the list to filter. It must be a top-level key in the JSON and its value must be a list."
+            },
+            "filter_values": {
+              "type": "dict",
+              "display_name": "Filter Values",
+              "required": false,
+              "advanced": false,
+              "show": false,
+              "info": "List of values to filter by."
+            },
+            "mapped_json_display": {
+              "type": "str",
+              "display_name": "JSON to Map",
+              "required": false,
+              "advanced": false,
+              "show": true,
+              "value": "{   \"update_id\": 522518008,   \"message\": {     \"message_id\": 5,     \"from\": {       \"id\": 144997264,       \"is_bot\": false,       \"first_name\": \"Nikita\",       \"last_name\": \"Samoylov\",       \"username\": \"nikitaxru\",       \"language_code\": \"en\"     },     \"chat\": {       \"id\": 144997264,       \"first_name\": \"Nikita\",       \"last_name\": \"Samoylov\",       \"username\": \"nikitaxru\",       \"type\": \"private\"     },     \"date\": 1763141204,     \"text\": \"\u0432\u0430\u043f\u0440\"   } }",
+              "input_types": [
+                "Message"
+              ],
+              "info": "Paste or preview your JSON here to explore its structure and select a path for extraction."
+            },
+            "operations": {
+              "type": "sortableList",
+              "display_name": "Operations",
+              "required": false,
+              "advanced": false,
+              "show": true,
+              "value": [
+                {
+                  "chosen": false,
+                  "icon": "terminal",
+                  "name": "JQ Expression",
+                  "selected": false
+                }
+              ],
+              "info": "List of operations to perform on the data."
+            },
+            "operator": {
+              "type": "str",
+              "display_name": "Comparison Operator",
+              "required": false,
+              "advanced": false,
+              "show": false,
+              "value": "equals",
+              "info": "The operator to apply for comparing the values."
+            },
+            "query": {
+              "type": "str",
+              "display_name": "JQ Expression",
+              "required": false,
+              "advanced": false,
+              "show": true,
+              "value": ".message.text",
+              "input_types": [
+                "Message"
+              ],
+              "info": "JSON Query to filter the data. Used by Parse JSON operation."
+            },
+            "remove_keys_input": {
+              "type": "str",
+              "display_name": "Remove Keys",
+              "required": false,
+              "advanced": false,
+              "show": false,
+              "input_types": [
+                "Message"
+              ],
+              "info": "List of keys to remove from the data."
+            },
+            "rename_keys_input": {
+              "type": "dict",
+              "display_name": "Rename Keys",
+              "required": false,
+              "advanced": false,
+              "show": false,
+              "value": {
+                "old_key": "new_key"
+              },
+              "info": "List of keys to rename in the data."
+            },
+            "select_keys_input": {
+              "type": "str",
+              "display_name": "Select Keys",
+              "required": false,
+              "advanced": false,
+              "show": false,
+              "input_types": [
+                "Message"
+              ],
+              "info": "List of keys to select from the data. Only top-level keys can be selected."
+            },
+            "selected_key": {
+              "type": "str",
+              "display_name": "Select Path",
+              "required": false,
+              "advanced": false,
+              "show": true,
+              "value": ".message.text"
+            }
+          },
+          "display_name": "Data Operations",
+          "description": "Perform various operations on a Data object.",
+          "outputs": [
+            {
+              "allows_loop": false,
+              "cache": true,
+              "display_name": "Data",
+              "group_outputs": false,
+              "method": "as_data",
+              "name": "data_output",
+              "options": null,
+              "required_inputs": null,
+              "selected": "Data",
+              "tool_mode": true,
+              "types": [
+                "Data"
+              ],
+              "value": "__UNDEFINED__"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "ParserComponent-smdUV",
+      "type": "genericNode",
+      "position": {
+        "x": 575.5174791851406,
+        "y": 1722.4888571456904
+      },
+      "data": {
+        "id": "ParserComponent-smdUV",
+        "type": "ParserComponent",
+        "display_name": null,
+        "description": "Extracts text using a template.",
+        "node": {
+          "template": {
+            "clean_data": {
+              "type": "bool",
+              "display_name": "Clean Data",
+              "required": false,
+              "advanced": true,
+              "show": true,
+              "value": true,
+              "info": "Enable to clean the data by removing empty rows and lines in each cell of the DataFrame/ Data object."
+            },
+            "input_data": {
+              "type": "other",
+              "display_name": "Data or DataFrame",
+              "required": true,
+              "advanced": false,
+              "show": true,
+              "input_types": [
+                "DataFrame",
+                "Data"
+              ],
+              "info": "Accepts either a DataFrame or a Data object."
+            },
+            "mode": {
+              "type": "tab",
+              "display_name": "Mode",
+              "required": false,
+              "advanced": false,
+              "show": true,
+              "value": "Parser",
+              "info": "Convert into raw string instead of using a template."
+            },
+            "pattern": {
+              "type": "str",
+              "display_name": "Template",
+              "required": true,
+              "advanced": false,
+              "show": true,
+              "value": "{result}",
+              "input_types": [
+                "Message"
+              ],
+              "info": "Use variables within curly brackets to extract column values for DataFrames or key values for Data.For example: `Name: {Name}, Age: {Age}, Country: {Country}`"
+            },
+            "sep": {
+              "type": "str",
+              "display_name": "Separator",
+              "required": false,
+              "advanced": true,
+              "show": true,
+              "value": "\n",
+              "input_types": [
+                "Message"
+              ],
+              "info": "String used to separate rows/items."
+            }
+          },
+          "display_name": "Parser",
+          "description": "Extracts text using a template.",
+          "outputs": [
+            {
+              "allows_loop": false,
+              "cache": true,
+              "display_name": "Parsed Text",
+              "group_outputs": false,
+              "method": "parse_combined_text",
+              "name": "parsed_text",
+              "options": null,
+              "required_inputs": null,
+              "selected": "Message",
+              "tool_mode": true,
+              "types": [
+                "Message"
+              ],
+              "value": "__UNDEFINED__"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "DataOperations-chatId",
+      "type": "genericNode",
+      "position": {
+        "x": 660.1563483017146,
+        "y": 1432.113774294168
+      },
+      "data": {
+        "id": "DataOperations-chatId",
+        "type": "DataOperations",
+        "display_name": null,
+        "description": "Perform various operations on a Data object.",
+        "node": {
+          "template": {
+            "data": {
+              "type": "other",
+              "display_name": "Data",
+              "required": true,
+              "advanced": false,
+              "show": true,
+              "input_types": [
+                "Data"
+              ],
+              "info": "Data object to filter."
+            },
+            "operations": {
+              "type": "sortableList",
+              "display_name": "Operations",
+              "required": false,
+              "advanced": false,
+              "show": true,
+              "value": [
+                {
+                  "chosen": false,
+                  "icon": "terminal",
+                  "name": "JQ Expression",
+                  "selected": false
+                }
+              ],
+              "info": "List of operations to perform on the data."
+            },
+            "query": {
+              "type": "str",
+              "display_name": "JQ Expression",
+              "required": false,
+              "advanced": false,
+              "show": true,
+              "value": ".message.chat.id",
+              "input_types": [
+                "Message"
+              ],
+              "info": "JSON Query to filter the data. Used by Parse JSON operation."
+            }
+          },
+          "display_name": "Data Operations",
+          "description": "Perform various operations on a Data object.",
+          "outputs": [
+            {
+              "allows_loop": false,
+              "cache": true,
+              "display_name": "Data",
+              "group_outputs": false,
+              "method": "as_data",
+              "name": "data_output",
+              "options": null,
+              "required_inputs": null,
+              "selected": "Data",
+              "tool_mode": true,
+              "types": [
+                "Data"
+              ],
+              "value": "__UNDEFINED__"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "ParserComponent-chatId",
+      "type": "genericNode",
+      "position": {
+        "x": 575.5174791851406,
+        "y": 1922.4888571456904
+      },
+      "data": {
+        "id": "ParserComponent-chatId",
+        "type": "ParserComponent",
+        "display_name": null,
+        "description": "Extracts text using a template.",
+        "node": {
+          "template": {
+            "input_data": {
+              "type": "other",
+              "display_name": "Data or DataFrame",
+              "required": true,
+              "advanced": false,
+              "show": true,
+              "input_types": [
+                "DataFrame",
+                "Data"
+              ],
+              "info": "Accepts either a DataFrame or a Data object."
+            },
+            "mode": {
+              "type": "tab",
+              "display_name": "Mode",
+              "required": false,
+              "advanced": false,
+              "show": true,
+              "value": "Parser",
+              "info": "Convert into raw string instead of using a template."
+            },
+            "pattern": {
+              "type": "str",
+              "display_name": "Template",
+              "required": true,
+              "advanced": false,
+              "show": true,
+              "value": "{result}",
+              "input_types": [
+                "Message"
+              ],
+              "info": "Use variables within curly brackets to extract column values for DataFrames or key values for Data.For example: `Name: {Name}, Age: {Age}, Country: {Country}`"
+            },
+            "sep": {
+              "type": "str",
+              "display_name": "Separator",
+              "required": false,
+              "advanced": true,
+              "show": true,
+              "value": "\n",
+              "input_types": [
+                "Message"
+              ],
+              "info": "String used to separate rows/items."
+            }
+          },
+          "display_name": "Parser",
+          "description": "Extracts text using a template.",
+          "outputs": [
+            {
+              "allows_loop": false,
+              "cache": true,
+              "display_name": "Parsed Text",
+              "group_outputs": false,
+              "method": "parse_combined_text",
+              "name": "parsed_text",
+              "options": null,
+              "required_inputs": null,
+              "selected": "Message",
+              "tool_mode": true,
+              "types": [
+                "Message"
+              ],
+              "value": "__UNDEFINED__"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "animated": false,
+      "className": "",
+      "data": {
+        "sourceHandle": {
+          "dataType": "Webhook",
+          "id": "Webhook-yGzSo",
+          "name": "output_data",
+          "output_types": [
+            "Data"
+          ]
+        },
+        "targetHandle": {
+          "fieldName": "data",
+          "id": "DataOperations-8cK7p",
+          "inputTypes": [
+            "Data"
+          ],
+          "type": "other"
+        }
+      },
+      "id": "xy-edge__Webhook-yGzSo{\u0153dataType\u0153:\u0153Webhook\u0153,\u0153id\u0153:\u0153Webhook-yGzSo\u0153,\u0153name\u0153:\u0153output_data\u0153,\u0153output_types\u0153:[\u0153Data\u0153]}-DataOperations-8cK7p{\u0153fieldName\u0153:\u0153data\u0153,\u0153id\u0153:\u0153DataOperations-8cK7p\u0153,\u0153inputTypes\u0153:[\u0153Data\u0153],\u0153type\u0153:\u0153other\u0153}",
+      "selected": false,
+      "source": "Webhook-yGzSo",
+      "sourceHandle": "{\u0153dataType\u0153:\u0153Webhook\u0153,\u0153id\u0153:\u0153Webhook-yGzSo\u0153,\u0153name\u0153:\u0153output_data\u0153,\u0153output_types\u0153:[\u0153Data\u0153]}",
+      "target": "DataOperations-8cK7p",
+      "targetHandle": "{\u0153fieldName\u0153:\u0153data\u0153,\u0153id\u0153:\u0153DataOperations-8cK7p\u0153,\u0153inputTypes\u0153:[\u0153Data\u0153],\u0153type\u0153:\u0153other\u0153}"
+    },
+    {
+      "animated": false,
+      "className": "",
+      "data": {
+        "sourceHandle": {
+          "dataType": "DataOperations",
+          "id": "DataOperations-8cK7p",
+          "name": "data_output",
+          "output_types": [
+            "Data"
+          ]
+        },
+        "targetHandle": {
+          "fieldName": "input_data",
+          "id": "ParserComponent-smdUV",
+          "inputTypes": [
+            "DataFrame",
+            "Data"
+          ],
+          "type": "other"
+        }
+      },
+      "id": "xy-edge__DataOperations-8cK7p{\u0153dataType\u0153:\u0153DataOperations\u0153,\u0153id\u0153:\u0153DataOperations-8cK7p\u0153,\u0153name\u0153:\u0153data_output\u0153,\u0153output_types\u0153:[\u0153Data\u0153]}-ParserComponent-smdUV{\u0153fieldName\u0153:\u0153input_data\u0153,\u0153id\u0153:\u0153ParserComponent-smdUV\u0153,\u0153inputTypes\u0153:[\u0153DataFrame\u0153,\u0153Data\u0153],\u0153type\u0153:\u0153other\u0153}",
+      "selected": false,
+      "source": "DataOperations-8cK7p",
+      "sourceHandle": "{\u0153dataType\u0153:\u0153DataOperations\u0153,\u0153id\u0153:\u0153DataOperations-8cK7p\u0153,\u0153name\u0153:\u0153data_output\u0153,\u0153output_types\u0153:[\u0153Data\u0153]}",
+      "target": "ParserComponent-smdUV",
+      "targetHandle": "{\u0153fieldName\u0153:\u0153input_data\u0153,\u0153id\u0153:\u0153ParserComponent-smdUV\u0153,\u0153inputTypes\u0153:[\u0153DataFrame\u0153,\u0153Data\u0153],\u0153type\u0153:\u0153other\u0153}"
+    },
+    {
+      "animated": false,
+      "className": "",
+      "data": {
+        "sourceHandle": {
+          "dataType": "Webhook",
+          "id": "Webhook-yGzSo",
+          "name": "output_data",
+          "output_types": [
+            "Data"
+          ]
+        },
+        "targetHandle": {
+          "fieldName": "data",
+          "id": "DataOperations-chatId",
+          "inputTypes": [
+            "Data"
+          ],
+          "type": "other"
+        }
+      },
+      "id": "xy-edge__Webhook-yGzSo{\u0153dataType\u0153:\u0153Webhook\u0153,\u0153id\u0153:\u0153Webhook-yGzSo\u0153,\u0153name\u0153:\u0153output_data\u0153,\u0153output_types\u0153:[\u0153Data\u0153]}-DataOperations-chatId{\u0153fieldName\u0153:\u0153data\u0153,\u0153id\u0153:\u0153DataOperations-chatId\u0153,\u0153inputTypes\u0153:[\u0153Data\u0153],\u0153type\u0153:\u0153other\u0153}",
+      "selected": false,
+      "source": "Webhook-yGzSo",
+      "sourceHandle": "{\u0153dataType\u0153:\u0153Webhook\u0153,\u0153id\u0153:\u0153Webhook-yGzSo\u0153,\u0153name\u0153:\u0153output_data\u0153,\u0153output_types\u0153:[\u0153Data\u0153]}",
+      "target": "DataOperations-chatId",
+      "targetHandle": "{\u0153fieldName\u0153:\u0153data\u0153,\u0153id\u0153:\u0153DataOperations-chatId\u0153,\u0153inputTypes\u0153:[\u0153Data\u0153],\u0153type\u0153:\u0153other\u0153}"
+    },
+    {
+      "animated": false,
+      "className": "",
+      "data": {
+        "sourceHandle": {
+          "dataType": "DataOperations",
+          "id": "DataOperations-chatId",
+          "name": "data_output",
+          "output_types": [
+            "Data"
+          ]
+        },
+        "targetHandle": {
+          "fieldName": "input_data",
+          "id": "ParserComponent-chatId",
+          "inputTypes": [
+            "DataFrame",
+            "Data"
+          ],
+          "type": "other"
+        }
+      },
+      "id": "xy-edge__DataOperations-chatId{\u0153dataType\u0153:\u0153DataOperations\u0153,\u0153id\u0153:\u0153DataOperations-chatId\u0153,\u0153name\u0153:\u0153data_output\u0153,\u0153output_types\u0153:[\u0153Data\u0153]}-ParserComponent-chatId{\u0153fieldName\u0153:\u0153input_data\u0153,\u0153id\u0153:\u0153ParserComponent-chatId\u0153,\u0153inputTypes\u0153:[\u0153DataFrame\u0153,\u0153Data\u0153],\u0153type\u0153:\u0153other\u0153}",
+      "selected": false,
+      "source": "DataOperations-chatId",
+      "sourceHandle": "{\u0153dataType\u0153:\u0153DataOperations\u0153,\u0153id\u0153:\u0153DataOperations-chatId\u0153,\u0153name\u0153:\u0153data_output\u0153,\u0153output_types\u0153:[\u0153Data\u0153]}",
+      "target": "ParserComponent-chatId",
+      "targetHandle": "{\u0153fieldName\u0153:\u0153input_data\u0153,\u0153id\u0153:\u0153ParserComponent-chatId\u0153,\u0153inputTypes\u0153:[\u0153DataFrame\u0153,\u0153Data\u0153],\u0153type\u0153:\u0153other\u0153}"
+    },
+    {
+      "animated": false,
+      "className": "",
+      "data": {
+        "sourceHandle": {
+          "dataType": "ParserComponent",
+          "id": "ParserComponent-chatId",
+          "name": "parsed_text",
+          "output_types": [
+            "Message"
+          ]
+        },
+        "targetHandle": {
+          "fieldName": "chat_id",
+          "id": "CustomComponent-Gkxq4",
+          "inputTypes": [
+            "Message"
+          ],
+          "type": "str"
+        }
+      },
+      "id": "xy-edge__ParserComponent-chatId{\u0153dataType\u0153:\u0153ParserComponent\u0153,\u0153id\u0153:\u0153ParserComponent-chatId\u0153,\u0153name\u0153:\u0153parsed_text\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-CustomComponent-Gkxq4{\u0153fieldName\u0153:\u0153chat_id\u0153,\u0153id\u0153:\u0153CustomComponent-Gkxq4\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
+      "selected": false,
+      "source": "ParserComponent-chatId",
+      "sourceHandle": "{\u0153dataType\u0153:\u0153ParserComponent\u0153,\u0153id\u0153:\u0153ParserComponent-chatId\u0153,\u0153name\u0153:\u0153parsed_text\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
+      "target": "CustomComponent-Gkxq4",
+      "targetHandle": "{\u0153fieldName\u0153:\u0153chat_id\u0153,\u0153id\u0153:\u0153CustomComponent-Gkxq4\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}"
+    },
+    {
+      "animated": false,
+      "className": "",
+      "data": {
+        "sourceHandle": {
+          "dataType": "ParserComponent",
+          "id": "ParserComponent-smdUV",
+          "name": "parsed_text",
+          "output_types": [
+            "Message"
+          ]
+        },
+        "targetHandle": {
+          "fieldName": "text",
+          "id": "CustomComponent-Gkxq4",
+          "inputTypes": [
+            "Message"
+          ],
+          "type": "str"
+        }
+      },
+      "id": "xy-edge__ParserComponent-smdUV{\u0153dataType\u0153:\u0153ParserComponent\u0153,\u0153id\u0153:\u0153ParserComponent-smdUV\u0153,\u0153name\u0153:\u0153parsed_text\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-CustomComponent-Gkxq4{\u0153fieldName\u0153:\u0153text\u0153,\u0153id\u0153:\u0153CustomComponent-Gkxq4\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
+      "selected": false,
+      "source": "ParserComponent-smdUV",
+      "sourceHandle": "{\u0153dataType\u0153:\u0153ParserComponent\u0153,\u0153id\u0153:\u0153ParserComponent-smdUV\u0153,\u0153name\u0153:\u0153parsed_text\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
+      "target": "CustomComponent-Gkxq4",
+      "targetHandle": "{\u0153fieldName\u0153:\u0153text\u0153,\u0153id\u0153:\u0153CustomComponent-Gkxq4\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}"
+    }
+  ]
+}

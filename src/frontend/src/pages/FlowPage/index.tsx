@@ -13,6 +13,7 @@ import { useTypesStore } from "@/stores/typesStore";
 import { customStringify } from "@/utils/reactflowUtils";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
+import FlowAssistantPanel from "./components/flowAssistant/flow-assistant-panel";
 import {
   FlowSearchProvider,
   FlowSidebarComponent,
@@ -172,8 +173,9 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
               <FlowSearchProvider>
                 {!view && <FlowSidebarComponent isLoading={isLoading} />}
                 <main className="flex w-full overflow-hidden">
-                  <div className="h-full w-full">
+                  <div className="relative h-full w-full">
                     <Page setIsLoading={setIsLoading} />
+                    {!view && <FlowAssistantPanel />}
                   </div>
                 </main>
               </FlowSearchProvider>
