@@ -126,6 +126,7 @@ test(
     });
 
     await page.locator('[data-testid^="output-inspection-"]').first().click();
+    await page.getByTestId("icon-TextSearchIcon").click();
 
     const value = await page.getByPlaceholder("Empty").inputValue();
 

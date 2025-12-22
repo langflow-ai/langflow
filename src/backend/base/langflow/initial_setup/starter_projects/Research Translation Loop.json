@@ -1577,6 +1577,7 @@
               "Message"
             ],
             "beta": false,
+            "category": "models_and_agents",
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Extracts text using a template.",
@@ -1625,6 +1626,12 @@
             ],
             "pinned": false,
             "template": {
+              "_frontend_node_flow_id": {
+                "value": "133a5c75-e6d9-47f2-addc-052d2677cca7"
+              },
+              "_frontend_node_folder_id": {
+                "value": "afaca9ee-97e3-4211-8569-722a4058ea5e"
+              },
               "_type": "Component",
               "code": {
                 "advanced": true,
