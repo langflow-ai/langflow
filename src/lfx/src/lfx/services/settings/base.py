@@ -332,7 +332,8 @@ class Settings(BaseSettings):
     Note that this doesn't check if the starter projects are already loaded in the db;
     this is intended to be used to skip all startup project logic."""
     update_starter_projects: bool = True
-    """If set to True, Langflow will update starter projects."""
+    """If set to True, Langflow will update starter projects in the database (in-place updates) and update source files if writable.
+    If False, only creates missing starter projects without updating existing ones."""
 
     # SSRF Protection
     ssrf_protection_enabled: bool = False

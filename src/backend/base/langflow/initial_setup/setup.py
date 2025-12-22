@@ -1087,16 +1087,15 @@ async def create_or_update_starter_projects(all_types_dict: dict) -> None:
     async with session_scope() as session:
         new_folder = await get_or_create_starter_folder(session)
         starter_projects = await load_starter_projects()
+        settings = get_settings_service().settings
 
-        if get_settings_service().settings.update_starter_projects:
-            await logger.adebug("Updating starter projects")
-            # 1. Delete all existing starter projects
+        if settings.update_starter_projects:
+            # Update existing projects in-place, create missing ones, and try to update source files if writable
+            await logger.adebug("Updating starter projects (DB updates + optional file writes)")
+            successfully_created_projects = 0
             successfully_updated_projects = 0
-            await delete_starter_projects(session, new_folder.id)
-            # Profile pictures are now served directly from the package installation directory
-            # No need to copy them to config_dir
-
-            # 2. Update all starter projects with the latest component versions (this modifies the actual file data)
+            existing_flows = await get_all_flows_similar_to_project(session, new_folder.id)
+            existing_flows_dict = {flow.name: flow for flow in existing_flows}
             for project_path, project in starter_projects:
                 (
                     project_name,
@@ -1109,37 +1108,65 @@ async def create_or_update_starter_projects(all_types_dict: dict) -> None:
                     project_gradient,
                     project_tags,
                 ) = get_project_data(project)
+                # Update project data with latest component versions
+                original_project_data = project_data.copy()
                 updated_project_data = update_projects_components_with_latest_component_versions(
                     project_data.copy(), all_types_dict
                 )
                 updated_project_data = update_edges_with_latest_component_versions(updated_project_data)
-                if updated_project_data != project_data:
-                    project_data = updated_project_data
-                    await update_project_file(project_path, project, updated_project_data)
+                project_data = updated_project_data
 
-                try:
-                    # Create the updated starter project
-                    create_new_project(
-                        session=session,
-                        project_name=project_name,
-                        project_description=project_description,
-                        project_is_component=project_is_component,
-                        updated_at_datetime=updated_at_datetime,
-                        project_data=project_data,
-                        project_icon=project_icon,
-                        project_icon_bg_color=project_icon_bg_color,
-                        project_gradient=project_gradient,
-                        project_tags=project_tags,
-                        new_folder_id=new_folder.id,
-                    )
-                except Exception:  # noqa: BLE001
-                    await logger.aexception(f"Error while creating starter project {project_name}")
+                # Try to update source files if writable and data changed (non-fatal if it fails)
+                if updated_project_data != original_project_data:
+                    try:
+                        await update_project_file(project_path, project, updated_project_data)
+                    except (PermissionError, OSError) as e:
+                        await logger.adebug(
+                            f"Could not update starter project file {project_path} (this is OK in read-only environments): {e}"
+                        )
 
-                successfully_updated_projects += 1
-            await logger.adebug(f"Successfully updated {successfully_updated_projects} starter projects")
+                if project_name in existing_flows_dict:
+                    # Update existing project in DB
+                    try:
+                        existing_project = existing_flows_dict[project_name]
+                        update_existing_project(
+                            existing_project=existing_project,
+                            project_name=project_name,
+                            project_description=project_description,
+                            project_is_component=project_is_component,
+                            updated_at_datetime=updated_at_datetime,
+                            project_data=project_data,
+                            project_icon=project_icon,
+                            project_icon_bg_color=project_icon_bg_color,
+                        )
+                        successfully_updated_projects += 1
+                    except Exception:  # noqa: BLE001
+                        await logger.aexception(f"Error while updating starter project {project_name}")
+                else:
+                    # Create new project
+                    try:
+                        create_new_project(
+                            session=session,
+                            project_name=project_name,
+                            project_description=project_description,
+                            project_is_component=project_is_component,
+                            updated_at_datetime=updated_at_datetime,
+                            project_data=project_data,
+                            project_icon=project_icon,
+                            project_icon_bg_color=project_icon_bg_color,
+                            project_gradient=project_gradient,
+                            project_tags=project_tags,
+                            new_folder_id=new_folder.id,
+                        )
+                        successfully_created_projects += 1
+                    except Exception:  # noqa: BLE001
+                        await logger.aexception(f"Error while creating starter project {project_name}")
+            await logger.adebug(
+                f"Successfully created {successfully_created_projects} and updated {successfully_updated_projects} starter projects"
+            )
         else:
             # Even if we're not updating starter projects, we still need to create any that don't exist
-            await logger.adebug("Creating new starter projects")
+            await logger.adebug("Creating new starter projects (no updates)")
             successfully_created_projects = 0
             existing_flows = await get_all_flows_similar_to_project(session, new_folder.id)
             existing_flow_names = [existing_flow.name for existing_flow in existing_flows]
@@ -1170,10 +1197,10 @@ async def create_or_update_starter_projects(all_types_dict: dict) -> None:
                             project_tags=project_tags,
                             new_folder_id=new_folder.id,
                         )
+                        successfully_created_projects += 1
                     except Exception:  # noqa: BLE001
                         await logger.aexception(f"Error while creating starter project {project_name}")
-                    successfully_created_projects += 1
-                await logger.adebug(f"Successfully created {successfully_created_projects} starter projects")
+            await logger.adebug(f"Successfully created {successfully_created_projects} starter projects")
 
 
 async def initialize_auto_login_default_superuser() -> None:

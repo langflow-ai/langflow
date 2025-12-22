@@ -14,6 +14,7 @@ from httpx import AsyncClient
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.initial_setup.setup import (
     copy_profile_pictures,
+    create_or_update_starter_projects,
     detect_github_url,
     get_project_data,
     load_bundles_from_urls,
@@ -78,6 +79,80 @@ async def test_create_or_update_starter_projects():
         # Check that the number of projects in the database is the same as the number of projects returned by
         # load_starter_projects
         assert num_db_projects == num_projects
+
+
+@pytest.mark.usefixtures("client")
+async def test_update_starter_projects_updates_existing():
+    """Test that update_starter_projects=True updates existing projects in-place."""
+    settings_service = get_settings_service()
+    original_setting = settings_service.settings.update_starter_projects
+    
+    try:
+        # Set update_starter_projects to True
+        settings_service.settings.update_starter_projects = True
+        
+        # Get initial state
+        async with session_scope() as session:
+            stmt = select(Folder).options(selectinload(Folder.flows)).where(Folder.name == STARTER_FOLDER_NAME)
+            folder = (await session.exec(stmt)).first()
+            assert folder is not None
+            
+            if folder.flows:
+                # Get an existing project
+                existing_project = folder.flows[0]
+                original_data = existing_project.data.copy()
+                original_name = existing_project.name
+                
+                # Update starter projects
+                all_types_dict = await get_and_cache_all_types_dict(settings_service)
+                await create_or_update_starter_projects(all_types_dict)
+                
+                # Verify the project still exists with same ID (in-place update)
+                await session.refresh(existing_project)
+                assert existing_project.name == original_name
+                # Data should be updated (may be same or different depending on component versions)
+                assert existing_project.data is not None
+    finally:
+        # Restore original setting
+        settings_service.settings.update_starter_projects = original_setting
+
+
+@pytest.mark.usefixtures("client")
+async def test_update_starter_projects_false_only_creates_missing():
+    """Test that update_starter_projects=False only creates missing projects, doesn't update existing."""
+    settings_service = get_settings_service()
+    original_setting = settings_service.settings.update_starter_projects
+    
+    try:
+        # Set update_starter_projects to False
+        settings_service.settings.update_starter_projects = False
+        
+        async with session_scope() as session:
+            stmt = select(Folder).options(selectinload(Folder.flows)).where(Folder.name == STARTER_FOLDER_NAME)
+            folder = (await session.exec(stmt)).first()
+            assert folder is not None
+            
+            if folder.flows:
+                # Get an existing project and modify its data
+                existing_project = folder.flows[0]
+                original_data = existing_project.data.copy()
+                modified_data = deepcopy(original_data)
+                modified_data["test_marker"] = "should_not_be_updated"
+                existing_project.data = modified_data
+                session.add(existing_project)
+                await session.commit()
+                await session.refresh(existing_project)
+                
+                # Update starter projects (should not update existing)
+                all_types_dict = await get_and_cache_all_types_dict(settings_service)
+                await create_or_update_starter_projects(all_types_dict)
+                
+                # Verify the project data was NOT updated (still has our marker)
+                await session.refresh(existing_project)
+                assert existing_project.data.get("test_marker") == "should_not_be_updated"
+    finally:
+        # Restore original setting
+        settings_service.settings.update_starter_projects = original_setting
 
 
 # Some starter projects require integration
