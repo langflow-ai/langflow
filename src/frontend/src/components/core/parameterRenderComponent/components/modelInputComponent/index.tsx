@@ -408,7 +408,7 @@ export default function ModelInputComponent({
     );
 
   const footerButtonClass =
-    "w-full flex cursor-pointer items-center justify-start gap-2 truncate py-3 text-xs text-muted-foreground px-3 hover:bg-accent group";
+    "w-full flex cursor-pointer items-center justify-start gap-2 truncate py-2 text-xs text-muted-foreground px-3 hover:bg-accent group";
 
   const renderFooterButton = (
     label: string,
@@ -484,6 +484,13 @@ export default function ModelInputComponent({
         "external-option-button",
       )}
 
+      {renderFooterButton(
+        "Manage Model Providers",
+        "Settings",
+        () => setOpenManageProvidersDialog(true),
+        "manage-model-providers",
+      )}
+
       {externalOptions?.fields?.data?.node &&
         renderFooterButton(
           externalOptions.fields.data.node.display_name,
@@ -492,13 +499,6 @@ export default function ModelInputComponent({
             handleExternalOptions(externalOptions.fields.data.node.name || ""),
           "external-option-button",
         )}
-
-      {renderFooterButton(
-        "Manage Model Providers",
-        "Settings",
-        () => setOpenManageProvidersDialog(true),
-        "manage-model-providers",
-      )}
     </div>
   );
 
