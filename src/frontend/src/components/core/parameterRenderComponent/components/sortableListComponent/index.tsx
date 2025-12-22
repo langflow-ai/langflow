@@ -145,7 +145,11 @@ const SortableListComponent = ({
               "dropdown-component-outline input-edit-node w-full",
               editNode ? "py-1" : "py-2",
             )}
-            data-testid={id ? `button_open_list_selection_${id}` : "button_open_list_selection"}
+            data-testid={
+              id
+                ? `button_open_list_selection_${id}`
+                : "button_open_list_selection"
+            }
           >
             <div
               className={cn(
