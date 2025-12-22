@@ -446,7 +446,13 @@ class FileComponent(BaseFileComponent):
                 build_config["advanced_mode"]["show"] = allow_advanced
                 if not allow_advanced:
                     build_config["advanced_mode"]["value"] = False
-                    docling_fields = ("pipeline", "ocr_engine", "doc_key", "md_image_placeholder", "md_page_break_placeholder")
+                    docling_fields = (
+                        "pipeline",
+                        "ocr_engine",
+                        "doc_key",
+                        "md_image_placeholder",
+                        "md_page_break_placeholder",
+                    )
                     for field in docling_fields:
                         if field in build_config:
                             build_config[field]["show"] = False
@@ -457,7 +463,13 @@ class FileComponent(BaseFileComponent):
             if is_astra_cloud_environment():
                 self._disable_docling_fields_in_cloud(build_config)
             else:
-                docling_fields = ("pipeline", "ocr_engine", "doc_key", "md_image_placeholder", "md_page_break_placeholder")
+                docling_fields = (
+                    "pipeline",
+                    "ocr_engine",
+                    "doc_key",
+                    "md_image_placeholder",
+                    "md_page_break_placeholder",
+                )
                 for field in docling_fields:
                     if field in build_config:
                         build_config[field]["show"] = bool(field_value)
