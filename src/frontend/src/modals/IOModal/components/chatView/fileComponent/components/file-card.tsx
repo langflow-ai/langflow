@@ -5,6 +5,7 @@ import { ForwardedIconComponent } from "../../../../../../components/common/gene
 import type { fileCardPropsType } from "../../../../../../types/components";
 import formatFileName from "../utils/format-file-name";
 import getClasses from "../utils/get-classes";
+import AuthenticatedImage from "./authenticated-image";
 import DownloadButton from "./download-button";
 
 const imgTypes = new Set(["png", "jpg", "jpeg", "gif", "webp", "image"]);
@@ -41,7 +42,7 @@ export default function FileCard({
           style={{ display: "inline-block" }}
         >
           <div className="relative w-[50%] rounded-lg border border-border">
-            <img
+            <AuthenticatedImage
               src={imgSrc}
               alt="generated image"
               className="m-0 h-auto w-auto rounded-lg border border-border p-0 transition-all"

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import { api } from "@/controllers/API/api";
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
 import { getBaseUrl } from "@/customization/utils/urls";
 import { createFileUpload } from "@/helpers/create-file-upload";
@@ -31,7 +32,18 @@ export default function IOFileInput({ field, updateValue }: IOFileInputProps) {
     if (field) {
       const fileName = field.split("/")[1];
       const flowFileId = currentFlowId.toString();
-      setImage(`${getBaseUrl()}files/images/${flowFileId}/${fileName}`);
+      const imageUrl = `${getBaseUrl()}files/images/${flowFileId}/${fileName}`;
+
+      // Fetch image with authentication
+      api
+        .get(imageUrl, { responseType: "blob" })
+        .then((response) => {
+          const objectUrl = URL.createObjectURL(response.data);
+          setImage(objectUrl);
+        })
+        .catch((err) => {
+          console.error("Failed to fetch authenticated image:", err);
+        });
     }
   }, []);
 
