@@ -114,7 +114,8 @@ class FileComponent(BaseFileComponent):
                 "Enable advanced document processing and export with Docling for PDFs, images, and office documents. "
                 "Note that advanced document processing can consume significant resources."
             ),
-            show=not is_astra_cloud_environment(),  # Disabled in cloud - Docling/EasyOCR not validated on Graviton ARM64
+            # Disabled in cloud environments
+            show=not is_astra_cloud_environment(),
         ),
         DropdownInput(
             name="pipeline",
