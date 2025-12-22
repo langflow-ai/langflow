@@ -187,7 +187,9 @@
           "targetHandle": {
             "fieldName": "model",
             "id": "BatchRunComponent-30WdR",
-            "inputTypes": [],
+            "inputTypes": [
+              "LanguageModel"
+            ],
             "type": "other"
           }
         },
@@ -196,7 +198,7 @@
         "source": "LanguageModelComponent-OvIt5",
         "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-OvIt5œ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
         "target": "BatchRunComponent-30WdR",
-        "targetHandle": "{œfieldNameœ: œmodelœ, œidœ: œBatchRunComponent-30WdRœ, œinputTypesœ: [], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œmodelœ, œidœ: œBatchRunComponent-30WdRœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -428,7 +430,9 @@
                 "display_name": "Language Model",
                 "dynamic": false,
                 "info": "Select your model provider",
-                "input_types": [],
+                "input_types": [
+                  "LanguageModel"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "model",
@@ -1033,7 +1037,9 @@
                   }
                 },
                 "info": "Select your model provider",
-                "input_types": [],
+                "input_types": [
+                  "LanguageModel"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "model_type": "language",
