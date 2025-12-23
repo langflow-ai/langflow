@@ -28,6 +28,21 @@ export default function TemplatesModal({
     setLoading(isCreating);
   };
 
+  const handleCreateBlankFlow = () => {
+    if (loading) return;
+
+    handleFlowCreating(true);
+    track("New Flow Created", { template: "Blank Flow" });
+
+    addFlow()
+      .then((id) => {
+        navigate(`/flow/${id}${folderId ? `/folder/${folderId}` : ""}`);
+      })
+      .finally(() => {
+        handleFlowCreating(false);
+      });
+  };
+
   // Define categories and their items
   const categories: Category[] = [
     {
@@ -96,20 +111,7 @@ export default function TemplatesModal({
                     </div>
                   </div>
                   <Button
-                    onClick={() => {
-                      if (loading) return;
-                      handleFlowCreating(true);
-                      addFlow()
-                        .then((id) => {
-                          navigate(
-                            `/flow/${id}${folderId ? `/folder/${folderId}` : ""}`,
-                          );
-                        })
-                        .finally(() => {
-                          handleFlowCreating(false);
-                        });
-                      track("New Flow Created", { template: "Blank Flow" });
-                    }}
+                    onClick={handleCreateBlankFlow}
                     size="sm"
                     data-testid="blank-flow"
                     className={cn(
