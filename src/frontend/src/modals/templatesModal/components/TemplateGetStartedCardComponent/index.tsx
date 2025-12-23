@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { convertTestName } from "@/components/common/storeCardComponent/utils/convert-test-name";
@@ -7,7 +6,13 @@ import { track } from "@/customization/utils/analytics";
 import useAddFlow from "@/hooks/flows/use-add-flow";
 import { useFolderStore } from "@/stores/foldersStore";
 import { updateIds } from "@/utils/reactflowUtils";
+import { cn } from "@/utils/utils";
 import type { CardData } from "../../../../types/templates/types";
+
+interface TemplateGetStartedCardComponentProps extends CardData {
+  loading: boolean;
+  onFlowCreating: (loading: boolean) => void;
+}
 
 export default function TemplateGetStartedCardComponent({
   bgImage,
@@ -15,7 +20,9 @@ export default function TemplateGetStartedCardComponent({
   icon,
   category,
   flow,
-}: CardData) {
+  loading,
+  onFlowCreating,
+}: TemplateGetStartedCardComponentProps) {
   const addFlow = useAddFlow();
   const navigate = useCustomNavigate();
   const { folderId } = useParams();
@@ -23,20 +30,18 @@ export default function TemplateGetStartedCardComponent({
 
   const folderIdUrl = folderId ?? myCollectionId;
 
-  const [loading, setLoading] = useState(false);
-
   const handleClick = () => {
     if (loading) return;
 
     if (flow) {
-      setLoading(true);
+      onFlowCreating(true);
       updateIds(flow.data!);
       addFlow({ flow })
         .then((id) => {
           navigate(`/flow/${id}/folder/${folderIdUrl}`);
         })
         .finally(() => {
-          setLoading(false);
+          onFlowCreating(false);
         });
 
       track("New Flow Created", { template: `${flow.name} Template` });
@@ -54,7 +59,10 @@ export default function TemplateGetStartedCardComponent({
 
   return flow ? (
     <div
-      className="group relative flex h-full min-h-[200px] w-full cursor-pointer flex-col overflow-hidden rounded-3xl border focus-visible:border-ring md:min-h-[250px]"
+      className={cn(
+        "group relative flex h-full min-h-[200px] w-full cursor-pointer flex-col overflow-hidden rounded-3xl border focus-visible:border-ring md:min-h-[250px]",
+        loading ? "cursor-default opacity-80" : "cursor-pointer",
+      )}
       tabIndex={1}
       onKeyDown={handleKeyDown}
       onClick={handleClick}

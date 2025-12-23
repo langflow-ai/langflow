@@ -7,6 +7,7 @@ import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
 import useAddFlow from "@/hooks/flows/use-add-flow";
 import type { Category } from "@/types/templates/types";
+import { cn } from "@/utils/utils";
 import type { newFlowModalPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
 import GetStartedComponent from "./components/GetStartedComponent";
@@ -22,6 +23,10 @@ export default function TemplatesModal({
   const addFlow = useAddFlow();
   const navigate = useCustomNavigate();
   const { folderId } = useParams();
+
+  const handleFlowCreating = (isCreating: boolean) => {
+    setLoading(isCreating);
+  };
 
   // Define categories and their items
   const categories: Category[] = [
@@ -70,11 +75,16 @@ export default function TemplatesModal({
             />
             <main className="flex flex-1 flex-col gap-4 overflow-auto p-6 md:gap-8">
               {currentTab === "get-started" ? (
-                <GetStartedComponent />
+                <GetStartedComponent
+                  loading={loading}
+                  onFlowCreating={handleFlowCreating}
+                />
               ) : (
                 <TemplateContentComponent
                   currentTab={currentTab}
                   categories={categories.flatMap((category) => category.items)}
+                  loading={loading}
+                  onFlowCreating={handleFlowCreating}
                 />
               )}
               <BaseModal.Footer>
@@ -88,7 +98,7 @@ export default function TemplatesModal({
                   <Button
                     onClick={() => {
                       if (loading) return;
-                      setLoading(true);
+                      handleFlowCreating(true);
                       addFlow()
                         .then((id) => {
                           navigate(
@@ -96,13 +106,16 @@ export default function TemplatesModal({
                           );
                         })
                         .finally(() => {
-                          setLoading(false);
+                          handleFlowCreating(false);
                         });
                       track("New Flow Created", { template: "Blank Flow" });
                     }}
                     size="sm"
                     data-testid="blank-flow"
-                    className="shrink-0"
+                    className={cn(
+                      "shrink-0",
+                      loading ? "cursor-default opacity-80" : "cursor-pointer",
+                    )}
                   >
                     <ForwardedIconComponent
                       name="Plus"
