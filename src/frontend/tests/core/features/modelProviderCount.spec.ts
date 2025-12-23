@@ -21,8 +21,6 @@ test.describe("ModelProviderCount Component", () => {
       await expect(
         page.getByText("Configure AI model providers and manage their API keys."),
       ).toBeVisible();
-        page.locator("div").getByText("Model Providers"),
-      ).toBeVisible();
     },
   );
 
