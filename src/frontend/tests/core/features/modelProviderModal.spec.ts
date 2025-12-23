@@ -19,7 +19,7 @@ test.describe("ModelProviderModal", () => {
 
       // Provider content should be visible
       await expect(
-        page.locator("div").getByText("Model Providers"),
+        page.getByText("Configure AI model providers and manage their API keys."),
       ).toBeVisible();
     },
   );
@@ -92,10 +92,10 @@ test.describe("ModelProviderModal", () => {
       // Navigate back
       await page.getByTestId("icon-ChevronLeft").first().click();
 
-      // Page should be closed/navigated away
+      // Page should be closed/navigated away - description text should not be visible
       await expect(
-        page.getByTestId("settings_menu_header").last(),
-      ).not.toContainText("Model Providers", { timeout: 3000 });
+        page.getByText("Configure AI model providers and manage their API keys."),
+      ).not.toBeVisible({ timeout: 3000 });
     },
   );
 
@@ -150,7 +150,7 @@ test.describe("ModelProviderModal", () => {
 
       // Content should be visible
       await expect(
-        page.locator("div").getByText("Model Providers"),
+        page.getByText("Configure AI model providers and manage their API keys."),
       ).toBeVisible();
     },
   );
