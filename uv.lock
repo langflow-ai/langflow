@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.10, <3.14"
 resolution-markers = [
     "python_full_version >= '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
@@ -5530,7 +5530,7 @@ wheels = [
 
 [[package]]
 name = "langflow"
-version = "1.7.0"
+version = "1.7.1"
 source = { editable = "." }
 dependencies = [
     { name = "agent-lifecycle-toolkit" },
@@ -5935,7 +5935,7 @@ dev = [
 
 [[package]]
 name = "langflow-base"
-version = "0.7.0"
+version = "0.7.1"
 source = { editable = "src/backend/base" }
 dependencies = [
     { name = "aiofile" },
@@ -6394,7 +6394,7 @@ wheels = [
 
 [[package]]
 name = "lfx"
-version = "0.2.0"
+version = "0.2.1"
 source = { editable = "src/lfx" }
 dependencies = [
     { name = "aiofile" },
@@ -6443,6 +6443,12 @@ dev = [
     { name = "pytest-asyncio" },
     { name = "pytest-cov" },
     { name = "ruff" },
+]
+integration = [
+    { name = "beautifulsoup4" },
+    { name = "langchain-community" },
+    { name = "langchain-openai" },
+    { name = "lxml" },
 ]
 
 [package.metadata]
@@ -6493,6 +6499,12 @@ dev = [
     { name = "pytest-asyncio", specifier = ">=0.26.0" },
     { name = "pytest-cov", specifier = ">=7.0.0" },
     { name = "ruff", specifier = ">=0.9.10" },
+]
+integration = [
+    { name = "beautifulsoup4", specifier = ">=4.12.0" },
+    { name = "langchain-community", specifier = ">=0.3.0,<1.0.0" },
+    { name = "langchain-openai", specifier = ">=0.3.0,<1.0.0" },
+    { name = "lxml", specifier = ">=5.0.0" },
 ]
 
 [[package]]

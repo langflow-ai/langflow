@@ -1,6 +1,6 @@
 [project]
 name = "lfx"
-version = "0.2.0"
+version = "0.2.1"
 description = "Langflow Executor - A lightweight CLI tool for executing and serving Langflow AI flows"
 readme = "README.md"
 authors = [
@@ -79,6 +79,13 @@ dev = [
     "pytest-asyncio>=0.26.0",
     "pytest-cov>=7.0.0",
     "ruff>=0.9.10",
+]
+integration = [
+    # Dependencies for running Simple Agent and other integration tests
+    "langchain-openai>=0.3.0,<1.0.0",
+    "langchain-community>=0.3.0,<1.0.0",
+    "beautifulsoup4>=4.12.0",
+    "lxml>=5.0.0",
 ]
 
 [tool.coverage.run]

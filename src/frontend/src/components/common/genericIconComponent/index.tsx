@@ -12,6 +12,14 @@ import { IconComponentProps } from "../../../types/components";
 import { getCachedIcon, getNodeIcon } from "../../../utils/styleUtils";
 import { cn } from "../../../utils/utils";
 
+type IconComponentType = React.ComponentType<{
+  className?: string;
+  style?: React.CSSProperties;
+  ref?: React.Ref<unknown>;
+  "data-testid"?: string;
+  isDark?: boolean;
+}>;
+
 export const ForwardedIconComponent = memo(
   forwardRef(
     (
@@ -33,7 +41,9 @@ export const ForwardedIconComponent = memo(
 
       const [showFallback, setShowFallback] = useState(false);
       const [iconError, setIconError] = useState(false);
-      const [TargetIcon, setTargetIcon] = useState<any>(getCachedIcon(name));
+      const [TargetIcon, setTargetIcon] = useState<IconComponentType | null>(
+        getCachedIcon(name) as IconComponentType | null,
+      );
 
       useEffect(() => {
         setIconError(false);
@@ -112,49 +122,47 @@ export const ForwardedIconComponent = memo(
         typeof TargetIcon === "function" ||
         (typeof TargetIcon === "object" &&
           TargetIcon !== null &&
-          // Check for various React component types:
-          // - $$typeof: lazy, forwardRef, memo components (Symbol.for('react.lazy'), etc.)
-          // - render: forwardRef components in some React versions
-          // - _payload: lazy component internals
-          // - type: wrapped components (memo wrapping forwardRef)
-          (TargetIcon.$$typeof ||
-            TargetIcon.render ||
-            TargetIcon._payload ||
-            TargetIcon.type));
+          (() => {
+            const targetIconObj = TargetIcon as {
+              $$typeof?: unknown;
+              render?: unknown;
+              _payload?: unknown;
+              type?: unknown;
+            };
+            return (
+              targetIconObj.$$typeof ||
+              targetIconObj.render ||
+              targetIconObj._payload ||
+              targetIconObj.type
+            );
+          })());
+      // Check for various React component types:
+      // - $$typeof: lazy, forwardRef, memo components (Symbol.for('react.lazy'), etc.)
+      // - render: forwardRef components in some React versions
+      // - _payload: lazy component internals
+      // - type: wrapped components (memo wrapping forwardRef))
+
+      const baseProps = {
+        className,
+        style,
+        "data-testid": dataTestId
+          ? dataTestId
+          : id
+            ? `${id}-${name}`
+            : `icon-${name}`,
+      };
+
+      const componentProps = { ...baseProps, ref };
+
+      const content = isValidComponent ? (
+        <TargetIcon {...componentProps} isDark={isDark} />
+      ) : (
+        <div {...baseProps}>{TargetIcon}</div>
+      );
 
       return (
         <Suspense fallback={skipFallback ? undefined : fallback}>
-          <ErrorBoundary onError={handleError}>
-            {isValidComponent ? (
-              <TargetIcon
-                className={className}
-                style={style}
-                ref={ref}
-                isDark={isDark}
-                data-testid={
-                  dataTestId
-                    ? dataTestId
-                    : id
-                      ? `${id}-${name}`
-                      : `icon-${name}`
-                }
-              />
-            ) : (
-              <div
-                className={className}
-                style={style}
-                data-testid={
-                  dataTestId
-                    ? dataTestId
-                    : id
-                      ? `${id}-${name}`
-                      : `icon-${name}`
-                }
-              >
-                {TargetIcon}
-              </div>
-            )}
-          </ErrorBoundary>
+          <ErrorBoundary onError={handleError}>{content}</ErrorBoundary>
         </Suspense>
       );
     },

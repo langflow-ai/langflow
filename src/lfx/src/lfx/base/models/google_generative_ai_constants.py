@@ -8,14 +8,12 @@ GOOGLE_GENERATIVE_AI_MODELS_DETAILED = [
         name="gemini-1.5-pro",
         icon="GoogleGenerativeAI",
         tool_calling=True,
-        default=True,
     ),
     create_model_metadata(
         provider="Google Generative AI",
         name="gemini-1.5-flash",
         icon="GoogleGenerativeAI",
         tool_calling=True,
-        default=True,
     ),
     create_model_metadata(
         provider="Google Generative AI", name="gemini-1.5-flash-8b", icon="GoogleGenerativeAI", tool_calling=True
@@ -26,7 +24,6 @@ GOOGLE_GENERATIVE_AI_MODELS_DETAILED = [
         name="gemini-2.0-flash-lite",
         icon="GoogleGenerativeAI",
         tool_calling=True,
-        default=True,
     ),
     # GEMINI 2.5 (future/not yet released)
     create_model_metadata(
