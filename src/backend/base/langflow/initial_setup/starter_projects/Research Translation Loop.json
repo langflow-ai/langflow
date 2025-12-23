@@ -1577,6 +1577,7 @@
               "Message"
             ],
             "beta": false,
+            "category": "models_and_agents",
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Extracts text using a template.",
