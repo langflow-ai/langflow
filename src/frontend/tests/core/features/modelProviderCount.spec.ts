@@ -109,6 +109,8 @@ test.describe("ModelProviderCount Component", () => {
       ).not.toBeVisible({ timeout: 3000 });
 
       // Second navigation - open page again
+      await page.getByTestId("user-profile-settings").click();
+      await page.getByText("Settings").first().click();
       await page.getByText("Model Providers").first().click();
       await expect(
         page.getByTestId("settings_menu_header").last(),
