@@ -1,4 +1,9 @@
-import { type Dispatch, type SetStateAction, useState } from "react";
+import React, {
+  type Dispatch,
+  ReactNode,
+  type SetStateAction,
+  useState,
+} from "react";
 import { useHref } from "react-router-dom";
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltipComponent from "@/components/common/shadTooltipComponent";
@@ -26,11 +31,13 @@ import { cn } from "@/utils/utils";
 type PublishDropdownProps = {
   openApiModal: boolean;
   setOpenApiModal: Dispatch<SetStateAction<boolean>>;
+  children?: ReactNode;
 };
 
 export default function PublishDropdown({
   openApiModal,
   setOpenApiModal,
+  children,
 }: PublishDropdownProps) {
   const location = useHref("/");
   const domain = window.location.origin + location;
@@ -210,7 +217,7 @@ export default function PublishDropdown({
         </DropdownMenuContent>
       </DropdownMenu>
       <ApiModal open={openApiModal} setOpen={setOpenApiModal}>
-        <></>
+        <>{children}</>
       </ApiModal>
       <EmbedModal
         open={openEmbedModal}
