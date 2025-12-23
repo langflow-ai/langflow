@@ -1,0 +1,63 @@
+---
+title: Security
+slug: /security
+---
+
+The Langflow UI is an IDE and code execution platform, which means that Langflow is inherently capable of executing arbitrary,
+developer-provided code.
+By design, the Langflow UI includes a code editor allowing developers to author and execute arbitrary Python with full access to the host
+Langflow backend process, filesystem, and network.
+In addition, some components wrap and use code execution, including use of AI models to generate code to be executed based
+on user input.
+
+Langflow neither enforces isolation between users within a single Langflow process, nor restricts access to the local disk or network resources. Flow visibility and user access controls are designed for usability, not security enforcement. Users can access underlying database connections and system resources directly. For multi-tenant deployments, Langflow relies on infrastructure-level security rather than application-level isolation, which means it is your responsibility to enforce tenant isolation.
+
+:::warning
+You are responsible for the following:
+
+* Enforcing comprehensive infrastructure isolation.
+* Running flows safely, particularly flows that use LLM-generated code or user inputs that could contain user-submitted code.
+* Ensuring that end-user interactions with Langflow-backed APIs are secure from end-to-end, including data at rest and in transit.
+:::
+
+## Secure Langflow during local development
+
+Langflow is a code execution platform with full access to your local system.
+You are responsible for ensuring the safety of flows you execute.
+
+In the event that Langflow could execute untrusted or LLM-generated code, consider using isolated or containerized execution environments. For more information, see [Containerize a Langflow application](/develop-application).
+
+## Secure first-party deployments
+
+When you are serving APIs backed by flows that you or your organization authored, you are responsible for ensuring Langflow-based APIs provide security to your end users.
+
+Follow industry best practices for APIs:
+
+* Use a secure API gateway to provide authentication and authorization
+* Ensure user data is appropriately isolated
+* Sanitize inputs and outputs against XSS and injection attacks, including regex patterns to prevent ReDoS vulnerabilities
+
+For more information on setting up a reverse proxy, see [Deploy Langflow with Nginx and SSL](/deployment-nginx-ssl).
+For more information on authentication configuration, see [API keys and authentication](/api-keys-and-authentication).
+
+## Secure third-party deployments
+
+If you provide Langflow as a service to third parties, you must assume that any code executed by Langflow could be potentially malicious.
+
+Langflow provides no isolation between tenants, so it's your responsibility to enforce isolation at the infrastructure level.
+
+* Use process-level isolation to prevent tenants from sharing a single Langflow process.
+* Use disk-level isolation to prevent shared access to writable persistent storage.
+* Use network-level isolation to prevent access to private networks.
+* Use database-level isolation to prevent access to or modification of shared database resources.
+
+Authentication and authorization must be provided and enforced outside of the Langflow container.
+For shared services, such as databases, enforce access limitations externally through credentials and security policies.
+
+For more information, see [Best practices for Langflow on Kubernetes](/deployment-prod-best-practices).
+
+## Security bulletin
+
+For the most up-to-date information about security vulnerabilities, fixes, and CVEs, see the [Langflow Security Policy](https://github.com/langflow-ai/langflow/blob/main/SECURITY.md) and [Langflow GitHub Security Advisories](https://github.com/langflow-ai/langflow/security/advisories).
+
+If you discover a security vulnerability in Langflow, the Langflow team encourages you to report it responsibly through the [GitHub Security tab](https://github.com/langflow-ai/langflow/security). Please don't publicly disclose vulnerabilities until they have been assessed and resolved.

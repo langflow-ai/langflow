@@ -105,6 +105,18 @@ const config = {
           routeBasePath: "/", // Serve the docs at the site's root
           sidebarPath: require.resolve("./sidebars.js"), // Use sidebars.js file
           sidebarCollapsed: true,
+          // Versioning configuration
+          lastVersion: '1.7.0',
+          versions: {
+            current: {
+              label: '1.8.x', // Work-in-progress version (will become next release)
+              path: 'next',
+            },
+            '1.7.0': {
+              label: '1.7.x',
+            },
+          },
+          onlyIncludeVersions: ['current', '1.7.0'], // Include both versions
           beforeDefaultRemarkPlugins: [
             [
               remarkCodeHike,
@@ -168,6 +180,7 @@ const config = {
     [
       "@docusaurus/plugin-client-redirects",
       {
+        // Docusaurus automatically resolves redirects to the version set by lastVersion
         redirects: [
           {
             to: "/",
@@ -407,6 +420,10 @@ const config = {
           srcDark: "img/lf-docs-dark.svg",
         },
         items: [
+          {
+            type: 'docsVersionDropdown',
+            position: 'right',
+          },
           // right
           {
             position: "right",

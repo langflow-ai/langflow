@@ -1,0 +1,91 @@
+---
+title: Contribute templates
+slug: /contributing-templates
+---
+
+import Icon from "@site/src/components/icon";
+
+Follow these best practices when submitting a template to Langflow.
+
+For template formatting examples, see [`/starter_projects`](https://github.com/langflow-ai/langflow/tree/main/src/backend/base/langflow/initial_setup/starter_projects) in the Langflow repository.
+
+## Create a PR to submit your template
+
+Follow these steps to submit your template:
+
+1. Fork the [Langflow repository](https://github.com/langflow-ai/langflow) on GitHub.
+2. On your fork, add your `template.json` file to `/starter_projects`.
+3. Include the [required items for template submission](#required-items-for-template-submission).
+4. Create a Pull Request (PR) from your fork to the main Langflow repository.
+5. Include a screenshot of your template in the PR.
+
+The Langflow team will review your PR, offer feedback, and, if approved, merge the template.
+
+## Required items for template submission
+
+Include the following items and follow these guidelines when submitting your template.
+
+### Name
+
+The template name must be concise and contain no more than three words.
+Capitalize only the first letter of each word.
+For example: **Blog Writer** or **Travel Planning Agent**.
+
+### Description
+
+A brief, informative description that is shown in the visual editor to help users understand the template's purpose and use cases.
+For example:
+
+```json
+   "description": "Auto-generate a customized blog post from instructions and referenced articles.",
+```
+
+### Icons
+
+Use icons from the [Lucide](https://lucide.dev/icons/) icon library.
+
+### Flow
+
+Use only <Icon name="Component" aria-hidden="true" /> **Core components** and <Icon name="Blocks" aria-hidden="true" /> **Bundles**.
+Don't use custom components that aren't part of the Langflow codebase.
+
+Include brief README, quickstart, or other essential details in a <Icon name="StickyNote" aria-hidden="true"/> **Note**. Notes accept Markdown syntax.
+For example:
+
+```text
+# Financial Assistant Agents
+
+The Financial Assistant Agent retrieves web content and writes reports about finance.
+
+## Prerequisites
+
+* [OpenAI API key](https://platform.openai.com/api-keys)
+* [Tavily AI Search key](https://docs.tavily.com/welcome)
+* [Sambanova API key](https://sambanova.ai/)
+
+## Quickstart
+
+1. In both **Agent** components, add your OpenAI API key.
+2. In the **Model Provider** field, select **Sambanova**, and select a model.
+3. In the **Sambanova** component, add your **Sambanova API key**.
+4. In the **Tavily Search** component, add your **Tavily API key**.
+5. Click the **Playground** and ask `Why did Nvidia stock drop in January?`
+```
+
+### Format
+
+Submit the template in JSON format.
+
+### Tags
+Assign the template to one of the following categories:
+
+- Assistants
+- Classification
+- Coding
+- Content Generation
+- Q&A
+- Prompting
+- RAG
+- Agents
+
+For more information, see the Langflow repository's [template categories](https://github.com/langflow-ai/langflow/blob/main/src/frontend/src/modals/templatesModal/index.tsx#L27-L57).

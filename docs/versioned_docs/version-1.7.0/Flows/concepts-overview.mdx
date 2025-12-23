@@ -1,0 +1,80 @@
+---
+title: Use the visual editor
+slug: /concepts-overview
+---
+
+import Icon from "@site/src/components/icon";
+
+You use Langflow's visual editor to create, test, and share flows, which are functional representations of application workflows.
+Flows consist of components that represent individual steps in your application's workflow.
+
+Langflow's drag-and-drop interface allows you to create complex AI workflows without writing extensive code.
+You can connect different resources, including prompts, large language models (LLMs), data sources, agents, MCP servers, and other tools and integrations.
+
+:::tip
+To try building and running a flow in a few minutes, see the [Langflow quickstart](/get-started-quickstart).
+:::
+
+## Workspace
+
+When building a [flow](/concepts-flows), you primarily interact with the workspace.
+This is where you add [components](/concepts-components), configure them, and attach them together.
+
+![Empty Langflow workspace](/img/workspace.png)
+
+From the workspace, you can also access the [**Playground**](#playground), [**Share** menu](#share-menu), and [**Logs**](/logging).
+
+### Workspace gestures and interactions
+
+Use these shortcuts, gestures, and functionality to navigate the workspace:
+
+- **Pan horizontally and vertically**: Click and drag an empty area of the workspace.
+
+- **Rearrange components**: Click and drag the components anywhere on the workspace.
+
+    To change the programmatic relationship between components, you must manipulate the component _edges_ or _ports_. For more information, see [Components overview](/concepts-components).
+
+    To enable guide lines, click <Icon name="CircleQuestionMark" aria-hidden="true" /> **Help**, and then toggle **Enable smart guides**.
+
+    If you can't edit any components, make sure the flow is [unlocked](/concepts-flows#lock-a-flow).
+
+- **Zoom**: Scroll on the mouse or trackpad, or click <Icon name="ChevronUp" aria-hidden="true" /> **Canvas controls** next to the zoom percentage more zoom options: **Zoom In**, **Zoom Out**, **Zoom To 100%**, and **Zoom To Fit**.
+
+- **Add notes and comments**: Click <Icon name="StickyNote" aria-hidden="true"/> **Add Note**.
+
+- **Keyboard shortcuts**: To view available shortcuts, click <Icon name="CircleQuestionMark" aria-hidden="true" /> **Help**, and then select **Shortcuts**.
+
+## Playground
+
+If your flow has a **Chat Input** component, you can use the **Playground** to run your flow, chat with your flow, view inputs and outputs, and modify the LLM's memories to tune the flow's responses in real time.
+
+To try this for yourself, create a flow based on the **Basic Prompting** template, and then click <Icon name="Play" aria-hidden="true"/> **Playground** when editing the flow in the workspace.
+
+![Playground](/img/playground.png)
+
+If you have an **Agent** component in your flow, the **Playground** displays its tool calls and outputs so you can monitor the agent's tool use and understand the reasoning behind its responses.
+To try an agent flow in the **Playground**, use the **Simple Agent** template or the [Langflow quickstart](/get-started-quickstart).
+
+![Playground with agent response](/img/playground-with-agent.png)
+
+For more information, see [Test flows in the Playground](/concepts-playground).
+
+## Share {#share-menu}
+
+The **Share** menu provides the following options for integrating your flow into external applications:
+
+* [**API access**](/concepts-publish#api-access): Integrate your flow into your applications with automatically-generated Python, JavaScript, and curl code snippets.
+* [**Export**](/concepts-flows-import#export-a-flow): Export your flow to your local machine as a JSON file.
+* [**MCP Server**](/mcp-server): Expose your flow as a tool for MCP-compatible clients.
+* [**Embed into site**](/concepts-publish#embedded-chat-widget): Embed your flow in HTML, React, or Angular applications.
+* [**Shareable Playground**](/concepts-playground#share-a-flows-playground): Share your **Playground** interface with another user.
+
+    This is specifically for sharing the **Playground** experience; it isn't for running a flow in a production application.
+
+    The **Sharable Playground** isn't available for Langflow Desktop.
+
+## See also
+
+* [Manage files in Langflow](/concepts-file-management)
+* [Global variables](/configuration-global-variables)
+* [API keys and authentication](/api-keys-and-authentication)
