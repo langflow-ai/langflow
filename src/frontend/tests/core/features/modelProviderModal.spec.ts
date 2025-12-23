@@ -18,7 +18,9 @@ test.describe("ModelProviderModal", () => {
       ).toContainText("Model Providers", { timeout: 5000 });
 
       // Provider content should be visible
-      await expect(page.locator("div").getByText("Model Providers")).toBeVisible();
+      await expect(
+        page.locator("div").getByText("Model Providers"),
+      ).toBeVisible();
     },
   );
 
@@ -68,7 +70,9 @@ test.describe("ModelProviderModal", () => {
         await page.waitForTimeout(500);
 
         // The page content should be visible
-        await expect(page.locator('[data-testid^="provider-item-"]').first()).toBeVisible();
+        await expect(
+          page.locator('[data-testid^="provider-item-"]').first(),
+        ).toBeVisible();
       }
     },
   );
@@ -145,7 +149,9 @@ test.describe("ModelProviderModal", () => {
       ).toContainText("Model Providers", { timeout: 5000 });
 
       // Content should be visible
-      await expect(page.locator("div").getByText("Model Providers")).toBeVisible();
+      await expect(
+        page.locator("div").getByText("Model Providers"),
+      ).toBeVisible();
     },
   );
 });

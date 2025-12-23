@@ -18,7 +18,9 @@ test.describe("ModelProviderCount Component", () => {
       ).toContainText("Model Providers", { timeout: 5000 });
 
       // Page should contain provider list content
-      await expect(page.locator("div").getByText("Model Providers")).toBeVisible();
+      await expect(
+        page.locator("div").getByText("Model Providers"),
+      ).toBeVisible();
     },
   );
 
