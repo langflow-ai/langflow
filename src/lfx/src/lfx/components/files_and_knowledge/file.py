@@ -189,7 +189,8 @@ class FileComponent(BaseFileComponent):
                 "Enable advanced document processing and export with Docling for PDFs, images, and office documents. "
                 "Note that advanced document processing can consume significant resources."
             ),
-            show=True,
+            # Disabled in cloud
+            show=not is_astra_cloud_environment(),
         ),
         DropdownInput(
             name="pipeline",
@@ -345,6 +346,20 @@ class FileComponent(BaseFileComponent):
         """Return the list of currently selected file paths from the template."""
         return template.get("path", {}).get("file_path", [])
 
+    def _disable_docling_fields_in_cloud(self, build_config: dict[str, Any]) -> None:
+        """Disable all Docling-related fields in cloud environments."""
+        if "advanced_mode" in build_config:
+            build_config["advanced_mode"]["show"] = False
+            build_config["advanced_mode"]["value"] = False
+        # Hide all Docling-related fields
+        docling_fields = ("pipeline", "ocr_engine", "doc_key", "md_image_placeholder", "md_page_break_placeholder")
+        for field in docling_fields:
+            if field in build_config:
+                build_config[field]["show"] = False
+        # Also disable OCR engine specifically
+        if "ocr_engine" in build_config:
+            build_config["ocr_engine"]["value"] = "None"
+
     def update_build_config(
         self,
         build_config: dict[str, Any],
@@ -422,25 +437,50 @@ class FileComponent(BaseFileComponent):
         if field_name == "path":
             paths = self._path_value(build_config)
 
-            # If all files can be processed by docling, do so
-            allow_advanced = all(not file_path.endswith((".csv", ".xlsx", ".parquet")) for file_path in paths)
-            build_config["advanced_mode"]["show"] = allow_advanced
-            if not allow_advanced:
-                build_config["advanced_mode"]["value"] = False
-                for f in ("pipeline", "ocr_engine", "doc_key", "md_image_placeholder", "md_page_break_placeholder"):
-                    if f in build_config:
-                        build_config[f]["show"] = False
+            # Disable in cloud environments
+            if is_astra_cloud_environment():
+                self._disable_docling_fields_in_cloud(build_config)
+            else:
+                # If all files can be processed by docling, do so
+                allow_advanced = all(not file_path.endswith((".csv", ".xlsx", ".parquet")) for file_path in paths)
+                build_config["advanced_mode"]["show"] = allow_advanced
+                if not allow_advanced:
+                    build_config["advanced_mode"]["value"] = False
+                    docling_fields = (
+                        "pipeline",
+                        "ocr_engine",
+                        "doc_key",
+                        "md_image_placeholder",
+                        "md_page_break_placeholder",
+                    )
+                    for field in docling_fields:
+                        if field in build_config:
+                            build_config[field]["show"] = False
 
         # Docling Processing
         elif field_name == "advanced_mode":
-            for f in ("pipeline", "ocr_engine", "doc_key", "md_image_placeholder", "md_page_break_placeholder"):
-                if f in build_config:
-                    build_config[f]["show"] = bool(field_value)
-                    if f == "pipeline":
-                        build_config[f]["advanced"] = not bool(field_value)
+            # Disable in cloud environments - don't show Docling fields even if advanced_mode is toggled
+            if is_astra_cloud_environment():
+                self._disable_docling_fields_in_cloud(build_config)
+            else:
+                docling_fields = (
+                    "pipeline",
+                    "ocr_engine",
+                    "doc_key",
+                    "md_image_placeholder",
+                    "md_page_break_placeholder",
+                )
+                for field in docling_fields:
+                    if field in build_config:
+                        build_config[field]["show"] = bool(field_value)
+                        if field == "pipeline":
+                            build_config[field]["advanced"] = not bool(field_value)
 
         elif field_name == "pipeline":
-            if field_value == "standard":
+            # Disable in cloud environments - don't show OCR engine even if pipeline is changed
+            if is_astra_cloud_environment():
+                self._disable_docling_fields_in_cloud(build_config)
+            elif field_value == "standard":
                 build_config["ocr_engine"]["show"] = True
                 build_config["ocr_engine"]["value"] = "easyocr"
             else:
@@ -1043,10 +1083,16 @@ class FileComponent(BaseFileComponent):
             for file in file_list:
                 extension = file.path.suffix[1:].lower()
                 if extension in self.DOCLING_ONLY_EXTENSIONS:
-                    msg = (
-                        f"File '{file.path.name}' has extension '.{extension}' which requires "
-                        f"Advanced Parser mode. Please enable 'Advanced Parser' to process this file."
-                    )
+                    if is_astra_cloud_environment():
+                        msg = (
+                            f"File '{file.path.name}' has extension '.{extension}' which requires "
+                            f"Advanced Parser mode. Advanced Parser is not available in cloud environments."
+                        )
+                    else:
+                        msg = (
+                            f"File '{file.path.name}' has extension '.{extension}' which requires "
+                            f"Advanced Parser mode. Please enable 'Advanced Parser' to process this file."
+                        )
                     self.log(msg)
                     raise ValueError(msg)
 
