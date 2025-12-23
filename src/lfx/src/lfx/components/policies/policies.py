@@ -1,9 +1,7 @@
 from os.path import join
-from typing import Any
 
 from lfx.base.models import LCModelComponent
 from lfx.components.policies.wrapped_tool import WrappedTool
-from lfx.custom.custom_component.component import Component
 
 from lfx.base.models.unified_models import (
     get_language_model_options,
@@ -14,13 +12,10 @@ from lfx.field_typing import LanguageModel
 
 from lfx.field_typing import Tool
 from lfx.inputs.inputs import BoolInput, MessageTextInput
-from lfx.io import HandleInput, MessageTextInput, Output, SecretStrInput, TabInput, SliderInput
-from toolguard import LitellmModel, ToolGuardsCodeGenerationResult, ToolGuardSpec, load_toolguards
+from lfx.io import HandleInput, MessageTextInput, Output, SecretStrInput, TabInput
+from toolguard import LitellmModel, ToolGuardsCodeGenerationResult, ToolGuardSpec, load_toolguards, I_TG_LLM
 from toolguard.buildtime import generate_guard_specs, generate_guards_from_specs
-from lfx.field_typing.range_spec import RangeSpec
-
 from toolguard.data_types import MelleaSessionData
-from toolguard.runtime import LangchainToolInvoker
 
 from lfx.io import ModelInput
 from lfx.log.logger import logger
@@ -124,11 +119,9 @@ Powered by [ToolGuard](https://github.com/IBM/toolguard)"""
             field_name=field_name,
             field_value=field_value,
         )
-
-    async def _build_guard_specs(self) -> list[ToolGuardSpec]:
-        logger.info(f"🔒️ToolGuard: Starting step 1")
-        logger.info(f"model = {self.model}")
-        llm = LitellmModel(
+    
+    def _get_step1_llm(self)->I_TG_LLM:
+        return LitellmModel(
             model_name=self.model[0].get("name"), 
             provider=self.model[0].get("provider").lower(),
             kw_args={
@@ -136,19 +129,28 @@ Powered by [ToolGuard](https://github.com/IBM/toolguard)"""
                 'api_key': self.api_key
             }
         )
+    
+    async def _build_guard_specs(self) -> list[ToolGuardSpec]:
+        logger.info(f"🔒️ToolGuard: Starting step 1")
+        logger.info(f"model = {self.model}")
+        llm = self._get_step1_llm()
         toolguard_step1_dir = join(self.guard_code_path, STEP1)
+        policy_text = "\n".join(self.policies)
         specs = await generate_guard_specs(
-            policy_text=self.policies, tools=self.in_tools, llm=llm, work_dir=toolguard_step1_dir
+            policy_text=policy_text, 
+            tools=self.in_tools,
+            llm=llm, 
+            work_dir=toolguard_step1_dir
         )
         logger.info(f"🔒️ToolGuard: Step 1 Done")
         return specs
 
-    def mellea_session(self )->MelleaSessionData: 
+    def _get_mellea_session(self )->MelleaSessionData: 
         return MelleaSessionData(
             backend_name=self.model[0].get("provider").lower(),
             model_id=self.model[0].get("name"),
             kw_args={
-                "base_url": "",
+                "base_url": "https://ete-litellm.bx.cloud9.ibm.com",
                 "api_key": self.api_key
             }
         )
@@ -160,7 +162,7 @@ Powered by [ToolGuard](https://github.com/IBM/toolguard)"""
             tools=self.in_tools,
             tool_specs=specs,
             work_dir=out_dir,
-            llm_data=self.mellea_session()
+            llm_data=self._get_mellea_session()
         )
         logger.info(f"🔒️ToolGuard: Step 2 Done")
         return gen_result
@@ -177,7 +179,7 @@ Powered by [ToolGuard](https://github.com/IBM/toolguard)"""
         if not self.bypass_policies:
             build_mode = getattr(self, "build_mode", BUILD_MODE_GENERATE)
             if build_mode == BUILD_MODE_GENERATE:  # run buildtime steps
-                logger.info("🔒️ToolGuard: execution (build) mode", name="info")
+                logger.info("🔒️ToolGuard: execution (build) mode")
                 specs  = await self._build_guard_specs()
                 guards = await self._build_guards(specs)
                 self.guard_code_path = guards.out_dir
@@ -186,7 +188,6 @@ Powered by [ToolGuard](https://github.com/IBM/toolguard)"""
                 # make sure self.guard_code_path contains the path to pre-built guards
                 # assert self.guard_code_path, "🔒️ToolGuard: guard path should be a valid code path!"
 
-            guards = None
             guarded_tools = [WrappedTool(tool, self.in_tools, self.guard_code_path) for tool in self.in_tools]
             return guarded_tools  # type: ignore
 

@@ -136,7 +136,8 @@ dependencies = [
     "traceloop-sdk>=0.43.1,<1.0.0",
     "vlmrun[all]>=0.2.0",
     "cuga~=0.2.6",
-    "toolguard>=0.1.7",
+    "toolguard>=0.1.10",
+    "apscheduler",
     "agent-lifecycle-toolkit~=0.4.4",
     "astrapy>=2.1.0,<3.0.0",
     "aioboto3>=15.2.0,<16.0.0"
