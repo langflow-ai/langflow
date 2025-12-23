@@ -1965,8 +1965,59 @@ async def call_workflow_tool(
         node_id = str(arguments.get("node_id", "")).strip()
 
         if not node_id:
-            msg = "node_id is required"
-            raise WorkflowEditError(msg)
+            # If the caller cannot provide node_id (some providers emit empty tool arguments),
+            # return code for all nodes that actually have editable source code.
+            flow = await _get_flow_for_user(flow_id=flow_id, user_id=user_id)
+            payload = flow.data or {}
+            nodes = _ensure_list(payload.get("nodes", []), name="nodes")
+
+            candidates: list[dict[str, Any]] = []
+            for node in nodes:
+                node_id_candidate = str(node.get("id") or "")
+                node_data = node.get("data", {}) if isinstance(node.get("data"), dict) else {}
+                node_inner = node_data.get("node", {}) if isinstance(node_data.get("node"), dict) else {}
+                template = node_inner.get("template", {}) if isinstance(node_inner.get("template"), dict) else {}
+                code_field = template.get("code")
+                if not isinstance(code_field, dict):
+                    continue
+                code_value = code_field.get("value", "")
+                if not isinstance(code_value, str) or not code_value.strip():
+                    continue
+
+                max_chars = 6000
+                truncated = len(code_value) > max_chars
+                code_out = code_value[:max_chars]
+
+                candidates.append(
+                    {
+                        "node_id": node_id_candidate,
+                        "type": node_data.get("type"),
+                        "display_name": node_data.get("display_name"),
+                        "description": node_inner.get("description", ""),
+                        "has_code": True,
+                        "code": code_out,
+                        "truncated": truncated,
+                        "code_info": {
+                            "lines": len(code_value.split("\n")) if code_value else 0,
+                            "chars": len(code_value) if code_value else 0,
+                        },
+                    }
+                )
+
+            # Keep payload bounded to avoid huge tool outputs
+            max_nodes = 5
+            candidates = candidates[:max_nodes]
+
+            result = {
+                "node_id": None,
+                "has_code": len(candidates) > 0,
+                "message": (
+                    "node_id was not provided. Returning code for nodes that have editable source code. "
+                    "If you need a specific node, call lf_workflow_get and pass node_id explicitly."
+                ),
+                "candidates": candidates,
+            }
+            return [types.TextContent(type="text", text=_json_dumps(result))]
 
         flow = await _get_flow_for_user(flow_id=flow_id, user_id=user_id)
         payload = flow.data or {}
@@ -2231,7 +2282,10 @@ async def call_workflow_tool(
 
         component_type = (arguments.get("component_type") or "").strip()
         if not component_type:
-            msg = "component_type is required"
+            msg = (
+                "component_type is required (e.g., 'ChatInput', 'Agent', 'QueryRouterModel'). "
+                "If you only have a workflow node, call lf_workflow_get and use node.data.type."
+            )
             raise WorkflowEditError(msg)
 
         all_types = await get_and_cache_all_types_dict(settings_service=get_settings_service())
@@ -2267,10 +2321,17 @@ async def call_workflow_tool(
         do_refresh = arguments.get("refresh", True)
 
         if not node_id:
-            msg = "node_id is required"
+            msg = (
+                "node_id is required. "
+                "Call lf_workflow_get with the same flow_id, find the target node in 'nodes', "
+                "and pass its 'id' as node_id."
+            )
             raise WorkflowEditError(msg)
         if not field_name:
-            msg = "field_name is required"
+            msg = (
+                "field_name is required (template field key, e.g., 'model_name'). "
+                "Use lf_get_component_info(component_type=...) or inspect the node template via lf_workflow_get."
+            )
             raise WorkflowEditError(msg)
 
         # Fields that trigger dynamic model updates
@@ -2372,7 +2433,7 @@ async def call_workflow_tool(
             search_documentation,
         )
 
-        action = str(arguments.get("action", "")).strip()
+        action = str(arguments.get("action", "")).strip().lower()
         if not action:
             msg = "action is required (one of: 'index', 'search', 'read')"
             raise WorkflowEditError(msg)

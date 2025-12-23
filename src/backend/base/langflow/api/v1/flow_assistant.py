@@ -20,10 +20,28 @@ from langflow.services.deps import get_variable_service, session_scope
 
 router = APIRouter(prefix="/flow-assistant", tags=["Flow Assistant"])
 
-QUERYROUTER_BASE_URL = "https://api.queryrouter.ru/v1"
+DEFAULT_QUERYROUTER_BASE_URL = "https://api.queryrouter.ru/v1"
 FLOW_ID_REQUIRED_TOOL_NAMES: set[str] = {
     t.name for t in WORKFLOW_MCP_TOOLS if "flow_id" in (t.input_schema.get("required") or [])
 }
+TOOL_REQUIRED_FIELDS: dict[str, set[str]] = {
+    t.name: set(t.input_schema.get("required") or []) for t in WORKFLOW_MCP_TOOLS
+}
+
+
+def _missing_required_fields(tool_name: str, tool_args: dict[str, Any]) -> list[str]:
+    required = TOOL_REQUIRED_FIELDS.get(tool_name) or set()
+    if not required:
+        return []
+    missing: list[str] = []
+    for k in sorted(required):
+        v = tool_args.get(k)
+        if v is None:
+            missing.append(k)
+            continue
+        if isinstance(v, str) and not v.strip():
+            missing.append(k)
+    return missing
 
 
 def _get_max_iterations() -> int:
@@ -137,6 +155,36 @@ def _normalize_tool_call_arguments(tool_calls: list[dict[str, Any]]) -> list[dic
     return normalized
 
 
+def _parse_tool_arguments(raw: Any) -> tuple[dict[str, Any], str | None]:
+    """Parse tool arguments from various provider formats.
+
+    Some providers return non-JSON or incomplete JSON in streaming mode.
+    We must not silently default to {} on parse errors, otherwise required
+    parameters appear as missing and the model cannot self-correct.
+    """
+    if raw is None:
+        return {}, None
+    if isinstance(raw, dict):
+        return raw, None
+    if not isinstance(raw, str):
+        return {}, f"Invalid tool arguments type: {type(raw).__name__}"
+
+    s = raw.strip()
+    if not s:
+        return {}, None
+
+    try:
+        parsed = json.loads(s)
+    except Exception as exc:  # noqa: BLE001
+        snippet = s[:500]
+        return {}, f"Invalid JSON in tool arguments: {exc!s}. Raw: {snippet}"
+
+    if not isinstance(parsed, dict):
+        return {}, f"Tool arguments must be a JSON object, got {type(parsed).__name__}"
+
+    return parsed, None
+
+
 def _assistant_message_to_openai_dict(m: AssistantMessage) -> dict[str, Any]:
     msg: dict[str, Any] = {"role": m.role, "content": m.content or ""}
     if m.tool_calls is not None:
@@ -179,6 +227,40 @@ def _get_queryrouter_api_key_from_env() -> str | None:
     return None
 
 
+def _normalize_queryrouter_base_url(raw: str) -> str | None:
+    s = (raw or "").strip()
+    if not s:
+        return None
+    s = s.rstrip("/")
+    if not s.endswith("/v1"):
+        s = f"{s}/v1"
+    return s
+
+
+def _get_queryrouter_base_url_from_env() -> str | None:
+    env_url = os.getenv("QUERYROUTER_BASE_URL", "").strip()
+    return _normalize_queryrouter_base_url(env_url)
+
+
+async def _get_queryrouter_base_url_for_user(*, user_id: UUID) -> str:
+    async with session_scope() as session:
+        variable_service = get_variable_service()
+        try:
+            url = await variable_service.get_variable(
+                user_id=user_id,
+                name="QUERYROUTER_BASE_URL",
+                field="queryrouter_base_url",
+                session=session,
+            )
+            normalized = _normalize_queryrouter_base_url(url or "")
+            if normalized:
+                return normalized
+        except Exception as exc:  # noqa: BLE001
+            await logger.awarning(f"Failed to load QUERYROUTER_BASE_URL global variable: {exc!s}")
+
+    return _get_queryrouter_base_url_from_env() or DEFAULT_QUERYROUTER_BASE_URL
+
+
 async def _get_queryrouter_api_key_for_user(*, user_id: UUID) -> str | None:
     async with session_scope() as session:
         variable_service = get_variable_service()
@@ -201,10 +283,10 @@ def _queryrouter_headers(api_key: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {api_key}"}
 
 
-async def _fetch_queryrouter_models(api_key: str) -> list[dict[str, Any]]:
+async def _fetch_queryrouter_models(*, api_key: str, base_url: str) -> list[dict[str, Any]]:
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.get(f"{QUERYROUTER_BASE_URL}/models", headers=_queryrouter_headers(api_key))
+            resp = await client.get(f"{base_url}/models", headers=_queryrouter_headers(api_key))
             resp.raise_for_status()
             data = resp.json().get("data", [])
             result: list[dict[str, Any]] = []
@@ -235,7 +317,8 @@ async def flow_assistant_models(current_user: CurrentActiveUser):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="QUERYROUTER_API_KEY not found. Set it as a Global Variable named QUERYROUTER_API_KEY.",
         )
-    models = await _fetch_queryrouter_models(api_key)
+    base_url = await _get_queryrouter_base_url_for_user(user_id=current_user.id)
+    models = await _fetch_queryrouter_models(api_key=api_key, base_url=base_url)
     return {"models": models}
 
 
@@ -585,8 +668,6 @@ async def flow_assistant_chat(
     request: FlowAssistantChatRequest,
     current_user: CurrentActiveUser,
 ):
-    import json
-
     api_key = await _get_queryrouter_api_key_for_user(user_id=current_user.id)
     if not api_key:
         raise HTTPException(
@@ -597,7 +678,8 @@ async def flow_assistant_chat(
     model = request.model or os.getenv("LANGFLOW_FLOW_ASSISTANT_MODEL", "")
     if not model:
         raise HTTPException(status_code=400, detail="Model is required. Pick a model from /flow-assistant/models.")
-    client = AsyncOpenAI(api_key=api_key, base_url=QUERYROUTER_BASE_URL)
+    base_url = await _get_queryrouter_base_url_for_user(user_id=current_user.id)
+    client = AsyncOpenAI(api_key=api_key, base_url=base_url)
 
     tools = _build_openai_tools()
     messages = _build_openai_messages(flow_id=request.flow_id, message=request.message, history=request.history)
@@ -653,17 +735,15 @@ async def flow_assistant_chat(
                 for idx, tc in enumerate(msg.tool_calls):
                     fn = tc.function
                     tool_name = fn.name
-                    tool_args_raw = fn.arguments or "{}"
-                    try:
-                        tool_args = json.loads(tool_args_raw)
-                    except Exception:  # noqa: BLE001
-                        tool_args = {}
+                    tool_args, tool_args_error = _parse_tool_arguments(fn.arguments)
                     tool_args = _maybe_inject_flow_id(tool_name=tool_name, tool_args=tool_args, flow_id=request.flow_id)
 
                     tool_error: str | None = None
                     tool_result_text: str | None = None
 
                     try:
+                        if tool_args_error:
+                            raise WorkflowEditError(tool_args_error)
                         tool_result = await call_workflow_tool(
                             tool_name=tool_name,
                             arguments=tool_args,
@@ -732,7 +812,8 @@ async def _stream_assistant_chat(
     api_key: str,
 ) -> AsyncGenerator[str, None]:
     """Stream assistant chat responses with tool calls."""
-    client = AsyncOpenAI(api_key=api_key, base_url=QUERYROUTER_BASE_URL)
+    base_url = await _get_queryrouter_base_url_for_user(user_id=user_id)
+    client = AsyncOpenAI(api_key=api_key, base_url=base_url)
     tools = _build_openai_tools()
 
     messages = _build_openai_messages(flow_id=flow_id, message=message, history=history)
@@ -771,71 +852,87 @@ async def _stream_assistant_chat(
             reasoning_content_buffer = ""
             tool_calls_buffer: dict[int, dict[str, Any]] = {}
             final_message: dict[str, Any] | None = None
+            had_delta_text = False
 
-            async for chunk in stream:
-                if not chunk.choices:
-                    continue
-                choice = chunk.choices[0]
-                choice_dict = choice.model_dump() if hasattr(choice, "model_dump") else {}
+            try:
+                async for chunk in stream:
+                    if not chunk.choices:
+                        continue
+                    choice = chunk.choices[0]
+                    choice_dict = choice.model_dump() if hasattr(choice, "model_dump") else {}
 
-                if choice_dict.get("message"):
-                    final_message = choice_dict["message"]
-                    if final_message.get("content"):
-                        yield _sse_event("text", {"content": final_message["content"]})
-                    continue
+                    if choice_dict.get("message"):
+                        final_message = choice_dict["message"]
+                        if final_message.get("content"):
+                            if had_delta_text:
+                                # If we already streamed delta.content chunks, the final message content
+                                # would duplicate the text in the UI. Suppress it.
+                                pass
+                            else:
+                                yield _sse_event("text", {"content": final_message["content"]})
+                        continue
 
-                delta = choice.delta
-                delta_dict = delta.model_dump() if hasattr(delta, "model_dump") else {}
+                    delta = choice.delta
+                    delta_dict = delta.model_dump() if hasattr(delta, "model_dump") else {}
 
-                if delta_dict.get("reasoning_details"):
-                    for detail in delta_dict["reasoning_details"]:
-                        reasoning_details.append(detail)
-                        if isinstance(detail, dict) and "content" in detail:
-                            reasoning_content_buffer += detail.get("content", "")
-                        elif isinstance(detail, str):
-                            reasoning_content_buffer += detail
+                    if delta_dict.get("reasoning_details"):
+                        for detail in delta_dict["reasoning_details"]:
+                            reasoning_details.append(detail)
+                            if isinstance(detail, dict) and "content" in detail:
+                                reasoning_content_buffer += detail.get("content", "")
+                            elif isinstance(detail, str):
+                                reasoning_content_buffer += detail
 
-                        if reasoning_content_buffer:
-                            yield _sse_event(
-                                "reasoning",
-                                {
-                                    "content": detail.get("content", "") if isinstance(detail, dict) else str(detail),
-                                    "summary": detail.get("summary") if isinstance(detail, dict) else None,
-                                },
-                            )
+                            if reasoning_content_buffer:
+                                yield _sse_event(
+                                    "reasoning",
+                                    {
+                                        "content": (
+                                            detail.get("content", "") if isinstance(detail, dict) else str(detail)
+                                        ),
+                                        "summary": detail.get("summary") if isinstance(detail, dict) else None,
+                                    },
+                                )
 
-                if delta.content:
-                    content_buffer += delta.content
-                    yield _sse_event("text", {"content": delta.content})
+                    if delta.content:
+                        content_buffer += delta.content
+                        had_delta_text = True
+                        yield _sse_event("text", {"content": delta.content})
 
-                if delta.tool_calls:
-                    for tc in delta.tool_calls:
-                        idx = tc.index
-                        tc_dict = tc.model_dump() if hasattr(tc, "model_dump") else {}
+                    if delta.tool_calls:
+                        for tc in delta.tool_calls:
+                            idx = tc.index
+                            tc_dict = tc.model_dump() if hasattr(tc, "model_dump") else {}
 
-                        if idx not in tool_calls_buffer:
-                            tool_call_id = tc.id or _new_tool_call_id()
-                            tool_calls_buffer[idx] = {
-                                "id": tool_call_id,
-                                "type": "function",
-                                "function": {"name": "", "arguments": ""},
-                            }
+                            if idx not in tool_calls_buffer:
+                                tool_call_id = tc.id or _new_tool_call_id()
+                                tool_calls_buffer[idx] = {
+                                    "id": tool_call_id,
+                                    "type": "function",
+                                    "function": {"name": "", "arguments": ""},
+                                }
 
-                        if tc.id:
-                            tool_calls_buffer[idx]["id"] = tc.id
-                        if tc_dict.get("type"):
-                            tool_calls_buffer[idx]["type"] = tc_dict["type"]
+                            if tc.id:
+                                tool_calls_buffer[idx]["id"] = tc.id
+                            if tc_dict.get("type"):
+                                tool_calls_buffer[idx]["type"] = tc_dict["type"]
 
-                        if tc.function:
-                            if tc.function.name:
-                                tool_calls_buffer[idx]["function"]["name"] = tc.function.name
-                                yield _sse_event("tool_start", {"name": tc.function.name})
-                            if tc.function.arguments:
-                                tool_calls_buffer[idx]["function"]["arguments"] += tc.function.arguments
+                            if tc.function:
+                                if tc.function.name:
+                                    tool_calls_buffer[idx]["function"]["name"] = tc.function.name
+                                    yield _sse_event("tool_start", {"name": tc.function.name})
+                                if tc.function.arguments:
+                                    tool_calls_buffer[idx]["function"]["arguments"] += tc.function.arguments
 
-                        for key, val in tc_dict.items():
-                            if key not in ("index", "id", "type", "function") and val is not None:
-                                tool_calls_buffer[idx][key] = val
+                            for key, val in tc_dict.items():
+                                if key not in ("index", "id", "type", "function") and val is not None:
+                                    tool_calls_buffer[idx][key] = val
+            except asyncio.CancelledError:
+                return
+            except Exception as exc:  # noqa: BLE001
+                await logger.aerror(f"Flow assistant LLM stream iteration error: {exc!s}")
+                yield _sse_event("error", {"message": "LLM stream interrupted", "detail": str(exc)})
+                return
 
             if final_message:
                 if not final_message.get("tool_calls"):
@@ -871,18 +968,88 @@ async def _stream_assistant_chat(
                 }
                 if reasoning_details:
                     assistant_message["reasoning_details"] = reasoning_details
-
+            messages_before_assistant = list(messages)
             messages.append(assistant_message)
+
+            parsed_tool_calls: list[dict[str, Any]] = []
+            needs_tool_args_repair = False
+            empty_args_tools: list[dict[str, Any]] = []
 
             for tc in tool_calls_for_execution:
                 tc_func = tc.get("function", {})
                 tool_name = tc_func.get("name", "")
-                tool_args_raw = tc_func.get("arguments", "")
-                try:
-                    tool_args = json.loads(tool_args_raw) if tool_args_raw else {}
-                except Exception:  # noqa: BLE001
-                    tool_args = {}
+                tool_args_raw = tc_func.get("arguments")
+                tool_args, tool_args_error = _parse_tool_arguments(tool_args_raw)
                 tool_args = _maybe_inject_flow_id(tool_name=tool_name, tool_args=tool_args, flow_id=flow_id)
+                missing_required = _missing_required_fields(tool_name, tool_args)
+                if missing_required and not tool_args_error:
+                    needs_tool_args_repair = True
+                    empty_args_tools.append(
+                        {
+                            "tool": tool_name,
+                            "raw_type": type(tool_args_raw).__name__,
+                            "raw_len": len(tool_args_raw) if isinstance(tool_args_raw, str) else None,
+                            "missing_required": missing_required,
+                        }
+                    )
+                parsed_tool_calls.append(
+                    {
+                        "id": tc.get("id") or _new_tool_call_id(),
+                        "name": tool_name,
+                        "args": tool_args,
+                        "args_error": tool_args_error,
+                    }
+                )
+
+            repaired = False
+            if needs_tool_args_repair:
+                try:
+                    repair_resp = await client.chat.completions.create(
+                        model=model,
+                        messages=messages_before_assistant,
+                        tools=tools,
+                        tool_choice="auto",
+                        temperature=0.0,
+                        extra_body=extra_body if extra_body else None,
+                    )
+                    repair_msg = repair_resp.choices[0].message
+                    repair_tool_calls = getattr(repair_msg, "tool_calls", None) or []
+                    repaired_payload: list[dict[str, Any]] = []
+                    for rtc in repair_tool_calls:
+                        rtc_dump = rtc.model_dump() if hasattr(rtc, "model_dump") else {}
+                        if rtc_dump:
+                            repaired_payload.append(rtc_dump)
+                    _ensure_tool_call_ids(repaired_payload)
+                    repaired_payload = _filter_complete_tool_calls(repaired_payload)
+                    repaired = bool(repaired_payload)
+                    if repaired:
+                        messages[-1]["tool_calls"] = repaired_payload
+                        parsed_tool_calls = []
+                        for tc in repaired_payload:
+                            tc_func = tc.get("function", {})
+                            tool_name = tc_func.get("name", "")
+                            tool_args_raw = tc_func.get("arguments")
+                            tool_args, tool_args_error = _parse_tool_arguments(tool_args_raw)
+                            tool_args = _maybe_inject_flow_id(tool_name=tool_name, tool_args=tool_args, flow_id=flow_id)
+                            parsed_tool_calls.append(
+                                {
+                                    "id": tc.get("id") or _new_tool_call_id(),
+                                    "name": tool_name,
+                                    "args": tool_args,
+                                    "args_error": tool_args_error,
+                                }
+                            )
+                except Exception as exc:  # noqa: BLE001
+                    await logger.awarning(f"Tool args repair failed: {exc!s}")
+
+            for tc in parsed_tool_calls:
+                tool_name = tc["name"]
+                tool_args = tc["args"]
+                tool_args_error = tc["args_error"]
+                tool_call_id = tc["id"]
+
+                if repaired:
+                    yield _sse_event("tool_start", {"name": tool_name})
 
                 yield _sse_event("tool_call", {"name": tool_name, "arguments": tool_args})
 
@@ -890,6 +1057,8 @@ async def _stream_assistant_chat(
                 tool_result_text: str | None = None
 
                 try:
+                    if tool_args_error:
+                        raise WorkflowEditError(tool_args_error)
                     tool_result = await call_workflow_tool(
                         tool_name=tool_name,
                         arguments=tool_args,
@@ -911,7 +1080,7 @@ async def _stream_assistant_chat(
                 messages.append(
                     {
                         "role": "tool",
-                        "tool_call_id": tc["id"],
+                        "tool_call_id": tool_call_id,
                         "content": tool_result_text,
                     }
                 )
