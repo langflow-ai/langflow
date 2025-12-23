@@ -28,8 +28,6 @@ export function EditNodeComponent({
     isTweaks,
     hideVisibility,
   );
-  console.log("columnDefs", columnDefs);
-  console.log("rowData", rowData);
   return useMemo(
     () => (
       <div className="flex h-full flex-col">
