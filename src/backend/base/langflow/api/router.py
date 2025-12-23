@@ -35,7 +35,6 @@ router_v1 = APIRouter(
 router_v2 = APIRouter(
     prefix="/v2",
 )
-
 router_v1.include_router(chat_router)
 router_v1.include_router(endpoints_router)
 router_v1.include_router(validate_router)
@@ -65,5 +64,5 @@ router_v2.include_router(registration_router_v2)
 router = APIRouter(
     prefix="/api",
 )
-router.include_router(router_v1)
+# Note: router_v1 is included in main.py to support conditional agentic_router inclusion
 router.include_router(router_v2)

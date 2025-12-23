@@ -1,0 +1,33 @@
+.popover-container {
+  position: relative;
+  display: inline-block;
+}
+
+.popover-trigger {
+  cursor: pointer;
+}
+
+.popover-content {
+  position: fixed;
+  transform: translateX(-50%);
+  margin-top: 10px;
+  background-color: rgb(132, 90, 90);
+  border: 1px solid #ccc;
+  box-shadow: 0 2px 10px rgba(106, 105, 105, 0.1);
+  border-radius: 4px;
+  padding: 15px;
+  z-index: 1000000000000;
+  white-space: nowrap;
+  overflow: visible;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3em 0.7em;
+  width: fit-content;
+}
+
+.pill:hover {
+  opacity: 0.7;
+}
