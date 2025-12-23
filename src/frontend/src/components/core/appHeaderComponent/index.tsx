@@ -87,14 +87,9 @@ export default function AppHeader(): JSX.Element {
       >
         {true && <ModelProviderCount />}
         {LANGFLOW_AGENTIC_EXPERIENCE && <AssistantButton type="header" />}
-        <>
-          <Button
-            unstyled
-            className="hidden items-center whitespace-nowrap pr-2 lg:inline"
-          >
-            <CustomLangflowCounts />
-          </Button>
-        </>
+        <div className="hidden pr-2 whitespace-nowrap lg:inline-flex lg:items-center">
+          <CustomLangflowCounts />
+        </div>
         <AlertDropdown
           notificationRef={notificationContentRef}
           onClose={() => setActiveState(null)}
