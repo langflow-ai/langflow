@@ -228,7 +228,8 @@ class Message(Data):
 
         for file in files:
             if isinstance(file, Image):
-                content_dicts.append(file.to_content_dict())
+                # Pass the message's flow_id to the Image for proper path resolution
+                content_dicts.append(file.to_content_dict(flow_id=self.flow_id))
             else:
                 content_dicts.append(create_image_content_dict(file, None, model_name))
         return content_dicts
@@ -301,7 +302,7 @@ class Message(Data):
     @classmethod
     async def create(cls, **kwargs):
         """If files are present, create the message in a separate thread as is_image_file is blocking."""
-        if "files" in kwargs:
+        if kwargs.get("files"):
             return await asyncio.to_thread(cls, **kwargs)
         return cls(**kwargs)
 
