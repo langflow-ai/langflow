@@ -17,14 +17,6 @@ test.describe("ModelProviderCount Component", () => {
       // Should display "Models" text
       await expect(modelProviderButton.getByText("Models")).toBeVisible();
 
-<<<<<<< HEAD
-      // Page should contain provider configuration content
-      await expect(
-        page.getByText(
-          "Configure AI model providers and manage their API keys.",
-        ),
-      ).toBeVisible();
-=======
       // Should display the badge with count
       const badge = page.getByTestId("model-provider-count-badge");
       await expect(badge).toBeVisible();
@@ -32,7 +24,6 @@ test.describe("ModelProviderCount Component", () => {
       // Badge should contain a number (count of enabled models)
       const badgeText = await badge.textContent();
       expect(badgeText).toMatch(/^\d+$/);
->>>>>>> parent of b3080d669e (Update modelProviderCount.spec.ts)
     },
   );
 
@@ -57,14 +48,6 @@ test.describe("ModelProviderCount Component", () => {
       );
       await modelProviderButton.click();
 
-<<<<<<< HEAD
-      // Should be back at main view - the settings page header should change
-      await expect(
-        page.getByText(
-          "Configure AI model providers and manage their API keys.",
-        ),
-      ).not.toBeVisible({ timeout: 3000 });
-=======
       // Modal should appear with "Model providers" header
       await expect(page.getByText("Model providers")).toBeVisible({
         timeout: 5000,
@@ -73,7 +56,6 @@ test.describe("ModelProviderCount Component", () => {
       // Modal should contain provider list content
       const dialog = page.locator('[role="dialog"]');
       await expect(dialog).toBeVisible();
->>>>>>> parent of b3080d669e (Update modelProviderCount.spec.ts)
     },
   );
 
@@ -90,17 +72,7 @@ test.describe("ModelProviderCount Component", () => {
         .or(page.locator('button[data-testid="close-button"]'))
         .first();
 
-<<<<<<< HEAD
-      // Navigate back
-      await page.getByTestId("icon-ChevronLeft").first().click();
-      await expect(
-        page.getByText(
-          "Configure AI model providers and manage their API keys.",
-        ),
-      ).not.toBeVisible({ timeout: 3000 });
-=======
       await closeButton.click();
->>>>>>> parent of b3080d669e (Update modelProviderCount.spec.ts)
 
       // Open the modal
       const modelProviderButton = page.getByTestId(
