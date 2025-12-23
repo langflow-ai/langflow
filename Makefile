@@ -281,6 +281,10 @@ setup_env: ## set up the environment
 
 backend: setup_env install_backend ## run the backend in development mode
 	@-kill -9 $$(lsof -t -i:7860) || true
+ifdef extra
+	@echo "Ensuring optional package: $(extra)";
+	uv pip install "langflow[$(extra)]"
+endif
 ifdef login
 	@echo "Running backend autologin is $(login)";
 	LANGFLOW_AUTO_LOGIN=$(login) uv run uvicorn \

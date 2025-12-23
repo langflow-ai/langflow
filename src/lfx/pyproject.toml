@@ -90,6 +90,11 @@ integration = [
     "beautifulsoup4>=4.12.0",
     "lxml>=5.0.0",
 ]
+docling = [
+    # Optional dependencies for docling component testing
+    "docling>=2.0.0",
+    "docling-core>=2.0.0",
+]
 
 [tool.coverage.run]
 branch = true
