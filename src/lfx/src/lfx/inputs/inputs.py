@@ -21,6 +21,7 @@ from .input_mixin import (
     InputTraceMixin,
     LinkMixin,
     ListableInputMixin,
+    MCPInputMixin,
     MetadataTraceMixin,
     MultilineMixin,
     QueryMixin,
@@ -124,13 +125,7 @@ class CodeInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMix
 
 
 # Applying mixins to a specific input type
-class StrInput(
-    BaseInputMixin,
-    ListableInputMixin,
-    DatabaseLoadMixin,
-    MetadataTraceMixin,
-    ToolModeMixin,
-):
+class StrInput(BaseInputMixin, ListableInputMixin, DatabaseLoadMixin, MetadataTraceMixin, ToolModeMixin, MCPInputMixin):
     field_type: SerializableFieldTypes = FieldTypes.TEXT
     load_from_db: CoalesceBool = False
     """Defines if the field will allow the user to open a text editor. Default is False."""
@@ -183,7 +178,7 @@ class StrInput(
         return [cls._validate_value(vv, info) for vv in v] if is_list else cls._validate_value(v, info)
 
 
-class MessageInput(StrInput, InputTraceMixin):
+class MessageInput(StrInput, InputTraceMixin, MCPInputMixin):
     input_types: list[str] = ["Message"]
 
     @staticmethod
@@ -204,7 +199,7 @@ class MessageInput(StrInput, InputTraceMixin):
         raise ValueError(msg)
 
 
-class MessageTextInput(StrInput, MetadataTraceMixin, InputTraceMixin, ToolModeMixin):
+class MessageTextInput(StrInput, MetadataTraceMixin, InputTraceMixin, ToolModeMixin, MCPInputMixin):
     """Represents a text input component for the Langflow system.
 
     This component is used to handle text inputs in the Langflow system.
@@ -258,7 +253,7 @@ class MessageTextInput(StrInput, MetadataTraceMixin, InputTraceMixin, ToolModeMi
         return value
 
 
-class MultilineInput(MessageTextInput, AIMixin, MultilineMixin, InputTraceMixin, ToolModeMixin):
+class MultilineInput(MessageTextInput, AIMixin, MultilineMixin, InputTraceMixin, ToolModeMixin, MCPInputMixin):
     """Represents a multiline input field.
 
     Attributes:
@@ -344,7 +339,7 @@ class SecretStrInput(BaseInputMixin, DatabaseLoadMixin):
         return value
 
 
-class IntInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixin, ToolModeMixin):
+class IntInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixin, ToolModeMixin, MCPInputMixin):
     """Represents an integer field.
 
     This class represents an integer input and provides functionality for handling integer values.
@@ -380,7 +375,7 @@ class IntInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixi
         return v
 
 
-class FloatInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixin, ToolModeMixin):
+class FloatInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixin, ToolModeMixin, MCPInputMixin):
     """Represents a float field.
 
     This class represents a float input and provides functionality for handling float values.
@@ -416,7 +411,7 @@ class FloatInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMi
         return v
 
 
-class BoolInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin, ToolModeMixin):
+class BoolInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin, ToolModeMixin, MCPInputMixin):
     """Represents a boolean field.
 
     This class represents a boolean input and provides functionality for handling boolean values.
@@ -468,7 +463,7 @@ class DictInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMix
     value: dict = Field(default_factory=dict)
 
 
-class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeMixin):
+class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeMixin, MCPInputMixin):
     """Represents a dropdown input field.
 
     This class represents a dropdown input field and provides functionality for handling dropdown values.

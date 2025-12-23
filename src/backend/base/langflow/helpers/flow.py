@@ -440,32 +440,30 @@ def json_schema_from_flow(flow: Flow) -> dict:
     """Generate JSON schema from flow input nodes."""
     from lfx.graph.graph.base import Graph
 
+    mcp_types = {"str": "string", "int": "integer", "float": "number", "bool": "boolean", "list": "array"}
+
     # Get the flow's data which contains the nodes and their configurations
     flow_data = flow.data or {}
 
     graph = Graph.from_payload(flow_data)
-    input_nodes = [vertex for vertex in graph.vertices if vertex.is_input]
-    properties = {}
-    required = []
-    for node in input_nodes:
+    all_nodes = list(graph.vertices)
+    properties: dict[str, dict] = {}
+    required: list[str] = []
+    for node in all_nodes:
         node_data = node.data["node"]
-        name = node.data["id"]
-
         template = node_data["template"]
 
-        properties[name] = {"type": "string", "description": f"Input for {name}"}
+        for field_data in template.values():
+            if field_data != "Component" and field_data.get("mcp_enabled", False):
+                name = node.data["id"]
+                if field_data.get("name", "input_value") != "input_value":
+                    name = f"{node.data['id']}-{field_data.get('name', 'input_value')}"
 
-        for field_name, field_data in template.items():
-            if field_name.startswith("mcp_"):
-                if field_name == "mcp_description":
-                    val = field_data.get("value")
-                    properties[name]["description"] = val or f"Input for {name}"
+                properties[name] = {}
+                properties[name]["description"] = field_data.get("mcp_description", f"Input for {name}")
+                properties[name]["type"] = mcp_types.get(field_data.get("type", "str"), "string")
 
-                if field_name == "mcp_type" and field_data.get("value") != "":
-                    val = field_data.get("value")
-                    properties[name]["type"] = val or "string"
-
-                if field_name == "mcp_required" and field_data.get("value", False):
+                if field_data["mcp_required"]:
                     required.append(name)
 
     return {"type": "object", "properties": properties, "required": required}

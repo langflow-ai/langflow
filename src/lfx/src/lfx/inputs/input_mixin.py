@@ -314,6 +314,15 @@ class AIMixin(BaseModel):
     ai_enabled: CoalesceBool = False
 
 
+class MCPInputMixin(BaseModel):
+    mcp_enabled: bool = False
+    """Specifies if the field should be enabled for MCP. Defaults to False."""
+    mcp_description: str | None = None
+    """Specifies the description for MCP. Defaults to an empty string."""
+    mcp_required: bool = False
+    """Specifies if the field should be required for MCP. Defaults to False."""
+
+
 class LinkMixin(BaseModel):
     icon: str | None = None
     """Icon to be displayed in the link."""
