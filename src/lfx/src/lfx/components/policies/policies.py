@@ -7,11 +7,9 @@ from lfx.inputs.inputs import BoolInput, ModelInput
 from lfx.base.models.model import LCModelComponent
 from lfx.log.logger import logger
 from os.path import join
-from typing import Any
 
 from lfx.base.models import LCModelComponent
 from lfx.components.policies.wrapped_tool import WrappedTool
-from lfx.custom.custom_component.component import Component
 
 from lfx.base.models.unified_models import (
     get_language_model_options,
@@ -111,18 +109,22 @@ Powered by [ToolGuard](https://github.com/IBM/toolguard)"""
         llm = LitellmModel(model, llm_provider)
 
         toolguard_step1_dir = join(self.guard_code_path, STEP1)
+        policy_text = "\n".join(self.policies)
         specs = await generate_guard_specs(
-            policy_text=self.policies, tools=self.in_tools, llm=llm, work_dir=toolguard_step1_dir
+            policy_text=policy_text, 
+            tools=self.in_tools,
+            llm=llm, 
+            work_dir=toolguard_step1_dir
         )
         logger.info(f"🔒️ToolGuard: Step 1 Done")
         return specs
 
-    def mellea_session(self )->MelleaSessionData: 
+    def _get_mellea_session(self )->MelleaSessionData: 
         return MelleaSessionData(
             backend_name=self.model[0].get("provider").lower(),
             model_id=self.model[0].get("name"),
             kw_args={
-                "base_url": "",
+                "base_url": "https://ete-litellm.bx.cloud9.ibm.com",
                 "api_key": self.api_key
             }
         )
@@ -134,7 +136,7 @@ Powered by [ToolGuard](https://github.com/IBM/toolguard)"""
             tools=self.in_tools,
             tool_specs=specs,
             work_dir=out_dir,
-            llm_data=self.mellea_session()
+            llm_data=self._get_mellea_session()
         )
         logger.info(f"🔒️ToolGuard: Step 2 Done")
         return gen_result
