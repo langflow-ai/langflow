@@ -474,3 +474,103 @@ async def extract_urls_from_strings(strings: list[str]) -> list[str]:
             urls.extend(found_urls)
 
     return urls
+
+
+async def regenerate_mcp_server_config(
+    project: Folder,
+    user: User,
+    session,
+    new_auth_type: str,
+    storage_service,
+    settings_service,
+) -> None:
+    """Regenerate MCP server configuration when auth_type changes.
+
+    This function deletes the existing MCP server configuration and creates a new one
+    with the appropriate authentication settings based on the new auth_type.
+
+    Args:
+        project: The project folder whose MCP config needs regeneration
+        user: The user who owns the project
+        session: Database session
+        new_auth_type: The new authentication type ("apikey" or "none")
+        storage_service: Storage service instance
+        settings_service: Settings service instance
+    """
+    if not settings_service.settings.add_projects_to_mcp_servers:
+        await logger.adebug("MCP server auto-add disabled, skipping config regeneration")
+        return
+
+    try:
+        # Validate existing MCP server for this project
+        validation_result = await validate_mcp_server_for_project(
+            project.id,
+            project.name,
+            user,
+            session,
+            storage_service,
+            settings_service,
+            operation="update",
+        )
+
+        server_name = validation_result.server_name
+
+        # Delete existing server config if it exists
+        if validation_result.server_exists and validation_result.project_id_matches:
+            await update_server(
+                server_name,
+                {},  # Empty config for deletion
+                user,
+                session,
+                storage_service,
+                settings_service,
+                delete=True,
+            )
+            await logger.adebug(f"Deleted existing MCP server config for project {project.name}")
+
+        # Build new connection URL
+        streamable_http_url = await get_project_streamable_http_url(project.id)
+
+        # Prepare new server config based on auth_type
+        if new_auth_type == "apikey":
+            # Create API key for this user
+            api_key_name = f"MCP Project {project.name} - {user.username}"
+            unmasked_api_key = await create_api_key(session, ApiKeyCreate(name=api_key_name), user.id)
+
+            command = "uvx"
+            args = [
+                "mcp-proxy",
+                "--transport",
+                "streamablehttp",
+                "--headers",
+                "x-api-key",
+                unmasked_api_key.api_key,
+                streamable_http_url,
+            ]
+        else:  # auth_type == "none"
+            command = "uvx"
+            args = [
+                "mcp-proxy",
+                "--transport",
+                "streamablehttp",
+                streamable_http_url,
+            ]
+
+        server_config = {"command": command, "args": args}
+
+        # Add new server config
+        await update_server(
+            server_name,
+            server_config,
+            user,
+            session,
+            storage_service,
+            settings_service,
+        )
+
+        await logger.ainfo(
+            f"Regenerated MCP server config for project {project.name} with auth_type={new_auth_type}"
+        )
+
+    except Exception as e:  # noqa: BLE001
+        await logger.aerror(f"Failed to regenerate MCP server config for project {project.name}: {e}")

@@ -68,8 +68,16 @@ def handle_auth_settings_update(
     should_stop_composer = current_auth_type == "oauth" and new_auth_type != "oauth"
     should_handle_composer = current_auth_type == "oauth" or new_auth_type == "oauth"
 
+    # Determine if MCP server config needs regeneration (auth type changed to/from apikey or none)
+    should_regenerate_mcp_config = (
+        current_auth_type != new_auth_type
+        and new_auth_type in ["apikey", "none"]
+    )
+
     return {
         "should_start_composer": should_start_composer,
         "should_stop_composer": should_stop_composer,
         "should_handle_composer": should_handle_composer,
+        "should_regenerate_mcp_config": should_regenerate_mcp_config,
+        "new_auth_type": new_auth_type,
     }
