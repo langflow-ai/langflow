@@ -19,7 +19,9 @@ test.describe("ModelProviderModal", () => {
 
       // Provider content should be visible
       await expect(
-        page.getByText("Configure AI model providers and manage their API keys."),
+        page.getByText(
+          "Configure AI model providers and manage their API keys.",
+        ),
       ).toBeVisible();
     },
   );
@@ -94,7 +96,9 @@ test.describe("ModelProviderModal", () => {
 
       // Page should be closed/navigated away - description text should not be visible
       await expect(
-        page.getByText("Configure AI model providers and manage their API keys."),
+        page.getByText(
+          "Configure AI model providers and manage their API keys.",
+        ),
       ).not.toBeVisible({ timeout: 3000 });
     },
   );
@@ -150,7 +154,9 @@ test.describe("ModelProviderModal", () => {
 
       // Content should be visible
       await expect(
-        page.getByText("Configure AI model providers and manage their API keys."),
+        page.getByText(
+          "Configure AI model providers and manage their API keys.",
+        ),
       ).toBeVisible();
     },
   );

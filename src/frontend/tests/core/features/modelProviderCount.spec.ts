@@ -19,7 +19,9 @@ test.describe("ModelProviderCount Component", () => {
 
       // Page should contain provider configuration content
       await expect(
-        page.getByText("Configure AI model providers and manage their API keys."),
+        page.getByText(
+          "Configure AI model providers and manage their API keys.",
+        ),
       ).toBeVisible();
     },
   );
@@ -43,7 +45,9 @@ test.describe("ModelProviderCount Component", () => {
 
       // Should be back at main view - the settings page header should change
       await expect(
-        page.getByText("Configure AI model providers and manage their API keys."),
+        page.getByText(
+          "Configure AI model providers and manage their API keys.",
+        ),
       ).not.toBeVisible({ timeout: 3000 });
     },
   );
@@ -63,7 +67,9 @@ test.describe("ModelProviderCount Component", () => {
       // Navigate back
       await page.getByTestId("icon-ChevronLeft").first().click();
       await expect(
-        page.getByText("Configure AI model providers and manage their API keys."),
+        page.getByText(
+          "Configure AI model providers and manage their API keys.",
+        ),
       ).not.toBeVisible({ timeout: 3000 });
 
       // Second navigation - open page again
