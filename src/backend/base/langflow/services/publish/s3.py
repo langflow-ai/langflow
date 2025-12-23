@@ -34,15 +34,28 @@ class S3PublishService(PublishService):
         async with self.session.client("s3") as client:
             yield client
 
-    async def publish_flow(self, user_id: str, flow_id: str, flow_data: str) -> str:
+    def _flow_version_key(self, user_id: str, flow_id: str, version_id: str) -> str:
+        return f"{self.prefix}{user_id}/{flow_id}/versions/flow_{version_id}.json"
+
+    def _project_version_key(self, user_id: str, project_id: str, version_id: str) -> str:
+        return f"{self.prefix}{user_id}/{project_id}/versions/project_{version_id}.json"
+
+    async def publish_flow(
+        self,
+        user_id: str,
+        flow_id: str,
+        flow_data: str,
+        version_id: str,
+    ) -> str | None:
         if not self.bucket_name:
             msg = "Publish backend bucket name is not configured"
             raise ValueError(msg)
 
-        key = f"{user_id}/{flow_id}/flow.json"
+        key = self._flow_version_key(user_id, flow_id, version_id)
 
         async with self._get_client() as client:
             await client.put_object(
+                IfNoneMatch="*", # prevent creating new s3 versions if the object already exists
                 Bucket=self.bucket_name,
                 Key=key,
                 Body=flow_data,
@@ -52,8 +65,13 @@ class S3PublishService(PublishService):
         logger.info(f"Published flow {flow_id} to s3://{self.bucket_name}/{key}")
         return key
 
-    async def get_flow(self, user_id: str, flow_id: str) -> str:
-        key = f"{user_id}/{flow_id}/flow_snapshot.json"
+    async def get_flow(
+        self,
+        user_id: str,
+        flow_id: str,
+        version_id: str,
+    ) -> str | None:
+        key = self._flow_version_key(user_id, flow_id, version_id)
 
         async with self._get_client() as client:
             try:
@@ -64,18 +82,25 @@ class S3PublishService(PublishService):
                 logger.error(f"Error fetching flow {flow_id}: {e}")
                 raise
 
-    async def publish_project(self, user_id: str, project_id: str, manifest: dict) -> str:
+    async def publish_project(
+        self,
+        user_id: str,
+        project_id: str,
+        manifest: dict,
+        version_id: str,
+    ) -> str | None:
         if not self.bucket_name:
             msg = "Publish backend bucket name is not configured"
             raise ValueError(msg)
 
-        key = f"{user_id}/{project_id}/project_manifest.json"
+        key = self._project_version_key(user_id, project_id, version_id)
 
         # Serialize manifest to bytes
         project_data = json.dumps(manifest).encode("utf-8")
 
         async with self._get_client() as client:
             await client.put_object(
+                IfNoneMatch="*", # prevent creating new s3 versions if the object already exists
                 Bucket=self.bucket_name,
                 Key=key,
                 Body=project_data,
