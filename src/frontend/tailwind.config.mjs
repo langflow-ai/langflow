@@ -355,11 +355,12 @@ const config = {
         mmd: "13px",
       },
       width: {
-        sm: "120px",
-        md: "218px",
+        18: "18px",
+        120: "120px",
+        218: "218px",
       },
       height: {
-        xxs: "32px",
+        18: "18px",
       },
     },
   },

@@ -79,7 +79,7 @@ export function SessionSelector({
         isVisible ? "bg-accent font-semibold" : "font-normal",
       )}
     >
-      <div className="flex w-full items-center justify-between overflow-hidden p-2 align-middle w-md">
+      <div className="flex w-full items-center justify-between overflow-hidden p-2 align-middle w-218">
         <div className="flex w/full min-w-0 items-center">
           {isEditing ? (
             <div
