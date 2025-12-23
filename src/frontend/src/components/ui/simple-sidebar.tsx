@@ -380,7 +380,7 @@ const SimpleSidebar = React.forwardRef<
     }, [open, fullscreen, side]);
 
     const transitionDuration = React.useMemo(() => {
-      return isResizing && !fullscreen ? 0 : 0.6;
+      return isResizing && !fullscreen ? 0 : 0.3;
     }, [isResizing, fullscreen]);
 
     return (

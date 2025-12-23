@@ -15,7 +15,7 @@ export const AnimatedConditional = ({
       animate={{ width: isOpen ? "auto" : 0 }}
       exit={{ width: 0 }}
       transition={{
-        duration: 0.6,
+        duration: 0.3,
         ease: "easeInOut",
       }}
       style={{
