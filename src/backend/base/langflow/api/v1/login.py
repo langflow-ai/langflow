@@ -204,24 +204,9 @@ async def get_session(
         if not user or not user.is_active:
             return SessionResponse(authenticated=False)
 
-        # Get decrypted store API key if available
-        store_api_key = None
-        if user.store_api_key:
-            try:
-                from langflow.services.auth.utils import decrypt_api_key
-
-                store_api_key = decrypt_api_key(user.store_api_key, get_settings_service())
-            except ValueError as _:  # Replace ValueError with the specific exception expected
-                # If decryption fails, log the exception
-                import logging
-
-                logger = logging.getLogger(__name__)
-                logger.exception("Decryption of stored API key failed")
-
         return SessionResponse(
             authenticated=True,
             user=UserRead.model_validate(user, from_attributes=True),
-            store_api_key=store_api_key,
         )
     except (HTTPException, ValueError) as _:
         # Any authentication error means not authenticated
