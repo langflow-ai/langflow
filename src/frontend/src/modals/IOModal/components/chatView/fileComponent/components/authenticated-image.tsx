@@ -3,7 +3,7 @@ import { type ReactElement, useEffect, useState } from "react";
 import { api } from "@/controllers/API/api";
 import Loading from "@/components/ui/loading";
 
-interface AuthenticatedImageProps {
+export interface AuthenticatedImageProps {
   src: string;
   alt: string;
   className?: string;
