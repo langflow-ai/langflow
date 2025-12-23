@@ -66,6 +66,10 @@ export default function ModelInputComponent({
   const [openManageProvidersDialog, setOpenManageProvidersDialog] =
     useState(false);
 
+  // Ref to track if we've already processed the empty options state
+  // Prevents infinite loop when no models are available
+  const hasProcessedEmptyRef = useRef(false);
+
   const postTemplateValue = usePostTemplateValue({
     parameterId: "model",
     nodeId: nodeId || "",
@@ -116,12 +120,20 @@ export default function ModelInputComponent({
 
     // No available models: clear selection/value
     if (!availableOptions || availableOptions.length === 0) {
-      if (value && value.length) {
-        handleOnNewValue({ value: [] });
+      // Only process empty state once to prevent infinite loop
+      if (!hasProcessedEmptyRef.current) {
+        hasProcessedEmptyRef.current = true;
+        // Only call handleOnNewValue if value is not already empty
+        if (value && Array.isArray(value) && value.length > 0) {
+          handleOnNewValue({ value: [] });
+        }
       }
       setSelectedModel(null);
       return;
     }
+
+    // Reset the empty state flag when we have options
+    hasProcessedEmptyRef.current = false;
 
     // If current value exists in refreshed options, keep it
     if (currentName) {
@@ -320,13 +332,18 @@ export default function ModelInputComponent({
     </Button>
   );
 
-  const renderSelectedIcon = () =>
-    selectedModel?.icon ? (
+  const renderSelectedIcon = () => {
+    if (disabled || options.length === 0) {
+      return null;
+    }
+
+    return selectedModel?.icon ? (
       <ForwardedIconComponent
-        name={selectedModel.icon}
+        name={selectedModel.icon || "Bot"}
         className="h-4 w-4 flex-shrink-0"
       />
     ) : null;
+  };
 
   // Renders either a "Setup Provider" button (no providers) or the model selector dropdown trigger
   const renderTriggerButton = () =>
@@ -391,7 +408,7 @@ export default function ModelInputComponent({
     );
 
   const footerButtonClass =
-    "w-full flex cursor-pointer items-center justify-start gap-2 truncate py-3 text-xs text-muted-foreground px-3 hover:bg-accent group";
+    "w-full flex cursor-pointer items-center justify-start gap-2 truncate py-2 text-xs text-muted-foreground px-3 hover:bg-accent group";
 
   const renderFooterButton = (
     label: string,
@@ -467,6 +484,13 @@ export default function ModelInputComponent({
         "external-option-button",
       )}
 
+      {renderFooterButton(
+        "Manage Model Providers",
+        "Settings",
+        () => setOpenManageProvidersDialog(true),
+        "manage-model-providers",
+      )}
+
       {externalOptions?.fields?.data?.node &&
         renderFooterButton(
           externalOptions.fields.data.node.display_name,
@@ -475,13 +499,6 @@ export default function ModelInputComponent({
             handleExternalOptions(externalOptions.fields.data.node.name || ""),
           "external-option-button",
         )}
-
-      {renderFooterButton(
-        "Manage Model Providers",
-        "Settings",
-        () => setOpenManageProvidersDialog(true),
-        "manage-model-providers",
-      )}
     </div>
   );
 
