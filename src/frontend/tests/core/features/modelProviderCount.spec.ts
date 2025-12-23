@@ -1,19 +1,31 @@
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { navigateSettingsPages } from "../../utils/go-to-settings";
 
 test.describe("ModelProviderCount Component", () => {
   test(
     "should open model provider page when navigating via settings",
     { tag: ["@release", "@components", "@workspace"] },
     async ({ page }) => {
-      await awaitBootstrapTest(page, { skipModal: true });
+      await awaitBootstrapTest(page);
 
-      // Wait for page to be ready
-      await page.waitForTimeout(1000);
+      // Close the new project modal
+      const closeButton = page
+        .locator("button")
+        .filter({ hasText: "Close" })
+        .or(page.locator('button[aria-label="Close"]'))
+        .or(page.locator('button[data-testid="close-button"]'))
+        .first();
+      await closeButton.click();
 
-      // Navigate to Settings > Model Providers
-      await navigateSettingsPages(page, "Settings", "Model Providers");
+      // Navigate to settings > Model Providers
+      await page.getByTestId("user-profile-settings").click();
+      await page.getByText("Settings").first().click();
+      await page.getByText("Model Providers").first().click();
+
+      // Wait for the settings page header
+      await page.waitForSelector('[data-testid="settings_menu_header"]', {
+        timeout: 5000,
+      });
 
       // Page should appear with "Model Providers" header
       await expect(
@@ -22,9 +34,7 @@ test.describe("ModelProviderCount Component", () => {
 
       // Page should contain provider configuration content
       await expect(
-        page.getByText(
-          "Configure AI model providers and manage their API keys.",
-        ),
+        page.getByText("Configure AI model providers and manage their API keys."),
       ).toBeVisible();
     },
   );
@@ -33,13 +43,20 @@ test.describe("ModelProviderCount Component", () => {
     "should navigate back from model provider page",
     { tag: ["@release", "@components", "@workspace"] },
     async ({ page }) => {
-      await awaitBootstrapTest(page, { skipModal: true });
+      await awaitBootstrapTest(page);
 
-      // Wait for page to be ready
-      await page.waitForTimeout(1000);
+      const closeButton = page
+        .locator("button")
+        .filter({ hasText: "Close" })
+        .or(page.locator('button[aria-label="Close"]'))
+        .or(page.locator('button[data-testid="close-button"]'))
+        .first();
+      await closeButton.click();
 
-      // Navigate to Settings > Model Providers
-      await navigateSettingsPages(page, "Settings", "Model Providers");
+      // Navigate to settings > Model Providers
+      await page.getByTestId("user-profile-settings").click();
+      await page.getByText("Settings").first().click();
+      await page.getByText("Model Providers").first().click();
 
       // Verify page is open
       await expect(
@@ -51,9 +68,7 @@ test.describe("ModelProviderCount Component", () => {
 
       // Should be back at main view - the settings page header should change
       await expect(
-        page.getByText(
-          "Configure AI model providers and manage their API keys.",
-        ),
+        page.getByText("Configure AI model providers and manage their API keys."),
       ).not.toBeVisible({ timeout: 3000 });
     },
   );
@@ -62,13 +77,21 @@ test.describe("ModelProviderCount Component", () => {
     "should navigate to model provider page multiple times",
     { tag: ["@release", "@components", "@workspace"] },
     async ({ page }) => {
-      await awaitBootstrapTest(page, { skipModal: true });
+      await awaitBootstrapTest(page);
 
-      // Wait for page to be ready
-      await page.waitForTimeout(1000);
+      const closeButton = page
+        .locator("button")
+        .filter({ hasText: "Close" })
+        .or(page.locator('button[aria-label="Close"]'))
+        .or(page.locator('button[data-testid="close-button"]'))
+        .first();
+      await closeButton.click();
 
       // First navigation - open page
-      await navigateSettingsPages(page, "Settings", "Model Providers");
+      await page.getByTestId("user-profile-settings").click();
+      await page.getByText("Settings").first().click();
+      await page.getByText("Model Providers").first().click();
+
       await expect(
         page.getByTestId("settings_menu_header").last(),
       ).toContainText("Model Providers", { timeout: 5000 });
@@ -76,9 +99,7 @@ test.describe("ModelProviderCount Component", () => {
       // Navigate back
       await page.getByTestId("icon-ChevronLeft").first().click();
       await expect(
-        page.getByText(
-          "Configure AI model providers and manage their API keys.",
-        ),
+        page.getByText("Configure AI model providers and manage their API keys."),
       ).not.toBeVisible({ timeout: 3000 });
 
       // Second navigation - open page again
@@ -93,13 +114,20 @@ test.describe("ModelProviderCount Component", () => {
     "should display provider list in the page",
     { tag: ["@release", "@components", "@workspace"] },
     async ({ page }) => {
-      await awaitBootstrapTest(page, { skipModal: true });
+      await awaitBootstrapTest(page);
 
-      // Wait for page to be ready
-      await page.waitForTimeout(1000);
+      const closeButton = page
+        .locator("button")
+        .filter({ hasText: "Close" })
+        .or(page.locator('button[aria-label="Close"]'))
+        .or(page.locator('button[data-testid="close-button"]'))
+        .first();
+      await closeButton.click();
 
-      // Navigate to Settings > Model Providers
-      await navigateSettingsPages(page, "Settings", "Model Providers");
+      // Navigate to settings > Model Providers
+      await page.getByTestId("user-profile-settings").click();
+      await page.getByText("Settings").first().click();
+      await page.getByText("Model Providers").first().click();
 
       // Wait for page to be fully visible
       await expect(
@@ -118,13 +146,20 @@ test.describe("ModelProviderCount Component", () => {
     "model provider page should display provider count information",
     { tag: ["@release", "@components", "@workspace"] },
     async ({ page }) => {
-      await awaitBootstrapTest(page, { skipModal: true });
+      await awaitBootstrapTest(page);
 
-      // Wait for page to be ready
-      await page.waitForTimeout(1000);
+      const closeButton = page
+        .locator("button")
+        .filter({ hasText: "Close" })
+        .or(page.locator('button[aria-label="Close"]'))
+        .or(page.locator('button[data-testid="close-button"]'))
+        .first();
+      await closeButton.click();
 
-      // Navigate to Settings > Model Providers
-      await navigateSettingsPages(page, "Settings", "Model Providers");
+      // Navigate to settings > Model Providers
+      await page.getByTestId("user-profile-settings").click();
+      await page.getByText("Settings").first().click();
+      await page.getByText("Model Providers").first().click();
 
       // Page should display the header
       await expect(
