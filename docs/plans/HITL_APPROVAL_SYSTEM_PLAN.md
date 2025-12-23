@@ -57,7 +57,7 @@ The design prioritizes:
 - Must integrate with existing Langflow authentication system
 - Must use existing database infrastructure (PostgreSQL/SQLite)
 - Must not require additional message queue infrastructure initially
-- Must support both SSE and WebSocket for real-time updates
+- Must use SSE for real-time updates (WebSocket not available in Langflow)
 
 ---
 
@@ -71,15 +71,15 @@ The design prioritizes:
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │  ┌─────────────┐    ┌──────────────┐    ┌─────────────┐    ┌────────────┐  │
-│  │   Frontend  │◄──►│   API Layer  │◄──►│  Approval   │◄──►│  Database  │  │
-│  │  (React UI) │    │  (FastAPI)   │    │   Service   │    │ (Postgres) │  │
+│  │   Frontend  │◄──►│   API Layer  │◄──►│  Approval   │◄──►│  State     │  │
+│  │  (React UI) │    │  (FastAPI)   │    │   Service   │    │  Service   │  │
 │  └─────────────┘    └──────────────┘    └─────────────┘    └────────────┘  │
-│        │                   │                   │                            │
-│        │ SSE/WS            │                   │                            │
-│        ▼                   ▼                   ▼                            │
-│  ┌─────────────┐    ┌──────────────┐    ┌─────────────┐                    │
-│  │ Notification│    │    Event     │    │   Graph     │                    │
-│  │   Center    │    │   Manager    │◄──►│  Execution  │                    │
+│        │                   │                   │                  │         │
+│        │ SSE               │                   │                  ▼         │
+│        ▼                   ▼                   ▼           ┌────────────┐  │
+│  ┌─────────────┐    ┌──────────────┐    ┌─────────────┐   │ DB/Redis/  │  │
+│  │ Notification│    │    Event     │    │   Graph     │   │ Custom     │  │
+│  │   Center    │    │   Manager    │◄──►│  Execution  │   └────────────┘  │
 │  └─────────────┘    └──────────────┘    └─────────────┘                    │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -101,9 +101,9 @@ The design prioritizes:
 │                                   │                        │               │
 │                                   ▼                        ▼               │
 │                            ┌──────────────┐         ┌──────────────┐      │
-│                            │   Approval   │         │   SSE/WS     │      │
-│                            │   Request    │         │   Stream     │      │
-│                            │   (DB)       │         │   (Frontend) │      │
+│                            │   Approval   │         │     SSE      │      │
+│                            │   Request    │         │    Stream    │      │
+│                            │   (State)    │         │  (Frontend)  │      │
 │                            └──────────────┘         └──────────────┘      │
 │                                   │                        │               │
 │  4. DECIDE                        │                        │               │
@@ -308,17 +308,27 @@ ALTER TABLE message ADD COLUMN message_type VARCHAR(50) DEFAULT 'chat';  -- 'cha
 ```
 src/backend/base/langflow/
 ├── services/
-│   └── approval/
+│   ├── approval/
+│   │   ├── __init__.py
+│   │   ├── service.py              # ApprovalService class
+│   │   ├── models.py               # Pydantic models
+│   │   ├── exceptions.py           # Custom exceptions
+│   │   └── strategies/
+│   │       ├── __init__.py
+│   │       ├── base.py             # Base approval strategy
+│   │       ├── simple.py           # Single approver
+│   │       ├── multi.py            # Multi-approver (all/any)
+│   │       └── conditional.py      # Condition-based
+│   └── execution_state/
 │       ├── __init__.py
-│       ├── service.py              # ApprovalService class
-│       ├── models.py               # Pydantic models
-│       ├── exceptions.py           # Custom exceptions
-│       └── strategies/
-│           ├── __init__.py
-│           ├── base.py             # Base approval strategy
-│           ├── simple.py           # Single approver
-│           ├── multi.py            # Multi-approver (all/any)
-│           └── conditional.py      # Condition-based
+│       ├── service.py              # ExecutionStateService (abstract)
+│       ├── factory.py              # Factory for backend selection
+│       ├── backends/
+│       │   ├── __init__.py
+│       │   ├── base.py             # Abstract backend interface
+│       │   ├── database.py         # PostgreSQL/SQLite backend (OSS default)
+│       │   └── redis.py            # Redis backend (cloud/scale)
+│       └── serializers.py          # Graph state serialization
 ├── api/
 │   └── v1/
 │       └── approvals.py            # Approval API endpoints
@@ -334,11 +344,350 @@ src/backend/base/langflow/
             ├── checkpoint.py       # ApprovalCheckpoint model
             ├── request.py          # ApprovalRequest model
             ├── decision.py         # ApprovalDecision model
-            ├── execution_state.py  # ExecutionState model
+            ├── execution_state.py  # ExecutionState model (DB backend)
             └── crud.py             # CRUD operations
 ```
 
-### 4.2 Core Service Implementation
+### 4.2 Pluggable Execution State Service
+
+The `ExecutionStateService` is designed with a pluggable backend architecture to support different deployment scenarios:
+
+- **Database Backend (Default)**: Uses PostgreSQL/SQLite for OSS/local deployments
+- **Redis Backend**: Uses Redis for cloud deployments requiring faster access and TTL
+- **Custom Backends**: Extensible for other storage systems (e.g., DynamoDB, Memcached)
+
+```python
+# src/backend/base/langflow/services/execution_state/backends/base.py
+
+from abc import ABC, abstractmethod
+from typing import Optional
+from uuid import UUID
+from datetime import timedelta
+
+class ExecutionStateBackend(ABC):
+    """
+    Abstract base class for execution state storage backends.
+
+    Implementations must be stateless and thread-safe to support
+    horizontal scaling with Knative pods.
+    """
+
+    @abstractmethod
+    async def save_state(
+        self,
+        request_id: UUID,
+        state: dict,
+        ttl: Optional[timedelta] = None,
+    ) -> None:
+        """
+        Persist execution state.
+
+        Args:
+            request_id: Unique identifier for the approval request
+            state: Serialized graph execution state
+            ttl: Optional time-to-live for automatic cleanup
+        """
+        ...
+
+    @abstractmethod
+    async def get_state(self, request_id: UUID) -> Optional[dict]:
+        """
+        Retrieve execution state.
+
+        Args:
+            request_id: Unique identifier for the approval request
+
+        Returns:
+            Serialized state dict or None if not found/expired
+        """
+        ...
+
+    @abstractmethod
+    async def delete_state(self, request_id: UUID) -> bool:
+        """
+        Delete execution state after successful resumption.
+
+        Args:
+            request_id: Unique identifier for the approval request
+
+        Returns:
+            True if deleted, False if not found
+        """
+        ...
+
+    @abstractmethod
+    async def extend_ttl(
+        self,
+        request_id: UUID,
+        ttl: timedelta,
+    ) -> bool:
+        """
+        Extend TTL for pending approvals (e.g., when timeout is extended).
+
+        Args:
+            request_id: Unique identifier for the approval request
+            ttl: New time-to-live duration
+
+        Returns:
+            True if extended, False if not found
+        """
+        ...
+
+
+# src/backend/base/langflow/services/execution_state/backends/database.py
+
+from sqlalchemy.ext.asyncio import AsyncSession
+from langflow.services.execution_state.backends.base import ExecutionStateBackend
+from langflow.services.database.models.approval.execution_state import ExecutionStateTable
+
+class DatabaseExecutionStateBackend(ExecutionStateBackend):
+    """
+    Database-backed execution state storage.
+
+    Default backend for OSS/local deployments using PostgreSQL or SQLite.
+    State is stored in the execution_state table with full ACID guarantees.
+    """
+
+    def __init__(self, session_factory):
+        self._session_factory = session_factory
+
+    async def save_state(
+        self,
+        request_id: UUID,
+        state: dict,
+        ttl: Optional[timedelta] = None,
+    ) -> None:
+        async with self._session_factory() as session:
+            # Upsert execution state
+            execution_state = ExecutionStateTable(
+                approval_request_id=request_id,
+                graph_state=state["graph_state"],
+                current_vertex_id=state["current_vertex_id"],
+                completed_vertices=state["completed_vertices"],
+                pending_vertices=state["pending_vertices"],
+                vertex_results=state["vertex_results"],
+                artifacts=state["artifacts"],
+                expires_at=datetime.utcnow() + ttl if ttl else None,
+            )
+            session.add(execution_state)
+            await session.commit()
+
+    async def get_state(self, request_id: UUID) -> Optional[dict]:
+        async with self._session_factory() as session:
+            result = await session.get(ExecutionStateTable, request_id)
+            if not result:
+                return None
+            if result.expires_at and result.expires_at < datetime.utcnow():
+                return None  # Expired
+            return {
+                "graph_state": result.graph_state,
+                "current_vertex_id": result.current_vertex_id,
+                "completed_vertices": result.completed_vertices,
+                "pending_vertices": result.pending_vertices,
+                "vertex_results": result.vertex_results,
+                "artifacts": result.artifacts,
+            }
+
+    async def delete_state(self, request_id: UUID) -> bool:
+        async with self._session_factory() as session:
+            result = await session.get(ExecutionStateTable, request_id)
+            if result:
+                await session.delete(result)
+                await session.commit()
+                return True
+            return False
+
+    async def extend_ttl(self, request_id: UUID, ttl: timedelta) -> bool:
+        async with self._session_factory() as session:
+            result = await session.get(ExecutionStateTable, request_id)
+            if result:
+                result.expires_at = datetime.utcnow() + ttl
+                await session.commit()
+                return True
+            return False
+
+
+# src/backend/base/langflow/services/execution_state/backends/redis.py
+
+import json
+from redis.asyncio import Redis
+from langflow.services.execution_state.backends.base import ExecutionStateBackend
+
+class RedisExecutionStateBackend(ExecutionStateBackend):
+    """
+    Redis-backed execution state storage.
+
+    Recommended for cloud deployments with Knative scaling.
+    Provides faster access and native TTL support.
+    """
+
+    def __init__(self, redis_client: Redis, key_prefix: str = "langflow:exec_state:"):
+        self._redis = redis_client
+        self._key_prefix = key_prefix
+
+    def _make_key(self, request_id: UUID) -> str:
+        return f"{self._key_prefix}{request_id}"
+
+    async def save_state(
+        self,
+        request_id: UUID,
+        state: dict,
+        ttl: Optional[timedelta] = None,
+    ) -> None:
+        key = self._make_key(request_id)
+        value = json.dumps(state)
+
+        if ttl:
+            await self._redis.setex(key, int(ttl.total_seconds()), value)
+        else:
+            await self._redis.set(key, value)
+
+    async def get_state(self, request_id: UUID) -> Optional[dict]:
+        key = self._make_key(request_id)
+        value = await self._redis.get(key)
+
+        if value is None:
+            return None
+
+        return json.loads(value)
+
+    async def delete_state(self, request_id: UUID) -> bool:
+        key = self._make_key(request_id)
+        deleted = await self._redis.delete(key)
+        return deleted > 0
+
+    async def extend_ttl(self, request_id: UUID, ttl: timedelta) -> bool:
+        key = self._make_key(request_id)
+        return await self._redis.expire(key, int(ttl.total_seconds()))
+
+
+# src/backend/base/langflow/services/execution_state/factory.py
+
+from langflow.services.execution_state.backends.base import ExecutionStateBackend
+from langflow.services.execution_state.backends.database import DatabaseExecutionStateBackend
+from langflow.services.execution_state.backends.redis import RedisExecutionStateBackend
+from langflow.services.settings.service import SettingsService
+
+class ExecutionStateBackendFactory:
+    """
+    Factory for creating execution state backends based on configuration.
+    """
+
+    @staticmethod
+    def create(settings: SettingsService) -> ExecutionStateBackend:
+        """
+        Create the appropriate backend based on settings.
+
+        Configuration via environment variables:
+        - LANGFLOW_EXECUTION_STATE_BACKEND: "database" (default) or "redis"
+        - LANGFLOW_REDIS_URL: Redis connection URL (required for redis backend)
+        """
+        backend_type = settings.settings.execution_state_backend or "database"
+
+        if backend_type == "redis":
+            redis_url = settings.settings.redis_url
+            if not redis_url:
+                raise ValueError(
+                    "LANGFLOW_REDIS_URL must be set when using redis execution state backend"
+                )
+            from redis.asyncio import Redis
+            redis_client = Redis.from_url(redis_url)
+            return RedisExecutionStateBackend(redis_client)
+
+        elif backend_type == "database":
+            from langflow.services.deps import get_session_factory
+            return DatabaseExecutionStateBackend(get_session_factory())
+
+        else:
+            raise ValueError(f"Unknown execution state backend: {backend_type}")
+
+
+# src/backend/base/langflow/services/execution_state/service.py
+
+from langflow.services.base import Service
+from langflow.services.execution_state.backends.base import ExecutionStateBackend
+from langflow.services.execution_state.factory import ExecutionStateBackendFactory
+from langflow.services.execution_state.serializers import GraphStateSerializer
+
+class ExecutionStateService(Service):
+    """
+    Service for managing execution state during HITL approval workflows.
+
+    This service abstracts the storage backend, allowing the same API
+    to be used regardless of whether state is stored in a database or Redis.
+    """
+
+    name = "execution_state_service"
+
+    def __init__(self, settings_service: SettingsService):
+        self._backend: ExecutionStateBackend = ExecutionStateBackendFactory.create(
+            settings_service
+        )
+        self._serializer = GraphStateSerializer()
+
+    async def save_execution_state(
+        self,
+        request_id: UUID,
+        graph: "Graph",
+        current_vertex_id: str,
+        ttl: Optional[timedelta] = None,
+    ) -> None:
+        """
+        Save the current graph execution state for later resumption.
+        """
+        state = self._serializer.serialize(graph, current_vertex_id)
+        await self._backend.save_state(request_id, state, ttl)
+
+    async def restore_execution_state(
+        self,
+        request_id: UUID,
+    ) -> Optional["Graph"]:
+        """
+        Restore graph execution state for resumption after approval.
+
+        Returns None if state not found or expired.
+        """
+        state = await self._backend.get_state(request_id)
+        if state is None:
+            return None
+
+        return self._serializer.deserialize(state)
+
+    async def cleanup_execution_state(self, request_id: UUID) -> bool:
+        """
+        Clean up execution state after flow completion or rejection.
+        """
+        return await self._backend.delete_state(request_id)
+
+    async def extend_approval_timeout(
+        self,
+        request_id: UUID,
+        additional_time: timedelta,
+    ) -> bool:
+        """
+        Extend the TTL when approval timeout is extended.
+        """
+        return await self._backend.extend_ttl(request_id, additional_time)
+```
+
+**Configuration Options:**
+
+| Environment Variable | Default | Description |
+|---------------------|---------|-------------|
+| `LANGFLOW_EXECUTION_STATE_BACKEND` | `database` | Backend type: `database` or `redis` |
+| `LANGFLOW_REDIS_URL` | - | Redis connection URL (required for redis backend) |
+| `LANGFLOW_EXECUTION_STATE_TTL` | `86400` | Default TTL in seconds (24 hours) |
+
+**Deployment Recommendations:**
+
+| Deployment | Backend | Rationale |
+|------------|---------|-----------|
+| Local/Development | `database` | Simpler setup, no additional infrastructure |
+| Single-server OSS | `database` | SQLite/PostgreSQL sufficient for moderate load |
+| Multi-server OSS | `database` | PostgreSQL provides shared state across servers |
+| Cloud/Knative | `redis` | Faster access, native TTL, better for high concurrency |
+
+### 4.3 Core Approval Service Implementation
 
 ```python
 # src/backend/base/langflow/services/approval/service.py
@@ -419,7 +768,7 @@ class ApprovalService(Service):
         session.add(execution_state)
         await session.commit()
 
-        # Emit notification event (will be picked up by SSE/WebSocket)
+        # Emit notification event (will be picked up by SSE stream)
         await self._emit_approval_request_event(request)
 
         return request
@@ -503,7 +852,7 @@ class ApprovalService(Service):
         pass
 ```
 
-### 4.3 Approval Gate Component
+### 4.4 Approval Gate Component
 
 ```python
 # src/backend/base/langflow/components/approval/approval_gate.py
@@ -672,7 +1021,7 @@ class ApprovalGateComponent(Component):
         return Data(text="")
 ```
 
-### 4.4 Event Integration
+### 4.5 Event Integration
 
 ```python
 # src/backend/base/langflow/events/approval_events.py
@@ -738,7 +1087,7 @@ class ApprovalEventData:
         }
 ```
 
-### 4.5 Graph Execution Integration
+### 4.6 Graph Execution Integration
 
 ```python
 # Modifications to src/backend/base/langflow/api/build.py
@@ -809,7 +1158,7 @@ async def resume_after_approval(
     )
 ```
 
-### 4.6 API Endpoints
+### 4.7 API Endpoints
 
 ```python
 # src/backend/base/langflow/api/v1/approvals.py
@@ -1717,11 +2066,11 @@ This design builds upon existing Langflow patterns:
 
 1. **State Vertices** (`notify.py`, `listen.py`) - Context-based state management
 2. **Conditional Router** - Branch control with `stop()`/`start()`
-3. **EventManager** - Event emission and streaming
+3. **EventManager** - Event emission and SSE streaming
 4. **JobQueueService** - Async job management with queues
-5. **SessionService** - Session state tracking
-6. **BaseModal** - Frontend modal patterns
-7. **SSE Streaming** - Real-time event delivery
+5. **BaseModal** - Frontend modal patterns
+6. **SSE Streaming** - Real-time event delivery via Server-Sent Events
+7. **Zustand Stores** - Frontend state management pattern
 
 ## Appendix B: Security Considerations
 
@@ -1744,6 +2093,10 @@ Recommended metrics to track:
 
 ---
 
-*Document Version: 1.0*
-*Last Updated: 2024*
+*Document Version: 1.1*
+*Last Updated: December 2024*
 *Author: Claude Code Assistant*
+
+## Changelog
+
+- **v1.1**: Added pluggable ExecutionStateService with database/Redis backends; removed WebSocket references (not available in Langflow); removed Observer pattern references (dead code)
