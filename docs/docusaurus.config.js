@@ -420,6 +420,10 @@ const config = {
           srcDark: "img/lf-docs-dark.svg",
         },
         items: [
+          {
+            type: 'docsVersionDropdown',
+            position: 'right',
+          },
           // right
           {
             position: "right",
