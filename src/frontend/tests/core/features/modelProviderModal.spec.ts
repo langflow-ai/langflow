@@ -9,6 +9,9 @@ test.describe("ModelProviderModal", () => {
     async ({ page }) => {
       await awaitBootstrapTest(page, { skipModal: true });
 
+      // Wait for page to be ready
+      await page.waitForTimeout(1000);
+
       // Navigate to Settings > Model Providers
       await navigateSettingsPages(page, "Settings", "Model Providers");
 
@@ -32,6 +35,9 @@ test.describe("ModelProviderModal", () => {
     async ({ page }) => {
       await awaitBootstrapTest(page, { skipModal: true });
 
+      // Wait for page to be ready
+      await page.waitForTimeout(1000);
+
       // Navigate to Settings > Model Providers
       await navigateSettingsPages(page, "Settings", "Model Providers");
       await expect(
@@ -51,6 +57,9 @@ test.describe("ModelProviderModal", () => {
     { tag: ["@release", "@components", "@workspace"] },
     async ({ page }) => {
       await awaitBootstrapTest(page, { skipModal: true });
+
+      // Wait for page to be ready
+      await page.waitForTimeout(1000);
 
       // Navigate to Settings > Model Providers
       await navigateSettingsPages(page, "Settings", "Model Providers");
@@ -85,6 +94,9 @@ test.describe("ModelProviderModal", () => {
     async ({ page }) => {
       await awaitBootstrapTest(page, { skipModal: true });
 
+      // Wait for page to be ready
+      await page.waitForTimeout(1000);
+
       // Navigate to Settings > Model Providers
       await navigateSettingsPages(page, "Settings", "Model Providers");
       await expect(
@@ -108,6 +120,9 @@ test.describe("ModelProviderModal", () => {
     { tag: ["@release", "@components", "@workspace"] },
     async ({ page }) => {
       await awaitBootstrapTest(page, { skipModal: true });
+
+      // Wait for page to be ready
+      await page.waitForTimeout(1000);
 
       // Navigate to Settings > Model Providers
       await navigateSettingsPages(page, "Settings", "Model Providers");
@@ -143,6 +158,9 @@ test.describe("ModelProviderModal", () => {
     { tag: ["@release", "@components", "@workspace"] },
     async ({ page }) => {
       await awaitBootstrapTest(page, { skipModal: true });
+
+      // Wait for page to be ready
+      await page.waitForTimeout(1000);
 
       // Navigate to Settings > Model Providers
       await navigateSettingsPages(page, "Settings", "Model Providers");

@@ -9,6 +9,9 @@ test.describe("ModelProviderCount Component", () => {
     async ({ page }) => {
       await awaitBootstrapTest(page, { skipModal: true });
 
+      // Wait for page to be ready
+      await page.waitForTimeout(1000);
+
       // Navigate to Settings > Model Providers
       await navigateSettingsPages(page, "Settings", "Model Providers");
 
@@ -31,6 +34,9 @@ test.describe("ModelProviderCount Component", () => {
     { tag: ["@release", "@components", "@workspace"] },
     async ({ page }) => {
       await awaitBootstrapTest(page, { skipModal: true });
+
+      // Wait for page to be ready
+      await page.waitForTimeout(1000);
 
       // Navigate to Settings > Model Providers
       await navigateSettingsPages(page, "Settings", "Model Providers");
@@ -57,6 +63,9 @@ test.describe("ModelProviderCount Component", () => {
     { tag: ["@release", "@components", "@workspace"] },
     async ({ page }) => {
       await awaitBootstrapTest(page, { skipModal: true });
+
+      // Wait for page to be ready
+      await page.waitForTimeout(1000);
 
       // First navigation - open page
       await navigateSettingsPages(page, "Settings", "Model Providers");
@@ -86,6 +95,9 @@ test.describe("ModelProviderCount Component", () => {
     async ({ page }) => {
       await awaitBootstrapTest(page, { skipModal: true });
 
+      // Wait for page to be ready
+      await page.waitForTimeout(1000);
+
       // Navigate to Settings > Model Providers
       await navigateSettingsPages(page, "Settings", "Model Providers");
 
@@ -107,6 +119,9 @@ test.describe("ModelProviderCount Component", () => {
     { tag: ["@release", "@components", "@workspace"] },
     async ({ page }) => {
       await awaitBootstrapTest(page, { skipModal: true });
+
+      // Wait for page to be ready
+      await page.waitForTimeout(1000);
 
       // Navigate to Settings > Model Providers
       await navigateSettingsPages(page, "Settings", "Model Providers");
