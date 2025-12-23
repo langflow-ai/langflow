@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     from .canvas_composio import ComposioCanvasAPIComponent
     from .coda_composio import ComposioCodaAPIComponent
     from .composio_api import ComposioAPIComponent
+    from .connecteam_composio import ComposioConnecteamAPIComponent
     from .contentful_composio import ComposioContentfulAPIComponent
     from .deepgram_composio import ComposioDeepgramAPIComponent
     from .digicert_composio import ComposioDigicertAPIComponent
@@ -50,7 +51,6 @@ if TYPE_CHECKING:
     from .jira_composio import ComposioJiraAPIComponent
     from .jotform_composio import ComposioJotformAPIComponent
     from .klaviyo_composio import ComposioKlaviyoAPIComponent
-    from .lemlist_composio import ComposioLemlistAPIComponent
     from .linear_composio import ComposioLinearAPIComponent
     from .listennotes_composio import ComposioListennotesAPIComponent
     from .mem0_composio import ComposioMem0APIComponent
@@ -111,6 +111,7 @@ _dynamic_imports = {
     "ComposioCalendlyAPIComponent": "calendly_composio",
     "ComposioCanvasAPIComponent": "canvas_composio",
     "ComposioContentfulAPIComponent": "contentful_composio",
+    "ComposioConnecteamAPIComponent": "connecteam_composio",
     "ComposioDeepgramAPIComponent": "deepgram_composio",
     "ComposioDigicertAPIComponent": "digicert_composio",
     "ComposioDiscordAPIComponent": "discord_composio",
@@ -139,7 +140,6 @@ _dynamic_imports = {
     "ComposioJiraAPIComponent": "jira_composio",
     "ComposioJotformAPIComponent": "jotform_composio",
     "ComposioKlaviyoAPIComponent": "klaviyo_composio",
-    "ComposioLemlistAPIComponent": "lemlist_composio",
     "ComposioLinearAPIComponent": "linear_composio",
     "ComposioListennotesAPIComponent": "listennotes_composio",
     "ComposioMem0APIComponent": "mem0_composio",
@@ -174,6 +174,7 @@ __all__ = [
     "ComposioCanvaAPIComponent",
     "ComposioCanvasAPIComponent",
     "ComposioCodaAPIComponent",
+    "ComposioConnecteamAPIComponent",
     "ComposioContentfulAPIComponent",
     "ComposioDeepgramAPIComponent",
     "ComposioDigicertAPIComponent",
@@ -203,7 +204,6 @@ __all__ = [
     "ComposioJiraAPIComponent",
     "ComposioJotformAPIComponent",
     "ComposioKlaviyoAPIComponent",
-    "ComposioLemlistAPIComponent",
     "ComposioLinearAPIComponent",
     "ComposioListennotesAPIComponent",
     "ComposioMem0APIComponent",
