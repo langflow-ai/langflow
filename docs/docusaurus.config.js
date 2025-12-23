@@ -109,11 +109,11 @@ const config = {
           lastVersion: '1.7.0',
           versions: {
             current: {
-              label: 'Next', // Work-in-progress version (will become next release)
+              label: '1.8.x', // Work-in-progress version (will become next release)
               path: 'next',
             },
             '1.7.0': {
-              label: '1.7.0',
+              label: '1.7.x',
             },
           },
           onlyIncludeVersions: ['current', '1.7.0'], // Include both versions

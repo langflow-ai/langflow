@@ -46,26 +46,26 @@ The versioning configuration is found in `docusaurus.config.js`.
 
 The version key `'current'` is a special Docusaurus keyword that refers to the work-in-progress docs. You can't change this key, but you can customize the `label`.
 
-Versioning example for release version 1.7.0:
+Versioning example for release version 1.8.x:
 
-1. Before release, the `current` version contains work-in-progress docs that are ahead of version 1.7.0.
-2. When ready to release 1.7.0, create a branch and run `yarn docusaurus docs:version 1.7.0` to snapshot the current docs.
+1. Before release, the `current` version contains work-in-progress docs that are ahead of version `1.7.x`. The `current` label should already be set to `1.8.x` (updated when you began working on the 1.8.x docset).
+2. When ready to release 1.8.x, create a branch and run `yarn docusaurus docs:version 1.8.0` to snapshot the current docs. Use the full version number like `1.8.0` for the command, even though the label displays `1.8.x`.
 3. After creating a new version, update `docusaurus.config.js`:
 
 ```javascript
 docs: {
-  lastVersion: '1.8.0', // Make 1.8.0 the latest version
+  lastVersion: '1.8.0', // Make 1.8.0 the latest version (use full version number)
   versions: {
     current: {
-      label: 'Next', // Work-in-progress version (will become 1.9.0)
+      label: '1.9.x', // Work-in-progress version (will become next release)
       path: 'next',
     },
     '1.8.0': {
-      label: '1.8.0',
+      label: '1.8.x', // Label shows .x notation
       path: '1.8.0',
     },
     '1.7.0': {
-      label: '1.7.0',
+      label: '1.7.x', // Label shows .x notation
       path: '1.7.0',
     },
   },
@@ -81,11 +81,11 @@ yarn serve
 ```
 
 5. Create a pull request to main, and merge to create your new release.
-6. To create version 1.8.0, repeat the process by creating a branch, running `yarn docusaurus docs:version 1.8.0`, updating `docusaurus.config.js`, and merging to main.
+6. To create version 1.9.x, repeat the process: update the `current` label to `1.9.x` when you begin working on it, then when ready to release, run `yarn docusaurus docs:version 1.9.0`, update `docusaurus.config.js` with labels using `.x` notation, and merge to main.
 
 - `current` = always the work-in-progress docs from `main` branch (ahead of all releases)
-  - The version key must be `'current'` (Docusaurus keyword), but you can customize the `label` shown to users..
-- `lastVersion` = the most recent released version (shown as "latest" in the UI)
+  - The version key must be `'current'` (Docusaurus keyword), but you can customize the displayed `label`
+- `lastVersion` = the most recent released version (shown as "latest" in the UI).
 
 See the [Docusaurus docs](https://docusaurus.io/docs/versioning) for more info.
 
