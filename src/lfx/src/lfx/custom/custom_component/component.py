@@ -134,7 +134,6 @@ class Component(CustomComponent):
                 inputs[key] = value
 
         self._parameters = inputs or {}
-        self.set_attributes(self._parameters)
 
         # Store original inputs and config for reference
         self.__inputs = inputs
@@ -144,7 +143,7 @@ class Component(CustomComponent):
         if "_id" not in self.__config:
             self.__config |= {"_id": f"{self.__class__.__name__}-{nanoid.generate(size=5)}"}
 
-        # Initialize base class
+        # Initialize base class (this sets self._parameters from config via setattr)
         super().__init__(**self.__config)
 
         # Post-initialization setup
@@ -158,6 +157,18 @@ class Component(CustomComponent):
         if self.inputs is not None:
             self.map_inputs(self.inputs)
         self.map_outputs()
+
+        # Set attributes AFTER map_inputs so _inputs is populated
+        # _parameters is set by super().__init__() from config
+        # Filter out Vertex objects (from edge connections) - only set primitive values
+        if self._parameters:
+            filtered_params = {
+                k: v
+                for k, v in self._parameters.items()
+                if not (hasattr(v, "__class__") and "Vertex" in v.__class__.__name__)
+            }
+            if filtered_params:
+                self.set_attributes(filtered_params)
 
         # Final setup
         self._set_output_types(list(self._outputs_map.values()))

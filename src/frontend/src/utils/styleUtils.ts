@@ -239,6 +239,7 @@ export const SIDEBAR_CATEGORIES = [
   { display_name: "Text Splitters", name: "textsplitters", icon: "Scissors" },
   { display_name: "Toolkits", name: "toolkits", icon: "Package2" },
   { display_name: "Tools", name: "tools", icon: "Hammer" },
+  { display_name: "Telegram", name: "telegram", icon: "Send" },
 ];
 
 export const SIDEBAR_BUNDLES = [
@@ -367,6 +368,7 @@ export const categoryIcons: Record<string, string> = {
   textsplitters: "Scissors",
   toolkits: "Package2",
   tools: "Hammer",
+  telegram: "Send",
   custom: "Edit",
   custom_components: "GradientInfinity",
 };

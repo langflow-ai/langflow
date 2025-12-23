@@ -1535,6 +1535,10 @@ class Graph:
                         # Now set update the vertex with the cached vertex
                         vertex.built = cached_vertex_dict["built"]
                         vertex.artifacts = cached_vertex_dict["artifacts"]
+                        vertex.artifacts_raw = cached_vertex_dict.get("artifacts_raw", {})
+                        vertex.artifacts_type = cached_vertex_dict.get("artifacts_type", {})
+                        vertex.outputs_logs = cached_vertex_dict.get("outputs_logs", {})
+                        vertex.logs = cached_vertex_dict.get("logs", {})
                         vertex.built_object = cached_vertex_dict["built_object"]
                         vertex.built_result = cached_vertex_dict["built_result"]
                         vertex.full_data = cached_vertex_dict["full_data"]
@@ -1563,6 +1567,10 @@ class Graph:
                         "built": vertex.built,
                         "results": vertex.results,
                         "artifacts": vertex.artifacts,
+                        "artifacts_raw": vertex.artifacts_raw,
+                        "artifacts_type": vertex.artifacts_type,
+                        "outputs_logs": vertex.outputs_logs,
+                        "logs": vertex.logs,
                         "built_object": vertex.built_object,
                         "built_result": vertex.built_result,
                         "full_data": vertex.full_data,

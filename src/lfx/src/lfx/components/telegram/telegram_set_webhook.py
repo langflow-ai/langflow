@@ -4,7 +4,7 @@ import re
 import httpx
 
 from lfx.custom.custom_component.component import Component
-from lfx.io import BoolInput, IntInput, MessageTextInput, Output, SecretStrInput, StrInput
+from lfx.io import BoolInput, IntInput, MessageTextInput, MultilineInput, Output, SecretStrInput, StrInput
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 
@@ -55,12 +55,15 @@ class TelegramSetWebhook(Component):
             password=True,
             info="Токен вашего Telegram бота, полученный от @BotFather",
         ),
-        MessageTextInput(
+        MultilineInput(
             name="url",
             display_name="Webhook URL",
+            value="BACKEND_URL",
             required=True,
             info="HTTPS URL для отправки обновлений от Telegram. Формат: https://your-langflow-server/api/v1/webhook/{flow_id}. Где взять URL: 1) Скопируйте из поля 'Endpoint' компонента TelegramWebhook в вашем потоке, 2) Или найдите Flow ID в URL потока (после /flow/) и подставьте в формат выше, 3) Или откройте API Access pane потока и скопируйте URL из вкладки 'Webhook curl'. Используйте пустую строку для удаления webhook. URL должен быть HTTPS с валидным SSL сертификатом.",
             tool_mode=True,
+            copy_field=True,
+            input_types=[],
         ),
         BoolInput(
             name="auto_generate_secret",

@@ -64,8 +64,13 @@ class Vertex:
         # TODO: This won't be enough in the long term
         # we need to have a better way to determine if a vertex is an input or an output
         type_strings = [self.id.split("-")[0], data["data"]["type"]]
-        self.is_input = any(input_component_name in type_strings for input_component_name in INPUT_COMPONENTS)
-        self.is_output = any(output_component_name in type_strings for output_component_name in OUTPUT_COMPONENTS)
+        # Use substring matching to detect input/output components (e.g., "Webhook" in "TelegramWebhook")
+        self.is_input = any(
+            any(str(input_component_name) in ts for ts in type_strings) for input_component_name in INPUT_COMPONENTS
+        )
+        self.is_output = any(
+            any(str(output_component_name) in ts for ts in type_strings) for output_component_name in OUTPUT_COMPONENTS
+        )
         self._is_loop = None
         self.has_session_id = None
         self.custom_component = None
@@ -177,6 +182,10 @@ class Vertex:
             return result
         if isinstance(self.built_object, str):
             self.built_result = self.built_object
+
+        # If results dict has data, use it (populated by add_result from ComponentVertex)
+        if self.results:
+            return self.results
 
         if isinstance(self.built_result, UnbuiltResult):
             return {}

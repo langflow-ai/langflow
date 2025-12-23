@@ -1,4 +1,4 @@
-# ruff: noqa: RUF001, RUF003
+# ruff: noqa: RUF001
 import json
 
 from lfx.custom.custom_component.component import Component
@@ -135,9 +135,9 @@ class TelegramWebhook(Component):
             self.status = "Отфильтровано"
             return Data(data={"filtered": True, "update": update})
 
-        # Langflow нативно отобразит JSON, если положить его в Data и установить в status
         data = Data(data=update)
-        self.status = data
+        # Convert to readable JSON string for status display
+        self.status = json.dumps(update, indent=2, ensure_ascii=False)
         logger.info(f"Получено обновление Telegram ID: {update.get('update_id')}")
         return data
 
