@@ -1973,7 +1973,9 @@ async def call_workflow_tool(
 
             candidates: list[dict[str, Any]] = []
             for node in nodes:
-                node_id_candidate = str(node.get("id") or "")
+                node_id_candidate = str(node.get("id") or "").strip()
+                if not node_id_candidate:
+                    continue
                 node_data = node.get("data", {}) if isinstance(node.get("data"), dict) else {}
                 node_inner = node_data.get("node", {}) if isinstance(node_data.get("node"), dict) else {}
                 template = node_inner.get("template", {}) if isinstance(node_inner.get("template"), dict) else {}
