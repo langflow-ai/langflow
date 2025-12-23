@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-WBzwN",
+            "id": "Prompt-RaLHB",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "LanguageModelComponent-tkxPd",
+            "id": "LanguageModelComponent-qFXT1",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-WBzwN{œdataTypeœ:œPromptœ,œidœ:œPrompt-WBzwNœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-tkxPd{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-tkxPdœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-RaLHB{œdataTypeœ:œPromptœ,œidœ:œPrompt-RaLHBœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-qFXT1{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-qFXT1œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Prompt-WBzwN",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-WBzwNœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LanguageModelComponent-tkxPd",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-tkxPdœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Prompt-RaLHB",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-RaLHBœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "LanguageModelComponent-qFXT1",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-qFXT1œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "LanguageModelComponent",
-            "id": "LanguageModelComponent-tkxPd",
+            "id": "LanguageModelComponent-qFXT1",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -43,19 +43,19 @@
           },
           "targetHandle": {
             "fieldName": "summary",
-            "id": "Prompt-hsVHw",
+            "id": "Prompt-C5FYM",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-LanguageModelComponent-tkxPd{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-tkxPdœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-hsVHw{œfieldNameœ:œsummaryœ,œidœ:œPrompt-hsVHwœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-LanguageModelComponent-qFXT1{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-qFXT1œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-C5FYM{œfieldNameœ:œsummaryœ,œidœ:œPrompt-C5FYMœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "LanguageModelComponent-tkxPd",
-        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-tkxPdœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-hsVHw",
-        "targetHandle": "{œfieldNameœ: œsummaryœ, œidœ: œPrompt-hsVHwœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "LanguageModelComponent-qFXT1",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-qFXT1œ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-C5FYM",
+        "targetHandle": "{œfieldNameœ: œsummaryœ, œidœ: œPrompt-C5FYMœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -63,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-hsVHw",
+            "id": "Prompt-C5FYM",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -71,19 +71,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "LanguageModelComponent-V8U8j",
+            "id": "LanguageModelComponent-Wp3pC",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-hsVHw{œdataTypeœ:œPromptœ,œidœ:œPrompt-hsVHwœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-V8U8j{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-V8U8jœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-C5FYM{œdataTypeœ:œPromptœ,œidœ:œPrompt-C5FYMœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-Wp3pC{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-Wp3pCœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Prompt-hsVHw",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-hsVHwœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LanguageModelComponent-V8U8j",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-V8U8jœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Prompt-C5FYM",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-C5FYMœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "LanguageModelComponent-Wp3pC",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-Wp3pCœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -91,7 +91,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "LanguageModelComponent",
-            "id": "LanguageModelComponent-V8U8j",
+            "id": "LanguageModelComponent-Wp3pC",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -99,7 +99,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-6i2Ae",
+            "id": "ChatOutput-K40Du",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -108,12 +108,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-LanguageModelComponent-V8U8j{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-V8U8jœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-6i2Ae{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-6i2Aeœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-LanguageModelComponent-Wp3pC{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-Wp3pCœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-K40Du{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-K40Duœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "LanguageModelComponent-V8U8j",
-        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-V8U8jœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-6i2Ae",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-6i2Aeœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "source": "LanguageModelComponent-Wp3pC",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-Wp3pCœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-K40Du",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-K40Duœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -121,7 +121,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-V8iFx",
+            "id": "Prompt-dabhh",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -129,19 +129,19 @@
           },
           "targetHandle": {
             "fieldName": "system_message",
-            "id": "LanguageModelComponent-raKi9",
+            "id": "LanguageModelComponent-gYAmH",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-V8iFx{œdataTypeœ:œPromptœ,œidœ:œPrompt-V8iFxœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-raKi9{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-raKi9œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-dabhh{œdataTypeœ:œPromptœ,œidœ:œPrompt-dabhhœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-gYAmH{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-gYAmHœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Prompt-V8iFx",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-V8iFxœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LanguageModelComponent-raKi9",
-        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œLanguageModelComponent-raKi9œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Prompt-dabhh",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-dabhhœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "LanguageModelComponent-gYAmH",
+        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œLanguageModelComponent-gYAmHœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -149,7 +149,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "LanguageModelComponent",
-            "id": "LanguageModelComponent-raKi9",
+            "id": "LanguageModelComponent-gYAmH",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -157,7 +157,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-63KXX",
+            "id": "ChatOutput-yiSgq",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -166,48 +166,19 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-LanguageModelComponent-raKi9{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-raKi9œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-63KXX{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-63KXXœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-LanguageModelComponent-gYAmH{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-gYAmHœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-yiSgq{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-yiSgqœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "LanguageModelComponent-raKi9",
-        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-raKi9œ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-63KXX",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-63KXXœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "source": "LanguageModelComponent-gYAmH",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-gYAmHœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-yiSgq",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-yiSgqœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
-        "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "File",
-            "id": "File-Z5Vx4",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "text",
-            "id": "Prompt-WBzwN",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-File-Z5Vx4{œdataTypeœ:œFileœ,œidœ:œFile-Z5Vx4œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-WBzwN{œfieldNameœ:œtextœ,œidœ:œPrompt-WBzwNœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "File-Z5Vx4",
-        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-Z5Vx4œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-WBzwN",
-        "targetHandle": "{œfieldNameœ: œtextœ, œidœ: œPrompt-WBzwNœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "File",
-            "id": "File-Z5Vx4",
+            "id": "File-oAEuF",
             "name": "message",
             "output_types": [
               "Message"
@@ -215,25 +186,50 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "LanguageModelComponent-raKi9",
+            "id": "LanguageModelComponent-gYAmH",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-File-Z5Vx4{œdataTypeœ:œFileœ,œidœ:œFile-Z5Vx4œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-raKi9{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-raKi9œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "File-Z5Vx4",
-        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-Z5Vx4œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LanguageModelComponent-raKi9",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-raKi9œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "xy-edge__File-oAEuF{œdataTypeœ:œFileœ,œidœ:œFile-oAEuFœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-gYAmH{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-gYAmHœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "File-oAEuF",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-oAEuFœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "LanguageModelComponent-gYAmH",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-gYAmHœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "File",
+            "id": "File-oAEuF",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "text",
+            "id": "Prompt-RaLHB",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "xy-edge__File-oAEuF{œdataTypeœ:œFileœ,œidœ:œFile-oAEuFœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-RaLHB{œfieldNameœ:œtextœ,œidœ:œPrompt-RaLHBœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "File-oAEuF",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-oAEuFœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-RaLHB",
+        "targetHandle": "{œfieldNameœ: œtextœ, œidœ: œPrompt-RaLHBœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "Prompt-hsVHw",
+          "id": "Prompt-C5FYM",
           "node": {
             "base_classes": [
               "Message"
@@ -256,7 +252,6 @@
             "frozen": false,
             "icon": "braces",
             "legacy": false,
-            "lf_version": "1.7.0",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -369,9 +364,9 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "id": "Prompt-hsVHw",
+        "id": "Prompt-C5FYM",
         "measured": {
-          "height": 367,
+          "height": 366,
           "width": 320
         },
         "position": {
@@ -383,7 +378,7 @@
       },
       {
         "data": {
-          "id": "Prompt-WBzwN",
+          "id": "Prompt-RaLHB",
           "node": {
             "base_classes": [
               "Message"
@@ -411,7 +406,6 @@
             "is_input": null,
             "is_output": null,
             "legacy": false,
-            "lf_version": "1.7.0",
             "metadata": {},
             "minimized": false,
             "name": "",
@@ -526,9 +520,9 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "id": "Prompt-WBzwN",
+        "id": "Prompt-RaLHB",
         "measured": {
-          "height": 367,
+          "height": 366,
           "width": 320
         },
         "position": {
@@ -540,7 +534,7 @@
       },
       {
         "data": {
-          "id": "Prompt-V8iFx",
+          "id": "Prompt-dabhh",
           "node": {
             "base_classes": [
               "Message"
@@ -561,7 +555,6 @@
             "frozen": false,
             "icon": "braces",
             "legacy": false,
-            "lf_version": "1.7.0",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -651,9 +644,9 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "id": "Prompt-V8iFx",
+        "id": "Prompt-dabhh",
         "measured": {
-          "height": 284,
+          "height": 283,
           "width": 320
         },
         "position": {
@@ -665,7 +658,7 @@
       },
       {
         "data": {
-          "id": "note-BIQNZ",
+          "id": "note-VyXUq",
           "node": {
             "description": "# Sentiment Analysis Flow  \n\nThis flow processes text data, analyzes sentiment, and provides structured insights.  \n\n## Prerequisite\n\n* [OpenAI API key](https://platform.openai.com/docs/)\n\n## Quickstart\n\n1. Add your [OpenAI API key](https://platform.openai.com/docs/) to the OpenAI model components.\n2. In the **File Component**, load text data in `.txt`, `.csv`, or `.json` formats.\n3. Open the **Playground** to see the analysis and recommendation the flow constructs.\n\n## How It Works  \n\n1. The **Data to Message** component converts raw data into structured messages. \n\n2. The **NLP expert** prompt provides sentiment analysis, while the **Analyzing messages** prompt summarizes messages from a discussion board.\n\n3. The final **Prompt Component** creates a structured recommendation prompt to ensure that the AI model receives well-formatted input.  \n\n4. The **OpenAI Model Component** processes the text and classifies the sentiment as **Positive, Neutral, or Negative**.  \n\n",
             "display_name": "",
@@ -676,7 +669,7 @@
         },
         "dragging": false,
         "height": 574,
-        "id": "note-BIQNZ",
+        "id": "note-VyXUq",
         "measured": {
           "height": 574,
           "width": 412
@@ -692,7 +685,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-63KXX",
+          "id": "ChatOutput-yiSgq",
           "node": {
             "base_classes": [
               "Message"
@@ -719,7 +712,6 @@
             "frozen": false,
             "icon": "MessagesSquare",
             "legacy": false,
-            "lf_version": "1.7.0",
             "metadata": {
               "code_hash": "8c87e536cca4",
               "dependencies": {
@@ -961,7 +953,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-63KXX",
+        "id": "ChatOutput-yiSgq",
         "measured": {
           "height": 48,
           "width": 192
@@ -975,7 +967,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-6i2Ae",
+          "id": "ChatOutput-K40Du",
           "node": {
             "base_classes": [
               "Message"
@@ -1243,7 +1235,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-6i2Ae",
+        "id": "ChatOutput-K40Du",
         "measured": {
           "height": 48,
           "width": 192
@@ -1257,7 +1249,7 @@
       },
       {
         "data": {
-          "id": "note-F5DXI",
+          "id": "note-S1pun",
           "node": {
             "description": "### 💡 Add your OpenAI API key here 👇",
             "display_name": "",
@@ -1270,7 +1262,7 @@
         },
         "dragging": false,
         "height": 326,
-        "id": "note-F5DXI",
+        "id": "note-S1pun",
         "measured": {
           "height": 326,
           "width": 353
@@ -1286,7 +1278,7 @@
       },
       {
         "data": {
-          "id": "note-oTIvv",
+          "id": "note-ZAMRC",
           "node": {
             "description": "### 💡 Add your OpenAI API key here 👇",
             "display_name": "",
@@ -1298,7 +1290,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-oTIvv",
+        "id": "note-ZAMRC",
         "measured": {
           "height": 324,
           "width": 324
@@ -1312,7 +1304,7 @@
       },
       {
         "data": {
-          "id": "note-VA5iE",
+          "id": "note-KreFC",
           "node": {
             "description": "### 💡 Add your OpenAI API key here 👇",
             "display_name": "",
@@ -1324,7 +1316,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-VA5iE",
+        "id": "note-KreFC",
         "measured": {
           "height": 324,
           "width": 324
@@ -1338,7 +1330,7 @@
       },
       {
         "data": {
-          "id": "LanguageModelComponent-tkxPd",
+          "id": "LanguageModelComponent-qFXT1",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -1364,7 +1356,7 @@
             ],
             "frozen": false,
             "icon": "brain-circuit",
-            "last_updated": "2025-12-20T16:52:52.460Z",
+            "last_updated": "2025-12-11T21:29:10.202Z",
             "legacy": false,
             "lf_version": "1.7.0",
             "metadata": {
@@ -1394,7 +1386,6 @@
                 "cache": true,
                 "display_name": "Model Response",
                 "group_outputs": false,
-                "hidden": null,
                 "loop_types": null,
                 "method": "text_response",
                 "name": "text_output",
@@ -1412,7 +1403,6 @@
                 "cache": true,
                 "display_name": "Language Model",
                 "group_outputs": false,
-                "hidden": null,
                 "loop_types": null,
                 "method": "build_model",
                 "name": "model_output",
@@ -1430,10 +1420,10 @@
             "priority": 0,
             "template": {
               "_frontend_node_flow_id": {
-                "value": "7b29b229-2f50-4d10-b61c-0ab3008f8ff2"
+                "value": "524f71dc-cc58-441a-a009-c71d6755765f"
               },
               "_frontend_node_folder_id": {
-                "value": "34260300-cae1-43f3-8b14-1272b8cffe4c"
+                "value": "afaca9ee-97e3-4211-8569-722a4058ea5e"
               },
               "_type": "Component",
               "api_key": {
@@ -1531,7 +1521,7 @@
                 "type": "str",
                 "value": ""
               },
-              "is_refresh": true,
+              "is_refresh": false,
               "model": {
                 "_input_type": "ModelInput",
                 "advanced": false,
@@ -1549,112 +1539,14 @@
                   }
                 },
                 "info": "Select your model provider",
-                "input_types": [],
+                "input_types": [
+                  "LanguageModel"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "model_type": "language",
                 "name": "model",
-                "options": [
-                  {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5"
-                      ]
-                    },
-                    "name": "gpt-5",
-                    "provider": "OpenAI"
-                  },
-                  {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5-mini"
-                      ]
-                    },
-                    "name": "gpt-5-mini",
-                    "provider": "OpenAI"
-                  },
-                  {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5-nano"
-                      ]
-                    },
-                    "name": "gpt-5-nano",
-                    "provider": "OpenAI"
-                  },
-                  {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model"
-                    },
-                    "name": "gpt-4o-mini",
-                    "provider": "OpenAI"
-                  },
-                  {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model"
-                    },
-                    "name": "gpt-4o",
-                    "provider": "OpenAI"
-                  },
-                  {
-                    "category": "Google Generative AI",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "is_disabled_provider": true,
-                      "variable_name": "GOOGLE_API_KEY"
-                    },
-                    "name": "__enable_provider_Google Generative AI__",
-                    "provider": "Google Generative AI"
-                  },
-                  {
-                    "category": "Ollama",
-                    "icon": "Ollama",
-                    "metadata": {
-                      "is_disabled_provider": true,
-                      "variable_name": "OLLAMA_BASE_URL"
-                    },
-                    "name": "__enable_provider_Ollama__",
-                    "provider": "Ollama"
-                  },
-                  {
-                    "category": "IBM Watsonx",
-                    "icon": "WatsonxAI",
-                    "metadata": {
-                      "is_disabled_provider": true,
-                      "variable_name": "WATSONX_APIKEY"
-                    },
-                    "name": "__enable_provider_IBM Watsonx__",
-                    "provider": "IBM Watsonx"
-                  }
-                ],
+                "options": [],
                 "override_skip": false,
                 "placeholder": "Setup Provider",
                 "real_time_refresh": true,
@@ -1666,23 +1558,7 @@
                 "trace_as_input": true,
                 "track_in_telemetry": false,
                 "type": "model",
-                "value": [
-                  {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5"
-                      ]
-                    },
-                    "name": "gpt-5",
-                    "provider": "OpenAI"
-                  }
-                ]
+                "value": []
               },
               "ollama_base_url": {
                 "_input_type": "MessageInput",
@@ -1695,7 +1571,7 @@
                 ],
                 "list": false,
                 "list_add_label": "Add More",
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "ollama_base_url",
                 "override_skip": false,
                 "placeholder": "",
@@ -1708,7 +1584,7 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": false,
                 "type": "str",
-                "value": ""
+                "value": "http://localhost:11434"
               },
               "project_id": {
                 "_input_type": "StrInput",
@@ -1817,9 +1693,9 @@
           "type": "LanguageModelComponent"
         },
         "dragging": false,
-        "id": "LanguageModelComponent-tkxPd",
+        "id": "LanguageModelComponent-qFXT1",
         "measured": {
-          "height": 369,
+          "height": 450,
           "width": 320
         },
         "position": {
@@ -1831,7 +1707,7 @@
       },
       {
         "data": {
-          "id": "LanguageModelComponent-V8U8j",
+          "id": "LanguageModelComponent-Wp3pC",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -1857,7 +1733,7 @@
             ],
             "frozen": false,
             "icon": "brain-circuit",
-            "last_updated": "2025-12-20T16:52:52.462Z",
+            "last_updated": "2025-12-11T21:29:10.202Z",
             "legacy": false,
             "lf_version": "1.7.0",
             "metadata": {
@@ -1887,7 +1763,6 @@
                 "cache": true,
                 "display_name": "Model Response",
                 "group_outputs": false,
-                "hidden": null,
                 "loop_types": null,
                 "method": "text_response",
                 "name": "text_output",
@@ -1905,7 +1780,6 @@
                 "cache": true,
                 "display_name": "Language Model",
                 "group_outputs": false,
-                "hidden": null,
                 "loop_types": null,
                 "method": "build_model",
                 "name": "model_output",
@@ -1923,10 +1797,10 @@
             "priority": 0,
             "template": {
               "_frontend_node_flow_id": {
-                "value": "7b29b229-2f50-4d10-b61c-0ab3008f8ff2"
+                "value": "524f71dc-cc58-441a-a009-c71d6755765f"
               },
               "_frontend_node_folder_id": {
-                "value": "34260300-cae1-43f3-8b14-1272b8cffe4c"
+                "value": "afaca9ee-97e3-4211-8569-722a4058ea5e"
               },
               "_type": "Component",
               "api_key": {
@@ -2024,7 +1898,7 @@
                 "type": "str",
                 "value": ""
               },
-              "is_refresh": true,
+              "is_refresh": false,
               "model": {
                 "_input_type": "ModelInput",
                 "advanced": false,
@@ -2042,112 +1916,14 @@
                   }
                 },
                 "info": "Select your model provider",
-                "input_types": [],
+                "input_types": [
+                  "LanguageModel"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "model_type": "language",
                 "name": "model",
-                "options": [
-                  {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5"
-                      ]
-                    },
-                    "name": "gpt-5",
-                    "provider": "OpenAI"
-                  },
-                  {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5-mini"
-                      ]
-                    },
-                    "name": "gpt-5-mini",
-                    "provider": "OpenAI"
-                  },
-                  {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5-nano"
-                      ]
-                    },
-                    "name": "gpt-5-nano",
-                    "provider": "OpenAI"
-                  },
-                  {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model"
-                    },
-                    "name": "gpt-4o-mini",
-                    "provider": "OpenAI"
-                  },
-                  {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model"
-                    },
-                    "name": "gpt-4o",
-                    "provider": "OpenAI"
-                  },
-                  {
-                    "category": "Google Generative AI",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "is_disabled_provider": true,
-                      "variable_name": "GOOGLE_API_KEY"
-                    },
-                    "name": "__enable_provider_Google Generative AI__",
-                    "provider": "Google Generative AI"
-                  },
-                  {
-                    "category": "Ollama",
-                    "icon": "Ollama",
-                    "metadata": {
-                      "is_disabled_provider": true,
-                      "variable_name": "OLLAMA_BASE_URL"
-                    },
-                    "name": "__enable_provider_Ollama__",
-                    "provider": "Ollama"
-                  },
-                  {
-                    "category": "IBM Watsonx",
-                    "icon": "WatsonxAI",
-                    "metadata": {
-                      "is_disabled_provider": true,
-                      "variable_name": "WATSONX_APIKEY"
-                    },
-                    "name": "__enable_provider_IBM Watsonx__",
-                    "provider": "IBM Watsonx"
-                  }
-                ],
+                "options": [],
                 "override_skip": false,
                 "placeholder": "Setup Provider",
                 "real_time_refresh": true,
@@ -2159,23 +1935,7 @@
                 "trace_as_input": true,
                 "track_in_telemetry": false,
                 "type": "model",
-                "value": [
-                  {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5"
-                      ]
-                    },
-                    "name": "gpt-5",
-                    "provider": "OpenAI"
-                  }
-                ]
+                "value": []
               },
               "ollama_base_url": {
                 "_input_type": "MessageInput",
@@ -2188,7 +1948,7 @@
                 ],
                 "list": false,
                 "list_add_label": "Add More",
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "ollama_base_url",
                 "override_skip": false,
                 "placeholder": "",
@@ -2201,7 +1961,7 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": false,
                 "type": "str",
-                "value": ""
+                "value": "http://localhost:11434"
               },
               "project_id": {
                 "_input_type": "StrInput",
@@ -2305,14 +2065,13 @@
             },
             "tool_mode": false
           },
-          "selected_output": "text_output",
           "showNode": true,
           "type": "LanguageModelComponent"
         },
         "dragging": false,
-        "id": "LanguageModelComponent-V8U8j",
+        "id": "LanguageModelComponent-Wp3pC",
         "measured": {
-          "height": 369,
+          "height": 450,
           "width": 320
         },
         "position": {
@@ -2324,7 +2083,7 @@
       },
       {
         "data": {
-          "id": "LanguageModelComponent-raKi9",
+          "id": "LanguageModelComponent-gYAmH",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -2350,7 +2109,7 @@
             ],
             "frozen": false,
             "icon": "brain-circuit",
-            "last_updated": "2025-12-20T16:52:52.462Z",
+            "last_updated": "2025-12-11T21:29:10.202Z",
             "legacy": false,
             "lf_version": "1.7.0",
             "metadata": {
@@ -2380,7 +2139,6 @@
                 "cache": true,
                 "display_name": "Model Response",
                 "group_outputs": false,
-                "hidden": null,
                 "loop_types": null,
                 "method": "text_response",
                 "name": "text_output",
@@ -2398,7 +2156,6 @@
                 "cache": true,
                 "display_name": "Language Model",
                 "group_outputs": false,
-                "hidden": null,
                 "loop_types": null,
                 "method": "build_model",
                 "name": "model_output",
@@ -2416,10 +2173,10 @@
             "priority": 0,
             "template": {
               "_frontend_node_flow_id": {
-                "value": "7b29b229-2f50-4d10-b61c-0ab3008f8ff2"
+                "value": "524f71dc-cc58-441a-a009-c71d6755765f"
               },
               "_frontend_node_folder_id": {
-                "value": "34260300-cae1-43f3-8b14-1272b8cffe4c"
+                "value": "afaca9ee-97e3-4211-8569-722a4058ea5e"
               },
               "_type": "Component",
               "api_key": {
@@ -2517,7 +2274,7 @@
                 "type": "str",
                 "value": ""
               },
-              "is_refresh": true,
+              "is_refresh": false,
               "model": {
                 "_input_type": "ModelInput",
                 "advanced": false,
@@ -2535,112 +2292,14 @@
                   }
                 },
                 "info": "Select your model provider",
-                "input_types": [],
+                "input_types": [
+                  "LanguageModel"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "model_type": "language",
                 "name": "model",
-                "options": [
-                  {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5"
-                      ]
-                    },
-                    "name": "gpt-5",
-                    "provider": "OpenAI"
-                  },
-                  {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5-mini"
-                      ]
-                    },
-                    "name": "gpt-5-mini",
-                    "provider": "OpenAI"
-                  },
-                  {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5-nano"
-                      ]
-                    },
-                    "name": "gpt-5-nano",
-                    "provider": "OpenAI"
-                  },
-                  {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model"
-                    },
-                    "name": "gpt-4o-mini",
-                    "provider": "OpenAI"
-                  },
-                  {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model"
-                    },
-                    "name": "gpt-4o",
-                    "provider": "OpenAI"
-                  },
-                  {
-                    "category": "Google Generative AI",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "is_disabled_provider": true,
-                      "variable_name": "GOOGLE_API_KEY"
-                    },
-                    "name": "__enable_provider_Google Generative AI__",
-                    "provider": "Google Generative AI"
-                  },
-                  {
-                    "category": "Ollama",
-                    "icon": "Ollama",
-                    "metadata": {
-                      "is_disabled_provider": true,
-                      "variable_name": "OLLAMA_BASE_URL"
-                    },
-                    "name": "__enable_provider_Ollama__",
-                    "provider": "Ollama"
-                  },
-                  {
-                    "category": "IBM Watsonx",
-                    "icon": "WatsonxAI",
-                    "metadata": {
-                      "is_disabled_provider": true,
-                      "variable_name": "WATSONX_APIKEY"
-                    },
-                    "name": "__enable_provider_IBM Watsonx__",
-                    "provider": "IBM Watsonx"
-                  }
-                ],
+                "options": [],
                 "override_skip": false,
                 "placeholder": "Setup Provider",
                 "real_time_refresh": true,
@@ -2652,23 +2311,7 @@
                 "trace_as_input": true,
                 "track_in_telemetry": false,
                 "type": "model",
-                "value": [
-                  {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5"
-                      ]
-                    },
-                    "name": "gpt-5",
-                    "provider": "OpenAI"
-                  }
-                ]
+                "value": []
               },
               "ollama_base_url": {
                 "_input_type": "MessageInput",
@@ -2681,7 +2324,7 @@
                 ],
                 "list": false,
                 "list_add_label": "Add More",
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "ollama_base_url",
                 "override_skip": false,
                 "placeholder": "",
@@ -2694,7 +2337,7 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": false,
                 "type": "str",
-                "value": ""
+                "value": "http://localhost:11434"
               },
               "project_id": {
                 "_input_type": "StrInput",
@@ -2798,14 +2441,13 @@
             },
             "tool_mode": false
           },
-          "selected_output": "text_output",
           "showNode": true,
           "type": "LanguageModelComponent"
         },
         "dragging": false,
-        "id": "LanguageModelComponent-raKi9",
+        "id": "LanguageModelComponent-gYAmH",
         "measured": {
-          "height": 369,
+          "height": 532,
           "width": 320
         },
         "position": {
@@ -2817,7 +2459,7 @@
       },
       {
         "data": {
-          "id": "File-Z5Vx4",
+          "id": "File-oAEuF",
           "node": {
             "base_classes": [
               "Message"
@@ -2826,11 +2468,10 @@
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Loads and returns the content from uploaded files.",
-            "display_name": "Read File",
-            "documentation": "https://docs.langflow.org/read-file",
+            "display_name": "File",
+            "documentation": "",
             "edited": false,
             "field_order": [
-              "storage_location",
               "path",
               "file_path",
               "separator",
@@ -2838,31 +2479,14 @@
               "delete_server_file_after_processing",
               "ignore_unsupported_extensions",
               "ignore_unspecified_files",
-              "file_path_str",
-              "aws_access_key_id",
-              "aws_secret_access_key",
-              "bucket_name",
-              "aws_region",
-              "s3_file_key",
-              "service_account_key",
-              "file_id",
-              "advanced_mode",
-              "pipeline",
-              "ocr_engine",
-              "md_image_placeholder",
-              "md_page_break_placeholder",
-              "doc_key",
               "use_multithreading",
-              "concurrency_multithreading",
-              "markdown"
+              "concurrency_multithreading"
             ],
             "frozen": false,
             "icon": "file-text",
-            "last_updated": "2025-12-20T17:33:47.539Z",
             "legacy": false,
-            "lf_version": "1.7.0",
             "metadata": {
-              "code_hash": "9d57e0bfda44",
+              "code_hash": "5008cc086d7f",
               "dependencies": {
                 "dependencies": [
                   {
@@ -2916,15 +2540,13 @@
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "advanced_mode",
-                "override_skip": false,
                 "placeholder": "",
                 "real_time_refresh": true,
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "track_in_telemetry": true,
                 "type": "bool",
                 "value": false
               },
@@ -3024,7 +2646,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "\"\"\"Enhanced file component with Docling support and process isolation.\n\nNotes:\n-----\n- ALL Docling parsing/export runs in a separate OS process to prevent memory\n  growth and native library state from impacting the main Langflow process.\n- Standard text/structured parsing continues to use existing BaseFileComponent\n  utilities (and optional threading via `parallel_load_data`).\n\"\"\"\n\nfrom __future__ import annotations\n\nimport contextlib\nimport json\nimport subprocess\nimport sys\nimport textwrap\nfrom copy import deepcopy\nfrom pathlib import Path\nfrom tempfile import NamedTemporaryFile\nfrom typing import Any\n\nfrom lfx.base.data.base_file import BaseFileComponent\nfrom lfx.base.data.storage_utils import parse_storage_path, read_file_bytes, validate_image_content_type\nfrom lfx.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_file_to_data\nfrom lfx.inputs import SortableListInput\nfrom lfx.inputs.inputs import DropdownInput, MessageTextInput, StrInput\nfrom lfx.io import BoolInput, FileInput, IntInput, Output, SecretStrInput\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame  # noqa: TC001\nfrom lfx.schema.message import Message\nfrom lfx.services.deps import get_settings_service, get_storage_service\nfrom lfx.utils.async_helpers import run_until_complete\nfrom lfx.utils.validate_cloud import is_astra_cloud_environment\n\n\ndef _get_storage_location_options():\n    \"\"\"Get storage location options, filtering out Local if in Astra cloud environment.\"\"\"\n    all_options = [{\"name\": \"AWS\", \"icon\": \"Amazon\"}, {\"name\": \"Google Drive\", \"icon\": \"google\"}]\n    if is_astra_cloud_environment():\n        return all_options\n    return [{\"name\": \"Local\", \"icon\": \"hard-drive\"}, *all_options]\n\n\nclass FileComponent(BaseFileComponent):\n    \"\"\"File component with optional Docling processing (isolated in a subprocess).\"\"\"\n\n    display_name = \"Read File\"\n    # description is now a dynamic property - see get_tool_description()\n    _base_description = \"Loads content from one or more files.\"\n    documentation: str = \"https://docs.langflow.org/read-file\"\n    icon = \"file-text\"\n    name = \"File\"\n    add_tool_output = True  # Enable tool mode toggle without requiring tool_mode inputs\n\n    # Extensions that can be processed without Docling (using standard text parsing)\n    TEXT_EXTENSIONS = TEXT_FILE_TYPES\n\n    # Extensions that require Docling for processing (images, advanced office formats, etc.)\n    DOCLING_ONLY_EXTENSIONS = [\n        \"adoc\",\n        \"asciidoc\",\n        \"asc\",\n        \"bmp\",\n        \"dotx\",\n        \"dotm\",\n        \"docm\",\n        \"jpg\",\n        \"jpeg\",\n        \"png\",\n        \"potx\",\n        \"ppsx\",\n        \"pptm\",\n        \"potm\",\n        \"ppsm\",\n        \"pptx\",\n        \"tiff\",\n        \"xls\",\n        \"xlsx\",\n        \"xhtml\",\n        \"webp\",\n    ]\n\n    # Docling-supported/compatible extensions; TEXT_FILE_TYPES are supported by the base loader.\n    VALID_EXTENSIONS = [\n        *TEXT_EXTENSIONS,\n        *DOCLING_ONLY_EXTENSIONS,\n    ]\n\n    # Fixed export settings used when markdown export is requested.\n    EXPORT_FORMAT = \"Markdown\"\n    IMAGE_MODE = \"placeholder\"\n\n    _base_inputs = deepcopy(BaseFileComponent.get_base_inputs())\n\n    for input_item in _base_inputs:\n        if isinstance(input_item, FileInput) and input_item.name == \"path\":\n            input_item.real_time_refresh = True\n            input_item.tool_mode = False  # Disable tool mode for file upload input\n            input_item.required = False  # Make it optional so it doesn't error in tool mode\n            break\n\n    inputs = [\n        SortableListInput(\n            name=\"storage_location\",\n            display_name=\"Storage Location\",\n            placeholder=\"Select Location\",\n            info=\"Choose where to read the file from.\",\n            options=_get_storage_location_options(),\n            real_time_refresh=True,\n            limit=1,\n        ),\n        *_base_inputs,\n        StrInput(\n            name=\"file_path_str\",\n            display_name=\"File Path\",\n            info=(\n                \"Path to the file to read. Used when component is called as a tool. \"\n                \"If not provided, will use the uploaded file from 'path' input.\"\n            ),\n            show=False,\n            advanced=True,\n            tool_mode=True,  # Required for Toolset toggle, but _get_tools() ignores this parameter\n            required=False,\n        ),\n        # AWS S3 specific inputs\n        SecretStrInput(\n            name=\"aws_access_key_id\",\n            display_name=\"AWS Access Key ID\",\n            info=\"AWS Access key ID.\",\n            show=False,\n            advanced=False,\n            required=True,\n        ),\n        SecretStrInput(\n            name=\"aws_secret_access_key\",\n            display_name=\"AWS Secret Key\",\n            info=\"AWS Secret Key.\",\n            show=False,\n            advanced=False,\n            required=True,\n        ),\n        StrInput(\n            name=\"bucket_name\",\n            display_name=\"S3 Bucket Name\",\n            info=\"Enter the name of the S3 bucket.\",\n            show=False,\n            advanced=False,\n            required=True,\n        ),\n        StrInput(\n            name=\"aws_region\",\n            display_name=\"AWS Region\",\n            info=\"AWS region (e.g., us-east-1, eu-west-1).\",\n            show=False,\n            advanced=False,\n        ),\n        StrInput(\n            name=\"s3_file_key\",\n            display_name=\"S3 File Key\",\n            info=\"The key (path) of the file in S3 bucket.\",\n            show=False,\n            advanced=False,\n            required=True,\n        ),\n        # Google Drive specific inputs\n        SecretStrInput(\n            name=\"service_account_key\",\n            display_name=\"GCP Credentials Secret Key\",\n            info=\"Your Google Cloud Platform service account JSON key as a secret string (complete JSON content).\",\n            show=False,\n            advanced=False,\n            required=True,\n        ),\n        StrInput(\n            name=\"file_id\",\n            display_name=\"Google Drive File ID\",\n            info=(\"The Google Drive file ID to read. The file must be shared with the service account email.\"),\n            show=False,\n            advanced=False,\n            required=True,\n        ),\n        BoolInput(\n            name=\"advanced_mode\",\n            display_name=\"Advanced Parser\",\n            value=False,\n            real_time_refresh=True,\n            info=(\n                \"Enable advanced document processing and export with Docling for PDFs, images, and office documents. \"\n                \"Note that advanced document processing can consume significant resources.\"\n            ),\n            show=True,\n        ),\n        DropdownInput(\n            name=\"pipeline\",\n            display_name=\"Pipeline\",\n            info=\"Docling pipeline to use\",\n            options=[\"standard\", \"vlm\"],\n            value=\"standard\",\n            advanced=True,\n            real_time_refresh=True,\n        ),\n        DropdownInput(\n            name=\"ocr_engine\",\n            display_name=\"OCR Engine\",\n            info=\"OCR engine to use. Only available when pipeline is set to 'standard'.\",\n            options=[\"None\", \"easyocr\"],\n            value=\"easyocr\",\n            show=False,\n            advanced=True,\n        ),\n        StrInput(\n            name=\"md_image_placeholder\",\n            display_name=\"Image placeholder\",\n            info=\"Specify the image placeholder for markdown exports.\",\n            value=\"<!-- image -->\",\n            advanced=True,\n            show=False,\n        ),\n        StrInput(\n            name=\"md_page_break_placeholder\",\n            display_name=\"Page break placeholder\",\n            info=\"Add this placeholder between pages in the markdown output.\",\n            value=\"\",\n            advanced=True,\n            show=False,\n        ),\n        MessageTextInput(\n            name=\"doc_key\",\n            display_name=\"Doc Key\",\n            info=\"The key to use for the DoclingDocument column.\",\n            value=\"doc\",\n            advanced=True,\n            show=False,\n        ),\n        # Deprecated input retained for backward-compatibility.\n        BoolInput(\n            name=\"use_multithreading\",\n            display_name=\"[Deprecated] Use Multithreading\",\n            advanced=True,\n            value=True,\n            info=\"Set 'Processing Concurrency' greater than 1 to enable multithreading.\",\n        ),\n        IntInput(\n            name=\"concurrency_multithreading\",\n            display_name=\"Processing Concurrency\",\n            advanced=True,\n            info=\"When multiple files are being processed, the number of files to process concurrently.\",\n            value=1,\n        ),\n        BoolInput(\n            name=\"markdown\",\n            display_name=\"Markdown Export\",\n            info=\"Export processed documents to Markdown format. Only available when advanced mode is enabled.\",\n            value=False,\n            show=False,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Raw Content\", name=\"message\", method=\"load_files_message\", tool_mode=True),\n    ]\n\n    # ------------------------------ Tool description with file names --------------\n\n    def get_tool_description(self) -> str:\n        \"\"\"Return a dynamic description that includes the names of uploaded files.\n\n        This helps the Agent understand which files are available to read.\n        \"\"\"\n        base_description = \"Loads and returns the content from uploaded files.\"\n\n        # Get the list of uploaded file paths\n        file_paths = getattr(self, \"path\", None)\n        if not file_paths:\n            return base_description\n\n        # Ensure it's a list\n        if not isinstance(file_paths, list):\n            file_paths = [file_paths]\n\n        # Extract just the file names from the paths\n        file_names = []\n        for fp in file_paths:\n            if fp:\n                name = Path(fp).name\n                file_names.append(name)\n\n        if file_names:\n            files_str = \", \".join(file_names)\n            return f\"{base_description} Available files: {files_str}. Call this tool to read these files.\"\n\n        return base_description\n\n    @property\n    def description(self) -> str:\n        \"\"\"Dynamic description property that includes uploaded file names.\"\"\"\n        return self.get_tool_description()\n\n    async def _get_tools(self) -> list:\n        \"\"\"Override to create a tool without parameters.\n\n        The Read File component should use the files already uploaded via UI,\n        not accept file paths from the Agent (which wouldn't know the internal paths).\n        \"\"\"\n        from langchain_core.tools import StructuredTool\n        from pydantic import BaseModel\n\n        # Empty schema - no parameters needed\n        class EmptySchema(BaseModel):\n            \"\"\"No parameters required - uses pre-uploaded files.\"\"\"\n\n        async def read_files_tool() -> str:\n            \"\"\"Read the content of uploaded files.\"\"\"\n            try:\n                result = self.load_files_message()\n                if hasattr(result, \"get_text\"):\n                    return result.get_text()\n                if hasattr(result, \"text\"):\n                    return result.text\n                return str(result)\n            except (FileNotFoundError, ValueError, OSError, RuntimeError) as e:\n                return f\"Error reading files: {e}\"\n\n        description = self.get_tool_description()\n\n        tool = StructuredTool(\n            name=\"load_files_message\",\n            description=description,\n            coroutine=read_files_tool,\n            args_schema=EmptySchema,\n            handle_tool_error=True,\n            tags=[\"load_files_message\"],\n            metadata={\n                \"display_name\": \"Read File\",\n                \"display_description\": description,\n            },\n        )\n\n        return [tool]\n\n    # ------------------------------ UI helpers --------------------------------------\n\n    def _path_value(self, template: dict) -> list[str]:\n        \"\"\"Return the list of currently selected file paths from the template.\"\"\"\n        return template.get(\"path\", {}).get(\"file_path\", [])\n\n    def update_build_config(\n        self,\n        build_config: dict[str, Any],\n        field_value: Any,\n        field_name: str | None = None,\n    ) -> dict[str, Any]:\n        \"\"\"Show/hide Advanced Parser and related fields based on selection context.\"\"\"\n        # Update storage location options dynamically based on cloud environment\n        if \"storage_location\" in build_config:\n            updated_options = _get_storage_location_options()\n            build_config[\"storage_location\"][\"options\"] = updated_options\n\n        # Handle storage location selection\n        if field_name == \"storage_location\":\n            # Extract selected storage location\n            selected = [location[\"name\"] for location in field_value] if isinstance(field_value, list) else []\n\n            # Hide all storage-specific fields first\n            storage_fields = [\n                \"aws_access_key_id\",\n                \"aws_secret_access_key\",\n                \"bucket_name\",\n                \"aws_region\",\n                \"s3_file_key\",\n                \"service_account_key\",\n                \"file_id\",\n            ]\n\n            for f_name in storage_fields:\n                if f_name in build_config:\n                    build_config[f_name][\"show\"] = False\n\n            # Show fields based on selected storage location\n            if len(selected) == 1:\n                location = selected[0]\n\n                if location == \"Local\":\n                    # Show file upload input for local storage\n                    if \"path\" in build_config:\n                        build_config[\"path\"][\"show\"] = True\n\n                elif location == \"AWS\":\n                    # Hide file upload input, show AWS fields\n                    if \"path\" in build_config:\n                        build_config[\"path\"][\"show\"] = False\n\n                    aws_fields = [\n                        \"aws_access_key_id\",\n                        \"aws_secret_access_key\",\n                        \"bucket_name\",\n                        \"aws_region\",\n                        \"s3_file_key\",\n                    ]\n                    for f_name in aws_fields:\n                        if f_name in build_config:\n                            build_config[f_name][\"show\"] = True\n                            build_config[f_name][\"advanced\"] = False\n\n                elif location == \"Google Drive\":\n                    # Hide file upload input, show Google Drive fields\n                    if \"path\" in build_config:\n                        build_config[\"path\"][\"show\"] = False\n\n                    gdrive_fields = [\"service_account_key\", \"file_id\"]\n                    for f_name in gdrive_fields:\n                        if f_name in build_config:\n                            build_config[f_name][\"show\"] = True\n                            build_config[f_name][\"advanced\"] = False\n            # No storage location selected - show file upload by default\n            elif \"path\" in build_config:\n                build_config[\"path\"][\"show\"] = True\n\n            return build_config\n\n        if field_name == \"path\":\n            paths = self._path_value(build_config)\n\n            # If all files can be processed by docling, do so\n            allow_advanced = all(not file_path.endswith((\".csv\", \".xlsx\", \".parquet\")) for file_path in paths)\n            build_config[\"advanced_mode\"][\"show\"] = allow_advanced\n            if not allow_advanced:\n                build_config[\"advanced_mode\"][\"value\"] = False\n                for f in (\"pipeline\", \"ocr_engine\", \"doc_key\", \"md_image_placeholder\", \"md_page_break_placeholder\"):\n                    if f in build_config:\n                        build_config[f][\"show\"] = False\n\n        # Docling Processing\n        elif field_name == \"advanced_mode\":\n            for f in (\"pipeline\", \"ocr_engine\", \"doc_key\", \"md_image_placeholder\", \"md_page_break_placeholder\"):\n                if f in build_config:\n                    build_config[f][\"show\"] = bool(field_value)\n                    if f == \"pipeline\":\n                        build_config[f][\"advanced\"] = not bool(field_value)\n\n        elif field_name == \"pipeline\":\n            if field_value == \"standard\":\n                build_config[\"ocr_engine\"][\"show\"] = True\n                build_config[\"ocr_engine\"][\"value\"] = \"easyocr\"\n            else:\n                build_config[\"ocr_engine\"][\"show\"] = False\n                build_config[\"ocr_engine\"][\"value\"] = \"None\"\n\n        return build_config\n\n    def update_outputs(self, frontend_node: dict[str, Any], field_name: str, field_value: Any) -> dict[str, Any]:  # noqa: ARG002\n        \"\"\"Dynamically show outputs based on file count/type and advanced mode.\"\"\"\n        if field_name not in [\"path\", \"advanced_mode\", \"pipeline\"]:\n            return frontend_node\n\n        template = frontend_node.get(\"template\", {})\n        paths = self._path_value(template)\n        if not paths:\n            return frontend_node\n\n        frontend_node[\"outputs\"] = []\n        if len(paths) == 1:\n            file_path = paths[0] if field_name == \"path\" else frontend_node[\"template\"][\"path\"][\"file_path\"][0]\n            if file_path.endswith((\".csv\", \".xlsx\", \".parquet\")):\n                frontend_node[\"outputs\"].append(\n                    Output(\n                        display_name=\"Structured Content\",\n                        name=\"dataframe\",\n                        method=\"load_files_structured\",\n                        tool_mode=True,\n                    ),\n                )\n            elif file_path.endswith(\".json\"):\n                frontend_node[\"outputs\"].append(\n                    Output(display_name=\"Structured Content\", name=\"json\", method=\"load_files_json\", tool_mode=True),\n                )\n\n            advanced_mode = frontend_node.get(\"template\", {}).get(\"advanced_mode\", {}).get(\"value\", False)\n            if advanced_mode:\n                frontend_node[\"outputs\"].append(\n                    Output(\n                        display_name=\"Structured Output\",\n                        name=\"advanced_dataframe\",\n                        method=\"load_files_dataframe\",\n                        tool_mode=True,\n                    ),\n                )\n                frontend_node[\"outputs\"].append(\n                    Output(\n                        display_name=\"Markdown\", name=\"advanced_markdown\", method=\"load_files_markdown\", tool_mode=True\n                    ),\n                )\n                frontend_node[\"outputs\"].append(\n                    Output(display_name=\"File Path\", name=\"path\", method=\"load_files_path\", tool_mode=True),\n                )\n            else:\n                frontend_node[\"outputs\"].append(\n                    Output(display_name=\"Raw Content\", name=\"message\", method=\"load_files_message\", tool_mode=True),\n                )\n                frontend_node[\"outputs\"].append(\n                    Output(display_name=\"File Path\", name=\"path\", method=\"load_files_path\", tool_mode=True),\n                )\n        else:\n            # Multiple files => DataFrame output; advanced parser disabled\n            frontend_node[\"outputs\"].append(\n                Output(display_name=\"Files\", name=\"dataframe\", method=\"load_files\", tool_mode=True)\n            )\n\n        return frontend_node\n\n    # ------------------------------ Core processing ----------------------------------\n\n    def _get_selected_storage_location(self) -> str:\n        \"\"\"Get the selected storage location from the SortableListInput.\"\"\"\n        if hasattr(self, \"storage_location\") and self.storage_location:\n            if isinstance(self.storage_location, list) and len(self.storage_location) > 0:\n                return self.storage_location[0].get(\"name\", \"\")\n            if isinstance(self.storage_location, dict):\n                return self.storage_location.get(\"name\", \"\")\n        return \"Local\"  # Default to Local if not specified\n\n    def _validate_and_resolve_paths(self) -> list[BaseFileComponent.BaseFile]:\n        \"\"\"Override to handle file_path_str input from tool mode and cloud storage.\n\n        Priority:\n        1. Cloud storage (AWS/Google Drive) if selected\n        2. file_path_str (if provided by the tool call)\n        3. path (uploaded file from UI)\n        \"\"\"\n        storage_location = self._get_selected_storage_location()\n\n        # Handle AWS S3\n        if storage_location == \"AWS\":\n            return self._read_from_aws_s3()\n\n        # Handle Google Drive\n        if storage_location == \"Google Drive\":\n            return self._read_from_google_drive()\n\n        # Handle Local storage\n        # Check if file_path_str is provided (from tool mode)\n        file_path_str = getattr(self, \"file_path_str\", None)\n        if file_path_str:\n            # Use the string path from tool mode\n            from pathlib import Path\n\n            from lfx.schema.data import Data\n\n            resolved_path = Path(self.resolve_path(file_path_str))\n            if not resolved_path.exists():\n                msg = f\"File or directory not found: {file_path_str}\"\n                self.log(msg)\n                if not self.silent_errors:\n                    raise ValueError(msg)\n                return []\n\n            data_obj = Data(data={self.SERVER_FILE_PATH_FIELDNAME: str(resolved_path)})\n            return [BaseFileComponent.BaseFile(data_obj, resolved_path, delete_after_processing=False)]\n\n        # Otherwise use the default implementation (uses path FileInput)\n        return super()._validate_and_resolve_paths()\n\n    def _read_from_aws_s3(self) -> list[BaseFileComponent.BaseFile]:\n        \"\"\"Read file from AWS S3.\"\"\"\n        from lfx.base.data.cloud_storage_utils import create_s3_client, validate_aws_credentials\n\n        # Validate AWS credentials\n        validate_aws_credentials(self)\n        if not getattr(self, \"s3_file_key\", None):\n            msg = \"S3 File Key is required\"\n            raise ValueError(msg)\n\n        # Create S3 client\n        s3_client = create_s3_client(self)\n\n        # Download file to temp location\n        import tempfile\n\n        # Get file extension from S3 key\n        file_extension = Path(self.s3_file_key).suffix or \"\"\n\n        with tempfile.NamedTemporaryFile(mode=\"wb\", suffix=file_extension, delete=False) as temp_file:\n            temp_file_path = temp_file.name\n            try:\n                s3_client.download_fileobj(self.bucket_name, self.s3_file_key, temp_file)\n            except Exception as e:\n                # Clean up temp file on failure\n                with contextlib.suppress(OSError):\n                    Path(temp_file_path).unlink()\n                msg = f\"Failed to download file from S3: {e}\"\n                raise RuntimeError(msg) from e\n\n        # Create BaseFile object\n        from lfx.schema.data import Data\n\n        temp_path = Path(temp_file_path)\n        data_obj = Data(data={self.SERVER_FILE_PATH_FIELDNAME: str(temp_path)})\n        return [BaseFileComponent.BaseFile(data_obj, temp_path, delete_after_processing=True)]\n\n    def _read_from_google_drive(self) -> list[BaseFileComponent.BaseFile]:\n        \"\"\"Read file from Google Drive.\"\"\"\n        import tempfile\n\n        from googleapiclient.http import MediaIoBaseDownload\n\n        from lfx.base.data.cloud_storage_utils import create_google_drive_service\n\n        # Validate Google Drive credentials\n        if not getattr(self, \"service_account_key\", None):\n            msg = \"GCP Credentials Secret Key is required for Google Drive storage\"\n            raise ValueError(msg)\n        if not getattr(self, \"file_id\", None):\n            msg = \"Google Drive File ID is required\"\n            raise ValueError(msg)\n\n        # Create Google Drive service with read-only scope\n        drive_service = create_google_drive_service(\n            self.service_account_key, scopes=[\"https://www.googleapis.com/auth/drive.readonly\"]\n        )\n\n        # Get file metadata to determine file name and extension\n        try:\n            file_metadata = drive_service.files().get(fileId=self.file_id, fields=\"name,mimeType\").execute()\n            file_name = file_metadata.get(\"name\", \"download\")\n        except Exception as e:\n            msg = (\n                f\"Unable to access file with ID '{self.file_id}'. \"\n                f\"Error: {e!s}. \"\n                \"Please ensure: 1) The file ID is correct, 2) The file exists, \"\n                \"3) The service account has been granted access to this file.\"\n            )\n            raise ValueError(msg) from e\n\n        # Download file to temp location\n        file_extension = Path(file_name).suffix or \"\"\n        with tempfile.NamedTemporaryFile(mode=\"wb\", suffix=file_extension, delete=False) as temp_file:\n            temp_file_path = temp_file.name\n            try:\n                request = drive_service.files().get_media(fileId=self.file_id)\n                downloader = MediaIoBaseDownload(temp_file, request)\n                done = False\n                while not done:\n                    _status, done = downloader.next_chunk()\n            except Exception as e:\n                # Clean up temp file on failure\n                with contextlib.suppress(OSError):\n                    Path(temp_file_path).unlink()\n                msg = f\"Failed to download file from Google Drive: {e}\"\n                raise RuntimeError(msg) from e\n\n        # Create BaseFile object\n        from lfx.schema.data import Data\n\n        temp_path = Path(temp_file_path)\n        data_obj = Data(data={self.SERVER_FILE_PATH_FIELDNAME: str(temp_path)})\n        return [BaseFileComponent.BaseFile(data_obj, temp_path, delete_after_processing=True)]\n\n    def _is_docling_compatible(self, file_path: str) -> bool:\n        \"\"\"Lightweight extension gate for Docling-compatible types.\"\"\"\n        docling_exts = (\n            \".adoc\",\n            \".asciidoc\",\n            \".asc\",\n            \".bmp\",\n            \".csv\",\n            \".dotx\",\n            \".dotm\",\n            \".docm\",\n            \".docx\",\n            \".htm\",\n            \".html\",\n            \".jpg\",\n            \".jpeg\",\n            \".json\",\n            \".md\",\n            \".pdf\",\n            \".png\",\n            \".potx\",\n            \".ppsx\",\n            \".pptm\",\n            \".potm\",\n            \".ppsm\",\n            \".pptx\",\n            \".tiff\",\n            \".txt\",\n            \".xls\",\n            \".xlsx\",\n            \".xhtml\",\n            \".xml\",\n            \".webp\",\n        )\n        return file_path.lower().endswith(docling_exts)\n\n    async def _get_local_file_for_docling(self, file_path: str) -> tuple[str, bool]:\n        \"\"\"Get a local file path for Docling processing, downloading from S3 if needed.\n\n        Args:\n            file_path: Either a local path or S3 key (format \"flow_id/filename\")\n\n        Returns:\n            tuple[str, bool]: (local_path, should_delete) where should_delete indicates\n                              if this is a temporary file that should be cleaned up\n        \"\"\"\n        settings = get_settings_service().settings\n        if settings.storage_type == \"local\":\n            return file_path, False\n\n        # S3 storage - download to temp file\n        parsed = parse_storage_path(file_path)\n        if not parsed:\n            msg = f\"Invalid S3 path format: {file_path}. Expected 'flow_id/filename'\"\n            raise ValueError(msg)\n\n        storage_service = get_storage_service()\n        flow_id, filename = parsed\n\n        # Get file content from S3\n        content = await storage_service.get_file(flow_id, filename)\n\n        suffix = Path(filename).suffix\n        with NamedTemporaryFile(mode=\"wb\", suffix=suffix, delete=False) as tmp_file:\n            tmp_file.write(content)\n            temp_path = tmp_file.name\n\n        return temp_path, True\n\n    def _process_docling_in_subprocess(self, file_path: str) -> Data | None:\n        \"\"\"Run Docling in a separate OS process and map the result to a Data object.\n\n        We avoid multiprocessing pickling by launching `python -c \"<script>\"` and\n        passing JSON config via stdin. The child prints a JSON result to stdout.\n\n        For S3 storage, the file is downloaded to a temp file first.\n        \"\"\"\n        if not file_path:\n            return None\n\n        settings = get_settings_service().settings\n        if settings.storage_type == \"s3\":\n            local_path, should_delete = run_until_complete(self._get_local_file_for_docling(file_path))\n        else:\n            local_path = file_path\n            should_delete = False\n\n        try:\n            return self._process_docling_subprocess_impl(local_path, file_path)\n        finally:\n            # Clean up temp file if we created one\n            if should_delete:\n                with contextlib.suppress(Exception):\n                    Path(local_path).unlink()  # Ignore cleanup errors\n\n    def _process_docling_subprocess_impl(self, local_file_path: str, original_file_path: str) -> Data | None:\n        \"\"\"Implementation of Docling subprocess processing.\n\n        Args:\n            local_file_path: Path to local file to process\n            original_file_path: Original file path to include in metadata\n        Returns:\n            Data object with processed content\n        \"\"\"\n        args: dict[str, Any] = {\n            \"file_path\": local_file_path,\n            \"markdown\": bool(self.markdown),\n            \"image_mode\": str(self.IMAGE_MODE),\n            \"md_image_placeholder\": str(self.md_image_placeholder),\n            \"md_page_break_placeholder\": str(self.md_page_break_placeholder),\n            \"pipeline\": str(self.pipeline),\n            \"ocr_engine\": (\n                self.ocr_engine if self.ocr_engine and self.ocr_engine != \"None\" and self.pipeline != \"vlm\" else None\n            ),\n        }\n\n        # Child script for isolating the docling processing\n        child_script = textwrap.dedent(\n            r\"\"\"\n            import json, sys\n\n            def try_imports():\n                try:\n                    from docling.datamodel.base_models import ConversionStatus, InputFormat  # type: ignore\n                    from docling.document_converter import DocumentConverter  # type: ignore\n                    from docling_core.types.doc import ImageRefMode  # type: ignore\n                    return ConversionStatus, InputFormat, DocumentConverter, ImageRefMode, \"latest\"\n                except Exception as e:\n                    raise e\n\n            def create_converter(strategy, input_format, DocumentConverter, pipeline, ocr_engine):\n                # --- Standard PDF/IMAGE pipeline (your existing behavior), with optional OCR ---\n                if pipeline == \"standard\":\n                    try:\n                        from docling.datamodel.pipeline_options import PdfPipelineOptions  # type: ignore\n                        from docling.document_converter import PdfFormatOption  # type: ignore\n\n                        pipe = PdfPipelineOptions()\n                        pipe.do_ocr = False\n\n                        if ocr_engine:\n                            try:\n                                from docling.models.factories import get_ocr_factory  # type: ignore\n                                pipe.do_ocr = True\n                                fac = get_ocr_factory(allow_external_plugins=False)\n                                pipe.ocr_options = fac.create_options(kind=ocr_engine)\n                            except Exception:\n                                # If OCR setup fails, disable it\n                                pipe.do_ocr = False\n\n                        fmt = {}\n                        if hasattr(input_format, \"PDF\"):\n                            fmt[getattr(input_format, \"PDF\")] = PdfFormatOption(pipeline_options=pipe)\n                        if hasattr(input_format, \"IMAGE\"):\n                            fmt[getattr(input_format, \"IMAGE\")] = PdfFormatOption(pipeline_options=pipe)\n\n                        return DocumentConverter(format_options=fmt)\n                    except Exception:\n                        return DocumentConverter()\n\n                # --- Vision-Language Model (VLM) pipeline ---\n                if pipeline == \"vlm\":\n                    try:\n                        from docling.datamodel.pipeline_options import VlmPipelineOptions\n                        from docling.datamodel.vlm_model_specs import GRANITEDOCLING_MLX, GRANITEDOCLING_TRANSFORMERS\n                        from docling.document_converter import PdfFormatOption\n                        from docling.pipeline.vlm_pipeline import VlmPipeline\n\n                        vl_pipe = VlmPipelineOptions(\n                            vlm_options=GRANITEDOCLING_TRANSFORMERS,\n                        )\n\n                        if sys.platform == \"darwin\":\n                            try:\n                                import mlx_vlm\n                                vl_pipe.vlm_options = GRANITEDOCLING_MLX\n                            except ImportError as e:\n                                raise e\n\n                        # VLM paths generally don't need OCR; keep OCR off by default here.\n                        fmt = {}\n                        if hasattr(input_format, \"PDF\"):\n                            fmt[getattr(input_format, \"PDF\")] = PdfFormatOption(\n                            pipeline_cls=VlmPipeline,\n                            pipeline_options=vl_pipe\n                        )\n                        if hasattr(input_format, \"IMAGE\"):\n                            fmt[getattr(input_format, \"IMAGE\")] = PdfFormatOption(\n                            pipeline_cls=VlmPipeline,\n                            pipeline_options=vl_pipe\n                        )\n\n                        return DocumentConverter(format_options=fmt)\n                    except Exception as e:\n                        raise e\n\n                # --- Fallback: default converter with no special options ---\n                return DocumentConverter()\n\n            def export_markdown(document, ImageRefMode, image_mode, img_ph, pg_ph):\n                try:\n                    mode = getattr(ImageRefMode, image_mode.upper(), image_mode)\n                    return document.export_to_markdown(\n                        image_mode=mode,\n                        image_placeholder=img_ph,\n                        page_break_placeholder=pg_ph,\n                    )\n                except Exception:\n                    try:\n                        return document.export_to_text()\n                    except Exception:\n                        return str(document)\n\n            def to_rows(doc_dict):\n                rows = []\n                for t in doc_dict.get(\"texts\", []):\n                    prov = t.get(\"prov\") or []\n                    page_no = None\n                    if prov and isinstance(prov, list) and isinstance(prov[0], dict):\n                        page_no = prov[0].get(\"page_no\")\n                    rows.append({\n                        \"page_no\": page_no,\n                        \"label\": t.get(\"label\"),\n                        \"text\": t.get(\"text\"),\n                        \"level\": t.get(\"level\"),\n                    })\n                return rows\n\n            def main():\n                cfg = json.loads(sys.stdin.read())\n                file_path = cfg[\"file_path\"]\n                markdown = cfg[\"markdown\"]\n                image_mode = cfg[\"image_mode\"]\n                img_ph = cfg[\"md_image_placeholder\"]\n                pg_ph = cfg[\"md_page_break_placeholder\"]\n                pipeline = cfg[\"pipeline\"]\n                ocr_engine = cfg.get(\"ocr_engine\")\n                meta = {\"file_path\": file_path}\n\n                try:\n                    ConversionStatus, InputFormat, DocumentConverter, ImageRefMode, strategy = try_imports()\n                    converter = create_converter(strategy, InputFormat, DocumentConverter, pipeline, ocr_engine)\n                    try:\n                        res = converter.convert(file_path)\n                    except Exception as e:\n                        print(json.dumps({\"ok\": False, \"error\": f\"Docling conversion error: {e}\", \"meta\": meta}))\n                        return\n\n                    ok = False\n                    if hasattr(res, \"status\"):\n                        try:\n                            ok = (res.status == ConversionStatus.SUCCESS) or (str(res.status).lower() == \"success\")\n                        except Exception:\n                            ok = (str(res.status).lower() == \"success\")\n                    if not ok and hasattr(res, \"document\"):\n                        ok = getattr(res, \"document\", None) is not None\n                    if not ok:\n                        print(json.dumps({\"ok\": False, \"error\": \"Docling conversion failed\", \"meta\": meta}))\n                        return\n\n                    doc = getattr(res, \"document\", None)\n                    if doc is None:\n                        print(json.dumps({\"ok\": False, \"error\": \"Docling produced no document\", \"meta\": meta}))\n                        return\n\n                    if markdown:\n                        text = export_markdown(doc, ImageRefMode, image_mode, img_ph, pg_ph)\n                        print(json.dumps({\"ok\": True, \"mode\": \"markdown\", \"text\": text, \"meta\": meta}))\n                        return\n\n                    # structured\n                    try:\n                        doc_dict = doc.export_to_dict()\n                    except Exception as e:\n                        print(json.dumps({\"ok\": False, \"error\": f\"Docling export_to_dict failed: {e}\", \"meta\": meta}))\n                        return\n\n                    rows = to_rows(doc_dict)\n                    print(json.dumps({\"ok\": True, \"mode\": \"structured\", \"doc\": rows, \"meta\": meta}))\n                except Exception as e:\n                    print(\n                        json.dumps({\n                            \"ok\": False,\n                            \"error\": f\"Docling processing error: {e}\",\n                            \"meta\": {\"file_path\": file_path},\n                        })\n                    )\n\n            if __name__ == \"__main__\":\n                main()\n            \"\"\"\n        )\n\n        # Validate file_path to avoid command injection or unsafe input\n        if not isinstance(args[\"file_path\"], str) or any(c in args[\"file_path\"] for c in [\";\", \"|\", \"&\", \"$\", \"`\"]):\n            return Data(data={\"error\": \"Unsafe file path detected.\", \"file_path\": args[\"file_path\"]})\n\n        proc = subprocess.run(  # noqa: S603\n            [sys.executable, \"-u\", \"-c\", child_script],\n            input=json.dumps(args).encode(\"utf-8\"),\n            capture_output=True,\n            check=False,\n        )\n\n        if not proc.stdout:\n            err_msg = proc.stderr.decode(\"utf-8\", errors=\"replace\") if proc.stderr else \"no output from child process\"\n            return Data(data={\"error\": f\"Docling subprocess error: {err_msg}\", \"file_path\": original_file_path})\n\n        try:\n            result = json.loads(proc.stdout.decode(\"utf-8\"))\n        except Exception as e:  # noqa: BLE001\n            err_msg = proc.stderr.decode(\"utf-8\", errors=\"replace\")\n            return Data(\n                data={\n                    \"error\": f\"Invalid JSON from Docling subprocess: {e}. stderr={err_msg}\",\n                    \"file_path\": original_file_path,\n                },\n            )\n\n        if not result.get(\"ok\"):\n            error_msg = result.get(\"error\", \"Unknown Docling error\")\n            # Override meta file_path with original_file_path to ensure correct path matching\n            meta = result.get(\"meta\", {})\n            meta[\"file_path\"] = original_file_path\n            return Data(data={\"error\": error_msg, **meta})\n\n        meta = result.get(\"meta\", {})\n        # Override meta file_path with original_file_path to ensure correct path matching\n        # The subprocess returns the temp file path, but we need the original S3/local path for rollup_data\n        meta[\"file_path\"] = original_file_path\n        if result.get(\"mode\") == \"markdown\":\n            exported_content = str(result.get(\"text\", \"\"))\n            return Data(\n                text=exported_content,\n                data={\"exported_content\": exported_content, \"export_format\": self.EXPORT_FORMAT, **meta},\n            )\n\n        rows = list(result.get(\"doc\", []))\n        return Data(data={\"doc\": rows, \"export_format\": self.EXPORT_FORMAT, **meta})\n\n    def process_files(\n        self,\n        file_list: list[BaseFileComponent.BaseFile],\n    ) -> list[BaseFileComponent.BaseFile]:\n        \"\"\"Process input files.\n\n        - advanced_mode => Docling in a separate process.\n        - Otherwise => standard parsing in current process (optionally threaded).\n        \"\"\"\n        if not file_list:\n            msg = \"No files to process.\"\n            raise ValueError(msg)\n\n        # Validate image files to detect content/extension mismatches\n        # This prevents API errors like \"Image does not match the provided media type\"\n        image_extensions = {\"jpeg\", \"jpg\", \"png\", \"gif\", \"webp\", \"bmp\", \"tiff\"}\n        settings = get_settings_service().settings\n        for file in file_list:\n            extension = file.path.suffix[1:].lower()\n            if extension in image_extensions:\n                # Read bytes based on storage type\n                try:\n                    if settings.storage_type == \"s3\":\n                        # For S3 storage, use storage service to read file bytes\n                        file_path_str = str(file.path)\n                        content = run_until_complete(read_file_bytes(file_path_str))\n                    else:\n                        # For local storage, read bytes directly from filesystem\n                        content = file.path.read_bytes()\n\n                    is_valid, error_msg = validate_image_content_type(\n                        str(file.path),\n                        content=content,\n                    )\n                    if not is_valid:\n                        self.log(error_msg)\n                        if not self.silent_errors:\n                            raise ValueError(error_msg)\n                except (OSError, FileNotFoundError) as e:\n                    self.log(f\"Could not read file for validation: {e}\")\n                    # Continue - let it fail later with better error\n\n        # Validate that files requiring Docling are only processed when advanced mode is enabled\n        if not self.advanced_mode:\n            for file in file_list:\n                extension = file.path.suffix[1:].lower()\n                if extension in self.DOCLING_ONLY_EXTENSIONS:\n                    msg = (\n                        f\"File '{file.path.name}' has extension '.{extension}' which requires \"\n                        f\"Advanced Parser mode. Please enable 'Advanced Parser' to process this file.\"\n                    )\n                    self.log(msg)\n                    raise ValueError(msg)\n\n        def process_file_standard(file_path: str, *, silent_errors: bool = False) -> Data | None:\n            try:\n                return parse_text_file_to_data(file_path, silent_errors=silent_errors)\n            except FileNotFoundError as e:\n                self.log(f\"File not found: {file_path}. Error: {e}\")\n                if not silent_errors:\n                    raise\n                return None\n            except Exception as e:\n                self.log(f\"Unexpected error processing {file_path}: {e}\")\n                if not silent_errors:\n                    raise\n                return None\n\n        docling_compatible = all(self._is_docling_compatible(str(f.path)) for f in file_list)\n\n        # Advanced path: Check if ALL files are compatible with Docling\n        if self.advanced_mode and docling_compatible:\n            final_return: list[BaseFileComponent.BaseFile] = []\n            for file in file_list:\n                file_path = str(file.path)\n                advanced_data: Data | None = self._process_docling_in_subprocess(file_path)\n\n                # Handle None case - Docling processing failed or returned None\n                if advanced_data is None:\n                    error_data = Data(\n                        data={\n                            \"file_path\": file_path,\n                            \"error\": \"Docling processing returned no result. Check logs for details.\",\n                        },\n                    )\n                    final_return.extend(self.rollup_data([file], [error_data]))\n                    continue\n\n                # --- UNNEST: expand each element in `doc` to its own Data row\n                payload = getattr(advanced_data, \"data\", {}) or {}\n\n                # Check for errors first\n                if \"error\" in payload:\n                    error_msg = payload.get(\"error\", \"Unknown error\")\n                    error_data = Data(\n                        data={\n                            \"file_path\": file_path,\n                            \"error\": error_msg,\n                            **{k: v for k, v in payload.items() if k not in (\"error\", \"file_path\")},\n                        },\n                    )\n                    final_return.extend(self.rollup_data([file], [error_data]))\n                    continue\n\n                doc_rows = payload.get(\"doc\")\n                if isinstance(doc_rows, list) and doc_rows:\n                    # Non-empty list of structured rows\n                    rows: list[Data | None] = [\n                        Data(\n                            data={\n                                \"file_path\": file_path,\n                                **(item if isinstance(item, dict) else {\"value\": item}),\n                            },\n                        )\n                        for item in doc_rows\n                    ]\n                    final_return.extend(self.rollup_data([file], rows))\n                elif isinstance(doc_rows, list) and not doc_rows:\n                    # Empty list - file was processed but no text content found\n                    # Create a Data object indicating no content was extracted\n                    self.log(f\"No text extracted from '{file_path}', creating placeholder data\")\n                    empty_data = Data(\n                        data={\n                            \"file_path\": file_path,\n                            \"text\": \"(No text content extracted from image)\",\n                            \"info\": \"Image processed successfully but contained no extractable text\",\n                            **{k: v for k, v in payload.items() if k != \"doc\"},\n                        },\n                    )\n                    final_return.extend(self.rollup_data([file], [empty_data]))\n                else:\n                    # If not structured, keep as-is (e.g., markdown export or error dict)\n                    # Ensure file_path is set for proper rollup matching\n                    if not payload.get(\"file_path\"):\n                        payload[\"file_path\"] = file_path\n                        # Create new Data with file_path\n                        advanced_data = Data(\n                            data=payload,\n                            text=getattr(advanced_data, \"text\", None),\n                        )\n                    final_return.extend(self.rollup_data([file], [advanced_data]))\n            return final_return\n\n        # Standard multi-file (or single non-advanced) path\n        concurrency = 1 if not self.use_multithreading else max(1, self.concurrency_multithreading)\n\n        file_paths = [str(f.path) for f in file_list]\n        self.log(f\"Starting parallel processing of {len(file_paths)} files with concurrency: {concurrency}.\")\n        my_data = parallel_load_data(\n            file_paths,\n            silent_errors=self.silent_errors,\n            load_function=process_file_standard,\n            max_concurrency=concurrency,\n        )\n        return self.rollup_data(file_list, my_data)\n\n    # ------------------------------ Output helpers -----------------------------------\n\n    def load_files_helper(self) -> DataFrame:\n        result = self.load_files()\n\n        # Result is a DataFrame - check if it has any rows\n        if result.empty:\n            msg = \"Could not extract content from the provided file(s).\"\n            raise ValueError(msg)\n\n        # Check for error column with error messages\n        if \"error\" in result.columns:\n            errors = result[\"error\"].dropna().tolist()\n            if errors and not any(col in result.columns for col in [\"text\", \"doc\", \"exported_content\"]):\n                raise ValueError(errors[0])\n\n        return result\n\n    def load_files_dataframe(self) -> DataFrame:\n        \"\"\"Load files using advanced Docling processing and export to DataFrame format.\"\"\"\n        self.markdown = False\n        return self.load_files_helper()\n\n    def load_files_markdown(self) -> Message:\n        \"\"\"Load files using advanced Docling processing and export to Markdown format.\"\"\"\n        self.markdown = True\n        result = self.load_files_helper()\n\n        # Result is a DataFrame - check for text or exported_content columns\n        if \"text\" in result.columns and not result[\"text\"].isna().all():\n            text_values = result[\"text\"].dropna().tolist()\n            if text_values:\n                return Message(text=str(text_values[0]))\n\n        if \"exported_content\" in result.columns and not result[\"exported_content\"].isna().all():\n            content_values = result[\"exported_content\"].dropna().tolist()\n            if content_values:\n                return Message(text=str(content_values[0]))\n\n        # Return empty message with info that no text was found\n        return Message(text=\"(No text content extracted from file)\")\n"
+                "value": "\"\"\"Enhanced file component with Docling support and process isolation.\n\nNotes:\n-----\n- ALL Docling parsing/export runs in a separate OS process to prevent memory\n  growth and native library state from impacting the main Langflow process.\n- Standard text/structured parsing continues to use existing BaseFileComponent\n  utilities (and optional threading via `parallel_load_data`).\n\"\"\"\n\nfrom __future__ import annotations\n\nimport contextlib\nimport json\nimport subprocess\nimport sys\nimport textwrap\nfrom copy import deepcopy\nfrom pathlib import Path\nfrom tempfile import NamedTemporaryFile\nfrom typing import Any\n\nfrom lfx.base.data.base_file import BaseFileComponent\nfrom lfx.base.data.storage_utils import parse_storage_path, read_file_bytes, validate_image_content_type\nfrom lfx.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_file_to_data\nfrom lfx.inputs import SortableListInput\nfrom lfx.inputs.inputs import DropdownInput, MessageTextInput, StrInput\nfrom lfx.io import BoolInput, FileInput, IntInput, Output, SecretStrInput\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame  # noqa: TC001\nfrom lfx.schema.message import Message\nfrom lfx.services.deps import get_settings_service, get_storage_service\nfrom lfx.utils.async_helpers import run_until_complete\nfrom lfx.utils.validate_cloud import is_astra_cloud_environment\n\n\ndef _get_storage_location_options():\n    \"\"\"Get storage location options, filtering out Local if in Astra cloud environment.\"\"\"\n    all_options = [{\"name\": \"AWS\", \"icon\": \"Amazon\"}, {\"name\": \"Google Drive\", \"icon\": \"google\"}]\n    if is_astra_cloud_environment():\n        return all_options\n    return [{\"name\": \"Local\", \"icon\": \"hard-drive\"}, *all_options]\n\n\nclass FileComponent(BaseFileComponent):\n    \"\"\"File component with optional Docling processing (isolated in a subprocess).\"\"\"\n\n    display_name = \"Read File\"\n    # description is now a dynamic property - see get_tool_description()\n    _base_description = \"Loads content from one or more files.\"\n    documentation: str = \"https://docs.langflow.org/read-file\"\n    icon = \"file-text\"\n    name = \"File\"\n    add_tool_output = True  # Enable tool mode toggle without requiring tool_mode inputs\n\n    # Extensions that can be processed without Docling (using standard text parsing)\n    TEXT_EXTENSIONS = TEXT_FILE_TYPES\n\n    # Extensions that require Docling for processing (images, advanced office formats, etc.)\n    DOCLING_ONLY_EXTENSIONS = [\n        \"adoc\",\n        \"asciidoc\",\n        \"asc\",\n        \"bmp\",\n        \"dotx\",\n        \"dotm\",\n        \"docm\",\n        \"jpg\",\n        \"jpeg\",\n        \"png\",\n        \"potx\",\n        \"ppsx\",\n        \"pptm\",\n        \"potm\",\n        \"ppsm\",\n        \"pptx\",\n        \"tiff\",\n        \"xls\",\n        \"xlsx\",\n        \"xhtml\",\n        \"webp\",\n    ]\n\n    # Docling-supported/compatible extensions; TEXT_FILE_TYPES are supported by the base loader.\n    VALID_EXTENSIONS = [\n        *TEXT_EXTENSIONS,\n        *DOCLING_ONLY_EXTENSIONS,\n    ]\n\n    # Fixed export settings used when markdown export is requested.\n    EXPORT_FORMAT = \"Markdown\"\n    IMAGE_MODE = \"placeholder\"\n\n    _base_inputs = deepcopy(BaseFileComponent.get_base_inputs())\n\n    for input_item in _base_inputs:\n        if isinstance(input_item, FileInput) and input_item.name == \"path\":\n            input_item.real_time_refresh = True\n            input_item.tool_mode = False  # Disable tool mode for file upload input\n            input_item.required = False  # Make it optional so it doesn't error in tool mode\n            break\n\n    inputs = [\n        SortableListInput(\n            name=\"storage_location\",\n            display_name=\"Storage Location\",\n            placeholder=\"Select Location\",\n            info=\"Choose where to read the file from.\",\n            options=_get_storage_location_options(),\n            real_time_refresh=True,\n            limit=1,\n        ),\n        *_base_inputs,\n        StrInput(\n            name=\"file_path_str\",\n            display_name=\"File Path\",\n            info=(\n                \"Path to the file to read. Used when component is called as a tool. \"\n                \"If not provided, will use the uploaded file from 'path' input.\"\n            ),\n            show=False,\n            advanced=True,\n            tool_mode=True,  # Required for Toolset toggle, but _get_tools() ignores this parameter\n            required=False,\n        ),\n        # AWS S3 specific inputs\n        SecretStrInput(\n            name=\"aws_access_key_id\",\n            display_name=\"AWS Access Key ID\",\n            info=\"AWS Access key ID.\",\n            show=False,\n            advanced=False,\n            required=True,\n        ),\n        SecretStrInput(\n            name=\"aws_secret_access_key\",\n            display_name=\"AWS Secret Key\",\n            info=\"AWS Secret Key.\",\n            show=False,\n            advanced=False,\n            required=True,\n        ),\n        StrInput(\n            name=\"bucket_name\",\n            display_name=\"S3 Bucket Name\",\n            info=\"Enter the name of the S3 bucket.\",\n            show=False,\n            advanced=False,\n            required=True,\n        ),\n        StrInput(\n            name=\"aws_region\",\n            display_name=\"AWS Region\",\n            info=\"AWS region (e.g., us-east-1, eu-west-1).\",\n            show=False,\n            advanced=False,\n        ),\n        StrInput(\n            name=\"s3_file_key\",\n            display_name=\"S3 File Key\",\n            info=\"The key (path) of the file in S3 bucket.\",\n            show=False,\n            advanced=False,\n            required=True,\n        ),\n        # Google Drive specific inputs\n        SecretStrInput(\n            name=\"service_account_key\",\n            display_name=\"GCP Credentials Secret Key\",\n            info=\"Your Google Cloud Platform service account JSON key as a secret string (complete JSON content).\",\n            show=False,\n            advanced=False,\n            required=True,\n        ),\n        StrInput(\n            name=\"file_id\",\n            display_name=\"Google Drive File ID\",\n            info=(\"The Google Drive file ID to read. The file must be shared with the service account email.\"),\n            show=False,\n            advanced=False,\n            required=True,\n        ),\n        BoolInput(\n            name=\"advanced_mode\",\n            display_name=\"Advanced Parser\",\n            value=False,\n            real_time_refresh=True,\n            info=(\n                \"Enable advanced document processing and export with Docling for PDFs, images, and office documents. \"\n                \"Note that advanced document processing can consume significant resources.\"\n            ),\n            # Disabled in cloud\n            show=not is_astra_cloud_environment(),\n        ),\n        DropdownInput(\n            name=\"pipeline\",\n            display_name=\"Pipeline\",\n            info=\"Docling pipeline to use\",\n            options=[\"standard\", \"vlm\"],\n            value=\"standard\",\n            advanced=True,\n            real_time_refresh=True,\n        ),\n        DropdownInput(\n            name=\"ocr_engine\",\n            display_name=\"OCR Engine\",\n            info=\"OCR engine to use. Only available when pipeline is set to 'standard'.\",\n            options=[\"None\", \"easyocr\"],\n            value=\"easyocr\",\n            show=False,\n            advanced=True,\n        ),\n        StrInput(\n            name=\"md_image_placeholder\",\n            display_name=\"Image placeholder\",\n            info=\"Specify the image placeholder for markdown exports.\",\n            value=\"<!-- image -->\",\n            advanced=True,\n            show=False,\n        ),\n        StrInput(\n            name=\"md_page_break_placeholder\",\n            display_name=\"Page break placeholder\",\n            info=\"Add this placeholder between pages in the markdown output.\",\n            value=\"\",\n            advanced=True,\n            show=False,\n        ),\n        MessageTextInput(\n            name=\"doc_key\",\n            display_name=\"Doc Key\",\n            info=\"The key to use for the DoclingDocument column.\",\n            value=\"doc\",\n            advanced=True,\n            show=False,\n        ),\n        # Deprecated input retained for backward-compatibility.\n        BoolInput(\n            name=\"use_multithreading\",\n            display_name=\"[Deprecated] Use Multithreading\",\n            advanced=True,\n            value=True,\n            info=\"Set 'Processing Concurrency' greater than 1 to enable multithreading.\",\n        ),\n        IntInput(\n            name=\"concurrency_multithreading\",\n            display_name=\"Processing Concurrency\",\n            advanced=True,\n            info=\"When multiple files are being processed, the number of files to process concurrently.\",\n            value=1,\n        ),\n        BoolInput(\n            name=\"markdown\",\n            display_name=\"Markdown Export\",\n            info=\"Export processed documents to Markdown format. Only available when advanced mode is enabled.\",\n            value=False,\n            show=False,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Raw Content\", name=\"message\", method=\"load_files_message\", tool_mode=True),\n    ]\n\n    # ------------------------------ Tool description with file names --------------\n\n    def get_tool_description(self) -> str:\n        \"\"\"Return a dynamic description that includes the names of uploaded files.\n\n        This helps the Agent understand which files are available to read.\n        \"\"\"\n        base_description = \"Loads and returns the content from uploaded files.\"\n\n        # Get the list of uploaded file paths\n        file_paths = getattr(self, \"path\", None)\n        if not file_paths:\n            return base_description\n\n        # Ensure it's a list\n        if not isinstance(file_paths, list):\n            file_paths = [file_paths]\n\n        # Extract just the file names from the paths\n        file_names = []\n        for fp in file_paths:\n            if fp:\n                name = Path(fp).name\n                file_names.append(name)\n\n        if file_names:\n            files_str = \", \".join(file_names)\n            return f\"{base_description} Available files: {files_str}. Call this tool to read these files.\"\n\n        return base_description\n\n    @property\n    def description(self) -> str:\n        \"\"\"Dynamic description property that includes uploaded file names.\"\"\"\n        return self.get_tool_description()\n\n    async def _get_tools(self) -> list:\n        \"\"\"Override to create a tool without parameters.\n\n        The Read File component should use the files already uploaded via UI,\n        not accept file paths from the Agent (which wouldn't know the internal paths).\n        \"\"\"\n        from langchain_core.tools import StructuredTool\n        from pydantic import BaseModel\n\n        # Empty schema - no parameters needed\n        class EmptySchema(BaseModel):\n            \"\"\"No parameters required - uses pre-uploaded files.\"\"\"\n\n        async def read_files_tool() -> str:\n            \"\"\"Read the content of uploaded files.\"\"\"\n            try:\n                result = self.load_files_message()\n                if hasattr(result, \"get_text\"):\n                    return result.get_text()\n                if hasattr(result, \"text\"):\n                    return result.text\n                return str(result)\n            except (FileNotFoundError, ValueError, OSError, RuntimeError) as e:\n                return f\"Error reading files: {e}\"\n\n        description = self.get_tool_description()\n\n        tool = StructuredTool(\n            name=\"load_files_message\",\n            description=description,\n            coroutine=read_files_tool,\n            args_schema=EmptySchema,\n            handle_tool_error=True,\n            tags=[\"load_files_message\"],\n            metadata={\n                \"display_name\": \"Read File\",\n                \"display_description\": description,\n            },\n        )\n\n        return [tool]\n\n    # ------------------------------ UI helpers --------------------------------------\n\n    def _path_value(self, template: dict) -> list[str]:\n        \"\"\"Return the list of currently selected file paths from the template.\"\"\"\n        return template.get(\"path\", {}).get(\"file_path\", [])\n\n    def _disable_docling_fields_in_cloud(self, build_config: dict[str, Any]) -> None:\n        \"\"\"Disable all Docling-related fields in cloud environments.\"\"\"\n        if \"advanced_mode\" in build_config:\n            build_config[\"advanced_mode\"][\"show\"] = False\n            build_config[\"advanced_mode\"][\"value\"] = False\n        # Hide all Docling-related fields\n        docling_fields = (\"pipeline\", \"ocr_engine\", \"doc_key\", \"md_image_placeholder\", \"md_page_break_placeholder\")\n        for field in docling_fields:\n            if field in build_config:\n                build_config[field][\"show\"] = False\n        # Also disable OCR engine specifically\n        if \"ocr_engine\" in build_config:\n            build_config[\"ocr_engine\"][\"value\"] = \"None\"\n\n    def update_build_config(\n        self,\n        build_config: dict[str, Any],\n        field_value: Any,\n        field_name: str | None = None,\n    ) -> dict[str, Any]:\n        \"\"\"Show/hide Advanced Parser and related fields based on selection context.\"\"\"\n        # Update storage location options dynamically based on cloud environment\n        if \"storage_location\" in build_config:\n            updated_options = _get_storage_location_options()\n            build_config[\"storage_location\"][\"options\"] = updated_options\n\n        # Handle storage location selection\n        if field_name == \"storage_location\":\n            # Extract selected storage location\n            selected = [location[\"name\"] for location in field_value] if isinstance(field_value, list) else []\n\n            # Hide all storage-specific fields first\n            storage_fields = [\n                \"aws_access_key_id\",\n                \"aws_secret_access_key\",\n                \"bucket_name\",\n                \"aws_region\",\n                \"s3_file_key\",\n                \"service_account_key\",\n                \"file_id\",\n            ]\n\n            for f_name in storage_fields:\n                if f_name in build_config:\n                    build_config[f_name][\"show\"] = False\n\n            # Show fields based on selected storage location\n            if len(selected) == 1:\n                location = selected[0]\n\n                if location == \"Local\":\n                    # Show file upload input for local storage\n                    if \"path\" in build_config:\n                        build_config[\"path\"][\"show\"] = True\n\n                elif location == \"AWS\":\n                    # Hide file upload input, show AWS fields\n                    if \"path\" in build_config:\n                        build_config[\"path\"][\"show\"] = False\n\n                    aws_fields = [\n                        \"aws_access_key_id\",\n                        \"aws_secret_access_key\",\n                        \"bucket_name\",\n                        \"aws_region\",\n                        \"s3_file_key\",\n                    ]\n                    for f_name in aws_fields:\n                        if f_name in build_config:\n                            build_config[f_name][\"show\"] = True\n                            build_config[f_name][\"advanced\"] = False\n\n                elif location == \"Google Drive\":\n                    # Hide file upload input, show Google Drive fields\n                    if \"path\" in build_config:\n                        build_config[\"path\"][\"show\"] = False\n\n                    gdrive_fields = [\"service_account_key\", \"file_id\"]\n                    for f_name in gdrive_fields:\n                        if f_name in build_config:\n                            build_config[f_name][\"show\"] = True\n                            build_config[f_name][\"advanced\"] = False\n            # No storage location selected - show file upload by default\n            elif \"path\" in build_config:\n                build_config[\"path\"][\"show\"] = True\n\n            return build_config\n\n        if field_name == \"path\":\n            paths = self._path_value(build_config)\n\n            # Disable in cloud environments\n            if is_astra_cloud_environment():\n                self._disable_docling_fields_in_cloud(build_config)\n            else:\n                # If all files can be processed by docling, do so\n                allow_advanced = all(not file_path.endswith((\".csv\", \".xlsx\", \".parquet\")) for file_path in paths)\n                build_config[\"advanced_mode\"][\"show\"] = allow_advanced\n                if not allow_advanced:\n                    build_config[\"advanced_mode\"][\"value\"] = False\n                    docling_fields = (\n                        \"pipeline\",\n                        \"ocr_engine\",\n                        \"doc_key\",\n                        \"md_image_placeholder\",\n                        \"md_page_break_placeholder\",\n                    )\n                    for field in docling_fields:\n                        if field in build_config:\n                            build_config[field][\"show\"] = False\n\n        # Docling Processing\n        elif field_name == \"advanced_mode\":\n            # Disable in cloud environments - don't show Docling fields even if advanced_mode is toggled\n            if is_astra_cloud_environment():\n                self._disable_docling_fields_in_cloud(build_config)\n            else:\n                docling_fields = (\n                    \"pipeline\",\n                    \"ocr_engine\",\n                    \"doc_key\",\n                    \"md_image_placeholder\",\n                    \"md_page_break_placeholder\",\n                )\n                for field in docling_fields:\n                    if field in build_config:\n                        build_config[field][\"show\"] = bool(field_value)\n                        if field == \"pipeline\":\n                            build_config[field][\"advanced\"] = not bool(field_value)\n\n        elif field_name == \"pipeline\":\n            # Disable in cloud environments - don't show OCR engine even if pipeline is changed\n            if is_astra_cloud_environment():\n                self._disable_docling_fields_in_cloud(build_config)\n            elif field_value == \"standard\":\n                build_config[\"ocr_engine\"][\"show\"] = True\n                build_config[\"ocr_engine\"][\"value\"] = \"easyocr\"\n            else:\n                build_config[\"ocr_engine\"][\"show\"] = False\n                build_config[\"ocr_engine\"][\"value\"] = \"None\"\n\n        return build_config\n\n    def update_outputs(self, frontend_node: dict[str, Any], field_name: str, field_value: Any) -> dict[str, Any]:  # noqa: ARG002\n        \"\"\"Dynamically show outputs based on file count/type and advanced mode.\"\"\"\n        if field_name not in [\"path\", \"advanced_mode\", \"pipeline\"]:\n            return frontend_node\n\n        template = frontend_node.get(\"template\", {})\n        paths = self._path_value(template)\n        if not paths:\n            return frontend_node\n\n        frontend_node[\"outputs\"] = []\n        if len(paths) == 1:\n            file_path = paths[0] if field_name == \"path\" else frontend_node[\"template\"][\"path\"][\"file_path\"][0]\n            if file_path.endswith((\".csv\", \".xlsx\", \".parquet\")):\n                frontend_node[\"outputs\"].append(\n                    Output(\n                        display_name=\"Structured Content\",\n                        name=\"dataframe\",\n                        method=\"load_files_structured\",\n                        tool_mode=True,\n                    ),\n                )\n            elif file_path.endswith(\".json\"):\n                frontend_node[\"outputs\"].append(\n                    Output(display_name=\"Structured Content\", name=\"json\", method=\"load_files_json\", tool_mode=True),\n                )\n\n            advanced_mode = frontend_node.get(\"template\", {}).get(\"advanced_mode\", {}).get(\"value\", False)\n            if advanced_mode:\n                frontend_node[\"outputs\"].append(\n                    Output(\n                        display_name=\"Structured Output\",\n                        name=\"advanced_dataframe\",\n                        method=\"load_files_dataframe\",\n                        tool_mode=True,\n                    ),\n                )\n                frontend_node[\"outputs\"].append(\n                    Output(\n                        display_name=\"Markdown\", name=\"advanced_markdown\", method=\"load_files_markdown\", tool_mode=True\n                    ),\n                )\n                frontend_node[\"outputs\"].append(\n                    Output(display_name=\"File Path\", name=\"path\", method=\"load_files_path\", tool_mode=True),\n                )\n            else:\n                frontend_node[\"outputs\"].append(\n                    Output(display_name=\"Raw Content\", name=\"message\", method=\"load_files_message\", tool_mode=True),\n                )\n                frontend_node[\"outputs\"].append(\n                    Output(display_name=\"File Path\", name=\"path\", method=\"load_files_path\", tool_mode=True),\n                )\n        else:\n            # Multiple files => DataFrame output; advanced parser disabled\n            frontend_node[\"outputs\"].append(\n                Output(display_name=\"Files\", name=\"dataframe\", method=\"load_files\", tool_mode=True)\n            )\n\n        return frontend_node\n\n    # ------------------------------ Core processing ----------------------------------\n\n    def _get_selected_storage_location(self) -> str:\n        \"\"\"Get the selected storage location from the SortableListInput.\"\"\"\n        if hasattr(self, \"storage_location\") and self.storage_location:\n            if isinstance(self.storage_location, list) and len(self.storage_location) > 0:\n                return self.storage_location[0].get(\"name\", \"\")\n            if isinstance(self.storage_location, dict):\n                return self.storage_location.get(\"name\", \"\")\n        return \"Local\"  # Default to Local if not specified\n\n    def _validate_and_resolve_paths(self) -> list[BaseFileComponent.BaseFile]:\n        \"\"\"Override to handle file_path_str input from tool mode and cloud storage.\n\n        Priority:\n        1. Cloud storage (AWS/Google Drive) if selected\n        2. file_path_str (if provided by the tool call)\n        3. path (uploaded file from UI)\n        \"\"\"\n        storage_location = self._get_selected_storage_location()\n\n        # Handle AWS S3\n        if storage_location == \"AWS\":\n            return self._read_from_aws_s3()\n\n        # Handle Google Drive\n        if storage_location == \"Google Drive\":\n            return self._read_from_google_drive()\n\n        # Handle Local storage\n        # Check if file_path_str is provided (from tool mode)\n        file_path_str = getattr(self, \"file_path_str\", None)\n        if file_path_str:\n            # Use the string path from tool mode\n            from pathlib import Path\n\n            from lfx.schema.data import Data\n\n            resolved_path = Path(self.resolve_path(file_path_str))\n            if not resolved_path.exists():\n                msg = f\"File or directory not found: {file_path_str}\"\n                self.log(msg)\n                if not self.silent_errors:\n                    raise ValueError(msg)\n                return []\n\n            data_obj = Data(data={self.SERVER_FILE_PATH_FIELDNAME: str(resolved_path)})\n            return [BaseFileComponent.BaseFile(data_obj, resolved_path, delete_after_processing=False)]\n\n        # Otherwise use the default implementation (uses path FileInput)\n        return super()._validate_and_resolve_paths()\n\n    def _read_from_aws_s3(self) -> list[BaseFileComponent.BaseFile]:\n        \"\"\"Read file from AWS S3.\"\"\"\n        from lfx.base.data.cloud_storage_utils import create_s3_client, validate_aws_credentials\n\n        # Validate AWS credentials\n        validate_aws_credentials(self)\n        if not getattr(self, \"s3_file_key\", None):\n            msg = \"S3 File Key is required\"\n            raise ValueError(msg)\n\n        # Create S3 client\n        s3_client = create_s3_client(self)\n\n        # Download file to temp location\n        import tempfile\n\n        # Get file extension from S3 key\n        file_extension = Path(self.s3_file_key).suffix or \"\"\n\n        with tempfile.NamedTemporaryFile(mode=\"wb\", suffix=file_extension, delete=False) as temp_file:\n            temp_file_path = temp_file.name\n            try:\n                s3_client.download_fileobj(self.bucket_name, self.s3_file_key, temp_file)\n            except Exception as e:\n                # Clean up temp file on failure\n                with contextlib.suppress(OSError):\n                    Path(temp_file_path).unlink()\n                msg = f\"Failed to download file from S3: {e}\"\n                raise RuntimeError(msg) from e\n\n        # Create BaseFile object\n        from lfx.schema.data import Data\n\n        temp_path = Path(temp_file_path)\n        data_obj = Data(data={self.SERVER_FILE_PATH_FIELDNAME: str(temp_path)})\n        return [BaseFileComponent.BaseFile(data_obj, temp_path, delete_after_processing=True)]\n\n    def _read_from_google_drive(self) -> list[BaseFileComponent.BaseFile]:\n        \"\"\"Read file from Google Drive.\"\"\"\n        import tempfile\n\n        from googleapiclient.http import MediaIoBaseDownload\n\n        from lfx.base.data.cloud_storage_utils import create_google_drive_service\n\n        # Validate Google Drive credentials\n        if not getattr(self, \"service_account_key\", None):\n            msg = \"GCP Credentials Secret Key is required for Google Drive storage\"\n            raise ValueError(msg)\n        if not getattr(self, \"file_id\", None):\n            msg = \"Google Drive File ID is required\"\n            raise ValueError(msg)\n\n        # Create Google Drive service with read-only scope\n        drive_service = create_google_drive_service(\n            self.service_account_key, scopes=[\"https://www.googleapis.com/auth/drive.readonly\"]\n        )\n\n        # Get file metadata to determine file name and extension\n        try:\n            file_metadata = drive_service.files().get(fileId=self.file_id, fields=\"name,mimeType\").execute()\n            file_name = file_metadata.get(\"name\", \"download\")\n        except Exception as e:\n            msg = (\n                f\"Unable to access file with ID '{self.file_id}'. \"\n                f\"Error: {e!s}. \"\n                \"Please ensure: 1) The file ID is correct, 2) The file exists, \"\n                \"3) The service account has been granted access to this file.\"\n            )\n            raise ValueError(msg) from e\n\n        # Download file to temp location\n        file_extension = Path(file_name).suffix or \"\"\n        with tempfile.NamedTemporaryFile(mode=\"wb\", suffix=file_extension, delete=False) as temp_file:\n            temp_file_path = temp_file.name\n            try:\n                request = drive_service.files().get_media(fileId=self.file_id)\n                downloader = MediaIoBaseDownload(temp_file, request)\n                done = False\n                while not done:\n                    _status, done = downloader.next_chunk()\n            except Exception as e:\n                # Clean up temp file on failure\n                with contextlib.suppress(OSError):\n                    Path(temp_file_path).unlink()\n                msg = f\"Failed to download file from Google Drive: {e}\"\n                raise RuntimeError(msg) from e\n\n        # Create BaseFile object\n        from lfx.schema.data import Data\n\n        temp_path = Path(temp_file_path)\n        data_obj = Data(data={self.SERVER_FILE_PATH_FIELDNAME: str(temp_path)})\n        return [BaseFileComponent.BaseFile(data_obj, temp_path, delete_after_processing=True)]\n\n    def _is_docling_compatible(self, file_path: str) -> bool:\n        \"\"\"Lightweight extension gate for Docling-compatible types.\"\"\"\n        docling_exts = (\n            \".adoc\",\n            \".asciidoc\",\n            \".asc\",\n            \".bmp\",\n            \".csv\",\n            \".dotx\",\n            \".dotm\",\n            \".docm\",\n            \".docx\",\n            \".htm\",\n            \".html\",\n            \".jpg\",\n            \".jpeg\",\n            \".json\",\n            \".md\",\n            \".pdf\",\n            \".png\",\n            \".potx\",\n            \".ppsx\",\n            \".pptm\",\n            \".potm\",\n            \".ppsm\",\n            \".pptx\",\n            \".tiff\",\n            \".txt\",\n            \".xls\",\n            \".xlsx\",\n            \".xhtml\",\n            \".xml\",\n            \".webp\",\n        )\n        return file_path.lower().endswith(docling_exts)\n\n    async def _get_local_file_for_docling(self, file_path: str) -> tuple[str, bool]:\n        \"\"\"Get a local file path for Docling processing, downloading from S3 if needed.\n\n        Args:\n            file_path: Either a local path or S3 key (format \"flow_id/filename\")\n\n        Returns:\n            tuple[str, bool]: (local_path, should_delete) where should_delete indicates\n                              if this is a temporary file that should be cleaned up\n        \"\"\"\n        settings = get_settings_service().settings\n        if settings.storage_type == \"local\":\n            return file_path, False\n\n        # S3 storage - download to temp file\n        parsed = parse_storage_path(file_path)\n        if not parsed:\n            msg = f\"Invalid S3 path format: {file_path}. Expected 'flow_id/filename'\"\n            raise ValueError(msg)\n\n        storage_service = get_storage_service()\n        flow_id, filename = parsed\n\n        # Get file content from S3\n        content = await storage_service.get_file(flow_id, filename)\n\n        suffix = Path(filename).suffix\n        with NamedTemporaryFile(mode=\"wb\", suffix=suffix, delete=False) as tmp_file:\n            tmp_file.write(content)\n            temp_path = tmp_file.name\n\n        return temp_path, True\n\n    def _process_docling_in_subprocess(self, file_path: str) -> Data | None:\n        \"\"\"Run Docling in a separate OS process and map the result to a Data object.\n\n        We avoid multiprocessing pickling by launching `python -c \"<script>\"` and\n        passing JSON config via stdin. The child prints a JSON result to stdout.\n\n        For S3 storage, the file is downloaded to a temp file first.\n        \"\"\"\n        if not file_path:\n            return None\n\n        settings = get_settings_service().settings\n        if settings.storage_type == \"s3\":\n            local_path, should_delete = run_until_complete(self._get_local_file_for_docling(file_path))\n        else:\n            local_path = file_path\n            should_delete = False\n\n        try:\n            return self._process_docling_subprocess_impl(local_path, file_path)\n        finally:\n            # Clean up temp file if we created one\n            if should_delete:\n                with contextlib.suppress(Exception):\n                    Path(local_path).unlink()  # Ignore cleanup errors\n\n    def _process_docling_subprocess_impl(self, local_file_path: str, original_file_path: str) -> Data | None:\n        \"\"\"Implementation of Docling subprocess processing.\n\n        Args:\n            local_file_path: Path to local file to process\n            original_file_path: Original file path to include in metadata\n        Returns:\n            Data object with processed content\n        \"\"\"\n        args: dict[str, Any] = {\n            \"file_path\": local_file_path,\n            \"markdown\": bool(self.markdown),\n            \"image_mode\": str(self.IMAGE_MODE),\n            \"md_image_placeholder\": str(self.md_image_placeholder),\n            \"md_page_break_placeholder\": str(self.md_page_break_placeholder),\n            \"pipeline\": str(self.pipeline),\n            \"ocr_engine\": (\n                self.ocr_engine if self.ocr_engine and self.ocr_engine != \"None\" and self.pipeline != \"vlm\" else None\n            ),\n        }\n\n        # Child script for isolating the docling processing\n        child_script = textwrap.dedent(\n            r\"\"\"\n            import json, sys\n\n            def try_imports():\n                try:\n                    from docling.datamodel.base_models import ConversionStatus, InputFormat  # type: ignore\n                    from docling.document_converter import DocumentConverter  # type: ignore\n                    from docling_core.types.doc import ImageRefMode  # type: ignore\n                    return ConversionStatus, InputFormat, DocumentConverter, ImageRefMode, \"latest\"\n                except Exception as e:\n                    raise e\n\n            def create_converter(strategy, input_format, DocumentConverter, pipeline, ocr_engine):\n                # --- Standard PDF/IMAGE pipeline (your existing behavior), with optional OCR ---\n                if pipeline == \"standard\":\n                    try:\n                        from docling.datamodel.pipeline_options import PdfPipelineOptions  # type: ignore\n                        from docling.document_converter import PdfFormatOption  # type: ignore\n\n                        pipe = PdfPipelineOptions()\n                        pipe.do_ocr = False\n\n                        if ocr_engine:\n                            try:\n                                from docling.models.factories import get_ocr_factory  # type: ignore\n                                pipe.do_ocr = True\n                                fac = get_ocr_factory(allow_external_plugins=False)\n                                pipe.ocr_options = fac.create_options(kind=ocr_engine)\n                            except Exception:\n                                # If OCR setup fails, disable it\n                                pipe.do_ocr = False\n\n                        fmt = {}\n                        if hasattr(input_format, \"PDF\"):\n                            fmt[getattr(input_format, \"PDF\")] = PdfFormatOption(pipeline_options=pipe)\n                        if hasattr(input_format, \"IMAGE\"):\n                            fmt[getattr(input_format, \"IMAGE\")] = PdfFormatOption(pipeline_options=pipe)\n\n                        return DocumentConverter(format_options=fmt)\n                    except Exception:\n                        return DocumentConverter()\n\n                # --- Vision-Language Model (VLM) pipeline ---\n                if pipeline == \"vlm\":\n                    try:\n                        from docling.datamodel.pipeline_options import VlmPipelineOptions\n                        from docling.datamodel.vlm_model_specs import GRANITEDOCLING_MLX, GRANITEDOCLING_TRANSFORMERS\n                        from docling.document_converter import PdfFormatOption\n                        from docling.pipeline.vlm_pipeline import VlmPipeline\n\n                        vl_pipe = VlmPipelineOptions(\n                            vlm_options=GRANITEDOCLING_TRANSFORMERS,\n                        )\n\n                        if sys.platform == \"darwin\":\n                            try:\n                                import mlx_vlm\n                                vl_pipe.vlm_options = GRANITEDOCLING_MLX\n                            except ImportError as e:\n                                raise e\n\n                        # VLM paths generally don't need OCR; keep OCR off by default here.\n                        fmt = {}\n                        if hasattr(input_format, \"PDF\"):\n                            fmt[getattr(input_format, \"PDF\")] = PdfFormatOption(\n                            pipeline_cls=VlmPipeline,\n                            pipeline_options=vl_pipe\n                        )\n                        if hasattr(input_format, \"IMAGE\"):\n                            fmt[getattr(input_format, \"IMAGE\")] = PdfFormatOption(\n                            pipeline_cls=VlmPipeline,\n                            pipeline_options=vl_pipe\n                        )\n\n                        return DocumentConverter(format_options=fmt)\n                    except Exception as e:\n                        raise e\n\n                # --- Fallback: default converter with no special options ---\n                return DocumentConverter()\n\n            def export_markdown(document, ImageRefMode, image_mode, img_ph, pg_ph):\n                try:\n                    mode = getattr(ImageRefMode, image_mode.upper(), image_mode)\n                    return document.export_to_markdown(\n                        image_mode=mode,\n                        image_placeholder=img_ph,\n                        page_break_placeholder=pg_ph,\n                    )\n                except Exception:\n                    try:\n                        return document.export_to_text()\n                    except Exception:\n                        return str(document)\n\n            def to_rows(doc_dict):\n                rows = []\n                for t in doc_dict.get(\"texts\", []):\n                    prov = t.get(\"prov\") or []\n                    page_no = None\n                    if prov and isinstance(prov, list) and isinstance(prov[0], dict):\n                        page_no = prov[0].get(\"page_no\")\n                    rows.append({\n                        \"page_no\": page_no,\n                        \"label\": t.get(\"label\"),\n                        \"text\": t.get(\"text\"),\n                        \"level\": t.get(\"level\"),\n                    })\n                return rows\n\n            def main():\n                cfg = json.loads(sys.stdin.read())\n                file_path = cfg[\"file_path\"]\n                markdown = cfg[\"markdown\"]\n                image_mode = cfg[\"image_mode\"]\n                img_ph = cfg[\"md_image_placeholder\"]\n                pg_ph = cfg[\"md_page_break_placeholder\"]\n                pipeline = cfg[\"pipeline\"]\n                ocr_engine = cfg.get(\"ocr_engine\")\n                meta = {\"file_path\": file_path}\n\n                try:\n                    ConversionStatus, InputFormat, DocumentConverter, ImageRefMode, strategy = try_imports()\n                    converter = create_converter(strategy, InputFormat, DocumentConverter, pipeline, ocr_engine)\n                    try:\n                        res = converter.convert(file_path)\n                    except Exception as e:\n                        print(json.dumps({\"ok\": False, \"error\": f\"Docling conversion error: {e}\", \"meta\": meta}))\n                        return\n\n                    ok = False\n                    if hasattr(res, \"status\"):\n                        try:\n                            ok = (res.status == ConversionStatus.SUCCESS) or (str(res.status).lower() == \"success\")\n                        except Exception:\n                            ok = (str(res.status).lower() == \"success\")\n                    if not ok and hasattr(res, \"document\"):\n                        ok = getattr(res, \"document\", None) is not None\n                    if not ok:\n                        print(json.dumps({\"ok\": False, \"error\": \"Docling conversion failed\", \"meta\": meta}))\n                        return\n\n                    doc = getattr(res, \"document\", None)\n                    if doc is None:\n                        print(json.dumps({\"ok\": False, \"error\": \"Docling produced no document\", \"meta\": meta}))\n                        return\n\n                    if markdown:\n                        text = export_markdown(doc, ImageRefMode, image_mode, img_ph, pg_ph)\n                        print(json.dumps({\"ok\": True, \"mode\": \"markdown\", \"text\": text, \"meta\": meta}))\n                        return\n\n                    # structured\n                    try:\n                        doc_dict = doc.export_to_dict()\n                    except Exception as e:\n                        print(json.dumps({\"ok\": False, \"error\": f\"Docling export_to_dict failed: {e}\", \"meta\": meta}))\n                        return\n\n                    rows = to_rows(doc_dict)\n                    print(json.dumps({\"ok\": True, \"mode\": \"structured\", \"doc\": rows, \"meta\": meta}))\n                except Exception as e:\n                    print(\n                        json.dumps({\n                            \"ok\": False,\n                            \"error\": f\"Docling processing error: {e}\",\n                            \"meta\": {\"file_path\": file_path},\n                        })\n                    )\n\n            if __name__ == \"__main__\":\n                main()\n            \"\"\"\n        )\n\n        # Validate file_path to avoid command injection or unsafe input\n        if not isinstance(args[\"file_path\"], str) or any(c in args[\"file_path\"] for c in [\";\", \"|\", \"&\", \"$\", \"`\"]):\n            return Data(data={\"error\": \"Unsafe file path detected.\", \"file_path\": args[\"file_path\"]})\n\n        proc = subprocess.run(  # noqa: S603\n            [sys.executable, \"-u\", \"-c\", child_script],\n            input=json.dumps(args).encode(\"utf-8\"),\n            capture_output=True,\n            check=False,\n        )\n\n        if not proc.stdout:\n            err_msg = proc.stderr.decode(\"utf-8\", errors=\"replace\") if proc.stderr else \"no output from child process\"\n            return Data(data={\"error\": f\"Docling subprocess error: {err_msg}\", \"file_path\": original_file_path})\n\n        try:\n            result = json.loads(proc.stdout.decode(\"utf-8\"))\n        except Exception as e:  # noqa: BLE001\n            err_msg = proc.stderr.decode(\"utf-8\", errors=\"replace\")\n            return Data(\n                data={\n                    \"error\": f\"Invalid JSON from Docling subprocess: {e}. stderr={err_msg}\",\n                    \"file_path\": original_file_path,\n                },\n            )\n\n        if not result.get(\"ok\"):\n            error_msg = result.get(\"error\", \"Unknown Docling error\")\n            # Override meta file_path with original_file_path to ensure correct path matching\n            meta = result.get(\"meta\", {})\n            meta[\"file_path\"] = original_file_path\n            return Data(data={\"error\": error_msg, **meta})\n\n        meta = result.get(\"meta\", {})\n        # Override meta file_path with original_file_path to ensure correct path matching\n        # The subprocess returns the temp file path, but we need the original S3/local path for rollup_data\n        meta[\"file_path\"] = original_file_path\n        if result.get(\"mode\") == \"markdown\":\n            exported_content = str(result.get(\"text\", \"\"))\n            return Data(\n                text=exported_content,\n                data={\"exported_content\": exported_content, \"export_format\": self.EXPORT_FORMAT, **meta},\n            )\n\n        rows = list(result.get(\"doc\", []))\n        return Data(data={\"doc\": rows, \"export_format\": self.EXPORT_FORMAT, **meta})\n\n    def process_files(\n        self,\n        file_list: list[BaseFileComponent.BaseFile],\n    ) -> list[BaseFileComponent.BaseFile]:\n        \"\"\"Process input files.\n\n        - advanced_mode => Docling in a separate process.\n        - Otherwise => standard parsing in current process (optionally threaded).\n        \"\"\"\n        if not file_list:\n            msg = \"No files to process.\"\n            raise ValueError(msg)\n\n        # Validate image files to detect content/extension mismatches\n        # This prevents API errors like \"Image does not match the provided media type\"\n        image_extensions = {\"jpeg\", \"jpg\", \"png\", \"gif\", \"webp\", \"bmp\", \"tiff\"}\n        settings = get_settings_service().settings\n        for file in file_list:\n            extension = file.path.suffix[1:].lower()\n            if extension in image_extensions:\n                # Read bytes based on storage type\n                try:\n                    if settings.storage_type == \"s3\":\n                        # For S3 storage, use storage service to read file bytes\n                        file_path_str = str(file.path)\n                        content = run_until_complete(read_file_bytes(file_path_str))\n                    else:\n                        # For local storage, read bytes directly from filesystem\n                        content = file.path.read_bytes()\n\n                    is_valid, error_msg = validate_image_content_type(\n                        str(file.path),\n                        content=content,\n                    )\n                    if not is_valid:\n                        self.log(error_msg)\n                        if not self.silent_errors:\n                            raise ValueError(error_msg)\n                except (OSError, FileNotFoundError) as e:\n                    self.log(f\"Could not read file for validation: {e}\")\n                    # Continue - let it fail later with better error\n\n        # Validate that files requiring Docling are only processed when advanced mode is enabled\n        if not self.advanced_mode:\n            for file in file_list:\n                extension = file.path.suffix[1:].lower()\n                if extension in self.DOCLING_ONLY_EXTENSIONS:\n                    if is_astra_cloud_environment():\n                        msg = (\n                            f\"File '{file.path.name}' has extension '.{extension}' which requires \"\n                            f\"Advanced Parser mode. Advanced Parser is not available in cloud environments.\"\n                        )\n                    else:\n                        msg = (\n                            f\"File '{file.path.name}' has extension '.{extension}' which requires \"\n                            f\"Advanced Parser mode. Please enable 'Advanced Parser' to process this file.\"\n                        )\n                    self.log(msg)\n                    raise ValueError(msg)\n\n        def process_file_standard(file_path: str, *, silent_errors: bool = False) -> Data | None:\n            try:\n                return parse_text_file_to_data(file_path, silent_errors=silent_errors)\n            except FileNotFoundError as e:\n                self.log(f\"File not found: {file_path}. Error: {e}\")\n                if not silent_errors:\n                    raise\n                return None\n            except Exception as e:\n                self.log(f\"Unexpected error processing {file_path}: {e}\")\n                if not silent_errors:\n                    raise\n                return None\n\n        docling_compatible = all(self._is_docling_compatible(str(f.path)) for f in file_list)\n\n        # Advanced path: Check if ALL files are compatible with Docling\n        if self.advanced_mode and docling_compatible:\n            final_return: list[BaseFileComponent.BaseFile] = []\n            for file in file_list:\n                file_path = str(file.path)\n                advanced_data: Data | None = self._process_docling_in_subprocess(file_path)\n\n                # Handle None case - Docling processing failed or returned None\n                if advanced_data is None:\n                    error_data = Data(\n                        data={\n                            \"file_path\": file_path,\n                            \"error\": \"Docling processing returned no result. Check logs for details.\",\n                        },\n                    )\n                    final_return.extend(self.rollup_data([file], [error_data]))\n                    continue\n\n                # --- UNNEST: expand each element in `doc` to its own Data row\n                payload = getattr(advanced_data, \"data\", {}) or {}\n\n                # Check for errors first\n                if \"error\" in payload:\n                    error_msg = payload.get(\"error\", \"Unknown error\")\n                    error_data = Data(\n                        data={\n                            \"file_path\": file_path,\n                            \"error\": error_msg,\n                            **{k: v for k, v in payload.items() if k not in (\"error\", \"file_path\")},\n                        },\n                    )\n                    final_return.extend(self.rollup_data([file], [error_data]))\n                    continue\n\n                doc_rows = payload.get(\"doc\")\n                if isinstance(doc_rows, list) and doc_rows:\n                    # Non-empty list of structured rows\n                    rows: list[Data | None] = [\n                        Data(\n                            data={\n                                \"file_path\": file_path,\n                                **(item if isinstance(item, dict) else {\"value\": item}),\n                            },\n                        )\n                        for item in doc_rows\n                    ]\n                    final_return.extend(self.rollup_data([file], rows))\n                elif isinstance(doc_rows, list) and not doc_rows:\n                    # Empty list - file was processed but no text content found\n                    # Create a Data object indicating no content was extracted\n                    self.log(f\"No text extracted from '{file_path}', creating placeholder data\")\n                    empty_data = Data(\n                        data={\n                            \"file_path\": file_path,\n                            \"text\": \"(No text content extracted from image)\",\n                            \"info\": \"Image processed successfully but contained no extractable text\",\n                            **{k: v for k, v in payload.items() if k != \"doc\"},\n                        },\n                    )\n                    final_return.extend(self.rollup_data([file], [empty_data]))\n                else:\n                    # If not structured, keep as-is (e.g., markdown export or error dict)\n                    # Ensure file_path is set for proper rollup matching\n                    if not payload.get(\"file_path\"):\n                        payload[\"file_path\"] = file_path\n                        # Create new Data with file_path\n                        advanced_data = Data(\n                            data=payload,\n                            text=getattr(advanced_data, \"text\", None),\n                        )\n                    final_return.extend(self.rollup_data([file], [advanced_data]))\n            return final_return\n\n        # Standard multi-file (or single non-advanced) path\n        concurrency = 1 if not self.use_multithreading else max(1, self.concurrency_multithreading)\n\n        file_paths = [str(f.path) for f in file_list]\n        self.log(f\"Starting parallel processing of {len(file_paths)} files with concurrency: {concurrency}.\")\n        my_data = parallel_load_data(\n            file_paths,\n            silent_errors=self.silent_errors,\n            load_function=process_file_standard,\n            max_concurrency=concurrency,\n        )\n        return self.rollup_data(file_list, my_data)\n\n    # ------------------------------ Output helpers -----------------------------------\n\n    def load_files_helper(self) -> DataFrame:\n        result = self.load_files()\n\n        # Result is a DataFrame - check if it has any rows\n        if result.empty:\n            msg = \"Could not extract content from the provided file(s).\"\n            raise ValueError(msg)\n\n        # Check for error column with error messages\n        if \"error\" in result.columns:\n            errors = result[\"error\"].dropna().tolist()\n            if errors and not any(col in result.columns for col in [\"text\", \"doc\", \"exported_content\"]):\n                raise ValueError(errors[0])\n\n        return result\n\n    def load_files_dataframe(self) -> DataFrame:\n        \"\"\"Load files using advanced Docling processing and export to DataFrame format.\"\"\"\n        self.markdown = False\n        return self.load_files_helper()\n\n    def load_files_markdown(self) -> Message:\n        \"\"\"Load files using advanced Docling processing and export to Markdown format.\"\"\"\n        self.markdown = True\n        result = self.load_files_helper()\n\n        # Result is a DataFrame - check for text or exported_content columns\n        if \"text\" in result.columns and not result[\"text\"].isna().all():\n            text_values = result[\"text\"].dropna().tolist()\n            if text_values:\n                return Message(text=str(text_values[0]))\n\n        if \"exported_content\" in result.columns and not result[\"exported_content\"].isna().all():\n            content_values = result[\"exported_content\"].dropna().tolist()\n            if content_values:\n                return Message(text=str(content_values[0]))\n\n        # Return empty message with info that no text was found\n        return Message(text=\"(No text content extracted from file)\")\n"
               },
               "concurrency_multithreading": {
                 "_input_type": "IntInput",
@@ -3035,14 +2657,12 @@
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "concurrency_multithreading",
-                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "track_in_telemetry": true,
                 "type": "int",
                 "value": 1
               },
@@ -3055,14 +2675,12 @@
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "delete_server_file_after_processing",
-                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "track_in_telemetry": true,
                 "type": "bool",
                 "value": true
               },
@@ -3079,7 +2697,6 @@
                 "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "doc_key",
-                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": false,
@@ -3087,7 +2704,6 @@
                 "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
-                "track_in_telemetry": false,
                 "type": "str",
                 "value": "doc"
               },
@@ -3125,13 +2741,11 @@
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "file_path",
-                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
                 "trace_as_metadata": true,
-                "track_in_telemetry": false,
                 "type": "other",
                 "value": ""
               },
@@ -3165,14 +2779,12 @@
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "ignore_unspecified_files",
-                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "track_in_telemetry": true,
                 "type": "bool",
                 "value": false
               },
@@ -3185,14 +2797,12 @@
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "ignore_unsupported_extensions",
-                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "track_in_telemetry": true,
                 "type": "bool",
                 "value": true
               },
@@ -3205,14 +2815,12 @@
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "markdown",
-                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": false,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "track_in_telemetry": true,
                 "type": "bool",
                 "value": false
               },
@@ -3226,14 +2834,12 @@
                 "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "md_image_placeholder",
-                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": false,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "track_in_telemetry": false,
                 "type": "str",
                 "value": "<!-- image -->"
               },
@@ -3247,14 +2853,12 @@
                 "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "md_page_break_placeholder",
-                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": false,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "track_in_telemetry": false,
                 "type": "str",
                 "value": ""
               },
@@ -3273,7 +2877,6 @@
                   "easyocr"
                 ],
                 "options_metadata": [],
-                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": false,
@@ -3281,7 +2884,6 @@
                 "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "track_in_telemetry": true,
                 "type": "str",
                 "value": "easyocr"
               },
@@ -3341,16 +2943,13 @@
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "path",
-                "override_skip": false,
                 "placeholder": "",
                 "real_time_refresh": true,
                 "required": false,
                 "show": true,
                 "temp_file": false,
                 "title_case": false,
-                "tool_mode": false,
                 "trace_as_metadata": true,
-                "track_in_telemetry": false,
                 "type": "file",
                 "value": ""
               },
@@ -3369,7 +2968,6 @@
                   "vlm"
                 ],
                 "options_metadata": [],
-                "override_skip": false,
                 "placeholder": "",
                 "real_time_refresh": true,
                 "required": false,
@@ -3378,7 +2976,6 @@
                 "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "track_in_telemetry": true,
                 "type": "str",
                 "value": "standard"
               },
@@ -3413,14 +3010,12 @@
                 "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "separator",
-                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "track_in_telemetry": false,
                 "type": "str",
                 "value": "\n\n"
               },
@@ -3452,14 +3047,12 @@
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "silent_errors",
-                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "track_in_telemetry": true,
                 "type": "bool",
                 "value": false
               },
@@ -3507,49 +3100,46 @@
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "use_multithreading",
-                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "track_in_telemetry": true,
                 "type": "bool",
                 "value": true
               }
             },
             "tool_mode": false
           },
-          "selected_output": "message",
           "showNode": true,
           "type": "File"
         },
         "dragging": false,
-        "id": "File-Z5Vx4",
+        "id": "File-oAEuF",
         "measured": {
-          "height": 341,
+          "height": 229,
           "width": 320
         },
         "position": {
-          "x": -2086.008499473227,
-          "y": 856.5389445215357
+          "x": -2084.702607272029,
+          "y": 876.5761449064685
         },
         "selected": false,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": 1145.3658840087537,
-      "y": -7.163681820005991,
-      "zoom": 0.42922446588058377
+      "x": 1531.333069410271,
+      "y": -51.51956711530852,
+      "zoom": 0.5298593037007338
     }
   },
   "description": "Load text data from various file formats, process it into structured messages, and analyze sentiment using AI-powered classification.",
   "endpoint_name": null,
-  "id": "7b29b229-2f50-4d10-b61c-0ab3008f8ff2",
+  "id": "dc9f3c5d-b43a-493e-9dee-8e6d0c55a9ca",
   "is_component": false,
-  "last_tested_version": "1.7.0",
+  "last_tested_version": "1.4.3",
   "name": "Text Sentiment Analysis",
   "tags": [
     "classification"
