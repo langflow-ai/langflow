@@ -74,20 +74,30 @@ class LocalStorageService(StorageService):
             >>> parse_file_path("user_123/image.png")  # without data_dir
             ("user_123", "image.png")
         """
-        data_dir_str = str(self.data_dir)
-
+        from pathlib import Path
+        
+        # Convert to Path for cross-platform handling
+        full_path_obj = Path(full_path)
+        data_dir_path = Path(self.data_dir)
+        
         # Remove data_dir if present (but don't require it)
-        path_without_prefix = full_path
-        if full_path.startswith(data_dir_str):
-            path_without_prefix = full_path[len(data_dir_str) :].lstrip("/")
-
+        try:
+            # Try to get relative path from data_dir
+            path_without_prefix = full_path_obj.relative_to(data_dir_path)
+        except ValueError:
+            # If not relative to data_dir, use the full path as-is
+            path_without_prefix = full_path_obj
+        
+        # Convert back to string with forward slashes for consistent parsing
+        path_str = str(path_without_prefix).replace("\\", "/")
+        
         # Split from the right to get the filename
         # Everything before the last "/" is the flow_id
-        if "/" not in path_without_prefix:
-            return "", path_without_prefix
+        if "/" not in path_str:
+            return "", path_str
 
         # Use rsplit to split from the right, limiting to 1 split
-        flow_id, file_name = path_without_prefix.rsplit("/", 1)
+        flow_id, file_name = path_str.rsplit("/", 1)
         return flow_id, file_name
 
     async def save_file(self, flow_id: str, file_name: str, data: bytes, *, append: bool = False) -> None:
