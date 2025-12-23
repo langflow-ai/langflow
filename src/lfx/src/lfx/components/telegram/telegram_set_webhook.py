@@ -1,12 +1,16 @@
 # ruff: noqa: RUF001, RUF002
+import asyncio
 import re
+from pathlib import Path
 
 import httpx
 
 from lfx.custom.custom_component.component import Component
-from lfx.io import BoolInput, IntInput, MessageTextInput, Output, SecretStrInput, StrInput
+from lfx.io import BoolInput, IntInput, MessageTextInput, MultilineInput, Output, SecretStrInput, StrInput
 from lfx.log.logger import logger
 from lfx.schema.data import Data
+
+MAX_CONNECTIONS_LIMIT = 100
 
 
 def _generate_secret_token(flow_id: str | None = None, node_id: str | None = None) -> str:
@@ -26,11 +30,7 @@ def _generate_secret_token(flow_id: str | None = None, node_id: str | None = Non
     node_id = node_id or ""
 
     secret_token = f"{flow_id}_{node_id}"
-
-    # Очищаем от недопустимых символов (только A-Z, a-z, 0-9, _, -)
-    secret_token = re.sub(r"[^a-zA-Z0-9_\-]+", "", secret_token)
-
-    return secret_token
+    return re.sub(r"[^a-zA-Z0-9_\-]+", "", secret_token)
 
 
 class TelegramSetWebhook(Component):
@@ -42,7 +42,12 @@ class TelegramSetWebhook(Component):
     """
 
     display_name = "Telegram Установить Webhook"
-    description = "Устанавливает webhook URL для приема входящих обновлений через исходящий webhook. Telegram будет отправлять POST запросы на этот URL при каждом обновлении для бота. Настройте один раз, затем используйте компонент TelegramWebhook в вашем потоке для обработки входящих сообщений."
+    description = (
+        "Устанавливает webhook URL для приема входящих обновлений через исходящий webhook. "
+        "Telegram будет отправлять POST запросы на этот URL при каждом обновлении для бота. "
+        "Настройте один раз, затем используйте компонент TelegramWebhook "
+        "в вашем потоке для обработки входящих сообщений."
+    )
     documentation: str = "https://core.telegram.org/bots/api#setwebhook"
     icon = "Webhook"
     name = "TelegramSetWebhook"
@@ -55,25 +60,43 @@ class TelegramSetWebhook(Component):
             password=True,
             info="Токен вашего Telegram бота, полученный от @BotFather",
         ),
-        MessageTextInput(
+        MultilineInput(
             name="url",
             display_name="Webhook URL",
+            value="BACKEND_URL",
             required=True,
-            info="HTTPS URL для отправки обновлений от Telegram. Формат: https://your-langflow-server/api/v1/webhook/{flow_id}. Где взять URL: 1) Скопируйте из поля 'Endpoint' компонента TelegramWebhook в вашем потоке, 2) Или найдите Flow ID в URL потока (после /flow/) и подставьте в формат выше, 3) Или откройте API Access pane потока и скопируйте URL из вкладки 'Webhook curl'. Используйте пустую строку для удаления webhook. URL должен быть HTTPS с валидным SSL сертификатом.",
+            info=(
+                "HTTPS URL для отправки обновлений от Telegram. Формат: "
+                "https://your-langflow-server/api/v1/webhook/{flow_id}. "
+                "Где взять URL: 1) Скопируйте из поля 'Endpoint' компонента TelegramWebhook в вашем потоке, "
+                "2) Или найдите Flow ID в URL потока (после /flow/) и подставьте в формат выше, "
+                "3) Или откройте API Access pane потока и скопируйте URL из вкладки 'Webhook curl'. "
+                "Используйте пустую строку для удаления webhook. URL должен быть HTTPS с валидным SSL сертификатом."
+            ),
             tool_mode=True,
+            copy_field=True,
+            input_types=[],
         ),
         BoolInput(
             name="auto_generate_secret",
             display_name="Автоматически генерировать secret token",
             value=False,
-            info="Если включено, secret token будет автоматически сгенерирован на основе flow_id и node_id (в стиле n8n). Если выключено, используйте поле 'Секретный токен' для ручной настройки.",
+            info=(
+                "Если включено, secret token будет автоматически сгенерирован "
+                "на основе flow_id и node_id (в стиле n8n). "
+                "Если выключено, используйте поле 'Секретный токен' для ручной настройки."
+            ),
             advanced=True,
         ),
         MessageTextInput(
             name="secret_token",
             display_name="Секретный токен",
             required=False,
-            info="Секретный токен, который будет отправляться в заголовке 'X-Telegram-Bot-Api-Secret-Token' в каждом webhook запросе. 1-256 символов. Используется только если 'Автоматически генерировать secret token' выключено.",
+            info=(
+                "Секретный токен, который будет отправляться в заголовке 'X-Telegram-Bot-Api-Secret-Token' "
+                "в каждом webhook запросе. 1-256 символов. Используется только если "
+                "'Автоматически генерировать secret token' выключено."
+            ),
             advanced=True,
         ),
         StrInput(
@@ -88,14 +111,20 @@ class TelegramSetWebhook(Component):
             display_name="Максимум соединений",
             required=False,
             value=40,
-            info="Максимально допустимое количество одновременных HTTPS соединений к webhook для доставки обновлений, 1-100. По умолчанию 40.",
+            info=(
+                "Максимально допустимое количество одновременных HTTPS соединений к webhook для доставки обновлений, "
+                "1-100. По умолчанию 40."
+            ),
             advanced=True,
         ),
         StrInput(
             name="allowed_updates",
             display_name="Разрешенные обновления",
             required=False,
-            info="Список типов обновлений, на которые подписан бот, разделенных запятыми. По умолчанию все типы обновлений.",
+            info=(
+                "Список типов обновлений, на которые подписан бот, разделенных запятыми. "
+                "По умолчанию все типы обновлений."
+            ),
             advanced=True,
         ),
         BoolInput(
@@ -140,8 +169,8 @@ class TelegramSetWebhook(Component):
                     node_id = self._id
                 elif hasattr(self, "__config") and "_id" in self.__config:
                     node_id = self.__config["_id"]
-            except Exception:  # noqa: BLE001
-                pass
+            except (AttributeError, TypeError, KeyError) as e:
+                await logger.adebug(f"Не удалось определить flow_id/node_id для secret token: {e}")
 
             secret_token_to_use = _generate_secret_token(flow_id, node_id)
             if secret_token_to_use:
@@ -153,7 +182,7 @@ class TelegramSetWebhook(Component):
 
         if self.max_connections:
             max_conn = int(self.max_connections)
-            if max_conn < 1 or max_conn > 100:
+            if max_conn < 1 or max_conn > MAX_CONNECTIONS_LIMIT:
                 msg = "Максимум соединений должен быть между 1 и 100"
                 raise ValueError(msg)
             payload["max_connections"] = max_conn
@@ -169,9 +198,12 @@ class TelegramSetWebhook(Component):
         files = None
         if self.certificate:
             try:
-                with open(self.certificate, "rb") as cert_file:
-                    cert_content = cert_file.read()
-                    files = {"certificate": ("certificate.pem", cert_content, "application/x-pem-file")}
+                cert_path = Path(self.certificate)
+                if not cert_path.exists():
+                    msg = f"Файл сертификата не найден: {self.certificate}"
+                    raise ValueError(msg)
+                cert_content = await asyncio.to_thread(cert_path.read_bytes)
+                files = {"certificate": ("certificate.pem", cert_content, "application/x-pem-file")}
             except FileNotFoundError:
                 msg = f"Файл сертификата не найден: {self.certificate}"
                 raise ValueError(msg) from None

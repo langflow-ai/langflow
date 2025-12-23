@@ -24,6 +24,13 @@ class WorkflowEditError(ValueError):
     """Raised when a workflow edit operation is invalid or cannot be applied."""
 
 
+# Constants for field value length limits
+MAX_FIELD_VALUE_LENGTH = 200
+MAX_FIELD_INFO_LENGTH = 200
+MAX_OPTIMIZED_VALUE_LENGTH = 500
+MAX_OPTIONS_COUNT = 50
+
+
 def _json_dumps(obj: Any) -> str:
     return orjson.dumps(obj).decode("utf-8")
 
@@ -57,7 +64,8 @@ def _get_agent_input_preparation_documentation() -> str:
     return """# Agent Input Preparation Guide
 
 ## Overview
-The Agent component is a core Langflow component that processes user inputs using LLM and tools. Properly preparing input data for the Agent is critical for correct operation and message history management.
+The Agent component is a core Langflow component that processes user inputs using LLM and tools.
+Properly preparing input data for the Agent is critical for correct operation and message history management.
 
 ## Agent Input Requirements
 
@@ -443,7 +451,8 @@ def _get_custom_components_documentation() -> str:
     return """# Custom Component Documentation
 
 ## Overview
-Custom components allow you to add custom Python logic to workflows. They are Python classes that inherit from `Component`.
+Custom components allow you to add custom Python logic to workflows.
+They are Python classes that inherit from `Component`.
 
 ## Basic Structure
 
@@ -780,7 +789,6 @@ def _check_workflow_issues(payload: dict[str, Any]) -> list[dict[str, Any]]:
 
     sources = {e.get("source") for e in edges}
     targets = {e.get("target") for e in edges}
-    connected_nodes = sources | targets
 
     for node in nodes:
         if node.get("type") == "noteNode":
@@ -818,7 +826,9 @@ def _check_workflow_issues(payload: dict[str, Any]) -> list[dict[str, Any]]:
                     "display_name": display_name,
                     "component_type": component_type,
                     "message": f"Node '{display_name}' ({component_type}) has no incoming connections.",
-                    "suggestion": "Connect an upstream node to provide input, or verify if this node should receive data.",
+                    "suggestion": (
+                        "Connect an upstream node to provide input, or verify if this node should receive data."
+                    ),
                 }
             )
         elif not has_outgoing and not is_output_component:
@@ -832,7 +842,9 @@ def _check_workflow_issues(payload: dict[str, Any]) -> list[dict[str, Any]]:
                         "node_id": node_id,
                         "display_name": display_name,
                         "component_type": component_type,
-                        "message": f"Node '{display_name}' ({component_type}) has outputs but is not connected downstream.",
+                        "message": (
+                            f"Node '{display_name}' ({component_type}) has outputs but is not connected downstream."
+                        ),
                         "suggestion": "Connect this node's output to another node or to an output component.",
                     }
                 )
@@ -849,28 +861,31 @@ def _check_workflow_issues(payload: dict[str, Any]) -> list[dict[str, Any]]:
             is_required = field_def.get("required", False)
             is_shown = field_def.get("show", True)
             value = field_def.get("value")
-            input_types = field_def.get("input_types", [])
 
             has_edge_connection = any(
                 e.get("target") == node_id and _get_target_field_name(e) == field_name for e in edges
             )
 
-            if is_required and is_shown and not has_edge_connection:
-                if value is None or value == "" or (isinstance(value, list) and len(value) == 0):
-                    field_display = field_def.get("display_name", field_name)
-                    issues.append(
-                        {
-                            "type": "missing_required_field",
-                            "severity": "error",
-                            "node_id": node_id,
-                            "display_name": display_name,
-                            "component_type": component_type,
-                            "field": field_name,
-                            "field_display_name": field_display,
-                            "message": f"Required field '{field_display}' on node '{display_name}' is empty.",
-                            "suggestion": "Set a value using set_node_template_value or connect an input to this field.",
-                        }
-                    )
+            if (
+                is_required
+                and is_shown
+                and not has_edge_connection
+                and (value is None or value == "" or (isinstance(value, list) and len(value) == 0))
+            ):
+                field_display = field_def.get("display_name", field_name)
+                issues.append(
+                    {
+                        "type": "missing_required_field",
+                        "severity": "error",
+                        "node_id": node_id,
+                        "display_name": display_name,
+                        "component_type": component_type,
+                        "field": field_name,
+                        "field_display_name": field_display,
+                        "message": f"Required field '{field_display}' on node '{display_name}' is empty.",
+                        "suggestion": ("Set a value using set_node_template_value or connect an input to this field."),
+                    }
+                )
 
     for edge in edges:
         source_id = edge.get("source", "")
@@ -933,7 +948,8 @@ def _get_target_field_name(edge: dict[str, Any]) -> str:
             handle_str = target_handle.replace("œ", '"')
             handle_data = json.loads(handle_str)
             return handle_data.get("fieldName", "")
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001, S110
+            # Handle parsing errors silently - fallback to edge data method
             pass
 
     edge_data = edge.get("data", {})
@@ -979,7 +995,7 @@ def _extract_component_info(template: dict[str, Any], component_type: str, categ
 
         if field_def.get("value") is not None:
             val = field_def["value"]
-            if not isinstance(val, str) or len(val) < 200:
+            if not isinstance(val, str) or len(val) < MAX_FIELD_VALUE_LENGTH:
                 field_info["default"] = val
 
         if field_def.get("options"):
@@ -1069,7 +1085,7 @@ def _optimize_workflow_payload(payload: dict[str, Any], *, include_code: bool = 
                 if "value" in field_value:
                     val = field_value["value"]
                     # Don't include large string values or empty values
-                    if val and (not isinstance(val, str) or len(val) < 500):
+                    if val and (not isinstance(val, str) or len(val) < MAX_OPTIMIZED_VALUE_LENGTH):
                         optimized_field["value"] = val
 
                 # Keep input/output types for validation
@@ -1080,17 +1096,17 @@ def _optimize_workflow_payload(payload: dict[str, Any], *, include_code: bool = 
 
                 # Keep info if short
                 info = field_value.get("info", "")
-                if info and len(info) < 200:
+                if info and len(info) < MAX_FIELD_INFO_LENGTH:
                     optimized_field["info"] = info
 
                 # Keep options for dropdown fields (critical for assistant to set correct values)
                 if field_value.get("options"):
                     options = field_value["options"]
-                    # Limit options to avoid token bloat (keep first 50)
-                    if isinstance(options, list) and len(options) <= 50:
+                    # Limit options to avoid token bloat
+                    if isinstance(options, list) and len(options) <= MAX_OPTIONS_COUNT:
                         optimized_field["options"] = options
                     elif isinstance(options, list):
-                        optimized_field["options"] = options[:50]
+                        optimized_field["options"] = options[:MAX_OPTIONS_COUNT]
                         optimized_field["options_truncated"] = True
 
                 optimized_template[field_name] = optimized_field
@@ -1125,7 +1141,8 @@ async def _get_flow_for_user(*, flow_id: UUID, user_id: UUID) -> Flow:
     async with session_scope() as session:
         flow = await session.get(Flow, flow_id)
         if not flow or flow.user_id != user_id:
-            raise WorkflowEditError("Flow not found")
+            msg = "Flow not found"
+            raise WorkflowEditError(msg)
         return flow
 
 
@@ -1133,35 +1150,40 @@ def validate_flow_payload(payload: dict[str, Any]) -> list[str]:
     """Validate flow payload structure using Graph parsing, returning a list of errors."""
     try:
         Graph.from_payload(payload)
-        return []
     except Exception as exc:  # noqa: BLE001
         return [str(exc)]
+    else:
+        return []
 
 
 def _ensure_list(value: Any, *, name: str) -> list:
     if isinstance(value, list):
         return value
-    raise WorkflowEditError(f"Invalid '{name}': expected list")
+    msg = f"Invalid '{name}': expected list"
+    raise WorkflowEditError(msg)
 
 
 def _ensure_dict(value: Any, *, name: str) -> dict:
     if isinstance(value, dict):
         return value
-    raise WorkflowEditError(f"Invalid '{name}': expected object")
+    msg = f"Invalid '{name}': expected object"
+    raise WorkflowEditError(msg)
 
 
 def _find_node_index(nodes: list[dict[str, Any]], node_id: str) -> int:
     for i, n in enumerate(nodes):
         if str(n.get("id")) == node_id:
             return i
-    raise WorkflowEditError(f"Node '{node_id}' not found")
+    msg = f"Node '{node_id}' not found"
+    raise WorkflowEditError(msg)
 
 
 def _find_edge_index(edges: list[dict[str, Any]], edge_id: str) -> int:
     for i, e in enumerate(edges):
         if str(e.get("id")) == edge_id:
             return i
-    raise WorkflowEditError(f"Edge '{edge_id}' not found")
+    msg = f"Edge '{edge_id}' not found"
+    raise WorkflowEditError(msg)
 
 
 async def _apply_set_node_template_value(
@@ -1188,19 +1210,20 @@ async def _apply_set_node_template_value(
 
     if field_name not in template:
         if not create_if_missing:
-            raise WorkflowEditError(f"Template field '{field_name}' not found on node '{node_id}'")
+            msg = f"Template field '{field_name}' not found on node '{node_id}'"
+            raise WorkflowEditError(msg)
         template[field_name] = {"type": "str", "value": None, "show": True}
 
     field = template[field_name]
     if not isinstance(field, dict):
-        raise WorkflowEditError(f"Template field '{field_name}' is not an object on node '{node_id}'")
+        msg = f"Template field '{field_name}' is not an object on node '{node_id}'"
+        raise WorkflowEditError(msg)
 
     field["value"] = value
 
     # If field has real_time_refresh, call update_build_config for dynamic updates
     if field.get("real_time_refresh"):
         await _apply_dynamic_build_config_update(
-            node_inner=node_inner,
             template=template,
             field_name=field_name,
             field_value=value,
@@ -1210,7 +1233,6 @@ async def _apply_set_node_template_value(
 
 async def _apply_dynamic_build_config_update(
     *,
-    node_inner: dict[str, Any],
     template: dict[str, Any],
     field_name: str,
     field_value: Any,
@@ -1257,7 +1279,8 @@ async def _apply_dynamic_build_config_update(
             template.clear()
             template.update(dict(updated_config))
     except Exception as e:
-        raise WorkflowEditError(f"Dynamic template update failed for '{field_name}': {e}") from e
+        msg = f"Dynamic template update failed for '{field_name}': {e}"
+        raise WorkflowEditError(msg) from e
 
 
 def _get_node_by_id(nodes: list[dict[str, Any]], node_id: str) -> dict[str, Any] | None:
@@ -1319,8 +1342,6 @@ def _build_target_handle(
 ) -> dict[str, Any]:
     """Build a proper targetHandle dictionary from node input info."""
     node_id = target_node.get("id", "")
-    node_data = target_node.get("data", {})
-    component_type = node_data.get("type", "")
 
     input_field = _find_input_by_name(target_node, input_name)
     if input_field:
@@ -1379,7 +1400,8 @@ def _normalize_edge(payload: dict[str, Any], edge: dict[str, Any]) -> dict[str, 
     target_handle_name = edge.get("targetHandle", "")
 
     if not source_id or not target_id:
-        raise WorkflowEditError("Edge requires 'source' and 'target' node IDs")
+        msg = "Edge requires 'source' and 'target' node IDs"
+        raise WorkflowEditError(msg)
 
     nodes = _ensure_list(payload.get("nodes", []), name="nodes")
 
@@ -1387,17 +1409,16 @@ def _normalize_edge(payload: dict[str, Any], edge: dict[str, Any]) -> dict[str, 
     target_node = _get_node_by_id(nodes, target_id)
 
     if not source_node:
-        raise WorkflowEditError(f"Source node '{source_id}' not found")
+        msg = f"Source node '{source_id}' not found"
+        raise WorkflowEditError(msg)
     if not target_node:
-        raise WorkflowEditError(f"Target node '{target_id}' not found")
+        msg = f"Target node '{target_id}' not found"
+        raise WorkflowEditError(msg)
 
     if not source_handle_name:
         node_data = source_node.get("data", {}).get("node", {})
         outputs = node_data.get("outputs", [])
-        if outputs:
-            source_handle_name = outputs[0].get("name", "output")
-        else:
-            source_handle_name = "output"
+        source_handle_name = outputs[0].get("name", "output") if outputs else "output"
 
     if not target_handle_name:
         target_handle_name = "input_value"
@@ -1410,9 +1431,12 @@ def _normalize_edge(payload: dict[str, Any], edge: dict[str, Any]) -> dict[str, 
     # that point to a non-selected output on nodes with multiple outputs.
     # Keep `selected_output` aligned with the output we are connecting.
     source_data = source_node.get("data")
-    if source_node.get("type") == "genericNode" and isinstance(source_data, dict):
-        if _find_output_by_name(source_node, source_handle_name) is not None:
-            source_data["selected_output"] = source_handle_name
+    if (
+        source_node.get("type") == "genericNode"
+        and isinstance(source_data, dict)
+        and _find_output_by_name(source_node, source_handle_name) is not None
+    ):
+        source_data["selected_output"] = source_handle_name
 
     source_handle_str = _handle_to_string(source_handle)
     target_handle_str = _handle_to_string(target_handle)
@@ -1550,7 +1574,9 @@ def _apply_update_note(
     node = _ensure_dict(nodes[idx], name="node")
 
     if node.get("type") != "noteNode":
-        raise WorkflowEditError(f"Node '{note_id}' is not a note (type: {node.get('type')})")
+        node_type = node.get("type")
+        msg = f"Node '{note_id}' is not a note (type: {node_type})"
+        raise WorkflowEditError(msg)
 
     data = _ensure_dict(node.get("data", {}), name="node.data")
     node_inner = _ensure_dict(data.get("node", {}), name="node.data.node")
@@ -1597,10 +1623,12 @@ async def apply_workflow_patch(
         if kind == "add_node":
             component_type = str(op.get("component_type", ""))
             if not component_type:
-                raise WorkflowEditError("add_node requires 'component_type'")
+                msg = "add_node requires 'component_type'"
+                raise WorkflowEditError(msg)
             template = await _get_component_template(component_type)
             if not template:
-                raise WorkflowEditError(f"Unknown component type '{component_type}'")
+                msg = f"Unknown component type '{component_type}'"
+                raise WorkflowEditError(msg)
             position = op.get("position", {"x": 0, "y": 0})
             node_id = _generate_node_id(component_type)
             _apply_add_node(
@@ -1612,18 +1640,18 @@ async def apply_workflow_patch(
             )
             added_node_ids.append(node_id)
         elif kind == "add_note":
-            content = str(op.get("content", ""))
+            note_content = str(op.get("content", ""))
             position = op.get("position", {"x": 0, "y": 0})
-            background_color = str(op.get("background_color", "transparent"))
+            note_background_color = str(op.get("background_color", "transparent"))
             width = int(op.get("width", 324))
             height = int(op.get("height", 324))
             note_id = _generate_note_id()
             _apply_add_note(
                 new_payload,
                 note_id=note_id,
-                content=content,
+                content=note_content,
                 position=position,
-                background_color=background_color,
+                background_color=note_background_color,
                 width=width,
                 height=height,
             )
@@ -1631,16 +1659,18 @@ async def apply_workflow_patch(
         elif kind == "update_note":
             note_id = str(op.get("note_id", ""))
             if not note_id:
-                raise WorkflowEditError("update_note requires 'note_id'")
-            content = op.get("content")
-            background_color = op.get("background_color")
-            if content is None and background_color is None:
-                raise WorkflowEditError("update_note requires 'content' or 'background_color'")
+                msg = "update_note requires 'note_id'"
+                raise WorkflowEditError(msg)
+            update_content = op.get("content")
+            update_background_color = op.get("background_color")
+            if update_content is None and update_background_color is None:
+                msg = "update_note requires 'content' or 'background_color'"
+                raise WorkflowEditError(msg)
             _apply_update_note(
                 new_payload,
                 note_id=note_id,
-                content=content if content is not None else None,
-                background_color=str(background_color) if background_color is not None else None,
+                content=str(update_content) if update_content is not None else None,
+                background_color=str(update_background_color) if update_background_color is not None else None,
             )
         elif kind == "set_node_template_value":
             await _apply_set_node_template_value(
@@ -1659,7 +1689,8 @@ async def apply_workflow_patch(
         elif kind == "remove_node":
             _apply_remove_node(new_payload, node_id=str(op.get("node_id", "")))
         else:
-            raise WorkflowEditError(f"Unsupported op '{kind}'")
+            msg = f"Unsupported op '{kind}'"
+            raise WorkflowEditError(msg)
 
     new_payload["_added_node_ids"] = added_node_ids
     return new_payload
@@ -1765,7 +1796,8 @@ WORKFLOW_MCP_TOOLS: list[WorkflowMcpTool] = [
         name="lf_list_components",
         description=(
             "List available Langflow component types by category. "
-            "Use exact category names: input_output, processing, openai, anthropic, google, agents, helpers, models, tools, data, logic. "
+            "Use exact category names: input_output, processing, openai, anthropic, google, "
+            "agents, helpers, models, tools, data, logic. "
             "Without category, returns all categories with their components."
         ),
         input_schema={
@@ -1786,14 +1818,17 @@ WORKFLOW_MCP_TOOLS: list[WorkflowMcpTool] = [
             "Returns: description, all input fields (with types, descriptions, options for dropdowns, defaults), "
             "all outputs (with types), and use case recommendations. "
             "ALWAYS use this to understand a component's capabilities before adding it. "
-            "Prefer standard components over custom ones - use this tool to find if existing components can solve the task."
+            "Prefer standard components over custom ones - use this tool to find if existing components "
+            "can solve the task."
         ),
         input_schema={
             "type": "object",
             "properties": {
                 "component_type": {
                     "type": "string",
-                    "description": "Exact component type name (e.g., 'ChatInput', 'Agent', 'OpenAIModel', 'Prompt Template')",
+                    "description": (
+                        "Exact component type name (e.g., 'ChatInput', 'Agent', 'OpenAIModel', 'Prompt Template')"
+                    ),
                 },
             },
             "required": ["component_type"],
@@ -1886,7 +1921,9 @@ WORKFLOW_MCP_TOOLS: list[WorkflowMcpTool] = [
                 "action": {
                     "type": "string",
                     "enum": ["index", "search", "read"],
-                    "description": "Action to perform: 'index' for listing, 'search' for finding, 'read' for full content",
+                    "description": (
+                        "Action to perform: 'index' for listing, 'search' for finding, 'read' for full content"
+                    ),
                 },
                 "query": {
                     "type": "string",
@@ -1928,7 +1965,8 @@ async def call_workflow_tool(
         node_id = str(arguments.get("node_id", "")).strip()
 
         if not node_id:
-            raise WorkflowEditError("node_id is required")
+            msg = "node_id is required"
+            raise WorkflowEditError(msg)
 
         flow = await _get_flow_for_user(flow_id=flow_id, user_id=user_id)
         payload = flow.data or {}
@@ -1942,7 +1980,8 @@ async def call_workflow_tool(
                 break
 
         if not target_node:
-            raise WorkflowEditError(f"Node '{node_id}' not found in workflow")
+            msg = f"Node '{node_id}' not found in workflow"
+            raise WorkflowEditError(msg)
 
         # Extract code and metadata
         node_data = target_node.get("data", {})
@@ -1968,7 +2007,7 @@ async def call_workflow_tool(
 
         code_value = code_field.get("value", "")
 
-        result = {
+        node_code_result = {
             "node_id": node_id,
             "type": node_data.get("type"),
             "display_name": node_data.get("display_name"),
@@ -1981,13 +2020,13 @@ async def call_workflow_tool(
             },
         }
 
-        return [types.TextContent(type="text", text=_json_dumps(result))]
+        return [types.TextContent(type="text", text=_json_dumps(node_code_result))]
 
     if tool_name == "lf_workflow_validate":
         data = _ensure_dict(arguments.get("data"), name="data")
         errors = validate_flow_payload(data)
-        result = {"ok": len(errors) == 0, "errors": errors}
-        return [types.TextContent(type="text", text=_json_dumps(result))]
+        validation_result = {"ok": len(errors) == 0, "errors": errors}
+        return [types.TextContent(type="text", text=_json_dumps(validation_result))]
 
     if tool_name == "lf_workflow_patch":
         from sqlalchemy.orm.attributes import flag_modified
@@ -1998,7 +2037,8 @@ async def call_workflow_tool(
         async with session_scope() as session:
             flow = await session.get(Flow, flow_id)
             if not flow or flow.user_id != user_id:
-                raise WorkflowEditError("Flow not found")
+                msg = "Flow not found"
+                raise WorkflowEditError(msg)
             current = flow.data or {}
             new_payload = await apply_workflow_patch(current, patch, user_id=user_id)
             added_node_ids = new_payload.pop("_added_node_ids", [])
@@ -2010,10 +2050,10 @@ async def call_workflow_tool(
             flag_modified(flow, "data")  # Force SQLAlchemy to detect JSON change
             flow.updated_at = datetime.now(timezone.utc)
             session.add(flow)
-        result = {"ok": True}
+        patch_result = {"ok": True}
         if added_node_ids:
-            result["added_node_ids"] = added_node_ids
-        return [types.TextContent(type="text", text=_json_dumps(result))]
+            patch_result["added_node_ids"] = added_node_ids
+        return [types.TextContent(type="text", text=_json_dumps(patch_result))]
 
     if tool_name == "lf_list_components":
         from langflow.interface.components import get_and_cache_all_types_dict
@@ -2021,23 +2061,23 @@ async def call_workflow_tool(
 
         category_filter = (arguments.get("category") or "").strip()
         all_types = await get_and_cache_all_types_dict(settings_service=get_settings_service())
-        result: dict[str, list[str]] = {}
+        components_result: dict[str, Any] = {}
 
         if category_filter:
             cat_data = all_types.get(category_filter)
             if cat_data and isinstance(cat_data, dict):
-                result[category_filter] = list(cat_data.keys())
+                components_result[category_filter] = list(cat_data.keys())
             else:
-                available = [k for k in all_types.keys() if isinstance(all_types[k], dict) and all_types[k]]
-                result["error"] = f"Category '{category_filter}' not found"
-                result["available_categories"] = available
+                available = [k for k in all_types if isinstance(all_types[k], dict) and all_types[k]]
+                components_result["error"] = f"Category '{category_filter}' not found"
+                components_result["available_categories"] = available
         else:
             for cat_name, cat_data in all_types.items():
                 component_names = list(cat_data.keys()) if isinstance(cat_data, dict) else []
                 if component_names:
-                    result[cat_name] = component_names
+                    components_result[cat_name] = component_names
 
-        return [types.TextContent(type="text", text=_json_dumps(result))]
+        return [types.TextContent(type="text", text=_json_dumps(components_result))]
 
     if tool_name == "lf_node_handles":
         flow_id = _require_flow_id(arguments)
@@ -2046,7 +2086,7 @@ async def call_workflow_tool(
         payload = flow.data or {}
         nodes = payload.get("nodes", [])
 
-        result: dict[str, Any] = {}
+        node_handles_result: dict[str, Any] = {}
         for node in nodes:
             node_id = node.get("id", "")
             if node.get("type") == "noteNode":
@@ -2058,14 +2098,13 @@ async def call_workflow_tool(
             outputs = node_data.get("outputs", [])
             template = node_data.get("template", {})
 
-            output_handles = []
-            for output in outputs:
-                output_handles.append(
-                    {
-                        "name": output.get("name"),
-                        "types": output.get("types", []),
-                    }
-                )
+            output_handles = [
+                {
+                    "name": output.get("name"),
+                    "types": output.get("types", []),
+                }
+                for output in outputs
+            ]
 
             input_handles = []
             for field_name, field_def in template.items():
@@ -2100,14 +2139,14 @@ async def call_workflow_tool(
                         }
                     )
 
-            result[node_id] = {
+            node_handles_result[node_id] = {
                 "display_name": node.get("data", {}).get("display_name", node_id),
                 "type": node.get("data", {}).get("type", ""),
                 "outputs": output_handles,
                 "inputs": input_handles,
             }
 
-        return [types.TextContent(type="text", text=_json_dumps(result))]
+        return [types.TextContent(type="text", text=_json_dumps(node_handles_result))]
 
     if tool_name == "lf_add_custom_component":
         from sqlalchemy.orm.attributes import flag_modified
@@ -2119,7 +2158,8 @@ async def call_workflow_tool(
         position = arguments.get("position", {"x": 400, "y": 400})
 
         if not code.strip():
-            raise WorkflowEditError("Custom component code is required")
+            msg = "Custom component code is required"
+            raise WorkflowEditError(msg)
 
         try:
             component = Component(_code=code)
@@ -2134,7 +2174,8 @@ async def call_workflow_tool(
         async with session_scope() as session:
             flow = await session.get(Flow, flow_id)
             if not flow or flow.user_id != user_id:
-                raise WorkflowEditError("Flow not found")
+                msg = "Flow not found"
+                raise WorkflowEditError(msg)
 
             current = flow.data or {}
             nodes = current.setdefault("nodes", [])
@@ -2174,15 +2215,15 @@ async def call_workflow_tool(
         payload = flow.data or {}
 
         issues = _check_workflow_issues(payload)
-        result = {
+        check_workflow_result = {
             "ok": len(issues) == 0,
             "total_issues": len(issues),
             "issues": issues,
         }
         if not issues:
-            result["message"] = "Workflow looks good! All nodes are connected and configured correctly."
+            check_workflow_result["message"] = "Workflow looks good! All nodes are connected and configured correctly."
 
-        return [types.TextContent(type="text", text=_json_dumps(result))]
+        return [types.TextContent(type="text", text=_json_dumps(check_workflow_result))]
 
     if tool_name == "lf_get_component_info":
         from langflow.interface.components import get_and_cache_all_types_dict
@@ -2190,7 +2231,8 @@ async def call_workflow_tool(
 
         component_type = (arguments.get("component_type") or "").strip()
         if not component_type:
-            raise WorkflowEditError("component_type is required")
+            msg = "component_type is required"
+            raise WorkflowEditError(msg)
 
         all_types = await get_and_cache_all_types_dict(settings_service=get_settings_service())
 
@@ -2204,15 +2246,16 @@ async def call_workflow_tool(
 
         if not template:
             available = []
-            for cat_name, cat_data in all_types.items():
+            for cat_data in all_types.values():
                 if isinstance(cat_data, dict):
                     available.extend(list(cat_data.keys()))
-            raise WorkflowEditError(
+            msg = (
                 f"Component type '{component_type}' not found. "
                 f"Available types include: {', '.join(sorted(available)[:20])}..."
             )
+            raise WorkflowEditError(msg)
 
-        component_info = _extract_component_info(template, component_type, found_category)
+        component_info = _extract_component_info(template, component_type, found_category or "")
         return [types.TextContent(type="text", text=_json_dumps(component_info))]
 
     if tool_name == "lf_get_field_options":
@@ -2224,9 +2267,11 @@ async def call_workflow_tool(
         do_refresh = arguments.get("refresh", True)
 
         if not node_id:
-            raise WorkflowEditError("node_id is required")
+            msg = "node_id is required"
+            raise WorkflowEditError(msg)
         if not field_name:
-            raise WorkflowEditError("field_name is required")
+            msg = "field_name is required"
+            raise WorkflowEditError(msg)
 
         # Fields that trigger dynamic model updates
         model_dynamic_fields = {"api_key", "model", "model_name", "base_url"}
@@ -2234,7 +2279,8 @@ async def call_workflow_tool(
         async with session_scope() as session:
             flow = await session.get(Flow, flow_id)
             if not flow or flow.user_id != user_id:
-                raise WorkflowEditError("Flow not found")
+                msg = "Flow not found"
+                raise WorkflowEditError(msg)
 
             payload = flow.data or {}
             nodes = _ensure_list(payload.get("nodes", []), name="nodes")
@@ -2247,13 +2293,13 @@ async def call_workflow_tool(
 
             if field_name not in template:
                 available = [k for k in template if not k.startswith("_") and k != "code"]
-                raise WorkflowEditError(
-                    f"Field '{field_name}' not found on node '{node_id}'. Available fields: {', '.join(available)}"
-                )
+                msg = f"Field '{field_name}' not found on node '{node_id}'. Available fields: {', '.join(available)}"
+                raise WorkflowEditError(msg)
 
             field = template[field_name]
             if not isinstance(field, dict):
-                raise WorkflowEditError(f"Field '{field_name}' has unexpected format")
+                msg = f"Field '{field_name}' has unexpected format"
+                raise WorkflowEditError(msg)
 
             # Trigger refresh if requested
             # For model_name, we need to trigger via api_key field to fetch from API
@@ -2276,7 +2322,6 @@ async def call_workflow_tool(
 
                 if can_refresh and trigger_value:
                     await _apply_dynamic_build_config_update(
-                        node_inner=node_inner,
                         template=template,
                         field_name=trigger_field,
                         field_value=trigger_value,
@@ -2291,7 +2336,7 @@ async def call_workflow_tool(
                     field = template.get(field_name, {})
 
             # Build result with field info
-            result: dict[str, Any] = {
+            field_options_result: dict[str, Any] = {
                 "node_id": node_id,
                 "field_name": field_name,
                 "display_name": field.get("display_name", field_name),
@@ -2302,12 +2347,12 @@ async def call_workflow_tool(
             # Include options if available
             options = field.get("options")
             if options:
-                result["options"] = options
-                result["options_count"] = len(options) if isinstance(options, list) else 0
+                field_options_result["options"] = options
+                field_options_result["options_count"] = len(options) if isinstance(options, list) else 0
             else:
-                result["options"] = []
-                result["options_count"] = 0
-                result["note"] = (
+                field_options_result["options"] = []
+                field_options_result["options_count"] = 0
+                field_options_result["note"] = (
                     "No options available. For dynamic fields like model_name, "
                     "ensure the API key is set and the provider is correctly configured."
                 )
@@ -2315,9 +2360,9 @@ async def call_workflow_tool(
             # Include any external options (like "connect_other_models")
             external_options = field.get("external_options")
             if external_options:
-                result["external_options"] = external_options
+                field_options_result["external_options"] = external_options
 
-            return [types.TextContent(type="text", text=_json_dumps(result))]
+            return [types.TextContent(type="text", text=_json_dumps(field_options_result))]
 
     if tool_name == "lf_documentation":
         from langflow.api.v1.documentation import (
@@ -2329,7 +2374,8 @@ async def call_workflow_tool(
 
         action = str(arguments.get("action", "")).strip()
         if not action:
-            raise WorkflowEditError("action is required (one of: 'index', 'search', 'read')")
+            msg = "action is required (one of: 'index', 'search', 'read')"
+            raise WorkflowEditError(msg)
 
         if action == "index":
             category_filter = (arguments.get("category") or "").strip().lower()
@@ -2345,9 +2391,10 @@ async def call_workflow_tool(
                     }
                 else:
                     available = list(full_index.keys())
-                    raise WorkflowEditError(
+                    msg = (
                         f"Category '{category_filter}' not found. Available categories: {', '.join(sorted(available))}"
                     )
+                    raise WorkflowEditError(msg)
             else:
                 # Return full index with category descriptions
                 result = {
@@ -2367,7 +2414,8 @@ async def call_workflow_tool(
         if action == "search":
             query = (arguments.get("query") or "").strip()
             if not query:
-                raise WorkflowEditError("query is required for search action")
+                msg = "query is required for search action"
+                raise WorkflowEditError(msg)
 
             max_results = int(arguments.get("max_results", 5))
             max_results = min(max(1, max_results), 20)  # Clamp between 1 and 20
@@ -2404,17 +2452,21 @@ async def call_workflow_tool(
         if action == "read":
             identifier = (arguments.get("query") or "").strip()
             if not identifier:
-                raise WorkflowEditError("query (page slug or filename) is required for read action")
+                msg = "query (page slug or filename) is required for read action"
+                raise WorkflowEditError(msg)
 
             page = get_documentation_page(identifier)
             if not page:
-                raise WorkflowEditError(
+                msg = (
                     f"Documentation page '{identifier}' not found. "
                     "Use 'index' action to list available pages or 'search' to find by topic."
                 )
+                raise WorkflowEditError(msg)
 
             return [types.TextContent(type="text", text=_json_dumps(page))]
 
-        raise WorkflowEditError(f"Unknown action '{action}'. Use 'index', 'search', or 'read'.")
+        msg = f"Unknown action '{action}'. Use 'index', 'search', or 'read'."
+        raise WorkflowEditError(msg)
 
-    raise WorkflowEditError(f"Unknown workflow tool '{tool_name}'")
+    msg = f"Unknown workflow tool '{tool_name}'"
+    raise WorkflowEditError(msg)

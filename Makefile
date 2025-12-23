@@ -482,6 +482,7 @@ build_agent_docs: ## Build documentation bundle for Flow Assistant
 
 clean_agent_docs: ## Remove agent documentation bundle
 	@echo "$(YELLOW)Cleaning agent documentation bundle...$(NC)"
+	@rm -f src/backend/base/langflow/initial_setup/agent_docs.json
 	@rm -f src/backend/base/langflow/api/v1/agent_docs.json
 	@echo "$(GREEN)Agent documentation bundle removed.$(NC)"
 

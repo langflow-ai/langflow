@@ -8,7 +8,7 @@ Usage:
     python scripts/build_agent_docs.py
 
 The output file is saved to:
-    src/backend/base/langflow/api/v1/agent_docs.json
+    src/backend/base/langflow/initial_setup/agent_docs.json
 """
 
 from __future__ import annotations

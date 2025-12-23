@@ -109,12 +109,12 @@ async def log_transaction(
     flow_id: str | UUID,
     source: Vertex,
     status,
-    target: Vertex | None = None,  # noqa: ARG001
-    error=None,  # noqa: ARG001
+    target: Vertex | None = None,
+    error=None,
 ) -> None:
     """Asynchronously logs a transaction record for a vertex in a flow if transaction storage is enabled.
 
-    This is a lightweight implementation that only logs if database service is available.
+    This function saves transaction data to the database using langflow's CRUD functions.
     """
     try:
         settings_service = get_settings_service()
@@ -132,8 +132,62 @@ async def log_transaction(
             else:
                 return
 
-        # Log basic transaction info - concrete implementation should be in langflow
-        logger.debug(f"Transaction logged: vertex={source.id}, flow={flow_id}, status={status}")
+        # Convert flow_id to UUID if needed
+        try:
+            if isinstance(flow_id, str):
+                flow_id = UUID(flow_id)
+        except ValueError:
+            logger.debug(f"Invalid flow_id passed to log_transaction: {flow_id!r}")
+            return
+
+        # Import langflow CRUD and model dynamically to avoid circular dependencies
+        try:
+            from langflow.services.database.models.transactions.crud import (
+                log_transaction as crud_log_transaction,
+            )
+            from langflow.services.database.models.transactions.model import TransactionBase
+
+            # Extract source inputs/outputs
+            source_inputs = _vertex_to_primitive_dict(source) if source else {}
+            source_outputs = {}
+            if source:
+                try:
+                    # First try to get results from vertex.results dict (populated by ComponentVertex.add_result)
+                    if hasattr(source, "results") and source.results:
+                        # Serialize Data objects to dicts
+                        for key, value in source.results.items():
+                            if hasattr(value, "model_dump"):
+                                source_outputs[key] = value.model_dump()
+                            elif isinstance(value, dict | str | int | float | bool | list):
+                                source_outputs[key] = value
+                    # Fallback to built_result
+                    elif hasattr(source, "built_result"):
+                        if hasattr(source.built_result, "model_dump"):
+                            source_outputs = source.built_result.model_dump()
+                        elif isinstance(source.built_result, dict):
+                            source_outputs = source.built_result
+                except Exception:
+                    pass
+
+            transaction = TransactionBase(
+                flow_id=flow_id,
+                vertex_id=source.id,
+                target_id=target.id if target else None,
+                inputs=source_inputs,
+                outputs=source_outputs,
+                status=str(status),
+                error=str(error) if error else None,
+            )
+
+            from lfx.services.deps import session_scope
+
+            async with session_scope() as session:
+                await crud_log_transaction(session, transaction)
+
+            logger.debug(f"Transaction saved to DB: vertex={source.id}, flow={flow_id}, status={status}")
+        except ImportError:
+            # Langflow CRUD not available, fall back to debug logging only
+            logger.debug(f"Transaction logged (no DB): vertex={source.id}, flow={flow_id}, status={status}")
     except Exception as exc:  # noqa: BLE001
         logger.debug(f"Error logging transaction: {exc!s}")
 
@@ -143,13 +197,13 @@ async def log_vertex_build(
     flow_id: str | UUID,
     vertex_id: str,
     valid: bool,
-    params: Any,  # noqa: ARG001
-    data: dict | Any,  # noqa: ARG001
-    artifacts: dict | None = None,  # noqa: ARG001
+    params: Any,
+    data: dict | Any,
+    artifacts: dict | None = None,
 ) -> None:
     """Asynchronously logs a vertex build record if vertex build storage is enabled.
 
-    This is a lightweight implementation that only logs if database service is available.
+    This function saves vertex build data to the database using langflow's CRUD functions.
     """
     try:
         settings_service = get_settings_service()
@@ -168,10 +222,37 @@ async def log_vertex_build(
             logger.debug(f"Invalid flow_id passed to log_vertex_build: {flow_id!r}")
             return
 
-        # Log basic vertex build info - concrete implementation should be in langflow
-        logger.debug(f"Vertex build logged: vertex={vertex_id}, flow={flow_id}, valid={valid}")
-    except Exception:  # noqa: BLE001
-        logger.debug("Error logging vertex build")
+        # Import langflow CRUD and model dynamically to avoid circular dependencies
+        try:
+            from langflow.services.database.models.vertex_builds.crud import (
+                log_vertex_build as crud_log_vertex_build,
+            )
+            from langflow.services.database.models.vertex_builds.model import VertexBuildBase
+
+            # Serialize data if it has model_dump method (Pydantic model)
+            data_dict = data.model_dump() if hasattr(data, "model_dump") else (data if isinstance(data, dict) else {})
+            params_str = str(params) if params else None
+
+            vertex_build = VertexBuildBase(
+                flow_id=flow_id,
+                id=vertex_id,
+                valid=valid,
+                params=params_str,
+                data=data_dict,
+                artifacts=artifacts or {},
+            )
+
+            from lfx.services.deps import session_scope
+
+            async with session_scope() as session:
+                await crud_log_vertex_build(session, vertex_build)
+
+            logger.debug(f"Vertex build saved to DB: vertex={vertex_id}, flow={flow_id}, valid={valid}")
+        except ImportError:
+            # Langflow CRUD not available, fall back to debug logging only
+            logger.debug(f"Vertex build logged (no DB): vertex={vertex_id}, flow={flow_id}, valid={valid}")
+    except Exception as exc:  # noqa: BLE001
+        logger.debug(f"Error logging vertex build: {exc}")
 
 
 def rewrite_file_path(file_path: str):

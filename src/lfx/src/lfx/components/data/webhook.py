@@ -39,7 +39,7 @@ class WebhookComponent(Component):
     ]
 
     def build_data(self) -> Data:
-        message: str | Data = ""
+        message: str = ""
         if not self.data:
             self.status = "No data provided."
             return Data(data={})
@@ -51,6 +51,7 @@ class WebhookComponent(Component):
             message = f"Invalid JSON payload. Please check the format.\n\n{self.data}"
         data = Data(data=body)
         if not message:
-            message = data
+            # Convert data to a readable string representation for status display
+            message = json.dumps(body, indent=2, ensure_ascii=False)
         self.status = message
         return data

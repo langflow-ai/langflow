@@ -1,4 +1,4 @@
-# ruff: noqa: RUF001, RUF003
+# ruff: noqa: RUF001
 import json
 
 from lfx.custom.custom_component.component import Component
@@ -11,7 +11,10 @@ class TelegramWebhook(Component):
     """Компонент для приема и парсинга обновлений от Telegram через webhook."""
 
     display_name = "Telegram Webhook"
-    description = "Принимает и парсит входящие обновления от Telegram Bot API через webhook. Используйте как входную точку в вашем потоке."
+    description = (
+        "Принимает и парсит входящие обновления от Telegram Bot API через webhook. "
+        "Используйте как входную точку в вашем потоке."
+    )
     documentation: str = "https://core.telegram.org/bots/api#update"
     icon = "Webhook"
     name = "TelegramWebhook"
@@ -27,7 +30,10 @@ class TelegramWebhook(Component):
         MultilineInput(
             name="data",
             display_name="Данные",
-            info="Получает данные webhook от Telegram через HTTP POST. Автоматически заполняется при использовании с webhook endpoint Langflow.",
+            info=(
+                "Получает данные webhook от Telegram через HTTP POST. "
+                "Автоматически заполняется при использовании с webhook endpoint Langflow."
+            ),
             input_types=["Data"],
             advanced=True,
         ),
@@ -84,17 +90,14 @@ class TelegramWebhook(Component):
         update = {}
 
         try:
-            # Если данные пришли из компонента Webhook или API (Data объект)
-            if hasattr(raw_data, "data"):
-                payload = raw_data.data
-            else:
-                payload = raw_data
+            payload = raw_data.data if hasattr(raw_data, "data") else raw_data
 
             if isinstance(payload, dict):
                 update = payload
             elif isinstance(payload, str):
-                update = json.loads(payload.replace('"\n"', '"\\n"') or "{}")
-        except Exception as e:
+                safe_payload = payload.replace('"\n"', '"\\n"') or "{}"
+                update = json.loads(safe_payload)
+        except (json.JSONDecodeError, TypeError, ValueError) as e:
             logger.error(f"Ошибка парсинга Telegram update: {e}")
             self.status = f"Ошибка парсинга: {e}"
             return {}
@@ -135,9 +138,9 @@ class TelegramWebhook(Component):
             self.status = "Отфильтровано"
             return Data(data={"filtered": True, "update": update})
 
-        # Langflow нативно отобразит JSON, если положить его в Data и установить в status
         data = Data(data=update)
-        self.status = data
+        # Convert to readable JSON string for status display
+        self.status = json.dumps(update, indent=2, ensure_ascii=False)
         logger.info(f"Получено обновление Telegram ID: {update.get('update_id')}")
         return data
 

@@ -1914,7 +1914,7 @@
                   },
                   {
                     "name": "langflow",
-                    "version": null
+                    "version": "0.6.4"
                   },
                   {
                     "name": "boto3",
