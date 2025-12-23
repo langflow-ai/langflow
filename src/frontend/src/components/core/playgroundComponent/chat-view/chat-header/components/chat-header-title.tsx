@@ -40,10 +40,7 @@ export function ChatHeaderTitle({
           onDone={onCancel}
         />
       ) : (
-        <div
-          className="truncate text-[13px] font-medium leading-4 text-[#CCC]"
-          title={displayTitle}
-        >
+        <div className="truncate text-mmd text-foreground" title={displayTitle}>
           {displayTitle}
         </div>
       )}

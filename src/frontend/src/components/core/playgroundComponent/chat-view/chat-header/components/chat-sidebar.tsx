@@ -44,16 +44,10 @@ export function ChatSidebar({
   };
 
   return (
-    <div className="flex flex-col pl-3">
-      <div
-        className="flex flex-col pb-2"
-        style={{ gap: "var(--space-4, 16px)" }}
-      >
-        <div className="flex items-center justify-between p-2">
-          <div
-            className="flex items-center"
-            style={{ gap: "var(--space-4, 16px)" }}
-          >
+    <div className="flex flex-col pb-4 gap-4">
+      <div className="flex flex-col">
+        <div className="flex items-center justify-between  py-2 px-4">
+          <div className="flex items-center  gap-2">
             <div className="text-xs font-semibold leading-4 text-muted-foreground">
               Sessions
             </div>
@@ -78,7 +72,7 @@ export function ChatSidebar({
           No sessions yet.
         </div>
       ) : (
-        <div className="flex flex-col" style={{ gap: "0.5rem" }}>
+        <div className="flex flex-col gap-1">
           {sessionIds.map((session, index) => (
             <SessionSelector
               key={session}

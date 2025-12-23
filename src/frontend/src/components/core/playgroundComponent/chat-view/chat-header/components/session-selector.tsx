@@ -79,7 +79,7 @@ export function SessionSelector({
         isVisible ? "bg-accent font-semibold" : "font-normal",
       )}
     >
-      <div className="flex w-full items-center justify-between overflow-hidden px-2 py-1 align-middle w-[218px]">
+      <div className="flex w-full items-center justify-between overflow-hidden p-2 align-middle w-md">
         <div className="flex w/full min-w-0 items-center">
           {isEditing ? (
             <div
@@ -99,7 +99,7 @@ export function SessionSelector({
           ) : (
             <ShadTooltip styleClasses="z-50" content={session}>
               <div className="relative w-full overflow-hidden">
-                <span className="w-full truncate bg-transparent text-[13px] font-medium leading-4">
+                <span className="w-full truncate bg-transparent text-mmd">
                   {session === currentFlowId ? "Default Session" : session}
                 </span>
               </div>

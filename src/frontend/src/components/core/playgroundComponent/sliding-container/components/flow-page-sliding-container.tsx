@@ -92,7 +92,7 @@ export function FlowPageSlidingContainerContent({
       <div className="flex-1 flex overflow-hidden">
         <AnimatedConditional isOpen={sidebarOpen}>
           <div className="h-full overflow-y-auto border-r border-border">
-            <div className="p-4 pt-[15px]">
+            <div className="p-4">
               <ChatSidebar
                 sessions={sessions}
                 onNewChat={handleNewChat}
