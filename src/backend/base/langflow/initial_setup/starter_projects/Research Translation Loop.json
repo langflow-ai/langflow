@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-0fTqa",
+            "id": "ChatInput-nr0Vp",
             "name": "message",
             "output_types": [
               "Message"
@@ -15,55 +15,26 @@
           },
           "targetHandle": {
             "fieldName": "search_query",
-            "id": "ArXivComponent-H8Mae",
+            "id": "ArXivComponent-tAHR5",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-0fTqa{œdataTypeœ:œChatInputœ,œidœ:œChatInput-0fTqaœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ArXivComponent-H8Mae{œfieldNameœ:œsearch_queryœ,œidœ:œArXivComponent-H8Maeœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-nr0Vp{œdataTypeœ:œChatInputœ,œidœ:œChatInput-nr0Vpœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ArXivComponent-tAHR5{œfieldNameœ:œsearch_queryœ,œidœ:œArXivComponent-tAHR5œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-0fTqa",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-0fTqaœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ArXivComponent-H8Mae",
-        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œArXivComponent-H8Maeœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-nr0Vp",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-nr0Vpœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ArXivComponent-tAHR5",
+        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œArXivComponent-tAHR5œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ArXivComponent",
-            "id": "ArXivComponent-H8Mae",
-            "name": "dataframe",
-            "output_types": [
-              "DataFrame"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "data",
-            "id": "LoopComponent-qcJgH",
-            "inputTypes": [
-              "DataFrame"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-ArXivComponent-H8Mae{œdataTypeœ:œArXivComponentœ,œidœ:œArXivComponent-H8Maeœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-LoopComponent-qcJgH{œfieldNameœ:œdataœ,œidœ:œLoopComponent-qcJgHœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "ArXivComponent-H8Mae",
-        "sourceHandle": "{œdataTypeœ: œArXivComponentœ, œidœ: œArXivComponent-H8Maeœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "LoopComponent-qcJgH",
-        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œLoopComponent-qcJgHœ, œinputTypesœ: [œDataFrameœ], œtypeœ: œotherœ}"
-      },
-      {
-        "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "LoopComponent",
-            "id": "LoopComponent-qcJgH",
+            "id": "LoopComponent-GtPZT",
             "name": "item",
             "output_types": [
               "Data"
@@ -71,7 +42,7 @@
           },
           "targetHandle": {
             "fieldName": "input_data",
-            "id": "ParserComponent-E1d8t",
+            "id": "ParserComponent-pXAMb",
             "inputTypes": [
               "DataFrame",
               "Data"
@@ -79,20 +50,97 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-LoopComponent-qcJgH{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-qcJgHœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}-ParserComponent-E1d8t{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-E1d8tœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "LoopComponent-qcJgH",
-        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-qcJgHœ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ]}",
-        "target": "ParserComponent-E1d8t",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-E1d8tœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
+        "id": "xy-edge__LoopComponent-GtPZT{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-GtPZTœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}-ParserComponent-pXAMb{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-pXAMbœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
+        "source": "LoopComponent-GtPZT",
+        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-GtPZTœ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ]}",
+        "target": "ParserComponent-pXAMb",
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-pXAMbœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
-        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ParserComponent",
+            "id": "ParserComponent-pXAMb",
+            "name": "parsed_text",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "LanguageModelComponent-XKvly",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "xy-edge__ParserComponent-pXAMb{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-pXAMbœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-XKvly{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-XKvlyœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "ParserComponent-pXAMb",
+        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-pXAMbœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "LanguageModelComponent-XKvly",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-XKvlyœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "LanguageModelComponent",
+            "id": "LanguageModelComponent-XKvly",
+            "name": "text_output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "dataType": "LoopComponent",
+            "id": "LoopComponent-GtPZT",
+            "name": "item",
+            "output_types": [
+              "Data",
+              "Message"
+            ]
+          }
+        },
+        "id": "xy-edge__LanguageModelComponent-XKvly{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-XKvlyœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-LoopComponent-GtPZT{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-GtPZTœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ,œMessageœ]}",
+        "source": "LanguageModelComponent-XKvly",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-XKvlyœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "LoopComponent-GtPZT",
+        "targetHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-GtPZTœ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ, œMessageœ]}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ArXivComponent",
+            "id": "ArXivComponent-tAHR5",
+            "name": "dataframe",
+            "output_types": [
+              "DataFrame"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "data",
+            "id": "LoopComponent-GtPZT",
+            "inputTypes": [
+              "DataFrame"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__ArXivComponent-tAHR5{œdataTypeœ:œArXivComponentœ,œidœ:œArXivComponent-tAHR5œ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-LoopComponent-GtPZT{œfieldNameœ:œdataœ,œidœ:œLoopComponent-GtPZTœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}",
+        "source": "ArXivComponent-tAHR5",
+        "sourceHandle": "{œdataTypeœ: œArXivComponentœ, œidœ: œArXivComponent-tAHR5œ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
+        "target": "LoopComponent-GtPZT",
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œLoopComponent-GtPZTœ, œinputTypesœ: [œDataFrameœ], œtypeœ: œotherœ}"
+      },
+      {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "LoopComponent",
-            "id": "LoopComponent-qcJgH",
+            "id": "LoopComponent-GtPZT",
             "name": "done",
             "output_types": [
               "DataFrame"
@@ -100,7 +148,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-NVM2L",
+            "id": "ChatOutput-YAED9",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -109,75 +157,17 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-LoopComponent-qcJgH{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-qcJgHœ,œnameœ:œdoneœ,œoutput_typesœ:[œDataFrameœ]}-ChatOutput-NVM2L{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-NVM2Lœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "LoopComponent-qcJgH",
-        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-qcJgHœ, œnameœ: œdoneœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "ChatOutput-NVM2L",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-NVM2Lœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ParserComponent",
-            "id": "ParserComponent-E1d8t",
-            "name": "parsed_text",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "LanguageModelComponent-khJQA",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "xy-edge__ParserComponent-E1d8t{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-E1d8tœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-khJQA{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-khJQAœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "ParserComponent-E1d8t",
-        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-E1d8tœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LanguageModelComponent-khJQA",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-khJQAœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "LanguageModelComponent",
-            "id": "LanguageModelComponent-khJQA",
-            "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "dataType": "LoopComponent",
-            "id": "LoopComponent-qcJgH",
-            "name": "item",
-            "output_types": [
-              "Data",
-              "Message"
-            ]
-          }
-        },
-        "id": "xy-edge__LanguageModelComponent-khJQA{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-khJQAœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-LoopComponent-qcJgH{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-qcJgHœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ,œMessageœ]}",
-        "selected": false,
-        "source": "LanguageModelComponent-khJQA",
-        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-khJQAœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LoopComponent-qcJgH",
-        "targetHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-qcJgHœ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ, œMessageœ]}"
+        "id": "xy-edge__LoopComponent-GtPZT{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-GtPZTœ,œnameœ:œdoneœ,œoutput_typesœ:[œDataFrameœ]}-ChatOutput-YAED9{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-YAED9œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "source": "LoopComponent-GtPZT",
+        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-GtPZTœ, œnameœ: œdoneœ, œoutput_typesœ: [œDataFrameœ]}",
+        "target": "ChatOutput-YAED9",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-YAED9œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ArXivComponent-H8Mae",
+          "id": "ArXivComponent-tAHR5",
           "node": {
             "base_classes": [
               "DataFrame"
@@ -330,7 +320,7 @@
           "type": "ArXivComponent"
         },
         "dragging": false,
-        "id": "ArXivComponent-H8Mae",
+        "id": "ArXivComponent-tAHR5",
         "measured": {
           "height": 369,
           "width": 320
@@ -344,7 +334,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-NVM2L",
+          "id": "ChatOutput-YAED9",
           "node": {
             "base_classes": [
               "Message"
@@ -613,21 +603,21 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-NVM2L",
+        "id": "ChatOutput-YAED9",
         "measured": {
           "height": 48,
           "width": 192
         },
         "position": {
-          "x": 1078.5167042474975,
-          "y": 313.63532700509995
+          "x": 1161.842067639501,
+          "y": 380.6300719873473
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "ChatInput-0fTqa",
+          "id": "ChatInput-nr0Vp",
           "node": {
             "base_classes": [
               "Message"
@@ -891,7 +881,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-0fTqa",
+        "id": "ChatInput-nr0Vp",
         "measured": {
           "height": 204,
           "width": 320
@@ -905,7 +895,7 @@
       },
       {
         "data": {
-          "id": "note-Xz4Fg",
+          "id": "note-nrMOM",
           "node": {
             "description": "# **Langflow Loop Component Template - ArXiv search result Translator** \nThis template translates research paper summaries on ArXiv into Portuguese and summarizes them. \n Using **Langflow’s looping mechanism**, the template iterates through multiple research papers, translates them with the **OpenAI** model component, and outputs an aggregated version of all translated papers.  \n\n## Quickstart \n 1. Add your OpenAI API key to the **Language Model** component. \n2. In the **Playground**, enter a query related to a research topic (for example, “Quantum Computing Advancements”).  \n\n  The flow fetches a list of research papers from ArXiv matching the query. Each paper in the retrieved list is processed one-by-one using the Langflow **Loop component**. \n\n  The abstract of each paper is translated into Portuguese by the **OpenAI** model component. \n\n Once all papers are translated, the system aggregates them into a **single structured output**.",
             "display_name": "",
@@ -916,7 +906,7 @@
         },
         "dragging": false,
         "height": 647,
-        "id": "note-Xz4Fg",
+        "id": "note-nrMOM",
         "measured": {
           "height": 647,
           "width": 576
@@ -932,323 +922,7 @@
       },
       {
         "data": {
-          "id": "ParserComponent-E1d8t",
-          "node": {
-            "base_classes": [
-              "Message"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Extracts text using a template.",
-            "display_name": "Parser",
-            "documentation": "",
-            "edited": false,
-            "field_order": [
-              "input_data",
-              "mode",
-              "pattern",
-              "sep"
-            ],
-            "frozen": false,
-            "icon": "braces",
-            "legacy": false,
-            "lf_version": "1.7.0",
-            "metadata": {
-              "code_hash": "3cda25c3f7b5",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 1
-              },
-              "module": "lfx.components.processing.parser.ParserComponent"
-            },
-            "minimized": false,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Parsed Text",
-                "group_outputs": false,
-                "method": "parse_combined_text",
-                "name": "parsed_text",
-                "selected": "Message",
-                "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "template": {
-              "_type": "Component",
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from lfx.custom.custom_component.component import Component\nfrom lfx.helpers.data import safe_convert\nfrom lfx.inputs.inputs import BoolInput, HandleInput, MessageTextInput, MultilineInput, TabInput\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.schema.message import Message\nfrom lfx.template.field.base import Output\n\n\nclass ParserComponent(Component):\n    display_name = \"Parser\"\n    description = \"Extracts text using a template.\"\n    documentation: str = \"https://docs.langflow.org/parser\"\n    icon = \"braces\"\n\n    inputs = [\n        HandleInput(\n            name=\"input_data\",\n            display_name=\"Data or DataFrame\",\n            input_types=[\"DataFrame\", \"Data\"],\n            info=\"Accepts either a DataFrame or a Data object.\",\n            required=True,\n        ),\n        TabInput(\n            name=\"mode\",\n            display_name=\"Mode\",\n            options=[\"Parser\", \"Stringify\"],\n            value=\"Parser\",\n            info=\"Convert into raw string instead of using a template.\",\n            real_time_refresh=True,\n        ),\n        MultilineInput(\n            name=\"pattern\",\n            display_name=\"Template\",\n            info=(\n                \"Use variables within curly brackets to extract column values for DataFrames \"\n                \"or key values for Data.\"\n                \"For example: `Name: {Name}, Age: {Age}, Country: {Country}`\"\n            ),\n            value=\"Text: {text}\",  # Example default\n            dynamic=True,\n            show=True,\n            required=True,\n        ),\n        MessageTextInput(\n            name=\"sep\",\n            display_name=\"Separator\",\n            advanced=True,\n            value=\"\\n\",\n            info=\"String used to separate rows/items.\",\n        ),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"Parsed Text\",\n            name=\"parsed_text\",\n            info=\"Formatted text output.\",\n            method=\"parse_combined_text\",\n        ),\n    ]\n\n    def update_build_config(self, build_config, field_value, field_name=None):\n        \"\"\"Dynamically hide/show `template` and enforce requirement based on `stringify`.\"\"\"\n        if field_name == \"mode\":\n            build_config[\"pattern\"][\"show\"] = self.mode == \"Parser\"\n            build_config[\"pattern\"][\"required\"] = self.mode == \"Parser\"\n            if field_value:\n                clean_data = BoolInput(\n                    name=\"clean_data\",\n                    display_name=\"Clean Data\",\n                    info=(\n                        \"Enable to clean the data by removing empty rows and lines \"\n                        \"in each cell of the DataFrame/ Data object.\"\n                    ),\n                    value=True,\n                    advanced=True,\n                    required=False,\n                )\n                build_config[\"clean_data\"] = clean_data.to_dict()\n            else:\n                build_config.pop(\"clean_data\", None)\n\n        return build_config\n\n    def _clean_args(self):\n        \"\"\"Prepare arguments based on input type.\"\"\"\n        input_data = self.input_data\n\n        match input_data:\n            case list() if all(isinstance(item, Data) for item in input_data):\n                msg = \"List of Data objects is not supported.\"\n                raise ValueError(msg)\n            case DataFrame():\n                return input_data, None\n            case Data():\n                return None, input_data\n            case dict() if \"data\" in input_data:\n                try:\n                    if \"columns\" in input_data:  # Likely a DataFrame\n                        return DataFrame.from_dict(input_data), None\n                    # Likely a Data object\n                    return None, Data(**input_data)\n                except (TypeError, ValueError, KeyError) as e:\n                    msg = f\"Invalid structured input provided: {e!s}\"\n                    raise ValueError(msg) from e\n            case _:\n                msg = f\"Unsupported input type: {type(input_data)}. Expected DataFrame or Data.\"\n                raise ValueError(msg)\n\n    def parse_combined_text(self) -> Message:\n        \"\"\"Parse all rows/items into a single text or convert input to string if `stringify` is enabled.\"\"\"\n        # Early return for stringify option\n        if self.mode == \"Stringify\":\n            return self.convert_to_string()\n\n        df, data = self._clean_args()\n\n        lines = []\n        if df is not None:\n            for _, row in df.iterrows():\n                formatted_text = self.pattern.format(**row.to_dict())\n                lines.append(formatted_text)\n        elif data is not None:\n            # Use format_map with a dict that returns default_value for missing keys\n            class DefaultDict(dict):\n                def __missing__(self, key):\n                    return data.default_value or \"\"\n\n            formatted_text = self.pattern.format_map(DefaultDict(data.data))\n            lines.append(formatted_text)\n\n        combined_text = self.sep.join(lines)\n        self.status = combined_text\n        return Message(text=combined_text)\n\n    def convert_to_string(self) -> Message:\n        \"\"\"Convert input data to string with proper error handling.\"\"\"\n        result = \"\"\n        if isinstance(self.input_data, list):\n            result = \"\\n\".join([safe_convert(item, clean_data=self.clean_data or False) for item in self.input_data])\n        else:\n            result = safe_convert(self.input_data or False)\n        self.log(f\"Converted to string with length: {len(result)}\")\n\n        message = Message(text=result)\n        self.status = message\n        return message\n"
-              },
-              "input_data": {
-                "_input_type": "HandleInput",
-                "advanced": false,
-                "display_name": "Data or DataFrame",
-                "dynamic": false,
-                "info": "Accepts either a DataFrame or a Data object.",
-                "input_types": [
-                  "DataFrame",
-                  "Data"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "input_data",
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "other",
-                "value": ""
-              },
-              "mode": {
-                "_input_type": "TabInput",
-                "advanced": false,
-                "display_name": "Mode",
-                "dynamic": false,
-                "info": "Convert into raw string instead of using a template.",
-                "load_from_db": false,
-                "name": "mode",
-                "options": [
-                  "Parser",
-                  "Stringify"
-                ],
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "tab",
-                "value": "Stringify"
-              },
-              "pattern": {
-                "_input_type": "MultilineInput",
-                "advanced": false,
-                "copy_field": false,
-                "display_name": "Template",
-                "dynamic": true,
-                "info": "Use variables within curly brackets to extract column values for DataFrames or key values for Data.For example: `Name: {Name}, Age: {Age}, Country: {Country}`",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "multiline": true,
-                "name": "pattern",
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "Text: {dt}"
-              },
-              "sep": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Separator",
-                "dynamic": false,
-                "info": "String used to separate rows/items.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "sep",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "\n"
-              }
-            },
-            "tool_mode": false
-          },
-          "showNode": true,
-          "type": "ParserComponent"
-        },
-        "dragging": false,
-        "id": "ParserComponent-E1d8t",
-        "measured": {
-          "height": 329,
-          "width": 320
-        },
-        "position": {
-          "x": 971.3987248215344,
-          "y": -186.6658506576822
-        },
-        "selected": false,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "LoopComponent-qcJgH",
-          "node": {
-            "base_classes": [
-              "Data",
-              "DataFrame"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Iterates over a list of Data or Message objects, outputting one item at a time and aggregating results from loop inputs. Message objects are automatically converted to Data objects for consistent processing.",
-            "display_name": "Loop",
-            "documentation": "",
-            "edited": false,
-            "field_order": [
-              "data"
-            ],
-            "frozen": false,
-            "icon": "infinity",
-            "legacy": false,
-            "lf_version": "1.7.0",
-            "metadata": {
-              "code_hash": "e179036a232d",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 1
-              },
-              "module": "lfx.components.flow_controls.loop.LoopComponent"
-            },
-            "minimized": false,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": true,
-                "cache": true,
-                "display_name": "Item",
-                "group_outputs": true,
-                "loop_types": [
-                  "Message"
-                ],
-                "method": "item_output",
-                "name": "item",
-                "selected": "Data",
-                "tool_mode": true,
-                "types": [
-                  "Data"
-                ],
-                "value": "__UNDEFINED__"
-              },
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Done",
-                "group_outputs": true,
-                "method": "done_output",
-                "name": "done",
-                "selected": "DataFrame",
-                "tool_mode": true,
-                "types": [
-                  "DataFrame"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "template": {
-              "_type": "Component",
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from lfx.components.processing.converter import convert_to_data\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.inputs.inputs import HandleInput\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.schema.message import Message\nfrom lfx.template.field.base import Output\n\n\nclass LoopComponent(Component):\n    display_name = \"Loop\"\n    description = (\n        \"Iterates over a list of Data or Message objects, outputting one item at a time and \"\n        \"aggregating results from loop inputs. Message objects are automatically converted to \"\n        \"Data objects for consistent processing.\"\n    )\n    documentation: str = \"https://docs.langflow.org/loop\"\n    icon = \"infinity\"\n\n    inputs = [\n        HandleInput(\n            name=\"data\",\n            display_name=\"Inputs\",\n            info=\"The initial DataFrame to iterate over.\",\n            input_types=[\"DataFrame\"],\n        ),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"Item\",\n            name=\"item\",\n            method=\"item_output\",\n            allows_loop=True,\n            loop_types=[\"Message\"],\n            group_outputs=True,\n        ),\n        Output(display_name=\"Done\", name=\"done\", method=\"done_output\", group_outputs=True),\n    ]\n\n    def initialize_data(self) -> None:\n        \"\"\"Initialize the data list, context index, and aggregated list.\"\"\"\n        if self.ctx.get(f\"{self._id}_initialized\", False):\n            return\n\n        # Ensure data is a list of Data objects\n        data_list = self._validate_data(self.data)\n\n        # Store the initial data and context variables\n        self.update_ctx(\n            {\n                f\"{self._id}_data\": data_list,\n                f\"{self._id}_index\": 0,\n                f\"{self._id}_aggregated\": [],\n                f\"{self._id}_initialized\": True,\n            }\n        )\n\n    def _convert_message_to_data(self, message: Message) -> Data:\n        \"\"\"Convert a Message object to a Data object using Type Convert logic.\"\"\"\n        return convert_to_data(message, auto_parse=False)\n\n    def _validate_data(self, data):\n        \"\"\"Validate and return a list of Data objects. Message objects are auto-converted to Data.\"\"\"\n        if isinstance(data, DataFrame):\n            return data.to_data_list()\n        if isinstance(data, Data):\n            return [data]\n        if isinstance(data, Message):\n            # Auto-convert Message to Data\n            converted_data = self._convert_message_to_data(data)\n            return [converted_data]\n        if isinstance(data, list) and all(isinstance(item, (Data, Message)) for item in data):\n            # Convert any Message objects in the list to Data objects\n            converted_list = []\n            for item in data:\n                if isinstance(item, Message):\n                    converted_list.append(self._convert_message_to_data(item))\n                else:\n                    converted_list.append(item)\n            return converted_list\n        msg = \"The 'data' input must be a DataFrame, a list of Data/Message objects, or a single Data/Message object.\"\n        raise TypeError(msg)\n\n    def evaluate_stop_loop(self) -> bool:\n        \"\"\"Evaluate whether to stop item or done output.\"\"\"\n        current_index = self.ctx.get(f\"{self._id}_index\", 0)\n        data_length = len(self.ctx.get(f\"{self._id}_data\", []))\n        return current_index > data_length\n\n    def item_output(self) -> Data:\n        \"\"\"Output the next item in the list or stop if done.\"\"\"\n        self.initialize_data()\n        current_item = Data(text=\"\")\n\n        if self.evaluate_stop_loop():\n            self.stop(\"item\")\n        else:\n            # Get data list and current index\n            data_list, current_index = self.loop_variables()\n            if current_index < len(data_list):\n                # Output current item and increment index\n                try:\n                    current_item = data_list[current_index]\n                except IndexError:\n                    current_item = Data(text=\"\")\n            self.aggregated_output()\n            self.update_ctx({f\"{self._id}_index\": current_index + 1})\n\n        # Now we need to update the dependencies for the next run\n        self.update_dependency()\n        return current_item\n\n    def update_dependency(self):\n        item_dependency_id = self.get_incoming_edge_by_target_param(\"item\")\n        if item_dependency_id not in self.graph.run_manager.run_predecessors[self._id]:\n            self.graph.run_manager.run_predecessors[self._id].append(item_dependency_id)\n            # CRITICAL: Also update run_map so remove_from_predecessors() works correctly\n            # run_map[predecessor] = list of vertices that depend on predecessor\n            if self._id not in self.graph.run_manager.run_map[item_dependency_id]:\n                self.graph.run_manager.run_map[item_dependency_id].append(self._id)\n\n    def done_output(self) -> DataFrame:\n        \"\"\"Trigger the done output when iteration is complete.\"\"\"\n        self.initialize_data()\n\n        if self.evaluate_stop_loop():\n            self.stop(\"item\")\n            self.start(\"done\")\n\n            aggregated = self.ctx.get(f\"{self._id}_aggregated\", [])\n\n            return DataFrame(aggregated)\n        self.stop(\"done\")\n        return DataFrame([])\n\n    def loop_variables(self):\n        \"\"\"Retrieve loop variables from context.\"\"\"\n        return (\n            self.ctx.get(f\"{self._id}_data\", []),\n            self.ctx.get(f\"{self._id}_index\", 0),\n        )\n\n    def aggregated_output(self) -> list[Data]:\n        \"\"\"Return the aggregated list once all items are processed.\n\n        Returns Data or Message objects depending on loop input types.\n        \"\"\"\n        self.initialize_data()\n\n        # Get data list and aggregated list\n        data_list = self.ctx.get(f\"{self._id}_data\", [])\n        aggregated = self.ctx.get(f\"{self._id}_aggregated\", [])\n        loop_input = self.item\n\n        # Append the current loop input to aggregated if it's not already included\n        if loop_input is not None and not isinstance(loop_input, str) and len(aggregated) <= len(data_list):\n            # If the loop input is a Message, convert it to Data for consistency\n            if isinstance(loop_input, Message):\n                loop_input = self._convert_message_to_data(loop_input)\n            aggregated.append(loop_input)\n            self.update_ctx({f\"{self._id}_aggregated\": aggregated})\n        return aggregated\n"
-              },
-              "data": {
-                "_input_type": "HandleInput",
-                "advanced": false,
-                "display_name": "Inputs",
-                "dynamic": false,
-                "info": "The initial DataFrame to iterate over.",
-                "input_types": [
-                  "DataFrame"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "data",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "other",
-                "value": ""
-              }
-            },
-            "tool_mode": false
-          },
-          "showNode": true,
-          "type": "LoopComponent"
-        },
-        "dragging": false,
-        "id": "LoopComponent-qcJgH",
-        "measured": {
-          "height": 274,
-          "width": 320
-        },
-        "position": {
-          "x": 541.1188345961908,
-          "y": 181.38181401206583
-        },
-        "selected": false,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "LanguageModelComponent-khJQA",
+          "id": "LanguageModelComponent-XKvly",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -1274,8 +948,9 @@
             ],
             "frozen": false,
             "icon": "brain-circuit",
-            "last_updated": "2025-12-15T21:00:37.811Z",
+            "last_updated": "2025-12-18T20:14:17.831Z",
             "legacy": false,
+            "lf_version": "1.7.0",
             "metadata": {
               "code_hash": "7fe3257f2169",
               "dependencies": {
@@ -1303,6 +978,7 @@
                 "cache": true,
                 "display_name": "Model Response",
                 "group_outputs": false,
+                "hidden": null,
                 "loop_types": null,
                 "method": "text_response",
                 "name": "text_output",
@@ -1320,6 +996,7 @@
                 "cache": true,
                 "display_name": "Language Model",
                 "group_outputs": false,
+                "hidden": null,
                 "loop_types": null,
                 "method": "build_model",
                 "name": "model_output",
@@ -1337,7 +1014,7 @@
             "priority": 0,
             "template": {
               "_frontend_node_flow_id": {
-                "value": "bf9b5a44-29d7-4301-bcc2-1601cf905efe"
+                "value": "70f6d78d-41ad-42a3-854d-405e161ee563"
               },
               "_frontend_node_folder_id": {
                 "value": "afaca9ee-97e3-4211-8569-722a4058ea5e"
@@ -1438,7 +1115,7 @@
                 "type": "str",
                 "value": ""
               },
-              "is_refresh": false,
+              "is_refresh": true,
               "model": {
                 "_input_type": "ModelInput",
                 "advanced": false,
@@ -1541,6 +1218,32 @@
                     "provider": "OpenAI"
                   },
                   {
+                    "category": "Ollama",
+                    "icon": "Ollama",
+                    "metadata": {
+                      "api_key_param": "base_url",
+                      "base_url_param": "base_url",
+                      "context_length": 128000,
+                      "model_class": "ChatOllama",
+                      "model_name_param": "model"
+                    },
+                    "name": "llama3.3",
+                    "provider": "Ollama"
+                  },
+                  {
+                    "category": "Ollama",
+                    "icon": "Ollama",
+                    "metadata": {
+                      "api_key_param": "base_url",
+                      "base_url_param": "base_url",
+                      "context_length": 128000,
+                      "model_class": "ChatOllama",
+                      "model_name_param": "model"
+                    },
+                    "name": "qwq",
+                    "provider": "Ollama"
+                  },
+                  {
                     "category": "Google Generative AI",
                     "icon": "GoogleGenerativeAI",
                     "metadata": {
@@ -1549,16 +1252,6 @@
                     },
                     "name": "__enable_provider_Google Generative AI__",
                     "provider": "Google Generative AI"
-                  },
-                  {
-                    "category": "Ollama",
-                    "icon": "Ollama",
-                    "metadata": {
-                      "is_disabled_provider": true,
-                      "variable_name": "OLLAMA_BASE_URL"
-                    },
-                    "name": "__enable_provider_Ollama__",
-                    "provider": "Ollama"
                   },
                   {
                     "category": "IBM Watsonx",
@@ -1584,14 +1277,18 @@
                 "type": "model",
                 "value": [
                   {
+                    "category": "OpenAI",
                     "icon": "OpenAI",
                     "metadata": {
                       "api_key_param": "api_key",
                       "context_length": 128000,
                       "model_class": "ChatOpenAI",
-                      "model_name_param": "model"
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5.1"
+                      ]
                     },
-                    "name": "gpt-4o-mini",
+                    "name": "gpt-5.1",
                     "provider": "OpenAI"
                   }
                 ]
@@ -1729,28 +1426,353 @@
           "type": "LanguageModelComponent"
         },
         "dragging": false,
-        "id": "LanguageModelComponent-khJQA",
+        "id": "LanguageModelComponent-XKvly",
         "measured": {
           "height": 369,
           "width": 320
         },
         "position": {
-          "x": 1432.0732826505218,
-          "y": -32.168243534243494
+          "x": 1630.638479427766,
+          "y": 116.0160835115366
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "LoopComponent-GtPZT",
+          "node": {
+            "base_classes": [
+              "Data",
+              "DataFrame"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Iterates over a list of Data or Message objects, outputting one item at a time and aggregating results from loop inputs. Message objects are automatically converted to Data objects for consistent processing.",
+            "display_name": "Loop",
+            "documentation": "https://docs.langflow.org/loop",
+            "edited": false,
+            "field_order": [
+              "data"
+            ],
+            "frozen": false,
+            "icon": "infinity",
+            "legacy": false,
+            "metadata": {
+              "code_hash": "e179036a232d",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "lfx",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 1
+              },
+              "module": "lfx.components.flow_controls.loop.LoopComponent"
+            },
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": true,
+                "cache": true,
+                "display_name": "Item",
+                "group_outputs": true,
+                "loop_types": [
+                  "Message"
+                ],
+                "method": "item_output",
+                "name": "item",
+                "selected": "Data",
+                "tool_mode": true,
+                "types": [
+                  "Data"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Done",
+                "group_outputs": true,
+                "method": "done_output",
+                "name": "done",
+                "selected": "DataFrame",
+                "tool_mode": true,
+                "types": [
+                  "DataFrame"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from lfx.components.processing.converter import convert_to_data\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.inputs.inputs import HandleInput\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.schema.message import Message\nfrom lfx.template.field.base import Output\n\n\nclass LoopComponent(Component):\n    display_name = \"Loop\"\n    description = (\n        \"Iterates over a list of Data or Message objects, outputting one item at a time and \"\n        \"aggregating results from loop inputs. Message objects are automatically converted to \"\n        \"Data objects for consistent processing.\"\n    )\n    documentation: str = \"https://docs.langflow.org/loop\"\n    icon = \"infinity\"\n\n    inputs = [\n        HandleInput(\n            name=\"data\",\n            display_name=\"Inputs\",\n            info=\"The initial DataFrame to iterate over.\",\n            input_types=[\"DataFrame\"],\n        ),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"Item\",\n            name=\"item\",\n            method=\"item_output\",\n            allows_loop=True,\n            loop_types=[\"Message\"],\n            group_outputs=True,\n        ),\n        Output(display_name=\"Done\", name=\"done\", method=\"done_output\", group_outputs=True),\n    ]\n\n    def initialize_data(self) -> None:\n        \"\"\"Initialize the data list, context index, and aggregated list.\"\"\"\n        if self.ctx.get(f\"{self._id}_initialized\", False):\n            return\n\n        # Ensure data is a list of Data objects\n        data_list = self._validate_data(self.data)\n\n        # Store the initial data and context variables\n        self.update_ctx(\n            {\n                f\"{self._id}_data\": data_list,\n                f\"{self._id}_index\": 0,\n                f\"{self._id}_aggregated\": [],\n                f\"{self._id}_initialized\": True,\n            }\n        )\n\n    def _convert_message_to_data(self, message: Message) -> Data:\n        \"\"\"Convert a Message object to a Data object using Type Convert logic.\"\"\"\n        return convert_to_data(message, auto_parse=False)\n\n    def _validate_data(self, data):\n        \"\"\"Validate and return a list of Data objects. Message objects are auto-converted to Data.\"\"\"\n        if isinstance(data, DataFrame):\n            return data.to_data_list()\n        if isinstance(data, Data):\n            return [data]\n        if isinstance(data, Message):\n            # Auto-convert Message to Data\n            converted_data = self._convert_message_to_data(data)\n            return [converted_data]\n        if isinstance(data, list) and all(isinstance(item, (Data, Message)) for item in data):\n            # Convert any Message objects in the list to Data objects\n            converted_list = []\n            for item in data:\n                if isinstance(item, Message):\n                    converted_list.append(self._convert_message_to_data(item))\n                else:\n                    converted_list.append(item)\n            return converted_list\n        msg = \"The 'data' input must be a DataFrame, a list of Data/Message objects, or a single Data/Message object.\"\n        raise TypeError(msg)\n\n    def evaluate_stop_loop(self) -> bool:\n        \"\"\"Evaluate whether to stop item or done output.\"\"\"\n        current_index = self.ctx.get(f\"{self._id}_index\", 0)\n        data_length = len(self.ctx.get(f\"{self._id}_data\", []))\n        return current_index > data_length\n\n    def item_output(self) -> Data:\n        \"\"\"Output the next item in the list or stop if done.\"\"\"\n        self.initialize_data()\n        current_item = Data(text=\"\")\n\n        if self.evaluate_stop_loop():\n            self.stop(\"item\")\n        else:\n            # Get data list and current index\n            data_list, current_index = self.loop_variables()\n            if current_index < len(data_list):\n                # Output current item and increment index\n                try:\n                    current_item = data_list[current_index]\n                except IndexError:\n                    current_item = Data(text=\"\")\n            self.aggregated_output()\n            self.update_ctx({f\"{self._id}_index\": current_index + 1})\n\n        # Now we need to update the dependencies for the next run\n        self.update_dependency()\n        return current_item\n\n    def update_dependency(self):\n        item_dependency_id = self.get_incoming_edge_by_target_param(\"item\")\n        if item_dependency_id not in self.graph.run_manager.run_predecessors[self._id]:\n            self.graph.run_manager.run_predecessors[self._id].append(item_dependency_id)\n            # CRITICAL: Also update run_map so remove_from_predecessors() works correctly\n            # run_map[predecessor] = list of vertices that depend on predecessor\n            if self._id not in self.graph.run_manager.run_map[item_dependency_id]:\n                self.graph.run_manager.run_map[item_dependency_id].append(self._id)\n\n    def done_output(self) -> DataFrame:\n        \"\"\"Trigger the done output when iteration is complete.\"\"\"\n        self.initialize_data()\n\n        if self.evaluate_stop_loop():\n            self.stop(\"item\")\n            self.start(\"done\")\n\n            aggregated = self.ctx.get(f\"{self._id}_aggregated\", [])\n\n            return DataFrame(aggregated)\n        self.stop(\"done\")\n        return DataFrame([])\n\n    def loop_variables(self):\n        \"\"\"Retrieve loop variables from context.\"\"\"\n        return (\n            self.ctx.get(f\"{self._id}_data\", []),\n            self.ctx.get(f\"{self._id}_index\", 0),\n        )\n\n    def aggregated_output(self) -> list[Data]:\n        \"\"\"Return the aggregated list once all items are processed.\n\n        Returns Data or Message objects depending on loop input types.\n        \"\"\"\n        self.initialize_data()\n\n        # Get data list and aggregated list\n        data_list = self.ctx.get(f\"{self._id}_data\", [])\n        aggregated = self.ctx.get(f\"{self._id}_aggregated\", [])\n        loop_input = self.item\n\n        # Append the current loop input to aggregated if it's not already included\n        if loop_input is not None and not isinstance(loop_input, str) and len(aggregated) <= len(data_list):\n            # If the loop input is a Message, convert it to Data for consistency\n            if isinstance(loop_input, Message):\n                loop_input = self._convert_message_to_data(loop_input)\n            aggregated.append(loop_input)\n            self.update_ctx({f\"{self._id}_aggregated\": aggregated})\n        return aggregated\n"
+              },
+              "data": {
+                "_input_type": "HandleInput",
+                "advanced": false,
+                "display_name": "Inputs",
+                "dynamic": false,
+                "info": "The initial DataFrame to iterate over.",
+                "input_types": [
+                  "DataFrame"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "data",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "other",
+                "value": ""
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "LoopComponent"
+        },
+        "dragging": false,
+        "id": "LoopComponent-GtPZT",
+        "measured": {
+          "height": 274,
+          "width": 320
+        },
+        "position": {
+          "x": 581.346082615804,
+          "y": 105.19270617605812
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "ParserComponent-pXAMb",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "category": "models_and_agents",
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Extracts text using a template.",
+            "display_name": "Parser",
+            "documentation": "https://docs.langflow.org/parser",
+            "edited": false,
+            "field_order": [
+              "input_data",
+              "mode",
+              "pattern",
+              "sep"
+            ],
+            "frozen": false,
+            "icon": "braces",
+            "legacy": false,
+            "metadata": {
+              "code_hash": "3cda25c3f7b5",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "lfx",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 1
+              },
+              "module": "lfx.components.processing.parser.ParserComponent"
+            },
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Parsed Text",
+                "group_outputs": false,
+                "method": "parse_combined_text",
+                "name": "parsed_text",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from lfx.custom.custom_component.component import Component\nfrom lfx.helpers.data import safe_convert\nfrom lfx.inputs.inputs import BoolInput, HandleInput, MessageTextInput, MultilineInput, TabInput\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.schema.message import Message\nfrom lfx.template.field.base import Output\n\n\nclass ParserComponent(Component):\n    display_name = \"Parser\"\n    description = \"Extracts text using a template.\"\n    documentation: str = \"https://docs.langflow.org/parser\"\n    icon = \"braces\"\n\n    inputs = [\n        HandleInput(\n            name=\"input_data\",\n            display_name=\"Data or DataFrame\",\n            input_types=[\"DataFrame\", \"Data\"],\n            info=\"Accepts either a DataFrame or a Data object.\",\n            required=True,\n        ),\n        TabInput(\n            name=\"mode\",\n            display_name=\"Mode\",\n            options=[\"Parser\", \"Stringify\"],\n            value=\"Parser\",\n            info=\"Convert into raw string instead of using a template.\",\n            real_time_refresh=True,\n        ),\n        MultilineInput(\n            name=\"pattern\",\n            display_name=\"Template\",\n            info=(\n                \"Use variables within curly brackets to extract column values for DataFrames \"\n                \"or key values for Data.\"\n                \"For example: `Name: {Name}, Age: {Age}, Country: {Country}`\"\n            ),\n            value=\"Text: {text}\",  # Example default\n            dynamic=True,\n            show=True,\n            required=True,\n        ),\n        MessageTextInput(\n            name=\"sep\",\n            display_name=\"Separator\",\n            advanced=True,\n            value=\"\\n\",\n            info=\"String used to separate rows/items.\",\n        ),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"Parsed Text\",\n            name=\"parsed_text\",\n            info=\"Formatted text output.\",\n            method=\"parse_combined_text\",\n        ),\n    ]\n\n    def update_build_config(self, build_config, field_value, field_name=None):\n        \"\"\"Dynamically hide/show `template` and enforce requirement based on `stringify`.\"\"\"\n        if field_name == \"mode\":\n            build_config[\"pattern\"][\"show\"] = self.mode == \"Parser\"\n            build_config[\"pattern\"][\"required\"] = self.mode == \"Parser\"\n            if field_value:\n                clean_data = BoolInput(\n                    name=\"clean_data\",\n                    display_name=\"Clean Data\",\n                    info=(\n                        \"Enable to clean the data by removing empty rows and lines \"\n                        \"in each cell of the DataFrame/ Data object.\"\n                    ),\n                    value=True,\n                    advanced=True,\n                    required=False,\n                )\n                build_config[\"clean_data\"] = clean_data.to_dict()\n            else:\n                build_config.pop(\"clean_data\", None)\n\n        return build_config\n\n    def _clean_args(self):\n        \"\"\"Prepare arguments based on input type.\"\"\"\n        input_data = self.input_data\n\n        match input_data:\n            case list() if all(isinstance(item, Data) for item in input_data):\n                msg = \"List of Data objects is not supported.\"\n                raise ValueError(msg)\n            case DataFrame():\n                return input_data, None\n            case Data():\n                return None, input_data\n            case dict() if \"data\" in input_data:\n                try:\n                    if \"columns\" in input_data:  # Likely a DataFrame\n                        return DataFrame.from_dict(input_data), None\n                    # Likely a Data object\n                    return None, Data(**input_data)\n                except (TypeError, ValueError, KeyError) as e:\n                    msg = f\"Invalid structured input provided: {e!s}\"\n                    raise ValueError(msg) from e\n            case _:\n                msg = f\"Unsupported input type: {type(input_data)}. Expected DataFrame or Data.\"\n                raise ValueError(msg)\n\n    def parse_combined_text(self) -> Message:\n        \"\"\"Parse all rows/items into a single text or convert input to string if `stringify` is enabled.\"\"\"\n        # Early return for stringify option\n        if self.mode == \"Stringify\":\n            return self.convert_to_string()\n\n        df, data = self._clean_args()\n\n        lines = []\n        if df is not None:\n            for _, row in df.iterrows():\n                formatted_text = self.pattern.format(**row.to_dict())\n                lines.append(formatted_text)\n        elif data is not None:\n            # Use format_map with a dict that returns default_value for missing keys\n            class DefaultDict(dict):\n                def __missing__(self, key):\n                    return data.default_value or \"\"\n\n            formatted_text = self.pattern.format_map(DefaultDict(data.data))\n            lines.append(formatted_text)\n\n        combined_text = self.sep.join(lines)\n        self.status = combined_text\n        return Message(text=combined_text)\n\n    def convert_to_string(self) -> Message:\n        \"\"\"Convert input data to string with proper error handling.\"\"\"\n        result = \"\"\n        if isinstance(self.input_data, list):\n            result = \"\\n\".join([safe_convert(item, clean_data=self.clean_data or False) for item in self.input_data])\n        else:\n            result = safe_convert(self.input_data or False)\n        self.log(f\"Converted to string with length: {len(result)}\")\n\n        message = Message(text=result)\n        self.status = message\n        return message\n"
+              },
+              "input_data": {
+                "_input_type": "HandleInput",
+                "advanced": false,
+                "display_name": "Data or DataFrame",
+                "dynamic": false,
+                "info": "Accepts either a DataFrame or a Data object.",
+                "input_types": [
+                  "DataFrame",
+                  "Data"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "input_data",
+                "override_skip": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "other",
+                "value": ""
+              },
+              "mode": {
+                "_input_type": "TabInput",
+                "advanced": false,
+                "display_name": "Mode",
+                "dynamic": false,
+                "info": "Convert into raw string instead of using a template.",
+                "name": "mode",
+                "options": [
+                  "Parser",
+                  "Stringify"
+                ],
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "tab",
+                "value": "Parser"
+              },
+              "pattern": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "ai_enabled": false,
+                "copy_field": false,
+                "display_name": "Template",
+                "dynamic": true,
+                "info": "Use variables within curly brackets to extract column values for DataFrames or key values for Data.For example: `Name: {Name}, Age: {Age}, Country: {Country}`",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "multiline": true,
+                "name": "pattern",
+                "override_skip": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": "Text: {text}"
+              },
+              "sep": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Separator",
+                "dynamic": false,
+                "info": "String used to separate rows/items.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "sep",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": "\n"
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "ParserComponent"
+        },
+        "dragging": false,
+        "id": "ParserComponent-pXAMb",
+        "measured": {
+          "height": 329,
+          "width": 320
+        },
+        "position": {
+          "x": 1102.2949192976482,
+          "y": -80.12506181353082
         },
         "selected": false,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": 470.0085200553991,
-      "y": 327.4433296590934,
-      "zoom": 0.44899341935528186
+      "x": 245.66793868161778,
+      "y": 267.9129204471257,
+      "zoom": 0.48565229862392995
     }
   },
   "description": "This template iterates over search results using LoopComponent and translates each result into Portuguese automatically. 🚀",
   "endpoint_name": null,
-  "id": "bf9b5a44-29d7-4301-bcc2-1601cf905efe",
+  "id": "70f6d78d-41ad-42a3-854d-405e161ee563",
   "is_component": false,
   "last_tested_version": "1.7.0",
   "name": "Research Translation Loop",
