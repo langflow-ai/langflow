@@ -196,9 +196,14 @@ def get_unified_models_detailed(
 
     # Mark the first 5 models in each provider as default (based on list order)
     # and optionally filter to only defaults
+    default_model_count = 5  # Number of default models per provider
+
     for prov, models in provider_map.items():
-        for _, model in enumerate(models[:5]):
-            model["metadata"]["default"] = True
+        for i, model in enumerate(models):
+            if i < default_model_count:
+                model["metadata"]["default"] = True
+            else:
+                model["metadata"]["default"] = False
 
         # If only_defaults is True, filter to only default models
         if only_defaults:
@@ -841,7 +846,17 @@ def normalize_model_names_to_dicts(model_names: list[str] | str) -> list[dict[st
     return result
 
 
-def get_llm(model, user_id: UUID | str | None, api_key=None, temperature=None, *, stream=False) -> Any:
+def get_llm(
+    model,
+    user_id: UUID | str | None,
+    api_key=None,
+    temperature=None,
+    *,
+    stream=False,
+    watsonx_url=None,
+    watsonx_project_id=None,
+    ollama_base_url=None,
+) -> Any:
     # Check if model is already a BaseLanguageModel instance (from a connection)
     try:
         from langchain_core.language_models import BaseLanguageModel
@@ -873,10 +888,12 @@ def get_llm(model, user_id: UUID | str | None, api_key=None, temperature=None, *
 
     # Validate API key (Ollama doesn't require one)
     if not api_key and provider != "Ollama":
+        # Get the correct variable name from the provider variable mapping
+        provider_variable_map = get_model_provider_variable_mapping()
+        variable_name = provider_variable_map.get(provider, f"{provider.upper().replace(' ', '_')}_API_KEY")
         msg = (
             f"{provider} API key is required when using {provider} provider. "
-            f"Please provide it in the component or configure it globally as "
-            f"{provider.upper().replace(' ', '_')}_API_KEY."
+            f"Please provide it in the component or configure it globally as {variable_name}."
         )
         raise ValueError(msg)
 
@@ -902,7 +919,54 @@ def get_llm(model, user_id: UUID | str | None, api_key=None, temperature=None, *
     if temperature is not None:
         kwargs["temperature"] = temperature
 
-    return model_class(**kwargs)
+    # Add provider-specific parameters
+    if provider == "IBM WatsonX":
+        # For watsonx, url and project_id are required parameters
+        # Only add them if both are provided by the component
+        # If neither are provided, let ChatWatsonx handle it with its native error
+        # This allows components without WatsonX-specific fields to fail gracefully
+
+        url_param = metadata.get("url_param", "url")
+        project_id_param = metadata.get("project_id_param", "project_id")
+
+        has_url = watsonx_url is not None
+        has_project_id = watsonx_project_id is not None
+
+        if has_url and has_project_id:
+            # Both provided - add them to kwargs
+            kwargs[url_param] = watsonx_url
+            kwargs[project_id_param] = watsonx_project_id
+        elif has_url or has_project_id:
+            # Only one provided - this is a misconfiguration in the component
+            missing = "project ID" if has_url else "URL"
+            provided = "URL" if has_url else "project ID"
+            msg = (
+                f"IBM WatsonX requires both a URL and project ID. "
+                f"You provided a watsonx {provided} but no {missing}. "
+                f"Please add a 'watsonx {missing.title()}' field to your component or use the Language Model component "
+                f"which fully supports IBM WatsonX configuration."
+            )
+            raise ValueError(msg)
+        # else: neither provided - let ChatWatsonx handle it (will fail with its own error)
+    elif provider == "Ollama" and ollama_base_url:
+        # For Ollama, handle custom base_url
+        base_url_param = metadata.get("base_url_param", "base_url")
+        kwargs[base_url_param] = ollama_base_url
+
+    try:
+        return model_class(**kwargs)
+    except Exception as e:
+        # If instantiation fails and it's WatsonX, provide additional context
+        if provider == "IBM WatsonX" and ("url" in str(e).lower() or "project" in str(e).lower()):
+            msg = (
+                f"Failed to initialize IBM WatsonX model: {e}\n\n"
+                "IBM WatsonX requires additional configuration parameters (API endpoint URL and project ID). "
+                "This component may not support these parameters. "
+                "Consider using the 'Language Model' component instead, which fully supports IBM WatsonX."
+            )
+            raise ValueError(msg) from e
+        # Re-raise the original exception for other cases
+        raise
 
 
 def update_model_options_in_build_config(
