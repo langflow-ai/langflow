@@ -19,7 +19,11 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow, custom_params, remove_api_keys
-from langflow.api.utils.mcp.config_utils import regenerate_mcp_server_config, validate_mcp_server_for_project
+from langflow.api.utils.mcp.config_utils import (
+    MCPConfigRegenerationError,
+    regenerate_mcp_server_config,
+    validate_mcp_server_for_project,
+)
 from langflow.api.v1.auth_helpers import handle_auth_settings_update
 from langflow.api.v1.flows import create_flows
 from langflow.api.v1.mcp_projects import (
@@ -461,14 +465,17 @@ async def update_project(
 
         # Regenerate MCP server config if auth_type changed to apikey or none
         if "auth_settings" in project.model_fields_set and auth_result.get("should_regenerate_mcp_config"):
-            await regenerate_mcp_server_config(
-                existing_project,
-                current_user,
-                session,
-                auth_result.get("new_auth_type", "none"),
-                get_storage_service(),
-                get_settings_service(),
-            )
+            try:
+                await regenerate_mcp_server_config(
+                    existing_project,
+                    current_user,
+                    session,
+                    auth_result.get("new_auth_type", "none"),
+                    get_storage_service(),
+                    get_settings_service(),
+                )
+            except MCPConfigRegenerationError as e:
+                await logger.awarning(f"MCP config regeneration failed: {e}")
 
         concat_project_components = project.components + project.flows
 

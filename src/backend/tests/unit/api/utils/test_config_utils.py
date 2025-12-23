@@ -548,287 +548,167 @@ class TestMultiUserMCPServerAccess:
 
 
 class TestRegenerateMcpServerConfig:
-    """Test the regenerate_mcp_server_config function with error scenarios."""
-
-    @pytest.fixture
-    async def test_project_with_mcp(self, active_user, client: AsyncClient, created_api_key):
-        """Create a test project with MCP server configured."""
-        project_id = uuid4()
-        server_name = "lf-test_regen_project"
-
-        async with session_scope() as session:
-            project = Folder(
-                id=project_id,
-                name="Test Regen Project",
-                user_id=active_user.id,
-                description="Test project for MCP regeneration",
-            )
-            session.add(project)
-            await session.commit()
-            await session.refresh(project)
-
-        # Create initial MCP server config
-        server_config = {
-            "command": "uvx",
-            "args": [
-                "mcp-proxy",
-                "--transport",
-                "streamablehttp",
-                f"http://localhost:7860/api/v1/mcp/project/{project_id}/streamable",
-            ],
-        }
-        response = await client.post(
-            f"/api/v2/mcp/servers/{server_name}",
-            json=server_config,
-            headers={"x-api-key": created_api_key.api_key},
-        )
-        assert response.status_code == 200
-
-        yield project
-
-        # Cleanup
-        await client.delete(f"/api/v2/mcp/servers/{server_name}", headers={"x-api-key": created_api_key.api_key})
-        async with session_scope() as session:
-            project = (await session.exec(select(Folder).where(Folder.id == project_id))).first()
-            if project:
-                await session.delete(project)
-                await session.commit()
+    """Test regenerate_mcp_server_config function."""
 
     @pytest.mark.asyncio
-    async def test_should_skip_when_add_projects_disabled(self, active_user, test_project_with_mcp):
-        """Test that regeneration is skipped when add_projects_to_mcp_servers is disabled."""
+    async def test_should_skip_when_add_projects_disabled(self, active_user):
+        """Skip when add_projects_to_mcp_servers is disabled."""
         from unittest.mock import MagicMock
 
         from langflow.api.utils.mcp.config_utils import regenerate_mcp_server_config
 
-        # Mock settings service with add_projects_to_mcp_servers = False
         mock_settings_service = MagicMock()
         mock_settings_service.settings.add_projects_to_mcp_servers = False
-
         mock_storage_service = MagicMock()
+        mock_project = MagicMock()
+        mock_project.name = "Test"
 
         async with session_scope() as session:
-            # Should not raise and should skip silently
             await regenerate_mcp_server_config(
-                test_project_with_mcp,
-                active_user,
-                session,
-                "apikey",
-                mock_storage_service,
-                mock_settings_service,
+                mock_project, active_user, session, "apikey", mock_storage_service, mock_settings_service
             )
-            # If we got here without error, the function correctly skipped
 
     @pytest.mark.asyncio
-    async def test_should_handle_validation_error(self, active_user):
-        """Test that regeneration handles validation errors gracefully."""
+    async def test_should_raise_when_invalid_auth_type(self, active_user):
+        """Raise MCPConfigRegenerationError for invalid auth_type."""
+        from unittest.mock import MagicMock
+
+        from langflow.api.utils.mcp.config_utils import MCPConfigRegenerationError, regenerate_mcp_server_config
+
+        mock_settings_service = MagicMock()
+        mock_settings_service.settings.add_projects_to_mcp_servers = True
+        mock_storage_service = MagicMock()
+        mock_project = MagicMock()
+        mock_project.name = "Test"
+
+        async with session_scope() as session:
+            with pytest.raises(MCPConfigRegenerationError) as exc_info:
+                await regenerate_mcp_server_config(
+                    mock_project, active_user, session, "invalid", mock_storage_service, mock_settings_service
+                )
+            assert "Invalid auth_type" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_should_create_config_with_apikey(self, active_user):
+        """Create config with API key when auth_type is apikey."""
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        from langflow.api.utils.mcp.config_utils import MCPServerValidationResult, regenerate_mcp_server_config
+
+        mock_settings_service = MagicMock()
+        mock_settings_service.settings.add_projects_to_mcp_servers = True
+        mock_storage_service = MagicMock()
+        mock_project = MagicMock()
+        mock_project.id = uuid4()
+        mock_project.name = "Test"
+
+        mock_validation = MCPServerValidationResult(server_exists=False, project_id_matches=False, server_name="lf-test")
+        mock_api_key = MagicMock()
+        mock_api_key.api_key = "test-api-key"
+
+        with (
+            patch("langflow.api.utils.mcp.config_utils.validate_mcp_server_for_project", new_callable=AsyncMock, return_value=mock_validation),
+            patch("langflow.api.utils.mcp.config_utils.get_project_streamable_http_url", new_callable=AsyncMock, return_value="http://test/streamable"),
+            patch("langflow.api.utils.mcp.config_utils.create_api_key", new_callable=AsyncMock, return_value=mock_api_key),
+            patch("langflow.api.utils.mcp.config_utils.update_server", new_callable=AsyncMock) as mock_update,
+        ):
+            async with session_scope() as session:
+                await regenerate_mcp_server_config(
+                    mock_project, active_user, session, "apikey", mock_storage_service, mock_settings_service
+                )
+
+            config = mock_update.call_args[0][1]
+            assert "--headers" in config["args"]
+            assert "x-api-key" in config["args"]
+            assert "test-api-key" in config["args"]
+
+    @pytest.mark.asyncio
+    async def test_should_create_config_without_apikey(self, active_user):
+        """Create config without API key when auth_type is none."""
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        from langflow.api.utils.mcp.config_utils import MCPServerValidationResult, regenerate_mcp_server_config
+
+        mock_settings_service = MagicMock()
+        mock_settings_service.settings.add_projects_to_mcp_servers = True
+        mock_storage_service = MagicMock()
+        mock_project = MagicMock()
+        mock_project.id = uuid4()
+        mock_project.name = "Test"
+
+        mock_validation = MCPServerValidationResult(server_exists=False, project_id_matches=False, server_name="lf-test")
+
+        with (
+            patch("langflow.api.utils.mcp.config_utils.validate_mcp_server_for_project", new_callable=AsyncMock, return_value=mock_validation),
+            patch("langflow.api.utils.mcp.config_utils.get_project_streamable_http_url", new_callable=AsyncMock, return_value="http://test/streamable"),
+            patch("langflow.api.utils.mcp.config_utils.update_server", new_callable=AsyncMock) as mock_update,
+        ):
+            async with session_scope() as session:
+                await regenerate_mcp_server_config(
+                    mock_project, active_user, session, "none", mock_storage_service, mock_settings_service
+                )
+
+            config = mock_update.call_args[0][1]
+            assert "--headers" not in config["args"]
+            assert "x-api-key" not in config["args"]
+
+    @pytest.mark.asyncio
+    async def test_should_delete_existing_config_before_creating(self, active_user):
+        """Delete existing config before creating new one."""
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        from langflow.api.utils.mcp.config_utils import MCPServerValidationResult, regenerate_mcp_server_config
+
+        mock_settings_service = MagicMock()
+        mock_settings_service.settings.add_projects_to_mcp_servers = True
+        mock_storage_service = MagicMock()
+        mock_project = MagicMock()
+        mock_project.id = uuid4()
+        mock_project.name = "Test"
+
+        mock_validation = MCPServerValidationResult(
+            server_exists=True, project_id_matches=True, server_name="lf-test", existing_config={"old": "config"}
+        )
+
+        with (
+            patch("langflow.api.utils.mcp.config_utils.validate_mcp_server_for_project", new_callable=AsyncMock, return_value=mock_validation),
+            patch("langflow.api.utils.mcp.config_utils.get_project_streamable_http_url", new_callable=AsyncMock, return_value="http://test/streamable"),
+            patch("langflow.api.utils.mcp.config_utils.update_server", new_callable=AsyncMock) as mock_update,
+        ):
+            async with session_scope() as session:
+                await regenerate_mcp_server_config(
+                    mock_project, active_user, session, "none", mock_storage_service, mock_settings_service
+                )
+
+            assert mock_update.call_count == 2
+            first_call = mock_update.call_args_list[0]
+            assert first_call[0][1] == {}
+            assert first_call[1].get("delete") is True
+
+    @pytest.mark.asyncio
+    async def test_should_propagate_validation_error(self, active_user):
+        """Propagate errors from validate_mcp_server_for_project."""
         from unittest.mock import AsyncMock, MagicMock, patch
 
         from langflow.api.utils.mcp.config_utils import regenerate_mcp_server_config
 
         mock_settings_service = MagicMock()
         mock_settings_service.settings.add_projects_to_mcp_servers = True
-
         mock_storage_service = MagicMock()
-
-        # Create a mock project
         mock_project = MagicMock()
         mock_project.id = uuid4()
-        mock_project.name = "Test Project"
+        mock_project.name = "Test"
 
-        # Mock validate_mcp_server_for_project to raise an exception
         with patch(
             "langflow.api.utils.mcp.config_utils.validate_mcp_server_for_project",
             new_callable=AsyncMock,
-        ) as mock_validate:
-            mock_validate.side_effect = Exception("Validation failed")
-
-            async with session_scope() as session:
-                # Should not raise - error should be caught and logged
-                await regenerate_mcp_server_config(
-                    mock_project,
-                    active_user,
-                    session,
-                    "apikey",
-                    mock_storage_service,
-                    mock_settings_service,
-                )
-                # If we got here without raising, the error was handled gracefully
-
-    @pytest.mark.asyncio
-    async def test_should_handle_api_key_creation_error(self, active_user):
-        """Test that regeneration handles API key creation errors gracefully."""
-        from unittest.mock import AsyncMock, MagicMock, patch
-
-        from langflow.api.utils.mcp.config_utils import (
-            MCPServerValidationResult,
-            regenerate_mcp_server_config,
-        )
-
-        mock_settings_service = MagicMock()
-        mock_settings_service.settings.add_projects_to_mcp_servers = True
-
-        mock_storage_service = MagicMock()
-
-        mock_project = MagicMock()
-        mock_project.id = uuid4()
-        mock_project.name = "Test Project"
-
-        # Mock successful validation
-        mock_validation_result = MCPServerValidationResult(
-            server_exists=False,
-            project_id_matches=False,
-            server_name="lf-test_project",
-        )
-
-        with (
-            patch(
-                "langflow.api.utils.mcp.config_utils.validate_mcp_server_for_project",
-                new_callable=AsyncMock,
-                return_value=mock_validation_result,
-            ),
-            patch(
-                "langflow.api.utils.mcp.config_utils.get_project_streamable_http_url",
-                new_callable=AsyncMock,
-                return_value="http://localhost:7860/api/v1/mcp/project/test/streamable",
-            ),
-            patch(
-                "langflow.api.utils.mcp.config_utils.create_api_key",
-                new_callable=AsyncMock,
-            ) as mock_create_api_key,
-        ):
-            mock_create_api_key.side_effect = Exception("Failed to create API key")
-
-            async with session_scope() as session:
-                # Should not raise - error should be caught and logged
-                await regenerate_mcp_server_config(
-                    mock_project,
-                    active_user,
-                    session,
-                    "apikey",
-                    mock_storage_service,
-                    mock_settings_service,
-                )
-
-    @pytest.mark.asyncio
-    async def test_should_handle_update_server_error(self, active_user):
-        """Test that regeneration handles update_server errors gracefully."""
-        from unittest.mock import AsyncMock, MagicMock, patch
-
-        from langflow.api.utils.mcp.config_utils import (
-            MCPServerValidationResult,
-            regenerate_mcp_server_config,
-        )
-
-        mock_settings_service = MagicMock()
-        mock_settings_service.settings.add_projects_to_mcp_servers = True
-
-        mock_storage_service = MagicMock()
-
-        mock_project = MagicMock()
-        mock_project.id = uuid4()
-        mock_project.name = "Test Project"
-
-        mock_validation_result = MCPServerValidationResult(
-            server_exists=False,
-            project_id_matches=False,
-            server_name="lf-test_project",
-        )
-
-        with (
-            patch(
-                "langflow.api.utils.mcp.config_utils.validate_mcp_server_for_project",
-                new_callable=AsyncMock,
-                return_value=mock_validation_result,
-            ),
-            patch(
-                "langflow.api.utils.mcp.config_utils.get_project_streamable_http_url",
-                new_callable=AsyncMock,
-                return_value="http://localhost:7860/api/v1/mcp/project/test/streamable",
-            ),
-            patch(
-                "langflow.api.utils.mcp.config_utils.update_server",
-                new_callable=AsyncMock,
-            ) as mock_update_server,
-        ):
-            mock_update_server.side_effect = Exception("Failed to update server")
-
-            async with session_scope() as session:
-                # Should not raise - error should be caught and logged
-                await regenerate_mcp_server_config(
-                    mock_project,
-                    active_user,
-                    session,
-                    "none",  # Using "none" to skip API key creation
-                    mock_storage_service,
-                    mock_settings_service,
-                )
-
-    @pytest.mark.asyncio
-    async def test_should_delete_existing_config_before_regenerating(self, active_user):
-        """Test that existing config is deleted before creating new one."""
-        from unittest.mock import AsyncMock, MagicMock, patch
-
-        from langflow.api.utils.mcp.config_utils import (
-            MCPServerValidationResult,
-            regenerate_mcp_server_config,
-        )
-
-        mock_settings_service = MagicMock()
-        mock_settings_service.settings.add_projects_to_mcp_servers = True
-
-        mock_storage_service = MagicMock()
-
-        mock_project = MagicMock()
-        mock_project.id = uuid4()
-        mock_project.name = "Test Project"
-
-        # Server exists and matches project
-        mock_validation_result = MCPServerValidationResult(
-            server_exists=True,
-            project_id_matches=True,
-            server_name="lf-test_project",
-            existing_config={"command": "uvx", "args": ["old-config"]},
-        )
-
-        with (
-            patch(
-                "langflow.api.utils.mcp.config_utils.validate_mcp_server_for_project",
-                new_callable=AsyncMock,
-                return_value=mock_validation_result,
-            ),
-            patch(
-                "langflow.api.utils.mcp.config_utils.get_project_streamable_http_url",
-                new_callable=AsyncMock,
-                return_value="http://localhost:7860/api/v1/mcp/project/test/streamable",
-            ),
-            patch(
-                "langflow.api.utils.mcp.config_utils.update_server",
-                new_callable=AsyncMock,
-            ) as mock_update_server,
+            side_effect=ValueError("Validation failed"),
         ):
             async with session_scope() as session:
-                await regenerate_mcp_server_config(
-                    mock_project,
-                    active_user,
-                    session,
-                    "none",
-                    mock_storage_service,
-                    mock_settings_service,
-                )
-
-                # Verify update_server was called twice: once to delete, once to create
-                assert mock_update_server.call_count == 2
-
-                # First call should be delete (empty config, delete=True)
-                first_call = mock_update_server.call_args_list[0]
-                assert first_call[0][1] == {}  # Empty config
-                assert first_call[1].get("delete") is True
-
-                # Second call should be create (with new config)
-                second_call = mock_update_server.call_args_list[1]
-                assert second_call[0][1]["command"] == "uvx"
-                assert "mcp-proxy" in second_call[0][1]["args"]
+                with pytest.raises(ValueError, match="Validation failed"):
+                    await regenerate_mcp_server_config(
+                        mock_project, active_user, session, "none", mock_storage_service, mock_settings_service
+                    )
 
 
 class TestMCPWithDefaultFolderName:
