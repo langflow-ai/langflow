@@ -68,7 +68,7 @@ async def test_session_endpoint_authenticated(client, logged_in_headers):
 
 async def test_session_endpoint_no_api_key_in_response(client, logged_in_headers):
     """Test /session endpoint does not return store_api_key in response body.
-    
+
     This is a security check to ensure API keys are not exposed in HTTP response bodies,
     even to authenticated users. API keys should only be stored in httponly cookies.
     """
