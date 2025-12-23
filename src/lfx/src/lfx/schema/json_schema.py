@@ -1,12 +1,15 @@
 """JSON Schema utilities for LFX."""
 
-from typing import Any
+from typing import Any, Union
 
 from pydantic import AliasChoices, BaseModel, Field, create_model
 
 from lfx.log.logger import logger
 
 NULLABLE_TYPE_LENGTH = 2  # Number of types in a nullable union (the type itself + null)
+MAX_ANYOF_ITEMS = 2
+MAX_OBJECT_PROPERTIES_IN_ANYOF = 3
+MAX_OBJECT_PROPERTIES = 5
 
 
 def _snake_to_camel(name: str) -> str:
@@ -63,11 +66,55 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
                 return {"type": "string"}
         return s
 
+    def is_complex_schema(schema: dict[str, Any]) -> bool:
+        """Check if a schema is too complex for UI rendering."""
+        # Check for additionalProperties with complex anyOf structures
+        if "additionalProperties" in schema:
+            additional_props = schema["additionalProperties"]
+            if isinstance(additional_props, dict) and "anyOf" in additional_props:
+                anyof_items = additional_props["anyOf"]
+                # If anyOf has many items or contains complex objects
+                if len(anyof_items) > MAX_ANYOF_ITEMS:
+                    return True
+                for item in anyof_items:
+                    if isinstance(item, dict) and item.get("type") == "object":
+                        if "properties" in item and len(item["properties"]) > MAX_OBJECT_PROPERTIES_IN_ANYOF:
+                            return True
+                        if "additionalProperties" in item:
+                            return True
+            elif isinstance(additional_props, dict) and additional_props.get("type") == "object":
+                return True
+
+        # Check for complex object with many properties
+        if schema.get("type") == "object" and "properties" in schema:
+            properties_count = len(schema["properties"])
+            if properties_count > MAX_OBJECT_PROPERTIES:  # Threshold for complexity
+                return True
+
+        return False
+
     def parse_type(s: dict[str, Any] | None) -> Any:
         """Map a JSON Schema subschema to a Python type (possibly nested)."""
         if s is None:
             return None
         s = resolve_ref(s)
+
+        # Handle boolean values in additionalProperties
+        if "additionalProperties" in s and isinstance(s["additionalProperties"], bool) and s["additionalProperties"]:
+            return dict[str, Any]
+            # If false, it means no additional properties are allowed.
+            # We can represent this by returning a type that won't be iterable.
+            # However, for the purpose of building a model, we can perhaps return an empty dict
+            # or handle it in the _build_model function.
+            # For now, let's see if just handling `True` is enough.
+
+        # Handle objects with additionalProperties (dynamic fields) but no explicit properties
+        # This is common for dictionaries/maps where keys are dynamic
+        if s.get("type") == "object" and "additionalProperties" in s and not s.get("properties"):
+            # For dynamic dictionaries, returning Dict[str, Any] allows Langflow UI to potentially
+            # render a JSON editor or Key-Value input.
+            # Complex recursive types (like Unions) inside a Dict often cause UI rendering issues.
+            return dict[str, Any]
 
         if "anyOf" in s:
             # Handle common pattern for nullable types (anyOf with string and null)
@@ -89,20 +136,83 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
                     }.get(non_null_type, Any)
                 return Any
 
-            # For other anyOf cases, use the first non-null type
-            subtypes = [parse_type(sub) for sub in s["anyOf"]]
-            non_null_types = [t for t in subtypes if t is not None and t is not type(None)]
-            if non_null_types:
-                return non_null_types[0]
-            return str
+            # For other anyOf cases, return a Union of all possible types
+            # This ensures Pydantic generates a schema with oneOf/anyOf, allowing the UI to render appropriate inputs
+            try:
+                subtypes = []
+                for sub in s["anyOf"]:
+                    parsed = parse_type(sub)
+                    if parsed is not None and parsed is not type(None):
+                        subtypes.append(parsed)
+
+                # Remove duplicates while preserving order
+                unique_types = []
+                for t in subtypes:
+                    if t not in unique_types:
+                        unique_types.append(t)
+
+                if not unique_types:
+                    return Any
+
+                if len(unique_types) == 1:
+                    return unique_types[0]
+
+                # Safe Union creation for dynamic types
+                # Using __getitem__ with a tuple is the standard way to create Union[A, B] dynamically
+                # But we wrap in try-except to fallback to Any if type construction fails
+                return Union[tuple(unique_types)]  # noqa: UP007
+            except Exception as e:  # noqa: BLE001
+                logger.warning(f"Failed to create Union type from anyOf: {e}")
+                return Any
 
         t = s.get("type", "any")  # Use string "any" as default instead of Any type
+
+        # Handle case where type is a list (e.g. ["string", "null"])
+        if isinstance(t, list):
+            # Convert to anyOf format and recurse
+            return parse_type({"anyOf": [{"type": sub_t} for sub_t in t]})
+
         if t == "array":
             item_schema = s.get("items", {})
-            schema_type: Any = parse_type(item_schema)
-            return list[schema_type]
+            if item_schema:
+                # Check for complex structures that UI cannot handle properly
+                is_complex = False
+
+                # Check if items schema has additionalProperties with anyOf (very complex)
+                if "additionalProperties" in item_schema:
+                    additional_props = item_schema["additionalProperties"]
+                    if isinstance(additional_props, dict) and "anyOf" in additional_props:
+                        anyof_items = additional_props.get("anyOf", [])
+                        # If anyOf has more than 2 items or contains complex nested structures
+                        if len(anyof_items) > MAX_ANYOF_ITEMS:
+                            is_complex = True
+                        else:
+                            # Check if anyOf items are complex objects themselves
+                            for item in anyof_items:
+                                if isinstance(item, dict) and item.get("type") == "object":
+                                    is_complex = True
+                                    break
+
+                if not is_complex and item_schema.get("type") == "object" and "properties" in item_schema:
+                    # Complex object with many properties
+                    properties_count = len(item_schema.get("properties", {}))
+                    if properties_count > MAX_OBJECT_PROPERTIES:  # Threshold for complexity
+                        is_complex = True
+
+                # For complex array items, fall back to list[dict[str, Any]] instead of str
+                # This ensures the field appears as an array input in the UI
+                if is_complex:
+                    logger.debug("Detected complex array schema, using list[dict[str, Any]] for UI compatibility")
+                    return str  # Keep as str to force JSON input in UI
+
+                schema_type: Any = parse_type(item_schema)
+                return list[schema_type]
 
         if t == "object":
+            # Check if object schema is too complex for UI rendering
+            if is_complex_schema(s):
+                logger.debug("Detected complex object schema, falling back to str (JSON input) for UI compatibility")
+                return str
             # inline object not in $defs ⇒ anonymous nested model
             return _build_model(f"AnonModel{len(model_cache)}", s)
 
@@ -156,6 +266,31 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
                     field_kwargs["validation_alias"] = AliasChoices(prop_name, camel_case_name)
 
             fields[prop_name] = (py_type, Field(default, **field_kwargs))
+
+        # Handle additionalProperties for objects without explicit properties
+        if "additionalProperties" in subschema:
+            additional_props = subschema["additionalProperties"]
+            if isinstance(additional_props, bool):
+                if additional_props:
+                    # Allow any additional properties - but this is complex for UI
+                    # Fall back to str (JSON input) instead
+                    logger.debug(
+                        f"Object '{name}' allows additional properties, using str (JSON input) for UI compatibility"
+                    )
+                    # Don't create fields, just return str type from parse_type
+            elif isinstance(additional_props, dict) and not props:
+                # Handle dict-based additionalProperties
+                additional_props_schema = resolve_ref(additional_props)
+                if is_complex_schema(additional_props_schema) or "anyOf" in additional_props_schema:
+                    # Complex additional properties - use str (JSON input)
+                    logger.debug(
+                        f"Object '{name}' has complex additional properties, "
+                        "using str (JSON input) for UI compatibility"
+                    )
+                    # Will be handled by falling back to str in caller
+                else:
+                    py_type = parse_type(additional_props_schema) or Any
+                    fields["data"] = (dict[str, py_type], Field(default_factory=dict, description="Dynamic field data"))
 
         model_cls = create_model(name, **fields)
         model_cache[name] = model_cls
