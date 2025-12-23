@@ -187,34 +187,38 @@ class AstraDBBaseComponent(Component):
     @classmethod
     def map_cloud_providers(cls, token: str, environment: str | None = None) -> dict[str, dict[str, Any]]:
         """Fetch all available cloud providers and regions."""
-        # Get the admin object
-        client = DataAPIClient(environment=cls.get_environment(environment))
-        admin_client = client.get_admin(token=token)
+        try:
+            # Get the admin object
+            client = DataAPIClient(environment=cls.get_environment(environment))
+            admin_client = client.get_admin(token=token)
 
-        # Get the list of available regions
-        available_regions = admin_client.find_available_regions(only_org_enabled_regions=True)
+            # Get the list of available regions
+            available_regions = admin_client.find_available_regions(only_org_enabled_regions=True)
 
-        provider_mapping: dict[str, dict[str, str]] = {
-            "AWS": {"name": "Amazon Web Services", "id": "aws"},
-            "GCP": {"name": "Google Cloud Platform", "id": "gcp"},
-            "Azure": {"name": "Microsoft Azure", "id": "azure"},
-        }
+            provider_mapping: dict[str, dict[str, str]] = {
+                "AWS": {"name": "Amazon Web Services", "id": "aws"},
+                "GCP": {"name": "Google Cloud Platform", "id": "gcp"},
+                "Azure": {"name": "Microsoft Azure", "id": "azure"},
+            }
 
-        result: dict[str, dict[str, Any]] = {}
-        for region_info in available_regions:
-            cloud_provider = region_info.cloud_provider
-            region = region_info.name
+            result: dict[str, dict[str, Any]] = {}
+            for region_info in available_regions:
+                cloud_provider = region_info.cloud_provider
+                region = region_info.name
 
-            if cloud_provider in provider_mapping:
-                provider_name = provider_mapping[cloud_provider]["name"]
-                provider_id = provider_mapping[cloud_provider]["id"]
+                if cloud_provider in provider_mapping:
+                    provider_name = provider_mapping[cloud_provider]["name"]
+                    provider_id = provider_mapping[cloud_provider]["id"]
 
-                if provider_name not in result:
-                    result[provider_name] = {"id": provider_id, "regions": []}
+                    if provider_name not in result:
+                        result[provider_name] = {"id": provider_id, "regions": []}
 
-                result[provider_name]["regions"].append(region)
-
-        return result
+                    result[provider_name]["regions"].append(region)
+        except Exception as e:  # noqa: BLE001
+            logger.debug("Error fetching cloud providers: %s", e)
+            return {}
+        else:
+            return result
 
     @classmethod
     def get_vectorize_providers(cls, token: str, environment: str | None = None, api_endpoint: str | None = None):
@@ -327,48 +331,52 @@ class AstraDBBaseComponent(Component):
 
     @classmethod
     def get_database_list_static(cls, token: str, environment: str | None = None):
-        environment = cls.get_environment(environment)
-        client = DataAPIClient(environment=environment)
+        try:
+            environment = cls.get_environment(environment)
+            client = DataAPIClient(environment=environment)
 
-        # Get the admin object
-        admin_client = client.get_admin(token=token)
+            # Get the admin object
+            admin_client = client.get_admin(token=token)
 
-        # Get the list of databases
-        db_list = admin_client.list_databases()
+            # Get the list of databases
+            db_list = admin_client.list_databases()
 
-        # Generate the api endpoint for each database
-        db_info_dict = {}
-        for db in db_list:
-            try:
-                # Get the API endpoint for the database
-                api_endpoints = [db_reg.api_endpoint for db_reg in db.regions]
-
-                # Get the number of collections
+            # Generate the api endpoint for each database
+            db_info_dict = {}
+            for db in db_list:
                 try:
-                    # Get the number of collections in the database
-                    num_collections = len(
-                        client.get_database(
-                            api_endpoints[0],
-                            token=token,
-                        ).list_collection_names()
-                    )
-                except Exception:  # noqa: BLE001
-                    if db.status != "PENDING":
-                        continue
-                    num_collections = 0
+                    # Get the API endpoint for the database
+                    api_endpoints = [db_reg.api_endpoint for db_reg in db.regions]
 
-                # Add the database to the dictionary
-                db_info_dict[db.name] = {
-                    "api_endpoints": api_endpoints,
-                    "keyspaces": db.keyspaces,
-                    "collections": num_collections,
-                    "status": db.status if db.status != "ACTIVE" else None,
-                    "org_id": db.org_id if db.org_id else None,
-                }
-            except Exception as e:  # noqa: BLE001
-                logger.debug("Failed to get metadata for database %s: %s", db.name, e)
+                    # Get the number of collections
+                    try:
+                        # Get the number of collections in the database
+                        num_collections = len(
+                            client.get_database(
+                                api_endpoints[0],
+                                token=token,
+                            ).list_collection_names()
+                        )
+                    except Exception:  # noqa: BLE001
+                        if db.status != "PENDING":
+                            continue
+                        num_collections = 0
 
-        return db_info_dict
+                    # Add the database to the dictionary
+                    db_info_dict[db.name] = {
+                        "api_endpoints": api_endpoints,
+                        "keyspaces": db.keyspaces,
+                        "collections": num_collections,
+                        "status": db.status if db.status != "ACTIVE" else None,
+                        "org_id": db.org_id if db.org_id else None,
+                    }
+                except Exception as e:  # noqa: BLE001
+                    logger.debug("Failed to get metadata for database %s: %s", db.name, e)
+        except Exception as e:  # noqa: BLE001
+            logger.debug("Error fetching database list: %s", e)
+            return {}
+        else:
+            return db_info_dict
 
     def get_database_list(self):
         return self.get_database_list_static(
@@ -467,6 +475,9 @@ class AstraDBBaseComponent(Component):
 
     def _initialize_database_options(self):
         try:
+            db_list = self.get_database_list()
+            if not db_list:
+                return []
             return [
                 {
                     "name": name,
@@ -476,11 +487,11 @@ class AstraDBBaseComponent(Component):
                     "keyspaces": info["keyspaces"],
                     "org_id": info["org_id"],
                 }
-                for name, info in self.get_database_list().items()
+                for name, info in db_list.items()
             ]
-        except Exception as e:
-            msg = f"Error fetching database options: {e}"
-            raise ValueError(msg) from e
+        except Exception as e:  # noqa: BLE001
+            logger.debug("Error fetching database options: %s", e)
+            return []
 
     @classmethod
     def get_provider_icon(cls, collection=None, provider_name: str | None = None) -> str:

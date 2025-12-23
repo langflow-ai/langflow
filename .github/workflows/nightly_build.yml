@@ -221,6 +221,7 @@ jobs:
     with:
       build_docker_base: true
       build_docker_main: true
+      build_docker_ep: true
       build_lfx: true
       nightly_tag_main: ${{ needs.create-nightly-tag.outputs.main_tag }}
       nightly_tag_base: ${{ needs.create-nightly-tag.outputs.base_tag }}

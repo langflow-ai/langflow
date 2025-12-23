@@ -61,7 +61,7 @@ def remove_api_keys(flow: dict):
         node_data = node.get("data").get("node")
         template = node_data.get("template")
         for value in template.values():
-            if isinstance(value, dict) and has_api_terms(value["name"]) and value.get("password"):
+            if isinstance(value, dict) and "name" in value and has_api_terms(value["name"]) and value.get("password"):
                 value["value"] = None
 
     return flow
@@ -420,4 +420,7 @@ def extract_global_variables_from_headers(headers) -> dict[str, str]:
 
 def raise_error_if_astra_cloud_env():
     """Raise an error if we're in an Astra cloud environment."""
-    raise_error_if_astra_cloud_disable_component(disable_endpoint_in_astra_cloud_msg)
+    try:
+        raise_error_if_astra_cloud_disable_component(disable_endpoint_in_astra_cloud_msg)
+    except Exception as e:
+        raise HTTPException(status_code=403, detail=str(e)) from e

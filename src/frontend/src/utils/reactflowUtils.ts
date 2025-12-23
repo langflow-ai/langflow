@@ -11,6 +11,7 @@
  * software for all.
  */
 
+// biome-ignore-all lint/suspicious/noExplicitAny: TODO We need to fix this. added suppression for 1.7.1 merge
 import {
   type Connection,
   type Edge,
@@ -110,10 +111,15 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
         targetNode.type === "genericNode"
       ) {
         const dataType = targetNode.data.type;
+        const output = targetNode.data.node!.outputs?.find(
+          (output) => output.name === targetHandleObject.name,
+        );
+        const baseTypes = output?.types ?? [];
+        // Include loop_types for loop inputs (allows_loop=true)
         const outputTypes =
-          targetNode.data.node!.outputs?.find(
-            (output) => output.name === targetHandleObject.name,
-          )?.types ?? [];
+          output?.allows_loop && output?.loop_types
+            ? [output.selected ?? baseTypes[0], ...output.loop_types]
+            : baseTypes;
 
         id = {
           dataType: dataType ?? "",
@@ -315,10 +321,17 @@ export function detectBrokenEdgesEdges(nodes: AllNodeType[], edges: Edge[]) {
         targetNode.type === "genericNode"
       ) {
         const dataType = targetNode.data.type;
+        const targetOutput = targetNode.data.node!.outputs?.find(
+          (output) => output.name === targetHandleObject.name,
+        );
+        // Match the handle ID generation logic from NodeOutputParameter
+        const selectedType = targetOutput?.selected ?? targetOutput?.types[0];
         const outputTypes =
-          targetNode.data.node!.outputs?.find(
-            (output) => output.name === targetHandleObject.name,
-          )?.types ?? [];
+          targetOutput?.allows_loop && targetOutput?.loop_types
+            ? [selectedType, ...targetOutput.loop_types]
+            : selectedType
+              ? [selectedType]
+              : [];
 
         id = {
           dataType: dataType ?? "",
@@ -350,8 +363,12 @@ export function detectBrokenEdgesEdges(nodes: AllNodeType[], edges: Edge[]) {
           (output) => output.name === name,
         );
         if (output) {
+          // Match the handle ID generation logic from NodeOutputParameter
+          const selectedType = output.selected ?? output.types[0];
           const outputTypes =
-            output!.types.length === 1 ? output!.types : [output!.selected!];
+            output.allows_loop && output.loop_types
+              ? [selectedType, ...output.loop_types]
+              : [selectedType];
 
           const id: sourceHandleType = {
             id: sourceNode.data.id,
@@ -790,6 +807,21 @@ function hasLoop(
         const sourceHandleObject = scapeJSONParse(
           firstEdge?.sourceHandle ?? edge?.sourceHandle ?? "",
         );
+        const targetHandleObject: targetHandleType = scapeJSONParse(
+          e.targetHandle!,
+        );
+
+        // For loop inputs, compare by name and id instead of full stringified comparison
+        // This handles the case where loop inputs have additional loop_types in output_types
+        if (
+          targetHandleObject.output_types &&
+          sourceHandleObject.name === targetHandleObject.name &&
+          sourceHandleObject.id === targetHandleObject.id
+        ) {
+          return true;
+        }
+
+        // Fallback to original comparison for non-loop inputs
         const sourceHandleParsed = scapedJSONStringfy(sourceHandleObject);
         if (sourceHandleParsed === e.targetHandle) {
           return true;
