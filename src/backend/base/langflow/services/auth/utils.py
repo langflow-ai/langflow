@@ -29,23 +29,24 @@ if TYPE_CHECKING:
 
 
 class OAuth2PasswordBearerCookie(OAuth2PasswordBearer):
-    """Custom OAuth2 scheme that checks cookies first, then Authorization header.
+    """Custom OAuth2 scheme that checks Authorization header first, then cookies.
 
-    This allows the application to work with HttpOnly cookies while maintaining
-    backward compatibility with Authorization header-based authentication.
+    This allows the application to work with HttpOnly cookies while supporting
+    explicit Authorization headers for backward compatibility and testing scenarios.
+    If an explicit Authorization header is provided, it takes precedence over cookies.
     """
 
     async def __call__(self, request: Request) -> str | None:
-        # First, try to get token from cookie (for HttpOnly cookie support)
+        # First, check for explicit Authorization header (for backward compatibility and testing)
+        authorization = request.headers.get("Authorization")
+        scheme, param = get_authorization_scheme_param(authorization)
+        if scheme.lower() == "bearer" and param:
+            return param
+
+        # Fall back to cookie (for HttpOnly cookie support in browser-based clients)
         token = request.cookies.get("access_token_lf")
         if token:
             return token
-
-        # Fall back to Authorization header (for backward compatibility)
-        authorization = request.headers.get("Authorization")
-        scheme, param = get_authorization_scheme_param(authorization)
-        if scheme.lower() == "bearer":
-            return param
 
         # If auto_error is True, this would raise an exception
         # Since we set auto_error=False, return None
