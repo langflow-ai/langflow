@@ -40,7 +40,6 @@ export default function TemplateContentComponent({
   const navigate = useCustomNavigate();
   const { folderId } = useParams();
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const folderIdUrl = folderId ?? myCollectionId;
 
@@ -60,10 +59,6 @@ export default function TemplateContentComponent({
     } else {
       const searchResults = fuse.search(searchQuery);
       setFilteredExamples(searchResults.map((result) => result.item));
-    }
-    // Scroll to the top when search query changes
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTop = 0;
     }
   }, [searchQuery, currentTab, examples, fuse]);
 
@@ -87,27 +82,26 @@ export default function TemplateContentComponent({
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div className="flex flex-1 flex-col gap-6 overflow-hidden">
-      <div className="relative mx-3 flex-1 grow-0 py-px">
-        <ForwardedIconComponent
-          name="Search"
-          className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-        />
-        <Input
-          type="search"
-          placeholder="Search..."
-          icon={"SearchIcon"}
-          data-testid="search-input-template"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          ref={searchInputRef}
-          className="w-3/4 rounded-lg bg-background lg:w-2/3"
-        />
+    <>
+      <div className="sticky top-[-24px] z-10 -mx-6 -mt-6 bg-background/80 px-6 pb-4 pt-6 backdrop-blur-sm">
+        <div className="relative py-px">
+          <ForwardedIconComponent
+            name="Search"
+            className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+          />
+          <Input
+            type="search"
+            placeholder="Search..."
+            icon={"SearchIcon"}
+            data-testid="search-input-template"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            ref={searchInputRef}
+            className="w-3/4 rounded-lg bg-background lg:w-2/3"
+          />
+        </div>
       </div>
-      <div
-        ref={scrollContainerRef}
-        className="flex flex-1 flex-col gap-6 overflow-auto scrollbar-hide"
-      >
+      <div className="flex flex-col gap-6">
         {currentTabItem && filteredExamples.length > 0 ? (
           <TemplateCategoryComponent
             examples={filteredExamples}
@@ -128,6 +122,6 @@ export default function TemplateContentComponent({
           </div>
         )}
       </div>
-    </div>
+    </>
   );
 }
