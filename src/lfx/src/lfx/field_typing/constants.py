@@ -6,9 +6,9 @@ from typing import Text, TypeAlias, TypeVar
 
 # Safe imports that don't create circular dependencies
 try:
-    from langchain.agents.agent import AgentExecutor
-    from langchain.chains.base import Chain
-    from langchain.memory.chat_memory import BaseChatMemory
+    from langchain_classic.agents import AgentExecutor
+    from langchain_classic.chains.base import Chain
+    from langchain_classic.memory.chat_memory import BaseChatMemory
     from langchain_core.chat_history import BaseChatMessageHistory
     from langchain_core.document_loaders import BaseLoader
     from langchain_core.documents import Document
@@ -162,9 +162,9 @@ CUSTOM_COMPONENT_SUPPORTED_TYPES = {
 }
 
 # Default import string for component code generation
-LANGCHAIN_IMPORT_STRING = """from langchain.agents.agent import AgentExecutor
-from langchain.chains.base import Chain
-from langchain.memory.chat_memory import BaseChatMemory
+LANGCHAIN_IMPORT_STRING = """from langchain_classic.agents import AgentExecutor
+from langchain_classic.chains.base import Chain
+from langchain_classic.memory.chat_memory import BaseChatMemory
 from langchain_core.chat_history import BaseChatMessageHistory
 from langchain_core.document_loaders import BaseLoader
 from langchain_core.documents import Document
