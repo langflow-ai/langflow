@@ -3,7 +3,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 import ModelProviderModal from "@/modals/modelProviderModal";
-import { cn } from "@/utils/utils";
 import ForwardedIconComponent from "../genericIconComponent";
 
 export const ModelProviderCount = () => {
@@ -24,16 +23,16 @@ export const ModelProviderCount = () => {
       <Button
         unstyled
         size="sm"
-        className="hit-area-hover flex items-center gap-2 rounded-md p-1 text-muted-foreground"
+        className="hit-area-hover flex items-center gap-2 rounded-md p-1 text-muted-foreground group"
         onClick={() => setOpen((cur) => !cur)}
         data-testid="model-provider-count-button"
       >
-        <ForwardedIconComponent name="BrainCog" className="w-5 h-5" />
-        <div className="text-sm">Models</div>
+        <ForwardedIconComponent name="BrainCog" className="w-4 h-4" />
+        <div className="text-xs">Models</div>
         <Badge
           variant="secondaryStatic"
           size="sq"
-          className={cn(" h-6", enabledCount > 10 && "w-6")}
+          className="text-xs group-hover:text-primary group-hover:bg-secondary"
           data-testid="model-provider-count-badge"
         >
           {enabledCount}
