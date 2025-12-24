@@ -31,8 +31,8 @@ BUILD_MODE_CACHE = "Use Cache"
 class PoliciesComponent(LCModelComponent):
     display_name = "Policies"
     description = """Component for building tool protection code from textual business policies and instructions.
-Powered by [ToolGuard](https://github.com/IBM/toolguard)"""
-    documentation: str = "https://github.com/IBM/toolguard"
+Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
+    documentation: str = "https://github.com/AgentToolkit/toolguard "
     icon = "clipboard-check"  # consider also file-text
     name = "policies"
     beta = True
