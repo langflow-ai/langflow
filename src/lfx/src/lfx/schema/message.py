@@ -267,7 +267,22 @@ class Message(Data):
         return cls(prompt=prompt_json)
 
     def format_text(self):
-        prompt_template = PromptTemplate.from_template(self.template)
+        # Escape any non-identifier placeholders so braces from JSON/examples are treated as literals
+        def _escape_non_identifier_placeholders(template: str) -> str:
+            parts: list[str] = []
+            identifier_pattern = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+            for literal_text, field_name, _, _ in StrFormatter().parse(template):
+                parts.append(literal_text)
+                if field_name is None:
+                    continue
+                if identifier_pattern.match(field_name or ""):
+                    parts.append("{" + field_name + "}")
+                else:
+                    parts.append("{{" + (field_name or "") + "}}")
+            return "".join(parts)
+
+        safe_template = _escape_non_identifier_placeholders(self.template)
+        prompt_template = PromptTemplate.from_template(safe_template)
         variables_with_str_values = dict_values_to_string(self.variables)
         formatted_prompt = prompt_template.format(**variables_with_str_values)
         self.text = formatted_prompt
