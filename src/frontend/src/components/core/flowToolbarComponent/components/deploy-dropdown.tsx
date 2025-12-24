@@ -98,7 +98,7 @@ export default function PublishDropdown({
           <Button
             variant="ghost"
             size="md"
-            className="!px-2.5 font-normal"
+            className="!px-2.5 font-normal bg-foreground text-background hover:bg-foreground/90"
             data-testid="publish-button"
           >
             Share
