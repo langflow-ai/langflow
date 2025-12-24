@@ -45,12 +45,12 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
             component.build_embeddings()
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
-    async def test_get_model_returns_all_models(self, mock_get):
+    @patch("lfx.components.ollama.ollama_embeddings.httpx.AsyncClient")
+    async def test_get_model_returns_all_models(self, mock_client_class):
         """Test that get_model returns all models without filtering."""
         component = OllamaEmbeddingsComponent()
-        mock_response = AsyncMock()
-        mock_response.raise_for_status.return_value = None
+        mock_response = MagicMock()
+        mock_response.raise_for_status = MagicMock()
         mock_response.json.return_value = {
             "models": [
                 {"name": "gemma3:4b"},
@@ -60,7 +60,12 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
                 {"name": "custom-embedding-model"},
             ]
         }
-        mock_get.return_value = mock_response
+
+        # Mock the async context manager
+        mock_client_instance = MagicMock()
+        mock_client_instance.get = AsyncMock(return_value=mock_response)
+        mock_client_class.return_value.__aenter__ = AsyncMock(return_value=mock_client_instance)
+        mock_client_class.return_value.__aexit__ = AsyncMock(return_value=None)
 
         base_url = "http://localhost:11434"
         result = await component.get_model(base_url)
@@ -74,14 +79,19 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         assert "custom-embedding-model" in result
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
-    async def test_get_model_handles_empty_models(self, mock_get):
+    @patch("lfx.components.ollama.ollama_embeddings.httpx.AsyncClient")
+    async def test_get_model_handles_empty_models(self, mock_client_class):
         """Test that get_model handles empty model list."""
         component = OllamaEmbeddingsComponent()
-        mock_response = AsyncMock()
-        mock_response.raise_for_status.return_value = None
+        mock_response = MagicMock()
+        mock_response.raise_for_status = MagicMock()
         mock_response.json.return_value = {"models": []}
-        mock_get.return_value = mock_response
+
+        # Mock the async context manager
+        mock_client_instance = MagicMock()
+        mock_client_instance.get = AsyncMock(return_value=mock_response)
+        mock_client_class.return_value.__aenter__ = AsyncMock(return_value=mock_client_instance)
+        mock_client_class.return_value.__aexit__ = AsyncMock(return_value=None)
 
         base_url = "http://localhost:11434"
         result = await component.get_model(base_url)
@@ -89,34 +99,44 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         assert result == []
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
-    async def test_get_model_handles_request_error(self, mock_get):
+    @patch("lfx.components.ollama.ollama_embeddings.httpx.AsyncClient")
+    async def test_get_model_handles_request_error(self, mock_client_class):
         """Test that get_model handles request errors."""
         import httpx
 
         component = OllamaEmbeddingsComponent()
-        mock_get.side_effect = httpx.RequestError("Connection error", request=None)
+
+        # Mock the async context manager to raise an error
+        mock_client_instance = MagicMock()
+        mock_client_instance.get = AsyncMock(side_effect=httpx.RequestError("Connection error", request=None))
+        mock_client_class.return_value.__aenter__ = AsyncMock(return_value=mock_client_instance)
+        mock_client_class.return_value.__aexit__ = AsyncMock(return_value=None)
 
         base_url = "http://localhost:11434"
         with pytest.raises(ValueError, match=re.escape("Could not get model names from Ollama.")):
             await component.get_model(base_url)
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
-    async def test_update_build_config_updates_model_options(self, mock_get):
+    @patch("lfx.components.ollama.ollama_embeddings.httpx.AsyncClient")
+    async def test_update_build_config_updates_model_options(self, mock_client_class):
         """Test that update_build_config updates model options correctly."""
         component = OllamaEmbeddingsComponent()
         component.base_url = "http://localhost:11434"
 
-        mock_response = AsyncMock()
-        mock_response.raise_for_status.return_value = None
+        mock_response = MagicMock()
+        mock_response.raise_for_status = MagicMock()
         mock_response.json.return_value = {
             "models": [
                 {"name": "gemma3:4b"},
                 {"name": "deepseek-r1:8b"},
             ]
         }
-        mock_get.return_value = mock_response
+
+        # Mock the async context manager for both is_valid_ollama_url and get_model
+        mock_client_instance = MagicMock()
+        mock_client_instance.get = AsyncMock(return_value=mock_response)
+        mock_client_class.return_value.__aenter__ = AsyncMock(return_value=mock_client_instance)
+        mock_client_class.return_value.__aexit__ = AsyncMock(return_value=None)
 
         build_config = {
             "model_name": {"options": []},
@@ -129,15 +149,19 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         assert updated_config["model_name"]["options"] == ["gemma3:4b", "deepseek-r1:8b"]
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
-    async def test_update_build_config_invalid_url(self, mock_get):
+    @patch("lfx.components.ollama.ollama_embeddings.httpx.AsyncClient")
+    async def test_update_build_config_invalid_url(self, mock_client_class):
         """Test that update_build_config raises error for invalid URL."""
         import httpx
 
         component = OllamaEmbeddingsComponent()
         component.base_url = "http://invalid-url:11434"
 
-        mock_get.side_effect = httpx.RequestError("Connection failed", request=None)
+        # Mock the async context manager to raise an error for is_valid_ollama_url
+        mock_client_instance = MagicMock()
+        mock_client_instance.get = AsyncMock(side_effect=httpx.RequestError("Connection failed", request=None))
+        mock_client_class.return_value.__aenter__ = AsyncMock(return_value=mock_client_instance)
+        mock_client_class.return_value.__aexit__ = AsyncMock(return_value=None)
 
         build_config = {
             "model_name": {"options": []},
@@ -152,25 +176,35 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
             await component.update_build_config(build_config, field_value, field_name)
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
-    async def test_is_valid_ollama_url(self, mock_get):
+    @patch("lfx.components.ollama.ollama_embeddings.httpx.AsyncClient")
+    async def test_is_valid_ollama_url(self, mock_client_class):
         """Test is_valid_ollama_url returns True for valid URL."""
         component = OllamaEmbeddingsComponent()
-        mock_response = AsyncMock()
+        mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_get.return_value = mock_response
+
+        # Mock the async context manager
+        mock_client_instance = MagicMock()
+        mock_client_instance.get = AsyncMock(return_value=mock_response)
+        mock_client_class.return_value.__aenter__ = AsyncMock(return_value=mock_client_instance)
+        mock_client_class.return_value.__aexit__ = AsyncMock(return_value=None)
 
         result = await component.is_valid_ollama_url("http://localhost:11434")
         assert result is True
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
-    async def test_is_valid_ollama_url_invalid(self, mock_get):
+    @patch("lfx.components.ollama.ollama_embeddings.httpx.AsyncClient")
+    async def test_is_valid_ollama_url_invalid(self, mock_client_class):
         """Test is_valid_ollama_url returns False for invalid URL."""
         import httpx
 
         component = OllamaEmbeddingsComponent()
-        mock_get.side_effect = httpx.RequestError("Connection error", request=None)
+
+        # Mock the async context manager to raise an error
+        mock_client_instance = MagicMock()
+        mock_client_instance.get = AsyncMock(side_effect=httpx.RequestError("Connection error", request=None))
+        mock_client_class.return_value.__aenter__ = AsyncMock(return_value=mock_client_instance)
+        mock_client_class.return_value.__aexit__ = AsyncMock(return_value=None)
 
         result = await component.is_valid_ollama_url("http://invalid-url:11434")
         assert result is False
