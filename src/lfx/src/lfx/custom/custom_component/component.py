@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import asyncio
+import contextlib
 import inspect
 from collections.abc import AsyncIterator, Iterator
 from copy import deepcopy
@@ -178,6 +179,9 @@ class Component(CustomComponent):
         # Final setup
         self._set_output_types(list(self._outputs_map.values()))
         self.set_class_code()
+
+        # Update set() signature for IDE autocomplete
+        self._update_set_signature()
 
     @classmethod
     def get_base_inputs(cls):
@@ -424,6 +428,74 @@ class Component(CustomComponent):
         for key, value in kwargs.items():
             self._process_connection_or_parameters(key, value)
         return self
+
+    def _update_set_signature(self) -> None:
+        """Update the signature of the set() method to reflect available inputs.
+
+        This enables IDE autocomplete and help() to show available input parameters.
+        """
+        from inspect import Parameter, Signature
+
+        params = [Parameter("self", Parameter.POSITIONAL_OR_KEYWORD)]
+        seen_names: set[str] = set()
+
+        for inp in self.inputs:
+            # Skip duplicate parameter names
+            if inp.name in seen_names:
+                continue
+            seen_names.add(inp.name)
+
+            # Determine default value
+            default = inp.value if inp.value is not None else Parameter.empty
+
+            # Determine annotation from input type if possible
+            annotation = Parameter.empty
+            if hasattr(inp, "input_types") and inp.input_types:
+                # Use first input type as hint
+                annotation = inp.input_types[0] if len(inp.input_types) == 1 else str
+
+            params.append(
+                Parameter(
+                    inp.name,
+                    Parameter.KEYWORD_ONLY,
+                    default=default,
+                    annotation=annotation,
+                )
+            )
+
+        with contextlib.suppress(AttributeError, TypeError, ValueError):
+            # Some edge cases may not support this (e.g., invalid param names)
+            self.set.__func__.__signature__ = Signature(params)
+
+    def describe(self) -> str:
+        """Return a human-readable description of the component's inputs and outputs.
+
+        Useful for REPL exploration and debugging.
+
+        Returns:
+            A formatted string describing the component.
+        """
+        lines = [f"{self.__class__.__name__} ({self.display_name})"]
+
+        if self._inputs:
+            lines.append("\nInputs:")
+            for name, inp in self._inputs.items():
+                input_types = getattr(inp, "input_types", [])
+                type_str = ", ".join(input_types) if input_types else "Any"
+                required = "required" if getattr(inp, "required", False) else "optional"
+                value = inp.value
+                value_str = f" = {value!r}" if value is not None else ""
+                lines.append(f"  {name}: {type_str} ({required}){value_str}")
+
+        if self._outputs_map:
+            lines.append("\nOutputs:")
+            for name, output in self._outputs_map.items():
+                types = output.types if output.types else ["Any"]
+                type_str = ", ".join(types)
+                method = output.method or "unknown"
+                lines.append(f"  {name}: {type_str} -> .{method}()")
+
+        return "\n".join(lines)
 
     def list_inputs(self):
         """Returns a list of input names."""
@@ -934,6 +1006,27 @@ class Component(CustomComponent):
             )
         msg = f"Attribute {name} not found in {self.__class__.__name__}"
         raise AttributeError(msg)
+
+    def __dir__(self) -> list[str]:
+        """Return list of attributes including dynamic inputs and outputs.
+
+        This enables IDE autocomplete to show available inputs and outputs.
+        Outputs are shown with their method names (e.g., 'message_response').
+        """
+        # Start with standard attributes
+        base = set(super().__dir__())
+
+        # Add input names
+        if hasattr(self, "_inputs"):
+            base.update(self._inputs.keys())
+
+        # Add output method names for connection (e.g., chat_input.message_response)
+        if hasattr(self, "_outputs_map"):
+            for output in self._outputs_map.values():
+                if output.method:
+                    base.add(output.method)
+
+        return sorted(base)
 
     def set_input_value(self, name: str, value: Any) -> None:
         if name in self._inputs:
