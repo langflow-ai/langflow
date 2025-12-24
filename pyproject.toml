@@ -1,6 +1,6 @@
 [project]
 name = "langflow"
-version = "1.7.0"
+version = "1.7.1"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.14"
 license = "MIT"
@@ -17,7 +17,7 @@ maintainers = [
 ]
 # Define your main dependencies here
 dependencies = [
-    "langflow-base~=0.7.0",
+    "langflow-base~=0.7.1",
     "beautifulsoup4==4.12.3",
     "google-search-results>=2.4.1,<3.0.0",
     "google-api-python-client==2.154.0",
@@ -75,7 +75,7 @@ dependencies = [
     "duckduckgo_search==7.2.1",
     "opensearch-py==2.8.0",
     "langchain-google-genai==2.0.6",
-    "langchain-cohere==0.3.3",
+    "langchain-cohere>=0.3.3,<1.0.0",
     "langchain-huggingface==0.3.1",
     "langchain-anthropic==0.3.14",
     "langchain-astradb>=0.6.1,<1.0.0",
@@ -85,14 +85,14 @@ dependencies = [
     "langchain-pinecone>=0.2.8,<1.0.0",
     "langchain-mistralai==0.2.3",
     "langchain-chroma>=0.2.6,<1.0.0",
-    "langchain-aws==0.2.33",
+    "langchain-aws>=0.2.33,<1.0.0",
     "langchain-unstructured==0.1.5",
     "langchain-milvus==0.1.7",
     "langchain-mongodb==0.7.0",
     "langchain-nvidia-ai-endpoints==0.3.8",
     "langchain-google-calendar-tools==0.0.1",
-    "langchain-google-community==2.0.3",
-    "langchain-elasticsearch==0.3.0",
+    "langchain-google-community>=2.0.3,<3.0.0",
+    "langchain-elasticsearch>=0.3.0,<1.0.0",
     "langchain-ollama==0.3.10",
     "langchain-sambanova==0.1.0",
     "langchain-community>=0.3.21,<1.0.0",
@@ -135,9 +135,11 @@ dependencies = [
     "fastparquet>=2024.11.0,<2025.0.0",
     "traceloop-sdk>=0.43.1,<1.0.0",
     "vlmrun[all]>=0.2.0",
-    "cuga==0.1.10",
-    "agent-lifecycle-toolkit~=0.4.1",
+    "cuga~=0.2.6",
+    "langchain-mcp-adapters>=0.1.14,<0.2.0",  # Pin to avoid incompatibility with langchain-core<1.0.0
+    "agent-lifecycle-toolkit~=0.4.4",
     "astrapy>=2.1.0,<3.0.0",
+    "aioboto3>=15.2.0,<16.0.0"
 ]
 
 

@@ -47,6 +47,101 @@ To avoid the impact of potential breaking changes and test new versions, the Lan
 
     If you made changes to your flows in the isolated installation, you might want to export and import those flows back to your upgraded primary installation so you don't have to repeat the component upgrade process.
 
+## 1.7.x
+
+:::warning Version yanked
+Version 1.7.0 was yanked due to a critical bug. Version 1.7.0 has been replaced with version 1.7.1, which includes a fix for this issue.
+:::
+
+Highlights of this release include the following changes.
+For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases).
+
+### Known issue: Data not accessible when upgrading to version 1.7.0 {#v170-data-path}
+
+A critical issue was identified during the upgrade process to version 1.7.0.
+
+Flows, projects, and global variables are **not** deleted or corrupted. The data still exists, but version 1.7.0 cannot find it due to a path change in how flows are located.
+All Langflow versions upgrading to 1.7.0 are affected.
+
+Don't upgrade to Langflow version 1.7.0.
+Instead, upgrade directly to version 1.7.1, which includes a fix for this bug.
+
+If you installed version 1.7.0 before the fix was released, follow these steps to recover your flows:
+
+1. Revert Langflow to version 1.6.9:
+
+   ```bash
+   uv pip install langflow==1.6.9
+   ```
+
+2. Verify that your flows, projects, and global variables are accessible.
+
+3. Upgrade directly to version 1.7.1, which includes the fix for this issue:
+
+   ```bash
+   uv pip install langflow==1.7.1
+   ```
+
+### New features and enhancements
+
+- Support for streamable HTTP transport for MCP clients and servers
+
+    Langflow now supports [streamable HTTP transport](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports#streamable-http) for both MCP clients and servers.
+    When using Langflow as an [MCP client](/mcp-client), you can connect to MCP servers with streamable HTTP transport.
+    When using Langflow as an [MCP server](/mcp-server), clients can connect using streamable HTTP transport.
+    SSE transport is still supported as a fallback for backwards compatibility.
+
+- Webhook authentication
+
+    Added the `LANGFLOW_WEBHOOK_AUTH_ENABLE` environment variable for authenticating requests to the [`/webhook` endpoint](/api-flows-run#webhook-run-flow). When `LANGFLOW_WEBHOOK_AUTH_ENABLE=TRUE`, webhook endpoints require API key authentication and validate that the authenticated user owns the flow being executed. When `FALSE`, no Langflow API key is required and all requests to the webhook endpoint are treated as being sent by the flow owner. For more information, see [Trigger flows with webhooks](/webhook).
+
+- Configurable API key validation
+
+    Added the `LANGFLOW_API_KEY_SOURCE` environment variable to control how Langflow validates API keys. When set to `db`, Langflow validates API keys against keys stored in the database. When set to `env`, Langflow validates API keys against the `LANGFLOW_API_KEY` environment variable. For more information, see [API keys and authentication](/api-keys-and-authentication#langflow-api-key-source).
+
+- SSRF protection
+
+    Added SSRF (Server-Side Request Forgery) protection to the [**API Request** component](/api-request). HTTP redirects are disabled by default to prevent SSRF bypass attacks. To enable SSRF protection, set `LANGFLOW_SSRF_PROTECTION_ENABLED=TRUE`. Configure allowed hosts with `LANGFLOW_SSRF_ALLOWED_HOSTS`. Flows that relied on automatic redirects will need to enable it manually.
+
+- Email registration in Langflow Desktop
+
+    Langflow Desktop now includes an email registration screen at startup. The registered email address helps track user registrations and understand the user base. For more information, see [Telemetry](/contributing-telemetry#email).
+
+- Changes to read/write file components
+
+    The **Save File** component was renamed to **Write File**, and it can now save to S3 and Google Drive.
+    The **File** component was renamed to **Read File**.
+    Both components support **Tool Mode**.
+
+- New integrations, bundles, and components:
+
+  New filter operator for **DataFrame Operations** component
+
+    The [**DataFrame Operations** component](/dataframe-operations) now includes a `not contains` filter operator.
+    Use it to clean data by extracting only records that _don't_ contain specific values.
+    For example, you can filter out invalid email addresses that don't contain `@`.
+
+  New JSON operations for **Data Operations** component
+
+    The [**Data Operations** component](/data-operations) now includes two operations for advanced JSON data manipulation.
+    The **Path Selection** operation extracts values from nested JSON structures, and the **JQ Expression** operation uses the [`jq`](https://jqlang.org/) query language to perform advanced JSON filtering, projections, and transformations.
+
+  New [**Smart Router** component](/smart-router)
+
+  New [**Mock Data** component](/mock-data)
+
+  New [**Dynamic Create Data** component](/dynamic-create-data)
+
+  New [**ALTK** bundle](/bundles-altk)
+
+  New [**CometAPI** bundle](/bundles-cometapi)
+
+  New [**CUGA** bundle](/bundles-cuga)
+
+  The **LLM Router** component is now called the [**LLM Selector** component](/llm-selector).
+
+  The [**Web Search** component](/web-search) now consolidates Web Search, News Search, and RSS Reader into a single component with tabs for different search modes. You can search the web using DuckDuckGo, search Google News, or read RSS feeds—all from one component. The separate **News Search** and **RSS Reader** components have been removed.
+
 ## 1.6.0
 
 Highlights of this release include the following changes.
@@ -127,11 +222,11 @@ This is expected behavior.
 
 - Advanced document parsing with built-in Docling support
 
-  The **File** component supports advanced parsing with the Docling library.
+  The **Read File** component supports advanced parsing with the Docling library.
 
-  To make it easier to use the [**Docling** components](/bundles-docling) and the **File** component's new advanced parsing feature, the Docling dependency is now included with Langflow for all operating systems except macOS Intel (x86_64).
+  To make it easier to use the [**Docling** components](/bundles-docling) and the **Read File** component's new advanced parsing feature, the Docling dependency is now included with Langflow for all operating systems except macOS Intel (x86_64).
 
-  For more information, see [Advanced parsing](/components-data#advanced-parsing).
+  For more information, see [Advanced parsing](/read-file#advanced-parsing).
 
 - Reorganized component menus and visual editor controls
 
@@ -200,9 +295,8 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
     The [**MCP Tools** component](/mcp-client) is now under the **Agents** category.
 
-    Tools that performed the same function were combined into single components that support multiple providers, such as the [**Web Search** component](/components-data#web-search) and the [**News Search** component](/components-data#news-search).
+    Tools that performed the same function were combined into single components that support multiple providers, such as the [**Web Search** component](/web-search) and the **News Search** component.
 
-    For more information, see [Tools components](/components-tools).
 
 - Stability improvements
 

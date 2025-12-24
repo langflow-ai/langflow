@@ -23,6 +23,31 @@ from lfx.schema.message import Message
 from lfx.services.deps import get_settings_service, get_storage_service, session_scope
 
 
+def resolve_mcp_config(
+    server_name: str,  # noqa: ARG001
+    server_config_from_value: dict | None,
+    server_config_from_db: dict | None,
+) -> dict | None:
+    """Resolve MCP server config with proper precedence.
+
+    Resolves the configuration for an MCP server with the following precedence:
+    1. Database config (takes priority) - ensures edits are reflected
+    2. Config from value/tweaks (fallback) - allows REST API to provide config for new servers
+
+    Args:
+        server_name: Name of the MCP server
+        server_config_from_value: Config provided via value/tweaks (optional)
+        server_config_from_db: Config from database (optional)
+
+    Returns:
+        Final config to use (DB takes priority, falls back to value)
+        Returns None if no config found in either location
+    """
+    if server_config_from_db:
+        return server_config_from_db
+    return server_config_from_value
+
+
 class MCPToolsComponent(ComponentWithCache):
     schema_inputs: list = []
     tools: list[StructuredTool] = []
@@ -66,7 +91,7 @@ class MCPToolsComponent(ComponentWithCache):
 
     display_name = "MCP Tools"
     description = "Connect to an MCP server to use its tools."
-    documentation: str = "https://docs.langflow.org/mcp-client"
+    documentation: str = "https://docs.langflow.org/mcp-tools"
     icon = "Mcp"
     name = "MCPTools"
 
@@ -189,6 +214,8 @@ class MCPToolsComponent(ComponentWithCache):
                 return self.tools, {"name": server_name, "config": server_config_from_value}
 
         try:
+            # Try to fetch from database first to ensure we have the latest config
+            # This ensures database updates (like editing a server) take effect
             try:
                 from langflow.api.v2.mcp import get_server
                 from langflow.services.database.models.user.crud import get_user_by_id
@@ -198,6 +225,8 @@ class MCPToolsComponent(ComponentWithCache):
                     "This feature requires the full Langflow installation."
                 )
                 raise ImportError(msg) from e
+
+            server_config_from_db = None
             async with session_scope() as db:
                 if not self.user_id:
                     msg = "User ID is required for fetching MCP tools."
@@ -205,7 +234,7 @@ class MCPToolsComponent(ComponentWithCache):
                 current_user = await get_user_by_id(db, self.user_id)
 
                 # Try to get server config from DB/API
-                server_config = await get_server(
+                server_config_from_db = await get_server(
                     server_name,
                     current_user,
                     db,
@@ -213,9 +242,12 @@ class MCPToolsComponent(ComponentWithCache):
                     settings_service=get_settings_service(),
                 )
 
-            # If get_server returns empty but we have a config, use it
-            if not server_config and server_config_from_value:
-                server_config = server_config_from_value
+            # Resolve config with proper precedence: DB takes priority, falls back to value
+            server_config = resolve_mcp_config(
+                server_name=server_name,
+                server_config_from_value=server_config_from_value,
+                server_config_from_db=server_config_from_db,
+            )
 
             if not server_config:
                 self.tools = []
@@ -268,7 +300,10 @@ class MCPToolsComponent(ComponentWithCache):
         try:
             if field_name == "tool":
                 try:
-                    if len(self.tools) == 0:
+                    # Always refresh tools when cache is disabled, or when tools list is empty
+                    # This ensures database edits are reflected immediately when cache is disabled
+                    use_cache = getattr(self, "use_cache", False)
+                    if len(self.tools) == 0 or not use_cache:
                         try:
                             self.tools, build_config["mcp_server"]["value"] = await self.update_tool_list()
                             build_config["tool"]["options"] = [tool.name for tool in self.tools]
@@ -360,6 +395,14 @@ class MCPToolsComponent(ComponentWithCache):
                         return build_config
                 safe_cache_set(self._shared_component_cache, "last_selected_server", current_server_name)
 
+                # When cache is disabled, clear any cached data for this server
+                # This ensures we always fetch fresh data from the database
+                if not use_cache and current_server_name:
+                    servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
+                    if isinstance(servers_cache, dict) and current_server_name in servers_cache:
+                        servers_cache.pop(current_server_name)
+                        safe_cache_set(self._shared_component_cache, "servers", servers_cache)
+
                 # Check if tools are already cached for this server before clearing
                 cached_tools = None
                 if current_server_name and use_cache:
@@ -378,9 +421,10 @@ class MCPToolsComponent(ComponentWithCache):
                                 await logger.awarning(msg)
                                 cached_tools = None
 
-                # Only clear tools if we don't have cached tools for the current server
-                if not cached_tools:
-                    self.tools = []  # Clear previous tools only if no cache
+                # Clear tools when cache is disabled OR when we don't have cached tools
+                # This ensures fresh tools are fetched after database edits
+                if not cached_tools or not use_cache:
+                    self.tools = []  # Clear previous tools to force refresh
 
                 # Clear previous tool inputs if:
                 # 1. Server actually changed
@@ -565,7 +609,12 @@ class MCPToolsComponent(ComponentWithCache):
         if item_dict.get("type") == "text":
             text = item_dict.get("text")
             try:
-                return json.loads(text)
+                parsed = json.loads(text)
+                # Ensure we always return a dictionary for DataFrame compatibility
+                if isinstance(parsed, dict):
+                    return parsed
+                # Wrap non-dict parsed values in a dictionary
+                return {"text": text, "parsed_value": parsed, "type": "text"}  # noqa: TRY300
             except json.JSONDecodeError:
                 return item_dict
         return item_dict

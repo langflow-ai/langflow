@@ -1,6 +1,7 @@
 import json
 from collections.abc import AsyncIterator, Iterator
 from pathlib import Path
+from typing import Any
 
 import orjson
 import pandas as pd
@@ -9,16 +10,25 @@ from fastapi.encoders import jsonable_encoder
 
 from lfx.custom import Component
 from lfx.inputs import SortableListInput
-from lfx.io import DropdownInput, HandleInput, SecretStrInput, StrInput
+from lfx.io import BoolInput, DropdownInput, HandleInput, SecretStrInput, StrInput
 from lfx.schema import Data, DataFrame, Message
 from lfx.services.deps import get_settings_service, get_storage_service, session_scope
 from lfx.template.field.base import Output
+from lfx.utils.validate_cloud import is_astra_cloud_environment
+
+
+def _get_storage_location_options():
+    """Get storage location options, filtering out Local if in Astra cloud environment."""
+    all_options = [{"name": "AWS", "icon": "Amazon"}, {"name": "Google Drive", "icon": "google"}]
+    if is_astra_cloud_environment():
+        return all_options
+    return [{"name": "Local", "icon": "hard-drive"}, *all_options]
 
 
 class SaveToFileComponent(Component):
     display_name = "Write File"
     description = "Save data to local file, AWS S3, or Google Drive in the selected format."
-    documentation: str = "https://docs.langflow.org/components-processing#save-file"
+    documentation: str = "https://docs.langflow.org/write-file"
     icon = "file-text"
     name = "SaveToFile"
 
@@ -49,11 +59,7 @@ class SaveToFileComponent(Component):
             display_name="Storage Location",
             placeholder="Select Location",
             info="Choose where to save the file.",
-            options=[
-                {"name": "Local", "icon": "hard-drive"},
-                {"name": "AWS", "icon": "Amazon"},
-                {"name": "Google Drive", "icon": "google"},
-            ],
+            options=_get_storage_location_options(),
             real_time_refresh=True,
             limit=1,
         ),
@@ -73,6 +79,16 @@ class SaveToFileComponent(Component):
             required=True,
             show=False,
             tool_mode=True,
+        ),
+        BoolInput(
+            name="append_mode",
+            display_name="Append",
+            info=(
+                "Append to file if it exists (only for Local storage with plain text formats). "
+                "Not supported for cloud storage (AWS/Google Drive)."
+            ),
+            value=False,
+            show=False,
         ),
         # Format inputs (dynamic based on storage location)
         DropdownInput(
@@ -106,6 +122,7 @@ class SaveToFileComponent(Component):
             info="AWS Access key ID.",
             show=False,
             advanced=True,
+            required=True,
         ),
         SecretStrInput(
             name="aws_secret_access_key",
@@ -113,6 +130,7 @@ class SaveToFileComponent(Component):
             info="AWS Secret Key.",
             show=False,
             advanced=True,
+            required=True,
         ),
         StrInput(
             name="bucket_name",
@@ -120,6 +138,7 @@ class SaveToFileComponent(Component):
             info="Enter the name of the S3 bucket.",
             show=False,
             advanced=True,
+            required=True,
         ),
         StrInput(
             name="aws_region",
@@ -142,6 +161,7 @@ class SaveToFileComponent(Component):
             info="Your Google Cloud Platform service account JSON key as a secret string (complete JSON content).",
             show=False,
             advanced=True,
+            required=True,
         ),
         StrInput(
             name="folder_id",
@@ -150,6 +170,7 @@ class SaveToFileComponent(Component):
                 "The Google Drive folder ID where the file will be uploaded. "
                 "The folder must be shared with the service account email."
             ),
+            required=True,
             show=False,
             advanced=True,
         ),
@@ -159,6 +180,12 @@ class SaveToFileComponent(Component):
 
     def update_build_config(self, build_config, field_value, field_name=None):
         """Update build configuration to show/hide fields based on storage location selection."""
+        # Update options dynamically based on cloud environment
+        # This ensures options are refreshed when build_config is updated
+        if "storage_location" in build_config:
+            updated_options = _get_storage_location_options()
+            build_config["storage_location"]["options"] = updated_options
+
         if field_name != "storage_location":
             return build_config
 
@@ -168,6 +195,7 @@ class SaveToFileComponent(Component):
         # Hide all dynamic fields first
         dynamic_fields = [
             "file_name",  # Common fields (input is always visible)
+            "append_mode",
             "local_format",
             "aws_format",
             "gdrive_format",
@@ -188,9 +216,13 @@ class SaveToFileComponent(Component):
         if len(selected) == 1:
             location = selected[0]
 
-            # Show file_name when any storage location is selected (input is always visible)
+            # Show file_name when any storage location is selected
             if "file_name" in build_config:
                 build_config["file_name"]["show"] = True
+
+            # Show append_mode only for Local storage (not supported for cloud storage)
+            if "append_mode" in build_config:
+                build_config["append_mode"]["show"] = location == "Local"
 
             if location == "Local":
                 if "local_format" in build_config:
@@ -208,12 +240,14 @@ class SaveToFileComponent(Component):
                 for f_name in aws_fields:
                     if f_name in build_config:
                         build_config[f_name]["show"] = True
+                        build_config[f_name]["advanced"] = False
 
             elif location == "Google Drive":
                 gdrive_fields = ["gdrive_format", "service_account_key", "folder_id"]
                 for f_name in gdrive_fields:
                     if f_name in build_config:
                         build_config[f_name]["show"] = True
+                        build_config[f_name]["advanced"] = False
 
         return build_config
 
@@ -231,6 +265,11 @@ class SaveToFileComponent(Component):
         storage_location = self._get_selected_storage_location()
         if not storage_location:
             msg = "Storage location must be selected."
+            raise ValueError(msg)
+
+        # Check if Local storage is disabled in cloud environment
+        if storage_location == "Local" and is_astra_cloud_environment():
+            msg = "Local storage is not available in cloud environment. Please use AWS or Google Drive."
             raise ValueError(msg)
 
         # Route to appropriate save method based on storage location
@@ -274,6 +313,11 @@ class SaveToFileComponent(Component):
             return Path(f"{path}.xlsx").expanduser() if file_extension not in ["xlsx", "xls"] else path
         return Path(f"{path}.{fmt}").expanduser() if file_extension != fmt else path
 
+    def _is_plain_text_format(self, fmt: str) -> bool:
+        """Check if a file format is plain text (supports appending)."""
+        plain_text_formats = ["txt", "json", "markdown", "md", "csv", "xml", "html", "yaml", "log", "tsv", "jsonl"]
+        return fmt.lower() in plain_text_formats
+
     async def _upload_file(self, file_path: Path) -> None:
         """Upload the saved file using the upload_user_file service."""
         from langflow.api.v2.files import upload_user_file
@@ -284,7 +328,8 @@ class SaveToFileComponent(Component):
             msg = f"File not found: {file_path}"
             raise FileNotFoundError(msg)
 
-        # Upload the file
+        # Upload the file - always use append=False because the local file already contains
+        # the correct content (either new or appended locally)
         with file_path.open("rb") as f:
             async with session_scope() as db:
                 if not self.user_id:
@@ -298,39 +343,109 @@ class SaveToFileComponent(Component):
                     current_user=current_user,
                     storage_service=get_storage_service(),
                     settings_service=get_settings_service(),
+                    append=False,
                 )
 
     def _save_dataframe(self, dataframe: DataFrame, path: Path, fmt: str) -> str:
         """Save a DataFrame to the specified file format."""
+        append_mode = getattr(self, "append_mode", False)
+        should_append = append_mode and path.exists() and self._is_plain_text_format(fmt)
+
         if fmt == "csv":
-            dataframe.to_csv(path, index=False)
+            dataframe.to_csv(path, index=False, mode="a" if should_append else "w", header=not should_append)
         elif fmt == "excel":
             dataframe.to_excel(path, index=False, engine="openpyxl")
         elif fmt == "json":
-            dataframe.to_json(path, orient="records", indent=2)
+            if should_append:
+                # Read and parse existing JSON
+                existing_data = []
+                try:
+                    existing_content = path.read_text(encoding="utf-8").strip()
+                    if existing_content:
+                        parsed = json.loads(existing_content)
+                        # Handle case where existing content is a single object
+                        if isinstance(parsed, dict):
+                            existing_data = [parsed]
+                        elif isinstance(parsed, list):
+                            existing_data = parsed
+                except (json.JSONDecodeError, FileNotFoundError):
+                    # Treat parse errors or missing file as empty array
+                    existing_data = []
+
+                # Append new data
+                new_records = json.loads(dataframe.to_json(orient="records"))
+                existing_data.extend(new_records)
+
+                # Write back as a single JSON array
+                path.write_text(json.dumps(existing_data, indent=2), encoding="utf-8")
+            else:
+                dataframe.to_json(path, orient="records", indent=2)
         elif fmt == "markdown":
-            path.write_text(dataframe.to_markdown(index=False), encoding="utf-8")
+            content = dataframe.to_markdown(index=False)
+            if should_append:
+                path.write_text(path.read_text(encoding="utf-8") + "\n\n" + content, encoding="utf-8")
+            else:
+                path.write_text(content, encoding="utf-8")
         else:
             msg = f"Unsupported DataFrame format: {fmt}"
             raise ValueError(msg)
-        return f"DataFrame saved successfully as '{path}'"
+        action = "appended to" if should_append else "saved successfully as"
+        return f"DataFrame {action} '{path}'"
 
     def _save_data(self, data: Data, path: Path, fmt: str) -> str:
         """Save a Data object to the specified file format."""
+        append_mode = getattr(self, "append_mode", False)
+        should_append = append_mode and path.exists() and self._is_plain_text_format(fmt)
+
         if fmt == "csv":
-            pd.DataFrame(data.data).to_csv(path, index=False)
+            pd.DataFrame(data.data).to_csv(
+                path,
+                index=False,
+                mode="a" if should_append else "w",
+                header=not should_append,
+            )
         elif fmt == "excel":
             pd.DataFrame(data.data).to_excel(path, index=False, engine="openpyxl")
         elif fmt == "json":
-            path.write_text(
-                orjson.dumps(jsonable_encoder(data.data), option=orjson.OPT_INDENT_2).decode("utf-8"), encoding="utf-8"
-            )
+            new_data = jsonable_encoder(data.data)
+            if should_append:
+                # Read and parse existing JSON
+                existing_data = []
+                try:
+                    existing_content = path.read_text(encoding="utf-8").strip()
+                    if existing_content:
+                        parsed = json.loads(existing_content)
+                        # Handle case where existing content is a single object
+                        if isinstance(parsed, dict):
+                            existing_data = [parsed]
+                        elif isinstance(parsed, list):
+                            existing_data = parsed
+                except (json.JSONDecodeError, FileNotFoundError):
+                    # Treat parse errors or missing file as empty array
+                    existing_data = []
+
+                # Append new data
+                if isinstance(new_data, list):
+                    existing_data.extend(new_data)
+                else:
+                    existing_data.append(new_data)
+
+                # Write back as a single JSON array
+                path.write_text(json.dumps(existing_data, indent=2), encoding="utf-8")
+            else:
+                content = orjson.dumps(new_data, option=orjson.OPT_INDENT_2).decode("utf-8")
+                path.write_text(content, encoding="utf-8")
         elif fmt == "markdown":
-            path.write_text(pd.DataFrame(data.data).to_markdown(index=False), encoding="utf-8")
+            content = pd.DataFrame(data.data).to_markdown(index=False)
+            if should_append:
+                path.write_text(path.read_text(encoding="utf-8") + "\n\n" + content, encoding="utf-8")
+            else:
+                path.write_text(content, encoding="utf-8")
         else:
             msg = f"Unsupported Data format: {fmt}"
             raise ValueError(msg)
-        return f"Data saved successfully as '{path}'"
+        action = "appended to" if should_append else "saved successfully as"
+        return f"Data {action} '{path}'"
 
     async def _save_message(self, message: Message, path: Path, fmt: str) -> str:
         """Save a Message to the specified file format, handling async iterators."""
@@ -346,16 +461,50 @@ class SaveToFileComponent(Component):
         else:
             content = str(message.text)
 
+        append_mode = getattr(self, "append_mode", False)
+        should_append = append_mode and path.exists() and self._is_plain_text_format(fmt)
+
         if fmt == "txt":
-            path.write_text(content, encoding="utf-8")
+            if should_append:
+                path.write_text(path.read_text(encoding="utf-8") + "\n" + content, encoding="utf-8")
+            else:
+                path.write_text(content, encoding="utf-8")
         elif fmt == "json":
-            path.write_text(json.dumps({"message": content}, indent=2), encoding="utf-8")
+            new_message = {"message": content}
+            if should_append:
+                # Read and parse existing JSON
+                existing_data = []
+                try:
+                    existing_content = path.read_text(encoding="utf-8").strip()
+                    if existing_content:
+                        parsed = json.loads(existing_content)
+                        # Handle case where existing content is a single object
+                        if isinstance(parsed, dict):
+                            existing_data = [parsed]
+                        elif isinstance(parsed, list):
+                            existing_data = parsed
+                except (json.JSONDecodeError, FileNotFoundError):
+                    # Treat parse errors or missing file as empty array
+                    existing_data = []
+
+                # Append new message
+                existing_data.append(new_message)
+
+                # Write back as a single JSON array
+                path.write_text(json.dumps(existing_data, indent=2), encoding="utf-8")
+            else:
+                path.write_text(json.dumps(new_message, indent=2), encoding="utf-8")
         elif fmt == "markdown":
-            path.write_text(f"**Message:**\n\n{content}", encoding="utf-8")
+            md_content = f"**Message:**\n\n{content}"
+            if should_append:
+                path.write_text(path.read_text(encoding="utf-8") + "\n\n" + md_content, encoding="utf-8")
+            else:
+                path.write_text(md_content, encoding="utf-8")
         else:
             msg = f"Unsupported Message format: {fmt}"
             raise ValueError(msg)
-        return f"Message saved successfully as '{path}'"
+        action = "appended to" if should_append else "saved successfully as"
+        return f"Message {action} '{path}'"
 
     def _get_selected_storage_location(self) -> str:
         """Get the selected storage location from the SortableListInput."""
@@ -414,32 +563,67 @@ class SaveToFileComponent(Component):
 
     async def _save_to_aws(self) -> Message:
         """Save file to AWS S3 using S3 functionality."""
+        import os
+
+        import boto3
+
+        from lfx.base.data.cloud_storage_utils import create_s3_client, validate_aws_credentials
+
+        # Get AWS credentials from component inputs or fall back to environment variables
+        aws_access_key_id = getattr(self, "aws_access_key_id", None)
+        if aws_access_key_id and hasattr(aws_access_key_id, "get_secret_value"):
+            aws_access_key_id = aws_access_key_id.get_secret_value()
+        if not aws_access_key_id:
+            aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
+
+        aws_secret_access_key = getattr(self, "aws_secret_access_key", None)
+        if aws_secret_access_key and hasattr(aws_secret_access_key, "get_secret_value"):
+            aws_secret_access_key = aws_secret_access_key.get_secret_value()
+        if not aws_secret_access_key:
+            aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+
+        bucket_name = getattr(self, "bucket_name", None)
+        if not bucket_name:
+            # Try to get from storage service settings
+            settings = get_settings_service().settings
+            bucket_name = settings.object_storage_bucket_name
+
         # Validate AWS credentials
-        if not getattr(self, "aws_access_key_id", None):
-            msg = "AWS Access Key ID is required for S3 storage"
+        if not aws_access_key_id:
+            msg = (
+                "AWS Access Key ID is required for S3 storage. Provide it as a component input "
+                "or set AWS_ACCESS_KEY_ID environment variable."
+            )
             raise ValueError(msg)
-        if not getattr(self, "aws_secret_access_key", None):
-            msg = "AWS Secret Key is required for S3 storage"
+        if not aws_secret_access_key:
+            msg = (
+                "AWS Secret Key is required for S3 storage. Provide it as a component input "
+                "or set AWS_SECRET_ACCESS_KEY environment variable."
+            )
             raise ValueError(msg)
-        if not getattr(self, "bucket_name", None):
-            msg = "S3 Bucket Name is required for S3 storage"
+        if not bucket_name:
+            msg = (
+                "S3 Bucket Name is required for S3 storage. Provide it as a component input "
+                "or set LANGFLOW_OBJECT_STORAGE_BUCKET_NAME environment variable."
+            )
             raise ValueError(msg)
 
-        # Use S3 upload functionality
-        try:
-            import boto3
-        except ImportError as e:
-            msg = "boto3 is not installed. Please install it using `uv pip install boto3`."
-            raise ImportError(msg) from e
+        # Validate AWS credentials
+        validate_aws_credentials(self)
 
         # Create S3 client
-        client_config = {
-            "aws_access_key_id": self.aws_access_key_id,
-            "aws_secret_access_key": self.aws_secret_access_key,
+        s3_client = create_s3_client(self)
+        client_config: dict[str, Any] = {
+            "aws_access_key_id": str(aws_access_key_id),
+            "aws_secret_access_key": str(aws_secret_access_key),
         }
 
-        if hasattr(self, "aws_region") and self.aws_region:
-            client_config["region_name"] = self.aws_region
+        # Get region from component input, environment variable, or settings
+        aws_region = getattr(self, "aws_region", None)
+        if not aws_region:
+            aws_region = os.getenv("AWS_DEFAULT_REGION") or os.getenv("AWS_REGION")
+        if aws_region:
+            client_config["region_name"] = str(aws_region)
 
         s3_client = boto3.client("s3", **client_config)
 
@@ -455,14 +639,16 @@ class SaveToFileComponent(Component):
         # Create temporary file
         import tempfile
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=f".{file_format}", delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", suffix=f".{file_format}", delete=False
+        ) as temp_file:
             temp_file.write(content)
             temp_file_path = temp_file.name
 
         try:
             # Upload to S3
-            s3_client.upload_file(temp_file_path, self.bucket_name, file_path)
-            s3_url = f"s3://{self.bucket_name}/{file_path}"
+            s3_client.upload_file(temp_file_path, bucket_name, file_path)
+            s3_url = f"s3://{bucket_name}/{file_path}"
             return Message(text=f"File successfully uploaded to {s3_url}")
         finally:
             # Clean up temp file
@@ -471,6 +657,12 @@ class SaveToFileComponent(Component):
 
     async def _save_to_google_drive(self) -> Message:
         """Save file to Google Drive using Google Drive functionality."""
+        import tempfile
+
+        from googleapiclient.http import MediaFileUpload
+
+        from lfx.base.data.cloud_storage_utils import create_google_drive_service
+
         # Validate Google Drive credentials
         if not getattr(self, "service_account_key", None):
             msg = "GCP Credentials Secret Key is required for Google Drive storage"
@@ -479,30 +671,10 @@ class SaveToFileComponent(Component):
             msg = "Google Drive Folder ID is required for Google Drive storage"
             raise ValueError(msg)
 
-        # Use Google Drive upload functionality
-        try:
-            import json
-            import tempfile
-
-            from google.oauth2 import service_account
-            from googleapiclient.discovery import build
-            from googleapiclient.http import MediaFileUpload
-        except ImportError as e:
-            msg = "Google API client libraries are not installed. Please install them."
-            raise ImportError(msg) from e
-
-        # Parse credentials
-        try:
-            credentials_dict = json.loads(self.service_account_key)
-        except json.JSONDecodeError as e:
-            msg = f"Invalid JSON in service account key: {e!s}"
-            raise ValueError(msg) from e
-
-        # Create Google Drive service
-        credentials = service_account.Credentials.from_service_account_info(
-            credentials_dict, scopes=["https://www.googleapis.com/auth/drive.file"]
+        # Create Google Drive service with full drive scope (needed for folder operations)
+        drive_service, credentials = create_google_drive_service(
+            self.service_account_key, scopes=["https://www.googleapis.com/auth/drive"], return_credentials=True
         )
-        drive_service = build("drive", "v3", credentials=credentials)
 
         # Extract content and format
         content = self._extract_content_for_upload()
@@ -514,16 +686,34 @@ class SaveToFileComponent(Component):
 
         # Create temporary file
         file_path = f"{self.file_name}.{file_format}"
-        with tempfile.NamedTemporaryFile(mode="w", suffix=f".{file_format}", delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            suffix=f".{file_format}",
+            delete=False,
+        ) as temp_file:
             temp_file.write(content)
             temp_file_path = temp_file.name
 
         try:
             # Upload to Google Drive
+            # Note: We skip explicit folder verification since it requires broader permissions.
+            # If the folder doesn't exist or isn't accessible, the create() call will fail with a clear error.
             file_metadata = {"name": file_path, "parents": [self.folder_id]}
             media = MediaFileUpload(temp_file_path, resumable=True)
 
-            uploaded_file = drive_service.files().create(body=file_metadata, media_body=media, fields="id").execute()
+            try:
+                uploaded_file = (
+                    drive_service.files().create(body=file_metadata, media_body=media, fields="id").execute()
+                )
+            except Exception as e:
+                msg = (
+                    f"Unable to upload file to Google Drive folder '{self.folder_id}'. "
+                    f"Error: {e!s}. "
+                    "Please ensure: 1) The folder ID is correct, 2) The folder exists, "
+                    "3) The service account has been granted access to this folder."
+                )
+                raise ValueError(msg) from e
 
             file_id = uploaded_file.get("id")
             file_url = f"https://drive.google.com/file/d/{file_id}/view"

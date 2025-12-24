@@ -11,7 +11,7 @@ from lfx.schema.data import Data
 class OlivyaComponent(Component):
     display_name = "Place Call"
     description = "A component to create an outbound call request from Olivya's platform."
-    documentation: str = "http://docs.langflow.org/components/olivya"
+    documentation: str = "https://docs.olivya.io"
     icon = "Olivya"
     name = "OlivyaComponent"
 

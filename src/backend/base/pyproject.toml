@@ -1,6 +1,6 @@
 [project]
 name = "langflow-base"
-version = "0.7.0"
+version = "0.7.1"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.14"
 license = "MIT"
@@ -17,20 +17,20 @@ maintainers = [
 ]
 
 dependencies = [
-    "lfx~=0.2.0",
+    "lfx~=0.2.1",
     "fastapi>=0.115.2,<1.0.0",
     "httpx[http2]>=0.27,<1.0.0",
     "aiofile>=3.9.0,<4.0.0",
     "uvicorn>=0.30.0,<1.0.0",
     "gunicorn>=22.0.0,<23.0.0",
     "langchain~=0.3.21",
-    "langchain-community~=0.3.20",
-    "langchain-core~=0.3.45",
+    "langchain-community>=0.3.0,<1.0.0",
+    "langchain-core>=0.3.45,<1.0.0",
     "langchainhub~=0.1.15",
     "loguru>=0.7.1,<1.0.0",
     "structlog>=25.4.0,<26.0.0",
     "rich>=13.7.0,<14.0.0",
-    "langchain-experimental>=0.3.4,<1.0.0",
+    "langchain-experimental>=0.3.0,<1.0.0",
     "sqlmodel==0.0.22",
     "pydantic~=2.11.0",
     "pydantic-settings>=2.2.0,<3.0.0",
@@ -66,7 +66,8 @@ dependencies = [
     "opentelemetry-instrumentation-fastapi>=0.46b0,<1.0.0",
     "prometheus-client>=0.20.0,<1.0.0",
     "aiofiles>=24.1.0,<25.0.0",
-    "setuptools>=78.1.0,<79.0.0",
+    "pip>=25.3,<26.0.0",
+    "setuptools>=78.1.1,<79.0.0",
     "nanoid>=2.0.0,<3.0.0",
     "filelock>=3.15.4,<4.0.0",
     "grandalf>=0.8.0,<1.0.0",

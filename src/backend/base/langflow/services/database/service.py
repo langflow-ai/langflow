@@ -15,13 +15,14 @@ import sqlalchemy as sa
 from alembic import command, util
 from alembic.config import Config
 from lfx.log.logger import logger
-from sqlalchemy import event, exc, inspect
+from lfx.services.deps import session_scope
+from sqlalchemy import event, inspect
 from sqlalchemy.dialects import sqlite as dialect_sqlite
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import OperationalError
-from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 from sqlmodel import SQLModel, select, text
-from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
 from tenacity import retry, stop_after_attempt, wait_fixed
 
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
@@ -63,6 +64,15 @@ class DatabaseService(Service):
         else:
             self.engine = self._create_engine()
 
+        # Create async session maker for efficient session creation
+        # This is the recommended SQLAlchemy 2.0+ pattern
+        # IMPORTANT: Must use SQLModel's AsyncSession (not SQLAlchemy's) for exec() method
+        self.async_session_maker = async_sessionmaker(
+            self.engine,
+            class_=SQLModelAsyncSession,  # SQLModel's AsyncSession with exec() support
+            expire_on_commit=False,
+        )
+
         # Check if Alembic should log to stdout or a file.
         # If file, check if the provided path is absolute, cross-platform.
         alembic_log_file = self.settings_service.settings.alembic_log_file
@@ -87,6 +97,12 @@ class DatabaseService(Service):
             self.engine = self._create_engine_with_retry()
         else:
             self.engine = self._create_engine()
+
+        self.async_session_maker = async_sessionmaker(
+            self.engine,
+            class_=SQLModelAsyncSession,
+            expire_on_commit=False,
+        )
 
     def _sanitize_database_url(self):
         """Create the engine for the database."""
@@ -192,18 +208,19 @@ class DatabaseService(Service):
                     cursor.close()
 
     @asynccontextmanager
-    async def with_session(self):
+    async def _with_session(self):
+        """Internal method to create a session. DO NOT USE DIRECTLY.
+
+        Use session_scope() for write operations or session_scope_readonly() for read operations.
+        This method does not handle commits - it only provides a raw session.
+        """
         if self.settings_service.settings.use_noop_database:
             yield NoopSession()
         else:
-            async with AsyncSession(self.engine, expire_on_commit=False) as session:
-                # Start of Selection
-                try:
-                    yield session
-                except exc.SQLAlchemyError as db_exc:
-                    await logger.aerror(f"Database error during session scope: {db_exc}")
-                    await session.rollback()
-                    raise
+            # Use async_session_maker - the recommended SQLAlchemy 2.0+ pattern
+            # Provides efficient session creation and proper connection pooling
+            async with self.async_session_maker() as session:
+                yield session
 
     async def assign_orphaned_flows_to_superuser(self) -> None:
         """Assign orphaned flows to the default superuser when auto login is enabled."""
@@ -212,7 +229,7 @@ class DatabaseService(Service):
         if not settings_service.auth_settings.AUTO_LOGIN:
             return
 
-        async with self.with_session() as session:
+        async with session_scope() as session:
             # Fetch orphaned flows
             stmt = (
                 select(models.Flow)
@@ -315,7 +332,7 @@ class DatabaseService(Service):
         return True
 
     async def check_schema_health(self) -> None:
-        async with self.with_session() as session, session.bind.connect() as conn:
+        async with self.engine.begin() as conn:
             await conn.run_sync(self._check_schema_health)
 
     @staticmethod
@@ -377,7 +394,7 @@ class DatabaseService(Service):
 
     async def run_migrations(self, *, fix=False) -> None:
         should_initialize_alembic = False
-        async with self.with_session() as session:
+        async with session_scope() as session:
             # If the table does not exist it throws an error
             # so we need to catch it
             try:
@@ -411,7 +428,8 @@ class DatabaseService(Service):
         sql_models = [
             model for model in models.__dict__.values() if isinstance(model, type) and issubclass(model, SQLModel)
         ]
-        async with self.with_session() as session, session.bind.connect() as conn:
+        # Use engine.begin() for proper async connection management with NullPool
+        async with self.engine.begin() as conn:
             return [
                 TableResults(sql_model.__tablename__, await conn.run_sync(self.check_table, sql_model))
                 for sql_model in sql_models
@@ -480,7 +498,7 @@ class DatabaseService(Service):
         await self.create_db_and_tables()
 
     async def create_db_and_tables(self) -> None:
-        async with self.with_session() as session, session.bind.connect() as conn:
+        async with self.engine.begin() as conn:
             await conn.run_sync(self._create_db_and_tables)
 
     async def teardown(self) -> None:
@@ -489,7 +507,7 @@ class DatabaseService(Service):
             settings_service = get_settings_service()
             # remove the default superuser if auto_login is enabled
             # using the SUPERUSER to get the user
-            async with self.with_session() as session:
+            async with session_scope() as session:
                 await teardown_superuser(settings_service, session)
         except Exception:  # noqa: BLE001
             await logger.aexception("Error tearing down database")

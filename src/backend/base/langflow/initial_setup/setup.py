@@ -702,7 +702,6 @@ async def delete_starter_projects(session, folder_id) -> None:
     flows = await get_all_flows_similar_to_project(session, folder_id)
     for flow in flows:
         await session.delete(flow)
-    await session.commit()
 
 
 async def folder_exists(session, folder_name):
@@ -716,7 +715,7 @@ async def get_or_create_starter_folder(session):
         new_folder = FolderCreate(name=STARTER_FOLDER_NAME, description=STARTER_FOLDER_DESCRIPTION)
         db_folder = Folder.model_validate(new_folder, from_attributes=True)
         session.add(db_folder)
-        await session.commit()
+        await session.flush()
         await session.refresh(db_folder)
         return db_folder
     stmt = select(Folder).where(Folder.name == STARTER_FOLDER_NAME)
@@ -1034,8 +1033,8 @@ async def upsert_flow_from_file(file_content: AnyStr, filename: str, session: As
 
         # Ensure that the flow is associated with an existing default folder
         if existing.folder_id is None:
-            folder_id = await get_or_create_default_folder(session, user_id)
-            existing.folder_id = folder_id
+            folder = await get_or_create_default_folder(session, user_id)
+            existing.folder_id = folder.id
 
         if isinstance(existing.id, str):
             try:
@@ -1094,7 +1093,8 @@ async def create_or_update_starter_projects(all_types_dict: dict) -> None:
             # 1. Delete all existing starter projects
             successfully_updated_projects = 0
             await delete_starter_projects(session, new_folder.id)
-            await copy_profile_pictures()
+            # Profile pictures are now served directly from the package installation directory
+            # No need to copy them to config_dir
 
             # 2. Update all starter projects with the latest component versions (this modifies the actual file data)
             for project_path, project in starter_projects:
@@ -1245,7 +1245,7 @@ async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> 
                 legacy_folder.description = DEFAULT_FOLDER_DESCRIPTION
                 session.add(legacy_folder)
                 try:
-                    await session.commit()
+                    await session.flush()
                     await session.refresh(legacy_folder)
                     return FolderRead.model_validate(legacy_folder, from_attributes=True)
                 except sa.exc.IntegrityError:
@@ -1257,7 +1257,7 @@ async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> 
     try:
         folder_obj = Folder(user_id=user_id, name=DEFAULT_FOLDER_NAME, description=DEFAULT_FOLDER_DESCRIPTION)
         session.add(folder_obj)
-        await session.commit()
+        await session.flush()
         await session.refresh(folder_obj)
     except sa.exc.IntegrityError as e:
         # Another worker may have created the folder concurrently.
@@ -1274,6 +1274,7 @@ async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> 
 async def sync_flows_from_fs():
     flow_mtimes = {}
     fs_flows_polling_interval = get_settings_service().settings.fs_flows_polling_interval / 1000
+    storage_service = get_storage_service()
     try:
         while True:
             try:
@@ -1282,7 +1283,14 @@ async def sync_flows_from_fs():
                     flows = (await session.exec(stmt)).all()
                     for flow in flows:
                         mtime = flow_mtimes.setdefault(flow.id, 0)
-                        path = anyio.Path(flow.fs_path)
+                        # Resolve path: if relative, construct full path using user's flows directory
+                        fs_path_str = flow.fs_path
+                        if not Path(fs_path_str).is_absolute():
+                            # Relative path - construct full path
+                            path = storage_service.data_dir / "flows" / str(flow.user_id) / fs_path_str
+                        else:
+                            # Absolute path - use as-is
+                            path = anyio.Path(fs_path_str)
                         try:
                             if await path.exists():
                                 new_mtime = (await path.stat()).st_mtime
@@ -1294,7 +1302,7 @@ async def sync_flows_from_fs():
                                                 setattr(flow, field_name, new_value)
                                         if folder_id := update_data.get("folder_id"):
                                             flow.folder_id = UUID(folder_id)
-                                        await session.commit()
+                                        await session.flush()
                                         await session.refresh(flow)
                                     except Exception:  # noqa: BLE001
                                         await logger.aexception(

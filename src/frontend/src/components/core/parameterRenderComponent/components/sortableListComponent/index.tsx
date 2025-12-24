@@ -85,6 +85,7 @@ const SortableListComponent = ({
   options = [],
   searchCategory = [],
   limit,
+  id,
   ...baseInputProps
 }: InputProps<any, SortableListComponentProps>) => {
   const { placeholder, handleOnNewValue, value } = baseInputProps;
@@ -144,7 +145,11 @@ const SortableListComponent = ({
               "dropdown-component-outline input-edit-node w-full",
               editNode ? "py-1" : "py-2",
             )}
-            data-testid="button_open_list_selection"
+            data-testid={
+              id
+                ? `button_open_list_selection_${id}`
+                : "button_open_list_selection"
+            }
           >
             <div
               className={cn(

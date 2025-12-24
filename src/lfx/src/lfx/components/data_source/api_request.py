@@ -45,7 +45,7 @@ DEFAULT_FIELDS = ["mode"]
 class APIRequestComponent(Component):
     display_name = "API Request"
     description = "Make HTTP requests using URL or cURL commands."
-    documentation: str = "https://docs.langflow.org/components-data#api-request"
+    documentation: str = "https://docs.langflow.org/api-request"
     icon = "Globe"
     name = "APIRequest"
 
@@ -493,11 +493,13 @@ class APIRequestComponent(Component):
                 return self.parse_curl(self.curl_input, build_config)
             return build_config
 
-        # print(f"Current mode: {field_value}")
         if field_value == "cURL":
             set_field_display(build_config, "curl_input", value=True)
             if build_config["curl_input"]["value"]:
-                build_config = self.parse_curl(build_config["curl_input"]["value"], build_config)
+                try:
+                    build_config = self.parse_curl(build_config["curl_input"]["value"], build_config)
+                except ValueError as e:
+                    self.log(f"Failed to parse cURL input: {e}")
         else:
             set_field_display(build_config, "curl_input", value=False)
 
