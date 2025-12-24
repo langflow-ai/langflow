@@ -22,7 +22,7 @@ import {
 } from "react-router-dom";
 import { useCookies } from "react-cookie";
 import { LANDING_BASENAME } from "./landingRoutes";
-import logoicon from "./new-assets/visualailogo.webp";
+import logoicon from "./new-assets/visualailogo.png";
 import ProgressBar from "./ProgressBar";
 import {
   ACTIVE_ORG_STORAGE_KEY,
