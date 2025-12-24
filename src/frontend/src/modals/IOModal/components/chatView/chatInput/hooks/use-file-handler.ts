@@ -6,15 +6,15 @@ import {
   FS_ERROR_TEXT,
   SN_ERROR_TEXT,
 } from "@/constants/constants";
-import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
 import useAlertStore from "@/stores/alertStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import type { FilePreviewType } from "@/types/components";
 import { formatFileSize } from "@/utils/stringManipulation";
+import { customUsePostUploadFile } from "@/customization/hooks/use-custom-upload-file-v1";
 
 export const useFileHandler = (currentFlowId: string) => {
   const [files, setFiles] = useState<FilePreviewType[]>([]);
-  const { mutate } = usePostUploadFile();
+  const { mutate } = customUsePostUploadFile();
   const { setErrorData } = useAlertStore();
   const maxFileSizeUpload = useUtilityStore((state) => state.maxFileSizeUpload);
 

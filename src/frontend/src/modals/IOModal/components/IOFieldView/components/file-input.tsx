@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 
 import { api } from "@/controllers/API/api";
-import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
 import { getBaseUrl } from "@/customization/utils/urls";
 import { createFileUpload } from "@/helpers/create-file-upload";
 import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
@@ -11,6 +10,7 @@ import { Button } from "../../../../../components/ui/button";
 import { ALLOWED_IMAGE_INPUT_EXTENSIONS } from "../../../../../constants/constants";
 import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
 import type { IOFileInputProps } from "../../../../../types/components";
+import { customUsePostUploadFile } from "@/customization/hooks/use-custom-upload-file-v1";
 
 export default function IOFileInput({ field, updateValue }: IOFileInputProps) {
   //component to handle file upload from chatIO
@@ -83,7 +83,7 @@ export default function IOFileInput({ field, updateValue }: IOFileInputProps) {
     setIsDragging(false);
   };
 
-  const { mutate } = usePostUploadFile();
+  const { mutate } = customUsePostUploadFile();
 
   const upload = async (file) => {
     if (file) {

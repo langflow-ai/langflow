@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { useGetFilesV2 } from "@/controllers/API/queries/file-management";
-import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
 import { ENABLE_FILE_MANAGEMENT } from "@/customization/feature-flags";
 import { createFileUpload } from "@/helpers/create-file-upload";
 import FileManagerModal from "@/modals/fileManagerModal";
@@ -19,6 +18,7 @@ import IconComponent, {
 } from "../../../../common/genericIconComponent";
 import { Button } from "../../../../ui/button";
 import type { FileComponentType, InputProps } from "../../types";
+import { customUsePostUploadFile } from "@/customization/hooks/use-custom-upload-file-v1";
 
 export default function InputFileComponent({
   value,
@@ -52,7 +52,7 @@ export default function InputFileComponent({
     return fileTypes.includes(fileExtension || "");
   }
 
-  const { mutateAsync, isPending } = usePostUploadFile();
+  const { mutateAsync, isPending } = customUsePostUploadFile();
 
   const handleButtonClick = (): void => {
     createFileUpload({ multiple: isList, accept: fileTypes?.join(",") }).then(

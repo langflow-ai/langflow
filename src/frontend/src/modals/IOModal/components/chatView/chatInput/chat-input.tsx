@@ -2,7 +2,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import ShortUniqueId from "short-unique-id";
 import { useStickToBottomContext } from "use-stick-to-bottom";
-import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
 import { ENABLE_IMAGE_ON_PLAYGROUND } from "@/customization/feature-flags";
 import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 import useAlertStore from "@/stores/alertStore";
@@ -24,6 +23,7 @@ import NoInputView from "./components/no-input";
 import { VoiceAssistant } from "./components/voice-assistant/voice-assistant";
 import useAutoResizeTextArea from "./hooks/use-auto-resize-text-area";
 import useFocusOnUnlock from "./hooks/use-focus-unlock";
+import { customUsePostUploadFile } from "@/customization/hooks/use-custom-upload-file-v1";
 
 export default function ChatInput({
   sendMessage,
@@ -63,7 +63,7 @@ export default function ChatInput({
   useFocusOnUnlock(isBuilding, inputRef);
   useAutoResizeTextArea(chatValue, inputRef);
 
-  const { mutate } = usePostUploadFile();
+  const { mutate } = customUsePostUploadFile();
 
   const handleFileChange = async (
     event: React.ChangeEvent<HTMLInputElement> | ClipboardEvent,
