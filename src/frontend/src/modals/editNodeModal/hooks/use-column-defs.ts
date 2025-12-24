@@ -1,6 +1,7 @@
 import type { ColDef, ValueGetterParams } from "ag-grid-community";
 import { useMemo } from "react";
 import TableAdvancedToggleCellRender from "@/components/core/parameterRenderComponent/components/tableComponent/components/tableAdvancedToggleCellRender";
+import TableMcpDescriptionCellRender from "@/components/core/parameterRenderComponent/components/tableComponent/components/tableMcpDescriptionCellRender";
 import TableNodeCellRender from "@/components/core/parameterRenderComponent/components/tableComponent/components/tableNodeCellRender";
 
 const useColumnDefs = (
@@ -63,6 +64,32 @@ const useColumnDefs = (
         resizable: false,
         cellClass: "no-border cursor-default !py-1",
       },
+      {
+        headerName: "MCP Tool Call Arguments",
+        field: "mcp_enabled",
+        cellRenderer: TableMcpDescriptionCellRender,
+        cellStyle: {
+          display: "flex",
+          "justify-content": "flex-start",
+          "align-items": "flex-start",
+        },
+        valueGetter: (params: ValueGetterParams) => {
+          return {
+            nodeId: nodeId,
+            fieldKey: params.data.key,
+            isTweaks,
+          };
+        },
+        suppressKeyboardEvent: (params) =>
+          params.event.key === "a" &&
+          (params.event.ctrlKey || params.event.metaKey),
+        minWidth: 340,
+        autoHeight: true,
+        editable: true,
+        flex: 1,
+        resizable: false,
+        cellClass: "no-border cursor-default !py-1",
+      },
     ];
     if (!hideVisibility) {
       colDefs.unshift({
@@ -84,7 +111,7 @@ const useColumnDefs = (
       });
     }
     return colDefs;
-  }, [open]);
+  }, [open, nodeId, isTweaks, hideVisibility]);
 
   return columnDefs;
 };

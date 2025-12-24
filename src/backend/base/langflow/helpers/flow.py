@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID
 
 from fastapi import HTTPException
-from lfx.log.logger import logger
 from pydantic.v1 import BaseModel, Field, create_model
 from sqlalchemy.orm import aliased
 from sqlmodel import asc, desc, select
@@ -441,40 +440,30 @@ def json_schema_from_flow(flow: Flow) -> dict:
     """Generate JSON schema from flow input nodes."""
     from lfx.graph.graph.base import Graph
 
+    mcp_types = {"str": "string", "int": "integer", "float": "number", "bool": "boolean", "list": "array"}
+
     # Get the flow's data which contains the nodes and their configurations
     flow_data = flow.data or {}
 
     graph = Graph.from_payload(flow_data)
-    input_nodes = [vertex for vertex in graph.vertices if vertex.is_input]
-
-    properties = {}
-    required = []
-    for node in input_nodes:
+    all_nodes = list(graph.vertices)
+    properties: dict[str, dict] = {}
+    required: list[str] = []
+    for node in all_nodes:
         node_data = node.data["node"]
         template = node_data["template"]
 
-        for field_name, field_data in template.items():
-            if field_data != "Component" and field_data.get("show", False) and not field_data.get("advanced", False):
-                field_type = field_data.get("type", "string")
-                properties[field_name] = {
-                    "type": field_type,
-                    "description": field_data.get("info", f"Input for {field_name}"),
-                }
-                # Update field_type in properties after determining the JSON Schema type
-                if field_type == "str":
-                    field_type = "string"
-                elif field_type == "int":
-                    field_type = "integer"
-                elif field_type == "float":
-                    field_type = "number"
-                elif field_type == "bool":
-                    field_type = "boolean"
-                else:
-                    logger.warning(f"Unknown field type: {field_type} defaulting to string")
-                    field_type = "string"
-                properties[field_name]["type"] = field_type
+        for field_data in template.values():
+            if field_data != "Component" and field_data.get("mcp_enabled", False):
+                name = node.data["id"]
+                if field_data.get("name", "input_value") != "input_value":
+                    name = f"{node.data['id']}-{field_data.get('name', 'input_value')}"
 
-                if field_data.get("required", False):
-                    required.append(field_name)
+                properties[name] = {}
+                properties[name]["description"] = field_data.get("mcp_description", f"Input for {name}")
+                properties[name]["type"] = mcp_types.get(field_data.get("type", "str"), "string")
+
+                if field_data["mcp_required"]:
+                    required.append(name)
 
     return {"type": "object", "properties": properties, "required": required}
