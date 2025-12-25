@@ -644,3 +644,77 @@ class TestFileComponentToolMode:
         )
         new_temp_files = temp_files_after - temp_files_before
         assert len(new_temp_files) == 0, f"Temp files not cleaned up: {new_temp_files}"
+
+
+class TestFileComponentCloudEnvironment:
+    """Test FileComponent behavior in cloud environments."""
+
+    def test_advanced_mode_disabled_in_cloud(self, monkeypatch):
+        """Test that advanced_mode and all Docling fields are disabled when ASTRA_CLOUD_DISABLE_COMPONENT is set."""
+        # Set the environment variable to simulate cloud environment
+        monkeypatch.setenv("ASTRA_CLOUD_DISABLE_COMPONENT", "true")
+
+        component = FileComponent()
+        build_config = {
+            "advanced_mode": {"show": True, "value": False},
+            "pipeline": {"show": False},
+            "ocr_engine": {"show": False},
+            "doc_key": {"show": False},
+            "md_image_placeholder": {"show": False},
+            "md_page_break_placeholder": {"show": False},
+            "path": {"file_path": ["document.pdf"]},
+        }
+
+        result = component.update_build_config(build_config, ["document.pdf"], "path")
+
+        # In cloud, advanced_mode should be hidden regardless of file type
+        assert result["advanced_mode"]["show"] is False, "advanced_mode should be hidden in cloud"
+        assert result["advanced_mode"]["value"] is False, "advanced_mode value should be False in cloud"
+        # All related fields should be hidden
+        assert result["pipeline"]["show"] is False
+        assert result["ocr_engine"]["show"] is False
+        assert result["ocr_engine"]["value"] == "None"
+        assert result["doc_key"]["show"] is False
+        assert result["md_image_placeholder"]["show"] is False
+        assert result["md_page_break_placeholder"]["show"] is False
+
+    def test_advanced_mode_toggle_disabled_in_cloud(self, monkeypatch):
+        """Test that toggling advanced_mode in cloud doesn't show Docling fields."""
+        monkeypatch.setenv("ASTRA_CLOUD_DISABLE_COMPONENT", "true")
+
+        component = FileComponent()
+        build_config = {
+            "advanced_mode": {"show": True, "value": True},
+            "pipeline": {"show": False},
+            "ocr_engine": {"show": False},
+            "doc_key": {"show": False},
+            "md_image_placeholder": {"show": False},
+            "md_page_break_placeholder": {"show": False},
+        }
+
+        result = component.update_build_config(build_config, field_value=True, field_name="advanced_mode")
+
+        # Even if advanced_mode is toggled to True, it should be disabled in cloud
+        assert result["advanced_mode"]["show"] is False
+        assert result["advanced_mode"]["value"] is False
+        # All Docling fields should remain hidden
+        assert result["pipeline"]["show"] is False
+        assert result["ocr_engine"]["show"] is False
+        assert result["ocr_engine"]["value"] == "None"
+
+    def test_pipeline_change_disabled_in_cloud(self, monkeypatch):
+        """Test that changing pipeline in cloud doesn't show OCR engine."""
+        monkeypatch.setenv("ASTRA_CLOUD_DISABLE_COMPONENT", "true")
+
+        component = FileComponent()
+        build_config = {
+            "advanced_mode": {"show": False, "value": False},
+            "pipeline": {"show": False},
+            "ocr_engine": {"show": False, "value": "easyocr"},
+        }
+
+        result = component.update_build_config(build_config, "standard", "pipeline")
+
+        # Even if pipeline is set to "standard", OCR engine should be disabled in cloud
+        assert result["ocr_engine"]["show"] is False
+        assert result["ocr_engine"]["value"] == "None"
