@@ -32,7 +32,7 @@ class PoliciesComponent(LCModelComponent):
     display_name = "Policies"
     description = """Component for building tool protection code from textual business policies and instructions.
 Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
-    documentation: str = "https://github.com/AgentToolkit/toolguard "
+    documentation: str = "https://github.com/AgentToolkit/toolguard"
     icon = "clipboard-check"  # consider also file-text
     name = "policies"
     beta = True
@@ -48,11 +48,36 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             name="build_mode",
             display_name="Policies Build Mode",
             options=[BUILD_MODE_GENERATE, BUILD_MODE_CACHE],
-            info="Indicates whether to invoke buildtime (build), or use a cached code (use cache)",
+            info="Indicates whether to invoke buildtime (Generate), or use a cached code (Use Cache)",
             value=BUILD_MODE_GENERATE,
             real_time_refresh=True,
             tool_mode=True,
         ),
+        # TableInput(
+        #     name="build_mode",
+        #     display_name="policies build mode",
+        #     info="...",
+        #     table_schema=[
+        #         {
+        #             "name": "mode",
+        #             "display_name": "policies build mode",
+        #             "type": "str",
+        #             "description": "...",
+        #         },
+        #         {
+        #             "name": "active",
+        #             "display_name": "active?",
+        #             "type": "boolean",
+        #             "edit_mode": EditMode.INLINE,
+        #             "options": ["False", "True"],
+        #             "default": "False",
+        #             "description": "...",
+        #         },
+        #     ],
+        #     value=[{"mode": "Generate", "active": "False"}, {"mode": "Use Cache", "active": "False"}],
+        #     #advanced=True,
+        #     input_types=["DataFrame"],
+        # ),
         MessageTextInput(
             name="policies",
             display_name="Policies",
@@ -80,6 +105,33 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             # real_time_refresh=True,
             # refresh_button=False,
             required=True,
+            options=[
+                {
+                    "name": "gpt-4o",
+                    "icon": "OpenAI",
+                    "category": "OpenAI",
+                    "provider": "OpenAI",
+                    "metadata": {
+                        "context_length": 128000,
+                        "model_class": "ChatOpenAI",
+                        "model_name_param": "model",
+                        "api_key_param": "api_key",
+                        "reasoning_models": ["gpt-4o"]
+                    }
+                },
+                {
+                    "name": "claude-sonnet-4",
+                    "icon": "Anthropic",
+                    "category": "Anthropic",
+                    "provider": "Anthropic",
+                    "metadata": {
+                        "context_length": 128000,
+                        "model_class": "ChatAnthropic",
+                        "model_name_param": "model",
+                        "api_key_param": "api_key"
+                    }
+                }
+            ]
         ),
         SecretStrInput(
             name="api_key",
@@ -111,7 +163,7 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         toolguard_step1_dir = join(self.guard_code_path, STEP1)
         policy_text = "\n".join(self.policies)
         specs = await generate_guard_specs(
-            policy_text=policy_text, 
+            policy_text=policy_text,
             tools=self.in_tools,
             llm=llm, 
             work_dir=toolguard_step1_dir,
