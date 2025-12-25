@@ -693,6 +693,9 @@ async def read_basic_examples(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
+########################################################
+# Publish Flow endpoints
+########################################################
 @router.post("/{flow_id}/versions", status_code=201)
 async def publish_flow_version(
     *,
@@ -747,3 +750,46 @@ async def get_published_flow(
         return orjson.loads(flow_data)
     except Exception as e:
         raise HTTPException(status_code=404, detail="Published flow not found") from e
+
+
+########################################################
+# Flow History endpoints
+########################################################
+@router.get("/{flow_id}/history")
+async def get_flow_history(
+    *,
+    flow_id: UUID,
+    current_user: CurrentActiveUser,
+):
+    """Retrieve the history of a flow."""
+    pass
+
+
+@router.post("/{flow_id}/history")
+async def save_flow_checkpoint(
+    *,
+    flow_id: UUID,
+    current_user: CurrentActiveUser,
+):
+    """Save a checkpoint of the flow."""
+    pass
+
+
+@router.get("/{flow_id}/history")
+async def get_flow_history(
+    *,
+    flow_id: UUID,
+    current_user: CurrentActiveUser,
+):
+    """Retrieve the history of a flow."""
+    pass
+
+
+@router.get("/{flow_id}/history/restore")
+async def restore_flow_checkpoint(
+    *,
+    flow_id: UUID,
+    current_user: CurrentActiveUser,
+):
+    """Restore a checkpoint of the flow."""
+    pass
