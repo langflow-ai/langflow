@@ -21,6 +21,7 @@ from lfx.io import ModelInput
 from lfx.log.logger import logger
 
 from langflow.inputs import DropdownInput, MultilineInput
+from lfx.schema.table import EditMode
 
 STEP1 = "Step_1"
 STEP2 = "Step_2"
@@ -32,7 +33,7 @@ class PoliciesComponent(LCModelComponent):
     display_name = "Policies"
     description = """Component for building tool protection code from textual business policies and instructions.
 Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
-    documentation: str = "https://github.com/AgentToolkit/toolguard "
+    documentation: str = "https://github.com/AgentToolkit/toolguard"
     icon = "clipboard-check"  # consider also file-text
     name = "policies"
     beta = True
@@ -48,11 +49,36 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             name="build_mode",
             display_name="Policies Build Mode",
             options=[BUILD_MODE_GENERATE, BUILD_MODE_CACHE],
-            info="Indicates whether to invoke buildtime (build), or use a cached code (use cache)",
+            info="Indicates whether to invoke buildtime (Generate), or use a cached code (Use Cache)",
             value=BUILD_MODE_GENERATE,
             real_time_refresh=True,
             tool_mode=True,
         ),
+        # TableInput(
+        #     name="build_mode",
+        #     display_name="policies build mode",
+        #     info="...",
+        #     table_schema=[
+        #         {
+        #             "name": "mode",
+        #             "display_name": "policies build mode",
+        #             "type": "str",
+        #             "description": "...",
+        #         },
+        #         {
+        #             "name": "active",
+        #             "display_name": "active?",
+        #             "type": "boolean",
+        #             "edit_mode": EditMode.INLINE,
+        #             "options": ["False", "True"],
+        #             "default": "False",
+        #             "description": "...",
+        #         },
+        #     ],
+        #     value=[{"mode": "Generate", "active": "False"}, {"mode": "Use Cache", "active": "False"}],
+        #     #advanced=True,
+        #     input_types=["DataFrame"],
+        # ),
         MessageTextInput(
             name="policies",
             display_name="Policies",
@@ -71,12 +97,45 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             value='tmp',  # todo: decide on the path
             advanced=True,
         ),
+        # ModelInput(
+        #     name="model",
+        #     display_name="Language Model",
+        #     info="Select your model provider",
+        #     real_time_refresh=True,
+        #     required=True,
+        # ),
         ModelInput(
             name="model",
             display_name="Language Model",
             info="Select your model provider",
-            real_time_refresh=True,
             required=True,
+            options=[
+                {
+                    "name": "gpt-4o",
+                    "icon": "OpenAI",
+                    "category": "OpenAI",
+                    "provider": "OpenAI",
+                    "metadata": {
+                        "context_length": 128000,
+                        "model_class": "ChatOpenAI",
+                        "model_name_param": "model",
+                        "api_key_param": "api_key",
+                        "reasoning_models": ["gpt-4o"]
+                    }
+                },
+                {
+                    "name": "claude-sonnet-4",
+                    "icon": "Anthropic",
+                    "category": "Anthropic",
+                    "provider": "Anthropic",
+                    "metadata": {
+                        "context_length": 128000,
+                        "model_class": "ChatAnthropic",
+                        "model_name_param": "model",
+                        "api_key_param": "api_key"
+                    }
+                }
+            ]
         ),
         SecretStrInput(
             name="api_key",
@@ -119,17 +178,17 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             field_name=field_name,
             field_value=field_value,
         )
-    
+
     def _get_step1_llm(self)->I_TG_LLM:
         return LitellmModel(
-            model_name=self.model[0].get("name"), 
+            model_name=self.model[0].get("name"),
             provider=self.model[0].get("provider").lower(),
             kw_args={
                 # 'base_url': "",
                 'api_key': self.api_key
             }
         )
-    
+
     async def _build_guard_specs(self) -> list[ToolGuardSpec]:
         logger.info(f"🔒️ToolGuard: Starting step 1")
         logger.info(f"model = {self.model}")
@@ -137,15 +196,15 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         toolguard_step1_dir = join(self.guard_code_path, STEP1)
         policy_text = "\n".join(self.policies)
         specs = await generate_guard_specs(
-            policy_text=policy_text, 
+            policy_text=policy_text,
             tools=self.in_tools,
-            llm=llm, 
+            llm=llm,
             work_dir=toolguard_step1_dir
         )
         logger.info(f"🔒️ToolGuard: Step 1 Done")
         return specs
 
-    def _get_mellea_session(self )->MelleaSessionData: 
+    def _get_mellea_session(self )->MelleaSessionData:
         return MelleaSessionData(
             backend_name=self.model[0].get("provider").lower(),
             model_id=self.model[0].get("name"),
@@ -154,7 +213,7 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
                 "api_key": self.api_key
             }
         )
-    
+
     async def _build_guards(self, specs: list[ToolGuardSpec]) -> ToolGuardsCodeGenerationResult:
         logger.info(f"🔒️ToolGuard: Starting step 2")
         out_dir = join(self.guard_code_path, STEP2)
@@ -180,9 +239,9 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             build_mode = getattr(self, "build_mode", BUILD_MODE_GENERATE)
             if build_mode == BUILD_MODE_GENERATE:  # run buildtime steps
                 logger.info("🔒️ToolGuard: execution (build) mode")
-                specs  = await self._build_guard_specs()
-                guards = await self._build_guards(specs)
-                self.guard_code_path = guards.out_dir
+                #specs  = await self._build_guard_specs()
+                #guards = await self._build_guards(specs)
+                #self.guard_code_path = guards.out_dir
             else:  # build_mode == "use cache"
                 self.log("🔒️ToolGuard: run mode (cached code from path)", name="info")
                 # make sure self.guard_code_path contains the path to pre-built guards
@@ -192,4 +251,3 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             return guarded_tools  # type: ignore
 
         return self.in_tools
-
