@@ -1,8 +1,25 @@
 import type { FlowType } from "../flow";
 
 export type ChatType = { flow: FlowType };
+
+// Generic JSON-like shapes for message payloads and tool inputs/outputs
+export interface JSONObject {
+  [key: string]: JSONValue;
+}
+
+export type JSONValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JSONObject
+  | JSONValue[];
 export type ChatMessageType = {
-  message: string | Object;
+  id: string;
+  flow_id?: string;
+  session?: string;
+  session_id?: string;
+  message: string | number | JSONObject;
   template?: string;
   isSend: boolean;
   thought?: string;
@@ -10,16 +27,17 @@ export type ChatMessageType = {
   prompt?: string;
   chatKey?: string;
   componentId?: string;
-  id: string;
-  timestamp: string;
+  timestamp: string | number | Date;
   stream_url?: string | null;
+  sender?: string;
   sender_name?: string;
-  session?: string;
   edit?: boolean;
   icon?: string;
   category?: string;
-  properties?: PropertiesType;
-  content_blocks?: ContentBlock[];
+  properties?: PropertiesType | JSONObject;
+  content_blocks?: ContentBlock[] | JSONObject[];
+  background_color?: string;
+  text_color?: string;
 };
 
 export type SourceType = {
@@ -61,7 +79,10 @@ export type FlowPoolObjectType = {
   valid: boolean;
   // list of chat outputs or list of chat inputs
   messages: Array<ChatOutputType | ChatInputType> | [];
-  data: { artifacts: any; results: any | ChatOutputType | ChatInputType };
+  data: {
+    artifacts: JSONObject;
+    results: ChatOutputType | ChatInputType | JSONObject;
+  };
   id: string;
 };
 
@@ -98,7 +119,7 @@ export interface MediaContent extends BaseContent {
 
 export interface JSONContent extends BaseContent {
   type: "json";
-  data: Record<string, any>;
+  data: JSONObject;
 }
 
 export interface CodeContent extends BaseContent {
@@ -111,9 +132,9 @@ export interface CodeContent extends BaseContent {
 export interface ToolContent extends BaseContent {
   type: "tool_use";
   name?: string;
-  tool_input: Record<string, any>;
-  output?: any;
-  error?: any;
+  tool_input: JSONObject;
+  output?: JSONValue;
+  error?: string | JSONObject;
 }
 
 // Union type for all content types
