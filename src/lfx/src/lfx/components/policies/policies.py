@@ -1,6 +1,8 @@
 from os.path import join
 
+
 from lfx.base.models import LCModelComponent
+from lfx.components.policies.models import BUILDTIME_MODELS
 from lfx.components.policies.wrapped_tool import WrappedTool
 
 from lfx.base.models.unified_models import (
@@ -97,45 +99,12 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             value='tmp',  # todo: decide on the path
             advanced=True,
         ),
-        # ModelInput(
-        #     name="model",
-        #     display_name="Language Model",
-        #     info="Select your model provider",
-        #     real_time_refresh=True,
-        #     required=True,
-        # ),
         ModelInput(
             name="model",
             display_name="Language Model",
             info="Select your model provider",
-            required=True,
-            options=[
-                {
-                    "name": "gpt-4o",
-                    "icon": "OpenAI",
-                    "category": "OpenAI",
-                    "provider": "OpenAI",
-                    "metadata": {
-                        "context_length": 128000,
-                        "model_class": "ChatOpenAI",
-                        "model_name_param": "model",
-                        "api_key_param": "api_key",
-                        "reasoning_models": ["gpt-4o"]
-                    }
-                },
-                {
-                    "name": "claude-sonnet-4",
-                    "icon": "Anthropic",
-                    "category": "Anthropic",
-                    "provider": "Anthropic",
-                    "metadata": {
-                        "context_length": 128000,
-                        "model_class": "ChatAnthropic",
-                        "model_name_param": "model",
-                        "api_key_param": "api_key"
-                    }
-                }
-            ]
+            options=BUILDTIME_MODELS,
+            required=True
         ),
         SecretStrInput(
             name="api_key",
