@@ -33,6 +33,7 @@ import { ExaIcon } from "@/icons/Exa";
 import { FBIcon } from "@/icons/FacebookMessenger";
 import { FirecrawlIcon } from "@/icons/Firecrawl";
 import { freezeAllIcon } from "@/icons/freezeAll";
+import { GigaChatIcon } from "@/icons/GigaChat";
 import { GitBookIcon } from "@/icons/GitBook";
 import { GitLoaderIcon } from "@/icons/GitLoader";
 import { GleanIcon } from "@/icons/Glean";
@@ -106,8 +107,8 @@ import { UnstructuredIcon } from "@/icons/Unstructured";
 import { UpstashSvgIcon } from "@/icons/Upstash";
 import { VectaraIcon } from "@/icons/VectaraIcon";
 import { VertexAIIcon } from "@/icons/VertexAI";
-import { VllmIcon } from "@/icons/vLLM";
 import { VLMRunIcon } from "@/icons/VLMRun";
+import { VllmIcon } from "@/icons/vLLM";
 import { WeaviateIcon } from "@/icons/Weaviate";
 import { WikipediaIcon } from "@/icons/Wikipedia";
 import { WolframIcon } from "@/icons/Wolfram";
@@ -155,6 +156,7 @@ export const eagerIconsMapping = {
   FacebookMessenger: FBIcon,
   Firecrawl: FirecrawlIcon,
   FreezeAll: freezeAllIcon,
+  GigaChat: GigaChatIcon,
   GitBook: GitBookIcon,
   GitLoader: GitLoaderIcon,
   Glean: GleanIcon,
