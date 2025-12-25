@@ -113,7 +113,12 @@ class Settings(BaseSettings):
     reap idle sessions."""
 
     # sqlite configuration
-    sqlite_pragmas: dict | None = {"synchronous": "NORMAL", "journal_mode": "WAL", "busy_timeout": 30000}
+    sqlite_pragmas: dict | None = {
+        "synchronous": "NORMAL",
+        "journal_mode": "WAL",
+        "busy_timeout": 30000,
+        "foreign_keys": "ON",
+    }
     """SQLite pragmas to use when connecting to the database."""
 
     db_driver_connection_settings: dict | None = None
