@@ -7,12 +7,20 @@ import {
 import { customDefaultShortcuts } from "../customization/constants";
 import type { languageMap } from "../types/components";
 
-const getEnvVar = (key: string, defaultValue: any = undefined) => {
+export const DEFAULT_SESSION_NAME = "Default Session";
+export const NEW_SESSION_NAME = "New Session";
+export const SLIDING_TRANSITION_MS = 300;
+
+const getEnvVar = <T = string | undefined>(
+  key: string,
+  defaultValue?: T,
+): T | undefined => {
   if (typeof process !== "undefined" && process.env) {
-    return process.env[key] ?? defaultValue;
+    return (process.env[key] as T) ?? defaultValue;
   }
   try {
-    return new Function(`return import.meta.env?.${key}`)() ?? defaultValue;
+    const value = new Function(`return import.meta.env?.${key}`)() as T;
+    return value ?? defaultValue;
   } catch {
     return defaultValue;
   }
