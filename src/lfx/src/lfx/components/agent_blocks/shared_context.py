@@ -283,10 +283,11 @@ class SharedContextComponent(Component):
         return full_key in self.ctx
 
     def _record_event(self, operation: str, key: str | None = None) -> None:
-        """Record an operation event for tracking and verification.
+        """Record an operation event for tracking, verification, and real-time UI updates.
 
         Events are stored in the context under EVENTS_KEY and can be retrieved
         using get_events() to verify that agents actually used the shared context.
+        Events are also emitted to the event manager for real-time UI display.
 
         Args:
             operation: The operation performed (get, set, append, delete, keys, has_key)
@@ -305,6 +306,10 @@ class SharedContextComponent(Component):
             self.ctx[self.EVENTS_KEY] = []
 
         self.ctx[self.EVENTS_KEY].append(event)
+
+        # Emit to event manager for real-time UI updates
+        if hasattr(self, "_event_manager") and self._event_manager:
+            self._event_manager.send_event(event_type="shared_context", data=event)
 
     @classmethod
     def get_events(cls, context: dict) -> list[dict]:
