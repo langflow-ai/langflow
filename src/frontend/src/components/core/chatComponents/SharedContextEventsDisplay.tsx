@@ -1,8 +1,8 @@
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/utils/utils";
 import type { SharedContextEventData } from "@/types/chat";
+import { cn } from "@/utils/utils";
 
 interface SharedContextEventsDisplayProps {
   events: SharedContextEventData[];
