@@ -7,6 +7,7 @@ from lfx.graph.graph.base import Graph
 from lfx.log.logger import logger
 
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
+from langflow.helpers.flow_version import save_flow_checkpoint
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import session_scope
 
@@ -278,6 +279,12 @@ async def update_component_field_value(
             # Update the flow data
             db_flow.data = flow_data
             session.add(db_flow)
+            await save_flow_checkpoint(
+                session=session,
+                user_id=user_id,
+                flow_id=flow_id_str,
+                flow_data=flow_data
+                )
             await session.commit()
             await session.refresh(db_flow)
 
