@@ -23,6 +23,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow, remove_api_keys, validate_is_component
 from langflow.api.v1.schemas import FlowListCreate
+from langflow.helpers.flow_version import list_flow_versions, save_flow_checkpoint
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.database.models.flow.model import (
@@ -465,6 +466,12 @@ async def update_flow(
                 db_flow.folder_id = default_folder.id
 
         session.add(db_flow)
+        await save_flow_checkpoint(
+            session=session,
+            user_id=current_user.id,
+            flow_id=flow_id,
+            flow=db_flow
+            )
         await session.flush()
         await session.refresh(db_flow)
         await _save_flow_to_fs(db_flow, current_user.id, storage_service)
@@ -696,7 +703,7 @@ async def read_basic_examples(
 ########################################################
 # Publish Flow endpoints
 ########################################################
-@router.post("/{flow_id}/versions", status_code=201)
+@router.post("/{flow_id}/publish", status_code=201)
 async def publish_flow_version(
     *,
     session: DbSession,
@@ -729,7 +736,7 @@ async def publish_flow_version(
     return {"message": "Flow published successfully", "flow_id": flow_id}
 
 
-@router.get("/{flow_id}/versions", status_code=200)
+@router.get("/{flow_id}/publish", status_code=200)
 async def get_published_flow(
     *,
     flow_id: UUID,
@@ -755,41 +762,40 @@ async def get_published_flow(
 ########################################################
 # Flow History endpoints
 ########################################################
-@router.get("/{flow_id}/history")
-async def get_flow_history(
+@router.get("/{flow_id}/versions")
+async def get_flow_versions(
     *,
     flow_id: UUID,
     current_user: CurrentActiveUser,
 ):
     """Retrieve the history of a flow."""
-    pass
+    return await list_flow_versions(
+        user_id=current_user.id,
+        flow_id=flow_id,
+    )
 
 
-@router.post("/{flow_id}/history")
-async def save_flow_checkpoint(
+@router.post("/{flow_id}/versions")
+async def create_flow_checkpoint(
     *,
-    flow_id: UUID,
     current_user: CurrentActiveUser,
+    flow_id: UUID,
+    flow: FlowUpdate,
 ):
     """Save a checkpoint of the flow."""
-    pass
+    await save_flow_checkpoint(
+        session=None,
+        user_id=current_user.id,
+        flow_id=flow_id,
+        flow=flow
+        )
 
 
-@router.get("/{flow_id}/history")
-async def get_flow_history(
-    *,
-    flow_id: UUID,
-    current_user: CurrentActiveUser,
-):
-    """Retrieve the history of a flow."""
-    pass
-
-
-@router.get("/{flow_id}/history/restore")
+@router.post("/{flow_id}/versions/{version_id}")
 async def restore_flow_checkpoint(
     *,
     flow_id: UUID,
     current_user: CurrentActiveUser,
+    version_id: UUID,
 ):
     """Restore a checkpoint of the flow."""
-    pass
