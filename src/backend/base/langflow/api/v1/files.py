@@ -138,12 +138,18 @@ async def download_file(
 @router.get("/images/{flow_id}/{file_name}")
 async def download_image(
     file_name: str,
-    flow: Annotated[Flow, Depends(get_flow)],
+    flow_id: UUID,
 ):
-    # Authorization handled by get_flow dependency
+    """Download image from storage.
+
+    Note: This endpoint intentionally does not require authentication.
+    Images are served directly to browsers via <img> tags which cannot
+    send authentication headers. The UUIDs in the path provide sufficient
+    obscurity for uploaded chat images.
+    """
     storage_service = get_storage_service()
     extension = file_name.split(".")[-1]
-    flow_id_str = str(flow.id)
+    flow_id_str = str(flow_id)
 
     if not extension:
         raise HTTPException(status_code=500, detail=f"Extension not found for file {file_name}")

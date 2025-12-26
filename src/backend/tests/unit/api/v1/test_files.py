@@ -743,3 +743,165 @@ async def test_profile_pictures_fallback_with_partial_config_dir(partial_config_
     # For download: Space files should still work via fallback to package
     response = await files_client.get("api/v1/files/profile_pictures/Space/046-rocket.svg")
     assert response.status_code == 200, "Space files should fallback to package"
+
+
+# ============================================================================
+# Tests for image download endpoint - NO AUTHENTICATION REQUIRED
+# These tests ensure the /images endpoint works without authentication,
+# which is critical for browser <img> tags that cannot send auth headers.
+# Regression tests for the fix that reverted commit 7ba8c73 changes to /images.
+# ============================================================================
+
+
+async def test_download_image_without_authentication(files_client, files_created_api_key, files_flow):
+    """Test that images can be downloaded WITHOUT authentication headers.
+
+    This is critical because browser <img> tags cannot send authentication
+    headers, so the /images endpoint must work without auth.
+
+    Regression test: commit 7ba8c73 broke this by adding auth to /images.
+    """
+    headers = {"x-api-key": files_created_api_key.api_key}
+
+    # First upload an image (this requires auth)
+    # Create a minimal valid PNG (1x1 transparent pixel)
+    png_content = (
+        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+        b"\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00\x01"
+        b"\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82"
+    )
+
+    response = await files_client.post(
+        f"api/v1/files/upload/{files_flow.id}",
+        files={"file": ("test_image.png", png_content, "image/png")},
+        headers=headers,
+    )
+    assert response.status_code == 201, f"Upload failed: {response.json()}"
+
+    # Get the actual filename from the response
+    file_path = response.json()["file_path"]
+    file_name = file_path.split("/")[-1]
+
+    # Now try to download the image WITHOUT any authentication headers
+    # This simulates what a browser <img> tag does
+    response = await files_client.get(
+        f"api/v1/files/images/{files_flow.id}/{file_name}",
+        # NO headers - simulating browser <img> tag
+    )
+
+    # CRITICAL: This must return 200, not 401 or 403
+    assert response.status_code == 200, (
+        f"Image download without auth failed with {response.status_code}. "
+        "This breaks browser <img> tags. Check if /images endpoint requires auth."
+    )
+
+    # Verify content type is image
+    assert "image" in response.headers.get("content-type", ""), "Response should be an image"
+
+
+async def test_download_image_returns_correct_content_type(files_client, files_created_api_key, files_flow):
+    """Test that the /images endpoint returns correct content-type for images."""
+    headers = {"x-api-key": files_created_api_key.api_key}
+
+    # Create a minimal valid PNG
+    png_content = (
+        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+        b"\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00\x01"
+        b"\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82"
+    )
+
+    response = await files_client.post(
+        f"api/v1/files/upload/{files_flow.id}",
+        files={"file": ("test.png", png_content, "image/png")},
+        headers=headers,
+    )
+    assert response.status_code == 201
+
+    file_path = response.json()["file_path"]
+    file_name = file_path.split("/")[-1]
+
+    # Download image (no auth needed)
+    response = await files_client.get(f"api/v1/files/images/{files_flow.id}/{file_name}")
+
+    assert response.status_code == 200
+    assert "image/png" in response.headers.get("content-type", "")
+
+
+async def test_download_image_rejects_non_image_files(files_client, files_created_api_key, files_flow):
+    """Test that the /images endpoint rejects non-image files."""
+    headers = {"x-api-key": files_created_api_key.api_key}
+
+    # Upload a text file
+    response = await files_client.post(
+        f"api/v1/files/upload/{files_flow.id}",
+        files={"file": ("test.txt", b"not an image", "text/plain")},
+        headers=headers,
+    )
+    assert response.status_code == 201
+
+    file_path = response.json()["file_path"]
+    file_name = file_path.split("/")[-1]
+
+    # Try to download via /images endpoint (should fail)
+    response = await files_client.get(f"api/v1/files/images/{files_flow.id}/{file_name}")
+
+    # Should reject non-image content types
+    assert response.status_code == 500
+    assert "not an image" in response.json().get("detail", "").lower()
+
+
+async def test_download_image_with_invalid_flow_id(files_client):
+    """Test that /images returns 404 for non-existent flow_id."""
+    import uuid
+
+    fake_flow_id = uuid.uuid4()
+
+    response = await files_client.get(f"api/v1/files/images/{fake_flow_id}/nonexistent.png")
+
+    # Should return 500 (file not found) - not 401/403
+    # The important thing is that it doesn't require auth
+    assert response.status_code == 500
+
+
+async def test_download_image_endpoint_is_public(files_client, files_created_api_key, files_flow):
+    """Explicit test that /images endpoint does NOT require authentication.
+
+    This test documents the intentional security decision:
+    - Browser <img> tags cannot send authentication headers
+    - Image URLs contain UUIDs which provide sufficient obscurity
+    - The endpoint only serves files from the storage service (not arbitrary files)
+
+    If this test fails, it means someone added auth to /images which will break
+    the chat image display functionality.
+    """
+    headers = {"x-api-key": files_created_api_key.api_key}
+
+    # Upload an image with auth
+    png_content = (
+        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+        b"\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00\x01"
+        b"\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82"
+    )
+
+    upload_response = await files_client.post(
+        f"api/v1/files/upload/{files_flow.id}",
+        files={"file": ("public_test.png", png_content, "image/png")},
+        headers=headers,
+    )
+    assert upload_response.status_code == 201
+
+    file_path = upload_response.json()["file_path"]
+    file_name = file_path.split("/")[-1]
+
+    # Download WITHOUT auth - must succeed
+    download_response = await files_client.get(
+        f"api/v1/files/images/{files_flow.id}/{file_name}"
+        # Intentionally no headers
+    )
+
+    assert download_response.status_code == 200, (
+        f"REGRESSION: /images endpoint now requires authentication! "
+        f"Got status {download_response.status_code}. "
+        "This breaks browser <img> tags in chat. "
+        "The /images endpoint must remain public."
+    )
