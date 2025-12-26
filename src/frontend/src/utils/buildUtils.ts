@@ -14,6 +14,7 @@ import {
 } from "@/customization/utils/custom-buildUtils";
 import { customPollBuildEvents } from "@/customization/utils/custom-poll-build-events";
 import { useMessagesStore } from "@/stores/messagesStore";
+import { useSharedContextStore } from "@/stores/sharedContextStore";
 import { BuildStatus, EventDeliveryType } from "../constants/enums";
 import { getVerticesOrder, postBuildVertex } from "../controllers/API";
 import useAlertStore from "../stores/alertStore";
@@ -468,6 +469,9 @@ async function onEvent(
 
   switch (type) {
     case "vertices_sorted": {
+      // Clear previous shared context events when a new build starts
+      useSharedContextStore.getState().clearEvents();
+
       const verticesToRun = data.to_run;
       const verticesIds = data.ids;
 
@@ -595,6 +599,9 @@ async function onEvent(
     case "build_end":
       useFlowStore.getState().updateBuildStatus([data.id], BuildStatus.BUILT);
       break;
+    case "shared_context":
+      useSharedContextStore.getState().addEvent(data);
+      return true;
     default:
       return true;
   }
