@@ -269,6 +269,15 @@ async def update_component_field_value(
             # Get the database flow object
             db_flow = await session.get(Flow, UUID(flow_id_str))
 
+            db_flow_copy = db_flow.model_copy()
+            db_flow_copy.data = flow_data
+            await save_flow_checkpoint(
+                session=session,
+                user_id=user_id,
+                flow_id=flow_id_str,
+                flow=db_flow_copy
+                )
+
             if not db_flow:
                 return {"error": f"Flow {flow_id_str} not found in database", "success": False}
 
@@ -276,15 +285,10 @@ async def update_component_field_value(
             if str(db_flow.user_id) != str(user_id):
                 return {"error": "User does not have permission to update this flow", "success": False}
 
+
             # Update the flow data
             db_flow.data = flow_data
             session.add(db_flow)
-            await save_flow_checkpoint(
-                session=session,
-                user_id=user_id,
-                flow_id=flow_id_str,
-                flow_data=flow_data
-                )
             await session.commit()
             await session.refresh(db_flow)
 

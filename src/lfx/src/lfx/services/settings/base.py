@@ -205,11 +205,9 @@ class Settings(BaseSettings):
     """Object storage tags for file storage."""
 
     # Publish Configuration
-    publish_storage_prefix: str | None = None
-    """Object storage prefix for the flow and project storage."""
     publish_backend: str | None = None
     """The backend to use for publishing flows (e.g., 's3')."""
-    publish_backend_bucket_name: str | None = None
+    publish_backend_bucket_name: str | None = "langflow-publish"
     """The bucket name for the publish backend."""
     publish_backend_prefix: str | None = "publish"
     """The prefix for the publish backend."""

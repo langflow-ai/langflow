@@ -1,18 +1,22 @@
 
 from __future__ import annotations
 
+import hashlib
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlalchemy import func, select, update
 
+from langflow.logging.logger import logger
 from langflow.schema.data import Data
-from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.base import orjson_dumps
+from langflow.services.database.models.flow.model import Flow, FlowUpdate
 from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.deps import session_scope
 
 if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio.session import AsyncSessionTransaction
     from sqlmodel.ext.asyncio.session import AsyncSession
 
 
@@ -21,8 +25,7 @@ async def save_flow_checkpoint(
     session: AsyncSession | None = None,
     user_id: str | UUID | None = None,
     flow_id: str | UUID | None = None,
-    flow: Flow | None = None,
-    flush_session: bool = False,
+    flow: FlowUpdate | None = None,
     ) -> FlowVersion | None:
     """Save a checkpoint of a flow by creating a new FlowVersion row.
 
@@ -40,18 +43,22 @@ async def save_flow_checkpoint(
     if not (user_id and flow_id and flow):
         msg = "user_id, flow_id and flow_data are required"
         raise ValueError(msg)
+    if not flow.data:
+        logger.warning("Flow data is empty, skipping checkpoint")
+        return None
 
     uuid_user_id = _get_uuid(user_id)
     uuid_flow_id = _get_uuid(flow_id)
 
     if session is not None:
-        return await _save_flow_checkpoint(
-            session,
-            uuid_user_id,
-            uuid_flow_id,
-            flow,
-            flush_session,
-            )
+        async with session.begin_nested() as transaction:
+            return await _save_flow_checkpoint(
+                session=session,
+                transaction=transaction,
+                user_id=uuid_user_id,
+                flow_id=uuid_flow_id,
+                flow=flow,
+                )
 
     async with session_scope() as scoped_session:
         return await _save_flow_checkpoint(
@@ -59,46 +66,45 @@ async def save_flow_checkpoint(
             uuid_user_id,
             uuid_flow_id,
             flow,
-            flush_session,
             )
 
 
 async def _save_flow_checkpoint(
-    db: AsyncSession,
+    session: AsyncSession,
+    transaction: AsyncSessionTransaction,
     user_id: UUID,
     flow_id: UUID,
-    flow: Flow,
-    flush_session: bool = False, # noqa: FBT001, FBT002
+    flow: FlowUpdate,
 ) -> FlowVersion | None:
     """Save a checkpoint of a flow."""
     try:
-        next_version = (
-            await db.exec(
+        # optimistic update to reduce db queries
+        next_version, old_flow_data = (
+            await session.exec(
                 update(Flow)
                 .where(Flow.id == flow_id)
                 .where(Flow.user_id == user_id)
                 .values(latest_version=func.coalesce(Flow.latest_version, 0) + 1)
-                .returning(Flow.latest_version)
+                .returning(Flow.latest_version, Flow.data)
                 )
-            ).scalar_one()
+            ).one()
     except Exception as e:
         msg = f"Error getting next version: {e}"
         raise ValueError(msg) from e
 
+    if compute_dict_hash(flow.data) == compute_dict_hash(old_flow_data):
+        logger.warning("No changes detected in the flow, skipping checkpoint")
+        return await transaction.rollback() # rollback the optimistic update
+
     version_row = FlowVersion(
-        flow_id=flow_id,
         user_id=user_id,
+        flow_id=flow_id,
         version=next_version,
         created_at=datetime.now(timezone.utc),
         flow_data=flow.data,
-        flow_name=flow.name,
-        flow_description=flow.description,
     )
 
-    db.add(version_row)
-
-    if flush_session:
-        await db.flush()
+    session.add(version_row)
 
     return version_row
 
@@ -145,3 +151,57 @@ async def restore_flow_checkpoint(
 
 def _get_uuid(value: str | UUID) -> UUID:
     return UUID(value) if isinstance(value, str) else value
+
+
+########################################################
+# Helper functions for filtering flow data for version comparison
+########################################################
+exclude_node_keys = {
+    "selected",
+    "dragging",
+    "positionAbsolute",
+    "measured",
+    "resizing",
+    "width",
+    "height",
+    "last_updated"
+}
+exclude_edge_keys={
+    "selected",
+    "animated",
+    "className",
+    "style",
+}
+
+
+def filter_json(flow_data: dict):
+    """Filters the flow data in-place to exclude transient UI state for version comparison."""
+    flow_data.pop("viewport", None)
+    flow_data.pop("chatHistory", None)
+
+    if "nodes" in flow_data and isinstance(flow_data["nodes"], list):
+        filter_items(flow_data, field_name="nodes", exclude_keys=exclude_node_keys)
+    if "edges" in flow_data and isinstance(flow_data["edges"], list):
+        filter_items(flow_data, field_name="edges", exclude_keys=exclude_edge_keys)
+
+
+def filter_items(data: dict, exclude_keys: list[str] | None = None, field_name: str | None = None):
+    """Filters the items in the data[field_name] list in-place to exclude the keys in exclude_keys.
+
+    Throws an error if exclude_keys or field_name are not provided.
+    """
+    data[field_name] = [
+        {
+            k: v for (k, v) in item.items() if k not in exclude_keys
+        } for item in data[field_name]
+    ]
+    if field_name == "nodes":
+        for node in data[field_name]:
+            node.get("data", {}).get("node", {}).pop("last_updated", None)
+
+
+def compute_dict_hash(flow_data: dict):
+    """Computes the hash of the flow data."""
+    filter_json(flow_data_copy := flow_data.copy())
+    cleaned_flow_json = orjson_dumps(flow_data_copy, sort_keys=True)
+    return hashlib.sha256(cleaned_flow_json.encode("utf-8")).hexdigest()
