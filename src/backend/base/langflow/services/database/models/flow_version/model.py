@@ -13,12 +13,9 @@ class FlowVersion(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True, unique=True)
     user_id: UUID | None = Field(default=None, foreign_key="user.id")
     flow_id: UUID = Field(sa_column=Column(ForeignKey("flow.id", ondelete="CASCADE"), nullable=False))
+    flow_data: dict | None = Field(default=None, sa_column=Column(JSON))
     version: int = Field(description="Sequential version number for the flow")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-    flow_data: dict | None = Field(default=None, sa_column=Column(JSON))
-    flow_name: str = Field(sa_column=Column(String, nullable=False))
-    flow_description: str | None = Field(default=None, sa_column=Column(Text, nullable=True))
 
     __table_args__ = (
         Index("flow_version_index", "flow_id", "version"),
@@ -34,7 +31,5 @@ class FlowVersion(SQLModel, table=True):
             "version": serialized.pop("version"),
             "created_at": serialized.pop("created_at"),
             "flow_data": serialized.pop("flow_data"),
-            "flow_name": serialized.pop("flow_name"),
-            "flow_description": serialized.pop("flow_description"),
         }
         return Data(data=data)

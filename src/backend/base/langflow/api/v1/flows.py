@@ -440,6 +440,18 @@ async def update_flow(
         if not db_flow:
             raise HTTPException(status_code=404, detail="Flow not found")
 
+        # must save the checkpoint before db_flow is updated,
+        # otherwise save_flow_checkpoint will see the updated flow
+        # as sqlalchemy flushes any changes made to db_flow,
+        # and thus not detect any changes.
+        # (the old flow is needed to check for any changes vs the new flow)
+        await save_flow_checkpoint(
+            session=session,
+            user_id=current_user.id,
+            flow_id=flow_id,
+            flow=flow
+            )
+
         update_data = flow.model_dump(exclude_unset=True, exclude_none=True)
 
         # Specifically handle endpoint_name when it's explicitly set to null or empty string
@@ -466,12 +478,6 @@ async def update_flow(
                 db_flow.folder_id = default_folder.id
 
         session.add(db_flow)
-        await save_flow_checkpoint(
-            session=session,
-            user_id=current_user.id,
-            flow_id=flow_id,
-            flow=db_flow
-            )
         await session.flush()
         await session.refresh(db_flow)
         await _save_flow_to_fs(db_flow, current_user.id, storage_service)

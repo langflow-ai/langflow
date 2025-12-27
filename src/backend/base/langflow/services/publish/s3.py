@@ -35,10 +35,10 @@ class S3PublishService(PublishService):
             yield client
 
     def _flow_version_key(self, user_id: str, flow_id: str, version_id: str) -> str:
-        return f"{self.prefix}{user_id}/{flow_id}/versions/flow_{version_id}.json"
+        return f"{self.prefix}{user_id}/flow/{flow_id}/versions/flow_{version_id}.json"
 
     def _project_version_key(self, user_id: str, project_id: str, version_id: str) -> str:
-        return f"{self.prefix}{user_id}/{project_id}/versions/project_{version_id}.json"
+        return f"{self.prefix}{user_id}/project/{project_id}/versions/project_{version_id}.json"
 
     async def publish_flow(
         self,
