@@ -188,7 +188,7 @@ async def test_log_vertex_build_ordering(async_session: AsyncSession, timestamp_
 
     # Verify newest builds are kept
     remaining_builds = (
-        await async_session.scalars(select(VertexBuildTable.timestamp).order_by(VertexBuildTable.timestamp.desc()))
+        await async_session.scalars(select(VertexBuildTable.timestamp).order_by(VertexBuildTable.timestamp).desc())
     ).all()
 
     assert len(remaining_builds) == max_builds
