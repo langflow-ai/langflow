@@ -449,7 +449,7 @@ async def update_flow(
             session=session,
             user_id=current_user.id,
             flow_id=flow_id,
-            flow=flow
+            flow_data=flow.data
             )
 
         update_data = flow.model_dump(exclude_unset=True, exclude_none=True)
@@ -793,7 +793,7 @@ async def create_flow_checkpoint(
         session=None,
         user_id=current_user.id,
         flow_id=flow_id,
-        flow=flow
+        flow_data=flow.data
         )
 
 
