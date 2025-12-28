@@ -274,7 +274,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       edges: applyEdgeChanges(changes, get().edges),
     });
   },
-  setNodes: (change) => {
+  setNodes: (change, isUserChange = true) => {
     const newChange =
       typeof change === "function" ? change(get().nodes) : change;
     const newEdges = cleanEdges(newChange, get().edges);
@@ -289,11 +289,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       hasIO: inputs.length > 0 || outputs.length > 0,
     });
     get().updateCurrentFlow({ nodes: newChange, edges: newEdges });
-    if (get().autoSaveFlow) {
+    if (get().autoSaveFlow && isUserChange) {
       get().autoSaveFlow!();
     }
   },
-  setEdges: (change) => {
+  setEdges: (change, isUserChange = true) => {
     const newChange =
       typeof change === "function" ? change(get().edges) : change;
     set({
@@ -301,7 +301,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       flowState: undefined,
     });
     get().updateCurrentFlow({ edges: newChange });
-    if (get().autoSaveFlow) {
+    if (get().autoSaveFlow && isUserChange) {
       get().autoSaveFlow!();
     }
   },
@@ -346,7 +346,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       };
     });
     get().updateCurrentFlow({ nodes: newNodes, edges: newEdges });
-    if (get().autoSaveFlow) {
+    if (get().autoSaveFlow  && isUserChange) {
       get().autoSaveFlow!();
     }
   },

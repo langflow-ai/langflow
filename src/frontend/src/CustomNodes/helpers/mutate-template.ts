@@ -15,7 +15,7 @@ export const mutateTemplate = async (
   newValue,
   nodeId: string,
   node: APIClassType,
-  setNodeClass,
+  setNodeClass: (node: APIClassType, type?: string, isUserChange?: boolean) => void,
   postTemplateValue: UseMutationResult<
     APIClassType | undefined,
     ResponseErrorDetailAPI,
@@ -35,7 +35,7 @@ export const mutateTemplate = async (
         async (
           newValue,
           node: APIClassType,
-          setNodeClass,
+          setNodeClass: (node: APIClassType, type?: string, isUserChange?: boolean) => void,
           postTemplateValue: UseMutationResult<
             APIClassType | undefined,
             ResponseErrorDetailAPI,
@@ -64,7 +64,7 @@ export const mutateTemplate = async (
               newNode.tool_mode = toolMode ?? node.tool_mode;
               newNode.last_updated = newTemplate.last_updated;
               try {
-                setNodeClass(newNode);
+                setNodeClass(newNode, undefined, false);
               } catch (e) {
                 if (e instanceof Error && e.message === "Node not found") {
                   console.error("Node not found");

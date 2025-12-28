@@ -13,22 +13,26 @@ const useHandleNodeClass = (
   const setNode = setMyNode ?? useFlowStore((state) => state.setNode);
   const updateNodeInternals = useUpdateNodeInternals();
 
-  const handleNodeClass = (newNodeClass, type?: string) => {
-    setNode(nodeId, (oldNode) => {
-      const newNode = cloneDeep(oldNode);
+  const handleNodeClass = (newNodeClass, type?: string, isUserChange: boolean = true) => {
+    setNode(
+      nodeId,
+      (oldNode) => {
+        const newNode = cloneDeep(oldNode);
 
-      newNode.data = {
-        ...newNode.data,
-        node: cloneDeep(newNodeClass),
-      };
-      if (type) {
-        newNode.data.type = type;
-      }
+        newNode.data = {
+          ...newNode.data,
+          node: cloneDeep(newNodeClass),
+        };
+        if (type) {
+          newNode.data.type = type;
+        }
 
-      updateNodeInternals(nodeId);
+        updateNodeInternals(nodeId);
 
-      return newNode;
-    });
+        return newNode;
+      },
+      isUserChange,
+    );
   };
 
   return { handleNodeClass };

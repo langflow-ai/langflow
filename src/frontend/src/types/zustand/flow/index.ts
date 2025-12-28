@@ -129,9 +129,11 @@ export type FlowStoreType = {
   onEdgesChange: OnEdgesChange<EdgeType>;
   setNodes: (
     update: AllNodeType[] | ((oldState: AllNodeType[]) => AllNodeType[]),
+    isUserChange?: boolean,
   ) => void;
   setEdges: (
     update: EdgeType[] | ((oldState: EdgeType[]) => EdgeType[]),
+    isUserChange?: boolean,
   ) => void;
   setNode: (
     id: string,

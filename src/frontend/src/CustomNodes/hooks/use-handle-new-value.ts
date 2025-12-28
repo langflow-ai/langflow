@@ -55,7 +55,7 @@ const useHandleOnNewValue = ({
 
   // Memoize the node update function
   const updateNodeState = useCallback(
-    (newNode: APIClassType) => {
+    (newNode: APIClassType, isUserChange: boolean = true) => {
       setNode(
         nodeId,
         (oldNode) => {
@@ -66,7 +66,7 @@ const useHandleOnNewValue = ({
             data: newData,
           };
         },
-        true,
+        isUserChange,
         () => {
           updateNodeInternals(nodeId);
         },
@@ -113,9 +113,9 @@ const useHandleOnNewValue = ({
 
       const shouldUpdate = parameter.real_time_refresh;
 
-      const setNodeClass = (newNodeClass: APIClassType) => {
+      const setNodeClass = (newNodeClass: APIClassType, type?: string, isUserChange: boolean = true) => {
         options?.setNodeClass?.(newNodeClass);
-        updateNodeState(newNodeClass);
+        updateNodeState(newNodeClass, isUserChange);
       };
 
       if (shouldUpdate && changes.value !== undefined) {
