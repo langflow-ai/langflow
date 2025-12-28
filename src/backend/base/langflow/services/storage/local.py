@@ -60,7 +60,7 @@ class LocalStorageService(StorageService):
         return str(self.data_dir / flow_id / file_name)
 
     def parse_file_path(self, full_path: str) -> tuple[str, str]:
-        """Parse a full local storage path to extract flow_id and file_name.
+        r"""Parse a full local storage path to extract flow_id and file_name.
 
         Uses pathlib.Path for robust cross-platform path handling, including
         Windows paths with backslashes.
