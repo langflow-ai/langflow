@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.10, <3.14"
 resolution-markers = [
     "python_full_version >= '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
@@ -5530,7 +5530,7 @@ wheels = [
 
 [[package]]
 name = "langflow"
-version = "1"
+version = "1.7.1"
 source = { editable = "." }
 dependencies = [
     { name = "agent-lifecycle-toolkit" },
