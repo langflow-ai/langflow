@@ -189,9 +189,9 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             build_mode = getattr(self, "build_mode", BUILD_MODE_GENERATE)
             if build_mode == BUILD_MODE_GENERATE:  # run buildtime steps
                 logger.info("🔒️ToolGuard: execution (build) mode")
-                #specs  = await self._build_guard_specs()
-                #guards = await self._build_guards(specs)
-                #self.guard_code_path = guards.out_dir
+                specs  = await self._build_guard_specs()
+                guards = await self._build_guards(specs)
+                self.guard_code_path = guards.out_dir
             else:  # build_mode == "use cache"
                 self.log("🔒️ToolGuard: run mode (cached code from path)", name="info")
                 # make sure self.guard_code_path contains the path to pre-built guards
