@@ -1,31 +1,31 @@
-import { Dialog, DialogContent, DialogHeader } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import {
   NO_API_KEY_PROVIDERS,
   VARIABLE_CATEGORY,
-} from '@/constants/providerConstants';
-import { useGetProviderVariableMapping } from '@/controllers/API/queries/models/use-get-provider-variable-mapping';
-import { useUpdateEnabledModels } from '@/controllers/API/queries/models/use-update-enabled-models';
+} from "@/constants/providerConstants";
+import { useGetProviderVariableMapping } from "@/controllers/API/queries/models/use-get-provider-variable-mapping";
+import { useUpdateEnabledModels } from "@/controllers/API/queries/models/use-update-enabled-models";
 import {
   useGetGlobalVariables,
   usePatchGlobalVariables,
   usePostGlobalVariables,
-} from '@/controllers/API/queries/variables';
-import { useDebounce } from '@/hooks/use-debounce';
-import { useRefreshModelInputs } from '@/hooks/use-refresh-model-inputs';
-import ProviderList from '@/modals/modelProviderModal/components/ProviderList';
-import { Provider } from '@/modals/modelProviderModal/components/types';
-import useAlertStore from '@/stores/alertStore';
-import { cn } from '@/utils/utils';
-import ModelSelection from './components/ModelSelection';
+} from "@/controllers/API/queries/variables";
+import { useDebounce } from "@/hooks/use-debounce";
+import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
+import ProviderList from "@/modals/modelProviderModal/components/ProviderList";
+import { Provider } from "@/modals/modelProviderModal/components/types";
+import useAlertStore from "@/stores/alertStore";
+import { cn } from "@/utils/utils";
+import ModelSelection from "./components/ModelSelection";
 
 // Valid model types matching backend: 'llm', 'embeddings', 'image', 'audio', 'video'
 export type ModelTypeOption =
-  | 'llm'
-  | 'embeddings'
-  | 'image'
-  | 'audio'
-  | 'video';
+  | "llm"
+  | "embeddings"
+  | "image"
+  | "audio"
+  | "video";
 
 interface ModelProviderModalProps {
   open: boolean;
@@ -39,17 +39,17 @@ const ModelProviderModal = ({
   modelType,
 }: ModelProviderModalProps) => {
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(
-    null
+    null,
   );
-  const [apiKey, setApiKey] = useState('');
+  const [apiKey, setApiKey] = useState("");
   const [validationFailed, setValidationFailed] = useState(false);
   // Track if API key change came from user typing (vs programmatic reset)
   // Used to prevent auto-save from triggering when we clear the input after success
   const isUserInputRef = useRef(false);
 
   const queryClient = useQueryClient();
-  const setSuccessData = useAlertStore(state => state.setSuccessData);
-  const setErrorData = useAlertStore(state => state.setErrorData);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
 
   const { mutate: createGlobalVariable, isPending: isCreating } =
     usePostGlobalVariables();
@@ -66,15 +66,15 @@ const ModelProviderModal = ({
   // Invalidate all provider-related caches after successful create/update
   // This ensures the UI reflects the latest state across all components
   const invalidateProviderQueries = () => {
-    queryClient.invalidateQueries({ queryKey: ['useGetModelProviders'] });
-    queryClient.invalidateQueries({ queryKey: ['useGetEnabledModels'] });
-    queryClient.invalidateQueries({ queryKey: ['useGetGlobalVariables'] });
-    queryClient.refetchQueries({ queryKey: ['flows'] });
+    queryClient.invalidateQueries({ queryKey: ["useGetModelProviders"] });
+    queryClient.invalidateQueries({ queryKey: ["useGetEnabledModels"] });
+    queryClient.invalidateQueries({ queryKey: ["useGetGlobalVariables"] });
+    queryClient.refetchQueries({ queryKey: ["flows"] });
   };
 
   // Reset form when provider changes
   useEffect(() => {
-    setApiKey('');
+    setApiKey("");
     setValidationFailed(false);
   }, [selectedProvider?.provider]);
 
@@ -110,16 +110,16 @@ const ModelProviderModal = ({
       },
       {
         onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: ['useGetEnabledModels'] });
+          queryClient.invalidateQueries({ queryKey: ["useGetEnabledModels"] });
         },
-      }
+      },
     );
   };
 
   // Toggle provider selection - clicking same provider deselects it
   const handleProviderSelect = (provider: Provider) => {
-    setSelectedProvider(prev =>
-      prev?.provider === provider.provider ? null : provider
+    setSelectedProvider((prev) =>
+      prev?.provider === provider.provider ? null : provider,
     );
   };
 
@@ -138,32 +138,34 @@ const ModelProviderModal = ({
     const variableName = providerVariableMapping[selectedProvider.provider];
     if (!variableName) {
       setErrorData({
-        title: 'Invalid Provider',
+        title: "Invalid Provider",
         list: [`Provider "${selectedProvider.provider}" is not supported.`],
       });
       return;
     }
 
     // Check if provider was previously configured (variable exists)
-    const existingVariable = globalVariables.find(v => v.name === variableName);
+    const existingVariable = globalVariables.find(
+      (v) => v.name === variableName,
+    );
 
     // Ollama default endpoint - used as placeholder to mark provider as active
-    const placeholderValue = 'http://localhost:11434';
+    const placeholderValue = "http://localhost:11434";
 
     const onSuccess = () => {
       setSuccessData({ title: `${selectedProvider.provider} Activated` });
       invalidateProviderQueries();
-      setSelectedProvider(prev =>
-        prev ? { ...prev, is_enabled: true } : null
+      setSelectedProvider((prev) =>
+        prev ? { ...prev, is_enabled: true } : null,
       );
     };
 
     const onError = (error: any) => {
       setErrorData({
-        title: 'Error Activating Provider',
+        title: "Error Activating Provider",
         list: [
           error?.response?.data?.detail ||
-            'An unexpected error occurred. Please try again.',
+            "An unexpected error occurred. Please try again.",
         ],
       });
     };
@@ -172,7 +174,7 @@ const ModelProviderModal = ({
     if (existingVariable) {
       updateGlobalVariable(
         { id: existingVariable.id, value: placeholderValue },
-        { onSuccess, onError }
+        { onSuccess, onError },
       );
     } else {
       createGlobalVariable(
@@ -183,7 +185,7 @@ const ModelProviderModal = ({
           category: VARIABLE_CATEGORY.GLOBAL,
           default_fields: [],
         },
-        { onSuccess, onError }
+        { onSuccess, onError },
       );
     }
   };
@@ -195,21 +197,23 @@ const ModelProviderModal = ({
     const variableName = providerVariableMapping[selectedProvider.provider];
     if (!variableName) {
       setErrorData({
-        title: 'Invalid Provider',
+        title: "Invalid Provider",
         list: [`Provider "${selectedProvider.provider}" is not supported.`],
       });
       return;
     }
 
     // Check if provider was previously configured - determines update vs create
-    const existingVariable = globalVariables.find(v => v.name === variableName);
+    const existingVariable = globalVariables.find(
+      (v) => v.name === variableName,
+    );
 
     const onSuccess = () => {
       setSuccessData({ title: `${selectedProvider.provider} API Key Saved` });
       invalidateProviderQueries();
-      setApiKey('');
-      setSelectedProvider(prev =>
-        prev ? { ...prev, is_enabled: true } : null
+      setApiKey("");
+      setSelectedProvider((prev) =>
+        prev ? { ...prev, is_enabled: true } : null,
       );
     };
 
@@ -217,11 +221,11 @@ const ModelProviderModal = ({
       setValidationFailed(true);
       setErrorData({
         title: existingVariable
-          ? 'Error Updating API Key'
-          : 'Error Saving API Key',
+          ? "Error Updating API Key"
+          : "Error Saving API Key",
         list: [
           error?.response?.data?.detail ||
-            'An unexpected error occurred. Please try again.',
+            "An unexpected error occurred. Please try again.",
         ],
       });
     };
@@ -229,7 +233,7 @@ const ModelProviderModal = ({
     if (existingVariable) {
       updateGlobalVariable(
         { id: existingVariable.id, value: apiKey },
-        { onSuccess, onError }
+        { onSuccess, onError },
       );
     } else {
       createGlobalVariable(
@@ -240,7 +244,7 @@ const ModelProviderModal = ({
           category: VARIABLE_CATEGORY.GLOBAL,
           default_fields: [],
         },
-        { onSuccess, onError }
+        { onSuccess, onError },
       );
     }
   };
@@ -250,7 +254,7 @@ const ModelProviderModal = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={isOpen => !isOpen && handleClose()}>
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
       <DialogContent className="flex flex-col overflow-hidden rounded-xl p-0 max-w-[768px] h-[560px] gap-0">
         <DialogHeader className="flex w-full border-b px-4 py-3">
           <div className="flex justify-start items-center gap-3">
@@ -261,8 +265,8 @@ const ModelProviderModal = ({
         <div className="flex flex-row w-full overflow-hidden">
           <div
             className={cn(
-              'flex border-r p-2 flex-col transition-all duration-300 h-[513px] ease-in-out overflow-y-auto',
-              selectedProvider ? 'w-1/3' : 'w-full'
+              "flex border-r p-2 flex-col transition-all duration-300 h-[513px] ease-in-out overflow-y-auto",
+              selectedProvider ? "w-1/3" : "w-full",
             )}
           >
             <ProviderList
@@ -274,17 +278,17 @@ const ModelProviderModal = ({
 
           <div
             className={cn(
-              'flex flex-col gap-1 transition-all duration-300 ease-in-out overflow-hidden',
+              "flex flex-col gap-1 transition-all duration-300 ease-in-out overflow-hidden",
               selectedProvider
-                ? 'w-2/3 opacity-100 translate-x-0'
-                : 'w-0 opacity-0 translate-x-full'
+                ? "w-2/3 opacity-100 translate-x-0"
+                : "w-0 opacity-0 translate-x-full",
             )}
           >
             <div className="flex flex-col gap-1 p-4">
               <div className="flex flex-row gap-1 min-w-[300px]">
                 <span className="text-[13px] font-semibold mr-auto">
-                  {selectedProvider?.provider || 'Unknown Provider'}
-                  {requiresApiKey && ' API Key'}
+                  {selectedProvider?.provider || "Unknown Provider"}
+                  {requiresApiKey && " API Key"}
                   {requiresApiKey && (
                     <span className="text-red-500 ml-1">*</span>
                   )}
@@ -293,7 +297,7 @@ const ModelProviderModal = ({
               <span className="text-[13px] text-muted-foreground pt-1 pb-2">
                 {requiresApiKey ? (
                   <>
-                    Add your{' '}
+                    Add your{" "}
                     {selectedProvider?.documentation_url ? (
                       <a
                         href={selectedProvider.documentation_url}
@@ -307,7 +311,7 @@ const ModelProviderModal = ({
                       <span className="underline cursor-pointer hover:text-primary">
                         {selectedProvider?.provider} API key
                       </span>
-                    )}{' '}
+                    )}{" "}
                     to enable these models
                   </>
                 ) : (
@@ -321,7 +325,7 @@ const ModelProviderModal = ({
                   placeholder="Add API key"
                   value={apiKey}
                   type="password"
-                  onChange={e => {
+                  onChange={(e) => {
                     isUserInputRef.current = true;
                     setValidationFailed(false);
                     setApiKey(e.target.value);
@@ -329,20 +333,20 @@ const ModelProviderModal = ({
                   // Show loading spinner while saving, X on error, checkmark when configured
                   endIcon={
                     isPending
-                      ? 'LoaderCircle'
+                      ? "LoaderCircle"
                       : validationFailed
-                      ? 'X'
-                      : selectedProvider?.is_enabled
-                      ? 'Check'
-                      : undefined
+                        ? "X"
+                        : selectedProvider?.is_enabled
+                          ? "Check"
+                          : undefined
                   }
                   endIconClassName={cn(
-                    isPending && 'animate-spin text-muted-foreground top-2.5',
-                    validationFailed && 'text-red-500',
+                    isPending && "animate-spin text-muted-foreground top-2.5",
+                    validationFailed && "text-red-500",
                     !isPending &&
                       !validationFailed &&
                       selectedProvider?.is_enabled &&
-                      'text-green-500'
+                      "text-green-500",
                   )}
                 />
               ) : (
