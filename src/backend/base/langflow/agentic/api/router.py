@@ -6,11 +6,11 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException
 from lfx.log.logger import logger
 from lfx.run.base import run_flow
+from pydantic import BaseModel
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.services.deps import get_variable_service
 from langflow.services.variable.service import VariableService
-from pydantic import BaseModel
 
 
 class FlowRequest(BaseModel):
