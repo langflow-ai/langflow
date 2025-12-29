@@ -15,8 +15,12 @@ from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.services.deps import get_settings_service, session_scope
+from lfx.utils.validate_cloud import raise_error_if_astra_cloud_disable_component
 
 _KNOWLEDGE_BASES_ROOT_PATH: Path | None = None
+
+# Error message to raise if we're in Astra cloud environment and the component is not supported.
+astra_error_msg = "Knowledge retrieval is not supported in Astra cloud environment."
 
 
 def _get_knowledge_bases_root_path() -> Path:
@@ -95,6 +99,8 @@ class KnowledgeRetrievalComponent(Component):
     ]
 
     async def update_build_config(self, build_config, field_value, field_name=None):  # noqa: ARG002
+        # Check if we're in Astra cloud environment and raise an error if we are.
+        raise_error_if_astra_cloud_disable_component(astra_error_msg)
         if field_name == "knowledge_base":
             # Update the knowledge base options dynamically
             build_config["knowledge_base"]["options"] = await get_knowledge_bases(
@@ -110,6 +116,8 @@ class KnowledgeRetrievalComponent(Component):
 
     def _get_kb_metadata(self, kb_path: Path) -> dict:
         """Load and process knowledge base metadata."""
+        # Check if we're in Astra cloud environment and raise an error if we are.
+        raise_error_if_astra_cloud_disable_component(astra_error_msg)
         metadata: dict[str, Any] = {}
         metadata_file = kb_path / "embedding_metadata.json"
         if not metadata_file.exists():
@@ -184,6 +192,8 @@ class KnowledgeRetrievalComponent(Component):
         Returns:
             A DataFrame containing the data rows from the knowledge base.
         """
+        # Check if we're in Astra cloud environment and raise an error if we are.
+        raise_error_if_astra_cloud_disable_component(astra_error_msg)
         # Get the current user
         async with session_scope() as db:
             if not self.user_id:

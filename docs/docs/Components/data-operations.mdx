@@ -13,7 +13,7 @@ The **Data Operations** component performs operations on [`Data`](/data-types#da
 For all options, see [Available data operations](#available-data-operations).
 The output is a new `Data` object containing the modified data after running the selected operation.
 
-### Use the Data Operations component in a flow
+## Use the Data Operations component in a flow
 
 The following example demonstrates how to use a **Data Operations** component in a flow using data from a webhook payload:
 
@@ -79,7 +79,7 @@ For more information about the webhook endpoint, see [Trigger flows with webhook
    * If you attached a **Chat Output** component, open the **Playground** to see the result as a chat message.
    * Click <Icon name="TextSearch" aria-hidden="true" /> **Inspect output** on the **Data Operations** component.
 
-### Data Operations parameters
+## Data Operations parameters
 
 Many parameters are conditional based on the selected **Operation** (`operation`).
 
@@ -115,7 +115,7 @@ All operations act on an incoming `Data` object.
 | Path Selection | `mapped_json_display`, `selected_key` | Extracts values from nested JSON structures using path expressions. |
 | JQ Expression | `query` | Performs advanced JSON queries using [`jq`](https://jqlang.org/manual/) syntax for filtering, projections, and transformations. |
 
-### Path Selection operation examples
+## Path Selection operation examples
 
 Use the Path Selection operation to extract values from nested JSON structures with dot notation paths.
 
@@ -140,7 +140,7 @@ Use the Path Selection operation to extract values from nested JSON structures w
 3. In the **Select Paths** dropdown, select the path.
     You can select paths such as `.user.profile.name` to extract "John Doe", or select `.user.settings.theme` to extract "dark".
 
-### JQ Expression operation example {#jq-expression-operation-examples}
+## JQ Expression operation example {#jq-expression-operation-examples}
 
 Use the **JQ Expressions** operation to use the [jq](https://jqlang.org/) query language to perform more advanced JSON filtering.
 1. In the **Operations** dropdown, select **JQ Expression**.
