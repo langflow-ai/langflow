@@ -94,7 +94,7 @@
                 "dependencies": [
                   {
                     "name": "langchain_text_splitters",
-                    "version": "0.3.11"
+                    "version": null
                   },
                   {
                     "name": "lfx",
@@ -362,11 +362,11 @@
                   },
                   {
                     "name": "bs4",
-                    "version": "4.12.3"
+                    "version": null
                   },
                   {
                     "name": "langchain_community",
-                    "version": "0.3.21"
+                    "version": null
                   },
                   {
                     "name": "lfx",
@@ -742,15 +742,15 @@
                 "dependencies": [
                   {
                     "name": "pandas",
-                    "version": "2.2.3"
+                    "version": null
                   },
                   {
                     "name": "cryptography",
-                    "version": "43.0.3"
+                    "version": null
                   },
                   {
                     "name": "langchain_chroma",
-                    "version": "0.2.6"
+                    "version": null
                   },
                   {
                     "name": "langflow",
@@ -762,15 +762,15 @@
                   },
                   {
                     "name": "langchain_openai",
-                    "version": "0.3.23"
+                    "version": null
                   },
                   {
                     "name": "langchain_huggingface",
-                    "version": "0.3.1"
+                    "version": null
                   },
                   {
                     "name": "langchain_cohere",
-                    "version": "0.3.5"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 8
