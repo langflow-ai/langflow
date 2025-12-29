@@ -10,7 +10,7 @@ from lfx.run.base import run_flow
 # from langflow.agentic.mcp.server import visualize_flow_graph
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.services.deps import get_variable_service
-from langflow.services.variable.service import DatabaseVariableService
+from langflow.services.variable.service import VariableService
 from pydantic import BaseModel
 
 
@@ -24,7 +24,7 @@ class FlowRequest(BaseModel):
 router = APIRouter(prefix="/agentic", tags=["Agentic"])
 
 
-async def get_openai_api_key(variable_service: DatabaseVariableService, user_id: UUID | str, session) -> str:
+async def get_openai_api_key(variable_service: VariableService, user_id: UUID | str, session) -> str:
     """Get OPENAI_API_KEY from Langflow global variables."""
     try:
         return await variable_service.get_variable(user_id, "OPENAI_API_KEY", "", session)
