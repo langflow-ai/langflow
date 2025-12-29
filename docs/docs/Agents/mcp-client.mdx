@@ -19,8 +19,8 @@ The **MCP Tools** component connects to an MCP server so that a [Langflow agent]
 
 This component has two modes, depending on the type of server you want to access:
 
-* [Connect to a non-Langflow MCP server](#mcp-stdio-mode) with a JSON configuration file, a server start command (STDIO mode), or a Streamable HTTP/SSE URL to access tools provided by external, non-Langflow MCP servers.
-* [Connect to a Langflow MCP server](#mcp-sse-mode) to use flows from your [Langflow projects](/concepts-flows#projects) as MCP tools. You must use SSE transport because Langflow MCP servers currently only support SSE.
+* [Connect to a non-Langflow MCP server](#mcp-stdio-mode) with a JSON configuration file, server start command, or HTTP/SSE URL to access tools provided by external, non-Langflow MCP servers.
+* [Connect to a Langflow MCP server](#mcp-http-mode) to use flows from your [Langflow projects](/concepts-flows#projects) as MCP tools.
 
 ### Connect to a non-Langflow MCP server {#mcp-stdio-mode}
 
@@ -33,9 +33,8 @@ This component has two modes, depending on the type of server you want to access
     * **JSON**: Paste the MCP server's JSON configuration object into the field, including required and optional parameters that you want to use, and then click **Add Server**.
     * **STDIO**: Enter the MCP server's **Name**, **Command**, and any **Arguments** and **Environment Variables** the server uses, and then click **Add Server**.
     For example, to start a [Fetch](https://github.com/modelcontextprotocol/servers/tree/main/src/fetch) server, the **Command** is `uvx mcp-server-fetch`.
-    * **Streamable HTTP/SSE**: Enter the MCP server's **Name**, **URL**, and any **Headers** and **Environment Variables** the server uses, and then click **Add Server**.
-    Langflow automatically tries Streamable HTTP transport first, and falls back to Server-Sent Events (SSE) transport if Streamable HTTP is not available.
-    The URL depends on the specific MCP server you're connecting to. For information about connecting to a Langflow MCP server, see [Connect a Langflow MCP server](#mcp-sse-mode).
+    * **HTTP/SSE**: Enter your MCP server's **Name**, **URL**, and any **Headers** and **Environment Variables** the server uses, and then click **Add Server**.
+    The default **URL** for Langflow MCP servers is `http://localhost:7860/api/v1/mcp/project/PROJECT_ID/streamable` or `http://localhost:7860/api/v1/mcp/streamable`. For more information, see [Connect to a Langflow MCP server](#mcp-http-mode).
 
     <PartialMcpNodeTip />
 
@@ -67,22 +66,27 @@ This component has two modes, depending on the type of server you want to access
 
 8. If you want the agent to be able to use more tools, repeat these steps to add more tools components with different servers or tools.
 
-### Connect a Langflow MCP server {#mcp-sse-mode}
+### Connect a Langflow MCP server {#mcp-http-mode}
 
 Every Langflow project runs a separate MCP server that exposes the project's flows as MCP tools.
 For more information about your projects' MCP servers, including exposing flows as MCP tools, see [Use Langflow as an MCP server](/mcp-server).
 
-To leverage flows-as-tools, use the **MCP Tools** component to connect to a project's MCP server endpoint.
-Langflow MCP servers currently only support Server-Sent Events (SSE) transport, so you must use **Streamable HTTP/SSE** mode to connect to them.
+Langflow MCP servers support both the **streamable HTTP** transport and **Server-Sent Events (SSE)** as a fallback.
 
-1. Add an **MCP Tools** component to your flow, click <Icon name="Plus" aria-hidden="true"/> **Add MCP Server**, and then select **Streamable HTTP/SSE** mode.
-2. In the **URL** field, modify the default address to point at your Langflow server's MCP endpoint. The default value for other Langflow installations is `http://localhost:7860/api/v1/mcp/sse`.
-   In SSE mode, all flows available from the targeted server are treated as tools.
+To leverage flows-as-tools, use the **MCP Tools** component to connect to a project's MCP endpoint:
+
+1. Add an **MCP Tools** component to your flow, click <Icon name="Plus" aria-hidden="true"/> **Add MCP Server**, and then select **HTTP/SSE** mode.
+2. In the **MCP URL** field, enter your Langflow server's MCP endpoint.
+   - For project-specific servers: `http://localhost:7860/api/v1/mcp/project/PROJECT_ID/streamable`
+   - For global MCP server: `http://localhost:7860/api/v1/mcp/streamable`
+   - Default for Langflow Desktop: `http://localhost:7868/`
+
+   All flows available from the targeted server are treated as tools.
 3. In the [component's header menu](/concepts-components#component-menus), enable **Tool Mode** so you can use the component with an agent.
 4. Connect the **MCP Tools** component's **Toolset** port to an **Agent** component's **Tools** port.
 5. If not already present in your flow, make sure you also attach **Chat Input** and **Chat Output** components to the **Agent** component.
 
-    ![MCP component with SSE mode enabled](/img/component-mcp-sse-mode.png)
+    ![MCP component with HTTP/SSE mode enabled](/img/component-mcp-sse-mode.png)
 
 6. Test your flow to make sure the agent uses your flows to respond to queries. Open the **Playground**, and then enter a prompt that uses a flow that you connected through the **MCP Tools** component.
 

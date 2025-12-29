@@ -94,6 +94,7 @@ jest.mock("@/components/ui/button", () => ({
     size,
     className,
     disabled,
+    loading,
   }: {
     children: React.ReactNode;
     onClick?: () => void;
@@ -101,9 +102,14 @@ jest.mock("@/components/ui/button", () => ({
     size?: string;
     className?: string;
     disabled?: boolean;
+    loading?: boolean;
   }) => (
-    <button onClick={onClick} className={className} disabled={disabled}>
-      {children}
+    <button
+      onClick={onClick}
+      className={className}
+      disabled={disabled || loading}
+    >
+      {loading ? "Loading..." : children}
     </button>
   ),
 }));
@@ -138,8 +144,14 @@ jest.mock("../McpAuthSection", () => ({
   McpAuthSection: () => <div data-testid="auth-section" />,
 }));
 
-jest.mock("../McpJsonContent", () => ({
-  McpJsonContent: () => <div data-testid="json-content" />,
+// Mock react-syntax-highlighter for McpJsonContent
+jest.mock("react-syntax-highlighter", () => ({
+  // biome-ignore lint/suspicious/noExplicitAny: TODO We need to fix this. added suppression for 1.7.1 merge
+  Light: ({ children, CodeTag }: { children: string; CodeTag: any }) => (
+    <div data-testid="syntax-highlighter">
+      <CodeTag>{children}</CodeTag>
+    </div>
+  ),
 }));
 
 jest.mock("../McpAutoInstallContent", () => ({
@@ -232,7 +244,8 @@ describe("McpServerTab - Critical User Flows", () => {
     const jsonButton = screen.getByText("JSON");
     fireEvent.click(jsonButton);
 
-    expect(screen.getByTestId("json-content")).toBeInTheDocument();
+    // JSON mode should show Transport selector
+    expect(screen.getByText("Transport")).toBeInTheDocument();
     expect(
       screen.queryByTestId("auto-install-content"),
     ).not.toBeInTheDocument();
@@ -245,12 +258,12 @@ describe("McpServerTab - Critical User Flows", () => {
 
     // Switch to JSON first
     fireEvent.click(screen.getByText("JSON"));
-    expect(screen.getByTestId("json-content")).toBeInTheDocument();
+    expect(screen.getByText("Transport")).toBeInTheDocument();
 
     // Switch back to Auto install
     fireEvent.click(screen.getByText("Auto install"));
     expect(screen.getByTestId("auto-install-content")).toBeInTheDocument();
-    expect(screen.queryByTestId("json-content")).not.toBeInTheDocument();
+    expect(screen.queryByText("Transport")).not.toBeInTheDocument();
   });
 
   it("shows OAuth error message when hasOAuthError is true", () => {
@@ -281,9 +294,37 @@ describe("McpServerTab - Critical User Flows", () => {
       wrapper: createWrapper(),
     });
 
-    expect(screen.queryByTestId("json-content")).not.toBeInTheDocument();
+    expect(screen.queryByText("Transport")).not.toBeInTheDocument();
     expect(
       screen.queryByTestId("auto-install-content"),
     ).not.toBeInTheDocument();
+  });
+
+  it("generates API key when clicking Generate API Key button in JSON mode", () => {
+    const mockGenerateApiKey = jest.fn();
+    mockUseMcpServer.mockReturnValue({
+      ...mockUseMcpServer(),
+      isAuthApiKey: true,
+      apiKey: "",
+      generateApiKey: mockGenerateApiKey,
+      hasOAuthError: false,
+      composerUrlData: {},
+    });
+
+    render(<McpServerTab folderName="Test" />, {
+      wrapper: createWrapper(),
+    });
+
+    // Switch to JSON mode
+    const jsonButton = screen.getByText("JSON");
+    fireEvent.click(jsonButton);
+
+    // Find and click the Generate API Key button
+    const generateButton = screen.getByText("Generate API key");
+    expect(generateButton).toBeInTheDocument();
+    fireEvent.click(generateButton);
+
+    // Verify that generateApiKey was called
+    expect(mockGenerateApiKey).toHaveBeenCalledTimes(1);
   });
 });
