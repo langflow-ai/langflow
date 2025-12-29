@@ -357,7 +357,7 @@
                 "dependencies": [
                   {
                     "name": "pydantic",
-                    "version": null
+                    "version": "2.11.10"
                   },
                   {
                     "name": "lfx",
@@ -365,7 +365,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": null
+                    "version": "0.3.80"
                   }
                 ],
                 "total_dependencies": 3
@@ -860,7 +860,7 @@
                 "dependencies": [
                   {
                     "name": "pydantic",
-                    "version": null
+                    "version": "2.11.10"
                   },
                   {
                     "name": "lfx",
@@ -868,7 +868,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": null
+                    "version": "0.3.80"
                   }
                 ],
                 "total_dependencies": 3
@@ -2126,7 +2126,7 @@
                 "dependencies": [
                   {
                     "name": "pydantic",
-                    "version": null
+                    "version": "2.11.10"
                   },
                   {
                     "name": "lfx",
@@ -2134,7 +2134,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": null
+                    "version": "0.3.80"
                   }
                 ],
                 "total_dependencies": 3
@@ -2623,11 +2623,11 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": null
+                    "version": "0.3.80"
                   },
                   {
                     "name": "pydantic",
-                    "version": null
+                    "version": "2.11.10"
                   },
                   {
                     "name": "lfx",
@@ -3020,7 +3020,7 @@
                 "dependencies": [
                   {
                     "name": "httpx",
-                    "version": null
+                    "version": "0.28.1"
                   },
                   {
                     "name": "lfx",
@@ -3433,11 +3433,11 @@
                 "dependencies": [
                   {
                     "name": "orjson",
-                    "version": null
+                    "version": "3.10.15"
                   },
                   {
                     "name": "fastapi",
-                    "version": null
+                    "version": "0.123.0"
                   },
                   {
                     "name": "lfx",

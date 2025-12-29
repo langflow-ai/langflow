@@ -298,7 +298,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": null
+                    "version": "0.3.80"
                   }
                 ],
                 "total_dependencies": 3
@@ -545,7 +545,7 @@
                 "dependencies": [
                   {
                     "name": "pandas",
-                    "version": null
+                    "version": "2.2.3"
                   },
                   {
                     "name": "googleapiclient",
@@ -777,7 +777,7 @@
                 "dependencies": [
                   {
                     "name": "pydantic",
-                    "version": null
+                    "version": "2.11.10"
                   },
                   {
                     "name": "lfx",
@@ -785,7 +785,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": null
+                    "version": "0.3.80"
                   }
                 ],
                 "total_dependencies": 3
@@ -1450,11 +1450,11 @@
                 "dependencies": [
                   {
                     "name": "orjson",
-                    "version": null
+                    "version": "3.10.15"
                   },
                   {
                     "name": "fastapi",
-                    "version": null
+                    "version": "0.123.0"
                   },
                   {
                     "name": "lfx",
@@ -1732,11 +1732,11 @@
                 "dependencies": [
                   {
                     "name": "pandas",
-                    "version": null
+                    "version": "2.2.3"
                   },
                   {
                     "name": "youtube_transcript_api",
-                    "version": null
+                    "version": "1.2.3"
                   },
                   {
                     "name": "lfx",
