@@ -9,12 +9,16 @@
             "dataType": "ChatInput",
             "id": "ChatInput-8XmJU",
             "name": "message",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "Agent-9dON7",
-            "inputTypes": ["Message"],
+            "inputTypes": [
+              "Message"
+            ],
             "type": "str"
           }
         },
@@ -33,12 +37,18 @@
             "dataType": "Agent",
             "id": "Agent-9dON7",
             "name": "response",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-o3obj",
-            "inputTypes": ["Data", "DataFrame", "Message"],
+            "inputTypes": [
+              "Data",
+              "DataFrame",
+              "Message"
+            ],
             "type": "other"
           }
         },
@@ -57,12 +67,16 @@
             "dataType": "Prompt",
             "id": "Prompt-PrjbV",
             "name": "prompt",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "system_prompt",
             "id": "Agent-9dON7",
-            "inputTypes": ["Message"],
+            "inputTypes": [
+              "Message"
+            ],
             "type": "str"
           }
         },
@@ -81,12 +95,17 @@
             "dataType": "RemixDocumentation",
             "id": "RemixDocumentation-DEIws",
             "name": "dataframe_output",
-            "output_types": ["DataFrame"]
+            "output_types": [
+              "DataFrame"
+            ]
           },
           "targetHandle": {
             "fieldName": "ingest_data",
             "id": "FAISS-Uz8O4",
-            "inputTypes": ["Data", "DataFrame"],
+            "inputTypes": [
+              "Data",
+              "DataFrame"
+            ],
             "type": "other"
           }
         },
@@ -105,12 +124,16 @@
             "dataType": "EmbeddingModel",
             "id": "EmbeddingModel-X6URU",
             "name": "embeddings",
-            "output_types": ["Embeddings"]
+            "output_types": [
+              "Embeddings"
+            ]
           },
           "targetHandle": {
             "fieldName": "embedding",
             "id": "FAISS-Uz8O4",
-            "inputTypes": ["Embeddings"],
+            "inputTypes": [
+              "Embeddings"
+            ],
             "type": "other"
           }
         },
@@ -129,12 +152,16 @@
             "dataType": "FAISS",
             "id": "FAISS-Uz8O4",
             "name": "component_as_tool",
-            "output_types": ["Tool"]
+            "output_types": [
+              "Tool"
+            ]
           },
           "targetHandle": {
             "fieldName": "tools",
             "id": "Agent-9dON7",
-            "inputTypes": ["Tool"],
+            "inputTypes": [
+              "Tool"
+            ],
             "type": "other"
           }
         },
@@ -153,12 +180,16 @@
             "dataType": "MCPTools",
             "id": "MCPTools-beHVJ",
             "name": "component_as_tool",
-            "output_types": ["Tool"]
+            "output_types": [
+              "Tool"
+            ]
           },
           "targetHandle": {
             "fieldName": "tools",
             "id": "Agent-9dON7",
-            "inputTypes": ["Tool"],
+            "inputTypes": [
+              "Tool"
+            ],
             "type": "other"
           }
         },
@@ -175,7 +206,9 @@
         "data": {
           "id": "ChatInput-8XmJU",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -223,7 +256,9 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -254,7 +289,9 @@
                 "display_name": "Context ID",
                 "dynamic": false,
                 "info": "The context ID of the chat. Adds an extra layer to the local memory.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -345,7 +382,10 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -363,7 +403,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -384,7 +426,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -440,7 +484,9 @@
         "data": {
           "id": "ChatOutput-o3obj",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -497,7 +543,9 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -546,7 +594,9 @@
                 "display_name": "Context ID",
                 "dynamic": false,
                 "info": "The context ID of the chat. Adds an extra layer to the local memory.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -567,7 +617,9 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -588,7 +640,11 @@
                 "display_name": "Inputs",
                 "dynamic": false,
                 "info": "Message to be passed as output.",
-                "input_types": ["Data", "DataFrame", "Message"],
+                "input_types": [
+                  "Data",
+                  "DataFrame",
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "input_value",
@@ -609,7 +665,10 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -627,7 +686,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -648,7 +709,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -704,7 +767,9 @@
         "data": {
           "id": "Agent-9dON7",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -733,7 +798,7 @@
             "last_updated": "2025-12-11T21:41:48.407Z",
             "legacy": false,
             "metadata": {
-              "code_hash": "96962dc0261a",
+              "code_hash": "30e0e6cec969",
               "dependencies": {
                 "dependencies": [
                   {
@@ -765,7 +830,9 @@
                 "name": "response",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -801,7 +868,9 @@
                 "display_name": "Agent Description [Deprecated]",
                 "dynamic": false,
                 "info": "The description of the agent. This is only used when in Tool Mode. Defaults to 'A helpful assistant with access to the following tools:' and tools are added dynamically. This feature is deprecated and will be removed in future versions.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -856,7 +925,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from __future__ import annotations\n\nimport json\nimport re\nfrom typing import TYPE_CHECKING\n\nfrom pydantic import ValidationError\n\nfrom lfx.components.models_and_agents.memory import MemoryComponent\n\nif TYPE_CHECKING:\n    from langchain_core.tools import Tool\n\nfrom lfx.base.agents.agent import LCToolsAgentComponent\nfrom lfx.base.agents.events import ExceptionWithMessageError\nfrom lfx.base.models.unified_models import (\n    get_language_model_options,\n    get_llm,\n    update_model_options_in_build_config,\n)\nfrom lfx.components.helpers import CurrentDateComponent\nfrom lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComponent\nfrom lfx.custom.custom_component.component import get_component_toolkit\nfrom lfx.helpers.base_model import build_model_from_schema\nfrom lfx.inputs.inputs import BoolInput, ModelInput\nfrom lfx.io import IntInput, MessageTextInput, MultilineInput, Output, SecretStrInput, TableInput\nfrom lfx.log.logger import logger\nfrom lfx.schema.data import Data\nfrom lfx.schema.dotdict import dotdict\nfrom lfx.schema.message import Message\nfrom lfx.schema.table import EditMode\n\n\ndef set_advanced_true(component_input):\n    component_input.advanced = True\n    return component_input\n\n\nclass AgentComponent(ToolCallingAgentComponent):\n    display_name: str = \"Agent\"\n    description: str = \"Define the agent's instructions, then enter a task to complete using tools.\"\n    documentation: str = \"https://docs.langflow.org/agents\"\n    icon = \"bot\"\n    beta = False\n    name = \"Agent\"\n\n    memory_inputs = [set_advanced_true(component_input) for component_input in MemoryComponent().inputs]\n\n    inputs = [\n        ModelInput(\n            name=\"model\",\n            display_name=\"Language Model\",\n            info=\"Select your model provider\",\n            real_time_refresh=True,\n            required=True,\n            model_type=[\"llm\"],\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"API Key\",\n            info=\"Model Provider API key\",\n            real_time_refresh=True,\n            advanced=True,\n        ),\n        MultilineInput(\n            name=\"system_prompt\",\n            display_name=\"Agent Instructions\",\n            info=\"System Prompt: Initial instructions and context provided to guide the agent's behavior.\",\n            value=\"You are a helpful assistant that can use tools to answer questions and perform tasks.\",\n            advanced=False,\n        ),\n        MessageTextInput(\n            name=\"context_id\",\n            display_name=\"Context ID\",\n            info=\"The context ID of the chat. Adds an extra layer to the local memory.\",\n            value=\"\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"n_messages\",\n            display_name=\"Number of Chat History Messages\",\n            value=100,\n            info=\"Number of chat history messages to retrieve.\",\n            advanced=True,\n            show=True,\n        ),\n        MultilineInput(\n            name=\"format_instructions\",\n            display_name=\"Output Format Instructions\",\n            info=\"Generic Template for structured output formatting. Valid only with Structured response.\",\n            value=(\n                \"You are an AI that extracts structured JSON objects from unstructured text. \"\n                \"Use a predefined schema with expected types (str, int, float, bool, dict). \"\n                \"Extract ALL relevant instances that match the schema - if multiple patterns exist, capture them all. \"\n                \"Fill missing or ambiguous values with defaults: null for missing values. \"\n                \"Remove exact duplicates but keep variations that have different field values. \"\n                \"Always return valid JSON in the expected format, never throw errors. \"\n                \"If multiple objects can be extracted, return them all in the structured format.\"\n            ),\n            advanced=True,\n        ),\n        TableInput(\n            name=\"output_schema\",\n            display_name=\"Output Schema\",\n            info=(\n                \"Schema Validation: Define the structure and data types for structured output. \"\n                \"No validation if no output schema.\"\n            ),\n            advanced=True,\n            required=False,\n            value=[],\n            table_schema=[\n                {\n                    \"name\": \"name\",\n                    \"display_name\": \"Name\",\n                    \"type\": \"str\",\n                    \"description\": \"Specify the name of the output field.\",\n                    \"default\": \"field\",\n                    \"edit_mode\": EditMode.INLINE,\n                },\n                {\n                    \"name\": \"description\",\n                    \"display_name\": \"Description\",\n                    \"type\": \"str\",\n                    \"description\": \"Describe the purpose of the output field.\",\n                    \"default\": \"description of field\",\n                    \"edit_mode\": EditMode.POPOVER,\n                },\n                {\n                    \"name\": \"type\",\n                    \"display_name\": \"Type\",\n                    \"type\": \"str\",\n                    \"edit_mode\": EditMode.INLINE,\n                    \"description\": (\"Indicate the data type of the output field (e.g., str, int, float, bool, dict).\"),\n                    \"options\": [\"str\", \"int\", \"float\", \"bool\", \"dict\"],\n                    \"default\": \"str\",\n                },\n                {\n                    \"name\": \"multiple\",\n                    \"display_name\": \"As List\",\n                    \"type\": \"boolean\",\n                    \"description\": \"Set to True if this output field should be a list of the specified type.\",\n                    \"default\": \"False\",\n                    \"edit_mode\": EditMode.INLINE,\n                },\n            ],\n        ),\n        *LCToolsAgentComponent.get_base_inputs(),\n        # removed memory inputs from agent component\n        # *memory_inputs,\n        BoolInput(\n            name=\"add_current_date_tool\",\n            display_name=\"Current Date\",\n            advanced=True,\n            info=\"If true, will add a tool to the agent that returns the current date.\",\n            value=True,\n        ),\n    ]\n    outputs = [\n        Output(name=\"response\", display_name=\"Response\", method=\"message_response\"),\n    ]\n\n    async def get_agent_requirements(self):\n        \"\"\"Get the agent requirements for the agent.\"\"\"\n        from langchain_core.tools import StructuredTool\n\n        llm_model = get_llm(\n            model=self.model,\n            user_id=self.user_id,\n            api_key=self.api_key,\n        )\n        if llm_model is None:\n            msg = \"No language model selected. Please choose a model to proceed.\"\n            raise ValueError(msg)\n\n        # Get memory data\n        self.chat_history = await self.get_memory_data()\n        await logger.adebug(f\"Retrieved {len(self.chat_history)} chat history messages\")\n        if isinstance(self.chat_history, Message):\n            self.chat_history = [self.chat_history]\n\n        # Add current date tool if enabled\n        if self.add_current_date_tool:\n            if not isinstance(self.tools, list):  # type: ignore[has-type]\n                self.tools = []\n            current_date_tool = (await CurrentDateComponent(**self.get_base_args()).to_toolkit()).pop(0)\n\n            if not isinstance(current_date_tool, StructuredTool):\n                msg = \"CurrentDateComponent must be converted to a StructuredTool\"\n                raise TypeError(msg)\n            self.tools.append(current_date_tool)\n\n        # Set shared callbacks for tracing the tools used by the agent\n        self.set_tools_callbacks(self.tools, self._get_shared_callbacks())\n\n        return llm_model, self.chat_history, self.tools\n\n    async def message_response(self) -> Message:\n        try:\n            llm_model, self.chat_history, self.tools = await self.get_agent_requirements()\n            # Set up and run agent\n            self.set(\n                llm=llm_model,\n                tools=self.tools or [],\n                chat_history=self.chat_history,\n                input_value=self.input_value,\n                system_prompt=self.system_prompt,\n            )\n            agent = self.create_agent_runnable()\n            result = await self.run_agent(agent)\n\n            # Store result for potential JSON output\n            self._agent_result = result\n\n        except (ValueError, TypeError, KeyError) as e:\n            await logger.aerror(f\"{type(e).__name__}: {e!s}\")\n            raise\n        except ExceptionWithMessageError as e:\n            await logger.aerror(f\"ExceptionWithMessageError occurred: {e}\")\n            raise\n        # Avoid catching blind Exception; let truly unexpected exceptions propagate\n        except Exception as e:\n            await logger.aerror(f\"Unexpected error: {e!s}\")\n            raise\n        else:\n            return result\n\n    def _preprocess_schema(self, schema):\n        \"\"\"Preprocess schema to ensure correct data types for build_model_from_schema.\"\"\"\n        processed_schema = []\n        for field in schema:\n            processed_field = {\n                \"name\": str(field.get(\"name\", \"field\")),\n                \"type\": str(field.get(\"type\", \"str\")),\n                \"description\": str(field.get(\"description\", \"\")),\n                \"multiple\": field.get(\"multiple\", False),\n            }\n            # Ensure multiple is handled correctly\n            if isinstance(processed_field[\"multiple\"], str):\n                processed_field[\"multiple\"] = processed_field[\"multiple\"].lower() in [\n                    \"true\",\n                    \"1\",\n                    \"t\",\n                    \"y\",\n                    \"yes\",\n                ]\n            processed_schema.append(processed_field)\n        return processed_schema\n\n    async def build_structured_output_base(self, content: str):\n        \"\"\"Build structured output with optional BaseModel validation.\"\"\"\n        json_pattern = r\"\\{.*\\}\"\n        schema_error_msg = \"Try setting an output schema\"\n\n        # Try to parse content as JSON first\n        json_data = None\n        try:\n            json_data = json.loads(content)\n        except json.JSONDecodeError:\n            json_match = re.search(json_pattern, content, re.DOTALL)\n            if json_match:\n                try:\n                    json_data = json.loads(json_match.group())\n                except json.JSONDecodeError:\n                    return {\"content\": content, \"error\": schema_error_msg}\n            else:\n                return {\"content\": content, \"error\": schema_error_msg}\n\n        # If no output schema provided, return parsed JSON without validation\n        if not hasattr(self, \"output_schema\") or not self.output_schema or len(self.output_schema) == 0:\n            return json_data\n\n        # Use BaseModel validation with schema\n        try:\n            processed_schema = self._preprocess_schema(self.output_schema)\n            output_model = build_model_from_schema(processed_schema)\n\n            # Validate against the schema\n            if isinstance(json_data, list):\n                # Multiple objects\n                validated_objects = []\n                for item in json_data:\n                    try:\n                        validated_obj = output_model.model_validate(item)\n                        validated_objects.append(validated_obj.model_dump())\n                    except ValidationError as e:\n                        await logger.aerror(f\"Validation error for item: {e}\")\n                        # Include invalid items with error info\n                        validated_objects.append({\"data\": item, \"validation_error\": str(e)})\n                return validated_objects\n\n            # Single object\n            try:\n                validated_obj = output_model.model_validate(json_data)\n                return [validated_obj.model_dump()]  # Return as list for consistency\n            except ValidationError as e:\n                await logger.aerror(f\"Validation error: {e}\")\n                return [{\"data\": json_data, \"validation_error\": str(e)}]\n\n        except (TypeError, ValueError) as e:\n            await logger.aerror(f\"Error building structured output: {e}\")\n            # Fallback to parsed JSON without validation\n            return json_data\n\n    async def json_response(self) -> Data:\n        \"\"\"Convert agent response to structured JSON Data output with schema validation.\"\"\"\n        # Always use structured chat agent for JSON response mode for better JSON formatting\n        try:\n            system_components = []\n\n            # 1. Agent Instructions (system_prompt)\n            agent_instructions = getattr(self, \"system_prompt\", \"\") or \"\"\n            if agent_instructions:\n                system_components.append(f\"{agent_instructions}\")\n\n            # 2. Format Instructions\n            format_instructions = getattr(self, \"format_instructions\", \"\") or \"\"\n            if format_instructions:\n                system_components.append(f\"Format instructions: {format_instructions}\")\n\n            # 3. Schema Information from BaseModel\n            if hasattr(self, \"output_schema\") and self.output_schema and len(self.output_schema) > 0:\n                try:\n                    processed_schema = self._preprocess_schema(self.output_schema)\n                    output_model = build_model_from_schema(processed_schema)\n                    schema_dict = output_model.model_json_schema()\n                    schema_info = (\n                        \"You are given some text that may include format instructions, \"\n                        \"explanations, or other content alongside a JSON schema.\\n\\n\"\n                        \"Your task:\\n\"\n                        \"- Extract only the JSON schema.\\n\"\n                        \"- Return it as valid JSON.\\n\"\n                        \"- Do not include format instructions, explanations, or extra text.\\n\\n\"\n                        \"Input:\\n\"\n                        f\"{json.dumps(schema_dict, indent=2)}\\n\\n\"\n                        \"Output (only JSON schema):\"\n                    )\n                    system_components.append(schema_info)\n                except (ValidationError, ValueError, TypeError, KeyError) as e:\n                    await logger.aerror(f\"Could not build schema for prompt: {e}\", exc_info=True)\n\n            # Combine all components\n            combined_instructions = \"\\n\\n\".join(system_components) if system_components else \"\"\n            llm_model, self.chat_history, self.tools = await self.get_agent_requirements()\n            self.set(\n                llm=llm_model,\n                tools=self.tools or [],\n                chat_history=self.chat_history,\n                input_value=self.input_value,\n                system_prompt=combined_instructions,\n            )\n\n            # Create and run structured chat agent\n            try:\n                structured_agent = self.create_agent_runnable()\n            except (NotImplementedError, ValueError, TypeError) as e:\n                await logger.aerror(f\"Error with structured chat agent: {e}\")\n                raise\n            try:\n                result = await self.run_agent(structured_agent)\n            except (\n                ExceptionWithMessageError,\n                ValueError,\n                TypeError,\n                RuntimeError,\n            ) as e:\n                await logger.aerror(f\"Error with structured agent result: {e}\")\n                raise\n            # Extract content from structured agent result\n            if hasattr(result, \"content\"):\n                content = result.content\n            elif hasattr(result, \"text\"):\n                content = result.text\n            else:\n                content = str(result)\n\n        except (\n            ExceptionWithMessageError,\n            ValueError,\n            TypeError,\n            NotImplementedError,\n            AttributeError,\n        ) as e:\n            await logger.aerror(f\"Error with structured chat agent: {e}\")\n            # Fallback to regular agent\n            content_str = \"No content returned from agent\"\n            return Data(data={\"content\": content_str, \"error\": str(e)})\n\n        # Process with structured output validation\n        try:\n            structured_output = await self.build_structured_output_base(content)\n\n            # Handle different output formats\n            if isinstance(structured_output, list) and structured_output:\n                if len(structured_output) == 1:\n                    return Data(data=structured_output[0])\n                return Data(data={\"results\": structured_output})\n            if isinstance(structured_output, dict):\n                return Data(data=structured_output)\n            return Data(data={\"content\": content})\n\n        except (ValueError, TypeError) as e:\n            await logger.aerror(f\"Error in structured output processing: {e}\")\n            return Data(data={\"content\": content, \"error\": str(e)})\n\n    async def get_memory_data(self):\n        # TODO: This is a temporary fix to avoid message duplication. We should develop a function for this.\n        messages = (\n            await MemoryComponent(**self.get_base_args())\n            .set(\n                session_id=self.graph.session_id,\n                context_id=self.context_id,\n                order=\"Ascending\",\n                n_messages=self.n_messages,\n            )\n            .retrieve_messages()\n        )\n        return [\n            message for message in messages if getattr(message, \"id\", None) != getattr(self.input_value, \"id\", None)\n        ]\n\n    def update_input_types(self, build_config: dotdict) -> dotdict:\n        \"\"\"Update input types for all fields in build_config.\"\"\"\n        for key, value in build_config.items():\n            if isinstance(value, dict):\n                if value.get(\"input_types\") is None:\n                    build_config[key][\"input_types\"] = []\n            elif hasattr(value, \"input_types\") and value.input_types is None:\n                value.input_types = []\n        return build_config\n\n    async def update_build_config(\n        self,\n        build_config: dotdict,\n        field_value: list[dict],\n        field_name: str | None = None,\n    ) -> dotdict:\n        # Update model options with caching (for all field changes)\n        # Agents require tool calling, so filter for only tool-calling capable models\n        def get_tool_calling_model_options(user_id=None):\n            return get_language_model_options(user_id=user_id, tool_calling=True)\n\n        build_config = update_model_options_in_build_config(\n            component=self,\n            build_config=dict(build_config),\n            cache_key_prefix=\"language_model_options_tool_calling\",\n            get_options_func=get_tool_calling_model_options,\n            field_name=field_name,\n            field_value=field_value,\n        )\n        build_config = dotdict(build_config)\n\n        # Iterate over all providers in the MODEL_PROVIDERS_DICT\n        if field_name == \"model\":\n            self.log(str(field_value))\n            # Update input types for all fields\n            build_config = self.update_input_types(build_config)\n\n            # Validate required keys\n            default_keys = [\n                \"code\",\n                \"_type\",\n                \"model\",\n                \"tools\",\n                \"input_value\",\n                \"add_current_date_tool\",\n                \"system_prompt\",\n                \"agent_description\",\n                \"max_iterations\",\n                \"handle_parsing_errors\",\n                \"verbose\",\n            ]\n            missing_keys = [key for key in default_keys if key not in build_config]\n            if missing_keys:\n                msg = f\"Missing required keys in build_config: {missing_keys}\"\n                raise ValueError(msg)\n\n        return dotdict({k: v.to_dict() if hasattr(v, \"to_dict\") else v for k, v in build_config.items()})\n\n    async def _get_tools(self) -> list[Tool]:\n        component_toolkit = get_component_toolkit()\n        tools_names = self._build_tools_names()\n        agent_description = self.get_tool_description()\n        # TODO: Agent Description Depreciated Feature to be removed\n        description = f\"{agent_description}{tools_names}\"\n\n        tools = component_toolkit(component=self).get_tools(\n            tool_name=\"Call_Agent\",\n            tool_description=description,\n            # here we do not use the shared callbacks as we are exposing the agent as a tool\n            callbacks=self.get_langchain_callbacks(),\n        )\n        if hasattr(self, \"tools_metadata\"):\n            tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)\n\n        return tools\n"
+                "value": "from __future__ import annotations\n\nimport json\nimport re\nfrom typing import TYPE_CHECKING\n\nfrom pydantic import ValidationError\n\nfrom lfx.components.models_and_agents.memory import MemoryComponent\n\nif TYPE_CHECKING:\n    from langchain_core.tools import Tool\n\nfrom lfx.base.agents.agent import LCToolsAgentComponent\nfrom lfx.base.agents.events import ExceptionWithMessageError\nfrom lfx.base.models.unified_models import (\n    get_language_model_options,\n    get_llm,\n    update_model_options_in_build_config,\n)\nfrom lfx.components.helpers import CurrentDateComponent\nfrom lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComponent\nfrom lfx.custom.custom_component.component import get_component_toolkit\nfrom lfx.helpers.base_model import build_model_from_schema\nfrom lfx.inputs.inputs import BoolInput, ModelInput\nfrom lfx.io import IntInput, MessageTextInput, MultilineInput, Output, SecretStrInput, TableInput\nfrom lfx.log.logger import logger\nfrom lfx.schema.data import Data\nfrom lfx.schema.dotdict import dotdict\nfrom lfx.schema.message import Message\nfrom lfx.schema.table import EditMode\n\n\ndef set_advanced_true(component_input):\n    component_input.advanced = True\n    return component_input\n\n\nclass AgentComponent(ToolCallingAgentComponent):\n    display_name: str = \"Agent\"\n    description: str = \"Define the agent's instructions, then enter a task to complete using tools.\"\n    documentation: str = \"https://docs.langflow.org/agents\"\n    icon = \"bot\"\n    beta = False\n    name = \"Agent\"\n\n    memory_inputs = [set_advanced_true(component_input) for component_input in MemoryComponent().inputs]\n\n    inputs = [\n        ModelInput(\n            name=\"model\",\n            display_name=\"Language Model\",\n            info=\"Select your model provider\",\n            real_time_refresh=True,\n            required=True,\n            model_type=[\"llm\"],\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"API Key\",\n            info=\"Model Provider API key\",\n            real_time_refresh=True,\n            advanced=True,\n        ),\n        MultilineInput(\n            name=\"system_prompt\",\n            display_name=\"Agent Instructions\",\n            info=\"System Prompt: Initial instructions and context provided to guide the agent's behavior.\",\n            value=\"You are a helpful assistant that can use tools to answer questions and perform tasks.\",\n            advanced=False,\n        ),\n        MessageTextInput(\n            name=\"context_id\",\n            display_name=\"Context ID\",\n            info=\"The context ID of the chat. Adds an extra layer to the local memory.\",\n            value=\"\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"n_messages\",\n            display_name=\"Number of Chat History Messages\",\n            value=100,\n            info=\"Number of chat history messages to retrieve.\",\n            advanced=True,\n            show=True,\n        ),\n        MultilineInput(\n            name=\"format_instructions\",\n            display_name=\"Output Format Instructions\",\n            info=\"Generic Template for structured output formatting. Valid only with Structured response.\",\n            value=(\n                \"You are an AI that extracts structured JSON objects from unstructured text. \"\n                \"Use a predefined schema with expected types (str, int, float, bool, dict). \"\n                \"Extract ALL relevant instances that match the schema - if multiple patterns exist, capture them all. \"\n                \"Fill missing or ambiguous values with defaults: null for missing values. \"\n                \"Remove exact duplicates but keep variations that have different field values. \"\n                \"Always return valid JSON in the expected format, never throw errors. \"\n                \"If multiple objects can be extracted, return them all in the structured format.\"\n            ),\n            advanced=True,\n        ),\n        TableInput(\n            name=\"output_schema\",\n            display_name=\"Output Schema\",\n            info=(\n                \"Schema Validation: Define the structure and data types for structured output. \"\n                \"No validation if no output schema.\"\n            ),\n            advanced=True,\n            required=False,\n            value=[],\n            table_schema=[\n                {\n                    \"name\": \"name\",\n                    \"display_name\": \"Name\",\n                    \"type\": \"str\",\n                    \"description\": \"Specify the name of the output field.\",\n                    \"default\": \"field\",\n                    \"edit_mode\": EditMode.INLINE,\n                },\n                {\n                    \"name\": \"description\",\n                    \"display_name\": \"Description\",\n                    \"type\": \"str\",\n                    \"description\": \"Describe the purpose of the output field.\",\n                    \"default\": \"description of field\",\n                    \"edit_mode\": EditMode.POPOVER,\n                },\n                {\n                    \"name\": \"type\",\n                    \"display_name\": \"Type\",\n                    \"type\": \"str\",\n                    \"edit_mode\": EditMode.INLINE,\n                    \"description\": (\"Indicate the data type of the output field (e.g., str, int, float, bool, dict).\"),\n                    \"options\": [\"str\", \"int\", \"float\", \"bool\", \"dict\"],\n                    \"default\": \"str\",\n                },\n                {\n                    \"name\": \"multiple\",\n                    \"display_name\": \"As List\",\n                    \"type\": \"boolean\",\n                    \"description\": \"Set to True if this output field should be a list of the specified type.\",\n                    \"default\": \"False\",\n                    \"edit_mode\": EditMode.INLINE,\n                },\n            ],\n        ),\n        *LCToolsAgentComponent.get_base_inputs(),\n        # removed memory inputs from agent component\n        # *memory_inputs,\n        BoolInput(\n            name=\"add_current_date_tool\",\n            display_name=\"Current Date\",\n            advanced=True,\n            info=\"If true, will add a tool to the agent that returns the current date.\",\n            value=True,\n        ),\n    ]\n    outputs = [\n        Output(name=\"response\", display_name=\"Response\", method=\"message_response\"),\n    ]\n\n    async def get_agent_requirements(self):\n        \"\"\"Get the agent requirements for the agent.\"\"\"\n        from langchain_core.tools import StructuredTool\n\n        llm_model = get_llm(\n            model=self.model,\n            user_id=self.user_id,\n            api_key=self.api_key,\n        )\n        if llm_model is None:\n            msg = \"No language model selected. Please choose a model to proceed.\"\n            raise ValueError(msg)\n\n        # Get memory data\n        self.chat_history = await self.get_memory_data()\n        await logger.adebug(f\"Retrieved {len(self.chat_history)} chat history messages\")\n        if isinstance(self.chat_history, Message):\n            self.chat_history = [self.chat_history]\n\n        # Add current date tool if enabled\n        if self.add_current_date_tool:\n            if not isinstance(self.tools, list):  # type: ignore[has-type]\n                self.tools = []\n            current_date_tool = (await CurrentDateComponent(**self.get_base_args()).to_toolkit()).pop(0)\n\n            if not isinstance(current_date_tool, StructuredTool):\n                msg = \"CurrentDateComponent must be converted to a StructuredTool\"\n                raise TypeError(msg)\n            self.tools.append(current_date_tool)\n\n        # Set shared callbacks for tracing the tools used by the agent\n        self.set_tools_callbacks(self.tools, self._get_shared_callbacks())\n\n        return llm_model, self.chat_history, self.tools\n\n    async def message_response(self) -> Message:\n        try:\n            llm_model, self.chat_history, self.tools = await self.get_agent_requirements()\n            # Set up and run agent\n            self.set(\n                llm=llm_model,\n                tools=self.tools or [],\n                chat_history=self.chat_history,\n                input_value=self.input_value,\n                system_prompt=self.system_prompt,\n            )\n            agent = self.create_agent_runnable()\n            result = await self.run_agent(agent)\n\n            # Store result for potential JSON output\n            self._agent_result = result\n\n        except (ValueError, TypeError, KeyError) as e:\n            await logger.aerror(f\"{type(e).__name__}: {e!s}\")\n            raise\n        except ExceptionWithMessageError as e:\n            await logger.aerror(f\"ExceptionWithMessageError occurred: {e}\")\n            raise\n        # Avoid catching blind Exception; let truly unexpected exceptions propagate\n        except Exception as e:\n            await logger.aerror(f\"Unexpected error: {e!s}\")\n            raise\n        else:\n            return result\n\n    def _preprocess_schema(self, schema):\n        \"\"\"Preprocess schema to ensure correct data types for build_model_from_schema.\"\"\"\n        processed_schema = []\n        for field in schema:\n            processed_field = {\n                \"name\": str(field.get(\"name\", \"field\")),\n                \"type\": str(field.get(\"type\", \"str\")),\n                \"description\": str(field.get(\"description\", \"\")),\n                \"multiple\": field.get(\"multiple\", False),\n            }\n            # Ensure multiple is handled correctly\n            if isinstance(processed_field[\"multiple\"], str):\n                processed_field[\"multiple\"] = processed_field[\"multiple\"].lower() in [\n                    \"true\",\n                    \"1\",\n                    \"t\",\n                    \"y\",\n                    \"yes\",\n                ]\n            processed_schema.append(processed_field)\n        return processed_schema\n\n    async def build_structured_output_base(self, content: str):\n        \"\"\"Build structured output with optional BaseModel validation.\"\"\"\n        json_pattern = r\"\\{.*\\}\"\n        schema_error_msg = \"Try setting an output schema\"\n\n        # Try to parse content as JSON first\n        json_data = None\n        try:\n            json_data = json.loads(content)\n        except json.JSONDecodeError:\n            json_match = re.search(json_pattern, content, re.DOTALL)\n            if json_match:\n                try:\n                    json_data = json.loads(json_match.group())\n                except json.JSONDecodeError:\n                    return {\"content\": content, \"error\": schema_error_msg}\n            else:\n                return {\"content\": content, \"error\": schema_error_msg}\n\n        # If no output schema provided, return parsed JSON without validation\n        if not hasattr(self, \"output_schema\") or not self.output_schema or len(self.output_schema) == 0:\n            return json_data\n\n        # Use BaseModel validation with schema\n        try:\n            processed_schema = self._preprocess_schema(self.output_schema)\n            output_model = build_model_from_schema(processed_schema)\n\n            # Validate against the schema\n            if isinstance(json_data, list):\n                # Multiple objects\n                validated_objects = []\n                for item in json_data:\n                    try:\n                        validated_obj = output_model.model_validate(item)\n                        validated_objects.append(validated_obj.model_dump())\n                    except ValidationError as e:\n                        await logger.aerror(f\"Validation error for item: {e}\")\n                        # Include invalid items with error info\n                        validated_objects.append({\"data\": item, \"validation_error\": str(e)})\n                return validated_objects\n\n            # Single object\n            try:\n                validated_obj = output_model.model_validate(json_data)\n                return [validated_obj.model_dump()]  # Return as list for consistency\n            except ValidationError as e:\n                await logger.aerror(f\"Validation error: {e}\")\n                return [{\"data\": json_data, \"validation_error\": str(e)}]\n\n        except (TypeError, ValueError) as e:\n            await logger.aerror(f\"Error building structured output: {e}\")\n            # Fallback to parsed JSON without validation\n            return json_data\n\n    async def json_response(self) -> Data:\n        \"\"\"Convert agent response to structured JSON Data output with schema validation.\"\"\"\n        # Always use structured chat agent for JSON response mode for better JSON formatting\n        try:\n            system_components = []\n\n            # 1. Agent Instructions (system_prompt)\n            agent_instructions = getattr(self, \"system_prompt\", \"\") or \"\"\n            if agent_instructions:\n                system_components.append(f\"{agent_instructions}\")\n\n            # 2. Format Instructions\n            format_instructions = getattr(self, \"format_instructions\", \"\") or \"\"\n            if format_instructions:\n                system_components.append(f\"Format instructions: {format_instructions}\")\n\n            # 3. Schema Information from BaseModel\n            if hasattr(self, \"output_schema\") and self.output_schema and len(self.output_schema) > 0:\n                try:\n                    processed_schema = self._preprocess_schema(self.output_schema)\n                    output_model = build_model_from_schema(processed_schema)\n                    schema_dict = output_model.model_json_schema()\n                    schema_info = (\n                        \"You are given some text that may include format instructions, \"\n                        \"explanations, or other content alongside a JSON schema.\\n\\n\"\n                        \"Your task:\\n\"\n                        \"- Extract only the JSON schema.\\n\"\n                        \"- Return it as valid JSON.\\n\"\n                        \"- Do not include format instructions, explanations, or extra text.\\n\\n\"\n                        \"Input:\\n\"\n                        f\"{json.dumps(schema_dict, indent=2)}\\n\\n\"\n                        \"Output (only JSON schema):\"\n                    )\n                    system_components.append(schema_info)\n                except (ValidationError, ValueError, TypeError, KeyError) as e:\n                    await logger.aerror(f\"Could not build schema for prompt: {e}\", exc_info=True)\n\n            # Combine all components\n            combined_instructions = \"\\n\\n\".join(system_components) if system_components else \"\"\n            llm_model, self.chat_history, self.tools = await self.get_agent_requirements()\n            self.set(\n                llm=llm_model,\n                tools=self.tools or [],\n                chat_history=self.chat_history,\n                input_value=self.input_value,\n                system_prompt=combined_instructions,\n            )\n\n            # Create and run structured chat agent\n            try:\n                structured_agent = self.create_agent_runnable()\n            except (NotImplementedError, ValueError, TypeError) as e:\n                await logger.aerror(f\"Error with structured chat agent: {e}\")\n                raise\n            try:\n                result = await self.run_agent(structured_agent)\n            except (\n                ExceptionWithMessageError,\n                ValueError,\n                TypeError,\n                RuntimeError,\n            ) as e:\n                await logger.aerror(f\"Error with structured agent result: {e}\")\n                raise\n            # Extract content from structured agent result\n            if hasattr(result, \"content\"):\n                content = result.content\n            elif hasattr(result, \"text\"):\n                content = result.text\n            else:\n                content = str(result)\n\n        except (\n            ExceptionWithMessageError,\n            ValueError,\n            TypeError,\n            NotImplementedError,\n            AttributeError,\n        ) as e:\n            await logger.aerror(f\"Error with structured chat agent: {e}\")\n            # Fallback to regular agent\n            content_str = \"No content returned from agent\"\n            return Data(data={\"content\": content_str, \"error\": str(e)})\n\n        # Process with structured output validation\n        try:\n            structured_output = await self.build_structured_output_base(content)\n\n            # Handle different output formats\n            if isinstance(structured_output, list) and structured_output:\n                if len(structured_output) == 1:\n                    return Data(data=structured_output[0])\n                return Data(data={\"results\": structured_output})\n            if isinstance(structured_output, dict):\n                return Data(data=structured_output)\n            return Data(data={\"content\": content})\n\n        except (ValueError, TypeError) as e:\n            await logger.aerror(f\"Error in structured output processing: {e}\")\n            return Data(data={\"content\": content, \"error\": str(e)})\n\n    async def get_memory_data(self):\n        # TODO: This is a temporary fix to avoid message duplication. We should develop a function for this.\n        messages = (\n            await MemoryComponent(**self.get_base_args())\n            .set(\n                session_id=self.graph.session_id,\n                context_id=self.context_id,\n                order=\"Ascending\",\n                n_messages=self.n_messages,\n            )\n            .retrieve_messages()\n        )\n        return [\n            message for message in messages if getattr(message, \"id\", None) != getattr(self.input_value, \"id\", None)\n        ]\n\n    def update_input_types(self, build_config: dotdict) -> dotdict:\n        \"\"\"Update input types for all fields in build_config.\"\"\"\n        for key, value in build_config.items():\n            if isinstance(value, dict):\n                if value.get(\"input_types\") is None:\n                    build_config[key][\"input_types\"] = []\n            elif hasattr(value, \"input_types\") and value.input_types is None:\n                value.input_types = []\n        return build_config\n\n    async def update_build_config(\n        self,\n        build_config: dotdict,\n        field_value: list[dict],\n        field_name: str | None = None,\n    ) -> dotdict:\n        # Update model options with caching (for all field changes)\n        # Agents require tool calling, so filter for only tool-calling capable models\n        def get_tool_calling_model_options(user_id=None):\n            return get_language_model_options(user_id=user_id, tool_calling=True)\n\n        build_config = update_model_options_in_build_config(\n            component=self,\n            build_config=dict(build_config),\n            cache_key_prefix=\"language_model_options_tool_calling\",\n            get_options_func=get_tool_calling_model_options,\n            field_name=field_name,\n            field_value=field_value,\n        )\n        build_config = dotdict(build_config)\n\n        # Iterate over all providers in the MODEL_PROVIDERS_DICT\n        if field_name == \"model\":\n            self.log(str(field_value))\n            # Update input types for all fields\n            build_config = self.update_input_types(build_config)\n\n            # Validate required keys\n            default_keys = [\n                \"code\",\n                \"_type\",\n                \"model\",\n                \"tools\",\n                \"input_value\",\n                \"add_current_date_tool\",\n                \"system_prompt\",\n                \"agent_description\",\n                \"max_iterations\",\n                \"handle_parsing_errors\",\n                \"verbose\",\n            ]\n            missing_keys = [key for key in default_keys if key not in build_config]\n            if missing_keys:\n                msg = f\"Missing required keys in build_config: {missing_keys}\"\n                raise ValueError(msg)\n        return dotdict({k: v.to_dict() if hasattr(v, \"to_dict\") else v for k, v in build_config.items()})\n\n    async def _get_tools(self) -> list[Tool]:\n        component_toolkit = get_component_toolkit()\n        tools_names = self._build_tools_names()\n        agent_description = self.get_tool_description()\n        # TODO: Agent Description Depreciated Feature to be removed\n        description = f\"{agent_description}{tools_names}\"\n\n        tools = component_toolkit(component=self).get_tools(\n            tool_name=\"Call_Agent\",\n            tool_description=description,\n            # here we do not use the shared callbacks as we are exposing the agent as a tool\n            callbacks=self.get_langchain_callbacks(),\n        )\n        if hasattr(self, \"tools_metadata\"):\n            tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)\n\n        return tools\n"
               },
               "context_id": {
                 "_input_type": "MessageTextInput",
@@ -864,7 +933,9 @@
                 "display_name": "Context ID",
                 "dynamic": false,
                 "info": "The context ID of the chat. Adds an extra layer to the local memory.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -889,7 +960,9 @@
                 "display_name": "Output Format Instructions",
                 "dynamic": false,
                 "info": "Generic Template for structured output formatting. Valid only with Structured response.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -934,7 +1007,9 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "The input provided by the user for the agent to process.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1067,7 +1142,13 @@
                     "display_name": "Type",
                     "edit_mode": "inline",
                     "name": "type",
-                    "options": ["str", "int", "float", "bool", "dict"],
+                    "options": [
+                      "str",
+                      "int",
+                      "float",
+                      "bool",
+                      "dict"
+                    ],
                     "type": "str"
                   },
                   {
@@ -1096,7 +1177,9 @@
                 "display_name": "Agent Instructions",
                 "dynamic": false,
                 "info": "System Prompt: Initial instructions and context provided to guide the agent's behavior.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1120,7 +1203,9 @@
                 "display_name": "Tools",
                 "dynamic": false,
                 "info": "These are the tools that the agent can use to help with tasks.",
-                "input_types": ["Tool"],
+                "input_types": [
+                  "Tool"
+                ],
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "tools",
@@ -1178,7 +1263,9 @@
         "data": {
           "id": "Prompt-PrjbV",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {
@@ -1193,7 +1280,10 @@
             "documentation": "",
             "edited": false,
             "error": null,
-            "field_order": ["template", "tool_placeholder"],
+            "field_order": [
+              "template",
+              "tool_placeholder"
+            ],
             "frozen": false,
             "full_path": null,
             "icon": "prompts",
@@ -1215,7 +1305,9 @@
                 "name": "prompt",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1249,7 +1341,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1269,7 +1363,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1289,7 +1385,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1325,7 +1423,9 @@
                 "display_name": "Tool Placeholder",
                 "dynamic": false,
                 "info": "A placeholder input for tool mode.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1363,7 +1463,10 @@
         "data": {
           "id": "RemixDocumentation-DEIws",
           "node": {
-            "base_classes": ["Data", "DataFrame"],
+            "base_classes": [
+              "Data",
+              "DataFrame"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1371,7 +1474,9 @@
             "display_name": "RTX Remix Documentation",
             "documentation": "https://docs.omniverse.nvidia.com/kit/docs/rtx_remix/latest/index.html",
             "edited": true,
-            "field_order": ["exclude_paths"],
+            "field_order": [
+              "exclude_paths"
+            ],
             "frozen": false,
             "icon": "NVIDIA",
             "legacy": false,
@@ -1391,7 +1496,9 @@
                 "required_inputs": null,
                 "selected": "DataFrame",
                 "tool_mode": true,
-                "types": ["DataFrame"],
+                "types": [
+                  "DataFrame"
+                ],
                 "value": "__UNDEFINED__"
               },
               {
@@ -1405,7 +1512,9 @@
                 "required_inputs": null,
                 "selected": "Data",
                 "tool_mode": true,
-                "types": ["Data"],
+                "types": [
+                  "Data"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1436,7 +1545,9 @@
                 "display_name": "Exclude Paths",
                 "dynamic": false,
                 "info": "List of path prefixes to exclude from results. Used to filter out sections of the documentation that are not typically relevant to user queries.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": true,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1481,7 +1592,9 @@
           "display_name": "Embedding Model",
           "id": "EmbeddingModel-X6URU",
           "node": {
-            "base_classes": ["Embeddings"],
+            "base_classes": [
+              "Embeddings"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1506,7 +1619,7 @@
             "legacy": false,
             "lf_version": "1.4.2",
             "metadata": {
-              "code_hash": "4024c0cf0992",
+              "code_hash": "78f33b4fac1d",
               "dependencies": {
                 "dependencies": [
                   {
@@ -1534,7 +1647,9 @@
                 "name": "embeddings",
                 "selected": "Embeddings",
                 "tool_mode": true,
-                "types": ["Embeddings"],
+                "types": [
+                  "Embeddings"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1547,7 +1662,9 @@
                 "display_name": "API Base URL",
                 "dynamic": false,
                 "info": "Base URL for the API. Leave empty for default.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1646,7 +1763,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from typing import Any\n\nfrom lfx.base.embeddings.model import LCEmbeddingsModel\nfrom lfx.base.models.unified_models import (\n    get_api_key_for_provider,\n    get_embedding_classes,\n    get_embedding_model_options,\n    update_model_options_in_build_config,\n)\nfrom lfx.base.models.watsonx_constants import IBM_WATSONX_URLS\nfrom lfx.field_typing import Embeddings\nfrom lfx.io import (\n    BoolInput,\n    DictInput,\n    DropdownInput,\n    FloatInput,\n    IntInput,\n    MessageTextInput,\n    ModelInput,\n    SecretStrInput,\n)\n\n\nclass EmbeddingModelComponent(LCEmbeddingsModel):\n    display_name = \"Embedding Model\"\n    description = \"Generate embeddings using a specified provider.\"\n    documentation: str = \"https://docs.langflow.org/components-embedding-models\"\n    icon = \"binary\"\n    name = \"EmbeddingModel\"\n    category = \"models\"\n\n    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):\n        \"\"\"Dynamically update build config with user-filtered model options.\"\"\"\n        return update_model_options_in_build_config(\n            component=self,\n            build_config=build_config,\n            cache_key_prefix=\"embedding_model_options\",\n            get_options_func=get_embedding_model_options,\n            field_name=field_name,\n            field_value=field_value,\n        )\n\n    inputs = [\n        ModelInput(\n            name=\"model\",\n            display_name=\"Embedding Model\",\n            info=\"Select your model provider\",\n            real_time_refresh=True,\n            required=True,\n            model_type=[\"embeddings\"],\n            input_types=[\"Embeddings\"],  # Override default to accept Embeddings instead of LanguageModel\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"API Key\",\n            info=\"Model Provider API key\",\n            real_time_refresh=True,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"api_base\",\n            display_name=\"API Base URL\",\n            info=\"Base URL for the API. Leave empty for default.\",\n            advanced=True,\n        ),\n        # Watson-specific inputs\n        DropdownInput(\n            name=\"base_url_ibm_watsonx\",\n            display_name=\"watsonx API Endpoint\",\n            info=\"The base URL of the API (IBM watsonx.ai only)\",\n            options=IBM_WATSONX_URLS,\n            value=IBM_WATSONX_URLS[0],\n            show=False,\n            real_time_refresh=True,\n        ),\n        MessageTextInput(\n            name=\"project_id\",\n            display_name=\"Project ID\",\n            info=\"IBM watsonx.ai Project ID (required for IBM watsonx.ai)\",\n            show=False,\n        ),\n        IntInput(\n            name=\"dimensions\",\n            display_name=\"Dimensions\",\n            info=\"The number of dimensions the resulting output embeddings should have. \"\n            \"Only supported by certain models.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"chunk_size\",\n            display_name=\"Chunk Size\",\n            advanced=True,\n            value=1000,\n        ),\n        FloatInput(\n            name=\"request_timeout\",\n            display_name=\"Request Timeout\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"max_retries\",\n            display_name=\"Max Retries\",\n            advanced=True,\n            value=3,\n        ),\n        BoolInput(\n            name=\"show_progress_bar\",\n            display_name=\"Show Progress Bar\",\n            advanced=True,\n        ),\n        DictInput(\n            name=\"model_kwargs\",\n            display_name=\"Model Kwargs\",\n            advanced=True,\n            info=\"Additional keyword arguments to pass to the model.\",\n        ),\n        IntInput(\n            name=\"truncate_input_tokens\",\n            display_name=\"Truncate Input Tokens\",\n            advanced=True,\n            value=200,\n            show=False,\n        ),\n        BoolInput(\n            name=\"input_text\",\n            display_name=\"Include the original text in the output\",\n            value=True,\n            advanced=True,\n            show=False,\n        ),\n    ]\n\n    def build_embeddings(self) -> Embeddings:\n        \"\"\"Build and return an embeddings instance based on the selected model.\"\"\"\n        # If an Embeddings object is directly connected, return it\n        try:\n            from langchain_core.embeddings import Embeddings as BaseEmbeddings\n\n            if isinstance(self.model, BaseEmbeddings):\n                return self.model\n        except ImportError:\n            pass\n\n        # Safely extract model configuration\n        if not self.model or not isinstance(self.model, list):\n            msg = \"Model must be a non-empty list\"\n            raise ValueError(msg)\n\n        model = self.model[0]\n        model_name = model.get(\"name\")\n        provider = model.get(\"provider\")\n        metadata = model.get(\"metadata\", {})\n\n        # Get API key from user input or global variables\n        api_key = get_api_key_for_provider(self.user_id, provider, self.api_key)\n\n        # Validate required fields (Ollama doesn't require API key)\n        if not api_key and provider != \"Ollama\":\n            msg = (\n                f\"{provider} API key is required. \"\n                f\"Please provide it in the component or configure it globally as \"\n                f\"{provider.upper().replace(' ', '_')}_API_KEY.\"\n            )\n            raise ValueError(msg)\n\n        if not model_name:\n            msg = \"Model name is required\"\n            raise ValueError(msg)\n\n        # Get embedding class\n        embedding_class_name = metadata.get(\"embedding_class\")\n        if not embedding_class_name:\n            msg = f\"No embedding class defined in metadata for {model_name}\"\n            raise ValueError(msg)\n\n        embedding_class = get_embedding_classes().get(embedding_class_name)\n        if not embedding_class:\n            msg = f\"Unknown embedding class: {embedding_class_name}\"\n            raise ValueError(msg)\n\n        # Build kwargs using parameter mapping\n        kwargs = self._build_kwargs(model, metadata)\n\n        return embedding_class(**kwargs)\n\n    def _build_kwargs(self, model: dict[str, Any], metadata: dict[str, Any]) -> dict[str, Any]:\n        \"\"\"Build kwargs dictionary using parameter mapping.\"\"\"\n        param_mapping = metadata.get(\"param_mapping\", {})\n        if not param_mapping:\n            msg = \"Parameter mapping not found in metadata\"\n            raise ValueError(msg)\n\n        kwargs = {}\n\n        # Required parameters - handle both \"model\" and \"model_id\" (for watsonx)\n        if \"model\" in param_mapping:\n            kwargs[param_mapping[\"model\"]] = model.get(\"name\")\n        elif \"model_id\" in param_mapping:\n            kwargs[param_mapping[\"model_id\"]] = model.get(\"name\")\n        if \"api_key\" in param_mapping:\n            kwargs[param_mapping[\"api_key\"]] = get_api_key_for_provider(\n                self.user_id,\n                model.get(\"provider\"),\n                self.api_key,\n            )\n\n        # Optional parameters with their values\n        provider = model.get(\"provider\")\n        optional_params = {\n            \"api_base\": self.api_base if self.api_base else None,\n            \"dimensions\": int(self.dimensions) if self.dimensions else None,\n            \"chunk_size\": int(self.chunk_size) if self.chunk_size else None,\n            \"request_timeout\": float(self.request_timeout) if self.request_timeout else None,\n            \"max_retries\": int(self.max_retries) if self.max_retries else None,\n            \"show_progress_bar\": self.show_progress_bar if hasattr(self, \"show_progress_bar\") else None,\n            \"model_kwargs\": self.model_kwargs if self.model_kwargs else None,\n        }\n\n        # Watson-specific parameters\n        if provider in {\"IBM WatsonX\", \"IBM watsonx.ai\"}:\n            # Map base_url_ibm_watsonx to \"url\" parameter for watsonx\n            if \"url\" in param_mapping:\n                url_value = (\n                    self.base_url_ibm_watsonx\n                    if hasattr(self, \"base_url_ibm_watsonx\") and self.base_url_ibm_watsonx\n                    else \"https://us-south.ml.cloud.ibm.com\"\n                )\n                kwargs[param_mapping[\"url\"]] = url_value\n            # Map project_id for watsonx\n            if hasattr(self, \"project_id\") and self.project_id and \"project_id\" in param_mapping:\n                kwargs[param_mapping[\"project_id\"]] = self.project_id\n\n        # Ollama-specific parameters\n        if provider == \"Ollama\" and \"base_url\" in param_mapping:\n            # Map api_base to \"base_url\" parameter for Ollama\n            base_url_value = self.api_base if hasattr(self, \"api_base\") and self.api_base else \"http://localhost:11434\"\n            kwargs[param_mapping[\"base_url\"]] = base_url_value\n\n        # Add optional parameters if they have values and are mapped\n        for param_name, param_value in optional_params.items():\n            if param_value is not None and param_name in param_mapping:\n                # Special handling for request_timeout with Google provider\n                if param_name == \"request_timeout\":\n                    if provider == \"Google\" and isinstance(param_value, (int, float)):\n                        kwargs[param_mapping[param_name]] = {\"timeout\": param_value}\n                    else:\n                        kwargs[param_mapping[param_name]] = param_value\n                else:\n                    kwargs[param_mapping[param_name]] = param_value\n\n        return kwargs\n"
+                "value": "from typing import Any\n\nfrom lfx.base.embeddings.model import LCEmbeddingsModel\nfrom lfx.base.models.unified_models import (\n    get_api_key_for_provider,\n    get_embedding_classes,\n    get_embedding_model_options,\n    update_model_options_in_build_config,\n)\nfrom lfx.base.models.watsonx_constants import IBM_WATSONX_URLS\nfrom lfx.field_typing import Embeddings\nfrom lfx.io import (\n    BoolInput,\n    DictInput,\n    DropdownInput,\n    FloatInput,\n    IntInput,\n    MessageTextInput,\n    ModelInput,\n    SecretStrInput,\n)\n\n\nclass EmbeddingModelComponent(LCEmbeddingsModel):\n    display_name = \"Embedding Model\"\n    description = \"Generate embeddings using a specified provider.\"\n    documentation: str = \"https://docs.langflow.org/components-embedding-models\"\n    icon = \"binary\"\n    name = \"EmbeddingModel\"\n    category = \"models\"\n\n    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):\n        \"\"\"Dynamically update build config with user-filtered model options.\"\"\"\n        # Update model options\n        build_config = update_model_options_in_build_config(\n            component=self,\n            build_config=build_config,\n            cache_key_prefix=\"embedding_model_options\",\n            get_options_func=get_embedding_model_options,\n            field_name=field_name,\n            field_value=field_value,\n        )\n\n        # Show/hide provider-specific fields based on selected model\n        if field_name == \"model\" and isinstance(field_value, list) and len(field_value) > 0:\n            selected_model = field_value[0]\n            provider = selected_model.get(\"provider\", \"\")\n\n            # Show/hide watsonx fields\n            is_watsonx = provider == \"IBM WatsonX\"\n            build_config[\"base_url_ibm_watsonx\"][\"show\"] = is_watsonx\n            build_config[\"project_id\"][\"show\"] = is_watsonx\n            build_config[\"truncate_input_tokens\"][\"show\"] = is_watsonx\n            build_config[\"input_text\"][\"show\"] = is_watsonx\n            if is_watsonx:\n                build_config[\"base_url_ibm_watsonx\"][\"required\"] = True\n                build_config[\"project_id\"][\"required\"] = True\n\n        return build_config\n\n    inputs = [\n        ModelInput(\n            name=\"model\",\n            display_name=\"Embedding Model\",\n            info=\"Select your model provider\",\n            real_time_refresh=True,\n            required=True,\n            model_type=[\"embeddings\"],\n            input_types=[\"Embeddings\"],  # Override default to accept Embeddings instead of LanguageModel\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"API Key\",\n            info=\"Model Provider API key\",\n            real_time_refresh=True,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"api_base\",\n            display_name=\"API Base URL\",\n            info=\"Base URL for the API. Leave empty for default.\",\n            advanced=True,\n        ),\n        # Watson-specific inputs\n        DropdownInput(\n            name=\"base_url_ibm_watsonx\",\n            display_name=\"watsonx API Endpoint\",\n            info=\"The base URL of the API (IBM watsonx.ai only)\",\n            options=IBM_WATSONX_URLS,\n            value=IBM_WATSONX_URLS[0],\n            show=False,\n            real_time_refresh=True,\n        ),\n        MessageTextInput(\n            name=\"project_id\",\n            display_name=\"Project ID\",\n            info=\"IBM watsonx.ai Project ID (required for IBM watsonx.ai)\",\n            show=False,\n        ),\n        IntInput(\n            name=\"dimensions\",\n            display_name=\"Dimensions\",\n            info=\"The number of dimensions the resulting output embeddings should have. \"\n            \"Only supported by certain models.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"chunk_size\",\n            display_name=\"Chunk Size\",\n            advanced=True,\n            value=1000,\n        ),\n        FloatInput(\n            name=\"request_timeout\",\n            display_name=\"Request Timeout\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"max_retries\",\n            display_name=\"Max Retries\",\n            advanced=True,\n            value=3,\n        ),\n        BoolInput(\n            name=\"show_progress_bar\",\n            display_name=\"Show Progress Bar\",\n            advanced=True,\n        ),\n        DictInput(\n            name=\"model_kwargs\",\n            display_name=\"Model Kwargs\",\n            advanced=True,\n            info=\"Additional keyword arguments to pass to the model.\",\n        ),\n        IntInput(\n            name=\"truncate_input_tokens\",\n            display_name=\"Truncate Input Tokens\",\n            advanced=True,\n            value=200,\n            show=False,\n        ),\n        BoolInput(\n            name=\"input_text\",\n            display_name=\"Include the original text in the output\",\n            value=True,\n            advanced=True,\n            show=False,\n        ),\n    ]\n\n    def build_embeddings(self) -> Embeddings:\n        \"\"\"Build and return an embeddings instance based on the selected model.\"\"\"\n        # If an Embeddings object is directly connected, return it\n        try:\n            from langchain_core.embeddings import Embeddings as BaseEmbeddings\n\n            if isinstance(self.model, BaseEmbeddings):\n                return self.model\n        except ImportError:\n            pass\n\n        # Safely extract model configuration\n        if not self.model or not isinstance(self.model, list):\n            msg = \"Model must be a non-empty list\"\n            raise ValueError(msg)\n\n        model = self.model[0]\n        model_name = model.get(\"name\")\n        provider = model.get(\"provider\")\n        metadata = model.get(\"metadata\", {})\n\n        # Get API key from user input or global variables\n        api_key = get_api_key_for_provider(self.user_id, provider, self.api_key)\n\n        # Validate required fields (Ollama doesn't require API key)\n        if not api_key and provider != \"Ollama\":\n            msg = (\n                f\"{provider} API key is required. \"\n                f\"Please provide it in the component or configure it globally as \"\n                f\"{provider.upper().replace(' ', '_')}_API_KEY.\"\n            )\n            raise ValueError(msg)\n\n        if not model_name:\n            msg = \"Model name is required\"\n            raise ValueError(msg)\n\n        # Get embedding class\n        embedding_class_name = metadata.get(\"embedding_class\")\n        if not embedding_class_name:\n            msg = f\"No embedding class defined in metadata for {model_name}\"\n            raise ValueError(msg)\n\n        embedding_class = get_embedding_classes().get(embedding_class_name)\n        if not embedding_class:\n            msg = f\"Unknown embedding class: {embedding_class_name}\"\n            raise ValueError(msg)\n\n        # Build kwargs using parameter mapping\n        kwargs = self._build_kwargs(model, metadata)\n\n        return embedding_class(**kwargs)\n\n    def _build_kwargs(self, model: dict[str, Any], metadata: dict[str, Any]) -> dict[str, Any]:\n        \"\"\"Build kwargs dictionary using parameter mapping.\"\"\"\n        param_mapping = metadata.get(\"param_mapping\", {})\n        if not param_mapping:\n            msg = \"Parameter mapping not found in metadata\"\n            raise ValueError(msg)\n\n        kwargs = {}\n\n        # Required parameters - handle both \"model\" and \"model_id\" (for watsonx)\n        if \"model\" in param_mapping:\n            kwargs[param_mapping[\"model\"]] = model.get(\"name\")\n        elif \"model_id\" in param_mapping:\n            kwargs[param_mapping[\"model_id\"]] = model.get(\"name\")\n        if \"api_key\" in param_mapping:\n            kwargs[param_mapping[\"api_key\"]] = get_api_key_for_provider(\n                self.user_id,\n                model.get(\"provider\"),\n                self.api_key,\n            )\n\n        # Optional parameters with their values\n        provider = model.get(\"provider\")\n        optional_params = {\n            \"api_base\": self.api_base if self.api_base else None,\n            \"dimensions\": int(self.dimensions) if self.dimensions else None,\n            \"chunk_size\": int(self.chunk_size) if self.chunk_size else None,\n            \"request_timeout\": float(self.request_timeout) if self.request_timeout else None,\n            \"max_retries\": int(self.max_retries) if self.max_retries else None,\n            \"show_progress_bar\": self.show_progress_bar if hasattr(self, \"show_progress_bar\") else None,\n            \"model_kwargs\": self.model_kwargs if self.model_kwargs else None,\n        }\n\n        # Watson-specific parameters\n        if provider in {\"IBM WatsonX\", \"IBM watsonx.ai\"}:\n            # Map base_url_ibm_watsonx to \"url\" parameter for watsonx\n            if \"url\" in param_mapping:\n                url_value = (\n                    self.base_url_ibm_watsonx\n                    if hasattr(self, \"base_url_ibm_watsonx\") and self.base_url_ibm_watsonx\n                    else \"https://us-south.ml.cloud.ibm.com\"\n                )\n                kwargs[param_mapping[\"url\"]] = url_value\n            # Map project_id for watsonx\n            if hasattr(self, \"project_id\") and self.project_id and \"project_id\" in param_mapping:\n                kwargs[param_mapping[\"project_id\"]] = self.project_id\n\n        # Ollama-specific parameters\n        if provider == \"Ollama\" and \"base_url\" in param_mapping:\n            # Map api_base to \"base_url\" parameter for Ollama\n            base_url_value = self.api_base if hasattr(self, \"api_base\") and self.api_base else \"http://localhost:11434\"\n            kwargs[param_mapping[\"base_url\"]] = base_url_value\n\n        # Add optional parameters if they have values and are mapped\n        for param_name, param_value in optional_params.items():\n            if param_value is not None and param_name in param_mapping:\n                # Special handling for request_timeout with Google provider\n                if param_name == \"request_timeout\":\n                    if provider == \"Google\" and isinstance(param_value, (int, float)):\n                        kwargs[param_mapping[param_name]] = {\"timeout\": param_value}\n                    else:\n                        kwargs[param_mapping[param_name]] = param_value\n                else:\n                    kwargs[param_mapping[param_name]] = param_value\n\n        return kwargs\n"
               },
               "dimensions": {
                 "_input_type": "IntInput",
@@ -1753,7 +1870,9 @@
                 "display_name": "Project ID",
                 "dynamic": false,
                 "info": "IBM watsonx.ai Project ID (required for IBM watsonx.ai)",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1849,7 +1968,10 @@
         "data": {
           "id": "FAISS-Uz8O4",
           "node": {
-            "base_classes": ["Data", "DataFrame"],
+            "base_classes": [
+              "Data",
+              "DataFrame"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1902,7 +2024,9 @@
                 "required_inputs": null,
                 "selected": "Tool",
                 "tool_mode": true,
-                "types": ["Tool"],
+                "types": [
+                  "Tool"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1951,7 +2075,9 @@
                 "display_name": "Embedding",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Embeddings"],
+                "input_types": [
+                  "Embeddings"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "embedding",
@@ -1988,7 +2114,10 @@
                 "display_name": "Ingest Data",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Data", "DataFrame"],
+                "input_types": [
+                  "Data",
+                  "DataFrame"
+                ],
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "ingest_data",
@@ -2043,7 +2172,9 @@
                 "display_name": "Search Query",
                 "dynamic": false,
                 "info": "Enter a query to run a similarity search.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2109,7 +2240,9 @@
                     "name": "search_documents",
                     "readonly": false,
                     "status": true,
-                    "tags": ["search_documents"]
+                    "tags": [
+                      "search_documents"
+                    ]
                   },
                   {
                     "args": {
@@ -2126,7 +2259,9 @@
                     "name": "as_dataframe",
                     "readonly": false,
                     "status": true,
-                    "tags": ["as_dataframe"]
+                    "tags": [
+                      "as_dataframe"
+                    ]
                   }
                 ]
               }
@@ -2182,7 +2317,9 @@
         "data": {
           "id": "MCPTools-beHVJ",
           "node": {
-            "base_classes": ["DataFrame"],
+            "base_classes": [
+              "DataFrame"
+            ],
             "beta": false,
             "category": "data",
             "conditional_paths": [],
@@ -2240,7 +2377,9 @@
                 "required_inputs": null,
                 "selected": "Tool",
                 "tool_mode": true,
-                "types": ["Tool"],
+                "types": [
+                  "Tool"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -2310,7 +2449,9 @@
                 "display_name": "Tool Placeholder",
                 "dynamic": false,
                 "info": "Placeholder for the tool",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2351,7 +2492,9 @@
                     "name": "remix__status_status_get",
                     "readonly": false,
                     "status": false,
-                    "tags": ["remix__status_status_get"]
+                    "tags": [
+                      "remix__status_status_get"
+                    ]
                   },
                   {
                     "args": {},
@@ -2361,7 +2504,9 @@
                     "name": "remix__status_health_get",
                     "readonly": false,
                     "status": false,
-                    "tags": ["remix__status_health_get"]
+                    "tags": [
+                      "remix__status_health_get"
+                    ]
                   },
                   {
                     "args": {},
@@ -2371,7 +2516,9 @@
                     "name": "remix__status_ready_get",
                     "readonly": false,
                     "status": false,
-                    "tags": ["remix__status_ready_get"]
+                    "tags": [
+                      "remix__status_ready_get"
+                    ]
                   },
                   {
                     "args": {},
@@ -2381,7 +2528,9 @@
                     "name": "remix__status_startup_get",
                     "readonly": false,
                     "status": false,
-                    "tags": ["remix__status_startup_get"]
+                    "tags": [
+                      "remix__status_startup_get"
+                    ]
                   },
                   {
                     "args": {
@@ -2396,7 +2545,9 @@
                     "name": "remix__async_app_docs_endpoint_asyncapi_docs_g",
                     "readonly": false,
                     "status": false,
-                    "tags": ["remix__async_app_docs_endpoint_asyncapi_docs_get"]
+                    "tags": [
+                      "remix__async_app_docs_endpoint_asyncapi_docs_get"
+                    ]
                   },
                   {
                     "args": {
@@ -2423,7 +2574,9 @@
                     "name": "remix_get_loaded_project",
                     "readonly": false,
                     "status": true,
-                    "tags": ["remix_get_loaded_project"]
+                    "tags": [
+                      "remix_get_loaded_project"
+                    ]
                   },
                   {
                     "args": {
@@ -2439,7 +2592,9 @@
                     "name": "remix_open_project",
                     "readonly": false,
                     "status": true,
-                    "tags": ["remix_open_project"]
+                    "tags": [
+                      "remix_open_project"
+                    ]
                   },
                   {
                     "args": {
@@ -2479,7 +2634,9 @@
                     "name": "remix_get_layers",
                     "readonly": false,
                     "status": true,
-                    "tags": ["remix_get_layers"]
+                    "tags": [
+                      "remix_get_layers"
+                    ]
                   },
                   {
                     "args": {
@@ -2573,7 +2730,9 @@
                     "name": "remix_create_layer",
                     "readonly": false,
                     "status": true,
-                    "tags": ["remix_create_layer"]
+                    "tags": [
+                      "remix_create_layer"
+                    ]
                   },
                   {
                     "args": {
@@ -2605,7 +2764,9 @@
                     "name": "remix_get_sublayers",
                     "readonly": false,
                     "status": true,
-                    "tags": ["remix_get_sublayers"]
+                    "tags": [
+                      "remix_get_sublayers"
+                    ]
                   },
                   {
                     "args": {
@@ -2626,7 +2787,9 @@
                     "name": "remix_remove_layer",
                     "readonly": false,
                     "status": true,
-                    "tags": ["remix_remove_layer"]
+                    "tags": [
+                      "remix_remove_layer"
+                    ]
                   },
                   {
                     "args": {
@@ -2673,7 +2836,9 @@
                     "name": "remix_move_layer",
                     "readonly": false,
                     "status": true,
-                    "tags": ["remix_move_layer"]
+                    "tags": [
+                      "remix_move_layer"
+                    ]
                   },
                   {
                     "args": {
@@ -2694,7 +2859,9 @@
                     "name": "remix_lock_layer",
                     "readonly": false,
                     "status": true,
-                    "tags": ["remix_lock_layer"]
+                    "tags": [
+                      "remix_lock_layer"
+                    ]
                   },
                   {
                     "args": {
@@ -2715,7 +2882,9 @@
                     "name": "remix_mute_layer",
                     "readonly": false,
                     "status": true,
-                    "tags": ["remix_mute_layer"]
+                    "tags": [
+                      "remix_mute_layer"
+                    ]
                   },
                   {
                     "args": {
@@ -2731,7 +2900,9 @@
                     "name": "remix_save_layer",
                     "readonly": false,
                     "status": true,
-                    "tags": ["remix_save_layer"]
+                    "tags": [
+                      "remix_save_layer"
+                    ]
                   },
                   {
                     "args": {},
@@ -2741,7 +2912,9 @@
                     "name": "remix_get_edit_target_layer",
                     "readonly": false,
                     "status": true,
-                    "tags": ["remix_get_edit_target_layer"]
+                    "tags": [
+                      "remix_get_edit_target_layer"
+                    ]
                   },
                   {
                     "args": {
@@ -2757,7 +2930,9 @@
                     "name": "remix_set_edit_target_layer",
                     "readonly": false,
                     "status": true,
-                    "tags": ["remix_set_edit_target_layer"]
+                    "tags": [
+                      "remix_set_edit_target_layer"
+                    ]
                   },
                   {
                     "args": {},
@@ -2767,7 +2942,9 @@
                     "name": "remix_get_layer_types",
                     "readonly": false,
                     "status": true,
-                    "tags": ["remix_get_layer_types"]
+                    "tags": [
+                      "remix_get_layer_types"
+                    ]
                   },
                   {
                     "args": {},
@@ -2777,7 +2954,9 @@
                     "name": "remix_get_available_model_assets",
                     "readonly": false,
                     "status": true,
-                    "tags": ["remix_get_available_model_assets"]
+                    "tags": [
+                      "remix_get_available_model_assets"
+                    ]
                   },
                   {
                     "args": {},
@@ -2787,7 +2966,9 @@
                     "name": "remix_get_available_texture_assets",
                     "readonly": false,
                     "status": true,
-                    "tags": ["remix_get_available_texture_assets"]
+                    "tags": [
+                      "remix_get_available_texture_assets"
+                    ]
                   },
                   {
                     "args": {
@@ -2811,7 +2992,9 @@
                     "name": "remix_get_available_ingested_assets",
                     "readonly": false,
                     "status": true,
-                    "tags": ["remix_get_available_ingested_assets"]
+                    "tags": [
+                      "remix_get_available_ingested_assets"
+                    ]
                   },
                   {
                     "args": {},
@@ -2821,7 +3004,9 @@
                     "name": "remix_get_default_model_asset_directory",
                     "readonly": false,
                     "status": true,
-                    "tags": ["remix_get_default_model_asset_directory"]
+                    "tags": [
+                      "remix_get_default_model_asset_directory"
+                    ]
                   },
                   {
                     "args": {},
@@ -2831,7 +3016,9 @@
                     "name": "remix_get_default_texture_asset_directory",
                     "readonly": false,
                     "status": true,
-                    "tags": ["remix_get_default_texture_asset_directory"]
+                    "tags": [
+                      "remix_get_default_texture_asset_directory"
+                    ]
                   },
                   {
                     "args": {},
@@ -2841,7 +3028,9 @@
                     "name": "remix_get_default_ingested_asset_directory",
                     "readonly": false,
                     "status": true,
-                    "tags": ["remix_get_default_ingested_asset_directory"]
+                    "tags": [
+                      "remix_get_default_ingested_asset_directory"
+                    ]
                   },
                   {
                     "args": {
@@ -2932,7 +3121,9 @@
                     "name": "remix_get_prim_paths",
                     "readonly": false,
                     "status": true,
-                    "tags": ["remix_get_prim_paths"]
+                    "tags": [
+                      "remix_get_prim_paths"
+                    ]
                   },
                   {
                     "args": {
@@ -2948,7 +3139,9 @@
                     "name": "remix_get_model_instances",
                     "readonly": false,
                     "status": true,
-                    "tags": ["remix_get_model_instances"]
+                    "tags": [
+                      "remix_get_model_instances"
+                    ]
                   },
                   {
                     "args": {
@@ -2978,7 +3171,9 @@
                     "name": "remix_get_material_textures",
                     "readonly": false,
                     "status": true,
-                    "tags": ["remix_get_material_textures"]
+                    "tags": [
+                      "remix_get_material_textures"
+                    ]
                   },
                   {
                     "args": {
@@ -2994,7 +3189,9 @@
                     "name": "remix_get_prim_reference_file_paths",
                     "readonly": false,
                     "status": true,
-                    "tags": ["remix_get_prim_reference_file_paths"]
+                    "tags": [
+                      "remix_get_prim_reference_file_paths"
+                    ]
                   },
                   {
                     "args": {
@@ -3054,7 +3251,9 @@
                     "name": "remix_replace_prim_reference_file_path",
                     "readonly": false,
                     "status": true,
-                    "tags": ["remix_replace_prim_reference_file_path"]
+                    "tags": [
+                      "remix_replace_prim_reference_file_path"
+                    ]
                   },
                   {
                     "args": {
@@ -3088,7 +3287,9 @@
                     "name": "remix_append_prim_reference_file_path",
                     "readonly": false,
                     "status": true,
-                    "tags": ["remix_append_prim_reference_file_path"]
+                    "tags": [
+                      "remix_append_prim_reference_file_path"
+                    ]
                   },
                   {
                     "args": {
@@ -3104,7 +3305,9 @@
                     "name": "remix_set_selection",
                     "readonly": false,
                     "status": true,
-                    "tags": ["remix_set_selection"]
+                    "tags": [
+                      "remix_set_selection"
+                    ]
                   },
                   {
                     "args": {
@@ -3195,7 +3398,9 @@
                     "name": "remix_get_textures",
                     "readonly": false,
                     "status": true,
-                    "tags": ["remix_get_textures"]
+                    "tags": [
+                      "remix_get_textures"
+                    ]
                   },
                   {
                     "args": {
@@ -3228,7 +3433,9 @@
                     "name": "remix_override_textures",
                     "readonly": false,
                     "status": true,
-                    "tags": ["remix_override_textures"]
+                    "tags": [
+                      "remix_override_textures"
+                    ]
                   },
                   {
                     "args": {},
@@ -3238,7 +3445,9 @@
                     "name": "remix_get_valid_texture_types",
                     "readonly": false,
                     "status": true,
-                    "tags": ["remix_get_valid_texture_types"]
+                    "tags": [
+                      "remix_get_valid_texture_types"
+                    ]
                   },
                   {
                     "args": {
@@ -3254,7 +3463,9 @@
                     "name": "remix_get_texture_material",
                     "readonly": false,
                     "status": true,
-                    "tags": ["remix_get_texture_material"]
+                    "tags": [
+                      "remix_get_texture_material"
+                    ]
                   },
                   {
                     "args": {
@@ -3283,7 +3494,9 @@
                     "name": "remix_get_texture_material_inputs",
                     "readonly": false,
                     "status": true,
-                    "tags": ["remix_get_texture_material_inputs"]
+                    "tags": [
+                      "remix_get_texture_material_inputs"
+                    ]
                   },
                   {
                     "args": {
@@ -3307,7 +3520,9 @@
                     "name": "remix_update_ingestion_schema",
                     "readonly": false,
                     "status": false,
-                    "tags": ["remix_update_ingestion_schema"]
+                    "tags": [
+                      "remix_update_ingestion_schema"
+                    ]
                   },
                   {
                     "args": {
@@ -3334,7 +3549,11 @@
                                 "expose_mass_ui": false,
                                 "global_progress_value": 0,
                                 "hide_context_ui": false,
-                                "progress": [0, "Initializing", true],
+                                "progress": [
+                                  0,
+                                  "Initializing",
+                                  true
+                                ],
                                 "save_all_layers_on_exit": true
                               },
                               "name": "DependencyIterator"
@@ -3345,7 +3564,11 @@
                               "expose_mass_queue_action_ui": false,
                               "expose_mass_ui": false,
                               "global_progress_value": 0,
-                              "progress": [0, "Initializing", true],
+                              "progress": [
+                                0,
+                                "Initializing",
+                                true
+                              ],
                               "save_on_fix_failure": true
                             },
                             "name": "ClearUnassignedMaterial",
@@ -3358,7 +3581,11 @@
                                   "expose_mass_ui": false,
                                   "global_progress_value": 0,
                                   "include_geom_subset": true,
-                                  "progress": [0, "Initializing", true],
+                                  "progress": [
+                                    0,
+                                    "Initializing",
+                                    true
+                                  ],
                                   "select_from_root_layer_only": false
                                 },
                                 "name": "AllMeshes"
@@ -3378,7 +3605,11 @@
                                 "expose_mass_ui": false,
                                 "global_progress_value": 0,
                                 "hide_context_ui": false,
-                                "progress": [0, "Initializing", true],
+                                "progress": [
+                                  0,
+                                  "Initializing",
+                                  true
+                                ],
                                 "save_all_layers_on_exit": true
                               },
                               "name": "DependencyIterator"
@@ -3392,7 +3623,11 @@
                               "expose_mass_queue_action_ui": false,
                               "expose_mass_ui": false,
                               "global_progress_value": 0,
-                              "progress": [0, "Initializing", true],
+                              "progress": [
+                                0,
+                                "Initializing",
+                                true
+                              ],
                               "save_on_fix_failure": true
                             },
                             "name": "DefaultMaterial",
@@ -3405,7 +3640,11 @@
                                   "expose_mass_ui": false,
                                   "global_progress_value": 0,
                                   "include_geom_subset": false,
-                                  "progress": [0, "Initializing", true],
+                                  "progress": [
+                                    0,
+                                    "Initializing",
+                                    true
+                                  ],
                                   "select_from_root_layer_only": false
                                 },
                                 "name": "AllMeshes"
@@ -3425,7 +3664,11 @@
                                 "expose_mass_ui": false,
                                 "global_progress_value": 0,
                                 "hide_context_ui": false,
-                                "progress": [0, "Initializing", true],
+                                "progress": [
+                                  0,
+                                  "Initializing",
+                                  true
+                                ],
                                 "save_all_layers_on_exit": true
                               },
                               "name": "DependencyIterator"
@@ -3437,7 +3680,11 @@
                               "expose_mass_ui": false,
                               "global_progress_value": 0,
                               "ignore_not_convertable_shaders": false,
-                              "progress": [0, "Initializing", true],
+                              "progress": [
+                                0,
+                                "Initializing",
+                                true
+                              ],
                               "save_on_fix_failure": true,
                               "shader_subidentifiers": {
                                 "AperturePBR_Opacity": ".*",
@@ -3453,7 +3700,11 @@
                                   "expose_mass_queue_action_ui": false,
                                   "expose_mass_ui": false,
                                   "global_progress_value": 0,
-                                  "progress": [0, "Initializing", true],
+                                  "progress": [
+                                    0,
+                                    "Initializing",
+                                    true
+                                  ],
                                   "select_from_root_layer_only": false
                                 },
                                 "name": "AllMaterials"
@@ -3473,7 +3724,11 @@
                                 "expose_mass_ui": false,
                                 "global_progress_value": 0,
                                 "hide_context_ui": false,
-                                "progress": [0, "Initializing", true],
+                                "progress": [
+                                  0,
+                                  "Initializing",
+                                  true
+                                ],
                                 "save_all_layers_on_exit": true
                               },
                               "name": "DependencyIterator"
@@ -3493,7 +3748,11 @@
                               "expose_mass_queue_action_ui": false,
                               "expose_mass_ui": false,
                               "global_progress_value": 0,
-                              "progress": [0, "Initializing", true],
+                              "progress": [
+                                0,
+                                "Initializing",
+                                true
+                              ],
                               "save_on_fix_failure": true
                             },
                             "name": "ValueMapping",
@@ -3505,7 +3764,11 @@
                                   "expose_mass_queue_action_ui": false,
                                   "expose_mass_ui": false,
                                   "global_progress_value": 0,
-                                  "progress": [0, "Initializing", true],
+                                  "progress": [
+                                    0,
+                                    "Initializing",
+                                    true
+                                  ],
                                   "select_from_root_layer_only": false
                                 },
                                 "name": "AllShaders"
@@ -3524,7 +3787,11 @@
                                 "expose_mass_ui": false,
                                 "global_progress_value": 0,
                                 "hide_context_ui": false,
-                                "progress": [0, "Initializing", true],
+                                "progress": [
+                                  0,
+                                  "Initializing",
+                                  true
+                                ],
                                 "save_all_layers_on_exit": true
                               },
                               "name": "DependencyIterator"
@@ -3550,7 +3817,11 @@
                               "expose_mass_queue_action_ui": false,
                               "expose_mass_ui": false,
                               "global_progress_value": 0,
-                              "progress": [0, "Initializing", true],
+                              "progress": [
+                                0,
+                                "Initializing",
+                                true
+                              ],
                               "replace_udim_textures_by_empty": true,
                               "save_on_fix_failure": true
                             },
@@ -3563,7 +3834,11 @@
                                   "expose_mass_queue_action_ui": false,
                                   "expose_mass_ui": false,
                                   "global_progress_value": 0,
-                                  "progress": [0, "Initializing", true],
+                                  "progress": [
+                                    0,
+                                    "Initializing",
+                                    true
+                                  ],
                                   "select_from_root_layer_only": false
                                 },
                                 "name": "AllShaders"
@@ -3583,7 +3858,11 @@
                                 "expose_mass_ui": false,
                                 "global_progress_value": 0,
                                 "hide_context_ui": false,
-                                "progress": [0, "Initializing", true],
+                                "progress": [
+                                  0,
+                                  "Initializing",
+                                  true
+                                ],
                                 "save_all_layers_on_exit": true
                               },
                               "name": "DependencyIterator"
@@ -3661,7 +3940,11 @@
                               "expose_mass_queue_action_ui": false,
                               "expose_mass_ui": false,
                               "global_progress_value": 0,
-                              "progress": [0, "Initializing", true],
+                              "progress": [
+                                0,
+                                "Initializing",
+                                true
+                              ],
                               "replace_udim_textures_by_empty": true,
                               "save_on_fix_failure": true,
                               "suffix": ".rtex.dds"
@@ -3675,7 +3958,11 @@
                                   "expose_mass_queue_action_ui": false,
                                   "expose_mass_ui": false,
                                   "global_progress_value": 0,
-                                  "progress": [0, "Initializing", true],
+                                  "progress": [
+                                    0,
+                                    "Initializing",
+                                    true
+                                  ],
                                   "select_from_root_layer_only": false
                                 },
                                 "name": "AllShaders"
@@ -3695,7 +3982,11 @@
                                 "expose_mass_ui": false,
                                 "global_progress_value": 0,
                                 "hide_context_ui": false,
-                                "progress": [0, "Initializing", true],
+                                "progress": [
+                                  0,
+                                  "Initializing",
+                                  true
+                                ],
                                 "save_all_layers_on_exit": true
                               },
                               "name": "DependencyIterator"
@@ -3706,7 +3997,11 @@
                               "expose_mass_queue_action_ui": false,
                               "expose_mass_ui": false,
                               "global_progress_value": 0,
-                              "progress": [0, "Initializing", true],
+                              "progress": [
+                                0,
+                                "Initializing",
+                                true
+                              ],
                               "save_on_fix_failure": true
                             },
                             "name": "RelativeAssetPaths",
@@ -3718,7 +4013,11 @@
                                   "expose_mass_queue_action_ui": false,
                                   "expose_mass_ui": false,
                                   "global_progress_value": 0,
-                                  "progress": [0, "Initializing", true],
+                                  "progress": [
+                                    0,
+                                    "Initializing",
+                                    true
+                                  ],
                                   "select_from_root_layer_only": false
                                 },
                                 "name": "AllPrims"
@@ -3738,7 +4037,11 @@
                                 "expose_mass_ui": false,
                                 "global_progress_value": 0,
                                 "hide_context_ui": false,
-                                "progress": [0, "Initializing", true],
+                                "progress": [
+                                  0,
+                                  "Initializing",
+                                  true
+                                ],
                                 "save_all_layers_on_exit": true
                               },
                               "name": "DependencyIterator"
@@ -3749,7 +4052,11 @@
                               "expose_mass_queue_action_ui": false,
                               "expose_mass_ui": false,
                               "global_progress_value": 0,
-                              "progress": [0, "Initializing", true],
+                              "progress": [
+                                0,
+                                "Initializing",
+                                true
+                              ],
                               "save_on_fix_failure": true
                             },
                             "name": "RelativeReferences",
@@ -3761,7 +4068,11 @@
                                   "expose_mass_queue_action_ui": false,
                                   "expose_mass_ui": false,
                                   "global_progress_value": 0,
-                                  "progress": [0, "Initializing", true],
+                                  "progress": [
+                                    0,
+                                    "Initializing",
+                                    true
+                                  ],
                                   "select_from_root_layer_only": false
                                 },
                                 "name": "AllPrims"
@@ -3780,7 +4091,11 @@
                                 "expose_mass_ui": false,
                                 "global_progress_value": 0,
                                 "hide_context_ui": false,
-                                "progress": [0, "Initializing", true],
+                                "progress": [
+                                  0,
+                                  "Initializing",
+                                  true
+                                ],
                                 "save_on_exit": true
                               },
                               "name": "CurrentStage"
@@ -3791,7 +4106,11 @@
                               "expose_mass_queue_action_ui": false,
                               "expose_mass_ui": false,
                               "global_progress_value": 0,
-                              "progress": [0, "Initializing", true],
+                              "progress": [
+                                0,
+                                "Initializing",
+                                true
+                              ],
                               "save_on_fix_failure": true,
                               "set_default_prim": true,
                               "wrap_prim_name": "XForms"
@@ -3805,7 +4124,11 @@
                                   "expose_mass_queue_action_ui": false,
                                   "expose_mass_ui": false,
                                   "global_progress_value": 0,
-                                  "progress": [0, "Initializing", true],
+                                  "progress": [
+                                    0,
+                                    "Initializing",
+                                    true
+                                  ],
                                   "select_from_root_layer_only": false
                                 },
                                 "name": "Nothing"
@@ -3824,7 +4147,11 @@
                                 "expose_mass_ui": false,
                                 "global_progress_value": 0,
                                 "hide_context_ui": false,
-                                "progress": [0, "Initializing", true],
+                                "progress": [
+                                  0,
+                                  "Initializing",
+                                  true
+                                ],
                                 "save_on_exit": true
                               },
                               "name": "CurrentStage"
@@ -3835,7 +4162,11 @@
                               "expose_mass_queue_action_ui": false,
                               "expose_mass_ui": true,
                               "global_progress_value": 0,
-                              "progress": [0, "Initializing", true],
+                              "progress": [
+                                0,
+                                "Initializing",
+                                true
+                              ],
                               "save_on_fix_failure": true,
                               "scale_target": 1
                             },
@@ -3848,7 +4179,11 @@
                                   "expose_mass_queue_action_ui": false,
                                   "expose_mass_ui": false,
                                   "global_progress_value": 0,
-                                  "progress": [0, "Initializing", true],
+                                  "progress": [
+                                    0,
+                                    "Initializing",
+                                    true
+                                  ],
                                   "select_from_root_layer_only": false,
                                   "select_session_layer_prims": false
                                 },
@@ -3868,7 +4203,11 @@
                                 "expose_mass_ui": false,
                                 "global_progress_value": 0,
                                 "hide_context_ui": false,
-                                "progress": [0, "Initializing", true],
+                                "progress": [
+                                  0,
+                                  "Initializing",
+                                  true
+                                ],
                                 "save_on_exit": true
                               },
                               "name": "CurrentStage"
@@ -3879,7 +4218,11 @@
                               "expose_mass_queue_action_ui": false,
                               "expose_mass_ui": false,
                               "global_progress_value": 0,
-                              "progress": [0, "Initializing", true],
+                              "progress": [
+                                0,
+                                "Initializing",
+                                true
+                              ],
                               "save_on_fix_failure": true,
                               "set_default_prim": true,
                               "wrap_prim_name": "ReferenceTarget"
@@ -3893,7 +4236,11 @@
                                   "expose_mass_queue_action_ui": false,
                                   "expose_mass_ui": false,
                                   "global_progress_value": 0,
-                                  "progress": [0, "Initializing", true],
+                                  "progress": [
+                                    0,
+                                    "Initializing",
+                                    true
+                                  ],
                                   "select_from_root_layer_only": false
                                 },
                                 "name": "Nothing"
@@ -3968,7 +4315,11 @@
                             "merge_all_meshes": false,
                             "output_directory": "",
                             "output_usd_extension": "usd",
-                            "progress": [0, "Initializing", true],
+                            "progress": [
+                              0,
+                              "Initializing",
+                              true
+                            ],
                             "single_mesh": false,
                             "smooth_normals": true,
                             "support_point_instancer": false,
@@ -4022,7 +4373,11 @@
                               "expose_mass_queue_action_ui": false,
                               "expose_mass_ui": false,
                               "global_progress_value": 0,
-                              "progress": [0, "Initializing", true]
+                              "progress": [
+                                0,
+                                "Initializing",
+                                true
+                              ]
                             },
                             "name": "FileCleanup"
                           },
@@ -4033,7 +4388,11 @@
                               "expose_mass_queue_action_ui": false,
                               "expose_mass_ui": false,
                               "global_progress_value": 0,
-                              "progress": [0, "Initializing", true]
+                              "progress": [
+                                0,
+                                "Initializing",
+                                true
+                              ]
                             },
                             "name": "FileMetadataWritter"
                           }
@@ -4047,7 +4406,9 @@
                     "name": "remix_ingest_model_asset",
                     "readonly": false,
                     "status": true,
-                    "tags": ["remix_ingest_model_asset"]
+                    "tags": [
+                      "remix_ingest_model_asset"
+                    ]
                   },
                   {
                     "args": {
@@ -4073,7 +4434,11 @@
                                 "expose_mass_ui": false,
                                 "global_progress_value": 0,
                                 "hide_context_ui": false,
-                                "progress": [0, "Initializing", true],
+                                "progress": [
+                                  0,
+                                  "Initializing",
+                                  true
+                                ],
                                 "save_on_exit": false
                               },
                               "name": "CurrentStage"
@@ -4085,7 +4450,11 @@
                               "expose_mass_ui": false,
                               "global_progress_value": 0,
                               "ignore_not_convertable_shaders": false,
-                              "progress": [0, "Initializing", true],
+                              "progress": [
+                                0,
+                                "Initializing",
+                                true
+                              ],
                               "save_on_fix_failure": true,
                               "shader_subidentifiers": {
                                 "AperturePBR_Opacity": ".*"
@@ -4100,7 +4469,11 @@
                                   "expose_mass_queue_action_ui": false,
                                   "expose_mass_ui": false,
                                   "global_progress_value": 0,
-                                  "progress": [0, "Initializing", true],
+                                  "progress": [
+                                    0,
+                                    "Initializing",
+                                    true
+                                  ],
                                   "select_from_root_layer_only": false
                                 },
                                 "name": "AllMaterials"
@@ -4119,7 +4492,11 @@
                                 "expose_mass_ui": false,
                                 "global_progress_value": 0,
                                 "hide_context_ui": false,
-                                "progress": [0, "Initializing", true],
+                                "progress": [
+                                  0,
+                                  "Initializing",
+                                  true
+                                ],
                                 "save_on_exit": false
                               },
                               "name": "CurrentStage"
@@ -4145,7 +4522,11 @@
                               "expose_mass_queue_action_ui": false,
                               "expose_mass_ui": false,
                               "global_progress_value": 0,
-                              "progress": [0, "Initializing", true],
+                              "progress": [
+                                0,
+                                "Initializing",
+                                true
+                              ],
                               "replace_udim_textures_by_empty": false,
                               "save_on_fix_failure": true
                             },
@@ -4160,7 +4541,11 @@
                                   "expose_mass_queue_action_ui": false,
                                   "expose_mass_ui": false,
                                   "global_progress_value": 0,
-                                  "progress": [0, "Initializing", true]
+                                  "progress": [
+                                    0,
+                                    "Initializing",
+                                    true
+                                  ]
                                 },
                                 "name": "FileCleanup"
                               }
@@ -4173,7 +4558,11 @@
                                   "expose_mass_queue_action_ui": false,
                                   "expose_mass_ui": false,
                                   "global_progress_value": 0,
-                                  "progress": [0, "Initializing", true],
+                                  "progress": [
+                                    0,
+                                    "Initializing",
+                                    true
+                                  ],
                                   "select_from_root_layer_only": false
                                 },
                                 "name": "AllShaders"
@@ -4192,7 +4581,11 @@
                                 "expose_mass_ui": false,
                                 "global_progress_value": 0,
                                 "hide_context_ui": false,
-                                "progress": [0, "Initializing", true],
+                                "progress": [
+                                  0,
+                                  "Initializing",
+                                  true
+                                ],
                                 "save_on_exit": false
                               },
                               "name": "CurrentStage"
@@ -4276,7 +4669,11 @@
                               "expose_mass_queue_action_ui": false,
                               "expose_mass_ui": false,
                               "global_progress_value": 0,
-                              "progress": [0, "Initializing", true],
+                              "progress": [
+                                0,
+                                "Initializing",
+                                true
+                              ],
                               "replace_udim_textures_by_empty": false,
                               "save_on_fix_failure": true,
                               "suffix": ".rtex.dds"
@@ -4292,7 +4689,11 @@
                                   "expose_mass_queue_action_ui": false,
                                   "expose_mass_ui": false,
                                   "global_progress_value": 0,
-                                  "progress": [0, "Initializing", true]
+                                  "progress": [
+                                    0,
+                                    "Initializing",
+                                    true
+                                  ]
                                 },
                                 "name": "FileCleanup"
                               }
@@ -4305,7 +4706,11 @@
                                   "expose_mass_queue_action_ui": false,
                                   "expose_mass_ui": false,
                                   "global_progress_value": 0,
-                                  "progress": [0, "Initializing", true],
+                                  "progress": [
+                                    0,
+                                    "Initializing",
+                                    true
+                                  ],
                                   "select_from_root_layer_only": false
                                 },
                                 "name": "AllShaders"
@@ -4324,7 +4729,11 @@
                                 "expose_mass_ui": false,
                                 "global_progress_value": 0,
                                 "hide_context_ui": false,
-                                "progress": [0, "Initializing", true],
+                                "progress": [
+                                  0,
+                                  "Initializing",
+                                  true
+                                ],
                                 "save_on_exit": false
                               },
                               "name": "CurrentStage"
@@ -4335,7 +4744,11 @@
                               "expose_mass_queue_action_ui": true,
                               "expose_mass_ui": false,
                               "global_progress_value": 0,
-                              "progress": [0, "Initializing", true],
+                              "progress": [
+                                0,
+                                "Initializing",
+                                true
+                              ],
                               "save_on_fix_failure": true
                             },
                             "name": "MassTexturePreview",
@@ -4347,7 +4760,11 @@
                                   "expose_mass_queue_action_ui": false,
                                   "expose_mass_ui": false,
                                   "global_progress_value": 0,
-                                  "progress": [0, "Initializing", true],
+                                  "progress": [
+                                    0,
+                                    "Initializing",
+                                    true
+                                  ],
                                   "select_from_root_layer_only": false
                                 },
                                 "name": "Nothing"
@@ -4390,7 +4807,11 @@
                             "hide_context_ui": true,
                             "input_files": [],
                             "output_directory": "",
-                            "progress": [0, "Initializing", true]
+                            "progress": [
+                              0,
+                              "Initializing",
+                              true
+                            ]
                           },
                           "name": "TextureImporter"
                         }
@@ -4437,7 +4858,11 @@
                               "expose_mass_queue_action_ui": false,
                               "expose_mass_ui": false,
                               "global_progress_value": 0,
-                              "progress": [0, "Initializing", true]
+                              "progress": [
+                                0,
+                                "Initializing",
+                                true
+                              ]
                             },
                             "name": "FileMetadataWritter"
                           }
@@ -4451,7 +4876,9 @@
                     "name": "remix_ingest_material_asset",
                     "readonly": false,
                     "status": true,
-                    "tags": ["remix_ingest_material_asset"]
+                    "tags": [
+                      "remix_ingest_material_asset"
+                    ]
                   }
                 ]
               },
@@ -4523,5 +4950,7 @@
   "is_component": false,
   "last_tested_version": "1.4.2",
   "name": "NVIDIA RTX Remix",
-  "tags": ["agents"]
+  "tags": [
+    "agents"
+  ]
 }
