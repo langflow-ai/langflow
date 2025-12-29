@@ -6,12 +6,12 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException
 from lfx.log.logger import logger
 from lfx.run.base import run_flow
-from pydantic import BaseModel
 
 # from langflow.agentic.mcp.server import visualize_flow_graph
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.services.deps import get_variable_service
 from langflow.services.variable.service import DatabaseVariableService
+from pydantic import BaseModel
 
 
 class FlowRequest(BaseModel):
@@ -127,40 +127,12 @@ async def run_next_component_flow(request: FlowRequest, current_user: CurrentAct
             check_variables=False,
         )
         logger.debug("Flow execution completed")
-        return result
 
     except Exception as e:
         logger.error(f"Error executing flow: {e}")
         raise HTTPException(status_code=500, detail=f"Error executing flow: {e}") from e
 
+    else:
+        return result
 
-if __name__ == "__main__":
-    import asyncio
 
-    flow_path = Path(__file__).parent.parent / "flows" / "PromptGeneration.json"
-    logger.debug(f"FLOW PATH: {flow_path}")
-
-    async def main():
-        try:
-            # Execute the flow
-            import os
-
-            openai_key = os.getenv("OPENAI_API_KEY")
-            print(f"OPENAI API KEY: {openai_key}")
-            result = await run_flow(
-                script_path=flow_path,
-                input_value=None,
-                global_variables={
-                    "FLOW_DETAILS": "PromptGeneration",
-                    "FIELD_VALUE": "Dummy Value",
-                    "OPENAI_API_KEY": openai_key,
-                },
-                verbose=True,
-                check_variables=False,
-            )
-            print(f"Result: {result}")
-        except Exception as e:
-            logger.error(f"Error executing flow: {e}")
-            raise HTTPException(status_code=500, detail=f"Error executing flow: {e}") from e
-
-    asyncio.run(main())
