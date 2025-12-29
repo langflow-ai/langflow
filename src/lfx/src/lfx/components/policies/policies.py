@@ -1,7 +1,7 @@
 from os.path import join
 
 from lfx.base.models import LCModelComponent
-from lfx.components.policies.wrapped_tool import WrappedTool
+from lfx.components.policies.wrapped_tool import LangchainModelWrapper, WrappedTool
 
 from lfx.base.models.unified_models import (
     get_language_model_options,
@@ -15,7 +15,6 @@ from lfx.inputs.inputs import BoolInput, MessageTextInput
 from lfx.io import HandleInput, MessageTextInput, Output, SecretStrInput, TabInput
 from toolguard import LitellmModel, ToolGuardsCodeGenerationResult, ToolGuardSpec, load_toolguards, I_TG_LLM
 from toolguard.buildtime import generate_guard_specs, generate_guards_from_specs
-from toolguard.data_types import MelleaSessionData
 
 from lfx.io import ModelInput
 from lfx.log.logger import logger
@@ -120,49 +119,31 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             field_value=field_value,
         )
     
-    def _get_step1_llm(self)->I_TG_LLM:
-        return LitellmModel(
-            model_name=self.model[0].get("name"), 
-            provider=self.model[0].get("provider").lower(),
-            kw_args={
-                # 'base_url': "",
-                'api_key': self.api_key
-            }
-        )
-    
     async def _build_guard_specs(self) -> list[ToolGuardSpec]:
         logger.info(f"🔒️ToolGuard: Starting step 1")
         logger.info(f"model = {self.model}")
-        llm = self._get_step1_llm()
+        llm = LangchainModelWrapper(self.build_model())
         toolguard_step1_dir = join(self.guard_code_path, STEP1)
         policy_text = "\n".join(self.policies)
         specs = await generate_guard_specs(
             policy_text=policy_text, 
             tools=self.in_tools,
             llm=llm, 
-            work_dir=toolguard_step1_dir
+            work_dir=toolguard_step1_dir,
+            short=True
         )
         logger.info(f"🔒️ToolGuard: Step 1 Done")
         return specs
-
-    def _get_mellea_session(self )->MelleaSessionData: 
-        return MelleaSessionData(
-            backend_name=self.model[0].get("provider").lower(),
-            model_id=self.model[0].get("name"),
-            kw_args={
-                "base_url": "https://ete-litellm.bx.cloud9.ibm.com",
-                "api_key": self.api_key
-            }
-        )
     
     async def _build_guards(self, specs: list[ToolGuardSpec]) -> ToolGuardsCodeGenerationResult:
         logger.info(f"🔒️ToolGuard: Starting step 2")
         out_dir = join(self.guard_code_path, STEP2)
+        llm = LangchainModelWrapper(self.build_model())
         gen_result = await generate_guards_from_specs(
             tools=self.in_tools,
             tool_specs=specs,
             work_dir=out_dir,
-            llm_data=self._get_mellea_session()
+            llm=llm
         )
         logger.info(f"🔒️ToolGuard: Step 2 Done")
         return gen_result
@@ -187,8 +168,8 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
                 self.log("🔒️ToolGuard: run mode (cached code from path)", name="info")
                 # make sure self.guard_code_path contains the path to pre-built guards
                 # assert self.guard_code_path, "🔒️ToolGuard: guard path should be a valid code path!"
-
-            guarded_tools = [WrappedTool(tool, self.in_tools, self.guard_code_path) for tool in self.in_tools]
+            code_dir = join(self.guard_code_path, STEP2)
+            guarded_tools = [WrappedTool(tool, self.in_tools, code_dir) for tool in self.in_tools]
             return guarded_tools  # type: ignore
 
         return self.in_tools
