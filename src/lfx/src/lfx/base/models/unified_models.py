@@ -291,8 +291,9 @@ def get_unified_models_detailed(
         When False (default) models whose metadata contains ``deprecated=True``
         are filtered out.
     only_defaults : bool
-        When True, only models marked as default (default=True) are returned.
-        Defaults to False to maintain backward compatibility.
+        When True, only models marked as default are returned.
+        The first 5 models from each provider (in list order) are automatically
+        marked as default. Defaults to False to maintain backward compatibility.
     **metadata_filters
         Arbitrary key/value pairs to match against the model's metadata.
         Example: ``get_unified_models_detailed(size="4k", context_window=8192)``
@@ -333,10 +334,6 @@ def get_unified_models_detailed(
         if (not include_deprecated) and md.get("deprecated", False):
             continue
 
-        # Skip models not marked as default if only_defaults is True
-        if only_defaults and not md.get("default", False):
-            continue
-
         if providers and md.get("provider") not in providers:
             continue
         if model_name and md.get("name") != model_name:
@@ -359,6 +356,21 @@ def get_unified_models_detailed(
                 "metadata": {k: v for k, v in metadata.items() if k not in ("provider", "name")},
             }
         )
+
+    # Mark the first 5 models in each provider as default (based on list order)
+    # and optionally filter to only defaults
+    default_model_count = 5  # Number of default models per provider
+
+    for prov, models in provider_map.items():
+        for i, model in enumerate(models):
+            if i < default_model_count:
+                model["metadata"]["default"] = True
+            else:
+                model["metadata"]["default"] = False
+
+        # If only_defaults is True, filter to only default models
+        if only_defaults:
+            provider_map[prov] = [m for m in models if m["metadata"].get("default", False)]
 
     # Format as requested
     return [
@@ -986,7 +998,17 @@ def normalize_model_names_to_dicts(model_names: list[str] | str) -> list[dict[st
     return result
 
 
-def get_llm(model, user_id: UUID | str | None, api_key=None, temperature=None, *, stream=False) -> Any:
+def get_llm(
+    model,
+    user_id: UUID | str | None,
+    api_key=None,
+    temperature=None,
+    *,
+    stream=False,
+    watsonx_url=None,
+    watsonx_project_id=None,
+    ollama_base_url=None,
+) -> Any:
     # Check if model is already a BaseLanguageModel instance (from a connection)
     try:
         from langchain_core.language_models import BaseLanguageModel
@@ -1018,10 +1040,12 @@ def get_llm(model, user_id: UUID | str | None, api_key=None, temperature=None, *
 
     # Validate API key (Ollama doesn't require one)
     if not api_key and provider != "Ollama":
+        # Get the correct variable name from the provider variable mapping
+        provider_variable_map = get_model_provider_variable_mapping()
+        variable_name = provider_variable_map.get(provider, f"{provider.upper().replace(' ', '_')}_API_KEY")
         msg = (
             f"{provider} API key is required when using {provider} provider. "
-            f"Please provide it in the component or configure it globally as "
-            f"{provider.upper().replace(' ', '_')}_API_KEY."
+            f"Please provide it in the component or configure it globally as {variable_name}."
         )
         raise ValueError(msg)
 
@@ -1047,7 +1071,54 @@ def get_llm(model, user_id: UUID | str | None, api_key=None, temperature=None, *
     if temperature is not None:
         kwargs["temperature"] = temperature
 
-    return model_class(**kwargs)
+    # Add provider-specific parameters
+    if provider == "IBM WatsonX":
+        # For watsonx, url and project_id are required parameters
+        # Only add them if both are provided by the component
+        # If neither are provided, let ChatWatsonx handle it with its native error
+        # This allows components without WatsonX-specific fields to fail gracefully
+
+        url_param = metadata.get("url_param", "url")
+        project_id_param = metadata.get("project_id_param", "project_id")
+
+        has_url = watsonx_url is not None
+        has_project_id = watsonx_project_id is not None
+
+        if has_url and has_project_id:
+            # Both provided - add them to kwargs
+            kwargs[url_param] = watsonx_url
+            kwargs[project_id_param] = watsonx_project_id
+        elif has_url or has_project_id:
+            # Only one provided - this is a misconfiguration in the component
+            missing = "project ID" if has_url else "URL"
+            provided = "URL" if has_url else "project ID"
+            msg = (
+                f"IBM WatsonX requires both a URL and project ID. "
+                f"You provided a watsonx {provided} but no {missing}. "
+                f"Please add a 'watsonx {missing.title()}' field to your component or use the Language Model component "
+                f"which fully supports IBM WatsonX configuration."
+            )
+            raise ValueError(msg)
+        # else: neither provided - let ChatWatsonx handle it (will fail with its own error)
+    elif provider == "Ollama" and ollama_base_url:
+        # For Ollama, handle custom base_url
+        base_url_param = metadata.get("base_url_param", "base_url")
+        kwargs[base_url_param] = ollama_base_url
+
+    try:
+        return model_class(**kwargs)
+    except Exception as e:
+        # If instantiation fails and it's WatsonX, provide additional context
+        if provider == "IBM WatsonX" and ("url" in str(e).lower() or "project" in str(e).lower()):
+            msg = (
+                f"Failed to initialize IBM WatsonX model: {e}\n\n"
+                "IBM WatsonX requires additional configuration parameters (API endpoint URL and project ID). "
+                "This component may not support these parameters. "
+                "Consider using the 'Language Model' component instead, which fully supports IBM WatsonX."
+            )
+            raise ValueError(msg) from e
+        # Re-raise the original exception for other cases
+        raise
 
 
 def update_model_options_in_build_config(
@@ -1188,20 +1259,17 @@ def update_model_options_in_build_config(
             if default_model:
                 build_config["model"]["value"] = [default_model]
 
-    # Simple logic: ONLY hide the handle when we're explicitly setting a model value
-    # Check if field_value is a model selection (list with model dict)
-    if (
-        isinstance(field_value, list)
-        and len(field_value) > 0
-        and isinstance(field_value[0], dict)
-        and "name" in field_value[0]
-    ):
-        # User is selecting a model, hide the handle
-        build_config["model"]["input_types"] = []
-    # Otherwise (including when field_value is "connect_other_models" or anything else), restore default input_types
-    elif cache_key_prefix == "embedding_model_options":
-        build_config["model"]["input_types"] = ["Embeddings"]
+    # Handle visibility logic:
+    # - Show handle ONLY when field_value is "connect_other_models"
+    # - Hide handle in all other cases (default, model selection, etc.)
+    if field_value == "connect_other_models":
+        # User explicitly selected "Connect other models", show the handle
+        if cache_key_prefix == "embedding_model_options":
+            build_config["model"]["input_types"] = ["Embeddings"]
+        else:
+            build_config["model"]["input_types"] = ["LanguageModel"]
     else:
-        build_config["model"]["input_types"] = ["LanguageModel"]
+        # Default case or model selection: hide the handle
+        build_config["model"]["input_types"] = []
 
     return build_config

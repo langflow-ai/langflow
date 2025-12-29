@@ -9,16 +9,12 @@
             "dataType": "ChatInput",
             "id": "ChatInput-8XmJU",
             "name": "message",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "Agent-9dON7",
-            "inputTypes": [
-              "Message"
-            ],
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
@@ -37,18 +33,12 @@
             "dataType": "Agent",
             "id": "Agent-9dON7",
             "name": "response",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-o3obj",
-            "inputTypes": [
-              "Data",
-              "DataFrame",
-              "Message"
-            ],
+            "inputTypes": ["Data", "DataFrame", "Message"],
             "type": "other"
           }
         },
@@ -67,16 +57,12 @@
             "dataType": "Prompt",
             "id": "Prompt-PrjbV",
             "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "system_prompt",
             "id": "Agent-9dON7",
-            "inputTypes": [
-              "Message"
-            ],
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
@@ -95,17 +81,12 @@
             "dataType": "RemixDocumentation",
             "id": "RemixDocumentation-DEIws",
             "name": "dataframe_output",
-            "output_types": [
-              "DataFrame"
-            ]
+            "output_types": ["DataFrame"]
           },
           "targetHandle": {
             "fieldName": "ingest_data",
             "id": "FAISS-Uz8O4",
-            "inputTypes": [
-              "Data",
-              "DataFrame"
-            ],
+            "inputTypes": ["Data", "DataFrame"],
             "type": "other"
           }
         },
@@ -124,16 +105,12 @@
             "dataType": "EmbeddingModel",
             "id": "EmbeddingModel-X6URU",
             "name": "embeddings",
-            "output_types": [
-              "Embeddings"
-            ]
+            "output_types": ["Embeddings"]
           },
           "targetHandle": {
             "fieldName": "embedding",
             "id": "FAISS-Uz8O4",
-            "inputTypes": [
-              "Embeddings"
-            ],
+            "inputTypes": ["Embeddings"],
             "type": "other"
           }
         },
@@ -152,16 +129,12 @@
             "dataType": "FAISS",
             "id": "FAISS-Uz8O4",
             "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
+            "output_types": ["Tool"]
           },
           "targetHandle": {
             "fieldName": "tools",
             "id": "Agent-9dON7",
-            "inputTypes": [
-              "Tool"
-            ],
+            "inputTypes": ["Tool"],
             "type": "other"
           }
         },
@@ -180,16 +153,12 @@
             "dataType": "MCPTools",
             "id": "MCPTools-beHVJ",
             "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
+            "output_types": ["Tool"]
           },
           "targetHandle": {
             "fieldName": "tools",
             "id": "Agent-9dON7",
-            "inputTypes": [
-              "Tool"
-            ],
+            "inputTypes": ["Tool"],
             "type": "other"
           }
         },
@@ -206,9 +175,7 @@
         "data": {
           "id": "ChatInput-8XmJU",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -256,9 +223,7 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -289,9 +254,7 @@
                 "display_name": "Context ID",
                 "dynamic": false,
                 "info": "The context ID of the chat. Adds an extra layer to the local memory.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -382,10 +345,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -403,9 +363,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -426,9 +384,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -484,9 +440,7 @@
         "data": {
           "id": "ChatOutput-o3obj",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -543,9 +497,7 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -594,9 +546,7 @@
                 "display_name": "Context ID",
                 "dynamic": false,
                 "info": "The context ID of the chat. Adds an extra layer to the local memory.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -617,9 +567,7 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -640,11 +588,7 @@
                 "display_name": "Inputs",
                 "dynamic": false,
                 "info": "Message to be passed as output.",
-                "input_types": [
-                  "Data",
-                  "DataFrame",
-                  "Message"
-                ],
+                "input_types": ["Data", "DataFrame", "Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "input_value",
@@ -665,10 +609,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -686,9 +627,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -709,9 +648,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -767,9 +704,7 @@
         "data": {
           "id": "Agent-9dON7",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -830,9 +765,7 @@
                 "name": "response",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -868,9 +801,7 @@
                 "display_name": "Agent Description [Deprecated]",
                 "dynamic": false,
                 "info": "The description of the agent. This is only used when in Tool Mode. Defaults to 'A helpful assistant with access to the following tools:' and tools are added dynamically. This feature is deprecated and will be removed in future versions.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -901,6 +832,7 @@
                 "password": true,
                 "placeholder": "",
                 "real_time_refresh": true,
+                "refresh_button": false,
                 "required": false,
                 "show": true,
                 "title_case": false,
@@ -932,9 +864,7 @@
                 "display_name": "Context ID",
                 "dynamic": false,
                 "info": "The context ID of the chat. Adds an extra layer to the local memory.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -959,9 +889,7 @@
                 "display_name": "Output Format Instructions",
                 "dynamic": false,
                 "info": "Generic Template for structured output formatting. Valid only with Structured response.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1006,9 +934,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "The input provided by the user for the agent to process.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1063,9 +989,7 @@
                   }
                 },
                 "info": "Select your model provider",
-                "input_types": [
-                  "LanguageModel"
-                ],
+                "input_types": [],
                 "list": false,
                 "list_add_label": "Add More",
                 "model_type": "language",
@@ -1143,13 +1067,7 @@
                     "display_name": "Type",
                     "edit_mode": "inline",
                     "name": "type",
-                    "options": [
-                      "str",
-                      "int",
-                      "float",
-                      "bool",
-                      "dict"
-                    ],
+                    "options": ["str", "int", "float", "bool", "dict"],
                     "type": "str"
                   },
                   {
@@ -1178,9 +1096,7 @@
                 "display_name": "Agent Instructions",
                 "dynamic": false,
                 "info": "System Prompt: Initial instructions and context provided to guide the agent's behavior.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1204,9 +1120,7 @@
                 "display_name": "Tools",
                 "dynamic": false,
                 "info": "These are the tools that the agent can use to help with tasks.",
-                "input_types": [
-                  "Tool"
-                ],
+                "input_types": ["Tool"],
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "tools",
@@ -1264,9 +1178,7 @@
         "data": {
           "id": "Prompt-PrjbV",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {
@@ -1281,10 +1193,7 @@
             "documentation": "",
             "edited": false,
             "error": null,
-            "field_order": [
-              "template",
-              "tool_placeholder"
-            ],
+            "field_order": ["template", "tool_placeholder"],
             "frozen": false,
             "full_path": null,
             "icon": "prompts",
@@ -1306,9 +1215,7 @@
                 "name": "prompt",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1342,9 +1249,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1364,9 +1269,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1386,9 +1289,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1424,9 +1325,7 @@
                 "display_name": "Tool Placeholder",
                 "dynamic": false,
                 "info": "A placeholder input for tool mode.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1464,10 +1363,7 @@
         "data": {
           "id": "RemixDocumentation-DEIws",
           "node": {
-            "base_classes": [
-              "Data",
-              "DataFrame"
-            ],
+            "base_classes": ["Data", "DataFrame"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1475,9 +1371,7 @@
             "display_name": "RTX Remix Documentation",
             "documentation": "https://docs.omniverse.nvidia.com/kit/docs/rtx_remix/latest/index.html",
             "edited": true,
-            "field_order": [
-              "exclude_paths"
-            ],
+            "field_order": ["exclude_paths"],
             "frozen": false,
             "icon": "NVIDIA",
             "legacy": false,
@@ -1497,9 +1391,7 @@
                 "required_inputs": null,
                 "selected": "DataFrame",
                 "tool_mode": true,
-                "types": [
-                  "DataFrame"
-                ],
+                "types": ["DataFrame"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -1513,9 +1405,7 @@
                 "required_inputs": null,
                 "selected": "Data",
                 "tool_mode": true,
-                "types": [
-                  "Data"
-                ],
+                "types": ["Data"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1546,9 +1436,7 @@
                 "display_name": "Exclude Paths",
                 "dynamic": false,
                 "info": "List of path prefixes to exclude from results. Used to filter out sections of the documentation that are not typically relevant to user queries.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": true,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1593,9 +1481,7 @@
           "display_name": "Embedding Model",
           "id": "EmbeddingModel-X6URU",
           "node": {
-            "base_classes": [
-              "Embeddings"
-            ],
+            "base_classes": ["Embeddings"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1648,9 +1534,7 @@
                 "name": "embeddings",
                 "selected": "Embeddings",
                 "tool_mode": true,
-                "types": [
-                  "Embeddings"
-                ],
+                "types": ["Embeddings"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1663,9 +1547,7 @@
                 "display_name": "API Base URL",
                 "dynamic": false,
                 "info": "Base URL for the API. Leave empty for default.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1871,9 +1753,7 @@
                 "display_name": "Project ID",
                 "dynamic": false,
                 "info": "IBM watsonx.ai Project ID (required for IBM watsonx.ai)",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1969,10 +1849,7 @@
         "data": {
           "id": "FAISS-Uz8O4",
           "node": {
-            "base_classes": [
-              "Data",
-              "DataFrame"
-            ],
+            "base_classes": ["Data", "DataFrame"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -2025,9 +1902,7 @@
                 "required_inputs": null,
                 "selected": "Tool",
                 "tool_mode": true,
-                "types": [
-                  "Tool"
-                ],
+                "types": ["Tool"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -2076,9 +1951,7 @@
                 "display_name": "Embedding",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Embeddings"
-                ],
+                "input_types": ["Embeddings"],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "embedding",
@@ -2115,10 +1988,7 @@
                 "display_name": "Ingest Data",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Data",
-                  "DataFrame"
-                ],
+                "input_types": ["Data", "DataFrame"],
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "ingest_data",
@@ -2173,9 +2043,7 @@
                 "display_name": "Search Query",
                 "dynamic": false,
                 "info": "Enter a query to run a similarity search.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2241,9 +2109,7 @@
                     "name": "search_documents",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "search_documents"
-                    ]
+                    "tags": ["search_documents"]
                   },
                   {
                     "args": {
@@ -2260,9 +2126,7 @@
                     "name": "as_dataframe",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "as_dataframe"
-                    ]
+                    "tags": ["as_dataframe"]
                   }
                 ]
               }
@@ -2318,9 +2182,7 @@
         "data": {
           "id": "MCPTools-beHVJ",
           "node": {
-            "base_classes": [
-              "DataFrame"
-            ],
+            "base_classes": ["DataFrame"],
             "beta": false,
             "category": "data",
             "conditional_paths": [],
@@ -2378,9 +2240,7 @@
                 "required_inputs": null,
                 "selected": "Tool",
                 "tool_mode": true,
-                "types": [
-                  "Tool"
-                ],
+                "types": ["Tool"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -2450,9 +2310,7 @@
                 "display_name": "Tool Placeholder",
                 "dynamic": false,
                 "info": "Placeholder for the tool",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2493,9 +2351,7 @@
                     "name": "remix__status_status_get",
                     "readonly": false,
                     "status": false,
-                    "tags": [
-                      "remix__status_status_get"
-                    ]
+                    "tags": ["remix__status_status_get"]
                   },
                   {
                     "args": {},
@@ -2505,9 +2361,7 @@
                     "name": "remix__status_health_get",
                     "readonly": false,
                     "status": false,
-                    "tags": [
-                      "remix__status_health_get"
-                    ]
+                    "tags": ["remix__status_health_get"]
                   },
                   {
                     "args": {},
@@ -2517,9 +2371,7 @@
                     "name": "remix__status_ready_get",
                     "readonly": false,
                     "status": false,
-                    "tags": [
-                      "remix__status_ready_get"
-                    ]
+                    "tags": ["remix__status_ready_get"]
                   },
                   {
                     "args": {},
@@ -2529,9 +2381,7 @@
                     "name": "remix__status_startup_get",
                     "readonly": false,
                     "status": false,
-                    "tags": [
-                      "remix__status_startup_get"
-                    ]
+                    "tags": ["remix__status_startup_get"]
                   },
                   {
                     "args": {
@@ -2546,9 +2396,7 @@
                     "name": "remix__async_app_docs_endpoint_asyncapi_docs_g",
                     "readonly": false,
                     "status": false,
-                    "tags": [
-                      "remix__async_app_docs_endpoint_asyncapi_docs_get"
-                    ]
+                    "tags": ["remix__async_app_docs_endpoint_asyncapi_docs_get"]
                   },
                   {
                     "args": {
@@ -2575,9 +2423,7 @@
                     "name": "remix_get_loaded_project",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "remix_get_loaded_project"
-                    ]
+                    "tags": ["remix_get_loaded_project"]
                   },
                   {
                     "args": {
@@ -2593,9 +2439,7 @@
                     "name": "remix_open_project",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "remix_open_project"
-                    ]
+                    "tags": ["remix_open_project"]
                   },
                   {
                     "args": {
@@ -2635,9 +2479,7 @@
                     "name": "remix_get_layers",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "remix_get_layers"
-                    ]
+                    "tags": ["remix_get_layers"]
                   },
                   {
                     "args": {
@@ -2731,9 +2573,7 @@
                     "name": "remix_create_layer",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "remix_create_layer"
-                    ]
+                    "tags": ["remix_create_layer"]
                   },
                   {
                     "args": {
@@ -2765,9 +2605,7 @@
                     "name": "remix_get_sublayers",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "remix_get_sublayers"
-                    ]
+                    "tags": ["remix_get_sublayers"]
                   },
                   {
                     "args": {
@@ -2788,9 +2626,7 @@
                     "name": "remix_remove_layer",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "remix_remove_layer"
-                    ]
+                    "tags": ["remix_remove_layer"]
                   },
                   {
                     "args": {
@@ -2837,9 +2673,7 @@
                     "name": "remix_move_layer",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "remix_move_layer"
-                    ]
+                    "tags": ["remix_move_layer"]
                   },
                   {
                     "args": {
@@ -2860,9 +2694,7 @@
                     "name": "remix_lock_layer",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "remix_lock_layer"
-                    ]
+                    "tags": ["remix_lock_layer"]
                   },
                   {
                     "args": {
@@ -2883,9 +2715,7 @@
                     "name": "remix_mute_layer",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "remix_mute_layer"
-                    ]
+                    "tags": ["remix_mute_layer"]
                   },
                   {
                     "args": {
@@ -2901,9 +2731,7 @@
                     "name": "remix_save_layer",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "remix_save_layer"
-                    ]
+                    "tags": ["remix_save_layer"]
                   },
                   {
                     "args": {},
@@ -2913,9 +2741,7 @@
                     "name": "remix_get_edit_target_layer",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "remix_get_edit_target_layer"
-                    ]
+                    "tags": ["remix_get_edit_target_layer"]
                   },
                   {
                     "args": {
@@ -2931,9 +2757,7 @@
                     "name": "remix_set_edit_target_layer",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "remix_set_edit_target_layer"
-                    ]
+                    "tags": ["remix_set_edit_target_layer"]
                   },
                   {
                     "args": {},
@@ -2943,9 +2767,7 @@
                     "name": "remix_get_layer_types",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "remix_get_layer_types"
-                    ]
+                    "tags": ["remix_get_layer_types"]
                   },
                   {
                     "args": {},
@@ -2955,9 +2777,7 @@
                     "name": "remix_get_available_model_assets",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "remix_get_available_model_assets"
-                    ]
+                    "tags": ["remix_get_available_model_assets"]
                   },
                   {
                     "args": {},
@@ -2967,9 +2787,7 @@
                     "name": "remix_get_available_texture_assets",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "remix_get_available_texture_assets"
-                    ]
+                    "tags": ["remix_get_available_texture_assets"]
                   },
                   {
                     "args": {
@@ -2993,9 +2811,7 @@
                     "name": "remix_get_available_ingested_assets",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "remix_get_available_ingested_assets"
-                    ]
+                    "tags": ["remix_get_available_ingested_assets"]
                   },
                   {
                     "args": {},
@@ -3005,9 +2821,7 @@
                     "name": "remix_get_default_model_asset_directory",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "remix_get_default_model_asset_directory"
-                    ]
+                    "tags": ["remix_get_default_model_asset_directory"]
                   },
                   {
                     "args": {},
@@ -3017,9 +2831,7 @@
                     "name": "remix_get_default_texture_asset_directory",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "remix_get_default_texture_asset_directory"
-                    ]
+                    "tags": ["remix_get_default_texture_asset_directory"]
                   },
                   {
                     "args": {},
@@ -3029,9 +2841,7 @@
                     "name": "remix_get_default_ingested_asset_directory",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "remix_get_default_ingested_asset_directory"
-                    ]
+                    "tags": ["remix_get_default_ingested_asset_directory"]
                   },
                   {
                     "args": {
@@ -3122,9 +2932,7 @@
                     "name": "remix_get_prim_paths",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "remix_get_prim_paths"
-                    ]
+                    "tags": ["remix_get_prim_paths"]
                   },
                   {
                     "args": {
@@ -3140,9 +2948,7 @@
                     "name": "remix_get_model_instances",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "remix_get_model_instances"
-                    ]
+                    "tags": ["remix_get_model_instances"]
                   },
                   {
                     "args": {
@@ -3172,9 +2978,7 @@
                     "name": "remix_get_material_textures",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "remix_get_material_textures"
-                    ]
+                    "tags": ["remix_get_material_textures"]
                   },
                   {
                     "args": {
@@ -3190,9 +2994,7 @@
                     "name": "remix_get_prim_reference_file_paths",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "remix_get_prim_reference_file_paths"
-                    ]
+                    "tags": ["remix_get_prim_reference_file_paths"]
                   },
                   {
                     "args": {
@@ -3252,9 +3054,7 @@
                     "name": "remix_replace_prim_reference_file_path",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "remix_replace_prim_reference_file_path"
-                    ]
+                    "tags": ["remix_replace_prim_reference_file_path"]
                   },
                   {
                     "args": {
@@ -3288,9 +3088,7 @@
                     "name": "remix_append_prim_reference_file_path",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "remix_append_prim_reference_file_path"
-                    ]
+                    "tags": ["remix_append_prim_reference_file_path"]
                   },
                   {
                     "args": {
@@ -3306,9 +3104,7 @@
                     "name": "remix_set_selection",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "remix_set_selection"
-                    ]
+                    "tags": ["remix_set_selection"]
                   },
                   {
                     "args": {
@@ -3399,9 +3195,7 @@
                     "name": "remix_get_textures",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "remix_get_textures"
-                    ]
+                    "tags": ["remix_get_textures"]
                   },
                   {
                     "args": {
@@ -3434,9 +3228,7 @@
                     "name": "remix_override_textures",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "remix_override_textures"
-                    ]
+                    "tags": ["remix_override_textures"]
                   },
                   {
                     "args": {},
@@ -3446,9 +3238,7 @@
                     "name": "remix_get_valid_texture_types",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "remix_get_valid_texture_types"
-                    ]
+                    "tags": ["remix_get_valid_texture_types"]
                   },
                   {
                     "args": {
@@ -3464,9 +3254,7 @@
                     "name": "remix_get_texture_material",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "remix_get_texture_material"
-                    ]
+                    "tags": ["remix_get_texture_material"]
                   },
                   {
                     "args": {
@@ -3495,9 +3283,7 @@
                     "name": "remix_get_texture_material_inputs",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "remix_get_texture_material_inputs"
-                    ]
+                    "tags": ["remix_get_texture_material_inputs"]
                   },
                   {
                     "args": {
@@ -3521,9 +3307,7 @@
                     "name": "remix_update_ingestion_schema",
                     "readonly": false,
                     "status": false,
-                    "tags": [
-                      "remix_update_ingestion_schema"
-                    ]
+                    "tags": ["remix_update_ingestion_schema"]
                   },
                   {
                     "args": {
@@ -3550,11 +3334,7 @@
                                 "expose_mass_ui": false,
                                 "global_progress_value": 0,
                                 "hide_context_ui": false,
-                                "progress": [
-                                  0,
-                                  "Initializing",
-                                  true
-                                ],
+                                "progress": [0, "Initializing", true],
                                 "save_all_layers_on_exit": true
                               },
                               "name": "DependencyIterator"
@@ -3565,11 +3345,7 @@
                               "expose_mass_queue_action_ui": false,
                               "expose_mass_ui": false,
                               "global_progress_value": 0,
-                              "progress": [
-                                0,
-                                "Initializing",
-                                true
-                              ],
+                              "progress": [0, "Initializing", true],
                               "save_on_fix_failure": true
                             },
                             "name": "ClearUnassignedMaterial",
@@ -3582,11 +3358,7 @@
                                   "expose_mass_ui": false,
                                   "global_progress_value": 0,
                                   "include_geom_subset": true,
-                                  "progress": [
-                                    0,
-                                    "Initializing",
-                                    true
-                                  ],
+                                  "progress": [0, "Initializing", true],
                                   "select_from_root_layer_only": false
                                 },
                                 "name": "AllMeshes"
@@ -3606,11 +3378,7 @@
                                 "expose_mass_ui": false,
                                 "global_progress_value": 0,
                                 "hide_context_ui": false,
-                                "progress": [
-                                  0,
-                                  "Initializing",
-                                  true
-                                ],
+                                "progress": [0, "Initializing", true],
                                 "save_all_layers_on_exit": true
                               },
                               "name": "DependencyIterator"
@@ -3624,11 +3392,7 @@
                               "expose_mass_queue_action_ui": false,
                               "expose_mass_ui": false,
                               "global_progress_value": 0,
-                              "progress": [
-                                0,
-                                "Initializing",
-                                true
-                              ],
+                              "progress": [0, "Initializing", true],
                               "save_on_fix_failure": true
                             },
                             "name": "DefaultMaterial",
@@ -3641,11 +3405,7 @@
                                   "expose_mass_ui": false,
                                   "global_progress_value": 0,
                                   "include_geom_subset": false,
-                                  "progress": [
-                                    0,
-                                    "Initializing",
-                                    true
-                                  ],
+                                  "progress": [0, "Initializing", true],
                                   "select_from_root_layer_only": false
                                 },
                                 "name": "AllMeshes"
@@ -3665,11 +3425,7 @@
                                 "expose_mass_ui": false,
                                 "global_progress_value": 0,
                                 "hide_context_ui": false,
-                                "progress": [
-                                  0,
-                                  "Initializing",
-                                  true
-                                ],
+                                "progress": [0, "Initializing", true],
                                 "save_all_layers_on_exit": true
                               },
                               "name": "DependencyIterator"
@@ -3681,11 +3437,7 @@
                               "expose_mass_ui": false,
                               "global_progress_value": 0,
                               "ignore_not_convertable_shaders": false,
-                              "progress": [
-                                0,
-                                "Initializing",
-                                true
-                              ],
+                              "progress": [0, "Initializing", true],
                               "save_on_fix_failure": true,
                               "shader_subidentifiers": {
                                 "AperturePBR_Opacity": ".*",
@@ -3701,11 +3453,7 @@
                                   "expose_mass_queue_action_ui": false,
                                   "expose_mass_ui": false,
                                   "global_progress_value": 0,
-                                  "progress": [
-                                    0,
-                                    "Initializing",
-                                    true
-                                  ],
+                                  "progress": [0, "Initializing", true],
                                   "select_from_root_layer_only": false
                                 },
                                 "name": "AllMaterials"
@@ -3725,11 +3473,7 @@
                                 "expose_mass_ui": false,
                                 "global_progress_value": 0,
                                 "hide_context_ui": false,
-                                "progress": [
-                                  0,
-                                  "Initializing",
-                                  true
-                                ],
+                                "progress": [0, "Initializing", true],
                                 "save_all_layers_on_exit": true
                               },
                               "name": "DependencyIterator"
@@ -3749,11 +3493,7 @@
                               "expose_mass_queue_action_ui": false,
                               "expose_mass_ui": false,
                               "global_progress_value": 0,
-                              "progress": [
-                                0,
-                                "Initializing",
-                                true
-                              ],
+                              "progress": [0, "Initializing", true],
                               "save_on_fix_failure": true
                             },
                             "name": "ValueMapping",
@@ -3765,11 +3505,7 @@
                                   "expose_mass_queue_action_ui": false,
                                   "expose_mass_ui": false,
                                   "global_progress_value": 0,
-                                  "progress": [
-                                    0,
-                                    "Initializing",
-                                    true
-                                  ],
+                                  "progress": [0, "Initializing", true],
                                   "select_from_root_layer_only": false
                                 },
                                 "name": "AllShaders"
@@ -3788,11 +3524,7 @@
                                 "expose_mass_ui": false,
                                 "global_progress_value": 0,
                                 "hide_context_ui": false,
-                                "progress": [
-                                  0,
-                                  "Initializing",
-                                  true
-                                ],
+                                "progress": [0, "Initializing", true],
                                 "save_all_layers_on_exit": true
                               },
                               "name": "DependencyIterator"
@@ -3818,11 +3550,7 @@
                               "expose_mass_queue_action_ui": false,
                               "expose_mass_ui": false,
                               "global_progress_value": 0,
-                              "progress": [
-                                0,
-                                "Initializing",
-                                true
-                              ],
+                              "progress": [0, "Initializing", true],
                               "replace_udim_textures_by_empty": true,
                               "save_on_fix_failure": true
                             },
@@ -3835,11 +3563,7 @@
                                   "expose_mass_queue_action_ui": false,
                                   "expose_mass_ui": false,
                                   "global_progress_value": 0,
-                                  "progress": [
-                                    0,
-                                    "Initializing",
-                                    true
-                                  ],
+                                  "progress": [0, "Initializing", true],
                                   "select_from_root_layer_only": false
                                 },
                                 "name": "AllShaders"
@@ -3859,11 +3583,7 @@
                                 "expose_mass_ui": false,
                                 "global_progress_value": 0,
                                 "hide_context_ui": false,
-                                "progress": [
-                                  0,
-                                  "Initializing",
-                                  true
-                                ],
+                                "progress": [0, "Initializing", true],
                                 "save_all_layers_on_exit": true
                               },
                               "name": "DependencyIterator"
@@ -3941,11 +3661,7 @@
                               "expose_mass_queue_action_ui": false,
                               "expose_mass_ui": false,
                               "global_progress_value": 0,
-                              "progress": [
-                                0,
-                                "Initializing",
-                                true
-                              ],
+                              "progress": [0, "Initializing", true],
                               "replace_udim_textures_by_empty": true,
                               "save_on_fix_failure": true,
                               "suffix": ".rtex.dds"
@@ -3959,11 +3675,7 @@
                                   "expose_mass_queue_action_ui": false,
                                   "expose_mass_ui": false,
                                   "global_progress_value": 0,
-                                  "progress": [
-                                    0,
-                                    "Initializing",
-                                    true
-                                  ],
+                                  "progress": [0, "Initializing", true],
                                   "select_from_root_layer_only": false
                                 },
                                 "name": "AllShaders"
@@ -3983,11 +3695,7 @@
                                 "expose_mass_ui": false,
                                 "global_progress_value": 0,
                                 "hide_context_ui": false,
-                                "progress": [
-                                  0,
-                                  "Initializing",
-                                  true
-                                ],
+                                "progress": [0, "Initializing", true],
                                 "save_all_layers_on_exit": true
                               },
                               "name": "DependencyIterator"
@@ -3998,11 +3706,7 @@
                               "expose_mass_queue_action_ui": false,
                               "expose_mass_ui": false,
                               "global_progress_value": 0,
-                              "progress": [
-                                0,
-                                "Initializing",
-                                true
-                              ],
+                              "progress": [0, "Initializing", true],
                               "save_on_fix_failure": true
                             },
                             "name": "RelativeAssetPaths",
@@ -4014,11 +3718,7 @@
                                   "expose_mass_queue_action_ui": false,
                                   "expose_mass_ui": false,
                                   "global_progress_value": 0,
-                                  "progress": [
-                                    0,
-                                    "Initializing",
-                                    true
-                                  ],
+                                  "progress": [0, "Initializing", true],
                                   "select_from_root_layer_only": false
                                 },
                                 "name": "AllPrims"
@@ -4038,11 +3738,7 @@
                                 "expose_mass_ui": false,
                                 "global_progress_value": 0,
                                 "hide_context_ui": false,
-                                "progress": [
-                                  0,
-                                  "Initializing",
-                                  true
-                                ],
+                                "progress": [0, "Initializing", true],
                                 "save_all_layers_on_exit": true
                               },
                               "name": "DependencyIterator"
@@ -4053,11 +3749,7 @@
                               "expose_mass_queue_action_ui": false,
                               "expose_mass_ui": false,
                               "global_progress_value": 0,
-                              "progress": [
-                                0,
-                                "Initializing",
-                                true
-                              ],
+                              "progress": [0, "Initializing", true],
                               "save_on_fix_failure": true
                             },
                             "name": "RelativeReferences",
@@ -4069,11 +3761,7 @@
                                   "expose_mass_queue_action_ui": false,
                                   "expose_mass_ui": false,
                                   "global_progress_value": 0,
-                                  "progress": [
-                                    0,
-                                    "Initializing",
-                                    true
-                                  ],
+                                  "progress": [0, "Initializing", true],
                                   "select_from_root_layer_only": false
                                 },
                                 "name": "AllPrims"
@@ -4092,11 +3780,7 @@
                                 "expose_mass_ui": false,
                                 "global_progress_value": 0,
                                 "hide_context_ui": false,
-                                "progress": [
-                                  0,
-                                  "Initializing",
-                                  true
-                                ],
+                                "progress": [0, "Initializing", true],
                                 "save_on_exit": true
                               },
                               "name": "CurrentStage"
@@ -4107,11 +3791,7 @@
                               "expose_mass_queue_action_ui": false,
                               "expose_mass_ui": false,
                               "global_progress_value": 0,
-                              "progress": [
-                                0,
-                                "Initializing",
-                                true
-                              ],
+                              "progress": [0, "Initializing", true],
                               "save_on_fix_failure": true,
                               "set_default_prim": true,
                               "wrap_prim_name": "XForms"
@@ -4125,11 +3805,7 @@
                                   "expose_mass_queue_action_ui": false,
                                   "expose_mass_ui": false,
                                   "global_progress_value": 0,
-                                  "progress": [
-                                    0,
-                                    "Initializing",
-                                    true
-                                  ],
+                                  "progress": [0, "Initializing", true],
                                   "select_from_root_layer_only": false
                                 },
                                 "name": "Nothing"
@@ -4148,11 +3824,7 @@
                                 "expose_mass_ui": false,
                                 "global_progress_value": 0,
                                 "hide_context_ui": false,
-                                "progress": [
-                                  0,
-                                  "Initializing",
-                                  true
-                                ],
+                                "progress": [0, "Initializing", true],
                                 "save_on_exit": true
                               },
                               "name": "CurrentStage"
@@ -4163,11 +3835,7 @@
                               "expose_mass_queue_action_ui": false,
                               "expose_mass_ui": true,
                               "global_progress_value": 0,
-                              "progress": [
-                                0,
-                                "Initializing",
-                                true
-                              ],
+                              "progress": [0, "Initializing", true],
                               "save_on_fix_failure": true,
                               "scale_target": 1
                             },
@@ -4180,11 +3848,7 @@
                                   "expose_mass_queue_action_ui": false,
                                   "expose_mass_ui": false,
                                   "global_progress_value": 0,
-                                  "progress": [
-                                    0,
-                                    "Initializing",
-                                    true
-                                  ],
+                                  "progress": [0, "Initializing", true],
                                   "select_from_root_layer_only": false,
                                   "select_session_layer_prims": false
                                 },
@@ -4204,11 +3868,7 @@
                                 "expose_mass_ui": false,
                                 "global_progress_value": 0,
                                 "hide_context_ui": false,
-                                "progress": [
-                                  0,
-                                  "Initializing",
-                                  true
-                                ],
+                                "progress": [0, "Initializing", true],
                                 "save_on_exit": true
                               },
                               "name": "CurrentStage"
@@ -4219,11 +3879,7 @@
                               "expose_mass_queue_action_ui": false,
                               "expose_mass_ui": false,
                               "global_progress_value": 0,
-                              "progress": [
-                                0,
-                                "Initializing",
-                                true
-                              ],
+                              "progress": [0, "Initializing", true],
                               "save_on_fix_failure": true,
                               "set_default_prim": true,
                               "wrap_prim_name": "ReferenceTarget"
@@ -4237,11 +3893,7 @@
                                   "expose_mass_queue_action_ui": false,
                                   "expose_mass_ui": false,
                                   "global_progress_value": 0,
-                                  "progress": [
-                                    0,
-                                    "Initializing",
-                                    true
-                                  ],
+                                  "progress": [0, "Initializing", true],
                                   "select_from_root_layer_only": false
                                 },
                                 "name": "Nothing"
@@ -4316,11 +3968,7 @@
                             "merge_all_meshes": false,
                             "output_directory": "",
                             "output_usd_extension": "usd",
-                            "progress": [
-                              0,
-                              "Initializing",
-                              true
-                            ],
+                            "progress": [0, "Initializing", true],
                             "single_mesh": false,
                             "smooth_normals": true,
                             "support_point_instancer": false,
@@ -4374,11 +4022,7 @@
                               "expose_mass_queue_action_ui": false,
                               "expose_mass_ui": false,
                               "global_progress_value": 0,
-                              "progress": [
-                                0,
-                                "Initializing",
-                                true
-                              ]
+                              "progress": [0, "Initializing", true]
                             },
                             "name": "FileCleanup"
                           },
@@ -4389,11 +4033,7 @@
                               "expose_mass_queue_action_ui": false,
                               "expose_mass_ui": false,
                               "global_progress_value": 0,
-                              "progress": [
-                                0,
-                                "Initializing",
-                                true
-                              ]
+                              "progress": [0, "Initializing", true]
                             },
                             "name": "FileMetadataWritter"
                           }
@@ -4407,9 +4047,7 @@
                     "name": "remix_ingest_model_asset",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "remix_ingest_model_asset"
-                    ]
+                    "tags": ["remix_ingest_model_asset"]
                   },
                   {
                     "args": {
@@ -4435,11 +4073,7 @@
                                 "expose_mass_ui": false,
                                 "global_progress_value": 0,
                                 "hide_context_ui": false,
-                                "progress": [
-                                  0,
-                                  "Initializing",
-                                  true
-                                ],
+                                "progress": [0, "Initializing", true],
                                 "save_on_exit": false
                               },
                               "name": "CurrentStage"
@@ -4451,11 +4085,7 @@
                               "expose_mass_ui": false,
                               "global_progress_value": 0,
                               "ignore_not_convertable_shaders": false,
-                              "progress": [
-                                0,
-                                "Initializing",
-                                true
-                              ],
+                              "progress": [0, "Initializing", true],
                               "save_on_fix_failure": true,
                               "shader_subidentifiers": {
                                 "AperturePBR_Opacity": ".*"
@@ -4470,11 +4100,7 @@
                                   "expose_mass_queue_action_ui": false,
                                   "expose_mass_ui": false,
                                   "global_progress_value": 0,
-                                  "progress": [
-                                    0,
-                                    "Initializing",
-                                    true
-                                  ],
+                                  "progress": [0, "Initializing", true],
                                   "select_from_root_layer_only": false
                                 },
                                 "name": "AllMaterials"
@@ -4493,11 +4119,7 @@
                                 "expose_mass_ui": false,
                                 "global_progress_value": 0,
                                 "hide_context_ui": false,
-                                "progress": [
-                                  0,
-                                  "Initializing",
-                                  true
-                                ],
+                                "progress": [0, "Initializing", true],
                                 "save_on_exit": false
                               },
                               "name": "CurrentStage"
@@ -4523,11 +4145,7 @@
                               "expose_mass_queue_action_ui": false,
                               "expose_mass_ui": false,
                               "global_progress_value": 0,
-                              "progress": [
-                                0,
-                                "Initializing",
-                                true
-                              ],
+                              "progress": [0, "Initializing", true],
                               "replace_udim_textures_by_empty": false,
                               "save_on_fix_failure": true
                             },
@@ -4542,11 +4160,7 @@
                                   "expose_mass_queue_action_ui": false,
                                   "expose_mass_ui": false,
                                   "global_progress_value": 0,
-                                  "progress": [
-                                    0,
-                                    "Initializing",
-                                    true
-                                  ]
+                                  "progress": [0, "Initializing", true]
                                 },
                                 "name": "FileCleanup"
                               }
@@ -4559,11 +4173,7 @@
                                   "expose_mass_queue_action_ui": false,
                                   "expose_mass_ui": false,
                                   "global_progress_value": 0,
-                                  "progress": [
-                                    0,
-                                    "Initializing",
-                                    true
-                                  ],
+                                  "progress": [0, "Initializing", true],
                                   "select_from_root_layer_only": false
                                 },
                                 "name": "AllShaders"
@@ -4582,11 +4192,7 @@
                                 "expose_mass_ui": false,
                                 "global_progress_value": 0,
                                 "hide_context_ui": false,
-                                "progress": [
-                                  0,
-                                  "Initializing",
-                                  true
-                                ],
+                                "progress": [0, "Initializing", true],
                                 "save_on_exit": false
                               },
                               "name": "CurrentStage"
@@ -4670,11 +4276,7 @@
                               "expose_mass_queue_action_ui": false,
                               "expose_mass_ui": false,
                               "global_progress_value": 0,
-                              "progress": [
-                                0,
-                                "Initializing",
-                                true
-                              ],
+                              "progress": [0, "Initializing", true],
                               "replace_udim_textures_by_empty": false,
                               "save_on_fix_failure": true,
                               "suffix": ".rtex.dds"
@@ -4690,11 +4292,7 @@
                                   "expose_mass_queue_action_ui": false,
                                   "expose_mass_ui": false,
                                   "global_progress_value": 0,
-                                  "progress": [
-                                    0,
-                                    "Initializing",
-                                    true
-                                  ]
+                                  "progress": [0, "Initializing", true]
                                 },
                                 "name": "FileCleanup"
                               }
@@ -4707,11 +4305,7 @@
                                   "expose_mass_queue_action_ui": false,
                                   "expose_mass_ui": false,
                                   "global_progress_value": 0,
-                                  "progress": [
-                                    0,
-                                    "Initializing",
-                                    true
-                                  ],
+                                  "progress": [0, "Initializing", true],
                                   "select_from_root_layer_only": false
                                 },
                                 "name": "AllShaders"
@@ -4730,11 +4324,7 @@
                                 "expose_mass_ui": false,
                                 "global_progress_value": 0,
                                 "hide_context_ui": false,
-                                "progress": [
-                                  0,
-                                  "Initializing",
-                                  true
-                                ],
+                                "progress": [0, "Initializing", true],
                                 "save_on_exit": false
                               },
                               "name": "CurrentStage"
@@ -4745,11 +4335,7 @@
                               "expose_mass_queue_action_ui": true,
                               "expose_mass_ui": false,
                               "global_progress_value": 0,
-                              "progress": [
-                                0,
-                                "Initializing",
-                                true
-                              ],
+                              "progress": [0, "Initializing", true],
                               "save_on_fix_failure": true
                             },
                             "name": "MassTexturePreview",
@@ -4761,11 +4347,7 @@
                                   "expose_mass_queue_action_ui": false,
                                   "expose_mass_ui": false,
                                   "global_progress_value": 0,
-                                  "progress": [
-                                    0,
-                                    "Initializing",
-                                    true
-                                  ],
+                                  "progress": [0, "Initializing", true],
                                   "select_from_root_layer_only": false
                                 },
                                 "name": "Nothing"
@@ -4808,11 +4390,7 @@
                             "hide_context_ui": true,
                             "input_files": [],
                             "output_directory": "",
-                            "progress": [
-                              0,
-                              "Initializing",
-                              true
-                            ]
+                            "progress": [0, "Initializing", true]
                           },
                           "name": "TextureImporter"
                         }
@@ -4859,11 +4437,7 @@
                               "expose_mass_queue_action_ui": false,
                               "expose_mass_ui": false,
                               "global_progress_value": 0,
-                              "progress": [
-                                0,
-                                "Initializing",
-                                true
-                              ]
+                              "progress": [0, "Initializing", true]
                             },
                             "name": "FileMetadataWritter"
                           }
@@ -4877,9 +4451,7 @@
                     "name": "remix_ingest_material_asset",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "remix_ingest_material_asset"
-                    ]
+                    "tags": ["remix_ingest_material_asset"]
                   }
                 ]
               },
@@ -4951,7 +4523,5 @@
   "is_component": false,
   "last_tested_version": "1.4.2",
   "name": "NVIDIA RTX Remix",
-  "tags": [
-    "agents"
-  ]
+  "tags": ["agents"]
 }
