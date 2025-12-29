@@ -145,6 +145,10 @@ export const lazyIconsMapping = {
     import("@/icons/Confluence").then((mod) => ({
       default: mod.ConfluenceIcon,
     })),
+  Connecteam: () =>
+    import("@/icons/Connecteam/index").then((mod) => ({
+      default: mod.ConnecteamIcon,
+    })),
   Couchbase: () =>
     import("@/icons/Couchbase").then((mod) => ({ default: mod.CouchbaseIcon })),
   Classroom: () =>
