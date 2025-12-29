@@ -784,8 +784,7 @@ async def test_download_image_for_browser(files_client, files_created_api_key, f
     )
 
     assert response.status_code == 200, (
-        f"Image download failed with {response.status_code}. "
-        "This breaks browser <img> tags in chat."
+        f"Image download failed with {response.status_code}. This breaks browser <img> tags in chat."
     )
 
     # Verify content type is image
@@ -880,12 +879,80 @@ async def test_download_image_browser_compatible(files_client, files_created_api
     file_name = file_path.split("/")[-1]
 
     # Download - simulates browser <img> tag
-    download_response = await files_client.get(
-        f"api/v1/files/images/{files_flow.id}/{file_name}"
-    )
+    download_response = await files_client.get(f"api/v1/files/images/{files_flow.id}/{file_name}")
 
     assert download_response.status_code == 200, (
         f"REGRESSION: /images endpoint broken! "
         f"Got status {download_response.status_code}. "
         "This breaks browser <img> tags in chat."
     )
+
+
+# ============================================================================
+# Tests for path traversal protection (ValidatedFileName)
+# ============================================================================
+
+
+@pytest.mark.parametrize(
+    "malicious_filename",
+    [
+        # Backslash-based traversal (Windows style)
+        "..\\..\\..\\etc\\passwd",
+        "..\\secret.txt",
+        # Double-dot embedded in filename
+        "..txt",
+        "test..secret",
+    ],
+)
+async def test_download_file_path_traversal_rejected(
+    files_client, files_created_api_key, files_flow, malicious_filename
+):
+    """Test that path traversal attempts are rejected on /download endpoint."""
+    headers = {"x-api-key": files_created_api_key.api_key}
+
+    response = await files_client.get(
+        f"api/v1/files/download/{files_flow.id}/{malicious_filename}",
+        headers=headers,
+    )
+
+    assert response.status_code == 400, f"Path traversal should be rejected: {malicious_filename}"
+    assert "invalid file name" in response.json()["detail"].lower()
+
+
+@pytest.mark.parametrize(
+    "malicious_filename",
+    [
+        "..\\..\\..\\etc\\passwd.png",
+        "..\\secret.png",
+        "..png",
+    ],
+)
+async def test_download_image_path_traversal_rejected(files_client, files_flow, malicious_filename):
+    """Test that path traversal attempts are rejected on /images endpoint."""
+    response = await files_client.get(
+        f"api/v1/files/images/{files_flow.id}/{malicious_filename}",
+    )
+
+    assert response.status_code == 400, f"Path traversal should be rejected: {malicious_filename}"
+    assert "invalid file name" in response.json()["detail"].lower()
+
+
+@pytest.mark.parametrize(
+    "malicious_filename",
+    [
+        "..\\..\\..\\etc\\passwd",
+        "..\\secret.txt",
+        "..txt",
+    ],
+)
+async def test_delete_file_path_traversal_rejected(files_client, files_created_api_key, files_flow, malicious_filename):
+    """Test that path traversal attempts are rejected on /delete endpoint."""
+    headers = {"x-api-key": files_created_api_key.api_key}
+
+    response = await files_client.delete(
+        f"api/v1/files/delete/{files_flow.id}/{malicious_filename}",
+        headers=headers,
+    )
+
+    assert response.status_code == 400, f"Path traversal should be rejected: {malicious_filename}"
+    assert "invalid file name" in response.json()["detail"].lower()
