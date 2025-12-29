@@ -14,6 +14,7 @@ export interface ModelProviderInfo {
 
 export interface ModelProviderWithStatus extends ModelProviderInfo {
   icon?: string;
+  documentation_url?: string;
 }
 
 export interface GetModelProvidersParams {
@@ -48,7 +49,6 @@ export const useGetModelProviders: useQueryFunctionType<
 
       return providersData.map((providerInfo) => ({
         ...providerInfo,
-        icon: getProviderIcon(providerInfo.provider),
       }));
     } catch (error) {
       console.error("Error fetching model providers:", error);
@@ -71,22 +71,4 @@ export const useGetModelProviders: useQueryFunctionType<
   );
 
   return queryResult;
-};
-
-// Helper function to map provider names to icon names
-const getProviderIcon = (providerName: string): string => {
-  const iconMap: Record<string, string> = {
-    OpenAI: "OpenAI",
-    Anthropic: "Anthropic",
-    "Google Generative AI": "Google",
-    Groq: "Groq",
-    "Amazon Bedrock": "Bedrock",
-    NVIDIA: "NVIDIA",
-    Cohere: "Cohere",
-    "Azure OpenAI": "AzureOpenAI",
-    SambaNova: "SambaNova",
-    Ollama: "Ollama",
-  };
-
-  return iconMap[providerName] || "Bot";
 };

@@ -65,7 +65,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             info="Select your model provider",
             real_time_refresh=True,
             required=True,
-            model_type="embedding",
+            model_type=["embeddings"],
             input_types=["Embeddings"],  # Override default to accept Embeddings instead of LanguageModel
         ),
         SecretStrInput(

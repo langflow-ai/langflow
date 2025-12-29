@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
@@ -13,12 +14,37 @@ from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS_DETAILED
 from lfx.base.models.google_generative_ai_constants import (
     GOOGLE_GENERATIVE_AI_MODELS_DETAILED,
 )
+from lfx.base.models.models_dev_client import (
+    clear_cache as clear_models_dev_cache,
+)
+from lfx.base.models.models_dev_client import (
+    get_live_models_detailed as fetch_live_models,
+)
+from lfx.base.models.models_dev_client import (
+    get_provider_metadata_from_api,
+)
 from lfx.base.models.ollama_constants import OLLAMA_EMBEDDING_MODELS_DETAILED, OLLAMA_MODELS_DETAILED
 from lfx.base.models.openai_constants import OPENAI_EMBEDDING_MODELS_DETAILED, OPENAI_MODELS_DETAILED
 from lfx.base.models.watsonx_constants import WATSONX_MODELS_DETAILED
 from lfx.log.logger import logger
 from lfx.services.deps import get_variable_service, session_scope
 from lfx.utils.async_helpers import run_until_complete
+
+# Configuration for live model data
+# When true, fetches model data from models.dev API instead of static constants
+USE_LIVE_MODEL_DATA = os.environ.get("LFX_USE_LIVE_MODEL_DATA", "false").lower() == "true"
+
+# Validated providers - only these providers will be shown in the UI, refer to https://models.dev/ for provider names
+VALIDATED_PROVIDERS: set[str] = {
+    "Anthropic",
+    "Google Generative AI",
+    "IBM Watsonx",
+    "Ollama",
+    "OpenAI",
+}
+
+# Excluded models - these model names will not be shown in the UI
+EXCLUDED_MODELS: set[str] = set()
 
 
 @lru_cache(maxsize=1)
@@ -57,36 +83,66 @@ def get_embedding_classes():
 
 
 @lru_cache(maxsize=1)
-def get_model_provider_metadata():
+def get_static_model_provider_metadata():
+    """Get static provider metadata (hardcoded providers)."""
     return {
         "OpenAI": {
             "icon": "OpenAI",
             "variable_name": "OPENAI_API_KEY",
+            "documentation_url": "https://platform.openai.com/api-keys",
         },
         "Anthropic": {
             "icon": "Anthropic",
             "variable_name": "ANTHROPIC_API_KEY",
+            "documentation_url": "https://console.anthropic.com/settings/keys",
         },
         "Google Generative AI": {
             "icon": "GoogleGenerativeAI",
-            "variable_name": "GOOGLE_API_KEY",
+            "variable_name": "GOOGLE_GENERATIVE_AI_API_KEY",
+            "documentation_url": "https://aistudio.google.com/app/apikey",
         },
         "Ollama": {
             "icon": "Ollama",
             "variable_name": "OLLAMA_BASE_URL",  # Ollama is local but can have custom URL
+            "documentation_url": "https://ollama.com/download",
         },
         "IBM Watsonx": {
             "icon": "WatsonxAI",
             "variable_name": "WATSONX_APIKEY",
+            "documentation_url": "https://cloud.ibm.com/iam/apikeys",
         },
     }
+
+
+def get_model_provider_metadata():
+    """Get provider metadata from either static constants or live API.
+
+    When USE_LIVE_MODEL_DATA is True, merges static and live metadata,
+    with live data overriding static data for matching providers.
+    """
+    if not USE_LIVE_MODEL_DATA:
+        return get_static_model_provider_metadata()
+
+    # Start with static metadata as the base
+    merged_metadata = dict(get_static_model_provider_metadata())
+
+    try:
+        live_metadata = get_provider_metadata_from_api()
+        if live_metadata:
+            # Override static with live data for matching providers
+            merged_metadata.update(live_metadata)
+    except (OSError, ValueError) as e:
+        logger.debug(f"Failed to get live provider metadata: {e}")
+
+    return merged_metadata
 
 
 model_provider_metadata = get_model_provider_metadata()
 
 
 @lru_cache(maxsize=1)
-def get_models_detailed():
+def get_static_models_detailed():
+    """Get static model definitions (hardcoded constants)."""
     return [
         ANTHROPIC_MODELS_DETAILED,
         OPENAI_MODELS_DETAILED,
@@ -98,7 +154,100 @@ def get_models_detailed():
     ]
 
 
+def get_live_models_as_groups() -> list[list[dict]]:
+    """Fetch live models from models.dev API and group by provider."""
+    try:
+        live_models = fetch_live_models()
+        if not live_models:
+            return []
+
+        # Group models by provider
+        provider_groups: dict[str, list[dict]] = {}
+        for model in live_models:
+            provider = model.get("provider", "Unknown")
+            if provider not in provider_groups:
+                provider_groups[provider] = []
+            provider_groups[provider].append(model)
+
+        return list(provider_groups.values())
+    except (OSError, ValueError) as e:
+        logger.debug(f"Failed to fetch live models: {e}")
+        return []
+
+
+def _merge_static_and_live_models(static_groups: list[list[dict]], live_groups: list[list[dict]]) -> list[list[dict]]:
+    """Merge static and live model data, with live data overriding static for matching providers.
+
+    Args:
+        static_groups: List of model groups from static constants
+        live_groups: List of model groups from live API
+
+    Returns:
+        Merged list of model groups
+    """
+    # Build a map of provider -> models from static data
+    provider_to_models: dict[str, list[dict]] = {}
+    for group in static_groups:
+        if group:
+            provider = group[0].get("provider", "Unknown")
+            provider_to_models[provider] = list(group)
+
+    # Override with live data for matching providers
+    for group in live_groups:
+        if group:
+            provider = group[0].get("provider", "Unknown")
+            # Live data completely replaces static data for this provider
+            provider_to_models[provider] = list(group)
+
+    return list(provider_to_models.values())
+
+
+def get_models_detailed():
+    """Get model definitions from either static constants or live API.
+
+    When USE_LIVE_MODEL_DATA is True, merges static and live model data,
+    with live data overriding static data for matching providers.
+    When False (default), uses static constants.
+    """
+    if not USE_LIVE_MODEL_DATA:
+        return get_static_models_detailed()
+
+    # Get static data as the base
+    static_groups = get_static_models_detailed()
+
+    # Try to get live data
+    live_groups = get_live_models_as_groups()
+
+    if live_groups:
+        # Merge static and live, with live taking precedence
+        return _merge_static_and_live_models(static_groups, live_groups)
+
+    # Fallback to static if live fails
+    logger.warning("Live model data unavailable, falling back to static constants")
+    return static_groups
+
+
 MODELS_DETAILED = get_models_detailed()
+
+
+def refresh_live_model_data() -> None:
+    """Refresh live model data from models.dev API.
+
+    Clears the cache and re-fetches model data. This is useful when you want
+    to ensure you have the latest model information.
+
+    Note: This function modifies the global MODELS_DETAILED list in place.
+    """
+    # Clear the API cache
+    clear_models_dev_cache()
+
+    # Clear lru_cache for provider metadata
+    get_provider_metadata_from_api.cache_clear()
+
+    # Re-fetch and update global
+    MODELS_DETAILED[:] = get_models_detailed()
+
+    logger.info("Refreshed live model data from models.dev")
 
 
 @lru_cache(maxsize=1)
@@ -107,14 +256,17 @@ def get_model_provider_variable_mapping() -> dict[str, str]:
 
 
 def get_model_providers() -> list[str]:
-    """Return a sorted list of unique provider names."""
-    return sorted({md.get("provider", "Unknown") for group in MODELS_DETAILED for md in group})
+    """Return a sorted list of unique provider names, including only those in VALIDATED_PROVIDERS."""
+    all_providers = {md.get("provider", "Unknown") for group in MODELS_DETAILED for md in group}
+    # Filter to only validated providers
+    filtered_providers = {p for p in all_providers if p in VALIDATED_PROVIDERS}
+    return sorted(filtered_providers)
 
 
 def get_unified_models_detailed(
     providers: list[str] | None = None,
     model_name: str | None = None,
-    model_type: str | None = None,
+    model_type: list[str] | None = None,
     *,
     include_unsupported: bool | None = None,
     include_deprecated: bool | None = None,
@@ -129,8 +281,9 @@ def get_unified_models_detailed(
         If given, only models from these providers are returned.
     model_name : str | None
         If given, only the model with this exact name is returned.
-    model_type : str | None
-        Optional. Restrict to models whose metadata "model_type" matches this value.
+    model_type : list[str] | None
+        Optional. Restrict to models whose metadata "model_type" matches any of these values.
+        Valid values: 'llms', 'embeddings', 'audio', 'video'.
     include_unsupported : bool
         When False (default) models whose metadata contains ``not_supported=True``
         are filtered out.
@@ -163,6 +316,16 @@ def get_unified_models_detailed(
     # Apply filters
     filtered_models: list[dict] = []
     for md in all_models:
+        # Skip non-validated providers
+        provider_name = md.get("provider", "Unknown")
+        if provider_name not in VALIDATED_PROVIDERS:
+            continue
+
+        # Skip excluded models
+        current_model_name = md.get("name", "")
+        if current_model_name in EXCLUDED_MODELS:
+            continue
+
         # Skip models flagged as not_supported unless explicitly included
         if (not include_unsupported) and md.get("not_supported", False):
             continue
@@ -175,7 +338,7 @@ def get_unified_models_detailed(
             continue
         if model_name and md.get("name") != model_name:
             continue
-        if model_type and md.get("model_type") != model_type:
+        if model_type and md.get("model_type") not in model_type:
             continue
         # Match arbitrary metadata key/value pairs
         if any(md.get(k) != v for k, v in metadata_filters.items()):
@@ -240,14 +403,8 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
     if user_id is None or (isinstance(user_id, str) and user_id == "None"):
         return None
 
-    # Map provider to global variable name
-    provider_variable_map = {
-        "OpenAI": "OPENAI_API_KEY",
-        "Anthropic": "ANTHROPIC_API_KEY",
-        "Google Generative AI": "GOOGLE_API_KEY",
-        "IBM WatsonX": "WATSONX_APIKEY",
-    }
-
+    # Get provider to variable name mapping dynamically
+    provider_variable_map = get_model_provider_variable_mapping()
     variable_name = provider_variable_map.get(provider)
     if not variable_name:
         return None
@@ -278,16 +435,11 @@ def validate_model_provider_key(variable_name: str, api_key: str) -> None:
     Raises:
         HTTPException: If the API key is invalid
     """
-    # Map variable names to providers
-    provider_map = {
-        "OPENAI_API_KEY": "OpenAI",
-        "ANTHROPIC_API_KEY": "Anthropic",
-        "GOOGLE_API_KEY": "Google Generative AI",
-        "WATSONX_APIKEY": "IBM WatsonX",
-        "OLLAMA_BASE_URL": "Ollama",
-    }
+    # Reverse the provider-variable mapping to get provider from variable name
+    provider_variable_map = get_model_provider_variable_mapping()
+    variable_to_provider = {var_name: provider for provider, var_name in provider_variable_map.items()}
 
-    provider = provider_map.get(variable_name)
+    provider = variable_to_provider.get(variable_name)
     if not provider:
         return  # Not a model provider key we validate
 
@@ -360,14 +512,14 @@ def get_language_model_options(
     # Apply tool_calling filter if specified
     if tool_calling is not None:
         all_models = get_unified_models_detailed(
-            model_type="llm",
+            model_type=["llm"],
             include_deprecated=False,
             include_unsupported=False,
             tool_calling=tool_calling,
         )
     else:
         all_models = get_unified_models_detailed(
-            model_type="llm",
+            model_type=["llm"],
             include_deprecated=False,
             include_unsupported=False,
         )
@@ -553,7 +705,7 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
     """
     # Get all embedding models (excluding deprecated and unsupported by default)
     all_models = get_unified_models_detailed(
-        model_type="embeddings",
+        model_type=["embeddings"],
         include_deprecated=False,
         include_unsupported=False,
     )

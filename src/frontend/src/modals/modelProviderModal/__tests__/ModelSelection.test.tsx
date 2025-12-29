@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { ModelTypeOption } from "@/modals/modelProviderModal";
 import ModelSelection from "../components/ModelSelection";
 import { Model } from "../components/types";
 
@@ -52,7 +53,7 @@ describe("ModelSelection", () => {
   const defaultProps = {
     availableModels: allModels,
     onModelToggle: jest.fn(),
-    modelType: "all" as const,
+    modelType: [] as ModelTypeOption[],
     providerName: "OpenAI",
     isEnabledModel: true,
   };
@@ -70,14 +71,14 @@ describe("ModelSelection", () => {
       ).toBeInTheDocument();
     });
 
-    it("should render LLM section when modelType is all", () => {
+    it("should render LLM section when modelType is empty (show all)", () => {
       render(<ModelSelection {...defaultProps} />);
 
       expect(screen.getByTestId("llm-models-section")).toBeInTheDocument();
       expect(screen.getByText("LLM Models")).toBeInTheDocument();
     });
 
-    it("should render Embeddings section when modelType is all", () => {
+    it("should render Embeddings section when modelType is empty (show all)", () => {
       render(<ModelSelection {...defaultProps} />);
 
       expect(
@@ -87,7 +88,7 @@ describe("ModelSelection", () => {
     });
 
     it("should only render LLM section when modelType is llm", () => {
-      render(<ModelSelection {...defaultProps} modelType="llm" />);
+      render(<ModelSelection {...defaultProps} modelType={["llm"]} />);
 
       expect(screen.getByTestId("llm-models-section")).toBeInTheDocument();
       expect(
@@ -96,7 +97,7 @@ describe("ModelSelection", () => {
     });
 
     it("should only render Embeddings section when modelType is embeddings", () => {
-      render(<ModelSelection {...defaultProps} modelType="embeddings" />);
+      render(<ModelSelection {...defaultProps} modelType={["embeddings"]} />);
 
       expect(
         screen.queryByTestId("llm-models-section"),

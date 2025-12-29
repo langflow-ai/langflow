@@ -1,13 +1,13 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Switch } from "@/components/ui/switch";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
-
+import { ModelTypeOption } from "@/modals/modelProviderModal";
 import { Model } from "@/modals/modelProviderModal/components/types";
 
 export interface ModelProviderSelectionProps {
   availableModels: Model[];
   onModelToggle: (modelName: string, enabled: boolean) => void;
-  modelType: "llm" | "embeddings" | "all";
+  modelType: ModelTypeOption[];
   providerName?: string;
   isEnabledModel?: boolean;
 }
@@ -51,7 +51,7 @@ const ModelRow = ({
  * Allows users to enable/disable individual models for a provider.
  */
 const ModelSelection = ({
-  modelType = "llm",
+  modelType = ["llm"],
   availableModels,
   onModelToggle,
   providerName,
@@ -69,6 +69,15 @@ const ModelSelection = ({
   );
   const embeddingModels = availableModels.filter(
     (model) => model.metadata?.model_type === "embeddings",
+  );
+  const imageModels = availableModels.filter(
+    (model) => model.metadata?.model_type === "image",
+  );
+  const audioModels = availableModels.filter(
+    (model) => model.metadata?.model_type === "audio",
+  );
+  const videoModels = availableModels.filter(
+    (model) => model.metadata?.model_type === "video",
   );
 
   const renderModelSection = (
@@ -98,22 +107,21 @@ const ModelSelection = ({
     );
   };
 
+  // Show all model types if modelType is empty or not provided
+  const showAll = !modelType || modelType.length === 0;
+
   return (
     <div data-testid="model-provider-selection" className="flex flex-col gap-6">
-      {modelType === "all" ? (
-        <>
-          {renderModelSection("LLM Models", llmModels, "llm")}
-          {renderModelSection(
-            "Embedding Models",
-            embeddingModels,
-            "embeddings",
-          )}
-        </>
-      ) : modelType === "llm" ? (
-        renderModelSection("LLM Models", llmModels, "llm")
-      ) : (
-        renderModelSection("Embedding Models", embeddingModels, "embeddings")
-      )}
+      {(showAll || modelType.includes("llm")) &&
+        renderModelSection("LLM Models", llmModels, "llm")}
+      {(showAll || modelType.includes("embeddings")) &&
+        renderModelSection("Embedding Models", embeddingModels, "embeddings")}
+      {(showAll || modelType.includes("image")) &&
+        renderModelSection("Image Models", imageModels, "image")}
+      {(showAll || modelType.includes("audio")) &&
+        renderModelSection("Audio Models", audioModels, "audio")}
+      {(showAll || modelType.includes("video")) &&
+        renderModelSection("Video Models", videoModels, "video")}
     </div>
   );
 };

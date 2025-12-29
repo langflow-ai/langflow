@@ -31,6 +31,7 @@ class BatchRunComponent(Component):
             info="Select your model provider",
             real_time_refresh=True,
             required=True,
+            model_type=["llm"],
         ),
         SecretStrInput(
             name="api_key",

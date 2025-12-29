@@ -1,11 +1,12 @@
 import { useMemo } from "react";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
+import { ModelTypeOption } from "@/modals/modelProviderModal";
 import ProviderListItem from "./ProviderListItem";
 import { Provider } from "./types";
 
 // Supported model types for filtering providers
-type ModelType = "llm" | "embeddings" | "all";
+type ModelType = ModelTypeOption[];
 
 export interface ProviderListProps {
   modelType: ModelType;
@@ -28,11 +29,12 @@ const ProviderList = ({
     return rawProviders
       .map((provider) => {
         const matchingModels =
-          provider?.models?.filter((model) =>
-            modelType === "all"
-              ? true
-              : model?.metadata?.model_type === modelType,
-          ) || [];
+          provider?.models?.filter((model) => {
+            // If modelType is empty or not provided, show all models
+            if (!modelType || modelType.length === 0) return true;
+            // Check if model's type is in the array of allowed types
+            return modelType.includes(model?.metadata?.model_type);
+          }) || [];
 
         return {
           provider: provider.provider,
@@ -40,6 +42,7 @@ const ProviderList = ({
           is_enabled: provider.is_enabled,
           model_count: matchingModels.length,
           models: matchingModels,
+          documentation_url: provider.documentation_url,
         };
       })
       .filter((provider) => provider.model_count > 0);
