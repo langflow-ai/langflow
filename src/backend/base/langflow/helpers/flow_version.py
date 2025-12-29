@@ -29,6 +29,12 @@ async def save_flow_checkpoint(
     ) -> FlowVersion | None:
     """Save a checkpoint of a flow by creating a new FlowVersion row.
 
+    This function does not update the
+    provided flow's data in the Flow table.
+    Instead, it updates the latest version number
+    in the Flow table and adds a corresponding row
+    in the FlowVersion table containing the new data.
+
     Args:
         session: The session to use for the database operations.
         If None, a new session will be created.
@@ -84,14 +90,9 @@ async def _save_flow_checkpoint(
         msg = f"Error getting next version: {e}"
         raise ValueError(msg) from e
 
-    print('HAHAHA OLD HASH: ', compute_dict_hash(old_flow_data))
-    print('HAHAHA NEW HASH: ', compute_dict_hash(flow_data))
     if compute_dict_hash(flow_data) == compute_dict_hash(old_flow_data):
         logger.warning("No changes detected in the flow, skipping checkpoint")
         return await transaction.rollback() # rollback the optimistic update
-
-    compute_dict_hash(old_flow_data, "old")
-    compute_dict_hash(flow_data, "new")
 
     version_row = FlowVersion(
         user_id=user_id,
@@ -142,10 +143,13 @@ async def restore_flow_checkpoint(
     *,
     user_id: str | None = None,
     flow_id: str | None = None,
-    version_id: str | None = None,
+    version_id: int | None = None,
     flow_data_current: dict | None = None,
     ):
     """Restore a checkpoint of the flow."""
+    if not (user_id and flow_id):
+        msg = "user_id and flow_id are required"
+        raise ValueError(msg)
     pass  # noqa: PIE790
 
 
@@ -156,36 +160,18 @@ def _get_uuid(value: str | UUID) -> UUID:
 ########################################################
 # Helper functions for filtering flow data for version comparison
 ########################################################
-exclude_node_keys = {
-    "__top_level__": {
-        "selected",
-        "dragging",
-        "positionAbsolute",
-        "measured",
-        "resizing",
-        "width",
-        "height",
-        "last_updated",
-        },
-    "template": {
-        # "is_refresh",
-        # "_frontend_node_flow_id",
-        # "_frontend_node_folder_id",
-    },
-    "__recursive__": {
-        # "override_skip",
-        # "track_in_telemetry",
-        # "options",
-        # "input_types",
-        # "value",
-    },
-    "outputs": {
-        # "loop_types",
-        # "hidden",
-        # "required_inputs",
-    }
+EXCLUDE_NODE_KEYS = {
+    "selected",
+    "dragging",
+    "positionAbsolute",
+    "measured",
+    "resizing",
+    "width",
+    "height",
+    "last_updated"
 }
-exclude_edge_keys={
+
+EXCLUDE_EDGE_KEYS = {
     "selected",
     "animated",
     "className",
@@ -198,78 +184,20 @@ def filter_json(flow_data: dict):
     flow_data.pop("viewport", None)
     flow_data.pop("chatHistory", None)
 
-    if "nodes" in flow_data:
-        filter_nodes(flow_data["nodes"])
-    if "edges" in flow_data:
-        filter_dict_list(flow_data["edges"], exclude_keys=exclude_edge_keys)
+    remove_keys_from_dicts(flow_data["nodes"], EXCLUDE_NODE_KEYS)
+    remove_keys_from_dicts(flow_data["edges"], EXCLUDE_EDGE_KEYS)
 
 
-def filter_nodes(nodes: list):
-    """Filters the items in the data[field_name] list in-place to exclude the keys in exclude_keys.
-
-    Throws an error if exclude_keys or field_name are not provided.
-    """
-    for item in nodes:
-        if not item.get("data", {}).get("node", {}):
-            continue
-        filter_dict(
-            item["data"]["node"].get("template", {}),
-            exclude_node_keys["template"]
-        )
-        filter_node_recursive(
-            item["data"]["node"].get("template", {}),
-            exclude_node_keys["__recursive__"]
-            )
-        filter_dict_list(
-            item["data"]["node"].get("outputs", []),
-            exclude_node_keys["outputs"]
-        )
-        filter_dict(
-            item,
-            exclude_node_keys["__top_level__"]
-        )
-        filter_node_recursive(item, exclude_node_keys["__recursive__"])
-        item["data"]["node"].pop("last_updated", None)
-    return nodes
+def remove_keys_from_dicts(dictlist : list[dict], exclude_keys : set):
+    """Remove a set of keys from each dictionary in a list in-place."""
+    dictlist = [
+        {k: v for (k, v) in d if k not in exclude_keys}
+        for d in dictlist
+    ]
 
 
-def filter_dict_list(items: list[dict], exclude_keys: set):
-    items = [filter_dict(item, exclude_keys=exclude_keys) for item in items]
-
-
-def filter_dict(d : dict, exclude_keys : set):
-    for key in exclude_keys:
-        d.pop(key, None)
-    return d
-
-def filter_node_recursive(d, exclude_keys):
-    if isinstance(d, dict):
-        for key in exclude_keys:
-            d.pop(key, None)
-        d = {k: filter_node_recursive(v, exclude_keys) for (k,v) in d.items()}
-    elif isinstance(d, list):
-        d = [filter_node_recursive(item, exclude_keys) for item in d]
-    return d
-
-
-def compute_dict_hash(flow_data: dict, old_or_new: str | None = None):
+def compute_dict_hash(flow_data: dict):
     """Computes the hash of the flow data."""
     filter_json(flow_data_copy := flow_data.copy())
-    # print('WOWOWOW FILTER JSON', flow_data_copy["nodes"])
     cleaned_flow_json = orjson_dumps(flow_data_copy, sort_keys=True)
-    import json
-
-    if old_or_new == "old":
-        with open("old_flow_data.json", "w") as f:
-            f.write(cleaned_flow_json)
-    if old_or_new == "new":
-        with open("new_flow_data.json", "w") as f:
-            f.write(cleaned_flow_json)
-
     return hashlib.sha256(cleaned_flow_json.encode("utf-8")).hexdigest()
-
-
-if __name__ == "__main__":
-    d = {'foo': 1, 'bar': 2}
-    exclude = 'bar'
-    filter_dict(d, exclude)
