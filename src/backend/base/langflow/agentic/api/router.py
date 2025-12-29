@@ -7,7 +7,6 @@ from fastapi import APIRouter, HTTPException
 from lfx.log.logger import logger
 from lfx.run.base import run_flow
 
-# from langflow.agentic.mcp.server import visualize_flow_graph
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.services.deps import get_variable_service
 from langflow.services.variable.service import VariableService
@@ -134,5 +133,3 @@ async def run_next_component_flow(request: FlowRequest, current_user: CurrentAct
 
     else:
         return result
-
-
