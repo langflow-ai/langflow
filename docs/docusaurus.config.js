@@ -422,7 +422,7 @@ const config = {
         items: [
           {
             type: 'docsVersionDropdown',
-            position: 'right',
+            position: 'left',
           },
           // right
           {
