@@ -46,6 +46,7 @@ from langflow.services.deps import (
 )
 from langflow.services.schema import ServiceType
 from langflow.services.utils import initialize_services, initialize_settings_service, teardown_services
+from langflow.utils.mcp_cleanup import cleanup_mcp_sessions
 
 if TYPE_CHECKING:
     from tempfile import TemporaryDirectory
@@ -303,8 +304,14 @@ def get_lifespan(*, fix_migration=False, version=None):
             # Allows the server to start first to avoid race conditions with MCP Server startup
             mcp_init_task = asyncio.create_task(delayed_init_mcp_servers())
 
-            yield
+            # v1 and project MCP server context managers
+            from langflow.api.v1.mcp import start_streamable_http_manager
+            from langflow.api.v1.mcp_projects import start_project_task_group
 
+            await start_streamable_http_manager()
+            await start_project_task_group()
+
+            yield
         except asyncio.CancelledError:
             await logger.adebug("Lifespan received cancellation signal")
         except Exception as exc:
@@ -314,6 +321,10 @@ def get_lifespan(*, fix_migration=False, version=None):
                 await log_exception_to_telemetry(exc, "lifespan")
             raise
         finally:
+            # CRITICAL: Cleanup MCP sessions FIRST, before any other shutdown logic.
+            # This ensures MCP subprocesses are killed even if shutdown is interrupted.
+            await cleanup_mcp_sessions()
+
             # Clean shutdown with progress indicator
             # Create shutdown progress (show verbose timing if log level is DEBUG)
             from langflow.__main__ import get_number_of_workers
@@ -334,6 +345,20 @@ def get_lifespan(*, fix_migration=False, version=None):
 
                 # Step 1: Cancelling Background Tasks
                 with shutdown_progress.step(1):
+                    from langflow.api.v1.mcp import stop_streamable_http_manager
+                    from langflow.api.v1.mcp_projects import stop_project_task_group
+
+                    # Shutdown MCP project servers
+                    try:
+                        await stop_project_task_group()
+                    except Exception as e:  # noqa: BLE001
+                        await logger.aerror(f"Failed to stop MCP Project servers: {e}")
+                    # Close MCP server streamable-http session manager .run() context manager
+                    try:
+                        await stop_streamable_http_manager()
+                    except Exception as e:  # noqa: BLE001
+                        await logger.aerror(f"Failed to stop MCP server streamable-http session manager: {e}")
+                    # Cancel background tasks
                     tasks_to_cancel = []
                     if sync_flows_from_fs_task:
                         sync_flows_from_fs_task.cancel()

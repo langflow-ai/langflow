@@ -98,7 +98,8 @@ async def fetch_file_object(file_id: uuid.UUID, current_user: CurrentActiveUser,
 
     # Make sure the user has access to the file
     if file.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="You don't have access to this file")
+        # Return 404 to prevent information disclosure about resource existence
+        raise HTTPException(status_code=404, detail="File not found")
 
     return file
 
@@ -185,7 +186,7 @@ async def upload_user_file(
             if existing_file:
                 # File exists, append to it by reusing the same filename
                 # Extract the filename from the path
-                unique_filename = existing_file.path.split("/")[-1] if "/" in existing_file.path else existing_file.path
+                unique_filename = Path(existing_file.path).name
             else:
                 # File doesn't exist yet, create new one with extension
                 unique_filename = f"{root_filename}.{file_extension}" if file_extension else root_filename
@@ -225,8 +226,8 @@ async def upload_user_file(
             # S3 bucket doesn't exist or file not found, or file was uploaded but can't be found
             raise HTTPException(status_code=404, detail=str(e)) from e
         except PermissionError as e:
-            # Access denied or invalid credentials
-            raise HTTPException(status_code=403, detail=str(e)) from e
+            # Access denied or invalid credentials - return 500 as this is a server config issue
+            raise HTTPException(status_code=500, detail="Error accessing storage") from e
         except Exception as e:
             # General error saving file or getting file size
             raise HTTPException(status_code=500, detail=f"Error accessing file: {e}") from e
@@ -382,7 +383,7 @@ async def delete_files_batch(
         # Delete all files from the storage service
         for file in files:
             # Extract just the filename from the path (strip user_id prefix)
-            file_name = file.path.split("/")[-1]
+            file_name = Path(file.path).name
             storage_deleted = False
 
             try:
@@ -479,7 +480,7 @@ async def download_files_batch(
             for file in files:
                 # Get the file content from storage
                 file_content = await storage_service.get_file(
-                    flow_id=str(current_user.id), file_name=file.path.split("/")[-1]
+                    flow_id=str(current_user.id), file_name=Path(file.path).name
                 )
 
                 # Get the file extension from the original filename
@@ -573,7 +574,7 @@ async def download_file(
             raise HTTPException(status_code=404, detail="File not found")
 
         # Get the basename of the file path
-        file_name = file.path.split("/")[-1]
+        file_name = Path(file.path).name
 
         # If return_content is True, read the file content and return it
         if return_content:
@@ -649,7 +650,7 @@ async def delete_file(
             raise HTTPException(status_code=404, detail="File not found")
 
         # Extract just the filename from the path (strip user_id prefix)
-        file_name = file_to_delete.path.split("/")[-1]
+        file_name = Path(file_to_delete.path).name
 
         # Delete the file from the storage service first
         storage_deleted = False
@@ -723,7 +724,7 @@ async def delete_all_files(
         # Delete all files from the storage service
         for file in files:
             # Extract just the filename from the path (strip user_id prefix)
-            file_name = file.path.split("/")[-1]
+            file_name = Path(file.path).name
             storage_deleted = False
 
             try:

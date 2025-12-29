@@ -87,7 +87,7 @@ export type InputFieldType = {
   refresh_button_text?: string;
   combobox?: boolean;
   info?: string;
-  options?: string[];
+  options?: any[];
   active_tab?: number;
   [key: string]: any;
   icon?: string;

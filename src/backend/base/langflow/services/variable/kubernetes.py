@@ -9,7 +9,7 @@ from typing_extensions import override
 
 from langflow.services.auth import utils as auth_utils
 from langflow.services.base import Service
-from langflow.services.database.models.variable.model import Variable, VariableCreate, VariableRead
+from langflow.services.database.models.variable.model import Variable, VariableCreate, VariableRead, VariableUpdate
 from langflow.services.variable.base import VariableService
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 from langflow.services.variable.kubernetes_secrets import KubernetesSecretManager, encode_user_id
@@ -201,3 +201,67 @@ class KubernetesSecretService(VariableService, Service):
             variables_read.append(variable_read)
 
         return variables_read
+
+    @override
+    async def get_variable_by_id(self, user_id: UUID | str, variable_id: UUID | str, session: AsyncSession) -> Variable:
+        """Get a variable by ID.
+
+        Note: Kubernetes secrets don't have IDs, so we use the variable_id as the name.
+        """
+        secret_name = encode_user_id(user_id)
+        key, value = await asyncio.to_thread(self.resolve_variable, secret_name, user_id, str(variable_id))
+
+        name = key
+        type_ = GENERIC_TYPE
+        if key.startswith(CREDENTIAL_TYPE + "_"):
+            name = key[len(CREDENTIAL_TYPE) + 1 :]
+            type_ = CREDENTIAL_TYPE
+
+        variable_base = VariableCreate(
+            name=name,
+            type=type_,
+            value=auth_utils.encrypt_api_key(value, settings_service=self.settings_service),
+            default_fields=[],
+        )
+        return Variable.model_validate(variable_base, from_attributes=True, update={"user_id": user_id})
+
+    @override
+    async def get_variable_object(self, user_id: UUID | str, name: str, session: AsyncSession) -> Variable:
+        """Get a variable object by name."""
+        secret_name = encode_user_id(user_id)
+        key, value = await asyncio.to_thread(self.resolve_variable, secret_name, user_id, name)
+
+        var_name = key
+        type_ = GENERIC_TYPE
+        if key.startswith(CREDENTIAL_TYPE + "_"):
+            var_name = key[len(CREDENTIAL_TYPE) + 1 :]
+            type_ = CREDENTIAL_TYPE
+
+        variable_base = VariableCreate(
+            name=var_name,
+            type=type_,
+            value=auth_utils.encrypt_api_key(value, settings_service=self.settings_service),
+            default_fields=[],
+        )
+        return Variable.model_validate(variable_base, from_attributes=True, update={"user_id": user_id})
+
+    @override
+    async def update_variable_fields(
+        self, user_id: UUID | str, variable_id: UUID | str, variable: VariableUpdate, session: AsyncSession
+    ) -> Variable:
+        """Update specific fields of a variable.
+
+        Note: Kubernetes secrets don't have IDs, so we use the variable name for updates.
+        """
+        if variable.name:
+            name = variable.name
+        else:
+            # Try to get the current variable to find its name
+            current_var = await self.get_variable_by_id(user_id, variable_id, session)
+            name = current_var.name
+
+        if variable.value is not None:
+            await self.update_variable(user_id, name, variable.value, session)
+
+        # Return the updated variable
+        return await self.get_variable_object(user_id, name, session)
