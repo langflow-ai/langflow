@@ -140,13 +140,7 @@ async def download_image(
     file_name: str,
     flow_id: UUID,
 ):
-    """Download image from storage.
-
-    Note: This endpoint intentionally does not require authentication.
-    Images are served directly to browsers via <img> tags which cannot
-    send authentication headers. The UUIDs in the path provide sufficient
-    obscurity for uploaded chat images.
-    """
+    """Download image from storage for browser rendering."""
     storage_service = get_storage_service()
     extension = file_name.split(".")[-1]
     flow_id_str = str(flow_id)
