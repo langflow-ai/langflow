@@ -7,7 +7,7 @@ import { mutateTemplate } from "../helpers/mutate-template";
 const useFetchDataOnMount = (
   node: APIClassType,
   nodeId: string,
-  setNodeClass: (node: APIClassType, type?: string, isUserChange?: boolean) => void,
+  setNodeClass: (node: APIClassType) => void,
   name: string,
   postTemplateValue: UseMutationResult<
     APIClassType | undefined,
@@ -31,7 +31,7 @@ const useFetchDataOnMount = (
           template?.value,
           nodeId,
           node,
-          (nodeClass) => setNodeClass(nodeClass, undefined, false),
+          setNodeClass,
           postTemplateValue,
           setErrorData,
           name,

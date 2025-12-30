@@ -3,11 +3,10 @@ import { memo, useEffect, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { track } from "@/customization/utils/analytics";
 import ExportModal from "@/modals/exportModal";
-import useFlowStore from "@/stores/flowStore";
-import { useShortcutsStore } from "@/stores/shortcuts";
-import { cn, isThereModal } from "@/utils/utils";
+import useFlowStore from "../../../stores/flowStore";
+import { useShortcutsStore } from "../../../stores/shortcuts";
+import { cn, isThereModal } from "../../../utils/utils";
 import FlowToolbarOptions from "./components/flow-toolbar-options";
-import HistoryDropdown from "./components/history-dropdown";
 
 const FlowToolbar = memo(function FlowToolbar(): JSX.Element {
   const preventDefault = true;
@@ -50,7 +49,7 @@ const FlowToolbar = memo(function FlowToolbar(): JSX.Element {
       <Panel className="!top-auto !m-2" position="top-right">
         <div
           className={cn(
-            "hover:shadow-round-btn-shadow flex h-11 items-center justify-center gap-2 rounded-md border bg-background px-1.5 shadow transition-all",
+            "hover:shadow-round-btn-shadow flex h-11 items-center justify-center gap-7 rounded-md border bg-background px-1.5 shadow transition-all",
           )}
         >
           <FlowToolbarOptions
@@ -59,8 +58,6 @@ const FlowToolbar = memo(function FlowToolbar(): JSX.Element {
             openApiModal={openApiModal}
             setOpenApiModal={setOpenApiModal}
           />
-          <div className="h-6 w-px bg-border" />
-          <HistoryDropdown />
         </div>
       </Panel>
       <ExportModal open={openExportModal} setOpen={setOpenExportModal} />

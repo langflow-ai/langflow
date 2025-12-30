@@ -300,7 +300,7 @@ function GenericNode({
           }
           return edge;
         });
-      }, false);
+      });
 
       setNode(data.id, (oldNode) => {
         const newNode = cloneDeep(oldNode);
@@ -327,7 +327,7 @@ function GenericNode({
         }
 
         return newNode;
-      }, false);
+      });
       updateNodeInternals(data.id);
     },
     [data.id, setNode, setEdges, updateNodeInternals],

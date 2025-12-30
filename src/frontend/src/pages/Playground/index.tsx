@@ -50,10 +50,10 @@ export default function PlaygroundPage() {
           navigate("/");
         }
       }
-      setIsLoading(false);
     };
 
     initializeFlow();
+    setIsLoading(false);
   }, [id]);
 
   useEffect(() => {
