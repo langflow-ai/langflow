@@ -82,7 +82,11 @@ class DatabaseService(Service):
         elif Path(alembic_log_file).is_absolute():
             self.alembic_log_path = Path(alembic_log_file)
         else:
-            self.alembic_log_path = Path(langflow_dir) / alembic_log_file
+            # Use config_dir (writable) instead of langflow_dir (read-only in containers)
+            # config_dir defaults to ~/.cache/langflow/langflow and is user-configurable
+            # via LANGFLOW_CONFIG_DIR environment variable
+            config_dir = Path(self.settings_service.settings.config_dir)
+            self.alembic_log_path = config_dir / alembic_log_file
 
     async def initialize_alembic_log_file(self):
         if self.alembic_log_to_stdout:
