@@ -3755,7 +3755,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-    post:
+    delete:
       tags:
         - mcp_projects
       summary: Handle Project Streamable Http
@@ -3779,7 +3779,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-    delete:
+    post:
       tags:
         - mcp_projects
       summary: Handle Project Streamable Http
@@ -3828,7 +3828,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-    post:
+    delete:
       tags:
         - mcp_projects
       summary: Handle Project Streamable Http
@@ -3852,7 +3852,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-    delete:
+    post:
       tags:
         - mcp_projects
       summary: Handle Project Streamable Http
@@ -6878,7 +6878,7 @@ components:
           title: Edit
           default: false
         properties:
-          $ref: '#/components/schemas/langflow__schema__properties__Properties'
+          $ref: '#/components/schemas/lfx__schema__properties__Properties'
         category:
           type: string
           title: Category
@@ -6959,7 +6959,7 @@ components:
           title: Duration
         properties:
           anyOf:
-            - $ref: '#/components/schemas/langflow__schema__properties__Properties'
+            - $ref: '#/components/schemas/lfx__schema__properties__Properties'
             - type: 'null'
         category:
           anyOf:
@@ -7027,7 +7027,7 @@ components:
           title: Error
         properties:
           anyOf:
-            - $ref: '#/components/schemas/langflow__schema__properties__Properties'
+            - $ref: '#/components/schemas/lfx__schema__properties__Properties'
             - type: 'null'
       type: object
       title: MessageUpdate
@@ -7280,7 +7280,7 @@ components:
       properties:
         properties:
           anyOf:
-            - $ref: '#/components/schemas/langflow__schema__properties__Properties'
+            - $ref: '#/components/schemas/lfx__schema__properties__Properties'
             - type: 'null'
         sender_name:
           anyOf:
@@ -8249,55 +8249,18 @@ components:
         - file_path
       title: UploadFileResponse
       description: Upload file response schema.
-    langflow__schema__content_types__CodeContent:
+    langflow__schema__content_types__JSONContent:
       additionalProperties: true
       type: object
-    langflow__schema__properties__Properties:
-      properties:
-        text_color:
-          anyOf:
-            - type: string
-            - type: 'null'
-          title: Text Color
-        background_color:
-          anyOf:
-            - type: string
-            - type: 'null'
-          title: Background Color
-        edited:
-          type: boolean
-          title: Edited
-          default: false
-        source:
-          $ref: '#/components/schemas/langflow__schema__properties__Source'
-        icon:
-          anyOf:
-            - type: string
-            - type: 'null'
-          title: Icon
-        allow_markdown:
-          type: boolean
-          title: Allow Markdown
-          default: false
-        positive_feedback:
-          anyOf:
-            - type: boolean
-            - type: 'null'
-          title: Positive Feedback
-        state:
-          type: string
-          enum:
-            - partial
-            - complete
-          title: State
-          default: complete
-        targets:
-          items: {}
-          type: array
-          title: Targets
-          default: []
+    langflow__schema__content_types__MediaContent:
+      additionalProperties: true
       type: object
-      title: Properties
+    langflow__schema__content_types__TextContent:
+      additionalProperties: true
+      type: object
+    langflow__schema__content_types__ToolContent:
+      additionalProperties: true
+      type: object
     langflow__schema__properties__Source:
       properties:
         id:
@@ -8350,21 +8313,58 @@ components:
         - contents
       title: ContentBlock
       description: A block of content that can contain different types of content.
+    lfx__schema__content_types__CodeContent:
+      additionalProperties: true
+      type: object
     lfx__schema__content_types__ErrorContent:
       additionalProperties: true
       type: object
-    lfx__schema__content_types__JSONContent:
-      additionalProperties: true
+    lfx__schema__properties__Properties:
+      properties:
+        text_color:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Text Color
+        background_color:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Background Color
+        edited:
+          type: boolean
+          title: Edited
+          default: false
+        source:
+          $ref: '#/components/schemas/langflow__schema__properties__Source'
+        icon:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Icon
+        allow_markdown:
+          type: boolean
+          title: Allow Markdown
+          default: false
+        positive_feedback:
+          anyOf:
+            - type: boolean
+            - type: 'null'
+          title: Positive Feedback
+        state:
+          type: string
+          enum:
+            - partial
+            - complete
+          title: State
+          default: complete
+        targets:
+          items: {}
+          type: array
+          title: Targets
+          default: []
       type: object
-    lfx__schema__content_types__MediaContent:
-      additionalProperties: true
-      type: object
-    lfx__schema__content_types__TextContent:
-      additionalProperties: true
-      type: object
-    lfx__schema__content_types__ToolContent:
-      additionalProperties: true
-      type: object
+      title: Properties
     lfx__utils__schemas__File:
       properties:
         path:
