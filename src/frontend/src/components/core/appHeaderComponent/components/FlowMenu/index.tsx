@@ -32,6 +32,7 @@ export const MenuBar = memo((): JSX.Element => {
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const saveFlow = useSaveFlow();
   const autoSaving = useFlowsManagerStore((state) => state.autoSaving);
+  const setAutoSaving = useFlowsManagerStore((state) => state.setAutoSaving);
   const {
     isFlowLocked,
     currentFlowName,
@@ -76,6 +77,7 @@ export const MenuBar = memo((): JSX.Element => {
   const handleSave = () => {
     saveFlow().then(() => {
       setSuccessData({ title: "Saved successfully" });
+      if (!autoSaving) setAutoSaving(true);
     });
   };
 
