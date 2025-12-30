@@ -4,6 +4,9 @@ import { Badge } from "@/components/ui/badge";
 const baseCellClass =
   "flex items-center truncate cursor-default leading-normal";
 
+const clickableCellClass =
+  "flex items-center truncate cursor-pointer leading-normal hover:text-primary hover:underline";
+
 const formatObjectValue = (value: unknown): string => {
   if (value === null || value === undefined) {
     return "";
@@ -58,7 +61,7 @@ export function createFlowLogsColumns(): ColDef[] {
       filter: false,
       sortable: false,
       editable: false,
-      cellClass: baseCellClass,
+      cellClass: clickableCellClass,
       valueGetter: (params) => formatObjectValue(params.data?.inputs),
     },
     {
@@ -69,7 +72,7 @@ export function createFlowLogsColumns(): ColDef[] {
       filter: false,
       sortable: false,
       editable: false,
-      cellClass: baseCellClass,
+      cellClass: clickableCellClass,
       valueGetter: (params) => formatObjectValue(params.data?.outputs),
     },
     {

@@ -1,3 +1,4 @@
+import re
 from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID, uuid4
@@ -6,6 +7,64 @@ from pydantic import field_serializer, field_validator
 from sqlmodel import JSON, Column, Field, SQLModel
 
 from langflow.serialization.serialization import get_max_items_length, get_max_text_length, serialize
+
+# Keys that should have their values masked for security
+SENSITIVE_KEYS_PATTERN = re.compile(
+    r"(api[_-]?key|password|secret|token|credential|auth|bearer|private[_-]?key|access[_-]?key)",
+    re.IGNORECASE,
+)
+
+# Keys to completely exclude from logs
+EXCLUDED_KEYS = frozenset({"code"})
+
+
+def _mask_sensitive_value(value: str) -> str:
+    """Mask a sensitive string value, showing only first 4 and last 4 chars."""
+    if len(value) <= 12:
+        return "***REDACTED***"
+    return f"{value[:4]}...{value[-4:]}"
+
+
+def _sanitize_dict(data: dict[str, Any]) -> dict[str, Any]:
+    """Recursively sanitize a dictionary, masking sensitive values."""
+    result: dict[str, Any] = {}
+    for key, value in data.items():
+        if key in EXCLUDED_KEYS:
+            continue
+        if SENSITIVE_KEYS_PATTERN.search(key):
+            if isinstance(value, str) and value:
+                result[key] = _mask_sensitive_value(value)
+            else:
+                result[key] = "***REDACTED***"
+        elif isinstance(value, dict):
+            result[key] = _sanitize_dict(value)
+        elif isinstance(value, list):
+            result[key] = _sanitize_list(value)
+        else:
+            result[key] = value
+    return result
+
+
+def _sanitize_list(data: list[Any]) -> list[Any]:
+    """Recursively sanitize a list."""
+    result: list[Any] = []
+    for item in data:
+        if isinstance(item, dict):
+            result.append(_sanitize_dict(item))
+        elif isinstance(item, list):
+            result.append(_sanitize_list(item))
+        else:
+            result.append(item)
+    return result
+
+
+def sanitize_data(data: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Sanitize data by masking sensitive values and excluding certain keys."""
+    if data is None:
+        return None
+    if not isinstance(data, dict):
+        return data
+    return _sanitize_dict(data)
 
 
 class TransactionBase(SQLModel):
@@ -23,13 +82,11 @@ class TransactionBase(SQLModel):
         arbitrary_types_allowed = True
 
     def __init__(self, **data):
-        # Filter out the 'code' key from inputs before creating the model
-        if "inputs" in data and isinstance(data["inputs"], dict) and "code" in data["inputs"]:
-            # IMPORTANT: Copy the inputs dict before mutation to avoid modifying the original
-            # dictionary that was passed in. Without this copy, we would mutate the caller's data.
-            inputs_copy = data["inputs"].copy()
-            inputs_copy.pop("code")
-            data["inputs"] = inputs_copy
+        # Sanitize inputs and outputs to remove sensitive data before storing
+        if "inputs" in data and isinstance(data["inputs"], dict):
+            data["inputs"] = sanitize_data(data["inputs"])
+        if "outputs" in data and isinstance(data["outputs"], dict):
+            data["outputs"] = sanitize_data(data["outputs"])
         super().__init__(**data)
 
     @field_validator("flow_id", mode="before")
@@ -43,18 +100,15 @@ class TransactionBase(SQLModel):
 
     @field_serializer("inputs")
     def serialize_inputs(self, data: dict[str, Any] | None) -> dict[str, Any]:
-        """Serialize inputs, filtering 'code' key and enforcing size limits."""
-        if isinstance(data, dict) and "code" in data:
-            data_copy = data.copy()
-            data_copy.pop("code")
-            data = data_copy
-
-        return serialize(data, max_length=get_max_text_length(), max_items=get_max_items_length())
+        """Serialize inputs, sanitizing sensitive data and enforcing size limits."""
+        sanitized = sanitize_data(data)
+        return serialize(sanitized, max_length=get_max_text_length(), max_items=get_max_items_length())
 
     @field_serializer("outputs")
     def serialize_outputs(self, data: dict[str, Any] | None) -> dict[str, Any]:
-        """Serialize outputs with enforced size limits."""
-        return serialize(data, max_length=get_max_text_length(), max_items=get_max_items_length())
+        """Serialize outputs, sanitizing sensitive data and enforcing size limits."""
+        sanitized = sanitize_data(data)
+        return serialize(sanitized, max_length=get_max_text_length(), max_items=get_max_items_length())
 
 
 class TransactionTable(TransactionBase, table=True):  # type: ignore[call-arg]
@@ -82,10 +136,12 @@ class TransactionLogsResponse(SQLModel):
 
     @field_serializer("inputs")
     def serialize_inputs(self, data: dict[str, Any] | None) -> dict[str, Any]:
-        """Serialize inputs with enforced size limits."""
-        return serialize(data, max_length=get_max_text_length(), max_items=get_max_items_length())
+        """Serialize inputs, sanitizing sensitive data and enforcing size limits."""
+        sanitized = sanitize_data(data)
+        return serialize(sanitized, max_length=get_max_text_length(), max_items=get_max_items_length())
 
     @field_serializer("outputs")
     def serialize_outputs(self, data: dict[str, Any] | None) -> dict[str, Any]:
-        """Serialize outputs with enforced size limits."""
-        return serialize(data, max_length=get_max_text_length(), max_items=get_max_items_length())
+        """Serialize outputs, sanitizing sensitive data and enforcing size limits."""
+        sanitized = sanitize_data(data)
+        return serialize(sanitized, max_length=get_max_text_length(), max_items=get_max_items_length())

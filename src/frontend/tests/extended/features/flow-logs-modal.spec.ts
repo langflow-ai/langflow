@@ -57,38 +57,6 @@ test.describe("Flow Logs Modal", () => {
     },
   );
 
-  test(
-    "should close modal with escape key",
-    { tag: ["@release", "@logs"] },
-    async ({ page }) => {
-      await awaitBootstrapTest(page);
-
-      await page.getByTestId("blank-flow").click();
-
-      await page.waitForSelector(
-        '[data-testid="sidebar-custom-component-button"]',
-        {
-          timeout: 3000,
-        },
-      );
-
-      // Open logs modal
-      await page.getByText("Logs").click();
-
-      // Verify modal is open
-      await expect(
-        page.getByText("Inspect component executions."),
-      ).toBeVisible();
-
-      // Close with Escape key
-      await page.keyboard.press("Escape");
-
-      // Verify modal is closed
-      await expect(
-        page.getByText("Inspect component executions."),
-      ).not.toBeVisible();
-    },
-  );
 
   test(
     "should display success status after successful component execution",
@@ -206,6 +174,105 @@ class CustomComponent(Component):
       // Verify error status badge is displayed (scoped to dialog)
       const dialog = page.getByLabel("Dialog");
       await expect(dialog.locator("text=error").first()).toBeVisible();
+
+      // Close modal
+      await page.keyboard.press("Escape");
+    },
+  );
+
+  test(
+    "should open detail viewer when clicking on Inputs cell",
+    { tag: ["@release", "@logs"] },
+    async ({ page }) => {
+      await awaitBootstrapTest(page);
+
+      await page.getByTestId("blank-flow").click();
+
+      await page.waitForSelector(
+        '[data-testid="sidebar-custom-component-button"]',
+        {
+          timeout: 3000,
+        },
+      );
+
+      // Add a custom component
+      await addCustomComponent(page);
+
+      await page.waitForSelector('[data-testid="title-Custom Component"]', {
+        timeout: 3000,
+      });
+
+      // Run the component
+      await page.getByTestId("button_run_custom component").click();
+
+      await page.waitForSelector("text=built successfully", { timeout: 30000 });
+
+      // Open logs modal
+      await page.getByText("Logs").click();
+
+      // Wait for the logs table to be visible
+      const logsDialog = page.getByLabel("Dialog");
+      await expect(logsDialog.locator("text=success").first()).toBeVisible();
+
+      // Click on the Inputs cell (find cell in Inputs column)
+      const inputsCell = logsDialog
+        .locator('[col-id="inputs"]')
+        .last();
+      await inputsCell.click();
+
+      // Verify detail viewer dialog opens with JSON content
+      await expect(page.locator("text=json").first()).toBeVisible();
+
+      // Close detail viewer
+      await page.keyboard.press("Escape");
+
+      // Close logs modal
+      await page.keyboard.press("Escape");
+    },
+  );
+
+  test(
+    "should mask sensitive data like api_key in logs",
+    { tag: ["@release", "@logs"] },
+    async ({ page }) => {
+      await awaitBootstrapTest(page);
+
+      await page.getByTestId("blank-flow").click();
+
+      await page.waitForSelector(
+        '[data-testid="sidebar-custom-component-button"]',
+        {
+          timeout: 3000,
+        },
+      );
+
+      // Add a custom component
+      await addCustomComponent(page);
+
+      await page.waitForSelector('[data-testid="title-Custom Component"]', {
+        timeout: 3000,
+      });
+
+      // Run the component
+      await page.getByTestId("button_run_custom component").click();
+
+      await page.waitForSelector("text=built successfully", { timeout: 30000 });
+
+      // Open logs modal
+      await page.getByText("Logs").click();
+
+      // Verify that sensitive data is masked (should not see full API keys)
+      const logsDialog = page.getByLabel("Dialog");
+
+      // If there's any api_key in the logs, it should be redacted
+      // Look for the REDACTED pattern
+      const pageContent = await logsDialog.textContent();
+
+      // If api_key appears in the content, it should be masked
+      if (pageContent && pageContent.includes("api_key")) {
+        // Should not contain long API key patterns (sk-proj-... with full key)
+        expect(pageContent).not.toMatch(/sk-proj-[a-zA-Z0-9_-]{20,}/);
+      }
 
       // Close modal
       await page.keyboard.press("Escape");

@@ -11,10 +11,12 @@ from langflow.services.database.models.transactions.crud import (
     transform_transaction_table_for_logs,
 )
 from langflow.services.database.models.transactions.model import (
+    SENSITIVE_KEYS_PATTERN,
     TransactionBase,
     TransactionLogsResponse,
     TransactionReadResponse,
     TransactionTable,
+    sanitize_data,
 )
 
 
@@ -55,7 +57,7 @@ class TestTransactionModels:
         assert transaction.error == "Something went wrong"
 
     def test_transaction_base_filters_code_from_inputs(self):
-        """Test that 'code' key is filtered from inputs."""
+        """Test that 'code' key is filtered from inputs via sanitize_data."""
         flow_id = uuid4()
         inputs_with_code = {"key": "value", "code": "def foo(): pass"}
         transaction = TransactionBase(
@@ -70,6 +72,67 @@ class TestTransactionModels:
         # But the transaction inputs should not have 'code'
         assert "code" not in transaction.inputs
         assert transaction.inputs["key"] == "value"
+
+    def test_transaction_base_sanitizes_sensitive_data_in_inputs(self):
+        """Test that sensitive data like api_key is masked in inputs."""
+        flow_id = uuid4()
+        inputs_with_api_key = {
+            "api_key": "sk-proj-MBZ6RyzaqpMgw_wwa123456789",
+            "template": "Hello world",
+        }
+        transaction = TransactionBase(
+            vertex_id="test-vertex",
+            inputs=inputs_with_api_key,
+            status="success",
+            flow_id=flow_id,
+        )
+
+        # The api_key should be masked
+        assert transaction.inputs["api_key"] == "sk-p...6789"
+        # Non-sensitive data should remain unchanged
+        assert transaction.inputs["template"] == "Hello world"
+
+    def test_transaction_base_sanitizes_sensitive_data_in_outputs(self):
+        """Test that sensitive data like password is masked in outputs."""
+        flow_id = uuid4()
+        outputs_with_password = {
+            "password": "supersecret123",
+            "result": "success",
+        }
+        transaction = TransactionBase(
+            vertex_id="test-vertex",
+            outputs=outputs_with_password,
+            status="success",
+            flow_id=flow_id,
+        )
+
+        # Short passwords should be fully redacted
+        assert transaction.outputs["password"] == "***REDACTED***"
+        # Non-sensitive data should remain unchanged
+        assert transaction.outputs["result"] == "success"
+
+    def test_transaction_base_sanitizes_nested_sensitive_data(self):
+        """Test that nested sensitive data is also masked."""
+        flow_id = uuid4()
+        inputs_nested = {
+            "config": {
+                "openai_api_key": "sk-12345678901234567890",
+                "model": "gpt-4",
+            },
+            "text": "Hello",
+        }
+        transaction = TransactionBase(
+            vertex_id="test-vertex",
+            inputs=inputs_nested,
+            status="success",
+            flow_id=flow_id,
+        )
+
+        # Nested api_key should be masked
+        assert transaction.inputs["config"]["openai_api_key"] == "sk-1...7890"
+        # Non-sensitive nested data should remain unchanged
+        assert transaction.inputs["config"]["model"] == "gpt-4"
+        assert transaction.inputs["text"] == "Hello"
 
     def test_transaction_base_flow_id_string_conversion(self):
         """Test that string flow_id is converted to UUID."""
@@ -108,6 +171,125 @@ class TestTransactionModels:
         # TransactionLogsResponse should not have error and flow_id fields
         assert not hasattr(response, "error") or "error" not in response.model_fields
         assert not hasattr(response, "flow_id") or "flow_id" not in response.model_fields
+
+
+class TestSanitizeData:
+    """Tests for the sanitize_data function and related utilities."""
+
+    def test_sanitize_data_returns_none_for_none_input(self):
+        """Test that sanitize_data returns None when input is None."""
+        assert sanitize_data(None) is None
+
+    def test_sanitize_data_masks_api_key(self):
+        """Test that api_key values are masked."""
+        data = {"api_key": "sk-proj-1234567890abcdef"}
+        result = sanitize_data(data)
+        assert result["api_key"] == "sk-p...cdef"
+
+    def test_sanitize_data_masks_password(self):
+        """Test that password values are masked."""
+        data = {"password": "short"}
+        result = sanitize_data(data)
+        assert result["password"] == "***REDACTED***"
+
+    def test_sanitize_data_masks_various_sensitive_keys(self):
+        """Test that various sensitive key patterns are masked."""
+        data = {
+            "api_key": "sk-1234567890123456",
+            "api-key": "sk-1234567890123456",
+            "apikey": "sk-1234567890123456",
+            "password": "secretpassword123",
+            "secret": "mysecret12345678",
+            "token": "mytoken123456789",
+            "credential": "mycredential1234",
+            "auth": "myauthvalue12345",
+            "bearer": "mybearertoken123",
+            "private_key": "myprivatekey1234",
+            "access_key": "myaccesskey12345",
+        }
+        result = sanitize_data(data)
+
+        for key in data:
+            # All sensitive keys should be masked
+            assert "***" in result[key] or "..." in result[key], f"Key '{key}' was not masked"
+
+    def test_sanitize_data_preserves_non_sensitive_data(self):
+        """Test that non-sensitive data is preserved."""
+        data = {
+            "model": "gpt-4",
+            "temperature": 0.7,
+            "max_tokens": 100,
+            "messages": [{"role": "user", "content": "Hello"}],
+        }
+        result = sanitize_data(data)
+        assert result == data
+
+    def test_sanitize_data_handles_nested_dicts(self):
+        """Test that nested dictionaries are sanitized."""
+        data = {
+            "config": {
+                "api_key": "sk-nested12345678901",
+                "model": "gpt-4",
+            }
+        }
+        result = sanitize_data(data)
+        assert "..." in result["config"]["api_key"]
+        assert result["config"]["model"] == "gpt-4"
+
+    def test_sanitize_data_handles_lists(self):
+        """Test that lists containing dicts are sanitized."""
+        data = {
+            "items": [
+                {"api_key": "sk-list1234567890123", "name": "item1"},
+                {"api_key": "sk-list1234567890124", "name": "item2"},
+            ]
+        }
+        result = sanitize_data(data)
+        assert "..." in result["items"][0]["api_key"]
+        assert "..." in result["items"][1]["api_key"]
+        assert result["items"][0]["name"] == "item1"
+        assert result["items"][1]["name"] == "item2"
+
+    def test_sanitize_data_removes_code_key(self):
+        """Test that 'code' key is completely removed."""
+        data = {"code": "def foo(): pass", "value": "keep me"}
+        result = sanitize_data(data)
+        assert "code" not in result
+        assert result["value"] == "keep me"
+
+    def test_sanitize_data_case_insensitive(self):
+        """Test that key matching is case insensitive."""
+        data = {
+            "API_KEY": "sk-upper1234567890123",
+            "Password": "mixedcase123456",
+            "SECRET": "allcaps12345678901",
+        }
+        result = sanitize_data(data)
+        for key in data:
+            assert "***" in result[key] or "..." in result[key], f"Key '{key}' was not masked"
+
+    def test_sensitive_keys_pattern_matches_expected_keys(self):
+        """Test that the SENSITIVE_KEYS_PATTERN regex matches expected keys."""
+        should_match = [
+            "api_key", "api-key", "apikey", "API_KEY",
+            "password", "PASSWORD",
+            "secret", "SECRET",
+            "token", "TOKEN",
+            "credential", "CREDENTIAL",
+            "auth", "AUTH",
+            "bearer", "BEARER",
+            "private_key", "private-key",
+            "access_key", "access-key",
+        ]
+        for key in should_match:
+            assert SENSITIVE_KEYS_PATTERN.search(key), f"Pattern should match '{key}'"
+
+        should_not_match = [
+            "model", "temperature", "max_tokens", "messages",
+            "name", "value", "result", "status",
+        ]
+        for key in should_not_match:
+            assert not SENSITIVE_KEYS_PATTERN.search(key), f"Pattern should not match '{key}'"
 
 
 class TestTransactionTransformers:
