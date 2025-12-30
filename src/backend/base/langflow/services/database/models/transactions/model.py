@@ -11,18 +11,32 @@ from langflow.serialization.serialization import get_max_items_length, get_max_t
 # Keys that should have their values masked for security
 # Pattern uses fullmatch-style matching to avoid false positives like "max_tokens"
 # Each pattern should match the entire key or a specific suffix
-SENSITIVE_KEY_NAMES = frozenset({
-    "api_key", "api-key", "apikey",
-    "password", "passwd",
-    "secret",
-    "token", "auth_token", "access_token", "api_token", "bearer_token",
-    "credential", "credentials",
-    "auth", "authorization",
-    "bearer",
-    "private_key", "private-key",
-    "access_key", "access-key",
-    "openai_api_key", "anthropic_api_key",
-})
+SENSITIVE_KEY_NAMES = frozenset(
+    {
+        "api_key",
+        "api-key",
+        "apikey",
+        "password",
+        "passwd",
+        "secret",
+        "token",
+        "auth_token",
+        "access_token",
+        "api_token",
+        "bearer_token",
+        "credential",
+        "credentials",
+        "auth",
+        "authorization",
+        "bearer",
+        "private_key",
+        "private-key",
+        "access_key",
+        "access-key",
+        "openai_api_key",
+        "anthropic_api_key",
+    }
+)
 
 # Pattern for keys that end with sensitive suffixes
 SENSITIVE_KEYS_PATTERN = re.compile(
