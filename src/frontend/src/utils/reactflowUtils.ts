@@ -1649,6 +1649,22 @@ export function processFlowNodes(flow: FlowType) {
     flow.data.nodes = nodes;
     flow.data.edges = edges;
   }
+  flow.data.nodes.forEach((node) => {
+    if (node.type === "genericNode") {
+      if (
+        !node.data.selected_output &&
+        (node.data.node?.outputs?.filter((output) => !output.group_outputs)
+          ?.length ?? 0) > 1
+      ) {
+        const output =
+          node.data.node?.outputs?.find((output) => output.selected) ||
+          node.data.node?.outputs?.[0];
+        if (output) {
+          node.data.selected_output = output.name;
+        }
+      }
+    }
+  });
 }
 
 export function expandGroupNode(

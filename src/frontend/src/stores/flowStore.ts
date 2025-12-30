@@ -220,6 +220,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       });
     }
     const newEdges = cleanEdges(nodes, edges);
+    if (flow?.data) {
+      flow.data.edges = newEdges;
+    }
     const { inputs, outputs } = getInputsAndOutputs(nodes);
     get().updateComponentsToUpdate(nodes);
     set({

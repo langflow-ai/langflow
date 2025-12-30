@@ -23,7 +23,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow, remove_api_keys, validate_is_component
 from langflow.api.v1.schemas import FlowListCreate
-from langflow.helpers.flow_version import list_flow_versions, save_flow_checkpoint
+from langflow.helpers.flow_version import FLOW_NOT_FOUND_ERROR_MSG, list_flow_versions, save_flow_checkpoint
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.database.models.flow.model import (
@@ -431,27 +431,8 @@ async def update_flow(
     """Update a flow."""
     settings_service = get_settings_service()
     try:
-        db_flow = await _read_flow(
-            session=session,
-            flow_id=flow_id,
-            user_id=current_user.id,
-        )
-
-        if not db_flow:
-            raise HTTPException(status_code=404, detail="Flow not found")
-
-        # must save the checkpoint before db_flow is updated,
-        # otherwise save_flow_checkpoint will see the updated flow
-        # as sqlalchemy flushes any changes made to db_flow,
-        # and thus not detect any changes.
-        # (the old flow is needed to check for any changes vs the new flow)
-        await save_flow_checkpoint(
-            session=session,
-            user_id=current_user.id,
-            flow_id=flow_id,
-            flow_data=flow.data
-            )
-
+        print('FEFEFE')
+        # validate the update data
         update_data = flow.model_dump(exclude_unset=True, exclude_none=True)
 
         # Specifically handle endpoint_name when it's explicitly set to null or empty string
@@ -461,23 +442,18 @@ async def update_flow(
         if settings_service.settings.remove_api_keys:
             update_data = remove_api_keys(update_data)
 
-        for key, value in update_data.items():
-            setattr(db_flow, key, value)
-
         # Validate fs_path if it was changed (will raise HTTPException if invalid)
         if "fs_path" in update_data:
-            await _verify_fs_path(db_flow.fs_path, current_user.id, storage_service)
+            await _verify_fs_path(update_data["fs_path"], current_user.id, storage_service)
 
-        webhook_component = get_webhook_component_in_flow(db_flow.data)
-        db_flow.webhook = webhook_component is not None
-        db_flow.updated_at = datetime.now(timezone.utc)
+        # save and checkpoint the flow and checkpoint it
+        db_flow =await save_flow_checkpoint(
+            session=session,
+            user_id=current_user.id,
+            flow_id=flow_id,
+            update_data=update_data
+        )
 
-        if db_flow.folder_id is None:
-            default_folder = (await session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME))).first()
-            if default_folder:
-                db_flow.folder_id = default_folder.id
-
-        session.add(db_flow)
         await session.flush()
         await session.refresh(db_flow)
         await _save_flow_to_fs(db_flow, current_user.id, storage_service)
@@ -486,6 +462,9 @@ async def update_flow(
         flow_read = FlowRead.model_validate(db_flow, from_attributes=True)
 
     except Exception as e:
+        if FLOW_NOT_FOUND_ERROR_MSG in str(e):
+            raise HTTPException(status_code=404, detail=str(e)) from e
+
         if "UNIQUE constraint failed" in str(e):
             # Get the name of the column that failed
             columns = str(e).split("UNIQUE constraint failed: ")[1].split(".")[1].split("\n")[0]

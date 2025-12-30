@@ -55,6 +55,8 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const { mutateAsync: getFlow } = useGetFlow();
   const { refreshAllModelInputs } = useRefreshModelInputs();
 
+  const setAutoSaving = useFlowsManagerStore((state) => state.setAutoSaving);
+
   const handleSave = () => {
     let saving = true;
     let proceed = false;
@@ -73,6 +75,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
         setSuccessData({
           title: "Flow saved successfully!",
         });
+        if (!autoSaving) setAutoSaving(true);
       }
       proceed = true;
     });
@@ -156,6 +159,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
 
   const getFlowToAddToCanvas = async (id: string) => {
     const flow = await getFlow({ id });
+    setAutoSaving(false);
     setCurrentFlow(flow);
     refreshAllModelInputs({ silent: true });
   };
