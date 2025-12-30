@@ -2,7 +2,8 @@ from os.path import join
 
 
 from lfx.base.models import LCModelComponent
-from lfx.components.policies.wrapped_tool import LangchainModelWrapper, WrappedTool
+from lfx.components.policies.guarded_tool import GuardedTool
+from lfx.components.policies.llm_wrapper import LangchainModelWrapper
 from lfx.components.policies.models import BUILDTIME_MODELS
 
 from lfx.base.models.unified_models import (
@@ -15,7 +16,7 @@ from lfx.field_typing import LanguageModel
 from lfx.field_typing import Tool
 from lfx.inputs.inputs import BoolInput, MessageTextInput
 from lfx.io import HandleInput, MessageTextInput, Output, SecretStrInput, TabInput
-from toolguard import LitellmModel, ToolGuardsCodeGenerationResult, ToolGuardSpec, load_toolguards, I_TG_LLM
+from toolguard import ToolGuardsCodeGenerationResult, ToolGuardSpec
 from toolguard.buildtime import generate_guard_specs, generate_guards_from_specs
 
 from lfx.io import ModelInput
@@ -197,7 +198,7 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
                 # make sure self.guard_code_path contains the path to pre-built guards
                 # assert self.guard_code_path, "🔒️ToolGuard: guard path should be a valid code path!"
             code_dir = join(self.guard_code_path, STEP2)
-            guarded_tools = [WrappedTool(tool, self.in_tools, code_dir) for tool in self.in_tools]
+            guarded_tools = [GuardedTool(tool, self.in_tools, code_dir) for tool in self.in_tools]
             return guarded_tools  # type: ignore
 
         return self.in_tools

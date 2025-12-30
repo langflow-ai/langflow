@@ -1,38 +1,15 @@
 import json
-from typing import Any, Dict, List, TypeVar
+from typing import Any, TypeVar
 
-from langchain_core.language_models.chat_models import BaseChatModel
 from pydantic import BaseModel
 from toolguard import IToolInvoker, load_toolguards
-
+from mcp.types import CallToolResult
 from lfx.field_typing import Tool
 from lfx.field_typing.constants import BaseTool
 from lfx.log.logger import logger
 
-
-class ToolInvoker(IToolInvoker):
-    T = TypeVar("T")
-    _tools: dict[str, BaseTool]
-
-    def __init__(self, tools: list[BaseTool]) -> None:
-        self._tools = {tool.name: tool for tool in tools}
-
-    def invoke(self, toolname: str, arguments: dict[str, Any], return_type: type[T]) -> T:
-        tool = self._tools.get(toolname)
-        if tool:
-            res = tool.run(tool_input=arguments)
-            res_dict = res["value"]
-            if issubclass(return_type, BaseModel):
-                return return_type.model_validate(res_dict)
-            if return_type in (int, float, str, bool):
-                return return_type(res_dict)
-            return res_dict
-
-        raise ValueError(f"unknown tool {toolname}")
-
-
-class WrappedTool(Tool):
-    _wrapped: Tool
+class GuardedTool(Tool):
+    _orig_tool: Tool
     _tool_invoker: IToolInvoker
     _tg_dir: str
 
@@ -48,13 +25,13 @@ class WrappedTool(Tool):
             metadata=tool.metadata,
             verbose=True,
         )
-        self._wrapped = tool
+        self._orig_tool = tool
         self._tool_invoker = ToolInvoker(all_tools)
         self._tg_dir = tg_dir
 
     @property
     def args(self) -> dict:
-        return self._wrapped.args
+        return self._orig_tool.args
 
     def parse_input(self, tool_input: str | dict):
         if isinstance(tool_input, str):
@@ -73,11 +50,11 @@ class WrappedTool(Tool):
 
             try:
                 toolguard.check_toolcall(self.name, args=args, delegate=self._tool_invoker)
-                return self._wrapped.run(args, config=config, **kwargs)
+                return self._orig_tool.run(args, config=config, **kwargs)
             except PolicyViolationException as ex:
                 return f"Error: {ex.message}"
             except Exception as ex:
-                logger.exception("Unhandled exception in WrappedTool._arun", exc_info=ex)
+                logger.exception("Unhandled exception in WrappedTool._arun")
                 raise ex
 
     async def arun(self, tool_input: str | dict, config=None, **kwargs):
@@ -88,32 +65,35 @@ class WrappedTool(Tool):
 
             try:
                 toolguard.check_toolcall(self.name, args=args, delegate=self._tool_invoker)
-                res = await self._wrapped.arun(tool_input=args, config=config, **kwargs)
+                res = await self._orig_tool.arun(tool_input=args, config=config, **kwargs)
                 return res
             except PolicyViolationException as ex:
                 return f"Error: {ex.message}"
             except Exception as ex:
                 logger.exception("Unhandled exception in WrappedTool._arun")
                 raise ex
-            
 
-from toolguard.llm.tg_litellm import LanguageModelBase
-from langchain_core.messages import messages_from_dict
-class LangchainModelWrapper(LanguageModelBase):
+class ToolInvoker(IToolInvoker):
+    T = TypeVar("T")
+    _tools: dict[str, BaseTool]
 
-	def __init__(self, langchain_model:BaseChatModel):
-		super().__init__(model_name = langchain_model.model_name) # type: ignore
-		self.langchain_model = langchain_model
+    def __init__(self, tools: list[BaseTool]) -> None:
+        self._tools = {tool.name: tool for tool in tools}
 
-	async def generate(self, messages: List[Dict])->str:
-		messages = [{
-		    'type': 'human' if msg['role'] == 'user' else 'system', 
-		    'data':{
-                'content': msg['content']
-            }
-		} for msg in messages]
-		lc_messages = messages_from_dict(messages)
-		response = await self.langchain_model.agenerate(
-			messages=[lc_messages],
-		)
-		return response.generations[0][0].message.content
+    def invoke(self, toolname: str, arguments: dict[str, Any], return_type: type[T]) -> T:
+        tool = self._tools.get(toolname)
+        if tool:
+            res = tool.invoke(input=arguments)
+
+            if isinstance(res, CallToolResult): #an MCP tool result
+                res_dict = res.structuredContent['result']
+            else: #component tool result
+                res_dict = res["value"]
+
+            if issubclass(return_type, BaseModel):
+                return return_type.model_validate(res_dict)
+            if return_type in (int, float, str, bool):
+                return return_type(res_dict)
+            return res_dict
+
+        raise ValueError(f"unknown tool {toolname}")
