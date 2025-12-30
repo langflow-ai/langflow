@@ -79,8 +79,7 @@ export default function FlowLogsModal({
     const field = event.colDef.field;
     if (field === "inputs" || field === "outputs") {
       const rowData = event.data as TransactionLogsRow;
-      const content =
-        field === "inputs" ? rowData.inputs : rowData.outputs;
+      const content = field === "inputs" ? rowData.inputs : rowData.outputs;
       const title = `${rowData.vertex_id} - ${field === "inputs" ? "Inputs" : "Outputs"}`;
 
       setDetailView({

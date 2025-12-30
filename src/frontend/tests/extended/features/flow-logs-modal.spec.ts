@@ -57,7 +57,6 @@ test.describe("Flow Logs Modal", () => {
     },
   );
 
-
   test(
     "should display success status after successful component execution",
     { tag: ["@release", "@logs"] },
@@ -215,9 +214,7 @@ class CustomComponent(Component):
       await expect(logsDialog.locator("text=success").first()).toBeVisible();
 
       // Click on the Inputs cell (find cell in Inputs column)
-      const inputsCell = logsDialog
-        .locator('[col-id="inputs"]')
-        .last();
+      const inputsCell = logsDialog.locator('[col-id="inputs"]').last();
       await inputsCell.click();
 
       // Verify detail viewer dialog opens with JSON content
