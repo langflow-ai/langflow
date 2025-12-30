@@ -80,7 +80,7 @@ async def save_flow_checkpoint(
     if not update_data:
         logger.debug("Update data not provided, skipping checkpoint")
         return None
-    print("WOW")
+
     uuid_user_id = _get_uuid(user_id)
     uuid_flow_id = _get_uuid(flow_id)
 
@@ -108,7 +108,6 @@ async def _save_flow_checkpoint(
     update_data: dict,
 ) -> Flow | None:
     """Save a checkpoint of a flow."""
-    print("OK")
     try:
         db_flow =  (
             await session.exec(
@@ -132,24 +131,22 @@ async def _save_flow_checkpoint(
 
     await configure_flow_webhook_and_folder(db_flow, session, user_id)
     db_flow.updated_at = datetime.now(timezone.utc)
+
     # create new checkpoint iff graph data changed
     if (
         "data" in update_data and
         normalized_flow_data(update_data["data"]) != normalized_flow_data(db_flow.data)
     ): # note that None and {} (empty dict) are acceptable values for flow data
-        print("HAHA FLOW CHANGED")
-        print("HAHA latest_version", db_flow.latest_version)
         db_flow.latest_version += 1
-        print("HAHA latest_version + 1", db_flow.latest_version)
-        # session.add(
-        #     FlowVersion(
-        #         user_id=user_id,
-        #         flow_id=flow_id,
-        #         version=db_flow.latest_version,
-        #         created_at=datetime.now(timezone.utc),
-        #         flow_data=update_data["data"],
-        #         )
-        #     )
+        session.add(
+            FlowVersion(
+                user_id=user_id,
+                flow_id=flow_id,
+                version=db_flow.latest_version,
+                created_at=datetime.now(timezone.utc),
+                flow_data=update_data["data"],
+                )
+            )
 
     session.add(db_flow)
     return db_flow
