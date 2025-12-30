@@ -11,11 +11,11 @@ from langflow.services.database.models.transactions.crud import (
     transform_transaction_table_for_logs,
 )
 from langflow.services.database.models.transactions.model import (
-    SENSITIVE_KEYS_PATTERN,
     TransactionBase,
     TransactionLogsResponse,
     TransactionReadResponse,
     TransactionTable,
+    _is_sensitive_key,
     sanitize_data,
 )
 
@@ -95,13 +95,14 @@ class TestTransactionModels:
     def test_transaction_base_sanitizes_sensitive_data_in_outputs(self):
         """Test that sensitive data like password is masked in outputs."""
         flow_id = uuid4()
-        outputs_with_password = {
-            "password": "supersecret123",
+        # Short password (<=12 chars) should be fully redacted
+        outputs_with_short_password = {
+            "password": "short",
             "result": "success",
         }
         transaction = TransactionBase(
             vertex_id="test-vertex",
-            outputs=outputs_with_password,
+            outputs=outputs_with_short_password,
             status="success",
             flow_id=flow_id,
         )
@@ -110,6 +111,22 @@ class TestTransactionModels:
         assert transaction.outputs["password"] == "***REDACTED***"
         # Non-sensitive data should remain unchanged
         assert transaction.outputs["result"] == "success"
+
+        # Long password (>12 chars) should be partially masked
+        outputs_with_long_password = {
+            "password": "supersecret123456",
+            "result": "ok",
+        }
+        transaction2 = TransactionBase(
+            vertex_id="test-vertex-2",
+            outputs=outputs_with_long_password,
+            status="success",
+            flow_id=flow_id,
+        )
+
+        # Long passwords should show first 4 and last 4 chars
+        assert transaction2.outputs["password"] == "supe...3456"
+        assert transaction2.outputs["result"] == "ok"
 
     def test_transaction_base_sanitizes_nested_sensitive_data(self):
         """Test that nested sensitive data is also masked."""
@@ -268,8 +285,8 @@ class TestSanitizeData:
         for key in data:
             assert "***" in result[key] or "..." in result[key], f"Key '{key}' was not masked"
 
-    def test_sensitive_keys_pattern_matches_expected_keys(self):
-        """Test that the SENSITIVE_KEYS_PATTERN regex matches expected keys."""
+    def test_is_sensitive_key_matches_expected_keys(self):
+        """Test that _is_sensitive_key correctly identifies sensitive keys."""
         should_match = [
             "api_key",
             "api-key",
@@ -291,9 +308,13 @@ class TestSanitizeData:
             "private-key",
             "access_key",
             "access-key",
+            "openai_api_key",
+            "anthropic_api_key",
+            "auth_token",
+            "access_token",
         ]
         for key in should_match:
-            assert SENSITIVE_KEYS_PATTERN.search(key), f"Pattern should match '{key}'"
+            assert _is_sensitive_key(key), f"Key '{key}' should be identified as sensitive"
 
         should_not_match = [
             "model",
@@ -304,9 +325,11 @@ class TestSanitizeData:
             "value",
             "result",
             "status",
+            "author",
+            "authentication_method",
         ]
         for key in should_not_match:
-            assert not SENSITIVE_KEYS_PATTERN.search(key), f"Pattern should not match '{key}'"
+            assert not _is_sensitive_key(key), f"Key '{key}' should NOT be identified as sensitive"
 
 
 class TestTransactionTransformers:
@@ -357,6 +380,86 @@ class TestTransactionTransformers:
         assert isinstance(result, list)
         assert len(result) == 3
         assert all(isinstance(r, TransactionLogsResponse) for r in result)
+
+
+class TestTransactionWithOutputs:
+    """Tests for transaction with explicit outputs parameter."""
+
+    def test_transaction_base_with_explicit_outputs(self):
+        """Test creating TransactionBase with explicit outputs dict."""
+        flow_id = uuid4()
+        outputs = {
+            "output": {"message": "Hello World", "type": "text"},
+            "another_output": {"message": {"key": "value"}, "type": "object"},
+        }
+        transaction = TransactionBase(
+            vertex_id="test-vertex",
+            inputs={"input_value": "test"},
+            outputs=outputs,
+            status="success",
+            flow_id=flow_id,
+        )
+
+        assert transaction.outputs is not None
+        assert "output" in transaction.outputs
+        assert transaction.outputs["output"]["message"] == "Hello World"
+        assert transaction.outputs["output"]["type"] == "text"
+
+    def test_transaction_base_outputs_sanitization(self):
+        """Test that outputs with sensitive data are sanitized."""
+        flow_id = uuid4()
+        outputs = {
+            "result": {
+                "message": "success",
+                "api_key": "sk-1234567890abcdef1234",
+            }
+        }
+        transaction = TransactionBase(
+            vertex_id="test-vertex",
+            outputs=outputs,
+            status="success",
+            flow_id=flow_id,
+        )
+
+        # The nested api_key should be masked
+        assert "..." in transaction.outputs["result"]["api_key"]
+        assert transaction.outputs["result"]["message"] == "success"
+
+    def test_transaction_table_with_outputs(self):
+        """Test creating TransactionTable with outputs."""
+        flow_id = uuid4()
+        outputs = {
+            "component_output": {"message": "Built successfully", "type": "text"}
+        }
+        table = TransactionTable(
+            id=uuid4(),
+            vertex_id="test-vertex",
+            inputs={"param": "value"},
+            outputs=outputs,
+            status="success",
+            flow_id=flow_id,
+        )
+
+        assert table.outputs is not None
+        assert "component_output" in table.outputs
+        assert table.outputs["component_output"]["message"] == "Built successfully"
+
+    def test_transaction_logs_response_includes_outputs(self):
+        """Test that TransactionLogsResponse includes outputs field."""
+        table = TransactionTable(
+            id=uuid4(),
+            vertex_id="test-vertex",
+            inputs={"input": "data"},
+            outputs={"output": {"message": "result", "type": "text"}},
+            status="success",
+            flow_id=uuid4(),
+            timestamp=datetime.now(timezone.utc),
+        )
+
+        response = TransactionLogsResponse.model_validate(table, from_attributes=True)
+
+        assert response.outputs is not None
+        assert "output" in response.outputs
 
 
 class TestTransactionsEndpoint:

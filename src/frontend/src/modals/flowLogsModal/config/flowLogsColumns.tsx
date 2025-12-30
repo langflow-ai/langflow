@@ -44,16 +44,6 @@ export function createFlowLogsColumns(): ColDef[] {
       cellClass: baseCellClass,
     },
     {
-      headerName: "Target",
-      field: "target_id",
-      flex: 1,
-      minWidth: 150,
-      filter: false,
-      sortable: false,
-      editable: false,
-      cellClass: baseCellClass,
-    },
-    {
       headerName: "Inputs",
       field: "inputs",
       flex: 1.2,

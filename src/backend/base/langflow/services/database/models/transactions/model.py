@@ -9,8 +9,24 @@ from sqlmodel import JSON, Column, Field, SQLModel
 from langflow.serialization.serialization import get_max_items_length, get_max_text_length, serialize
 
 # Keys that should have their values masked for security
+# Pattern uses fullmatch-style matching to avoid false positives like "max_tokens"
+# Each pattern should match the entire key or a specific suffix
+SENSITIVE_KEY_NAMES = frozenset({
+    "api_key", "api-key", "apikey",
+    "password", "passwd",
+    "secret",
+    "token", "auth_token", "access_token", "api_token", "bearer_token",
+    "credential", "credentials",
+    "auth", "authorization",
+    "bearer",
+    "private_key", "private-key",
+    "access_key", "access-key",
+    "openai_api_key", "anthropic_api_key",
+})
+
+# Pattern for keys that end with sensitive suffixes
 SENSITIVE_KEYS_PATTERN = re.compile(
-    r"(api[_-]?key|password|secret|token|credential|auth|bearer|private[_-]?key|access[_-]?key)",
+    r".*[_-]?(api[_-]?key|password|secret|token|credential|auth|bearer|private[_-]?key|access[_-]?key)$",
     re.IGNORECASE,
 )
 
@@ -28,13 +44,23 @@ def _mask_sensitive_value(value: str) -> str:
     return f"{value[:4]}...{value[-4:]}"
 
 
+def _is_sensitive_key(key: str) -> bool:
+    """Check if a key name is sensitive and should be masked."""
+    key_lower = key.lower()
+    # Check exact match first (faster)
+    if key_lower in SENSITIVE_KEY_NAMES:
+        return True
+    # Check pattern match for keys ending with sensitive suffixes
+    return bool(SENSITIVE_KEYS_PATTERN.match(key_lower))
+
+
 def _sanitize_dict(data: dict[str, Any]) -> dict[str, Any]:
     """Recursively sanitize a dictionary, masking sensitive values."""
     result: dict[str, Any] = {}
     for key, value in data.items():
         if key in EXCLUDED_KEYS:
             continue
-        if SENSITIVE_KEYS_PATTERN.search(key):
+        if _is_sensitive_key(key):
             if isinstance(value, str) and value:
                 result[key] = _mask_sensitive_value(value)
             else:
