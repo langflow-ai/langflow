@@ -8,6 +8,9 @@ from sqlmodel import JSON, Column, Field, SQLModel
 
 from langflow.serialization.serialization import get_max_items_length, get_max_text_length, serialize
 
+# Cache for regex pattern matches to avoid repeated searches
+_pattern_cache: dict[str, bool] = {}
+
 # Keys that should have their values masked for security
 SENSITIVE_KEYS_PATTERN = re.compile(
     r"(api[_-]?key|password|secret|token|credential|auth|bearer|private[_-]?key|access[_-]?key)",
@@ -34,7 +37,14 @@ def _sanitize_dict(data: dict[str, Any]) -> dict[str, Any]:
     for key, value in data.items():
         if key in EXCLUDED_KEYS:
             continue
-        if SENSITIVE_KEYS_PATTERN.search(key):
+
+        # Check cache first to avoid repeated regex searches
+        is_sensitive = _pattern_cache.get(key)
+        if is_sensitive is None:
+            is_sensitive = bool(SENSITIVE_KEYS_PATTERN.search(key))
+            _pattern_cache[key] = is_sensitive
+
+        if is_sensitive:
             if isinstance(value, str) and value:
                 result[key] = _mask_sensitive_value(value)
             else:
