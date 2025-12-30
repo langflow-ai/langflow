@@ -1,4 +1,8 @@
-"""S3-based storage service implementation using async boto3."""
+"""S3-based storage service implementation using async boto3.
+
+This service handles file storage operations with AWS S3, including
+file upload, download, deletion, and listing operations.
+"""
 
 from __future__ import annotations
 
@@ -241,8 +245,6 @@ class S3StorageService(StorageService):
                         with contextlib.suppress(Exception):
                             await body.close()
 
-            logger.debug(f"File {file_name} streamed successfully from S3: s3://{self.bucket_name}/{key}")
-
         except Exception as e:
             if hasattr(e, "response") and e.response.get("Error", {}).get("Code") == "NoSuchKey":
                 await logger.awarning(f"File {file_name} not found in S3 flow {flow_id}")
@@ -284,7 +286,6 @@ class S3StorageService(StorageService):
                             if file_name:  # Skip the directory marker if it exists
                                 files.append(file_name)
 
-            await logger.ainfo(f"Listed {len(files)} files in S3 flow {flow_id}")
         except Exception:
             logger.exception(f"Error listing files in S3 flow {flow_id}")
             raise
@@ -306,8 +307,6 @@ class S3StorageService(StorageService):
         try:
             async with self._get_client() as s3_client:
                 await s3_client.delete_object(Bucket=self.bucket_name, Key=key)
-
-            await logger.ainfo(f"File {file_name} deleted successfully from S3: s3://{self.bucket_name}/{key}")
 
         except Exception:
             logger.exception(f"Error deleting file {file_name} from S3 in flow {flow_id}")
@@ -333,7 +332,6 @@ class S3StorageService(StorageService):
                 response = await s3_client.head_object(Bucket=self.bucket_name, Key=key)
                 file_size = response["ContentLength"]
 
-            logger.debug(f"File {file_name} size: {file_size} bytes")
         except Exception as e:
             # Check if it's a 404 error
             if hasattr(e, "response") and e.response.get("Error", {}).get("Code") in ["NoSuchKey", "404"]:
