@@ -25,6 +25,10 @@ class JWTAlgorithm(str, Enum):
     RS256 = "RS256"
     RS512 = "RS512"
 
+    def is_asymmetric(self) -> bool:
+        """Return True if this algorithm uses asymmetric (public/private key) cryptography."""
+        return self in (JWTAlgorithm.RS256, JWTAlgorithm.RS512)
+
 
 class AuthSettings(BaseSettings):
     # Login settings
@@ -169,7 +173,7 @@ class AuthSettings(BaseSettings):
     @model_validator(mode="after")
     def setup_rsa_keys(self):
         """Generate or load RSA keys when using RS256/RS512 algorithm."""
-        if self.ALGORITHM not in (JWTAlgorithm.RS256, JWTAlgorithm.RS512):
+        if not self.ALGORITHM.is_asymmetric():
             return self
 
         config_dir = self.CONFIG_DIR

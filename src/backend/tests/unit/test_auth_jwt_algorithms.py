@@ -405,16 +405,18 @@ class TestAuthenticationFailures:
                     await get_current_user_by_jwt("some-token", mock_db)
 
                 assert exc_info.value.status_code == 401
-                assert "Authentication failure" in exc_info.value.detail
+                assert "Server configuration error" in exc_info.value.detail
+                assert "Public key not configured" in exc_info.value.detail
 
     @pytest.mark.asyncio
     async def test_missing_secret_key_hs256_raises_401(self):
         """Missing secret key for HS256 should raise 401."""
         from langflow.services.auth.utils import get_current_user_by_jwt
+        from lfx.services.settings.auth import JWTAlgorithm
 
         # Create a fully mocked settings service without using AuthSettings
         mock_auth_settings = MagicMock()
-        mock_auth_settings.ALGORITHM = "HS256"
+        mock_auth_settings.ALGORITHM = JWTAlgorithm.HS256
         mock_auth_settings.SECRET_KEY = MagicMock()
         mock_auth_settings.SECRET_KEY.get_secret_value.return_value = None
 
@@ -428,7 +430,8 @@ class TestAuthenticationFailures:
                 await get_current_user_by_jwt("some-token", mock_db)
 
             assert exc_info.value.status_code == 401
-            assert "Authentication failure" in exc_info.value.detail
+            assert "Server configuration error" in exc_info.value.detail
+            assert "Secret key not configured" in exc_info.value.detail
 
     @pytest.mark.asyncio
     async def test_invalid_token_raises_401(self):
@@ -540,7 +543,7 @@ class TestAuthenticationFailures:
                     await get_current_user_by_jwt(token, mock_db)
 
                 assert exc_info.value.status_code == 401
-                assert "Invalid token" in exc_info.value.detail
+                assert "invalid" in exc_info.value.detail.lower()
 
     @pytest.mark.asyncio
     async def test_user_not_found_raises_401(self):

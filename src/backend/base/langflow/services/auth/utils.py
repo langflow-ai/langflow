@@ -175,13 +175,13 @@ async def get_current_user_by_jwt(
     algorithm = settings_service.auth_settings.ALGORITHM
 
     # Use appropriate key based on algorithm
-    if algorithm in ("RS256", "RS512"):
+    if algorithm.is_asymmetric():
         verification_key = settings_service.auth_settings.PUBLIC_KEY
         if not verification_key:
             logger.error("Public key is not set in settings for RS256/RS512.")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Authentication failure: Verify authentication settings.",
+                detail="Server configuration error: Public key not configured for asymmetric JWT algorithm.",
                 headers={"WWW-Authenticate": "Bearer"},
             )
     else:
@@ -190,7 +190,7 @@ async def get_current_user_by_jwt(
             logger.error("Secret key is not set in settings.")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Authentication failure: Verify authentication settings.",
+                detail="Server configuration error: Secret key not configured.",
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
@@ -379,7 +379,7 @@ def create_token(data: dict, expires_delta: timedelta):
     algorithm = settings_service.auth_settings.ALGORITHM
 
     # Use appropriate key based on algorithm
-    if algorithm in ("RS256", "RS512"):
+    if algorithm.is_asymmetric():
         signing_key = settings_service.auth_settings.PRIVATE_KEY.get_secret_value()
     else:
         signing_key = settings_service.auth_settings.SECRET_KEY.get_secret_value()
@@ -507,13 +507,13 @@ async def create_refresh_token(refresh_token: str, db: AsyncSession):
     algorithm = settings_service.auth_settings.ALGORITHM
 
     # Use appropriate key based on algorithm
-    if algorithm in ("RS256", "RS512"):
+    if algorithm.is_asymmetric():
         verification_key = settings_service.auth_settings.PUBLIC_KEY
         if not verification_key:
             logger.error("Public key is not set in settings for RS256/RS512.")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Authentication failure: Verify authentication settings.",
+                detail="Server configuration error: Public key not configured for asymmetric JWT algorithm.",
             )
     else:
         verification_key = settings_service.auth_settings.SECRET_KEY.get_secret_value()
@@ -521,7 +521,7 @@ async def create_refresh_token(refresh_token: str, db: AsyncSession):
             logger.error("Secret key is not set in settings.")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Authentication failure: Verify authentication settings.",
+                detail="Server configuration error: Secret key not configured.",
             )
 
     try:
