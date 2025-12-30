@@ -469,9 +469,7 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
 
         mock_get_response = AsyncMock()
         mock_get_response.raise_for_status.return_value = None
-        mock_get_response.json.return_value = {
-            component.JSON_MODELS_KEY: []
-        }
+        mock_get_response.json.return_value = {component.JSON_MODELS_KEY: []}
         mock_get.return_value = mock_get_response
 
         base_url = "http://localhost:11434"
@@ -841,9 +839,7 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
             mock_valid.return_value = True
             mock_get_model.return_value = ["nomic-embed-text", "mxbai-embed-large"]
 
-            updated_config = await component.update_build_config(
-                build_config, "http://localhost:11434", "base_url"
-            )
+            updated_config = await component.update_build_config(build_config, "http://localhost:11434", "base_url")
 
         assert "nomic-embed-text" in updated_config["model_name"]["options"]
         assert "mxbai-embed-large" in updated_config["model_name"]["options"]
@@ -886,9 +882,7 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
             mock_valid.return_value = True
             mock_get_model.return_value = []
 
-            updated_config = await component.update_build_config(
-                build_config, "http://localhost:11434", "base_url"
-            )
+            updated_config = await component.update_build_config(build_config, "http://localhost:11434", "base_url")
 
         assert updated_config["model_name"]["options"] == []
 
@@ -925,4 +919,3 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         component = component_class()
         output_names = [out.name for out in component.outputs]
         assert "embeddings" in output_names
-
