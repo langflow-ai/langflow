@@ -428,9 +428,7 @@ class TestTransactionWithOutputs:
     def test_transaction_table_with_outputs(self):
         """Test creating TransactionTable with outputs."""
         flow_id = uuid4()
-        outputs = {
-            "component_output": {"message": "Built successfully", "type": "text"}
-        }
+        outputs = {"component_output": {"message": "Built successfully", "type": "text"}}
         table = TransactionTable(
             id=uuid4(),
             vertex_id="test-vertex",
