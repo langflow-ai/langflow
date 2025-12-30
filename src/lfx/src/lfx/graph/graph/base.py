@@ -1549,8 +1549,10 @@ class Graph:
                                 vertex.result.used_frozen_result = True
                         except Exception:  # noqa: BLE001
                             logger.debug("Error finalizing build", exc_info=True)
+                            vertex.built = False
                             should_build = True
                     except KeyError:
+                        vertex.built = False
                         should_build = True
 
             if should_build:
