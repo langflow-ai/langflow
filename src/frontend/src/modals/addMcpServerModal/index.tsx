@@ -288,7 +288,11 @@ export default function AddMcpServerModal({
             </div>
             <span className="text-mmd font-normal text-muted-foreground">
               Save MCP Servers. Manage added servers in{" "}
-              <CustomLink className="underline" to="/settings/mcp-servers">
+              <CustomLink
+                className="underline"
+                to="/settings/mcp-servers"
+                onClick={() => setOpen(false)}
+              >
                 settings
               </CustomLink>
               .
