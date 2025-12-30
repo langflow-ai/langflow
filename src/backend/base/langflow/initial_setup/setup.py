@@ -638,10 +638,30 @@ def get_project_data(project):
 
 
 async def update_project_file(project_path: anyio.Path, project: dict, updated_project_data) -> None:
+    """Update starter project JSON file with new data.
+
+    This function attempts to write updated project data back to the source file.
+    In containerized environments with read-only filesystems (e.g., Kubernetes with
+    readOnlyRootFilesystem: true), the write will fail gracefully since the database
+    is the source of truth for project data.
+
+    Args:
+        project_path: Path to the project JSON file
+        project: Project dictionary to update
+        updated_project_data: New project data to write
+    """
     project["data"] = updated_project_data
-    async with async_open(str(project_path), "w", encoding="utf-8") as f:
-        await f.write(orjson.dumps(project, option=ORJSON_OPTIONS).decode())
-    await logger.adebug(f"Updated starter project {project['name']} file")
+    try:
+        async with async_open(str(project_path), "w", encoding="utf-8") as f:
+            await f.write(orjson.dumps(project, option=ORJSON_OPTIONS).decode())
+        await logger.adebug(f"Updated starter project {project['name']} file")
+    except OSError as e:
+        # Handle read-only filesystem (common in containerized environments)
+        # The database update is the important part - file updates are optional
+        await logger.adebug(
+            f"Could not update starter project file {project['name']} (read-only filesystem): {e}. "
+            "This is expected in containerized environments with read-only root filesystem."
+        )
 
 
 def update_existing_project(
