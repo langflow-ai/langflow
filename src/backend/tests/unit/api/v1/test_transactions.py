@@ -271,22 +271,39 @@ class TestSanitizeData:
     def test_sensitive_keys_pattern_matches_expected_keys(self):
         """Test that the SENSITIVE_KEYS_PATTERN regex matches expected keys."""
         should_match = [
-            "api_key", "api-key", "apikey", "API_KEY",
-            "password", "PASSWORD",
-            "secret", "SECRET",
-            "token", "TOKEN",
-            "credential", "CREDENTIAL",
-            "auth", "AUTH",
-            "bearer", "BEARER",
-            "private_key", "private-key",
-            "access_key", "access-key",
+            "api_key",
+            "api-key",
+            "apikey",
+            "API_KEY",
+            "password",
+            "PASSWORD",
+            "secret",
+            "SECRET",
+            "token",
+            "TOKEN",
+            "credential",
+            "CREDENTIAL",
+            "auth",
+            "AUTH",
+            "bearer",
+            "BEARER",
+            "private_key",
+            "private-key",
+            "access_key",
+            "access-key",
         ]
         for key in should_match:
             assert SENSITIVE_KEYS_PATTERN.search(key), f"Pattern should match '{key}'"
 
         should_not_match = [
-            "model", "temperature", "max_tokens", "messages",
-            "name", "value", "result", "status",
+            "model",
+            "temperature",
+            "max_tokens",
+            "messages",
+            "name",
+            "value",
+            "result",
+            "status",
         ]
         for key in should_not_match:
             assert not SENSITIVE_KEYS_PATTERN.search(key), f"Pattern should not match '{key}'"

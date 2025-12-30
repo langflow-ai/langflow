@@ -17,10 +17,13 @@ SENSITIVE_KEYS_PATTERN = re.compile(
 # Keys to completely exclude from logs
 EXCLUDED_KEYS = frozenset({"code"})
 
+# Minimum length for partial masking (show first 4 and last 4 chars)
+MIN_LENGTH_FOR_PARTIAL_MASK = 12
+
 
 def _mask_sensitive_value(value: str) -> str:
     """Mask a sensitive string value, showing only first 4 and last 4 chars."""
-    if len(value) <= 12:
+    if len(value) <= MIN_LENGTH_FOR_PARTIAL_MASK:
         return "***REDACTED***"
     return f"{value[:4]}...{value[-4:]}"
 
