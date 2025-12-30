@@ -356,6 +356,9 @@ class DatabaseService(Service):
         # which is a buffer
         # I don't want to output anything
         # subprocess.DEVNULL is an int
+        # Ensure the parent directory exists before opening the log file
+        if not self.alembic_log_to_stdout and self.alembic_log_path:
+            self.alembic_log_path.parent.mkdir(parents=True, exist_ok=True)
         buffer_context = (
             nullcontext(sys.stdout) if self.alembic_log_to_stdout else self.alembic_log_path.open("w", encoding="utf-8")  # type: ignore[union-attr]
         )
