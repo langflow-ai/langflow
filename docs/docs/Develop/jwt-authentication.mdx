@@ -14,7 +14,7 @@ Use JWT to create credentials that automatically expire, enable stateless authen
 JWT authentication with the HS256 algorithm is enabled by default, but can be configured further with the `LANGFLOW_ALGORITHM` environment variable.
 
 <details closedn>
-<summary>Need help with JWTs?</summary>
+<summary>About the JWT structure and contents</summary>
 
 When a user logs in with their username and password at the `/api/v1/login` endpoint, Langflow validates the credentials and creates a JWT token containing the user's identity and expiration time. This token is then used for subsequent API requests instead of sending credentials with each request.
 
@@ -24,9 +24,9 @@ A JWT consists of three parts separated by dots (`.`):
 eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
 ```
 
-* The **Header** contains the token type and signing algorithm.
-* The **Payload** contains "claims", which is token data for user information and expiration time.
-* The **Signature** is a secret key that ensures the token hasn't been tampered with.
+* The header contains the token type and signing algorithm.
+* The payload contains _claims_, which are token data for user information and expiration time.
+* The signature is a secret key that ensures the token hasn't been tampered with.
 
 Each part of the JWT is Base64URL-encoded.
 You can paste this example JWT to decode the actual JSON data at [jwt.io](https://jwt.io/).
@@ -35,7 +35,7 @@ You can paste this example JWT to decode the actual JSON data at [jwt.io](https:
 
 ## Configure JWT environment variables
 
-Configure JWT authentication in Langflow using the following environment variables.
+Configure JWT authentication in Langflow using the following environment variables:
 
 | Variable | Description | Default | Required |
 |----------|-------------|---------|----------|
@@ -148,7 +148,7 @@ The private key signs tokens, and the public verifies them.
 The private key must be kept secret, while the public key can be safely shared.
 
 To automatically generate a private and public key pair and store it in the Langflow [`LANGFLOW_CONFIG_DIR`](/logging), set `LANGFLOW_ALGORITHM="RS512"` in your Langflow `.env`.
-When Langflow starts, it will:
+When Langflow starts, it does the following:
 1. Check if RSA keys exist in the configuration directory.
 2. If not, generate a new 2048-bit RSA key pair.
 3. Save the keys to `private_key.pem` and `public_key.pem`.
@@ -326,9 +326,9 @@ LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS=3600  # 1 hour
 LANGFLOW_REFRESH_TOKEN_EXPIRE_SECONDS=604800  # 7 days
 ```
 
-**Access tokens** authenticate API requests and typically expire within 15 minutes to 1 hour to limit security risks.
+Access tokens authenticate API requests and typically expire within 15 minutes to 1 hour to limit security risks.
 
-**Refresh tokens** obtain new access tokens without requiring the user to log in again.
+Refresh tokens obtain new access tokens without requiring the user to log in again.
 Refresh tokens typically expire within 7 to 30 days.
 
 When an access token expires, the client can use the refresh token to get a new access token from the `/api/v1/refresh` endpoint.
