@@ -486,3 +486,81 @@ async def test_copy_profile_pictures_handles_missing_config_dir():
 
         with pytest.raises(ValueError, match="Config dir is not set"):
             await copy_profile_pictures()
+
+
+# ==================== Update Project File Tests ====================
+
+
+async def test_update_project_file_success():
+    """Test that update_project_file successfully writes to a writable path."""
+    from langflow.initial_setup.setup import update_project_file
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        project_path = Path(temp_dir) / "test_project.json"
+        project = {"name": "Test Project", "data": {"old": "data"}}
+        updated_data = {"new": "data"}
+
+        await update_project_file(project_path, project, updated_data)
+
+        # Verify the file was written
+        assert await project_path.exists()
+        content = await project_path.read_text(encoding="utf-8")
+        import orjson
+
+        written_project = orjson.loads(content)
+        assert written_project["data"] == updated_data
+        assert written_project["name"] == "Test Project"
+
+
+async def test_update_project_file_readonly_filesystem():
+    """Test that update_project_file handles read-only filesystem gracefully."""
+    from langflow.initial_setup.setup import update_project_file
+
+    project_path = Path("/nonexistent/readonly/path/test_project.json")
+    project = {"name": "Test Project", "data": {"old": "data"}}
+    updated_data = {"new": "data"}
+
+    # This should NOT raise an exception - it should handle the error gracefully
+    await update_project_file(project_path, project, updated_data)
+
+    # Verify the project dict was still updated (in-memory)
+    assert project["data"] == updated_data
+
+
+async def test_update_project_file_permission_denied():
+    """Test that update_project_file handles permission denied gracefully."""
+    from langflow.initial_setup.setup import update_project_file
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        project_path = Path(temp_dir) / "test_project.json"
+        project = {"name": "Test Project", "data": {"old": "data"}}
+        updated_data = {"new": "data"}
+
+        # Mock async_open to raise OSError (permission denied)
+        with patch("langflow.initial_setup.setup.async_open") as mock_open:
+            mock_open.side_effect = OSError(13, "Permission denied")
+
+            # This should NOT raise an exception
+            await update_project_file(project_path, project, updated_data)
+
+            # Verify the project dict was still updated (in-memory)
+            assert project["data"] == updated_data
+
+
+async def test_update_project_file_logs_debug_on_error():
+    """Test that update_project_file logs debug message on OSError."""
+    from langflow.initial_setup.setup import update_project_file
+
+    project_path = Path("/nonexistent/readonly/path/test_project.json")
+    project = {"name": "Test Project", "data": {"old": "data"}}
+    updated_data = {"new": "data"}
+
+    with patch("langflow.initial_setup.setup.logger") as mock_logger:
+        mock_logger.adebug = AsyncMock()
+
+        await update_project_file(project_path, project, updated_data)
+
+        # Verify debug was called with appropriate message about read-only filesystem
+        mock_logger.adebug.assert_called()
+        call_args = str(mock_logger.adebug.call_args)
+        assert "read-only filesystem" in call_args or "Could not update" in call_args
