@@ -12,6 +12,8 @@ async def list_all_components(
     component_type: str | None = None,
     fields: list[str] | None = None,
     settings_service: SettingsService | None = None,
+    *,
+    is_core: bool | None = None,
 ) -> list[dict[str, Any]]:
     """Search and retrieve component data with configurable field selection.
 
@@ -23,6 +25,9 @@ async def list_all_components(
                Common fields: name, display_name, description, type, template, documentation,
                icon, is_input, is_output, lazy_loaded, field_order
         settings_service: Settings service instance for loading components.
+        is_core: Optional flag to filter by core components (True) or bundles (False).
+                 Core components typically have "components-" in their documentation URL,
+                 while bundles have "bundles-".
 
     Returns:
         List of dictionaries containing the selected fields for each matching component.
@@ -72,6 +77,15 @@ async def list_all_components(
                     query_lower = query.lower()
 
                     if query_lower not in name and query_lower not in display_name and query_lower not in description:
+                        continue
+
+                # Filter by core/bundle if specified
+                if is_core is not None:
+                    doc = component_data.get("documentation", "")
+                    is_bundle = "bundles-" in doc
+                    if is_core and is_bundle:
+                        continue
+                    if not is_core and not is_bundle:
                         continue
 
                 # Build result dict with component metadata
@@ -270,3 +284,16 @@ async def get_components_by_type(
         ... )
     """
     return await list_all_components(component_type=component_type, fields=fields, settings_service=settings_service)
+
+async def main():
+    from langflow.services.deps import get_settings_service
+    settings_service = get_settings_service()
+    components = await list_all_components(settings_service=settings_service)
+    import json
+    with open("components.json", "w", encoding="utf-8") as f:
+        json.dump(components, f, indent=2, ensure_ascii=False)
+
+
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(main())

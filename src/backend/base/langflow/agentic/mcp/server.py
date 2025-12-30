@@ -173,6 +173,7 @@ async def search_components(
     fields: list[str] | None = None,
     *,
     add_search_text: bool | None = None,
+    is_core: bool | None = None,
 ) -> list[dict[str, Any]]:
     """Search and retrieve component data with configurable field selection.
 
@@ -185,6 +186,7 @@ async def search_components(
                All fields: name, display_name, description, type, template, documentation,
                icon, is_input, is_output, lazy_loaded, field_order
         add_search_text: Whether to add a 'text' key to each component with all key-value pairs joined by newline.
+        is_core: Whether to filter for core components (True) or bundle components (False).
 
     Returns:
         List of dictionaries containing the selected fields for each matching component.
@@ -217,6 +219,7 @@ async def search_components(
         component_type=component_type,
         fields=fields,
         settings_service=settings_service,
+        is_core=is_core,
     )
     # For each component dict in result, add a 'text' key with all key-value pairs joined by newline.
 
