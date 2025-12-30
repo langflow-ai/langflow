@@ -5,6 +5,7 @@ import PaginatorComponent from "@/components/common/paginatorComponent";
 import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
 import { useGetTransactionsQuery } from "@/controllers/API/queries/transactions";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import type { TransactionLogsRow } from "@/types/api";
 import { convertUTCToLocalTimezone } from "@/utils/utils";
 import BaseModal from "../baseModal";
 import { createFlowLogsColumns } from "./config/flowLogsColumns";
@@ -19,7 +20,7 @@ export default function FlowLogsModal({
 
   const [pageIndex, setPageIndex] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const [rows, setRows] = useState<any>([]);
+  const [rows, setRows] = useState<TransactionLogsRow[]>([]);
   const [searchParams] = useSearchParams();
   const columns = createFlowLogsColumns();
   const flowIdFromUrl = searchParams.get("id");
@@ -37,8 +38,8 @@ export default function FlowLogsModal({
     if (data) {
       const { rows } = data;
 
-      if (data?.rows?.length > 0) {
-        data.rows.map((row: any) => {
+      if (rows?.length > 0) {
+        rows.forEach((row) => {
           row.timestamp = convertUTCToLocalTimezone(row.timestamp);
         });
       }
@@ -53,10 +54,13 @@ export default function FlowLogsModal({
     }
   }, [open]);
 
-  const handlePageChange = useCallback((newPageIndex, newPageSize) => {
-    setPageIndex(newPageIndex);
-    setPageSize(newPageSize);
-  }, []);
+  const handlePageChange = useCallback(
+    (newPageIndex: number, newPageSize: number) => {
+      setPageIndex(newPageIndex);
+      setPageSize(newPageSize);
+    },
+    [],
+  );
 
   return (
     <BaseModal open={open} setOpen={setOpen} size="x-large">

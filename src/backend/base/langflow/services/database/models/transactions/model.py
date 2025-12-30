@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from typing import Any
 from uuid import UUID, uuid4
 
 from pydantic import field_serializer, field_validator
@@ -11,8 +12,8 @@ class TransactionBase(SQLModel):
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     vertex_id: str = Field(nullable=False)
     target_id: str | None = Field(default=None)
-    inputs: dict | None = Field(default=None, sa_column=Column(JSON))
-    outputs: dict | None = Field(default=None, sa_column=Column(JSON))
+    inputs: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
+    outputs: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
     status: str = Field(nullable=False)
     error: str | None = Field(default=None)
     flow_id: UUID = Field()
@@ -41,19 +42,9 @@ class TransactionBase(SQLModel):
         return value
 
     @field_serializer("inputs")
-    def serialize_inputs(self, data) -> dict:
-        """Serialize the transaction's input data with enforced limits on text length and item count.
-
-        Parameters:
-            data (dict): The input data to be serialized.
-
-        Returns:
-            dict: The serialized input data with applied constraints.
-        """
-        # Filter out the "code" key from inputs if present
+    def serialize_inputs(self, data: dict[str, Any] | None) -> dict[str, Any]:
+        """Serialize inputs, filtering 'code' key and enforcing size limits."""
         if isinstance(data, dict) and "code" in data:
-            # IMPORTANT: Copy the data dict before mutation to avoid modifying the original
-            # dictionary. Without this copy, we would mutate the field's actual data.
             data_copy = data.copy()
             data_copy.pop("code")
             data = data_copy
@@ -61,15 +52,8 @@ class TransactionBase(SQLModel):
         return serialize(data, max_length=get_max_text_length(), max_items=get_max_items_length())
 
     @field_serializer("outputs")
-    def serialize_outputs(self, data) -> dict:
-        """Serialize the outputs dictionary with enforced limits on text length and item count.
-
-        Parameters:
-            data (dict): The outputs data to serialize.
-
-        Returns:
-            dict: The serialized outputs dictionary with applied constraints.
-        """
+    def serialize_outputs(self, data: dict[str, Any] | None) -> dict[str, Any]:
+        """Serialize outputs with enforced size limits."""
         return serialize(data, max_length=get_max_text_length(), max_items=get_max_items_length())
 
 
@@ -92,16 +76,16 @@ class TransactionLogsResponse(SQLModel):
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     vertex_id: str = Field(nullable=False)
     target_id: str | None = Field(default=None)
-    inputs: dict | None = Field(default=None)
-    outputs: dict | None = Field(default=None)
+    inputs: dict[str, Any] | None = Field(default=None)
+    outputs: dict[str, Any] | None = Field(default=None)
     status: str = Field(nullable=False)
 
     @field_serializer("inputs")
-    def serialize_inputs(self, data) -> dict:
-        """Serialize with enforced text length and item count limits."""
+    def serialize_inputs(self, data: dict[str, Any] | None) -> dict[str, Any]:
+        """Serialize inputs with enforced size limits."""
         return serialize(data, max_length=get_max_text_length(), max_items=get_max_items_length())
 
     @field_serializer("outputs")
-    def serialize_outputs(self, data) -> dict:
-        """Serialize outputs with enforced limits."""
+    def serialize_outputs(self, data: dict[str, Any] | None) -> dict[str, Any]:
+        """Serialize outputs with enforced size limits."""
         return serialize(data, max_length=get_max_text_length(), max_items=get_max_items_length())

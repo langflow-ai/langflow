@@ -108,9 +108,9 @@ def _vertex_to_primitive_dict(target: Vertex) -> dict:
 async def log_transaction(
     flow_id: str | UUID,
     source: Vertex,
-    status,
+    status: str,
     target: Vertex | None = None,
-    error=None,
+    error: str | Exception | None = None,
 ) -> None:
     """Asynchronously logs a transaction record for a vertex in a flow if transaction storage is enabled.
 
