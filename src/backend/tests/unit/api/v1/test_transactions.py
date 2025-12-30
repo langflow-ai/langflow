@@ -108,7 +108,7 @@ class TestTransactionModels:
         )
 
         # Short passwords should be fully redacted
-        assert transaction.outputs["password"] == "***REDACTED***"
+        assert transaction.outputs["password"] == "***REDACTED***"  # noqa: S105
         # Non-sensitive data should remain unchanged
         assert transaction.outputs["result"] == "success"
 
@@ -125,7 +125,7 @@ class TestTransactionModels:
         )
 
         # Long passwords should show first 4 and last 4 chars
-        assert transaction2.outputs["password"] == "supe...3456"
+        assert transaction2.outputs["password"] == "supe...3456"  # noqa: S105
         assert transaction2.outputs["result"] == "ok"
 
     def test_transaction_base_sanitizes_nested_sensitive_data(self):
@@ -207,7 +207,7 @@ class TestSanitizeData:
         """Test that password values are masked."""
         data = {"password": "short"}
         result = sanitize_data(data)
-        assert result["password"] == "***REDACTED***"
+        assert result["password"] == "***REDACTED***"  # noqa: S105
 
     def test_sanitize_data_masks_various_sensitive_keys(self):
         """Test that various sensitive key patterns are masked."""
