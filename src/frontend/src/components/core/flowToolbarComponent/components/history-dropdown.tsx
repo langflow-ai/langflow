@@ -12,11 +12,13 @@ import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useGetFlowVersionsQuery } from "@/controllers/API/queries/flows/use-get-flow-versions";
 import { usePostRestoreFlowVersion } from "@/controllers/API/queries/flows/use-post-restore-flow-version";
 import useAlertStore from "@/stores/alertStore";
+import useAuthStore from "@/stores/authStore";
 import moment from "moment";
 import { cn } from "@/utils/utils";
 
 export default function HistoryDropdown() {
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
+  const userData = useAuthStore((state) => state.userData);
   const currentFlowId = currentFlow?.id;
   const { data: versions, isLoading } = useGetFlowVersionsQuery({ flowId: currentFlowId });
   const { mutate: restoreVersion, isPending } = usePostRestoreFlowVersion();
@@ -75,15 +77,41 @@ export default function HistoryDropdown() {
                   )}
                 >
                   <div className="flex flex-col gap-0.5 min-w-0 flex-1 pr-2">
-                    <span className="text-sm font-medium text-foreground">
-                      {isLatest ? "Current version" : `Version ${versionData.version}`}
+                    <span
+                      className={cn(
+                        isLatest
+                          ? "text-sm font-medium text-foreground"
+                          : "text-xs text-muted-foreground"
+                      )}
+                    >
+                      {isLatest
+                        ? "Latest Version"
+                        : moment
+                            .utc(versionData.created_at)
+                            .local()
+                            .format("MMM D, h:mm A")}
                     </span>
-                    <span className="text-xs text-muted-foreground">
-                      Saved {moment.utc(versionData.created_at).local().format("MMM D")} at {moment.utc(versionData.created_at).local().format("h:mm A")}
-                    </span>
-                    {versionData.flow_name && (
-                      <span className="text-xs text-muted-foreground/70 truncate">
-                        {versionData.flow_name}
+                    {isLatest ? (
+                      <>
+                        <span className="text-xs text-muted-foreground">
+                          Saved{" "}
+                          {moment
+                            .utc(versionData.created_at)
+                            .local()
+                            .format("MMM D")}{" "}
+                          at{" "}
+                          {moment
+                            .utc(versionData.created_at)
+                            .local()
+                            .format("h:mm A")}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {userData?.username ?? "Unknown"}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">
+                        {userData?.username ?? "Unknown"}
                       </span>
                     )}
                   </div>
