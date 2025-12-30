@@ -36,23 +36,6 @@ export type FlowType = {
   mcp_enabled?: boolean;
 };
 
-export type FlowVersionDataType = {
-  id: string;
-  flow_id: string;
-  user_id: string;
-  version: number;
-  flow_data: ReactFlowJsonObject<AllNodeType, EdgeType> | null;
-  flow_name: string;
-  flow_description: string;
-  created_at: string;
-  updated_at?: string;
-};
-
-// Backend returns FlowVersion wrapped in a Data object with FlowVersion key
-export type FlowVersionType = {
-  FlowVersion: FlowVersionDataType;
-} & Partial<FlowVersionDataType>;
-
 export type GenericNodeType = Node<NodeDataType, "genericNode">;
 export type NoteNodeType = Node<NoteDataType, "noteNode">;
 

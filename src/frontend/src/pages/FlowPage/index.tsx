@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useBlocker, useParams } from "react-router-dom";
+import { useBlocker, useLocation, useParams } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { useGetTypes } from "@/controllers/API/queries/flows/use-get-types";
@@ -42,6 +42,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
 
   const setOnFlowPage = useFlowStore((state) => state.setOnFlowPage);
   const { id } = useParams();
+  const location = useLocation();
   const navigate = useCustomNavigate();
   const saveFlow = useSaveFlow();
 
@@ -159,7 +160,8 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
 
   const getFlowToAddToCanvas = async (id: string) => {
     const flow = await getFlow({ id });
-    setAutoSaving(false);
+    const shouldAutoSave = location.state?.autoSave ?? false;
+    setAutoSaving(shouldAutoSave);
     setCurrentFlow(flow);
     refreshAllModelInputs({ silent: true });
   };
