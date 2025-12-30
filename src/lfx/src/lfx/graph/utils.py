@@ -115,7 +115,9 @@ async def log_transaction(
 ) -> None:
     """Asynchronously logs a transaction record for a vertex in a flow if transaction storage is enabled.
 
-    This is a lightweight implementation that only logs if database service is available.
+    Uses the pluggable TransactionService to log transactions. When running within langflow,
+    the concrete TransactionService implementation persists to the database.
+    When running standalone (lfx only), transactions are not persisted.
 
     Args:
         flow_id: The flow ID
@@ -130,48 +132,40 @@ async def log_transaction(
         if source is None:
             return
 
-        # Use langflow's settings service to ensure transactions_storage_enabled is checked correctly
-        from langflow.services.deps import get_settings_service as langflow_get_settings_service
+        # Get the transaction service via dependency injection
+        from lfx.services.deps import get_transaction_service
 
-        settings_service = langflow_get_settings_service()
-        if not settings_service:
-            return
-        if not getattr(settings_service.settings, "transactions_storage_enabled", False):
+        transaction_service = get_transaction_service()
+
+        # If no transaction service is available or it's disabled, skip logging
+        if transaction_service is None or not transaction_service.is_enabled():
             return
 
+        # Resolve flow_id
         if not flow_id:
             if source.graph.flow_id:
                 flow_id = source.graph.flow_id
             else:
                 return
 
-        # Import here to avoid circular imports
-        from langflow.services.database.models.transactions.crud import (
-            log_transaction as crud_log_transaction,
-        )
-        from langflow.services.database.models.transactions.model import TransactionBase
-        from langflow.services.deps import session_scope
+        # Convert UUID to string for the service interface
+        flow_id_str = str(flow_id) if isinstance(flow_id, UUID) else flow_id
 
-        if isinstance(flow_id, str):
-            flow_id = UUID(flow_id)
-
+        # Prepare inputs and outputs
         inputs = _vertex_to_primitive_dict(source) if source else None
-        # Use explicit outputs if provided, otherwise derive from target vertex
         target_outputs = _vertex_to_primitive_dict(target) if target else None
         transaction_outputs = outputs if outputs is not None else target_outputs
 
-        transaction = TransactionBase(
+        # Log transaction via the service
+        await transaction_service.log_transaction(
+            flow_id=flow_id_str,
             vertex_id=source.id,
-            target_id=target.id if target else None,
             inputs=inputs,
             outputs=transaction_outputs,
             status=status,
+            target_id=target.id if target else None,
             error=str(error) if error else None,
-            flow_id=flow_id,
         )
-
-        async with session_scope() as session:
-            await crud_log_transaction(session, transaction)
 
     except Exception as exc:  # noqa: BLE001
         logger.debug(f"Error logging transaction: {exc!s}")
