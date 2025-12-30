@@ -268,8 +268,9 @@ def serialize(
         max_items: Maximum items in list-like structures, None for no truncation
         to_str: If True, return a string representation of the object if serialization fails
     """
-    if obj is None:
-        return None
+    # Fast path for primitives
+    if obj is None or isinstance(obj, (str, int, float, bool)):
+        return obj
     try:
         # First try type-specific serialization
         result = _serialize_dispatcher(obj, max_length, max_items)

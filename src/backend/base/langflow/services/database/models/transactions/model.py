@@ -103,10 +103,12 @@ def _sanitize_list(data: list[Any]) -> list[Any]:
 
 def sanitize_data(data: dict[str, Any] | None) -> dict[str, Any] | None:
     """Sanitize data by masking sensitive values and excluding certain keys."""
-    if data is None:
-        return None
     if not isinstance(data, dict):
         return data
+    if data is None:
+        return None
+    if not data:
+        return {}
     return _sanitize_dict(data)
 
 
