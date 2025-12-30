@@ -111,10 +111,19 @@ async def log_transaction(
     status: str,
     target: Vertex | None = None,
     error: str | Exception | None = None,
+    outputs: dict[str, Any] | None = None,
 ) -> None:
     """Asynchronously logs a transaction record for a vertex in a flow if transaction storage is enabled.
 
     This is a lightweight implementation that only logs if database service is available.
+
+    Args:
+        flow_id: The flow ID
+        source: The source vertex (component being executed)
+        status: Transaction status (success/error)
+        target: Optional target vertex (for data transfer logging)
+        error: Optional error information
+        outputs: Optional explicit outputs dict (component execution results)
     """
     try:
         # Guard against null source
@@ -147,13 +156,15 @@ async def log_transaction(
             flow_id = UUID(flow_id)
 
         inputs = _vertex_to_primitive_dict(source) if source else None
-        outputs = _vertex_to_primitive_dict(target) if target else None
+        # Use explicit outputs if provided, otherwise derive from target vertex
+        target_outputs = _vertex_to_primitive_dict(target) if target else None
+        transaction_outputs = outputs if outputs is not None else target_outputs
 
         transaction = TransactionBase(
             vertex_id=source.id,
             target_id=target.id if target else None,
             inputs=inputs,
-            outputs=outputs,
+            outputs=transaction_outputs,
             status=status,
             error=str(error) if error else None,
             flow_id=flow_id,

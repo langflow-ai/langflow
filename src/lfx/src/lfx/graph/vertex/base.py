@@ -530,9 +530,10 @@ class Vertex:
         self,
         flow_id: str | UUID,
         source: Vertex,
-        status,
+        status: str,
         target: Vertex | None = None,
-        error=None,
+        error: str | Exception | None = None,
+        outputs: dict[str, Any] | None = None,
     ) -> None:
         """Log a transaction asynchronously.
 
@@ -542,15 +543,16 @@ class Vertex:
             status: Transaction status
             target: Optional target vertex
             error: Optional error information
+            outputs: Optional explicit outputs dict (component execution results)
         """
         try:
-            await log_transaction(flow_id, source, status, target, error)
+            await log_transaction(flow_id, source, status, target, error, outputs)
         except Exception as exc:  # noqa: BLE001
             logger.debug(f"Error logging transaction: {exc!s}")
 
     async def _get_result(
         self,
-        requester: Vertex,
+        requester: Vertex,  # noqa: ARG002
         target_handle_name: str | None = None,  # noqa: ARG002
     ) -> Any:
         """Retrieves the result of the built component.
@@ -769,7 +771,15 @@ class Vertex:
             # Log transaction after successful build
             flow_id = self.graph.flow_id
             if flow_id:
-                await self._log_transaction_async(str(flow_id), source=self, target=None, status="success")
+                # Extract outputs from outputs_logs for transaction logging
+                outputs_dict = None
+                if self.outputs_logs:
+                    outputs_dict = {
+                        k: v.model_dump() if hasattr(v, "model_dump") else v for k, v in self.outputs_logs.items()
+                    }
+                await self._log_transaction_async(
+                    str(flow_id), source=self, target=None, status="success", outputs=outputs_dict
+                )
 
         return await self.get_requester_result(requester)
 
