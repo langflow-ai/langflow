@@ -872,4 +872,3 @@ class TestMCPToolsIntegration:
             templates = search_templates(query=None, fields=["id", "tags"])
             tag_templates = [t for t in templates if tag in t.get("tags", [])]
             assert len(tag_templates) > 0, f"No templates found with tag: {tag}"
-
