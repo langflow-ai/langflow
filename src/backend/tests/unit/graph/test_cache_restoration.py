@@ -16,7 +16,7 @@ Reset vertex.built = False when cache restoration fails, so build()
 runs fully and sets vertex.result correctly.
 """
 
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
@@ -78,7 +78,7 @@ class TestCacheRestorationBuiltFlagReset:
             mock_vertex.finalize_build()
             if mock_vertex.result is not None:
                 mock_vertex.result.used_frozen_result = True
-        except Exception:  # noqa: BLE001
+        except Exception:
             mock_vertex.built = False  # This is the fix
             should_build = True
 
@@ -183,7 +183,7 @@ class TestCacheRestorationSuccessCase:
             mock_vertex_with_result.finalize_build()
             if mock_vertex_with_result.result is not None:
                 mock_vertex_with_result.result.used_frozen_result = True
-        except Exception:  # noqa: BLE001
+        except Exception:
             mock_vertex_with_result.built = False
             should_build = True
 
@@ -284,7 +284,7 @@ class TestCacheRestorationEdgeCases:
             should_build = False
             try:
                 vertex.finalize_build()
-            except Exception:  # noqa: BLE001
+            except Exception:
                 vertex.built = False
                 should_build = True
 
@@ -305,7 +305,7 @@ class TestCacheRestorationIntegration:
         graph.run_manager.add_to_vertices_being_run = Mock()
         return graph
 
-    def test_full_flow_with_finalize_build_failure(self, mock_graph):
+    def test_full_flow_with_finalize_build_failure(self):
         """Test the complete flow when finalize_build fails during cache restoration.
 
         This simulates the exact scenario that was causing the bug:
@@ -335,7 +335,8 @@ class TestCacheRestorationIntegration:
 
         # Simulate finalize_build failure
         def finalize_build_that_fails():
-            raise ValueError("Simulated finalize_build failure")
+            msg = "Simulated finalize_build failure"
+            raise ValueError(msg)
 
         vertex.finalize_build = finalize_build_that_fails
 
@@ -356,7 +357,7 @@ class TestCacheRestorationIntegration:
 
             try:
                 vertex.finalize_build()
-            except Exception:  # noqa: BLE001
+            except Exception:
                 vertex.built = False  # THE FIX
                 should_build = True
 
@@ -422,7 +423,7 @@ class TestCacheRestorationIntegration:
             vertex_run2.built = cached_vertex_dict["built"]  # Set to True
             try:
                 vertex_run2.finalize_build()
-            except Exception:  # noqa: BLE001
+            except Exception:
                 vertex_run2.built = False  # THE FIX - reset to False
                 should_build = True
 
