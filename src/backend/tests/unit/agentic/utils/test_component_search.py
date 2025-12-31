@@ -632,4 +632,3 @@ class TestPerformance:
             settings_service=settings_service,
         )
         assert isinstance(components, list)
-

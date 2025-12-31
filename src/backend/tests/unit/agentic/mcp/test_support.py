@@ -455,4 +455,3 @@ class TestEdgeCases:
         result = replace_none_and_null_with_empty_str(data)
 
         assert result[0]["name"] == long_string
-

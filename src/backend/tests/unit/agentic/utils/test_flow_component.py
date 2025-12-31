@@ -680,11 +680,7 @@ class TestEdgeCases:
             for node in nodes:
                 template = node.get("data", {}).get("node", {}).get("template", {})
                 for fname, fconfig in template.items():
-                    if (
-                        fname != "_type"
-                        and isinstance(fconfig, dict)
-                        and fconfig.get("type") in ["str", "string"]
-                    ):
+                    if fname != "_type" and isinstance(fconfig, dict) and fconfig.get("type") in ["str", "string"]:
                         component_id = node["id"]
                         field_name = fname
 
@@ -721,11 +717,7 @@ class TestEdgeCases:
             for node in nodes:
                 template = node.get("data", {}).get("node", {}).get("template", {})
                 for fname, fconfig in template.items():
-                    if (
-                        fname != "_type"
-                        and isinstance(fconfig, dict)
-                        and fconfig.get("type") in ["str", "string"]
-                    ):
+                    if fname != "_type" and isinstance(fconfig, dict) and fconfig.get("type") in ["str", "string"]:
                         component_id = node["id"]
                         field_name = fname
 
@@ -752,4 +744,3 @@ class TestEdgeCases:
 
         finally:
             await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
-
