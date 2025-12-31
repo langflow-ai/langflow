@@ -9,12 +9,11 @@ These tests use real flows, real database, and real OpenAI API keys where availa
 
 import json
 import os
+from contextlib import suppress
 
 import pytest
 from fastapi import status
 from langflow.services.database.models.flow.model import FlowCreate
-from langflow.services.database.models.variable.model import Variable
-from langflow.services.deps import session_scope
 
 
 # Check if OpenAI API key is available for integration tests
@@ -22,7 +21,7 @@ HAS_OPENAI_KEY = bool(os.environ.get("OPENAI_API_KEY"))
 
 
 @pytest.fixture
-async def openai_api_key_variable(client, logged_in_headers, active_user):
+async def openai_api_key_variable(client, logged_in_headers, active_user):  # noqa: ARG001
     """Create OPENAI_API_KEY global variable for the test user."""
     api_key = os.environ.get("OPENAI_API_KEY", "test-key-for-structure-tests")
 
@@ -39,10 +38,8 @@ async def openai_api_key_variable(client, logged_in_headers, active_user):
         variable = response.json()
         yield variable
         # Cleanup
-        try:
+        with suppress(Exception):
             await client.delete(f"api/v1/variables/{variable['id']}", headers=logged_in_headers)
-        except Exception:
-            pass
     else:
         # Variable might already exist
         yield {"name": "OPENAI_API_KEY"}
@@ -76,8 +73,9 @@ class TestAgenticPromptEndpoint:
         assert response.status_code in [status.HTTP_422_UNPROCESSABLE_ENTITY, status.HTTP_400_BAD_REQUEST]
 
     @pytest.mark.asyncio
+    @pytest.mark.api_key_required
     async def test_prompt_endpoint_with_flow(
-        self, client, logged_in_headers, active_user, json_chat_input, openai_api_key_variable
+        self, client, logged_in_headers, active_user, json_chat_input, openai_api_key_variable  # noqa: ARG002
     ):
         """Test prompt endpoint with a valid flow."""
         # Create a flow
@@ -111,8 +109,9 @@ class TestAgenticPromptEndpoint:
             await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
 
     @pytest.mark.asyncio
+    @pytest.mark.api_key_required
     async def test_prompt_endpoint_with_component_field(
-        self, client, logged_in_headers, active_user, json_chat_input, openai_api_key_variable
+        self, client, logged_in_headers, active_user, json_chat_input, openai_api_key_variable  # noqa: ARG002
     ):
         """Test prompt endpoint with component_id and field_name."""
         # Create a flow
@@ -158,9 +157,10 @@ class TestAgenticPromptEndpoint:
             await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
 
     @pytest.mark.asyncio
+    @pytest.mark.api_key_required
     @pytest.mark.skipif(not HAS_OPENAI_KEY, reason="OPENAI_API_KEY not set")
     async def test_prompt_endpoint_real_execution(
-        self, client, logged_in_headers, active_user, json_chat_input, openai_api_key_variable
+        self, client, logged_in_headers, active_user, json_chat_input, openai_api_key_variable  # noqa: ARG002
     ):
         """Test prompt endpoint with real OpenAI execution."""
         # Create a flow
@@ -217,7 +217,8 @@ class TestAgenticNextComponentEndpoint:
         assert response.status_code in [status.HTTP_422_UNPROCESSABLE_ENTITY, status.HTTP_400_BAD_REQUEST]
 
     @pytest.mark.asyncio
-    async def test_next_component_nonexistent_flow(self, client, logged_in_headers, openai_api_key_variable):
+    @pytest.mark.api_key_required
+    async def test_next_component_nonexistent_flow(self, client, logged_in_headers, openai_api_key_variable):  # noqa: ARG002
         """Test next_component with nonexistent flow file returns 404."""
         response = await client.post(
             "api/v1/agentic/next_component",
@@ -232,8 +233,9 @@ class TestAgenticNextComponentEndpoint:
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
     @pytest.mark.asyncio
+    @pytest.mark.api_key_required
     async def test_next_component_with_system_message_gen(
-        self, client, logged_in_headers, active_user, openai_api_key_variable
+        self, client, logged_in_headers, active_user, openai_api_key_variable  # noqa: ARG002
     ):
         """Test next_component with SystemMessageGen flow."""
         response = await client.post(
@@ -253,8 +255,9 @@ class TestAgenticNextComponentEndpoint:
         ]
 
     @pytest.mark.asyncio
+    @pytest.mark.api_key_required
     async def test_next_component_with_template_assistant(
-        self, client, logged_in_headers, active_user, openai_api_key_variable
+        self, client, logged_in_headers, active_user, openai_api_key_variable  # noqa: ARG002
     ):
         """Test next_component with TemplateAssistant flow."""
         response = await client.post(
@@ -273,8 +276,9 @@ class TestAgenticNextComponentEndpoint:
         ]
 
     @pytest.mark.asyncio
+    @pytest.mark.api_key_required
     async def test_next_component_with_component_id(
-        self, client, logged_in_headers, active_user, openai_api_key_variable
+        self, client, logged_in_headers, active_user, openai_api_key_variable  # noqa: ARG002
     ):
         """Test next_component with component_id parameter."""
         response = await client.post(
@@ -295,8 +299,9 @@ class TestAgenticNextComponentEndpoint:
         ]
 
     @pytest.mark.asyncio
+    @pytest.mark.api_key_required
     async def test_next_component_with_field_name(
-        self, client, logged_in_headers, active_user, openai_api_key_variable
+        self, client, logged_in_headers, active_user, openai_api_key_variable  # noqa: ARG002
     ):
         """Test next_component with field_name parameter."""
         response = await client.post(
@@ -321,7 +326,7 @@ class TestAgenticAPIErrorHandling:
     """Test error handling for Agentic API endpoints."""
 
     @pytest.mark.asyncio
-    async def test_prompt_missing_openai_key(self, client, logged_in_headers, active_user, json_chat_input):
+    async def test_prompt_missing_openai_key(self, client, logged_in_headers, active_user, json_chat_input):  # noqa: ARG002
         """Test that missing OPENAI_API_KEY returns appropriate error."""
         # Create flow without setting up OPENAI_API_KEY variable
         flow_data = json.loads(json_chat_input)
@@ -358,7 +363,8 @@ class TestAgenticAPIErrorHandling:
             await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
 
     @pytest.mark.asyncio
-    async def test_invalid_flow_id_format(self, client, logged_in_headers, openai_api_key_variable):
+    @pytest.mark.api_key_required
+    async def test_invalid_flow_id_format(self, client, logged_in_headers, openai_api_key_variable):  # noqa: ARG002
         """Test handling of invalid flow_id format."""
         response = await client.post(
             "api/v1/agentic/prompt",
@@ -381,7 +387,8 @@ class TestAgenticAPIRequestSchema:
     """Test the request schema for Agentic API endpoints."""
 
     @pytest.mark.asyncio
-    async def test_flow_request_all_fields(self, client, logged_in_headers, json_chat_input, openai_api_key_variable):
+    @pytest.mark.api_key_required
+    async def test_flow_request_all_fields(self, client, logged_in_headers, json_chat_input, openai_api_key_variable):  # noqa: ARG002
         """Test request with all FlowRequest fields."""
         flow_data = json.loads(json_chat_input)
         flow = FlowCreate(name="FullRequestTestFlow", description="Test", data=flow_data.get("data"))
@@ -415,7 +422,8 @@ class TestAgenticAPIRequestSchema:
             await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
 
     @pytest.mark.asyncio
-    async def test_flow_request_minimal(self, client, logged_in_headers, json_chat_input, openai_api_key_variable):
+    @pytest.mark.api_key_required
+    async def test_flow_request_minimal(self, client, logged_in_headers, json_chat_input, openai_api_key_variable):  # noqa: ARG002
         """Test request with minimal required fields."""
         flow_data = json.loads(json_chat_input)
         flow = FlowCreate(name="MinimalRequestTestFlow", description="Test", data=flow_data.get("data"))
@@ -444,7 +452,8 @@ class TestAgenticAPIRequestSchema:
             await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
 
     @pytest.mark.asyncio
-    async def test_empty_input_value(self, client, logged_in_headers, json_chat_input, openai_api_key_variable):
+    @pytest.mark.api_key_required
+    async def test_empty_input_value(self, client, logged_in_headers, json_chat_input, openai_api_key_variable):  # noqa: ARG002
         """Test request with empty input_value."""
         flow_data = json.loads(json_chat_input)
         flow = FlowCreate(name="EmptyInputTestFlow", description="Test", data=flow_data.get("data"))
@@ -478,8 +487,9 @@ class TestAgenticAPIIntegration:
     """Integration tests combining Agentic API with other Langflow features."""
 
     @pytest.mark.asyncio
+    @pytest.mark.api_key_required
     async def test_create_and_prompt_workflow(
-        self, client, logged_in_headers, active_user, json_chat_input, openai_api_key_variable
+        self, client, logged_in_headers, active_user, json_chat_input, openai_api_key_variable  # noqa: ARG002
     ):
         """Test complete workflow: create flow -> use agentic prompt."""
         # Step 1: Create a flow
@@ -512,8 +522,9 @@ class TestAgenticAPIIntegration:
             await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
 
     @pytest.mark.asyncio
+    @pytest.mark.api_key_required
     async def test_prompt_with_flow_endpoint_name(
-        self, client, logged_in_headers, active_user, json_chat_input, openai_api_key_variable
+        self, client, logged_in_headers, active_user, json_chat_input, openai_api_key_variable  # noqa: ARG002
     ):
         """Test using flow endpoint_name instead of ID."""
         flow_data = json.loads(json_chat_input)
@@ -551,9 +562,10 @@ class TestAgenticAPIIntegration:
             await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
 
     @pytest.mark.asyncio
+    @pytest.mark.api_key_required
     @pytest.mark.skipif(not HAS_OPENAI_KEY, reason="OPENAI_API_KEY not set")
     async def test_real_prompt_generation(
-        self, client, logged_in_headers, active_user, json_chat_input, openai_api_key_variable
+        self, client, logged_in_headers, active_user, json_chat_input, openai_api_key_variable  # noqa: ARG002
     ):
         """Test real prompt generation with actual OpenAI API call."""
         flow_data = json.loads(json_chat_input)
@@ -586,8 +598,9 @@ class TestAgenticAPIConcurrency:
     """Test concurrent requests to Agentic API endpoints."""
 
     @pytest.mark.asyncio
+    @pytest.mark.api_key_required
     async def test_multiple_sequential_requests(
-        self, client, logged_in_headers, json_chat_input, openai_api_key_variable
+        self, client, logged_in_headers, json_chat_input, openai_api_key_variable  # noqa: ARG002
     ):
         """Test multiple sequential requests to the same endpoint."""
         flow_data = json.loads(json_chat_input)
