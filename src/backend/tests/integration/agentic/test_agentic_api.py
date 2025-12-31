@@ -15,7 +15,6 @@ import pytest
 from fastapi import status
 from langflow.services.database.models.flow.model import FlowCreate
 
-
 # Check if OpenAI API key is available for integration tests
 HAS_OPENAI_KEY = bool(os.environ.get("OPENAI_API_KEY"))
 
@@ -75,7 +74,11 @@ class TestAgenticPromptEndpoint:
     @pytest.mark.asyncio
     @pytest.mark.api_key_required
     async def test_prompt_endpoint_with_flow(
-        self, client, logged_in_headers, json_chat_input, openai_api_key_variable  # noqa: ARG002
+        self,
+        client,
+        logged_in_headers,
+        json_chat_input,
+        openai_api_key_variable,  # noqa: ARG002
     ):
         """Test prompt endpoint with a valid flow."""
         # Create a flow
@@ -111,7 +114,11 @@ class TestAgenticPromptEndpoint:
     @pytest.mark.asyncio
     @pytest.mark.api_key_required
     async def test_prompt_endpoint_with_component_field(
-        self, client, logged_in_headers, json_chat_input, openai_api_key_variable  # noqa: ARG002
+        self,
+        client,
+        logged_in_headers,
+        json_chat_input,
+        openai_api_key_variable,  # noqa: ARG002
     ):
         """Test prompt endpoint with component_id and field_name."""
         # Create a flow
@@ -160,7 +167,11 @@ class TestAgenticPromptEndpoint:
     @pytest.mark.api_key_required
     @pytest.mark.skipif(not HAS_OPENAI_KEY, reason="OPENAI_API_KEY not set")
     async def test_prompt_endpoint_real_execution(
-        self, client, logged_in_headers, json_chat_input, openai_api_key_variable  # noqa: ARG002
+        self,
+        client,
+        logged_in_headers,
+        json_chat_input,
+        openai_api_key_variable,  # noqa: ARG002
     ):
         """Test prompt endpoint with real OpenAI execution."""
         # Create a flow
@@ -235,7 +246,10 @@ class TestAgenticNextComponentEndpoint:
     @pytest.mark.asyncio
     @pytest.mark.api_key_required
     async def test_next_component_with_system_message_gen(
-        self, client, logged_in_headers, openai_api_key_variable  # noqa: ARG002
+        self,
+        client,
+        logged_in_headers,
+        openai_api_key_variable,  # noqa: ARG002
     ):
         """Test next_component with SystemMessageGen flow."""
         response = await client.post(
@@ -257,7 +271,10 @@ class TestAgenticNextComponentEndpoint:
     @pytest.mark.asyncio
     @pytest.mark.api_key_required
     async def test_next_component_with_template_assistant(
-        self, client, logged_in_headers, openai_api_key_variable  # noqa: ARG002
+        self,
+        client,
+        logged_in_headers,
+        openai_api_key_variable,  # noqa: ARG002
     ):
         """Test next_component with TemplateAssistant flow."""
         response = await client.post(
@@ -278,7 +295,10 @@ class TestAgenticNextComponentEndpoint:
     @pytest.mark.asyncio
     @pytest.mark.api_key_required
     async def test_next_component_with_component_id(
-        self, client, logged_in_headers, openai_api_key_variable  # noqa: ARG002
+        self,
+        client,
+        logged_in_headers,
+        openai_api_key_variable,  # noqa: ARG002
     ):
         """Test next_component with component_id parameter."""
         response = await client.post(
@@ -301,7 +321,10 @@ class TestAgenticNextComponentEndpoint:
     @pytest.mark.asyncio
     @pytest.mark.api_key_required
     async def test_next_component_with_field_name(
-        self, client, logged_in_headers, openai_api_key_variable  # noqa: ARG002
+        self,
+        client,
+        logged_in_headers,
+        openai_api_key_variable,  # noqa: ARG002
     ):
         """Test next_component with field_name parameter."""
         response = await client.post(
@@ -489,7 +512,12 @@ class TestAgenticAPIIntegration:
     @pytest.mark.asyncio
     @pytest.mark.api_key_required
     async def test_create_and_prompt_workflow(
-        self, client, logged_in_headers, active_user, json_chat_input, openai_api_key_variable  # noqa: ARG002
+        self,
+        client,
+        logged_in_headers,
+        active_user,
+        json_chat_input,
+        openai_api_key_variable,  # noqa: ARG002
     ):
         """Test complete workflow: create flow -> use agentic prompt."""
         # Step 1: Create a flow
@@ -524,7 +552,11 @@ class TestAgenticAPIIntegration:
     @pytest.mark.asyncio
     @pytest.mark.api_key_required
     async def test_prompt_with_flow_endpoint_name(
-        self, client, logged_in_headers, json_chat_input, openai_api_key_variable  # noqa: ARG002
+        self,
+        client,
+        logged_in_headers,
+        json_chat_input,
+        openai_api_key_variable,  # noqa: ARG002
     ):
         """Test using flow endpoint_name instead of ID."""
         flow_data = json.loads(json_chat_input)
@@ -565,7 +597,11 @@ class TestAgenticAPIIntegration:
     @pytest.mark.api_key_required
     @pytest.mark.skipif(not HAS_OPENAI_KEY, reason="OPENAI_API_KEY not set")
     async def test_real_prompt_generation(
-        self, client, logged_in_headers, json_chat_input, openai_api_key_variable  # noqa: ARG002
+        self,
+        client,
+        logged_in_headers,
+        json_chat_input,
+        openai_api_key_variable,  # noqa: ARG002
     ):
         """Test real prompt generation with actual OpenAI API call."""
         flow_data = json.loads(json_chat_input)
@@ -600,7 +636,11 @@ class TestAgenticAPIConcurrency:
     @pytest.mark.asyncio
     @pytest.mark.api_key_required
     async def test_multiple_sequential_requests(
-        self, client, logged_in_headers, json_chat_input, openai_api_key_variable  # noqa: ARG002
+        self,
+        client,
+        logged_in_headers,
+        json_chat_input,
+        openai_api_key_variable,  # noqa: ARG002
     ):
         """Test multiple sequential requests to the same endpoint."""
         flow_data = json.loads(json_chat_input)
@@ -631,4 +671,3 @@ class TestAgenticAPIConcurrency:
 
         finally:
             await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
-
