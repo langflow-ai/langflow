@@ -225,6 +225,7 @@ class TestCacheRestorationEdgeCases:
         When: Checking if should build
         Then: should_build should be True
         """
+
         # Arrange
         class CacheMiss:
             pass
