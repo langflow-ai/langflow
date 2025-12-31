@@ -168,7 +168,7 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             tools=self.in_tools,
             llm=llm, 
             work_dir=toolguard_step1_dir,
-            short=True
+            short=False
         )
         logger.info(f"🔒️ToolGuard: Step 1 Done")
         return specs
