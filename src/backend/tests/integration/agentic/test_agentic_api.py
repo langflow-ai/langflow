@@ -512,7 +512,11 @@ class TestAgenticAPIIntegration:
     @pytest.mark.asyncio
     @pytest.mark.api_key_required
     async def test_create_and_prompt_workflow(
-        self, client, logged_in_headers, json_chat_input, openai_api_key_variable  # noqa: ARG002
+        self,
+        client,
+        logged_in_headers,
+        json_chat_input,
+        openai_api_key_variable,  # noqa: ARG002
     ):
         """Test complete workflow: create flow -> use agentic prompt."""
         # Step 1: Create a flow
