@@ -3,10 +3,16 @@ from langchain_core.messages import messages_from_dict
 from typing import Dict, List
 from langchain_core.language_models.chat_models import BaseChatModel
 
-class LangchainModelWrapper(LanguageModelBase):
+def _model_name(lc_model:BaseChatModel)->str|None:
+	if hasattr(lc_model, "model_name"): #eg. OpenAI
+		return lc_model.model_name
+	if hasattr(lc_model, "model"): #eg. Anthorpic
+		return lc_model.model
+	return None
 
+class LangchainModelWrapper(LanguageModelBase):
 	def __init__(self, langchain_model:BaseChatModel):
-		super().__init__(model_name = langchain_model.model_name) # type: ignore
+		super().__init__(model_name = _model_name(langchain_model)) 
 		self.langchain_model = langchain_model
 
 	async def generate(self, messages: List[Dict])->str:

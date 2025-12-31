@@ -129,13 +129,18 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
     ]
 
     def build_model(self) -> LanguageModel:
-        return get_llm(
+        logger.info(f"model={self.model}")
+        llm_model = get_llm(
             model=self.model,
-            user_id=None,
+            user_id=self.user_id,
             api_key=self.api_key,
             # temperature=self.temperature,
             stream=False,
         )
+        if llm_model is None:
+            msg = "No language model selected. Please choose a model to proceed."
+            raise ValueError(msg)
+        return llm_model
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         """Dynamically update build config with user-filtered model options."""
@@ -159,7 +164,7 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             tools=self.in_tools,
             llm=llm, 
             work_dir=toolguard_step1_dir,
-            short=True
+            short=False
         )
         logger.info(f"🔒️ToolGuard: Step 1 Done")
         return specs
