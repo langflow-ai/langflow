@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
-from sqlalchemy import ForeignKey, String, Text
+from sqlalchemy import ForeignKey
 from sqlmodel import JSON, Column, Field, Index, SQLModel, UniqueConstraint
 
 from langflow.schema.data import Data

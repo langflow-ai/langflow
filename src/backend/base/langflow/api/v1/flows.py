@@ -34,7 +34,6 @@ from langflow.services.database.models.flow.model import (
     FlowRead,
     FlowUpdate,
 )
-from langflow.services.database.models.flow.utils import get_webhook_component_in_flow
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import get_service, get_settings_service, get_storage_service
@@ -446,11 +445,8 @@ async def update_flow(
             await _verify_fs_path(update_data["fs_path"], current_user.id, storage_service)
 
         # save and checkpoint the flow
-        db_flow =await save_flow_checkpoint(
-            session=session,
-            user_id=current_user.id,
-            flow_id=flow_id,
-            update_data=update_data
+        db_flow = await save_flow_checkpoint(
+            session=session, user_id=current_user.id, flow_id=flow_id, update_data=update_data
         )
 
         await session.flush()
@@ -767,12 +763,7 @@ async def create_flow_checkpoint(
     flow: FlowUpdate,
 ):
     """Save a checkpoint of the flow."""
-    await save_flow_checkpoint(
-        session=None,
-        user_id=current_user.id,
-        flow_id=flow_id,
-        flow_data=flow.data
-        )
+    await save_flow_checkpoint(session=None, user_id=current_user.id, flow_id=flow_id, flow_data=flow.data)
 
 
 @router.post("/{flow_id}/versions/{version_id}")
