@@ -32,6 +32,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const [isLoading, setIsLoading] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const changesNotSaved =
     customStringify(currentFlow) !== customStringify(currentSavedFlow) &&
@@ -57,6 +58,12 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const { refreshAllModelInputs } = useRefreshModelInputs();
 
   const setAutoSaving = useFlowsManagerStore((state) => state.setAutoSaving);
+
+  useEffect(() => {
+    if (isInitialized && changesNotSaved && !autoSaving) {
+      setAutoSaving(true);
+    }
+  }, [changesNotSaved, autoSaving, setAutoSaving, isInitialized]);
 
   const handleSave = () => {
     let saving = true;
@@ -163,7 +170,18 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
     const shouldAutoSave = location.state?.autoSave ?? false;
     setAutoSaving(shouldAutoSave);
     setCurrentFlow(flow);
-    refreshAllModelInputs({ silent: true });
+    await refreshAllModelInputs({ silent: true });
+    // If the flow was updated during the refresh, update the current flow in the flows manager store
+    // to prevent the changesNotSaved to be true
+    // We add a timeout to allow the flow to settle before checking for changes
+    // This is to prevent auto-save from triggering immediately after load due to internal state changes
+    setTimeout(() => {
+      const currentFlow = useFlowStore.getState().currentFlow;
+      if (currentFlow) {
+        useFlowsManagerStore.setState({ currentFlow: currentFlow });
+      }
+      setIsInitialized(true);
+    }, 1000);
   };
 
   const isMobile = useIsMobile();

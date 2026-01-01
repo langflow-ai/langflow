@@ -445,7 +445,7 @@ async def update_flow(
         if "fs_path" in update_data:
             await _verify_fs_path(update_data["fs_path"], current_user.id, storage_service)
 
-        # save and checkpoint the flow and checkpoint it
+        # save and checkpoint the flow
         db_flow =await save_flow_checkpoint(
             session=session,
             user_id=current_user.id,
