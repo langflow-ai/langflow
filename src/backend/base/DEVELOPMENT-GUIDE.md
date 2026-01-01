@@ -1,52 +1,54 @@
 ## Flow versioning (checkpointing)
 
-Langflow uses `FlowVersion` to store immutable checkpoints of flow edits.
+Langflow uses `FlowVersion` to store snapshots of flow edits.
 
-When you mutate a flow (especially `Flow.data`, `Flow.name`, `Flow.description`), you must also create a checkpoint in the **same database session/transaction** as the flow update.
+When you mutate a flow (particularly `Flow.data`), you must use `save_flow_checkpoint`. This function handles both the checkpoint creation (if `Flow.data` changes) and the update of the Flow object in the database.
 
 ### Required
-**ALWAYS call `save_flow_checkpoint` BEFORE updating the database object.**
+**ALWAYS use `save_flow_checkpoint` to update flow data.**
+`save_flow_checkpoint` updates the Flow row in the database and creates a new checkpoint (if needed) in the FlowVersion table in a single transaction.
 
-`save_flow_checkpoint` works by comparing the *new data* you pass it against the *current data* in the database. If you update the database object first, the "old" data is lost (or the session sees the new data as the current data), and no change will be detected.
+`save_flow_checkpoint` compares the `update_data` you pass it against the *current data* in the database. It will:
+1. Fetch the current flow from the database.
+2. Compare the new data against the stored data.
+3. If `Flow.data` (the graph) has changed, create a new `FlowVersion` entry.
+4. Update the `Flow` object with the new values from `update_data`.
+5. Return the updated `Flow` object.
 
 ### Example: Updating a Flow
 
 #### ✅ DO THIS
-Create the checkpoint *before* applying changes to the DB object.
+Pass the session (optional), user ID, flow ID, and the dictionary of updates to `save_flow_checkpoint`.
 
 ```python
-# 1. Prepare your new data
-new_flow_data = {...}
-flow_update = FlowUpdate(data=new_flow_data)
+# 1. Prepare your new data (e.g. from a FlowUpdate model)
+# update_data = flow_update.model_dump(exclude_unset=True, exclude_none=True)
+update_data = {"data": {...}, "name": "New Name", "description": "New Desc"}
 
-# 2. Checkpoint FIRST (compares new_flow_data vs DB state)
-await save_flow_checkpoint(
+# 2. Checkpoint and Update
+# save_flow_checkpoint updates the Flow row and creates a checkpoint (if needed)
+# and returns the updated row in the Flow table
+db_flow = await save_flow_checkpoint(
     session=session,
-    flow_id=flow.id,
+    flow_id=flow_id,
     user_id=user.id,
-    flow=flow_update
+    update_data=update_data
 )
 
-# 3. Update the DB object
-flow.data = new_flow_data
-session.add(flow)
-await session.commit()
+# 3. Flush/Refresh if needed (e.g. to get updated timestamps or IDs)
+await session.flush()
+await session.refresh(db_flow)
 ```
 
 #### ❌ DO NOT DO THIS
-If you update the object first, SQLAlchemy may flush that change before the checkpoint query runs, making the DB look identical to your new data.
+Do not update the database object manually before calling checkpoint, and do not expect `save_flow_checkpoint` to only handle versioning without updating the flow. (save_flow_checkpoint does both).
 
 ```python
 # 1. Update the DB object first (BAD!)
 flow.data = new_flow_data
+session.add(flow)
 
-# 2. Checkpoint too late
-# The session now sees flow.data as the "current" state.
-# save_flow_checkpoint will compare new_flow_data vs new_flow_data -> No Change detected.
-await save_flow_checkpoint(
-    session=session,
-    flow_id=flow.id,
-    user_id=user.id,
-    flow=FlowUpdate(data=new_flow_data)
-)
+# 2. Checkpoint too late or with wrong arguments
+# The session might already see flow.data as the "current" state, missing the change.
+await save_flow_checkpoint(...)
 ```
