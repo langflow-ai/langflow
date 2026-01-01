@@ -15,6 +15,8 @@ import pytest
 from fastapi import status
 from langflow.services.database.models.flow.model import FlowCreate
 
+from tests.api_keys import has_api_key
+
 # Check if OpenAI API key is available for integration tests
 HAS_OPENAI_KEY = bool(os.environ.get("OPENAI_API_KEY"))
 
@@ -48,6 +50,7 @@ class TestAgenticPromptEndpoint:
     """Test cases for POST /agentic/prompt endpoint."""
 
     @pytest.mark.asyncio
+    @pytest.mark.skipif(not has_api_key("OPENAI_API_KEY"), reason="OPENAI_API_KEY not available in CI")
     async def test_prompt_endpoint_requires_auth(self, client):
         """Test that endpoint requires authentication."""
         response = await client.post(
@@ -59,6 +62,7 @@ class TestAgenticPromptEndpoint:
         assert response.status_code in [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
 
     @pytest.mark.asyncio
+    @pytest.mark.skipif(not has_api_key("OPENAI_API_KEY"), reason="OPENAI_API_KEY not available in CI")
     async def test_prompt_endpoint_validation(self, client, logged_in_headers):
         """Test endpoint request validation."""
         # Missing required field
@@ -207,6 +211,7 @@ class TestAgenticNextComponentEndpoint:
     """Test cases for POST /agentic/next_component endpoint."""
 
     @pytest.mark.asyncio
+    @pytest.mark.skipif(not has_api_key("OPENAI_API_KEY"), reason="OPENAI_API_KEY not available in CI")
     async def test_next_component_requires_auth(self, client):
         """Test that endpoint requires authentication."""
         response = await client.post(
@@ -217,6 +222,7 @@ class TestAgenticNextComponentEndpoint:
         assert response.status_code in [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
 
     @pytest.mark.asyncio
+    @pytest.mark.skipif(not has_api_key("OPENAI_API_KEY"), reason="OPENAI_API_KEY not available in CI")
     async def test_next_component_validation(self, client, logged_in_headers):
         """Test endpoint request validation."""
         response = await client.post(
