@@ -4,12 +4,15 @@ import contextlib
 import json
 from typing import TYPE_CHECKING
 
+import aioboto3
 from lfx.log.logger import logger
 
 from langflow.services.publish.service import PublishService
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
+
+aioboto3 = None
 
 
 class S3PublishService(PublishService):
@@ -18,11 +21,9 @@ class S3PublishService(PublishService):
         self.bucket_name = settings_service.settings.publish_backend_bucket_name
         self.session = None
 
-        try:
-            import aioboto3
-
+        if aioboto3 is not None:
             self.session = aioboto3.Session()
-        except ImportError:
+        else:
             logger.warning("aioboto3 not installed. S3 Publish service will not work.")
 
     @contextlib.asynccontextmanager
