@@ -55,7 +55,7 @@ class S3PublishService(PublishService):
 
         async with self._get_client() as client:
             await client.put_object(
-                IfNoneMatch="*", # prevent creating new s3 versions if the object already exists
+                IfNoneMatch="*",  # prevent creating new s3 versions if the object already exists
                 Bucket=self.bucket_name,
                 Key=key,
                 Body=flow_data,
@@ -100,7 +100,7 @@ class S3PublishService(PublishService):
 
         async with self._get_client() as client:
             await client.put_object(
-                IfNoneMatch="*", # prevent creating new s3 versions if the object already exists
+                IfNoneMatch="*",  # prevent creating new s3 versions if the object already exists
                 Bucket=self.bucket_name,
                 Key=key,
                 Body=project_data,
