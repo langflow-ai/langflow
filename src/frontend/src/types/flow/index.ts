@@ -38,14 +38,11 @@ export type FlowType = {
 
 export type FlowVersionDataType = {
   id: string;
-  flow_id: string;
   user_id: string;
-  version: number;
+  flow_id: string;
   flow_data: ReactFlowJsonObject<AllNodeType, EdgeType> | null;
-  flow_name: string;
-  flow_description: string;
+  version: number;
   created_at: string;
-  updated_at?: string;
 };
 
 // Backend returns FlowVersion wrapped in a Data object with FlowVersion key

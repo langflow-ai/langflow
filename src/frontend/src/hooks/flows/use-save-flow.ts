@@ -1,4 +1,5 @@
 import type { ReactFlowJsonObject } from "@xyflow/react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
 import useAlertStore from "@/stores/alertStore";
@@ -8,6 +9,7 @@ import type { AllNodeType, EdgeType, FlowType } from "@/types/flow";
 import { customStringify } from "@/utils/reactflowUtils";
 
 const useSaveFlow = () => {
+  const queryClient = useQueryClient();
   const setFlows = useFlowsManagerStore((state) => state.setFlows);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSaveLoading = useFlowsManagerStore((state) => state.setSaveLoading);
@@ -83,6 +85,9 @@ const useSaveFlow = () => {
               },
               {
                 onSuccess: (updatedFlow) => {
+                  queryClient.invalidateQueries({
+                    queryKey: ["useGetFlowVersionsQuery", updatedFlow.id],
+                  });
                   const flows = useFlowsManagerStore.getState().flows;
                   setSaveLoading(false);
                   if (flows) {

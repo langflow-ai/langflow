@@ -1,7 +1,6 @@
 
 from __future__ import annotations
 
-from contextlib import asynccontextmanager
 from copy import deepcopy
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
@@ -24,6 +23,7 @@ if TYPE_CHECKING:
 ########################################################
 # querying
 ########################################################
+# (constants to use for matching error messages upstream)
 FLOW_NOT_FOUND_ERROR_MSG = "Flow not found."
 FLOW_VERSION_NOT_FOUND_ERROR_MSG = "Flow version not found."
 
@@ -52,7 +52,7 @@ async def save_flow_checkpoint(
         If None, a new session will be created.
         user_id: The user ID of the user who the flow belongs to.
         flow_id: The flow ID of the flow to checkpoint.
-        update_data: The flow to save in the checkpoint.
+        update_data: The updated flow to save.
 
     Returns:
         None
@@ -107,7 +107,7 @@ async def _save_flow_checkpoint(
     if (
         "data" in update_data and
         normalized_flow_data(update_data["data"]) != normalized_flow_data(db_flow.data)
-        ): # note (that) None and {} (empty dict) are acceptable values for flow data
+        ): # note that None and {} (empty dict) are acceptable values for flow data
         db_flow.latest_version += 1
         session.add(
             FlowVersion(
@@ -211,7 +211,7 @@ EXCLUDE_EDGE_KEYS = {
 
 def normalized_flow_data(flow_data: dict | None):
     """Filters a deepcopy of flow data to exclude transient state."""
-    copy_flow_data = deepcopy(flow_data)
+    copy_flow_data = deepcopy(flow_data) # prevent modifying database items
     if copy_flow_data:
         copy_flow_data.pop("viewport", None)
         copy_flow_data.pop("chatHistory", None)
@@ -265,11 +265,13 @@ def require_user_and_flow_ids(
     user_id: str | UUID | None,
     flow_id: str | UUID | None,
     ):
+    """Raise a ValueError if user_id or flow_id is not provided."""
     if not (user_id and flow_id):
         raise ValueError(MISSING_USER_OR_FLOW_ID_MSG)
 
 
 def require_proper_version(version : int | None):
+    """Raise a ValueError if version is not provided or is not a positive integer."""
     if not (version and version > -1):
         raise ValueError(IMPROPER_VERSION_NUMBER_MSG)
 
