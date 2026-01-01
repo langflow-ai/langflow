@@ -33,7 +33,7 @@ async def save_flow_checkpoint(
     user_id: str | UUID | None = None,
     flow_id: str | UUID | None = None,
     update_data: dict | None = None
-    ) -> None:
+    ) -> Flow | None:
     """Save a flow in the Flow table and create a checkpoint in the FlowVersion table.
 
     This function updates the provided flow's
@@ -55,7 +55,7 @@ async def save_flow_checkpoint(
         update_data: The updated flow to save.
 
     Returns:
-        None
+        Flow | None: The updated flow if successful, otherwise None.
     """
     require_user_and_flow_ids(user_id, flow_id)
 
