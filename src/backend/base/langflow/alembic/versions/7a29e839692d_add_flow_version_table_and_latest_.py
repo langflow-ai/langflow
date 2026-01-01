@@ -1,8 +1,9 @@
-"""
-
-Revision ID: 45be58e82fb0
+"""add flow_version table, and latest_version column to flow table
+Migration: Add flow_version table and latest_version column to flow table
+Phase: EXPAND
+Revision ID: 7a29e839692d
 Revises: 182e5471b900
-Create Date: 2025-12-31 20:26:26.370421
+Create Date: 2026-01-01 02:34:06.352999
 
 """
 from typing import Sequence, Union
@@ -15,7 +16,7 @@ from langflow.utils import migration
 
 
 # revision identifiers, used by Alembic.
-revision: str = '45be58e82fb0'
+revision: str = '7a29e839692d'
 down_revision: Union[str, None] = '182e5471b900'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
