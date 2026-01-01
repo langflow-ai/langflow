@@ -6,7 +6,7 @@ When you mutate a flow (particularly `Flow.data`), you must use `save_flow_check
 
 ### Required
 **ALWAYS use `save_flow_checkpoint` to update flow data.**
-`save_flow_checkpoint` updates the Flow row in the database and creates a new checkpoint (if needed) in the FlowVersion table in a single transaction.
+`save_flow_checkpoint` updates the Flow row in the database and creates a new checkpoint (if needed) in the FlowVersion table in the same transaction.
 
 `save_flow_checkpoint` compares the `update_data` you pass it against the *current data* in the database. It will:
 1. Fetch the current flow from the database.
