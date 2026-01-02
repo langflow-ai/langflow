@@ -829,3 +829,161 @@ class TestEdgeCases:
 
                 claims = jwt.get_unverified_claims(token)
                 assert claims["sub"] == long_user_id
+
+
+class TestJWTKeyHelpers:
+    """Test JWT key helper functions."""
+
+    def _create_mock_settings_service(self, algorithm, tmpdir):
+        """Helper to create mock settings service."""
+        from lfx.services.settings.auth import AuthSettings
+
+        settings = AuthSettings(CONFIG_DIR=tmpdir, ALGORITHM=algorithm)
+
+        mock_service = MagicMock()
+        mock_service.auth_settings = settings
+        return mock_service
+
+    def test_get_jwt_verification_key_hs256_returns_secret_key(self):
+        """HS256 should return secret key for verification."""
+        from langflow.services.auth.utils import get_jwt_verification_key
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mock_service = self._create_mock_settings_service("HS256", tmpdir)
+
+            key = get_jwt_verification_key(mock_service)
+
+            assert key == mock_service.auth_settings.SECRET_KEY.get_secret_value()
+            assert len(key) >= 32
+
+    def test_get_jwt_verification_key_rs256_returns_public_key(self):
+        """RS256 should return public key for verification."""
+        from langflow.services.auth.utils import get_jwt_verification_key
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mock_service = self._create_mock_settings_service("RS256", tmpdir)
+
+            key = get_jwt_verification_key(mock_service)
+
+            assert key == mock_service.auth_settings.PUBLIC_KEY
+            assert "-----BEGIN PUBLIC KEY-----" in key
+
+    def test_get_jwt_verification_key_rs512_returns_public_key(self):
+        """RS512 should return public key for verification."""
+        from langflow.services.auth.utils import get_jwt_verification_key
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mock_service = self._create_mock_settings_service("RS512", tmpdir)
+
+            key = get_jwt_verification_key(mock_service)
+
+            assert key == mock_service.auth_settings.PUBLIC_KEY
+            assert "-----BEGIN PUBLIC KEY-----" in key
+
+    def test_get_jwt_verification_key_missing_public_key_raises_error(self):
+        """Missing public key for asymmetric algorithm should raise JWTKeyError."""
+        from langflow.services.auth.utils import JWTKeyError, get_jwt_verification_key
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mock_service = self._create_mock_settings_service("RS256", tmpdir)
+            object.__setattr__(mock_service.auth_settings, "PUBLIC_KEY", "")
+
+            with pytest.raises(JWTKeyError) as exc_info:
+                get_jwt_verification_key(mock_service)
+
+            assert exc_info.value.status_code == 401
+            assert "Public key not configured" in exc_info.value.detail
+
+    def test_get_jwt_verification_key_missing_secret_key_raises_error(self):
+        """Missing secret key for HS256 should raise JWTKeyError."""
+        from langflow.services.auth.utils import JWTKeyError, get_jwt_verification_key
+        from lfx.services.settings.auth import JWTAlgorithm
+
+        mock_auth_settings = MagicMock()
+        mock_auth_settings.ALGORITHM = JWTAlgorithm.HS256
+        mock_auth_settings.SECRET_KEY = MagicMock()
+        mock_auth_settings.SECRET_KEY.get_secret_value.return_value = None
+
+        mock_service = MagicMock()
+        mock_service.auth_settings = mock_auth_settings
+
+        with pytest.raises(JWTKeyError) as exc_info:
+            get_jwt_verification_key(mock_service)
+
+        assert exc_info.value.status_code == 401
+        assert "Secret key not configured" in exc_info.value.detail
+
+    def test_get_jwt_signing_key_hs256_returns_secret_key(self):
+        """HS256 should return secret key for signing."""
+        from langflow.services.auth.utils import get_jwt_signing_key
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mock_service = self._create_mock_settings_service("HS256", tmpdir)
+
+            key = get_jwt_signing_key(mock_service)
+
+            assert key == mock_service.auth_settings.SECRET_KEY.get_secret_value()
+
+    def test_get_jwt_signing_key_rs256_returns_private_key(self):
+        """RS256 should return private key for signing."""
+        from langflow.services.auth.utils import get_jwt_signing_key
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mock_service = self._create_mock_settings_service("RS256", tmpdir)
+
+            key = get_jwt_signing_key(mock_service)
+
+            assert key == mock_service.auth_settings.PRIVATE_KEY.get_secret_value()
+            assert "-----BEGIN PRIVATE KEY-----" in key
+
+    def test_get_jwt_signing_key_rs512_returns_private_key(self):
+        """RS512 should return private key for signing."""
+        from langflow.services.auth.utils import get_jwt_signing_key
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mock_service = self._create_mock_settings_service("RS512", tmpdir)
+
+            key = get_jwt_signing_key(mock_service)
+
+            assert key == mock_service.auth_settings.PRIVATE_KEY.get_secret_value()
+            assert "-----BEGIN PRIVATE KEY-----" in key
+
+    def test_verification_and_signing_keys_work_together_hs256(self):
+        """Verification and signing keys should work together for HS256."""
+        from langflow.services.auth.utils import get_jwt_signing_key, get_jwt_verification_key
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mock_service = self._create_mock_settings_service("HS256", tmpdir)
+
+            signing_key = get_jwt_signing_key(mock_service)
+            verification_key = get_jwt_verification_key(mock_service)
+
+            # For symmetric algorithms, both keys are the same
+            assert signing_key == verification_key
+
+            # Sign and verify a token
+            payload = {"sub": "test-user", "type": "access"}
+            token = jwt.encode(payload, signing_key, algorithm="HS256")
+            decoded = jwt.decode(token, verification_key, algorithms=["HS256"])
+
+            assert decoded["sub"] == "test-user"
+
+    def test_verification_and_signing_keys_work_together_rs256(self):
+        """Verification and signing keys should work together for RS256."""
+        from langflow.services.auth.utils import get_jwt_signing_key, get_jwt_verification_key
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mock_service = self._create_mock_settings_service("RS256", tmpdir)
+
+            signing_key = get_jwt_signing_key(mock_service)
+            verification_key = get_jwt_verification_key(mock_service)
+
+            # For asymmetric algorithms, keys are different
+            assert signing_key != verification_key
+
+            # Sign and verify a token
+            payload = {"sub": "test-user", "type": "access"}
+            token = jwt.encode(payload, signing_key, algorithm="RS256")
+            decoded = jwt.decode(token, verification_key, algorithms=["RS256"])
+
+            assert decoded["sub"] == "test-user"

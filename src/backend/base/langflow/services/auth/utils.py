@@ -45,6 +45,56 @@ REFRESH_TOKEN_TYPE: Final[str] = "refresh"  # noqa: S105
 ACCESS_TOKEN_TYPE: Final[str] = "access"  # noqa: S105
 
 
+class JWTKeyError(HTTPException):
+    """Raised when JWT key configuration is invalid."""
+
+    def __init__(self, detail: str, *, include_www_authenticate: bool = True):
+        headers = {"WWW-Authenticate": "Bearer"} if include_www_authenticate else None
+        super().__init__(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=detail,
+            headers=headers,
+        )
+
+
+def get_jwt_verification_key(settings_service: SettingsService) -> str:
+    """Get the appropriate key for JWT verification based on configured algorithm.
+
+    For asymmetric algorithms (RS256, RS512): returns public key
+    For symmetric algorithms (HS256): returns secret key
+    """
+    algorithm = settings_service.auth_settings.ALGORITHM
+
+    if algorithm.is_asymmetric():
+        verification_key = settings_service.auth_settings.PUBLIC_KEY
+        if not verification_key:
+            logger.error("Public key is not set in settings for RS256/RS512.")
+            raise JWTKeyError(
+                "Server configuration error: Public key not configured for asymmetric JWT algorithm."
+            )
+        return verification_key
+
+    secret_key = settings_service.auth_settings.SECRET_KEY.get_secret_value()
+    if secret_key is None:
+        logger.error("Secret key is not set in settings.")
+        raise JWTKeyError("Server configuration error: Secret key not configured.")
+    return secret_key
+
+
+def get_jwt_signing_key(settings_service: SettingsService) -> str:
+    """Get the appropriate key for JWT signing based on configured algorithm.
+
+    For asymmetric algorithms (RS256, RS512): returns private key
+    For symmetric algorithms (HS256): returns secret key
+    """
+    algorithm = settings_service.auth_settings.ALGORITHM
+
+    if algorithm.is_asymmetric():
+        return settings_service.auth_settings.PRIVATE_KEY.get_secret_value()
+
+    return settings_service.auth_settings.SECRET_KEY.get_secret_value()
+
+
 # Source: https://github.com/mrtolkien/fastapi_simple_security/blob/master/fastapi_simple_security/security_api_key.py
 async def api_key_security(
     query_param: Annotated[str, Security(api_key_query)],
@@ -173,26 +223,7 @@ async def get_current_user_by_jwt(
         token = await token
 
     algorithm = settings_service.auth_settings.ALGORITHM
-
-    # Use appropriate key based on algorithm
-    if algorithm.is_asymmetric():
-        verification_key = settings_service.auth_settings.PUBLIC_KEY
-        if not verification_key:
-            logger.error("Public key is not set in settings for RS256/RS512.")
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Server configuration error: Public key not configured for asymmetric JWT algorithm.",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-    else:
-        verification_key = settings_service.auth_settings.SECRET_KEY.get_secret_value()
-        if verification_key is None:
-            logger.error("Secret key is not set in settings.")
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Server configuration error: Secret key not configured.",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
+    verification_key = get_jwt_verification_key(settings_service)
 
     try:
         with warnings.catch_warnings():
@@ -377,12 +408,7 @@ def create_token(data: dict, expires_delta: timedelta):
     to_encode["exp"] = expire
 
     algorithm = settings_service.auth_settings.ALGORITHM
-
-    # Use appropriate key based on algorithm
-    if algorithm.is_asymmetric():
-        signing_key = settings_service.auth_settings.PRIVATE_KEY.get_secret_value()
-    else:
-        signing_key = settings_service.auth_settings.SECRET_KEY.get_secret_value()
+    signing_key = get_jwt_signing_key(settings_service)
 
     return jwt.encode(
         to_encode,
@@ -505,24 +531,7 @@ async def create_refresh_token(refresh_token: str, db: AsyncSession):
     settings_service = get_settings_service()
 
     algorithm = settings_service.auth_settings.ALGORITHM
-
-    # Use appropriate key based on algorithm
-    if algorithm.is_asymmetric():
-        verification_key = settings_service.auth_settings.PUBLIC_KEY
-        if not verification_key:
-            logger.error("Public key is not set in settings for RS256/RS512.")
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Server configuration error: Public key not configured for asymmetric JWT algorithm.",
-            )
-    else:
-        verification_key = settings_service.auth_settings.SECRET_KEY.get_secret_value()
-        if verification_key is None:
-            logger.error("Secret key is not set in settings.")
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Server configuration error: Secret key not configured.",
-            )
+    verification_key = get_jwt_verification_key(settings_service)
 
     try:
         # Ignore warning about datetime.utcnow
