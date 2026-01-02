@@ -80,8 +80,6 @@ export function AuthProvider({ children }): React.ReactElement {
 
     let userLoaded = false;
     let variablesLoaded = false;
-    let retryCount = 0;
-    const MAX_RETRIES = 20;
 
     const checkAndSetAuthenticated = () => {
       if (userLoaded && variablesLoaded) {

@@ -207,7 +207,6 @@ function ApiInterceptor() {
       onSuccess: async () => {
         setAuthenticationErrorCount(0);
         await remakeRequest(error);
-        setAuthenticationErrorCount(0);
       },
       onError: (error) => {
         console.error(error);

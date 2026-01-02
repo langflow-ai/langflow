@@ -28,6 +28,7 @@ export const useGetAuthSession: useQueryFunctionType<
       return response.data;
     } catch (error) {
       // If the endpoint fails, return unauthenticated
+      console.error("Session validation error:", error);
       return { authenticated: false };
     }
   }

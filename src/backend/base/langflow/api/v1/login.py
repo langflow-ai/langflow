@@ -42,9 +42,12 @@ async def login_to_get_access_token(
     except Exception as exc:
         if isinstance(exc, HTTPException):
             raise
+        # Log the actual error server-side but don't expose it to clients
+        from loguru import logger
+        logger.error(f"Authentication error: {exc}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(exc),
+            detail="An error occurred during authentication",
         ) from exc
 
     if user:
