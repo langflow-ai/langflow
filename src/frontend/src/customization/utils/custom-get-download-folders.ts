@@ -1,4 +1,4 @@
-import { AxiosRequestConfig, ResponseType } from "axios";
+import type { AxiosRequestConfig, ResponseType } from "axios";
 import { track } from "./analytics";
 
 export const customGetDownloadTypeFolders = (): AxiosRequestConfig => {
@@ -29,7 +29,7 @@ export const customGetDownloadFolderBlob = (
   const filename =
     response.headers?.["content-disposition"]
       ?.split("filename=")[1]
-      ?.replace(/['"]/g, "") ?? "flows.zip";
+      ?.replace(/['"]/g, "") ?? `${folderName || "flows"}.zip`;
 
   link.setAttribute("download", filename);
   document.body.appendChild(link);

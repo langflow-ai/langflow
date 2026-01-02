@@ -1,11 +1,11 @@
 from textwrap import dedent
 
-from langflow.components.data import URLComponent
-from langflow.components.input_output import ChatOutput, TextInputComponent
-from langflow.components.languagemodels import OpenAIModelComponent
-from langflow.components.processing import ParserComponent
-from langflow.components.prompts import PromptComponent
-from langflow.graph import Graph
+from lfx.components.data import URLComponent
+from lfx.components.input_output import ChatOutput, TextInputComponent
+from lfx.components.models_and_agents import PromptComponent
+from lfx.components.openai.openai_chat_model import OpenAIModelComponent
+from lfx.components.processing import ParserComponent
+from lfx.graph import Graph
 
 
 def blog_writer_graph(template: str | None = None):

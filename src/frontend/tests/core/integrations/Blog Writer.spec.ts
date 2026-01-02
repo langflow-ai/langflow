@@ -1,6 +1,6 @@
-import { test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
@@ -47,7 +47,9 @@ withEventDeliveryModes(
 
     await page.getByTestId("button_run_chat output").click();
 
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForSelector("text=built successfully", {
+      timeout: 30000 * 3,
+    });
 
     await page.getByRole("button", { name: "Playground", exact: true }).click();
     await page

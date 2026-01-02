@@ -1,4 +1,4 @@
-import { GlobalVariable } from "@/types/global_variables";
+import type { GlobalVariable } from "@/types/global_variables";
 
 export type GlobalVariablesStore = {
   globalVariablesEntries: Array<string> | undefined;

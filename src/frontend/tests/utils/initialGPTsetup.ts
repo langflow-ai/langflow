@@ -1,4 +1,4 @@
-import { Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 import { addNewApiKeys } from "./add-new-api-keys";
 import { adjustScreenView } from "./adjust-screen-view";
 import { removeOldApiKeys } from "./remove-old-api-keys";

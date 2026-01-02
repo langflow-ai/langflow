@@ -1,6 +1,6 @@
 import { keepPreviousData } from "@tanstack/react-query";
-import { ColDef, ColGroupDef } from "ag-grid-community";
-import { useQueryFunctionType } from "../../../../types/api";
+import type { ColDef, ColGroupDef } from "ag-grid-community";
+import type { useQueryFunctionType } from "../../../../types/api";
 import { extractColumnsFromRows } from "../../../../utils/utils";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";

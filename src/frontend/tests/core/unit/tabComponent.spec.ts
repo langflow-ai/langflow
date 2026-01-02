@@ -1,4 +1,6 @@
-import { expect, Page, test } from "@playwright/test";
+import { type Page } from "@playwright/test";
+import { expect, test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
@@ -20,8 +22,7 @@ test(
     );
 
     await page.getByTestId("sidebar-custom-component-button").click();
-    await page.getByTitle("fit view").click();
-    await page.getByTitle("zoom out").click();
+    await adjustScreenView(page, { numberOfZoomOut: 1 });
 
     await page.getByTestId("title-Custom Component").first().click();
 
@@ -63,13 +64,7 @@ test(
     await page.keyboard.press("Backspace");
     await page.locator("textarea").last().fill(cleanCode);
     await page.locator('//*[@id="checkAndSaveBtn"]').click();
-
-    await page.waitForSelector('[data-testid="fit_view"]', {
-      timeout: 3000,
-    });
-
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("zoom_out").click();
+    await adjustScreenView(page, { numberOfZoomOut: 1 });
 
     // Verify that all tabs are visible
     expect(await page.getByText("Tab 1").isVisible()).toBeTruthy();
@@ -111,7 +106,7 @@ async function extractAndCleanCode(page: Page): Promise<string> {
     throw new Error("Could not find value attribute in the HTML");
   }
 
-  let codeContent = valueMatch[1]
+  const codeContent = valueMatch[1]
     .replace(/&quot;/g, '"')
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
@@ -133,7 +128,7 @@ function updateComponentCode(
 
   // Update imports
   if (updates.imports) {
-    const importPattern = /from\s+langflow\.io\s+import\s+([^;\n]+)/;
+    const importPattern = /from\s+lfx\.io\s+import\s+([^;\n]+)/;
     const newImports = updates.imports.join(", ");
     updatedCode = updatedCode.replace(
       importPattern,

@@ -1,6 +1,6 @@
 import {
   VoiceAssistant,
-  VoiceAssistantProps,
+  type VoiceAssistantProps,
 } from "@/modals/IOModal/components/chatView/chatInput/components/voice-assistant/voice-assistant";
 
 export function CustomVoiceAssistant({

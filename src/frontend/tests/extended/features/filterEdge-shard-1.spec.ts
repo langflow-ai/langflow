@@ -1,8 +1,20 @@
-import { expect, test } from "@playwright/test";
-import { addFlowToTestOnEmptyLangflow } from "../../utils/add-flow-to-test-on-empty-langflow";
+import type { Locator } from "@playwright/test";
+
+import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+
+async function findVisibleElement(
+  elements: Locator[],
+): Promise<Locator | undefined> {
+  for (const element of elements) {
+    if (await element.isVisible()) {
+      return element;
+    }
+  }
+  return undefined;
+}
 
 test(
   "user must see on handle click the possibility connections - RetrievalQA",
@@ -38,17 +50,14 @@ test(
     await page.mouse.down();
 
     await adjustScreenView(page);
-    let visibleElementHandle;
 
     const outputElements = await page
       .getByTestId("handle-retrievalqa-shownode-text-right")
       .all();
 
-    for (const element of outputElements) {
-      if (await element.isVisible()) {
-        visibleElementHandle = element;
-        break;
-      }
+    let visibleElementHandle = await findVisibleElement(outputElements);
+    if (!visibleElementHandle) {
+      throw new Error("Output handle not visible");
     }
 
     await visibleElementHandle.click({
@@ -56,14 +65,14 @@ test(
     });
 
     const disclosureTestIds = [
-      "disclosure-i/o",
-      "disclosure-data",
-      "disclosure-models",
-      "disclosure-helpers",
-      "disclosure-vector stores",
-      "disclosure-agents",
-      "disclosure-logic",
-      "disclosure-tools",
+      "disclosure-input & output",
+      "disclosure-data sources",
+      "disclosure-models & agents",
+      "disclosure-llm operations",
+      "disclosure-files",
+      "disclosure-processing",
+      "disclosure-flow control",
+      "disclosure-utilities",
       "disclosure-bundles-langchain",
       "disclosure-bundles-assemblyai",
       "disclosure-bundles-datastax",
@@ -71,14 +80,13 @@ test(
 
     const elementTestIds = [
       "input_outputChat Output",
-      "dataAPI Request",
-      "vectorstoresAstra DB",
+      "data_sourceAPI Request",
       "langchain_utilitiesTool Calling Agent",
       "langchain_utilitiesConversationChain",
-      "memoriesMem0 Chat Memory",
-      "logicCondition",
+      "mem0Mem0 Chat Memory",
+      "flow_controlsCondition",
       "langchain_utilitiesSelf Query Retriever",
-      "langchain_utilitiesCharacterTextSplitter",
+      "langchain_utilitiesCharacter Text Splitter",
     ];
 
     await Promise.all(
@@ -91,33 +99,25 @@ test(
     );
 
     await Promise.all(
-      elementTestIds.map((id) => {
+      elementTestIds.map(async (id) => {
         if (!expect(page.getByTestId(id).first()).toBeVisible()) {
           console.error(`${id} is not visible`);
         }
+        return expect(page.getByTestId(id).first()).toBeVisible();
       }),
     );
 
     await page.getByTestId("sidebar-search-input").click();
 
     const visibleModelSpecsTestIds = [
-      "languagemodelsAIML",
-      "languagemodelsAnthropic",
-      "languagemodelsAzure OpenAI",
-      "languagemodelsCohere",
-      "languagemodelsGoogle Generative AI",
-      "languagemodelsGroq",
-      "languagemodelsHuggingFace",
-      "languagemodelsLM Studio",
-      "languagemodelsMaritalk",
-      "languagemodelsMistralAI",
-      "languagemodelsNVIDIA",
-      "languagemodelsOllama",
-      "languagemodelsOpenAI",
-      "languagemodelsPerplexity",
-      "languagemodelsQianfan",
-      "languagemodelsSambaNova",
-      "languagemodelsVertex AI",
+      "cohereCohere Language Models",
+      "groqGroq",
+      "lmstudioLM Studio",
+      "maritalkMariTalk",
+      "perplexityPerplexity",
+      "baiduQianfan",
+      "sambanovaSambaNova",
+      "xaixAI",
     ];
 
     await Promise.all(
@@ -133,11 +133,9 @@ test(
       .getByTestId("handle-retrievalqa-shownode-llm-left")
       .all();
 
-    for (const element of chainInputElements1) {
-      if (await element.isVisible()) {
-        visibleElementHandle = element;
-        break;
-      }
+    const llmHandle = await findVisibleElement(chainInputElements1);
+    if (llmHandle) {
+      visibleElementHandle = llmHandle;
     }
 
     await visibleElementHandle.blur();
@@ -146,23 +144,21 @@ test(
       force: true,
     });
 
-    await expect(page.getByTestId("disclosure-models")).toBeVisible();
+    await expect(page.getByTestId("disclosure-models & agents")).toBeVisible();
 
     const rqaChainInputElements0 = await page
       .getByTestId("handle-retrievalqa-shownode-template-left")
       .all();
 
-    for (const element of rqaChainInputElements0) {
-      if (await element.isVisible()) {
-        visibleElementHandle = element;
-        break;
-      }
+    const templateHandle = await findVisibleElement(rqaChainInputElements0);
+    if (templateHandle) {
+      visibleElementHandle = templateHandle;
     }
 
     await visibleElementHandle.click();
 
-    await expect(page.getByTestId("disclosure-helpers")).toBeVisible();
-    await expect(page.getByTestId("disclosure-agents")).toBeVisible();
-    await expect(page.getByTestId("disclosure-logic")).toBeVisible();
+    await expect(page.getByTestId("disclosure-input & output")).toBeVisible();
+    await expect(page.getByTestId("disclosure-data sources")).toBeVisible();
+    await expect(page.getByTestId("disclosure-models & agents")).toBeVisible();
   },
 );

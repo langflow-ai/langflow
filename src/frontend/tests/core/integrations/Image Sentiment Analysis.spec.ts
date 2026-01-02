@@ -1,7 +1,8 @@
-import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import { readFileSync } from "fs";
 import path from "path";
+import { expect, test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { buildDataTransfer } from "../../utils/build-data-transfer";
 import { getAllResponseMessage } from "../../utils/get-all-response-message";
@@ -31,11 +32,7 @@ withEventDeliveryModes(
       .last()
       .click();
 
-    await page.waitForSelector('[data-testid="fit_view"]', {
-      timeout: 100000,
-    });
-
-    await page.getByTestId("fit_view").click();
+    await adjustScreenView(page);
 
     await initialGPTsetup(page);
 

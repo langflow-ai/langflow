@@ -1,0 +1,338 @@
+const SvgDocling = (props) => (
+  <svg
+    width="1em"
+    height="1em"
+    viewBox="0 0 1024 1024"
+    style={{
+      fillRule: "evenodd",
+      clipRule: "evenodd",
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      strokeMiterlimit: 1.5,
+    }}
+    {...props}
+  >
+    <g id="Docling" transform="matrix(1.07666,0,0,1.07666,-35.9018,-84.1562)">
+      <g id="Outline" transform="matrix(1,0,0,1,-0.429741,55.0879)">
+        <path
+          d="M394.709,69.09C417.34,35.077 467.97,30.178 478.031,55.609C486.35,55.043 494.726,54.701 503.158,54.589C533.157,45.238 560.496,47.419 584.65,60.732C800.941,96.66 966.069,284.814 966.069,511.232C966.069,763.284 761.435,967.918 509.383,967.918C433.692,967.918 362.277,949.464 299.385,916.808L242.3,931.993C203.092,943.242 187.715,928.369 208.575,891.871C208.935,891.24 216.518,879.37 223.997,867.677C119.604,783.975 52.698,655.355 52.698,511.232C52.698,298.778 198.086,120.013 394.709,69.09Z"
+          style={{ fill: "white" }}
+        />
+      </g>
+      <g id="Color" transform="matrix(1.02317,0,0,1.02317,-11.55,-17.8333)">
+        <path
+          d="M284.8,894.232L179.735,783.955L130.222,645.203L125.538,504.726L185.211,385.816C209.006,322.738 249.951,278.973 302.281,248.028L406.684,203.333L413.483,175.767L436.637,152.428L451.408,153.312L457.726,183.183L485.164,165.379L526.92,159.699L557.014,177.545L612.652,211.018C679.009,226.066 740.505,264.146 797.138,325.26L862.813,423.477L891.583,560.826L883.273,683.32L814.268,809.924L734.431,894.384L644.495,926.906L497.146,954.121L361.064,940.647L284.8,894.232Z"
+          style={{ fill: "url(#_Linear1)" }}
+        />
+        <path
+          d="M699.932,887.255L634.427,825.291L597.884,782.352L594.906,738.956L610.14,709.396L643.207,699.954L685,710.111L730.425,736.425L765.204,778.79L775.166,849.531L719.381,894.082L699.932,887.255Z"
+          style={{ fill: "url(#_Linear2)" }}
+        />
+        <g transform="matrix(-0.765945,0,0,1,839.727,5.47434)">
+          <clipPath id="_clip3">
+            <path d="M699.932,887.255L634.427,825.291L597.884,782.352L594.906,738.956L610.14,709.396L643.207,699.954L685,710.111L730.425,736.425L765.204,778.79L775.166,849.531L719.381,894.082L699.932,887.255Z" />
+          </clipPath>
+          <g clipPath="url(#_clip3)">
+            <g transform="matrix(-1.18516,0,0,0.907769,1039.04,88.3496)">
+              <use
+                xlinkHref="#_Image4"
+                x="223.969"
+                y="674.21"
+                width="152.098px"
+                height="213.852px"
+                transform="matrix(0.994105,0,0,0.999308,0,0)"
+              />
+            </g>
+          </g>
+        </g>
+        <path
+          d="M311.699,713.521C189.178,639.091 164.299,526.77 191.824,394.113L135.136,476.434L122.004,547.53C143.022,614.014 174.522,676.199 225.005,730.598C210.601,754.156 201.894,776.601 197.955,798.114L245.803,841.67C247.274,812.1 254.934,783.047 270.614,754.664L311.699,713.521Z"
+          style={{ fillOpacity: 0.22 }}
+        />
+        <g transform="matrix(-1,0,0,1,1022.04,2.74442)">
+          <path
+            d="M311.699,713.521C189.178,639.091 164.299,526.77 191.824,394.113L135.136,476.434L122.004,547.53C143.022,614.014 174.522,676.199 225.005,730.598C210.601,754.156 201.894,776.601 197.955,798.114L245.803,841.67C247.274,812.1 254.934,783.047 270.614,754.664L311.699,713.521Z"
+            style={{ fillOpacity: 0.22 }}
+          />
+        </g>
+        <path
+          style={{ fill: "url(#_Linear5)" }}
+          d="M354.92,650.818L420.009,663.185L493.368,666.379L554.826,665.251L620.19,658.511L658.169,651.428L671.428,644.802L673.265,627.093L659.898,611.845L625.422,609.244L599.275,591.212L568.632,556.79L542.9,534.336L515.052,528.253L480.412,532.71L455.2,552.337L428.514,578.155L405.312,599.359L374.228,612.097L355.342,614.456L340.75,630.308L341.568,645.341L354.92,650.818Z"
+        />
+        <path
+          style={{ fill: "url(#_Linear6)" }}
+          d="M257.168,949.32L317.434,876.747L364.928,810.6L384.1,743.934L378.759,714.719L376.844,685.849L374.836,659.954L448.734,664.2L511.462,667.602L571.339,665.091L632.796,658.836L648.232,656.882L649.937,697.808L608.105,717.702L598.45,738.594L592.286,761.642L604.743,796.309L639.595,825.803L649.872,840.757L558.219,895.152L502.124,907.569L425.781,923.496L333.29,931.298L286.269,936.907L257.168,949.32Z"
+        />
+        <g transform="matrix(1,0,0,1.30081,-1.77636e-15,-196.488)">
+          <path
+            d="M374.165,685.268C463.946,706.599 553.728,707.491 643.51,688.593L641.903,653.199C549.263,671.731 459.645,672.22 373.059,654.611L374.165,685.268Z"
+            style={{ fillOpacity: 0.18 }}
+          />
+        </g>
+        <path
+          d="M459.633,571.457C476.7,536.091 530.064,535.913 553.1,568.767C520.703,551.407 489.553,552.374 459.633,571.457Z"
+          style={{ fill: "white" }}
+        />
+        <g transform="matrix(1,0,0,1,0.223468,-2.61949)">
+          <path
+            d="M355.3,267.232C500.64,173.156 720.699,241.362 793.691,423.582C766.716,384.84 735.725,357.078 697.53,349.014L717.306,335.248C698.537,321.49 675.794,320.957 651.039,327.119C652.235,315.768 658.995,306.991 674.188,302.115C641.864,287.427 617.356,289.473 596.258,298.818C597.049,286.116 605.827,278.087 620.068,273.254C589.192,267.477 564.13,270.926 544.651,283.232C545.822,271.831 550.709,260.943 560.913,250.79C517.498,257.095 492.995,267.925 482.892,282.202C477.311,269.499 477.274,257.221 487.625,245.739C439.161,252.932 421.555,265.094 410.355,278.286C407.697,269.01 407.705,260.632 410.853,253.316C389.633,254.773 372.178,260.663 355.3,267.232Z"
+            style={{ fill: "rgb(255,213,95)" }}
+          />
+        </g>
+        <path
+          d="M475.656,209.175C479.639,175.037 503.437,173.299 532.412,180.026C507.242,183.404 486.969,195.251 473.705,219.215L475.656,209.175Z"
+          style={{ fill: "rgb(255,215,101)" }}
+        />
+        <g transform="matrix(0.114323,-0.655229,0.82741,0.144365,224.632,497.317)">
+          <path
+            d="M475.656,209.175C479.639,175.037 503.437,173.299 532.412,180.026C507.242,183.404 486.969,195.251 473.705,219.215L475.656,209.175Z"
+            style={{ fill: "rgb(255,215,101)" }}
+          />
+        </g>
+        <g transform="matrix(1.6739,1.15217e-16,-1.15217e-16,-0.733075,-341.46,1039.77)">
+          <path
+            d="M447.449,560.911C468.179,536.963 546.237,539.305 565.638,560.831C533.166,555.541 477.296,553.494 447.449,560.911Z"
+            style={{ fill: "white" }}
+          />
+        </g>
+        <path
+          d="M348.201,622.341C395.549,653.534 622.351,660.854 661.936,616.729L677.568,633.834L667.044,650.308L557.802,667.518L498.074,670.562L446.718,666.416L391.404,658.406L348.154,652.501L340.161,637.119L348.201,622.341Z"
+          style={{ fill: "rgb(199,68,6)" }}
+        />
+      </g>
+      <g
+        id="Black-outline"
+        transform="matrix(1.02317,0,0,1.02317,-11.55,-17.8333)"
+      >
+        <path
+          d="M373.389,657.919C376.285,676.334 377.04,695.016 375.326,714.008"
+          style={{ fill: "none", stroke: "black", strokeWidth: "15.73px" }}
+        />
+        <path
+          d="M645.931,654.961C646.158,669.958 647.22,684.853 648.975,699.661"
+          style={{ fill: "none", stroke: "black", strokeWidth: "15.73px" }}
+        />
+        <path d="M290.084,534.662C276.554,533.535 264.892,530.024 254.279,525.175C276.732,555.341 305.316,569.76 338.631,572.029L290.084,534.662Z" />
+        <g transform="matrix(0.94177,0,0,0.94909,28.8868,3.79501)">
+          <ellipse cx="338.022" cy="510.34" rx="88.911" ry="89.412" />
+        </g>
+        <g transform="matrix(0.112099,0.0552506,-0.0673118,0.136571,455.367,509.409)">
+          <ellipse cx="338.022" cy="510.34" rx="88.911" ry="89.412" />
+        </g>
+        <g transform="matrix(-0.112099,0.0552506,0.0673118,0.136571,560.529,509.492)">
+          <ellipse cx="338.022" cy="510.34" rx="88.911" ry="89.412" />
+        </g>
+        <g transform="matrix(-1,0,0,1,1013.33,-1.15187)">
+          <path d="M290.084,534.662C276.554,533.535 264.892,530.024 254.279,525.175C276.732,555.341 305.316,569.76 338.631,572.029L290.084,534.662Z" />
+        </g>
+        <g transform="matrix(-0.94177,0,0,0.94909,984.44,2.64314)">
+          <ellipse cx="338.022" cy="510.34" rx="88.911" ry="89.412" />
+        </g>
+        <g transform="matrix(1,0,0,1,1.9047,-5.57346)">
+          <path
+            d="M277.021,489.604C279.828,554.545 355.855,583.508 405.306,537.851C354.458,599.537 263.881,560.914 277.021,489.604Z"
+            style={{ fill: "white" }}
+          />
+        </g>
+        <g transform="matrix(-1,0,0,1,1011.43,-5.7284)">
+          <path
+            d="M277.021,489.604C279.828,554.545 355.855,583.508 405.306,537.851C354.458,599.537 263.881,560.914 277.021,489.604Z"
+            style={{ fill: "white" }}
+          />
+        </g>
+        <g transform="matrix(0.973815,0,0,1.00246,4.71761,-0.508759)">
+          <path
+            d="M407.22,206.891C107.655,339.384 134.447,630.03 314.615,708.305"
+            style={{ fill: "none", stroke: "black", strokeWidth: "29.39px" }}
+          />
+        </g>
+        <g transform="matrix(-0.973815,0,0,1.00246,1006.67,-1.31695)">
+          <path
+            d="M461.559,196.756C119.768,256.762 111.059,642.544 320.305,711.486"
+            style={{ fill: "none", stroke: "black", strokeWidth: "29.39px" }}
+          />
+        </g>
+        <g id="vector-duck">
+          <path
+            d="M240.912,850.71C248.043,740.231 325.609,685.992 371.268,715.193C386.487,724.926 392.506,757.72 358.575,816.753C327.005,871.68 300.465,894.596 288.329,903.447"
+            style={{ fill: "none", stroke: "black", strokeWidth: "21.79px" }}
+          />
+          <path
+            d="M638.382,843.426C427.991,964.695 389.022,902.942 251.512,947.641L307.759,889.573"
+            style={{ fill: "none", stroke: "black", strokeWidth: "15.73px" }}
+          />
+          <path
+            d="M770.991,853.754C779.364,764.998 730.67,727.923 666.385,704.966C629.568,691.819 580.483,723.886 595.974,772.596C606.285,805.016 650.54,839.029 707.786,886.778"
+            style={{ fill: "none", stroke: "black", strokeWidth: "21.79px" }}
+          />
+          <g transform="matrix(1,0,0,1,-1.87208,0.908099)">
+            <path d="M603.287,772.415C614.237,757.963 627.553,750.285 642.878,748.352C628.356,760.968 617.23,775.676 620.632,799.336C635.815,785.15 650.367,779.457 664.396,780.801C651.715,790.7 639.329,803.279 641.039,818.089C641.247,819.891 647.043,823.996 647.595,825.837C659.897,816.37 672.867,811.065 689.234,809.472C676.577,822.659 668.021,834.011 674.478,848.729L664.333,847.825L625.643,812.604L603.629,786.218L603.287,772.415Z" />
+          </g>
+          <g transform="matrix(-0.969851,0.2437,0.2437,0.969851,773.329,-138.212)">
+            <path d="M603.287,772.415C614.237,757.963 627.553,750.285 642.878,748.352C628.356,760.968 617.23,775.676 620.632,799.336C635.815,785.15 650.367,779.457 664.396,780.801C651.715,790.7 639.329,803.279 641.039,818.089C641.247,819.891 647.043,823.996 647.595,825.837C659.897,816.37 672.867,811.065 689.234,809.472C676.577,822.659 668.021,834.011 674.478,848.729L664.333,847.825L625.643,812.604L603.629,786.218L603.287,772.415Z" />
+          </g>
+          <path
+            d="M511.787,670.044C461.061,671.835 411.878,662.84 361.322,653.92C329.071,648.229 335.56,616.432 361.693,615.181C391.498,613.754 411.83,601.737 437.593,569.084C459.063,541.872 482.443,528.143 506.834,529.767"
+            style={{ fill: "none", stroke: "black", strokeWidth: "15.73px" }}
+          />
+          <g transform="matrix(-1,0,0,1,1014.44,-0.213451)">
+            <path
+              d="M511.787,670.044C461.061,671.835 411.878,662.84 361.322,653.92C329.071,648.229 335.56,616.432 361.693,615.181C391.498,613.754 411.83,601.737 437.593,569.084C459.063,541.872 482.443,528.143 506.834,529.767"
+              style={{ fill: "none", stroke: "black", strokeWidth: "15.73px" }}
+            />
+          </g>
+        </g>
+        <g transform="matrix(2.4586,0,0,2.5497,-444.527,-690.434)">
+          <ellipse
+            cx="312.566"
+            cy="450.751"
+            rx="10.63"
+            ry="10.48"
+            style={{ fill: "white" }}
+          />
+        </g>
+        <g transform="matrix(2.4586,0,0,2.5497,-127.75,-690.991)">
+          <ellipse
+            cx="312.566"
+            cy="450.751"
+            rx="10.63"
+            ry="10.48"
+            style={{ fill: "white" }}
+          />
+        </g>
+        <path
+          d="M505.738,698.061L578.879,713.989"
+          style={{ fill: "none", stroke: "black", strokeWidth: "12.1px" }}
+        />
+        <path
+          d="M422.781,709.6L568.438,743.041"
+          style={{ fill: "none", stroke: "black", strokeWidth: "12.1px" }}
+        />
+        <path
+          d="M419.941,738.409L565.688,772.989"
+          style={{ fill: "none", stroke: "black", strokeWidth: "12.1px" }}
+        />
+        <path
+          d="M408.6,787.08L510.634,810.689"
+          style={{ fill: "none", stroke: "black", strokeWidth: "12.1px" }}
+        />
+        <path
+          d="M397.571,815.956L500.93,840.219"
+          style={{ fill: "none", stroke: "black", strokeWidth: "12.1px" }}
+        />
+        <path
+          d="M386.763,844.926L454.065,861.974"
+          style={{ fill: "none", stroke: "black", strokeWidth: "12.1px" }}
+        />
+        <path
+          d="M459.169,919.169C512.194,898.262 539.171,867.298 535.241,824.402C568.052,818.31 598.499,817.058 625.84,822.165"
+          style={{ fill: "none", stroke: "black", strokeWidth: "16.95px" }}
+        />
+        <path d="M366.219,241.106C389.605,229.261 413.371,220.601 438.247,217.5C416.795,202.419 418.72,174.582 444.22,162.47C442.086,178.175 447.633,193.354 464.772,207.738C468.721,167.57 530.015,162.087 545.674,184.112C526.45,189.314 513.082,197.344 504.566,207.717C522.403,208.119 540.706,207.86 556.2,210.609L566.935,168.471C536.388,146.208 495.718,142.166 464.65,166.705C467.703,133.264 419.536,128.364 404.624,178.47L366.219,241.106Z" />
+        <path d="M392.617,924.576C428.953,936.938 467.84,943.636 508.258,943.636C708.944,943.636 871.876,778.49 871.876,575.076C871.876,382.463 725.788,224.162 539.898,207.895L554.137,173.696L554.485,168.187C757.218,191.602 914.895,366.003 914.895,577.383C914.895,804.698 732.549,989.249 507.949,989.249C435.381,989.249 367.223,969.983 308.199,936.232L392.617,924.576ZM279.206,917.988C171.663,843.819 101.002,718.887 101.002,577.383C101.002,383.006 234.333,219.898 413.398,176.712L424.375,216.389C264.082,254.803 144.64,400.913 144.64,575.076C144.64,703.735 209.822,817.086 308.514,883.023L279.206,917.988Z" />
+        <path d="M714.938,895.223L647.287,836.693L616.06,855.308L549.158,889.412L459.845,919.216L390.213,928.828L429.291,950.712L535.832,960.1L586.137,952.591L662.254,931.896L714.938,895.223Z" />
+        <path
+          style={{ fill: "url(#_Linear7)" }}
+          d="M423.538,929.39C509.164,917.593 580.815,890.465 640.827,850.566C635.677,886.828 622.639,918.218 594.006,939.977C530.254,930.953 474.955,928.632 423.538,929.39Z"
+        />
+      </g>
+    </g>
+    <defs>
+      <linearGradient
+        id="_Linear1"
+        x1="0"
+        y1="0"
+        x2="1"
+        y2="0"
+        gradientUnits="userSpaceOnUse"
+        gradientTransform="matrix(-52.3962,375.121,-375.121,-52.3962,471.134,384.463)"
+      >
+        <stop
+          offset="0"
+          style={{ stopColor: "rgb(255,176,44)", stopOpacity: 1 }}
+        />
+        <stop
+          offset="1"
+          style={{ stopColor: "rgb(255,73,2)", stopOpacity: 1 }}
+        />
+      </linearGradient>
+      <linearGradient
+        id="_Linear2"
+        x1="0"
+        y1="0"
+        x2="1"
+        y2="0"
+        gradientUnits="userSpaceOnUse"
+        gradientTransform="matrix(28.6198,-84.8913,84.8913,28.6198,647.831,831.55)"
+      >
+        <stop
+          offset="0"
+          style={{ stopColor: "rgb(255,73,2)", stopOpacity: 1 }}
+        />
+        <stop
+          offset="1"
+          style={{ stopColor: "rgb(255,176,44)", stopOpacity: 1 }}
+        />
+      </linearGradient>
+      <image
+        id="_Image4"
+        width="153px"
+        height="214px"
+        xlinkHref="data:image/jpeg;base64,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"
+      />
+      <linearGradient
+        id="_Linear5"
+        x1="0"
+        y1="0"
+        x2="1"
+        y2="0"
+        gradientUnits="userSpaceOnUse"
+        gradientTransform="matrix(-39.3403,137.423,-137.423,-39.3403,545.523,573.246)"
+      >
+        <stop
+          offset="0"
+          style={{ stopColor: "rgb(255,200,41)", stopOpacity: 1 }}
+        />
+        <stop
+          offset="1"
+          style={{ stopColor: "rgb(255,73,2)", stopOpacity: 1 }}
+        />
+      </linearGradient>
+      <linearGradient
+        id="_Linear6"
+        x1="0"
+        y1="0"
+        x2="1"
+        y2="0"
+        gradientUnits="userSpaceOnUse"
+        gradientTransform="matrix(1.01113,-68.2054,68.2054,1.01113,482.996,741.463)"
+      >
+        <stop offset="0" style={{ stopColor: "white", stopOpacity: 1 }} />
+        <stop
+          offset="1"
+          style={{ stopColor: "rgb(179,179,179)", stopOpacity: 1 }}
+        />
+      </linearGradient>
+      <linearGradient
+        id="_Linear7"
+        x1="0"
+        y1="0"
+        x2="1"
+        y2="0"
+        gradientUnits="userSpaceOnUse"
+        gradientTransform="matrix(-7.13599,-34.117,34.117,-7.13599,578.793,922.144)"
+      >
+        <stop
+          offset="0"
+          style={{ stopColor: "rgb(164,164,164)", stopOpacity: 1 }}
+        />
+        <stop
+          offset="1"
+          style={{ stopColor: "rgb(106,106,106)", stopOpacity: 1 }}
+        />
+      </linearGradient>
+    </defs>
+  </svg>
+);
+
+export default SvgDocling;

@@ -11,7 +11,14 @@ export const ENABLE_DATASTAX_LANGFLOW = false;
 export const ENABLE_FILE_MANAGEMENT = true;
 export const ENABLE_PUBLISH = true;
 export const ENABLE_WIDGET = true;
+export const LANGFLOW_AGENTIC_EXPERIENCE = false;
 export const ENABLE_VOICE_ASSISTANT = true;
 export const ENABLE_IMAGE_ON_PLAYGROUND = false;
 export const ENABLE_MCP = true;
-export const ENABLE_MCP_NOTICE = true;
+export const ENABLE_MCP_NOTICE = false;
+export const ENABLE_KNOWLEDGE_BASES = false;
+
+export const ENABLE_MCP_COMPOSER =
+  import.meta.env.LANGFLOW_MCP_COMPOSER_ENABLED === "true";
+export const ENABLE_NEW_SIDEBAR = true;
+export const ENABLE_FETCH_CREDENTIALS = false;

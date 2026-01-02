@@ -1,10 +1,10 @@
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import { Button } from "@/components/ui/button";
-import ListSelectionComponent from "@/CustomNodes/GenericNode/components/ListSelectionComponent";
-import { cn } from "@/utils/utils";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { ReactSortable } from "react-sortablejs";
-import { InputProps } from "../../types";
+import ListSelectionComponent from "@/CustomNodes/GenericNode/components/ListSelectionComponent";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/utils/utils";
+import type { InputProps } from "../../types";
 import HelperTextComponent from "../helperTextComponent";
 
 type SortableListComponentProps = {
@@ -79,11 +79,13 @@ const SortableListItem = memo(
 const SortableListComponent = ({
   tooltip = "",
   name,
+  editNode = false,
   helperText = "",
   helperMetadata = { icon: undefined, variant: "muted-foreground" },
   options = [],
   searchCategory = [],
   limit,
+  id,
   ...baseInputProps
 }: InputProps<any, SortableListComponentProps>) => {
   const { placeholder, handleOnNewValue, value } = baseInputProps;
@@ -139,10 +141,22 @@ const SortableListComponent = ({
             size="xs"
             role="combobox"
             onClick={handleOpenListSelectionDialog}
-            className="dropdown-component-outline input-edit-node w-full py-2"
-            data-testid="button_open_list_selection"
+            className={cn(
+              "dropdown-component-outline input-edit-node w-full",
+              editNode ? "py-1" : "py-2",
+            )}
+            data-testid={
+              id
+                ? `button_open_list_selection_${id}`
+                : "button_open_list_selection"
+            }
           >
-            <div className={cn("flex items-center text-sm font-semibold")}>
+            <div
+              className={cn(
+                "flex items-center",
+                editNode ? "text-xs" : "text-sm",
+              )}
+            >
               {placeholder}
             </div>
           </Button>
@@ -182,6 +196,7 @@ const SortableListComponent = ({
         open={open}
         onClose={handleCloseListSelectionDialog}
         searchCategories={searchCategory}
+        editNode={editNode}
         setSelectedList={setListDataHandler}
         selectedList={listData}
         options={options}

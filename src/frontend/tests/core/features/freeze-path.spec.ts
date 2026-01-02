@@ -1,7 +1,9 @@
-import { expect, Page, test } from "@playwright/test";
+import { type Page } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { expect, test } from "../../fixtures";
 import { addFlowToTestOnEmptyLangflow } from "../../utils/add-flow-to-test-on-empty-langflow";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
@@ -41,10 +43,7 @@ test(
         "say a random number between 1 and 300000 and a random animal that lives in the sea",
       );
 
-    await page.getByTestId("dropdown_str_model_name").click();
-    await page.getByTestId("gpt-4o-1-option").click();
-
-    await page.getByTestId("fit_view").click();
+    await adjustScreenView(page);
 
     await page.waitForSelector('[data-testid="button_run_chat output"]', {
       timeout: 3000,
@@ -67,8 +66,8 @@ test(
     await page.getByText("Close").last().click();
 
     // Change model to force different output
-    await page.getByTestId("dropdown_str_model_name").click();
-    await page.getByTestId("gpt-4o-mini-0-option").click();
+    await page.getByTestId("model_model").click();
+    await page.getByTestId("gpt-4o-option").click();
 
     await page.waitForSelector('[data-testid="button_run_chat output"]', {
       timeout: 3000,
@@ -93,7 +92,7 @@ test(
       timeout: 3000,
     });
 
-    await page.getByText("OpenAI", { exact: true }).last().click();
+    await page.getByText("Language Model", { exact: true }).last().click();
 
     await page.waitForSelector('[data-testid="more-options-modal"]', {
       timeout: 3000,
@@ -135,7 +134,7 @@ test(
   },
 );
 
-async function moveSlider(
+async function _moveSlider(
   page: Page,
   side: "left" | "right",
   advanced: boolean = false,

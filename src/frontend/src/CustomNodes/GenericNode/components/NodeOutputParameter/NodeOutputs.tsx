@@ -1,4 +1,4 @@
-import { NodeDataType } from "@/types/flow";
+import type { NodeDataType } from "@/types/flow";
 import { OutputParameter } from ".";
 
 export default function NodeOutputs({
@@ -79,15 +79,8 @@ export default function NodeOutputs({
         ? outputs.filter((output) => output.hidden)
         : outputs.filter((output) => !output.hidden);
 
-    if (selectedOutput) {
-      return (
-        filteredOutputs.find((output) => output.name === selectedOutput.name) ||
-        filteredOutputs[0]
-      );
-    }
-
     const outputWithSelection = filteredOutputs.find(
-      (output) => output.selected,
+      (output) => output.name === selectedOutput?.name,
     );
 
     return outputWithSelection || filteredOutputs[0];

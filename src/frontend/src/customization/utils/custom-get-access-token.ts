@@ -1,7 +1,6 @@
 import { LANGFLOW_ACCESS_TOKEN } from "@/constants/constants";
-import { Cookies } from "react-cookie";
+import { cookieManager } from "@/utils/cookie-manager";
 
 export const customGetAccessToken = () => {
-  const cookies = new Cookies();
-  return cookies.get(LANGFLOW_ACCESS_TOKEN);
+  return cookieManager.get(LANGFLOW_ACCESS_TOKEN);
 };

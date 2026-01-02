@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
@@ -16,17 +16,15 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("ollama");
 
-    await page.waitForSelector('[data-testid="languagemodelsOllama"]', {
+    await page.waitForSelector('[data-testid="ollamaOllama"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("languagemodelsOllama")
+      .getByTestId("ollamaOllama")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
-
-    await page.getByTestId("fit_view").click();
 
     await adjustScreenView(page);
     await page.getByTestId("generic-node-title-arrangement").click();

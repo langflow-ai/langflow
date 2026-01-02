@@ -8,7 +8,7 @@ from tests.base import ComponentTestBaseWithClient
 class TestArXivComponent(ComponentTestBaseWithClient):
     def test_component_versions(self, default_kwargs, file_names_mapping):
         """Test component compatibility across versions."""
-        from langflow.components.search.arxiv import ArXivComponent
+        from lfx.components.arxiv.arxiv import ArXivComponent
 
         # Test current version
         component = ArXivComponent(**default_kwargs)
@@ -19,7 +19,7 @@ class TestArXivComponent(ComponentTestBaseWithClient):
         for mapping in file_names_mapping:
             try:
                 module = __import__(
-                    f"langflow.components.{mapping['module']}",
+                    f"lfx.components.{mapping['module']}",
                     fromlist=[mapping["file_name"]],
                 )
                 component_class = getattr(module, mapping["file_name"])
@@ -31,7 +31,7 @@ class TestArXivComponent(ComponentTestBaseWithClient):
 
     @pytest.fixture
     def component_class(self):
-        from langflow.components.search.arxiv import ArXivComponent
+        from lfx.components.arxiv.arxiv import ArXivComponent
 
         return ArXivComponent
 
@@ -70,7 +70,7 @@ class TestArXivComponent(ComponentTestBaseWithClient):
 
         # Assert
         assert "http://export.arxiv.org/api/query?" in url
-        assert "search_query=all%3Aquantum%20computing" in url
+        assert "search_query=quantum%20computing" in url  # Note: no more "all" needed as prefix
         assert "max_results=10" in url
 
     def test_parse_atom_response(self, component_class, default_kwargs):

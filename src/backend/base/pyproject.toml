@@ -1,6 +1,6 @@
 [project]
 name = "langflow-base"
-version = "0.4.3"
+version = "0.7.1"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.14"
 license = "MIT"
@@ -17,23 +17,26 @@ maintainers = [
 ]
 
 dependencies = [
+    "lfx~=0.2.1",
     "fastapi>=0.115.2,<1.0.0",
     "httpx[http2]>=0.27,<1.0.0",
     "aiofile>=3.9.0,<4.0.0",
     "uvicorn>=0.30.0,<1.0.0",
-    "gunicorn>=22.0.0,<24.0.0",
+    "gunicorn>=22.0.0,<23.0.0",
     "langchain~=0.3.21",
-    "langchain-community~=0.3.20",
-    "langchain-core~=0.3.45",
+    "langchain-community>=0.3.0,<1.0.0",
+    "langchain-core>=0.3.45,<1.0.0",
     "langchainhub~=0.1.15",
     "loguru>=0.7.1,<1.0.0",
+    "structlog>=25.4.0,<26.0.0",
     "rich>=13.7.0,<14.0.0",
-    "langchain-experimental>=0.3.4,<1.0.0",
+    "langchain-experimental>=0.3.0,<1.0.0",
     "sqlmodel==0.0.22",
-    "pydantic~=2.10.1",
+    "pydantic~=2.11.0",
     "pydantic-settings>=2.2.0,<3.0.0",
+    "email-validator>=2.0.0",
     "typer>=0.13.0,<1.0.0",
-    "cachetools>=5.5.0,<6.0.0",
+    "cachetools>=6.0.0",
     "platformdirs>=4.2.0,<5.0.0",
     "python-multipart>=0.0.12,<1.0.0",
     "orjson==3.10.15",
@@ -50,7 +53,7 @@ dependencies = [
     "jq>=1.7.0,<2.0.0; sys_platform != 'win32'",
     "nest-asyncio>=1.6.0,<2.0.0",
     "emoji>=2.12.0,<3.0.0",
-    "cryptography>=42.0.5,<44.0.0",
+    "cryptography>=43.0.1,<44.0.0",
     "asyncer>=0.0.5,<1.0.0",
     "pyperclip>=1.8.2,<2.0.0",
     "uncurl>=0.0.11,<1.0.0",
@@ -63,7 +66,8 @@ dependencies = [
     "opentelemetry-instrumentation-fastapi>=0.46b0,<1.0.0",
     "prometheus-client>=0.20.0,<1.0.0",
     "aiofiles>=24.1.0,<25.0.0",
-    "setuptools>=78.1.0,<79.0.0",
+    "pip>=25.3,<26.0.0",
+    "setuptools>=78.1.1,<79.0.0",
     "nanoid>=2.0.0,<3.0.0",
     "filelock>=3.15.4,<4.0.0",
     "grandalf>=0.8.0,<1.0.0",
@@ -73,22 +77,59 @@ dependencies = [
     "fastapi-pagination>=0.13.1,<1.0.0",
     "defusedxml>=0.7.1,<1.0.0",
     "pypdf~=5.1.0",
-    "validators>=0.34.0",
-    "networkx>=3.4.2",
-    "json-repair>=0.30.3",
-    "mcp>=1.6.0",
-    "aiosqlite>=0.20.0",
-    "greenlet>=3.1.1",
-    "jsonquerylang>=1.1.1",
+    "validators>=0.34.0,<1.0.0",
+    "networkx>=3.4.2,<4.0.0",
+    "json-repair>=0.30.3,<1.0.0",
+    "mcp>=1.17.0,<2.0.0",
+    "aiosqlite>=0.20.0,<1.0.0",
+    "greenlet>=3.1.1,<4.0.0",
+    "jsonquerylang>=1.1.1,<2.0.0",
     "sqlalchemy[aiosqlite]>=2.0.38,<3.0.0",
     'elevenlabs==1.58.1; python_version == "3.12"',
-    'elevenlabs>=1.52.0; python_version != "3.12"',
-    "webrtcvad>=2.0.10",
-    "scipy>=1.15.2",
-    "ibm-watsonx-ai>=1.3.1",
-    "langchain-ibm>=0.3.8",
-    "trustcall>=0.0.38",
-    "json_repair==0.30.3",
+    'elevenlabs>=1.52.0,<2.0.0; python_version != "3.12"',
+    "scipy>=1.15.2,<2.0.0",
+    "ibm-watsonx-ai>=1.3.1,<2.0.0",
+    "langchain-ibm>=0.3.8,<1.0.0",
+    "trustcall>=0.0.38,<1.0.0",
+    "langchain-chroma>=0.1.4,<1.0.0",
+]
+
+[dependency-groups]
+dev = [
+    "asgi-lifespan>=2.1.0",
+    "pytest-github-actions-annotate-failures>=0.2.0",
+    "types-aiofiles>=24.1.0.20240626",
+    "types-redis>=4.6.0.5",
+    "ipykernel>=6.29.0",
+    "mypy>=1.11.0",
+    "ruff>=0.12.7",
+    "httpx[http2]>=0.27",
+    "pytest>=8.2.0",
+    "types-requests>=2.32.0",
+    "requests>=2.32.0",
+    "pytest-cov>=5.0.0",
+    "pandas-stubs>=2.1.4.231227",
+    "types-pillow>=10.2.0.20240213",
+    "types-pyyaml>=6.0.12.8",
+    "types-python-jose>=3.3.4.8",
+    "types-passlib>=1.7.7.13",
+    "pytest-mock>=3.14.0",
+    "pytest-xdist>=3.6.0",
+    "types-pywin32>=306.0.0.4",
+    "types-google-cloud-ndb>=2.2.0.0",
+    "pytest-sugar>=1.0.0",
+    "respx>=0.21.1",
+    "pytest-instafail>=0.5.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-profiling>=1.7.0",
+    "pre-commit>=3.7.0",
+    "vulture>=2.11",
+    "dictdiffer>=0.9.0",
+    "pytest-split>=0.9.0",
+    "devtools>=0.12.2",
+    "pytest-flakefinder>=1.1.0",
+    "types-markdown>=3.7.0.20240822",
+    "codeflash>=0.8.4",
 ]
 
 
@@ -115,60 +156,6 @@ namespace_packages = true
 mypy_path = "langflow"
 ignore_missing_imports = true
 
-[tool.ruff]
-target-version = "py310"
-exclude = ["langflow/alembic/versions"]
-line-length = 120
-
-[tool.ruff.lint]
-flake8-annotations.mypy-init-return = true
-flake8-bugbear.extend-immutable-calls = [
-    "fastapi.Depends",
-    "fastapi.File",
-    "fastapi.Query",
-    "typer.Option",
-]
-flake8-type-checking.runtime-evaluated-base-classes = [
-    "pydantic.BaseModel",
-    "typing.TypedDict", # Needed by fastapi
-    "typing_extensions.TypedDict", # Needed by fastapi
-]
-pydocstyle.convention = "google"
-select = ["ALL"]
-ignore = [
-    "C90", # McCabe complexity
-    "CPY", # Missing copyright
-    "COM812", # Messes with the formatter
-    "ERA", # Eradicate commented-out code
-    "FIX002", # Line contains TODO
-    "ISC001", # Messes with the formatter
-    "PERF203", # Rarely useful
-    "PLR09", # Too many something (arg, statements, etc)
-    "RUF012", # Pydantic models are currently not well detected. See https://github.com/astral-sh/ruff/issues/13630
-    "TD002", # Missing author in TODO
-    "TD003", # Missing issue link in TODO
-    "TRY301", # A bit too harsh (Abstract `raise` to an inner function)
-
-    # Rules that are TODOs
-    "ANN", # Missing type annotations
-    "D1", # Missing docstrings
-    "SLF001", # Using private attributes outside of class
-]
-
-[tool.ruff.lint.per-file-ignores]
-"langflow/api/v1/*" = [
-    "TCH", # FastAPI needs to evaluate types at runtime
-]
-"langflow/api/v2/*" = [
-    "TCH", # FastAPI needs to evaluate types at runtime
-]
-"langflow/{components/tools/python_code_structured_tool.py,custom/code_parser/code_parser.py,utils/validate.py}" = [
-    "S102", # Use of exec
-]
-"langflow/services/cache/*" = [
-    "S301", # Use of pickle
-]
-
 [tool.codeflash]
 # All paths are relative to this pyproject.toml's directory.
 module-root = "langflow"
@@ -190,11 +177,19 @@ Repository = "https://github.com/langflow-ai/langflow"
 Documentation = "https://docs.langflow.org"
 # Optional dependencies
 [project.optional-dependencies]
+audio = [
+    "webrtcvad>=2.0.10",
+]
 
 postgresql = [
-  "sqlalchemy[postgresql_psycopg2binary]",
-    "sqlalchemy[postgresql_psycopg]",
+    "sqlalchemy[postgresql_psycopg2binary]>=2.0.38,<3.0.0",
+    "sqlalchemy[postgresql_psycopg]>=2.0.38,<3.0.0",
+]
 
+local = [
+    "llama-cpp-python>=0.2.0",
+    "sentence-transformers>=2.0.0",
+    "ctransformers>=0.2"
 ]
 
 # Individual database providers
@@ -202,35 +197,35 @@ couchbase = ["couchbase>=4.2.1"]
 cassandra = ["cassio>=0.1.7"]
 clickhouse = ["clickhouse-connect==0.7.19"]
 mongodb = ["pymongo==4.10.1"]
-supabase = ["supabase==2.6.0"]
-redis = ["redis==5.2.1"]
-elasticsearch = ["elasticsearch==8.16.0", "langchain_elasticsearch==0.3.2"]
+supabase = ["supabase>=2.6.0,<3.0.0"]
+redis = ["redis>=5.2.1,<6.0.0"]
+elasticsearch = ["elasticsearch==8.16.0", "langchain-elasticsearch>=0.3.0,<1.0.0"]
 
 # Individual vector store providers
 faiss = ["faiss-cpu==1.9.0.post1"]
 qdrant = ["qdrant-client==1.9.2"]
-weaviate = ["weaviate-client==4.10.2"]
+weaviate = ["weaviate-client>=4.10.2,<5.0.0"]
 chroma = [
-    "chromadb==0.5.23",
-    "langchain-chroma==0.1.4"
+    "chromadb>=1.0.0,<2.0.0",
+    "langchain-chroma>=0.2.6,<1.0.0"
 ]
 upstash = ["upstash-vector==0.6.0"]
-pinecone = ["langchain-pinecone==0.2.2"]
+pinecone = ["langchain-pinecone>=0.2.8,<1.0.0"]
 milvus = ["langchain-milvus==0.1.7"]
-mongodb-vectors = ["langchain-mongodb==0.2.0"]
-astradb = ["langchain-astradb==0.5.2"]
+mongodb-vectors = ["langchain-mongodb==0.7.0"]
+astradb = ["langchain-astradb>=0.6.1,<1.0.0"]
 
 # Individual LLM providers
-openai = ["langchain-openai==0.2.12"]
-anthropic = ["langchain-anthropic==0.3.0"]
-cohere = ["langchain-cohere==0.3.3"]
+openai = ["langchain-openai>=0.3.0,<1.0.0"]
+anthropic = ["langchain-anthropic==0.3.14"]
+cohere = ["langchain-cohere>=0.3.3,<1.0.0"]
 google = [
     "langchain-google-genai==2.0.6",
-    "langchain-google-vertexai==2.0.7",
-    "langchain-google-community==2.0.3",
+    "langchain-google-vertexai>=2.0.7,<3.0.0",
+    "langchain-google-community>=2.0.3,<3.0.0",
     "langchain-google-calendar-tools==0.0.1"
 ]
-ollama = ["langchain-ollama==0.2.1"]
+ollama = ["langchain-ollama==0.3.10"]
 nvidia = ["langchain-nvidia-ai-endpoints==0.3.8"]
 mistral = ["langchain-mistralai==0.2.3"]
 sambanova = ["langchain-sambanova==0.1.0"]
@@ -243,8 +238,8 @@ ctransformers = ["ctransformers>=0.2.10"]
 
 # Individual monitoring providers
 langfuse = ["langfuse==2.53.9"]
-langwatch = ["langwatch==0.1.16"]
-langsmith = ["langsmith==0.1.147"]
+langwatch = ["langwatch>=0.2.11,<0.3.0"]
+langsmith = ["langsmith>=0.3.42,<1.0.0"]
 arize = ["arize-phoenix-otel>=0.6.1"]
 
 # Individual document loaders
@@ -253,7 +248,8 @@ docx = ["python-docx>=1.1.0"]
 pytube = ["pytube==15.0.0"]
 
 # Individual agent frameworks
-crewai = ["crewai==0.102.0"]
+# crewai is commented out due to httpx version conflict
+# crewai = ["crewai>=0.126.0"]
 dspy = ["dspy-ai==2.5.41"]
 smolagents = ["smolagents>=1.8.0"]
 
@@ -269,7 +265,10 @@ wolframalpha = ["wolframalpha==5.1.3"]
 
 # Individual utilities
 pyarrow = ["pyarrow==19.0.0"]
-fastavro = ["fastavro==1.9.7"]
+fastavro = [
+    'fastavro==1.9.7; python_version < "3.13"',
+    'fastavro>=1.9.8,<2.0.0; python_version >= "3.13"',
+]
 gitpython = ["GitPython==3.1.43"]
 nltk = ["nltk==3.9.1"]
 lark = ["lark==1.2.2"]
@@ -279,20 +278,20 @@ huggingface = ["huggingface-hub[inference]>=0.23.2,<1.0.0"]
 metaphor = ["metaphor-python==0.1.23"]
 metal = ["metal_sdk==2.5.1"]
 markup = ["MarkupSafe==3.0.2"]
-aws = ["boto3==1.34.162"]
+aws = ["boto3>=1.34.162,<2.0.0", "langchain-aws>=0.2.33,<1.0.0"]
 numexpr = ["numexpr==2.10.2"]
 qianfan = ["qianfan==0.3.5"]
 pgvector = ["pgvector==0.3.6"]
-litellm = ["litellm==1.60.2"]
+litellm = ["litellm>=1.60.2,<2.0.0"]
 zep = ["zep-python==2.0.2"]
-youtube = ["youtube-transcript-api==0.6.3"]
+youtube = ["youtube-transcript-api>=1.0.0,<2.0.0"]
 markdown = ["Markdown==3.7"]
 kubernetes = ["kubernetes==31.0.0"]
 json-repair = ["json_repair==0.30.3"]
-astra = ["astra-assistants[tools]~=2.2.9"]
+astra = ["astra-assistants[tools]>=2.2.13,<3.0.0"]
 composio = [
-    "composio-langchain==0.7.1",
-    "composio-core==0.7.1"
+    "composio==0.9.2",
+    "composio-langchain==0.9.2"
 ]
 ragstack = ["ragstack-ai-knowledge-store==0.2.1"]
 opensearch = ["opensearch-py==2.8.0"]
@@ -301,7 +300,7 @@ mem0 = ["mem0ai==0.1.34"]
 needle = ["needle-python>=0.4.0"]
 sseclient = ["sseclient-py==1.8.0"]
 openinference = ["openinference-instrumentation-langchain>=0.1.29"]
-mcp = ["mcp>=0.9.1"]
+mcp = ["mcp>=1.17.0,<2.0.0"]
 ag2 = ["ag2>=0.1.0"]
 scrapegraph = ["scrapegraph-py>=1.12.0"]
 pydantic-ai = ["pydantic-ai>=0.0.19"]
@@ -342,7 +341,7 @@ complete = [
     "langflow-base[pypdf]",
     "langflow-base[docx]",
     "langflow-base[pytube]",
-    "langflow-base[crewai]",
+    # "langflow-base[crewai]",  # commented out due to httpx version conflict
     "langflow-base[dspy]",
     "langflow-base[smolagents]",
     "langflow-base[beautifulsoup]",
@@ -393,3 +392,5 @@ all = [
     "langflow-base[complete]",
 ]
 
+[project.scripts]
+langflow-base = "langflow.__main__:main"

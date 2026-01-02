@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { FoldersStoreType } from "../types/zustand/folders";
+import type { FoldersStoreType } from "../types/zustand/folders";
 
 export const useFolderStore = create<FoldersStoreType>((set, get) => ({
   loadingById: false,

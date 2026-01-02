@@ -1,8 +1,11 @@
-import { useMessagesStore } from "@/stores/messagesStore";
-import { UseMutationResult } from "@tanstack/react-query";
-import { ColDef, ColGroupDef } from "ag-grid-community";
+import type { UseMutationResult } from "@tanstack/react-query";
+import type { ColDef, ColGroupDef } from "ag-grid-community";
 import { useEffect, useRef } from "react";
-import { extractColumnsFromRows } from "../../../../utils/utils";
+import { useMessagesStore } from "@/stores/messagesStore";
+import {
+  extractColumnsFromRows,
+  prepareSessionIdForAPI,
+} from "../../../../utils/utils";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -93,7 +96,7 @@ export const useGetMessagesPollingMutation = (
     payload: MessagesQueryParams,
   ): Promise<MessagesResponse> => {
     const requestId = payload.id || "default";
-    const sessionId = payload.session_id;
+    const _sessionId = payload.session_id;
 
     if (requestInProgressRef.current[requestId]) {
       return Promise.reject("Request already in progress");
@@ -109,7 +112,14 @@ export const useGetMessagesPollingMutation = (
       }
 
       if (params) {
-        config["params"] = { ...config["params"], ...params };
+        // Process params to ensure session_id is properly encoded
+        const processedParams = { ...params } as any;
+        if (processedParams.session_id) {
+          processedParams.session_id = prepareSessionIdForAPI(
+            processedParams.session_id,
+          );
+        }
+        config["params"] = { ...config["params"], ...processedParams };
       }
 
       const data = await api.get<any>(`${getURL("MESSAGES")}`, config);

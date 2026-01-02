@@ -1,21 +1,16 @@
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import ShadTooltip from "@/components/common/shadTooltipComponent";
-import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
-import { CustomNodeStatus } from "@/customization/components/custom-NodeStatus";
-import UpdateComponentModal from "@/modals/updateComponentModal";
-import { useAlternate } from "@/shared/hooks/use-alternate";
-import { FlowStoreType } from "@/types/zustand/flow";
 import { useUpdateNodeInternals } from "@xyflow/react";
 import { cloneDeep } from "lodash";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useShallow } from "zustand/react/shallow";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
+import { CustomNodeStatus } from "@/customization/components/custom-NodeStatus";
+import UpdateComponentModal from "@/modals/updateComponentModal";
+import { useAlternate } from "@/shared/hooks/use-alternate";
+import type { FlowStoreType } from "@/types/zustand/flow";
 import { Button } from "../../components/ui/button";
-import {
-  ICON_STROKE_WIDTH,
-  TOOLTIP_HIDDEN_OUTPUTS,
-  TOOLTIP_OPEN_HIDDEN_OUTPUTS,
-} from "../../constants/constants";
+import { ICON_STROKE_WIDTH } from "../../constants/constants";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import { useChangeOnUnfocus } from "../../shared/hooks/use-change-on-unfocus";
 import useAlertStore from "../../stores/alertStore";
@@ -23,18 +18,19 @@ import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useShortcutsStore } from "../../stores/shortcuts";
 import { useTypesStore } from "../../stores/typesStore";
-import { OutputFieldType, VertexBuildTypeAPI } from "../../types/api";
-import { NodeDataType } from "../../types/flow";
+import type { OutputFieldType, VertexBuildTypeAPI } from "../../types/api";
+import type { NodeDataType } from "../../types/flow";
 import { scapedJSONStringfy } from "../../utils/reactflowUtils";
 import { classNames, cn } from "../../utils/utils";
 import { processNodeAdvancedFields } from "../helpers/process-node-advanced-fields";
 import useUpdateNodeCode from "../hooks/use-update-node-code";
 import NodeDescription from "./components/NodeDescription";
+import NodeLegacyComponent from "./components/NodeLegacyComponent";
 import NodeName from "./components/NodeName";
 import NodeOutputs from "./components/NodeOutputParameter/NodeOutputs";
 import NodeUpdateComponent from "./components/NodeUpdateComponent";
-import RenderInputParameters from "./components/RenderInputParameters";
 import { NodeIcon } from "./components/nodeIcon";
+import RenderInputParameters from "./components/RenderInputParameters";
 import { useBuildStatus } from "./hooks/use-get-build-status";
 
 const MemoizedRenderInputParameters = memo(RenderInputParameters);
@@ -44,7 +40,7 @@ const MemoizedNodeStatus = memo(CustomNodeStatus);
 const MemoizedNodeDescription = memo(NodeDescription);
 const MemoizedNodeOutputs = memo(NodeOutputs);
 
-const HiddenOutputsButton = memo(
+const _HiddenOutputsButton = memo(
   ({
     showHiddenOutputs,
     onClick,
@@ -77,7 +73,7 @@ function GenericNode({
   const [borderColor, setBorderColor] = useState<string>("");
   const [loadingUpdate, setLoadingUpdate] = useState(false);
   const [showHiddenOutputs, setShowHiddenOutputs] = useState(false);
-  const [validationStatus, setValidationStatus] =
+  const [_validationStatus, setValidationStatus] =
     useState<VertexBuildTypeAPI | null>(null);
   const [openUpdateModal, setOpenUpdateModal] = useState(false);
 
@@ -97,9 +93,21 @@ function GenericNode({
   const removeDismissedNodes = useFlowStore(
     (state) => state.removeDismissedNodes,
   );
+
+  const dismissedNodesLegacy = useFlowStore(
+    (state) => state.dismissedNodesLegacy,
+  );
+  const addDismissedNodesLegacy = useFlowStore(
+    (state) => state.addDismissedNodesLegacy,
+  );
+
   const dismissAll = useMemo(
     () => dismissedNodes.includes(data.id),
     [dismissedNodes, data.id],
+  );
+  const dismissAllLegacy = useMemo(
+    () => dismissedNodesLegacy.includes(data.id),
+    [dismissedNodesLegacy, data.id],
   );
 
   const showNode = data.showNode ?? true;
@@ -259,7 +267,10 @@ function GenericNode({
   }, [data.node?.outputs]);
 
   const [selectedOutput, setSelectedOutput] = useState<OutputFieldType | null>(
-    () => data.node?.outputs?.find((output) => output.selected) || null,
+    () =>
+      data.node?.outputs?.find(
+        (output) => output.name === data?.selected_output,
+      ) || null,
   );
 
   const handleSelectOutput = useCallback(
@@ -310,13 +321,29 @@ function GenericNode({
             newNode.data.node.outputs[outputIndex].selected =
               output.selected ?? defaultType;
           }
+
+          const selectedOutput = newNode.data.node.outputs[outputIndex]?.name;
+          (newNode.data as NodeDataType).selected_output = selectedOutput;
         }
+
         return newNode;
       });
       updateNodeInternals(data.id);
     },
     [data.id, setNode, setEdges, updateNodeInternals],
   );
+
+  useEffect(() => {
+    if (
+      data?.selected_output ||
+      (data?.node?.outputs?.filter((output) => !output.group_outputs)?.length ??
+        0) <= 1
+    )
+      return;
+    handleSelectOutput(
+      data.node?.outputs?.find((output) => output.selected) || null,
+    );
+  }, [data.node?.outputs, data?.selected_output, handleSelectOutput]);
 
   const [hasChangedNodeDescription, setHasChangedNodeDescription] =
     useState(false);
@@ -332,13 +359,24 @@ function GenericNode({
     return useFlowStore.getState().nodes.filter((node) => node.selected).length;
   }, [selected]);
 
+  const rightClickedNodeId = useFlowStore((state) => state.rightClickedNodeId);
+
   const shouldShowUpdateComponent = useMemo(
     () => (isOutdated || hasBreakingChange) && !isUserEdited && !dismissAll,
     [isOutdated, hasBreakingChange, isUserEdited, dismissAll],
   );
 
+  const shouldShowLegacyComponent = useMemo(
+    () => (data.node?.legacy || data.node?.replacement) && !dismissAllLegacy,
+    [data.node?.legacy, data.node?.replacement, dismissAllLegacy],
+  );
+
   const memoizedNodeToolbarComponent = useMemo(() => {
-    return selected && selectedNodesCount === 1 ? (
+    const isRightClicked = rightClickedNodeId === data.id;
+    const isSelectedSingle = selected && selectedNodesCount === 1;
+    const shouldShowToolbar = isSelectedSingle || isRightClicked;
+
+    return shouldShowToolbar ? (
       <>
         <div
           className={cn(
@@ -366,6 +404,7 @@ function GenericNode({
             isOutdated={isOutdated && (dismissAll || isUserEdited)}
             isUserEdited={isUserEdited}
             hasBreakingChange={hasBreakingChange}
+            openDropdownOnRightClick={isRightClicked}
           />
         </div>
         <div className="-z-10">
@@ -422,6 +461,7 @@ function GenericNode({
     hasChangedNodeDescription,
     toggleEditNameDescription,
     selectedNodesCount,
+    rightClickedNodeId,
   ]);
   useEffect(() => {
     if (hiddenOutputs && hiddenOutputs.length === 0) {
@@ -436,6 +476,11 @@ function GenericNode({
   const memoizedSetDismissAll = useCallback(
     () => addDismissedNodes([data.id]),
     [addDismissedNodes, data.id],
+  );
+
+  const memoizedSetDismissAllLegacy = useCallback(
+    () => addDismissedNodesLegacy([data.id]),
+    [addDismissedNodesLegacy, data.id],
   );
 
   return (
@@ -457,7 +502,7 @@ function GenericNode({
           />
         )}
         {memoizedNodeToolbarComponent}
-        {shouldShowUpdateComponent && (
+        {shouldShowUpdateComponent ? (
           <NodeUpdateComponent
             hasBreakingChange={hasBreakingChange}
             showNode={showNode}
@@ -465,7 +510,16 @@ function GenericNode({
             loadingUpdate={loadingUpdate}
             setDismissAll={memoizedSetDismissAll}
           />
+        ) : shouldShowLegacyComponent ? (
+          <NodeLegacyComponent
+            legacy={data.node?.legacy}
+            replacement={data.node?.replacement}
+            setDismissAll={memoizedSetDismissAllLegacy}
+          />
+        ) : (
+          <></>
         )}
+
         <div
           data-testid={`${data.id}-main-node`}
           className={cn(
@@ -495,6 +549,10 @@ function GenericNode({
                   selected={selected}
                   showNode={showNode}
                   beta={data.node?.beta || false}
+                  legacy={
+                    data.node?.legacy ||
+                    (data.node?.replacement?.length ?? 0) > 0
+                  }
                   editNameDescription={editNameDescription}
                   toggleEditNameDescription={toggleEditNameDescription}
                   setHasChangedNodeDescription={setHasChangedNodeDescription}
@@ -547,6 +605,7 @@ function GenericNode({
             <div className="px-4 pb-3">
               <MemoizedNodeDescription
                 description={data.node?.description}
+                charLimit={1000}
                 mdClassName={"dark:prose-invert"}
                 nodeId={data.id}
                 selected={selected}

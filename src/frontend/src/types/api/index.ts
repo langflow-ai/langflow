@@ -1,11 +1,11 @@
-import {
+import type {
   UseMutationOptions,
   UseMutationResult,
   UseQueryOptions,
   UseQueryResult,
 } from "@tanstack/react-query";
-import { ChatInputType, ChatOutputType } from "../chat";
-import { FlowType } from "../flow";
+import type { ChatInputType, ChatOutputType } from "../chat";
+import type { FlowType } from "../flow";
 //kind and class are just representative names to represent the actual structure of the object received by the API
 export type APIDataType = { [key: string]: APIKindType };
 export type APIObjectType = { [key: string]: APIKindType };
@@ -43,6 +43,7 @@ export type APIClassType = {
   custom_fields?: CustomFieldsType;
   beta?: boolean;
   legacy?: boolean;
+  replacement?: string[];
   documentation: string;
   error?: string;
   official?: boolean;
@@ -53,6 +54,7 @@ export type APIClassType = {
   field_order?: string[];
   tool_mode?: boolean;
   type?: string;
+  last_updated?: string;
   [key: string]:
     | Array<string>
     | string
@@ -85,7 +87,7 @@ export type InputFieldType = {
   refresh_button_text?: string;
   combobox?: boolean;
   info?: string;
-  options?: string[];
+  options?: any[];
   active_tab?: number;
   [key: string]: any;
   icon?: string;
@@ -104,11 +106,13 @@ export type OutputFieldType = {
   types: Array<string>;
   selected?: string;
   name: string;
+  group_outputs?: boolean;
   method?: string;
   display_name: string;
   hidden?: boolean;
   proxy?: OutputFieldProxyType;
   allows_loop?: boolean;
+  loop_types?: Array<string>;
   options?: { [key: string]: any };
 };
 export type errorsTypeAPI = {
@@ -319,6 +323,7 @@ export type FieldValidatorType =
   | "password";
 
 export type FieldParserType =
+  | "mcp_name_case"
   | "snake_case"
   | "camel_case"
   | "pascal_case"
@@ -328,7 +333,8 @@ export type FieldParserType =
   | "no_blank"
   | "valid_csv"
   | "space_case"
-  | "commands";
+  | "commands"
+  | "sanitize_mcp_name";
 
 export type TableOptionsTypeAPI = {
   block_add?: boolean;

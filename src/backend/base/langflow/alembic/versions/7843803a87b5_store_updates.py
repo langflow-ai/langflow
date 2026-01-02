@@ -6,18 +6,17 @@ Create Date: 2023-10-18 23:08:57.744906
 
 """
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
 import sqlmodel
 from alembic import op
-from sqlalchemy.engine.reflection import Inspector
 
 # revision identifiers, used by Alembic.
 revision: str = "7843803a87b5"
-down_revision: Union[str, None] = "eb5866d51fd2"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = "eb5866d51fd2"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -51,5 +50,4 @@ def downgrade() -> None:
             batch_op.drop_column("is_component")
     except Exception as e:
         print(e)
-        pass
     # ### end Alembic commands ###

@@ -1,7 +1,5 @@
 export const SvgPython = (props) => (
   <svg
-    width="1080"
-    height="1080"
     version="1.0"
     viewBox="0 0 810 810"
     xmlns="http://www.w3.org/2000/svg"

@@ -1,5 +1,5 @@
 import LinkComponent from "@/components/core/parameterRenderComponent/components/linkComponent";
-import {
+import type {
   InputProps,
   LinkComponentType,
 } from "@/components/core/parameterRenderComponent/types";

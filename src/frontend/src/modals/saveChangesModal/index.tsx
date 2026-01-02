@@ -1,7 +1,7 @@
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import Loading from "@/components/ui/loading";
 import { truncate } from "lodash";
 import { useState } from "react";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import Loading from "@/components/ui/loading";
 import ConfirmationModal from "../confirmationModal";
 
 export function SaveChangesModal({
@@ -60,6 +60,7 @@ export function SaveChangesModal({
               target="_blank"
               className="text-secondary underline"
               href="https://docs.langflow.org/configuration-auto-save"
+              rel="noopener"
             >
               Enable auto-saving
             </a>{" "}

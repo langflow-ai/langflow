@@ -3,16 +3,16 @@ from collections import deque
 from typing import TYPE_CHECKING
 
 import pytest
-from langflow.components.helpers.memory import MemoryComponent
-from langflow.components.input_output import ChatInput, ChatOutput
-from langflow.components.languagemodels import OpenAIModelComponent
-from langflow.components.processing.converter import TypeConverterComponent
-from langflow.components.prompts import PromptComponent
-from langflow.graph.graph.base import Graph
-from langflow.graph.graph.constants import Finish
+from lfx.components.helpers.memory import MemoryComponent
+from lfx.components.input_output import ChatInput, ChatOutput
+from lfx.components.models_and_agents import PromptComponent
+from lfx.components.openai.openai_chat_model import OpenAIModelComponent
+from lfx.components.processing.converter import TypeConverterComponent
+from lfx.graph.graph.base import Graph
+from lfx.graph.graph.constants import Finish
 
 if TYPE_CHECKING:
-    from langflow.graph.graph.schema import GraphDump
+    from lfx.graph.graph.schema import GraphDump
 
 
 @pytest.fixture
@@ -131,7 +131,7 @@ def test_memory_chatbot_dump_components_and_edges(memory_chatbot_graph: Graph):
     assert nodes[3]["data"]["type"] == "OpenAIModel"
     assert nodes[3]["id"] == "openai"
 
-    assert nodes[4]["data"]["type"] == "Prompt"
+    assert nodes[4]["data"]["type"] == "Prompt Template"
     assert nodes[4]["id"] == "prompt"
 
     # Check edges

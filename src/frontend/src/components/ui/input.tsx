@@ -7,11 +7,22 @@ export interface InputProps
   icon?: string;
   inputClassName?: string;
   placeholder?: string;
+  endIcon?: string;
+  endIconClassName?: string;
 }
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
   (
-    { className, inputClassName, icon = "", type, placeholder, ...props },
+    {
+      className,
+      inputClassName,
+      icon = "",
+      endIcon = "",
+      endIconClassName = "",
+      type,
+      placeholder,
+      ...props
+    },
     ref,
   ) => {
     return (
@@ -32,8 +43,9 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           type={type}
           placeholder={placeholder}
           className={cn(
-            "nopan nodelete nodrag noflow primary-input placeholder-opacity-0",
+            "nopan nodelete nodrag noflow primary-input !placeholder-transparent",
             icon && "pl-9",
+            endIcon && "pr-9",
             icon ? inputClassName : className,
           )}
           ref={ref}
@@ -48,6 +60,15 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         >
           {placeholder}
         </span>
+        {endIcon && (
+          <ForwardedIconComponent
+            name={endIcon}
+            className={cn(
+              "pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 transform text-muted-foreground",
+              endIconClassName,
+            )}
+          />
+        )}
       </label>
     );
   },

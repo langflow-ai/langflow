@@ -1,5 +1,5 @@
-import { expect, test } from "@playwright/test";
 import { readFileSync } from "fs";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
@@ -53,11 +53,13 @@ test(
     });
 
     await page
-      .getByText("new project test name")
+      .getByTestId("sidebar-nav-new project test name")
       .last()
       .hover()
       .then(async () => {
-        await page.getByTestId("more-options-button").last().click();
+        await page
+          .getByTestId("more-options-button_new-project-test-name")
+          .click();
       });
 
     await page.getByTestId("btn-delete-project").click();
@@ -79,7 +81,7 @@ test("add a flow into a folder by drag and drop", async ({ page }) => {
 
   // Wait for the target element to be available before evaluation
 
-  await page.waitForSelector('[data-testid="sidebar-nav-My Projects"]', {
+  await page.waitForSelector('[data-testid="sidebar-nav-Starter Project"]', {
     timeout: 100000,
   });
   // Create the DataTransfer and File
@@ -94,7 +96,7 @@ test("add a flow into a folder by drag and drop", async ({ page }) => {
   }, jsonContent);
 
   // Now dispatch
-  await page.getByTestId("sidebar-nav-My Projects").dispatchEvent("drop", {
+  await page.getByTestId("sidebar-nav-Starter Project").dispatchEvent("drop", {
     dataTransfer,
   });
   // wait for the file to be uploaded failed with waitforselector
@@ -107,7 +109,7 @@ test("add a flow into a folder by drag and drop", async ({ page }) => {
     expect(true).toBeTruthy();
   }
 
-  await page.getByTestId("sidebar-nav-My Projects").click();
+  await page.getByTestId("sidebar-nav-Starter Project").click();
 
   await page.waitForSelector("text=Getting Started:", {
     timeout: 100000,

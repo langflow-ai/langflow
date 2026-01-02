@@ -15,7 +15,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install jq
         run: sudo apt-get install -y jq
@@ -54,10 +54,10 @@ jobs:
 
           # Get the OpenAPI spec and save to file
           echo "Fetching OpenAPI spec..."
-          curl -s http://localhost:7860/openapi.json > new_openapi.json
+          curl -s http://localhost:7860/openapi.json > docs/openapi/new_openapi.json
 
           # Verify file was created
-          ls -la new_openapi.json
+          ls -la docs/openapi/new_openapi.json
 
           # stop the container when done
           docker stop langflow
@@ -67,18 +67,22 @@ jobs:
         id: compare
         run: |
           # Extract versions
-          NEW_VERSION=$(jq -r '.info.version' new_openapi.json)
-          CURRENT_VERSION=$(jq -r '.info.version' docs/openapi.json)
+          NEW_VERSION=$(jq -r '.info.version' docs/openapi/new_openapi.json)
+          CURRENT_VERSION=$(jq -r '.info.version' docs/openapi/openapi.json)
 
           echo "Current version: $CURRENT_VERSION"
           echo "New version: $NEW_VERSION"
 
           # Compare file content (normalize by sorting keys)
-          jq --sort-keys . new_openapi.json > sorted_new.json
-          jq --sort-keys . docs/openapi.json > sorted_current.json
+          jq --sort-keys . docs/openapi/new_openapi.json > docs/openapi/sorted_new.json
+          jq --sort-keys . docs/openapi/openapi.json > docs/openapi/sorted_current.json
 
-          if ! cmp -s sorted_new.json sorted_current.json; then
+          if ! cmp -s docs/openapi/sorted_new.json docs/openapi/sorted_current.json; then
             echo "OpenAPI spec content has changed."
+
+            # Clean the new spec for ReDoc formatting
+            echo "Cleaning OpenAPI spec formatting..."
+            python3 docs/scripts/clean_openapi_formatting.py docs/openapi/new_openapi.json
 
             # Compare versions (assuming semantic versioning)
             if [ "$(printf '%s\n' "$CURRENT_VERSION" "$NEW_VERSION" | sort -V | tail -n1)" == "$NEW_VERSION" ] && [ "$CURRENT_VERSION" != "$NEW_VERSION" ]; then
@@ -93,14 +97,14 @@ jobs:
               echo "UPDATE_REASON=content updated without version change" >> $GITHUB_ENV
             fi
 
-            cat new_openapi.json | jq > docs/openapi.json
+            cat docs/openapi/new_openapi.json | jq > docs/openapi/openapi.json
           else
             echo "No changes detected in OpenAPI spec content."
             echo "NEEDS_UPDATE=false" >> $GITHUB_ENV
           fi
 
           # Clean up
-          rm new_openapi.json sorted_new.json sorted_current.json
+          rm docs/openapi/new_openapi.json docs/openapi/sorted_new.json docs/openapi/sorted_current.json
 
       - name: Create Pull Request
         if: env.NEEDS_UPDATE == 'true' && steps.check_pull_request.outputs.pr_exists != 'true'

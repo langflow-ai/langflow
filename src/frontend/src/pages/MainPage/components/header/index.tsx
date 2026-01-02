@@ -1,21 +1,16 @@
+import { debounce } from "lodash";
+import { useCallback, useEffect, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import {
-  DEFAULT_FOLDER,
-  DEFAULT_FOLDER_DEPRECATED,
-} from "@/constants/constants";
 import { useDeleteDeleteFlows } from "@/controllers/API/queries/flows/use-delete-delete-flows";
 import { useGetDownloadFlows } from "@/controllers/API/queries/flows/use-get-download-flows";
 import { ENABLE_MCP } from "@/customization/feature-flags";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import useAlertStore from "@/stores/alertStore";
 import { cn } from "@/utils/utils";
-import { debounce } from "lodash";
-import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 
 interface HeaderComponentProps {
   flowType: "flows" | "components" | "mcp";
@@ -96,6 +91,8 @@ const HeaderComponent = ({
     );
   };
 
+  const hasSelection = selectedFlows.length > 0;
+
   return (
     <>
       <div
@@ -113,7 +110,7 @@ const HeaderComponent = ({
             </SidebarTrigger>
           </div>
         </div>
-        {folderName === DEFAULT_FOLDER_DEPRECATED ? DEFAULT_FOLDER : folderName}
+        {folderName}
       </div>
       {!isEmptyFolder && (
         <>
@@ -191,7 +188,7 @@ const HeaderComponent = ({
               <div className="flex items-center">
                 <div
                   className={cn(
-                    "-mr-3 flex w-0 items-center gap-2 overflow-hidden opacity-0 transition-all duration-300",
+                    "flex w-0 items-center gap-2 overflow-hidden opacity-0 transition-all duration-300",
                     selectedFlows.length > 0 && "w-36 opacity-100",
                   )}
                 >
@@ -202,11 +199,12 @@ const HeaderComponent = ({
                     data-testid="download-bulk-btn"
                     onClick={handleDownload}
                     loading={isDownloading}
+                    tabIndex={hasSelection ? 0 : -1}
                   >
                     <ForwardedIconComponent name="Download" />
                   </Button>
-
                   <DeleteConfirmationModal
+                    asChild
                     onConfirm={handleDelete}
                     description={"flow" + (selectedFlows.length > 1 ? "s" : "")}
                     note={
@@ -221,6 +219,7 @@ const HeaderComponent = ({
                       className="px-2.5 !text-mmd"
                       data-testid="delete-bulk-btn"
                       loading={isDeleting}
+                      tabIndex={hasSelection ? 0 : -1}
                     >
                       <ForwardedIconComponent name="Trash2" />
                       Delete

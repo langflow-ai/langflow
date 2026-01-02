@@ -1,6 +1,6 @@
-import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
@@ -48,8 +48,8 @@ test(
       await apiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
     }
 
-    await page.getByTestId("dropdown_str_model_name").click();
-    await page.getByTestId("gpt-4o-1-option").click();
+    await page.getByTestId("model_model").click();
+    await page.getByTestId("gpt-4o-mini-option").click();
 
     await page.waitForSelector('[data-testid="button_run_chat output"]', {
       timeout: 1000,

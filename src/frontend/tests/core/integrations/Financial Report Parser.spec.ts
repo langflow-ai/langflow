@@ -1,10 +1,8 @@
-import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { getAllResponseMessage } from "../../utils/get-all-response-message";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
-import { waitForOpenModalWithChatInput } from "../../utils/wait-for-open-modal";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
 withEventDeliveryModes(
@@ -28,18 +26,11 @@ withEventDeliveryModes(
       .getByRole("heading", { name: "Financial Report Parser" })
       .click();
 
-    await page.waitForSelector('[data-testid="fit_view"]', {
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
     });
 
     await initialGPTsetup(page);
-
-    //* TODO: Remove these 3 steps once the template is updated *//
-    await page.getByTestId("dropdown-output-openaimodel").click();
-
-    await page
-      .getByTestId("dropdown-item-output-openaimodel-language model")
-      .click();
 
     await page.getByTestId("tab_1_stringify").click();
 
@@ -56,8 +47,8 @@ withEventDeliveryModes(
         timeout: 180000,
         state: "hidden",
       });
-    } catch (error) {
-      console.log("Timeout error");
+    } catch (_error) {
+      console.error("Timeout error");
       test.skip(true, "Timeout error");
     }
 

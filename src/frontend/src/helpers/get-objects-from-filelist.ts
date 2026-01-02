@@ -1,8 +1,8 @@
 export async function getObjectsFromFilelist<T>(files: File[]): Promise<T[]> {
-  let objects: T[] = [];
+  const objects: T[] = [];
   for (const file of files) {
-    let text = await file.text();
-    let fileData = await JSON.parse(text);
+    const text = await file.text();
+    const fileData = await JSON.parse(text);
     objects.push(fileData as T);
   }
   return objects;

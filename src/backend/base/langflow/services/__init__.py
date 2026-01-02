@@ -1,4 +1,4 @@
-from .manager import service_manager
+from .manager import get_service_manager
 from .schema import ServiceType
 
-__all__ = ["ServiceType", "service_manager"]
+__all__ = ["ServiceType", "get_service_manager"]

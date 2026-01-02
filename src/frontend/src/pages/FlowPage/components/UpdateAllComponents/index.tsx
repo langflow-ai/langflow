@@ -1,18 +1,18 @@
-import { Button } from "@/components/ui/button";
-import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
-import { processNodeAdvancedFields } from "@/CustomNodes/helpers/process-node-advanced-fields";
-import useUpdateAllNodes, {
-  UpdateNodesType,
-} from "@/CustomNodes/hooks/use-update-all-nodes";
-import UpdateComponentModal from "@/modals/updateComponentModal";
-import useAlertStore from "@/stores/alertStore";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import useFlowStore from "@/stores/flowStore";
-import { useTypesStore } from "@/stores/typesStore";
-import { cn } from "@/utils/utils";
 import { useUpdateNodeInternals } from "@xyflow/react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useMemo, useRef, useState } from "react";
+import { processNodeAdvancedFields } from "@/CustomNodes/helpers/process-node-advanced-fields";
+import useUpdateAllNodes, {
+  type UpdateNodesType,
+} from "@/CustomNodes/hooks/use-update-all-nodes";
+import { Button } from "@/components/ui/button";
+import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
+import UpdateComponentModal from "@/modals/updateComponentModal";
+import useAlertStore from "@/stores/alertStore";
+import useFlowStore from "@/stores/flowStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { useTypesStore } from "@/stores/typesStore";
+import { cn } from "@/utils/utils";
 
 const ERROR_MESSAGE_UPDATING_COMPONENTS = "Error updating components";
 const ERROR_MESSAGE_UPDATING_COMPONENTS_LIST = [
@@ -28,7 +28,7 @@ const CONTAINER_VARIANTS = {
   exit: { opacity: 0, y: 20 },
 };
 
-export default function UpdateAllComponents({}: {}) {
+export default function UpdateAllComponents() {
   const { componentsToUpdate, nodes, edges, setNodes } = useFlowStore();
   const templates = useTypesStore((state) => state.templates);
   const setErrorData = useAlertStore((state) => state.setErrorData);

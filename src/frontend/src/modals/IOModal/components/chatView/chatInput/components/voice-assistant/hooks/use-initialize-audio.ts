@@ -1,4 +1,4 @@
-import { MutableRefObject } from "react";
+import type { MutableRefObject } from "react";
 
 export const useInitializeAudio = async (
   audioContextRef: MutableRefObject<AudioContext | null>,
@@ -11,8 +11,9 @@ export const useInitializeAudio = async (
     }
 
     if (!audioContextRef.current) {
-      audioContextRef.current = new (window.AudioContext ||
-        (window as any).webkitAudioContext)({
+      audioContextRef.current = new (
+        window.AudioContext || (window as any).webkitAudioContext
+      )({
         sampleRate: 24000,
       });
     }
