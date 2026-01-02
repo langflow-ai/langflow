@@ -8,7 +8,7 @@ from typing import Optional, Union
 from langchain_core._api.deprecation import LangChainDeprecationWarning
 from pydantic import ValidationError
 
-from lfx.custom.sandbox import create_isolated_import, execute_in_sandbox
+from lfx.custom.sandbox import SecurityViolationError, create_isolated_import, execute_in_sandbox
 from lfx.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES, DEFAULT_IMPORT_STRING
 from lfx.log.logger import logger
 
@@ -59,6 +59,13 @@ def validate_code(code):
                 try:
                     # Use sandbox's isolated import - blocks dangerous modules
                     isolated_import(alias.name, None, None, (), 0)
+                except SecurityViolationError as e:
+                    # SecurityViolationError means the module is blocked by security policy.
+                    # Since the sandbox will be used during runtime execution (planned),
+                    # we should fail validation here so users get early feedback about
+                    # blocked modules. This prevents code from passing validation but
+                    # failing at runtime.
+                    errors["imports"]["errors"].append(str(e))
                 except ModuleNotFoundError as e:
                     errors["imports"]["errors"].append(str(e))
                 except Exception as e:  # noqa: BLE001
@@ -68,6 +75,13 @@ def validate_code(code):
                 try:
                     # Use sandbox's isolated import - blocks dangerous modules
                     isolated_import(node.module, None, None, (), 0)
+                except SecurityViolationError as e:
+                    # SecurityViolationError means the module is blocked by security policy.
+                    # Since the sandbox will be used during runtime execution (planned),
+                    # we should fail validation here so users get early feedback about
+                    # blocked modules. This prevents code from passing validation but
+                    # failing at runtime.
+                    errors["imports"]["errors"].append(str(e))
                 except ModuleNotFoundError as e:
                     errors["imports"]["errors"].append(str(e))
                 except Exception as e:  # noqa: BLE001
