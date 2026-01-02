@@ -22,6 +22,18 @@ class WorkflowValidationError(WorkflowExecutionError):
     """Workflow validation error (e.g., invalid flow data, graph build failure)."""
 
 
+class WorkflowQueueFullError(WorkflowExecutionError):
+    """Raised when the background task queue is full."""
+
+
+class WorkflowResourceError(WorkflowExecutionError):
+    """Raised when the server is out of memory or other resources."""
+
+
+class WorkflowServiceUnavailableError(WorkflowExecutionError):
+    """Raised when the task queue service is unavailable (e.g., broker down)."""
+
+
 # create a pidantic documentation for this class
 class ExceptionBody(BaseModel):
     message: str | list[str]
