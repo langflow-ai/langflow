@@ -1,10 +1,9 @@
-import { useAuth } from "@clerk/clerk-react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import type { PropsWithChildren } from "react";
 import { LANDING_BASENAME } from "./landingRoutes";
 import NewLandingPageLogin from "./NewLandingPageLogin";
 import OrganizationOnboarding from "./OrganizationOnboarding";
 import "./App.css";
-import DashboardPage from "./DashboardPage";
 import { useCookies } from "react-cookie";
 import LandingPage from "./LandingPage";
 import {
@@ -13,25 +12,23 @@ import {
   LANGFLOW_REFRESH_TOKEN,
 } from "./session";
 
-function RootRoute() {
-  const { isSignedIn } = useAuth();
+function SessionRedirect({ children }: PropsWithChildren) {
   const [cookies] = useCookies([LANGFLOW_ACCESS_TOKEN, LANGFLOW_REFRESH_TOKEN]);
+  const workspaceReady = hasWorkspaceSession(cookies);
 
-  console.log("[App] RootRoute render", { isSignedIn });
-
-  if (isSignedIn) {
-    const workspaceReady = hasWorkspaceSession(cookies);
-    const destination = workspaceReady ? "/dashboard" : "/organization";
-
-    console.log("[App] Redirecting signed-in user from root", {
-      workspaceReady,
-      destination,
-    });
-
-    return <Navigate to={destination} replace />;
+  if (workspaceReady) {
+    console.log("[App] SessionRedirect detected workspace; sending to /flows");
+    window.location.assign("/flows");
+    return null;
   }
 
-  return <LandingPage />;
+  return <>{children}</>;
+}
+
+function FlowsRedirect() {
+  console.log("[App] Redirecting to /flows");
+  window.location.assign("/flows");
+  return null;
 }
 
 export default function App() {
@@ -40,10 +37,23 @@ export default function App() {
   return (
     <BrowserRouter basename={LANDING_BASENAME}>
       <Routes>
-        <Route path="/" element={<RootRoute />} />
-        <Route path="/login" element={<NewLandingPageLogin />} />
-        <Route path="/organization" element={<OrganizationOnboarding />} />
-        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/" element={<LandingPage />} />
+        <Route
+          path="/login"
+          element={
+            <SessionRedirect>
+              <NewLandingPageLogin />
+            </SessionRedirect>
+          }
+        />
+        <Route
+          path="/organization"
+          element={
+            <SessionRedirect>
+              <OrganizationOnboarding />
+            </SessionRedirect>
+          }
+        />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

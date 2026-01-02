@@ -16,8 +16,6 @@ import {
 } from "react";
 import {
   Navigate,
-  useLocation,
-  useNavigate,
   useSearchParams,
 } from "react-router-dom";
 import { useCookies } from "react-cookie";
@@ -100,10 +98,22 @@ async function requestJson(
   });
 
   const text = expectJson ? await response.text() : null;
-  const data = text ? (JSON.parse(text) as Record<string, any>) : null;
+  let data: Record<string, any> | null = null;
+
+  if (text) {
+    try {
+      data = JSON.parse(text) as Record<string, any>;
+    } catch {
+      // Non-JSON response (e.g., HTML error page); keep text for fallback messaging
+      data = null;
+    }
+  }
 
   if (!response.ok) {
-    const detail = (data?.detail as string) ?? response.statusText;
+    const detail =
+      (data?.detail as string) ??
+      (text ? text.slice(0, 200) : null) ??
+      response.statusText;
     throw new HttpError(response.status, detail || "Request failed", data);
   }
 
@@ -228,8 +238,6 @@ export default function OrganizationOnboarding() {
     organizationId: organization?.id,
   });
 
-  const location = useLocation();
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [cookies, setCookie, removeCookie] = useCookies([
@@ -241,7 +249,6 @@ export default function OrganizationOnboarding() {
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [isBootstrapping, setIsBootstrapping] = useState(false);
-  const [shouldGoToDashboard, setShouldGoToDashboard] = useState(false);
 
   const bootstrappedRef = useRef(false);
   const processedOrgRef = useRef<string | null>(null);
@@ -319,13 +326,18 @@ export default function OrganizationOnboarding() {
     }
   }, [removeCookie, signOut]);
 
+  const goToFlows = useCallback(() => {
+    console.log("[OrganizationOnboarding] Redirecting to /flows");
+    window.location.assign("/flows");
+  }, []);
+
   /**
    * Core bootstrap flow:
    * - createOrganisation
    * - ensureLangflowUser
    * - backendLogin
    * - persist cookies + storage
-   * - redirect to /dashboard
+   * - redirect to /flows
    */
   const bootstrapSession = useCallback(async () => {
     if (!isSignedIn || !organization?.id || bootstrappedRef.current) return;
@@ -367,13 +379,12 @@ export default function OrganizationOnboarding() {
 
       persistSession(orgToken, (tokens as any)?.refresh_token ?? null, activeOrgId);
 
-      setStatus("Redirecting to dashboard...");
+      setStatus("Redirecting to workspace...");
       console.log(
-        "[OrganizationOnboarding] Redirecting to dashboard with org",
+        "[OrganizationOnboarding] Redirecting to workspace with org",
         activeOrgId,
       );
-      setShouldGoToDashboard(true);
-      navigate("/dashboard", { replace: true });
+      goToFlows();
     } catch (err: any) {
       console.error("[OrganizationOnboarding] Failed to bootstrap", err);
       const msg =
@@ -391,10 +402,10 @@ export default function OrganizationOnboarding() {
     clearSession,
     getToken,
     isSignedIn,
-    navigate,
     organization?.id,
     persistSession,
     user,
+    goToFlows,
   ]);
 
   useEffect(() => {
@@ -422,17 +433,16 @@ export default function OrganizationOnboarding() {
     const hasAccessToken = Boolean(cookies[LANGFLOW_ACCESS_TOKEN]);
 
     if (orgSelected && activeOrgId && hasAccessToken) {
-      console.log("[OrganizationOnboarding] Session already present; routing to /dashboard", {
+      console.log("[OrganizationOnboarding] Session already present; routing to /flows", {
         activeOrgId,
       });
-      setShouldGoToDashboard(true);
-      navigate("/dashboard", { replace: true });
+      goToFlows();
     }
-  }, [cookies, isLoaded, isSignedIn, navigate]);
+  }, [cookies, goToFlows, isLoaded, isSignedIn]);
 
   /**
    * When Clerk redirects back with ?selected=true,
-   * create org + bootstrap session, then go to /dashboard.
+   * create org + bootstrap session, then go to /flows.
    */
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return;
@@ -493,11 +503,6 @@ export default function OrganizationOnboarding() {
       "[OrganizationOnboarding] User not signed in, redirecting to /login",
     );
     return <Navigate to="/login" replace />;
-  }
-
-  if (shouldGoToDashboard) {
-    console.log("[OrganizationOnboarding] Local redirect flag set; sending to /dashboard");
-    return <Navigate to="/dashboard" replace />;
   }
 
   return (
