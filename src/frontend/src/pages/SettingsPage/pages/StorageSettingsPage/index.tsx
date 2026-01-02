@@ -24,9 +24,7 @@ export default function StorageSettingsPage() {
   const { data: storageSettings, isLoading } = useGetStorageSettings();
   const { mutate: updateSettings, isPending } = useUpdateStorageSettings();
 
-  const [storageLocation, setStorageLocation] = useState<string>(
-    storageSettings?.default_storage_location ?? "Local",
-  );
+  const [storageLocation, setStorageLocation] = useState<string>("Local");
   const [awsAccessKey, setAwsAccessKey] = useState<string>("");
   const [awsSecretKey, setAwsSecretKey] = useState<string>("");
   const [awsBucket, setAwsBucket] = useState<string>("");
@@ -35,22 +33,21 @@ export default function StorageSettingsPage() {
     useState<string>("");
   const [gdriveFolderId, setGdriveFolderId] = useState<string>("");
 
-  // Initialize form when data loads
-  useState(() => {
-    if (storageSettings) {
-      setStorageLocation(storageSettings.default_storage_location);
-      setAwsAccessKey(storageSettings.component_aws_access_key_id ?? "");
-      setAwsSecretKey(storageSettings.component_aws_secret_access_key ?? "");
-      setAwsBucket(storageSettings.component_aws_default_bucket ?? "");
-      setAwsRegion(storageSettings.component_aws_default_region ?? "");
-      setGdriveServiceAccountKey(
-        storageSettings.component_google_drive_service_account_key ?? "",
-      );
-      setGdriveFolderId(
-        storageSettings.component_google_drive_default_folder_id ?? "",
-      );
-    }
-  });
+  // Initialize form when data loads / refetches
+  useEffect(() => {
+    if (!storageSettings) return;
+    setStorageLocation(storageSettings.default_storage_location ?? "Local");
+    setAwsAccessKey(storageSettings.component_aws_access_key_id ?? "");
+    setAwsSecretKey(storageSettings.component_aws_secret_access_key ?? "");
+    setAwsBucket(storageSettings.component_aws_default_bucket ?? "");
+    setAwsRegion(storageSettings.component_aws_default_region ?? "");
+    setGdriveServiceAccountKey(
+      storageSettings.component_google_drive_service_account_key ?? "",
+    );
+    setGdriveFolderId(
+      storageSettings.component_google_drive_default_folder_id ?? "",
+    );
+  }, [storageSettings]);
 
   const handleSave = () => {
     const updates: any = {
