@@ -34,11 +34,12 @@ def mock_user():
 @pytest.fixture
 def mock_session_scope():
     """Mock the session_scope context manager and variable service methods."""
-    with patch("langflow.api.v2.storage_settings.session_scope") as mock_scope, \
-         patch("langflow.api.v2.storage_settings.DatabaseVariableService") as mock_var_service_class, \
-         patch("langflow.services.auth.utils.encrypt_api_key") as mock_encrypt, \
-         patch("langflow.services.auth.utils.decrypt_api_key") as mock_decrypt:
-
+    with (
+        patch("langflow.api.v2.storage_settings.session_scope") as mock_scope,
+        patch("langflow.api.v2.storage_settings.DatabaseVariableService") as mock_var_service_class,
+        patch("langflow.services.auth.utils.encrypt_api_key") as mock_encrypt,
+        patch("langflow.services.auth.utils.decrypt_api_key") as mock_decrypt,
+    ):
         mock_session = AsyncMock()
         mock_session.commit = AsyncMock()
         mock_scope.return_value.__aenter__.return_value = mock_session
@@ -82,7 +83,9 @@ def mock_session_scope():
 
 @pytest.mark.asyncio
 async def test_validation_fails_when_switching_to_aws_without_credentials(
-    mock_session_scope, settings_service, mock_user  # noqa: ARG001
+    mock_session_scope,  # noqa: ARG001
+    settings_service,
+    mock_user,
 ):
     """Test that validation fails when switching to AWS without providing credentials."""
     settings_update = StorageSettingsUpdate(default_storage_location="AWS")
@@ -124,7 +127,9 @@ async def test_validation_fails_when_switching_to_aws_without_bucket(mock_sessio
 
 @pytest.mark.asyncio
 async def test_validation_passes_when_switching_to_aws_with_all_credentials(
-    mock_session_scope, settings_service, mock_user  # noqa: ARG001
+    mock_session_scope,  # noqa: ARG001
+    settings_service,
+    mock_user,
 ):
     """Test that validation passes when switching to AWS with all credentials."""
     settings_update = StorageSettingsUpdate(
@@ -146,7 +151,9 @@ async def test_validation_passes_when_switching_to_aws_with_all_credentials(
 
 @pytest.mark.asyncio
 async def test_validation_fails_when_switching_to_google_drive_without_credentials(
-    mock_session_scope, settings_service, mock_user  # noqa: ARG001
+    mock_session_scope,  # noqa: ARG001
+    settings_service,
+    mock_user,
 ):
     """Test that validation fails when switching to Google Drive without credentials."""
     settings_update = StorageSettingsUpdate(default_storage_location="Google Drive")
@@ -160,7 +167,9 @@ async def test_validation_fails_when_switching_to_google_drive_without_credentia
 
 @pytest.mark.asyncio
 async def test_validation_passes_when_switching_to_google_drive_with_credentials(
-    mock_session_scope, settings_service, mock_user  # noqa: ARG001
+    mock_session_scope,  # noqa: ARG001
+    settings_service,
+    mock_user,
 ):
     """Test that validation passes when switching to Google Drive with credentials."""
     settings_update = StorageSettingsUpdate(
@@ -206,7 +215,9 @@ async def test_validation_passes_when_aws_already_configured(mock_session_scope,
 
 @pytest.mark.asyncio
 async def test_validation_passes_when_updating_credentials_without_changing_storage(
-    mock_session_scope, settings_service, mock_user  # noqa: ARG001
+    mock_session_scope,  # noqa: ARG001
+    settings_service,
+    mock_user,
 ):
     """Test that validation passes when updating credentials without changing storage location."""
     # Pre-configure AWS settings
