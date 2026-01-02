@@ -72,7 +72,7 @@ class TestFileComponentStorageSettings:
         component.use_custom_storage = False
         component.s3_file_key = "test/file.txt"
 
-        with patch("lfx.components.files_and_knowledge.file.get_settings_service") as mock_service:
+        with patch("lfx.base.data.storage_settings_mixin.get_settings_service") as mock_service:
             mock_settings = MagicMock()
             mock_settings.component_aws_access_key_id = "global_key_id"
             import os
@@ -115,7 +115,7 @@ class TestSaveFileComponentStorageSettings:
         component = SaveToFileComponent()
         component.use_custom_storage = False
 
-        with patch("lfx.components.files_and_knowledge.save_file.get_settings_service") as mock_service:
+        with patch("lfx.base.data.storage_settings_mixin.get_settings_service") as mock_service:
             mock_settings = MagicMock()
             mock_settings.default_storage_location = "Google Drive"
             mock_service.return_value.settings = mock_settings

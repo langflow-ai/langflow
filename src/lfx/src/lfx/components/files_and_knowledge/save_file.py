@@ -8,8 +8,8 @@ import pandas as pd
 from fastapi import UploadFile
 from fastapi.encoders import jsonable_encoder
 
+from lfx.base.data.storage_settings_mixin import StorageSettingsMixin
 from lfx.custom import Component
-from lfx.inputs import SortableListInput
 from lfx.io import BoolInput, DropdownInput, HandleInput, SecretStrInput, StrInput
 from lfx.schema import Data, DataFrame, Message
 from lfx.services.deps import get_settings_service, get_storage_service, session_scope
@@ -17,15 +17,7 @@ from lfx.template.field.base import Output
 from lfx.utils.validate_cloud import is_astra_cloud_environment
 
 
-def _get_storage_location_options():
-    """Get storage location options, filtering out Local if in Astra cloud environment."""
-    all_options = [{"name": "AWS", "icon": "Amazon"}, {"name": "Google Drive", "icon": "google"}]
-    if is_astra_cloud_environment():
-        return all_options
-    return [{"name": "Local", "icon": "hard-drive"}, *all_options]
-
-
-class SaveToFileComponent(Component):
+class SaveToFileComponent(Component, StorageSettingsMixin):
     display_name = "Write File"
     description = "Save data to local file, AWS S3, or Google Drive in the selected format."
     documentation: str = "https://docs.langflow.org/write-file"
@@ -53,26 +45,8 @@ class SaveToFileComponent(Component):
     GDRIVE_FORMAT_CHOICES = ["txt", "json", "csv", "xlsx", "slides", "docs", "jpg", "mp3"]
 
     inputs = [
-        # Custom storage toggle
-        BoolInput(
-            name="use_custom_storage",
-            display_name="Override Global Storage",
-            value=False,
-            advanced=True,
-            real_time_refresh=True,
-            info="Enable to override global storage settings for this component.",
-        ),
-        # Storage location selection
-        SortableListInput(
-            name="storage_location",
-            display_name="Storage Location",
-            placeholder="Select Location",
-            info="Choose where to save the file.",
-            options=_get_storage_location_options(),
-            real_time_refresh=True,
-            limit=1,
-            show=False,
-        ),
+        # Storage settings from mixin
+        *StorageSettingsMixin.get_storage_settings_inputs(),
         # Common inputs
         HandleInput(
             name="input",
@@ -193,36 +167,27 @@ class SaveToFileComponent(Component):
         # Update options dynamically based on cloud environment
         # This ensures options are refreshed when build_config is updated
         if "storage_location" in build_config:
+            from lfx.base.data.storage_settings_mixin import _get_storage_location_options
             updated_options = _get_storage_location_options()
             build_config["storage_location"]["options"] = updated_options
 
         # Handle use_custom_storage toggle
         if field_name == "use_custom_storage":
-            # Show/hide storage location fields based on toggle
-            if "storage_location" in build_config:
-                build_config["storage_location"]["show"] = bool(field_value)
-
-            # If disabling custom storage, hide all storage-specific fields
-            if not field_value:
-                dynamic_fields = [
-                    "file_name",
-                    "append_mode",
-                    "local_format",
-                    "aws_format",
-                    "gdrive_format",
-                    "aws_access_key_id",
-                    "aws_secret_access_key",
-                    "bucket_name",
-                    "aws_region",
-                    "s3_prefix",
-                    "service_account_key",
-                    "folder_id",
-                ]
-                for f_name in dynamic_fields:
-                    if f_name in build_config:
-                        build_config[f_name]["show"] = False
-
-            return build_config
+            dynamic_fields = [
+                "file_name",
+                "append_mode",
+                "local_format",
+                "aws_format",
+                "gdrive_format",
+                "aws_access_key_id",
+                "aws_secret_access_key",
+                "bucket_name",
+                "aws_region",
+                "s3_prefix",
+                "service_account_key",
+                "folder_id",
+            ]
+            return self._update_build_config_for_storage_toggle(build_config, field_value, dynamic_fields)
 
         if field_name != "storage_location":
             return build_config
@@ -544,26 +509,7 @@ class SaveToFileComponent(Component):
         action = "appended to" if should_append else "saved successfully as"
         return f"Message {action} '{path}'"
 
-    def _get_selected_storage_location(self) -> str:
-        """Get the selected storage location.
-
-        Uses component-level settings if use_custom_storage is True,
-        otherwise uses global settings.
-        """
-        use_custom = getattr(self, "use_custom_storage", False)
-
-        if use_custom:
-            # Use component-level storage location
-            if hasattr(self, "storage_location") and self.storage_location:
-                if isinstance(self.storage_location, list) and len(self.storage_location) > 0:
-                    return self.storage_location[0].get("name", "")
-                if isinstance(self.storage_location, dict):
-                    return self.storage_location.get("name", "")
-            return ""
-
-        # Use global settings
-        settings = get_settings_service().settings
-        return settings.default_storage_location
+    # _get_selected_storage_location inherited from StorageSettingsMixin
 
     def _get_file_format_for_location(self, location: str) -> str:
         """Get the appropriate file format based on storage location."""
@@ -619,75 +565,38 @@ class SaveToFileComponent(Component):
 
         from lfx.base.data.cloud_storage_utils import validate_aws_credentials
 
-        use_custom = getattr(self, "use_custom_storage", False)
-        settings = get_settings_service().settings
+        # Get and validate credentials from component or global settings
+        credentials = self._get_aws_credentials()
 
-        # Get AWS credentials from component or global settings
-        if use_custom:
-            # Get from component inputs or fall back to environment variables
-            aws_access_key_id = getattr(self, "aws_access_key_id", None)
-            if aws_access_key_id and hasattr(aws_access_key_id, "get_secret_value"):
-                aws_access_key_id = aws_access_key_id.get_secret_value()
-            if not aws_access_key_id:
-                aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
+        # For custom storage, check environment variables as fallback
+        if getattr(self, "use_custom_storage", False):
+            if not credentials["access_key_id"]:
+                credentials["access_key_id"] = os.getenv("AWS_ACCESS_KEY_ID")
+            if not credentials["secret_access_key"]:
+                credentials["secret_access_key"] = os.getenv("AWS_SECRET_ACCESS_KEY")
+            if not credentials["bucket_name"]:
+                settings = get_settings_service().settings
+                credentials["bucket_name"] = settings.object_storage_bucket_name
+            if not credentials["region"]:
+                credentials["region"] = os.getenv("AWS_DEFAULT_REGION") or os.getenv("AWS_REGION")
 
-            aws_secret_access_key = getattr(self, "aws_secret_access_key", None)
-            if aws_secret_access_key and hasattr(aws_secret_access_key, "get_secret_value"):
-                aws_secret_access_key = aws_secret_access_key.get_secret_value()
-            if not aws_secret_access_key:
-                aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+        self._validate_aws_credentials(credentials)
+        self._set_aws_credentials_on_self(credentials)
 
-            bucket_name = getattr(self, "bucket_name", None)
-            if not bucket_name:
-                bucket_name = settings.object_storage_bucket_name
-
-            aws_region = getattr(self, "aws_region", None)
-        else:
-            # Use global settings
-            aws_access_key_id = settings.component_aws_access_key_id
-            aws_secret_access_key = settings.component_aws_secret_access_key
-            bucket_name = settings.component_aws_default_bucket
-            aws_region = settings.component_aws_default_region
-
-        # Validate AWS credentials
-        if not aws_access_key_id:
-            msg = (
-                "AWS Access Key ID is required for S3 storage. Provide it as a component input "
-                "or set AWS_ACCESS_KEY_ID environment variable."
-            )
-            raise ValueError(msg)
-        if not aws_secret_access_key:
-            msg = (
-                "AWS Secret Key is required for S3 storage. Provide it as a component input "
-                "or set AWS_SECRET_ACCESS_KEY environment variable."
-            )
-            raise ValueError(msg)
-        if not bucket_name:
-            msg = (
-                "S3 Bucket Name is required for S3 storage. Provide it as a component input "
-                "or set LANGFLOW_OBJECT_STORAGE_BUCKET_NAME environment variable."
-            )
-            raise ValueError(msg)
-
-        # Set credentials on self temporarily for create_s3_client (if using global settings)
-        if not use_custom:
-            self.aws_access_key_id = aws_access_key_id
-            self.aws_secret_access_key = aws_secret_access_key
-            self.bucket_name = bucket_name
-            self.aws_region = aws_region
-
-        # Validate AWS credentials
+        # Validate and create S3 client
         validate_aws_credentials(self)
 
         # Create S3 client config
+        aws_access_key_id = credentials["access_key_id"]
+        aws_secret_access_key = credentials["secret_access_key"]
+        bucket_name = credentials["bucket_name"]
+        aws_region = credentials["region"]
+
         client_config: dict[str, Any] = {
             "aws_access_key_id": str(aws_access_key_id),
             "aws_secret_access_key": str(aws_secret_access_key),
         }
 
-        # Add region if specified
-        if not aws_region and use_custom:
-            aws_region = os.getenv("AWS_DEFAULT_REGION") or os.getenv("AWS_REGION")
         if aws_region:
             client_config["region_name"] = str(aws_region)
 
@@ -729,39 +638,27 @@ class SaveToFileComponent(Component):
 
         from lfx.base.data.cloud_storage_utils import create_google_drive_service
 
-        use_custom = getattr(self, "use_custom_storage", False)
-        settings = get_settings_service().settings
+        # Get and validate credentials from component or global settings
+        credentials = self._get_google_drive_credentials()
+        self._validate_google_drive_credentials(credentials)
 
-        # Get credentials from component or global settings
-        if use_custom:
-            # Validate Google Drive credentials from component
-            if not getattr(self, "service_account_key", None):
-                msg = "GCP Credentials Secret Key is required for Google Drive storage"
-                raise ValueError(msg)
-            if not getattr(self, "folder_id", None):
+        # Validate folder_id for write operation
+        if not credentials["folder_id"]:
+            use_custom = getattr(self, "use_custom_storage", False)
+            if use_custom:
                 msg = "Google Drive Folder ID is required for Google Drive storage"
-                raise ValueError(msg)
-            service_key = self.service_account_key
-            folder_id = getattr(self, "folder_id", None)
-            if not folder_id:
-                msg = "Google Drive Folder ID is not set."
-                raise ValueError(msg)
-        else:
-            # Use global settings
-            if not settings.component_google_drive_service_account_key:
-                msg = "Google Drive service account key not configured in global storage settings"
-                raise ValueError(msg)
-            if not settings.component_google_drive_default_folder_id:
+            else:
                 msg = "Google Drive default folder ID not configured in global storage settings"
-                raise ValueError(msg)
-            service_key = settings.component_google_drive_service_account_key
-            folder_id = settings.component_google_drive_default_folder_id
-            # Set on self for later use
-            self.folder_id = folder_id
+            raise ValueError(msg)
+
+        # Set folder_id on self for later use
+        self.folder_id = credentials["folder_id"]
 
         # Create Google Drive service with full drive scope (needed for folder operations)
-        drive_service, credentials = create_google_drive_service(
-            service_key, scopes=["https://www.googleapis.com/auth/drive"], return_credentials=True
+        drive_service, creds = create_google_drive_service(
+            credentials["service_account_key"],
+            scopes=["https://www.googleapis.com/auth/drive"],
+            return_credentials=True,
         )
 
         # Extract content and format
@@ -770,7 +667,7 @@ class SaveToFileComponent(Component):
 
         # Handle special Google Drive formats
         if file_format in ["slides", "docs"]:
-            return await self._save_to_google_apps(drive_service, credentials, content, file_format)
+            return await self._save_to_google_apps(drive_service, creds, content, file_format)
 
         # Create temporary file
         file_path = f"{self.file_name}.{file_format}"
