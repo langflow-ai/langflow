@@ -54,10 +54,14 @@ export default function StorageSettingsPage() {
       default_storage_location: storageLocation,
     };
 
+    // Helper to check if a value is all asterisks (masked)
+    const isAllAsterisks = (value: string) =>
+      value.length > 0 && value.split("").every((c) => c === "*");
+
     // Only include AWS settings if AWS is selected and fields are not masked
     if (storageLocation === "AWS") {
       if (awsAccessKey) updates.component_aws_access_key_id = awsAccessKey;
-      if (awsSecretKey && !awsSecretKey.startsWith("*"))
+      if (awsSecretKey && !isAllAsterisks(awsSecretKey))
         updates.component_aws_secret_access_key = awsSecretKey;
       if (awsBucket) updates.component_aws_default_bucket = awsBucket;
       if (awsRegion) updates.component_aws_default_region = awsRegion;
@@ -65,7 +69,7 @@ export default function StorageSettingsPage() {
 
     // Only include Google Drive settings if Google Drive is selected and fields are not masked
     if (storageLocation === "Google Drive") {
-      if (gdriveServiceAccountKey && !gdriveServiceAccountKey.startsWith("*")) {
+      if (gdriveServiceAccountKey && !isAllAsterisks(gdriveServiceAccountKey)) {
         updates.component_google_drive_service_account_key =
           gdriveServiceAccountKey;
       }
