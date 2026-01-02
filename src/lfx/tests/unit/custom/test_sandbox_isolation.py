@@ -371,3 +371,45 @@ def test():
     assert result == "SecurityViolationError"
     # Verify real builtins wasn't accessed
     assert hasattr(real_builtins, "eval")
+
+
+def test_sandbox_blocks_import_builtins_in_validation_context():
+    """Test that `import builtins` is blocked when isolated_builtins_dict is None (validation context).
+    
+    When validate_code() calls create_isolated_import() without arguments, it's in
+    validation-only mode. In this mode, `import builtins` should be blocked with an error
+    rather than returning the isolated version (since isolated builtins aren't created).
+    """
+    from lfx.custom.sandbox import SecurityViolationError, create_isolated_import
+
+    # Create isolated_import without isolated_builtins_dict (validation context)
+    isolated_import = create_isolated_import()  # None = validation-only mode
+
+    # Try to import builtins - should raise SecurityViolationError
+    with pytest.raises(SecurityViolationError, match="not allowed in sandbox"):
+        isolated_import("builtins", None, None, (), 0)
+
+
+def test_sandbox_prevents_importlib_bypass():
+    """Test that importlib cannot be used to bypass __import__ hook and get real builtins.
+    
+    CRITICAL SECURITY: importlib.import_module("builtins") would bypass our __import__ hook
+    and get the real builtins module. By blocking importlib entirely, we prevent this bypass.
+    """
+    from lfx.custom.sandbox import SecurityViolationError, execute_in_sandbox
+
+    # Test that importlib is blocked (prevents bypass)
+    code = """
+import importlib
+# If importlib were allowed, code could do: importlib.import_module("builtins")
+# to get the real builtins module and bypass our security restrictions
+def test():
+    real_builtins = importlib.import_module("builtins")
+    return real_builtins.eval("1+1")
+"""
+    code_obj = compile(code, "<test>", "exec")
+    exec_globals = {}
+
+    # Should raise SecurityViolationError because importlib is blocked
+    with pytest.raises(SecurityViolationError, match="blocked"):
+        execute_in_sandbox(code_obj, exec_globals)

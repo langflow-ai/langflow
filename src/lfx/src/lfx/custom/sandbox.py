@@ -101,8 +101,6 @@ MODERATE_MODULES: set[str] = {
     # Database - common for local storage
     "sqlite3",
     "dbm",
-    # Dynamic imports - needed for some libraries
-    "importlib",
     # Network protocols (less common but legitimate)
     "ftplib",
     "telnetlib",
@@ -133,6 +131,7 @@ CRITICAL_MODULES: set[str] = {
     "marshal",  # Serialization format (can be exploited)
     "gc",  # Garbage collector manipulation
     "inspect",  # Can be used for introspection attacks
+    "importlib",  # importlib allows bypassing our __import__ hook
 }
 
 # Compute blocked sets based on security level
@@ -157,6 +156,17 @@ else:  # MODERATE (default)
 def create_isolated_builtins() -> dict[str, Any]:
     """Create an isolated set of builtins to prevent escaping the sandbox.
 
+    This function creates a sandboxed version of Python's builtins that blocks dangerous
+    functions while allowing safe ones. It handles TWO attack vectors:
+
+    1. Direct builtin access: Code can access builtins via `__builtins__` dict or directly
+       (e.g., `eval()`, `__builtins__['eval']`). Solution: Create isolated dict with
+       dangerous builtins removed.
+
+    2. Builtins module import: Code can do `import builtins; builtins.eval()` to get
+       the real builtins module. Solution: Create IsolatedBuiltinsModule that returns
+       our isolated version instead of the real one.
+
     Blocks builtins based on the current security level:
     - MODERATE (default): Blocks critical builtins (eval, exec, compile, etc.)
       but allows common operations (open, input, etc.)
@@ -164,7 +174,10 @@ def create_isolated_builtins() -> dict[str, Any]:
     - DISABLED: No restrictions
 
     Returns:
-        Dictionary of isolated builtins
+        Dictionary of isolated builtins, including:
+        - Safe builtin functions (len, str, int, etc.)
+        - "__builtins__" key pointing to isolated copy
+        - "builtins" key containing IsolatedBuiltinsModule instance
     """
     # Create a copy of builtins to prevent modification of the real one
     isolated_builtins = {}
@@ -191,14 +204,23 @@ def create_isolated_builtins() -> dict[str, Any]:
         if hasattr(builtins, name):
             isolated_builtins[name] = getattr(builtins, name)
 
-    # Critical: Make __builtins__ point to this isolated copy, not the real one
-    # This prevents code from accessing the real builtins module
+    # CRITICAL SECURITY: Two ways code can access builtins - we must block both:
+    #
+    # 1. Via __builtins__ dict (e.g., `__builtins__['eval']` or just `eval()`)
+    #    Solution: Point __builtins__ to our isolated copy
     isolated_builtins["__builtins__"] = isolated_builtins.copy()
 
-    # Prevent access to the real builtins module
-    # If code tries to import builtins, they get our isolated version
+    # 2. Via `import builtins` (e.g., `import builtins; builtins.eval()`)
+    #    Solution: Create a fake builtins module that returns our isolated version
+    #    This is returned when code does `import builtins` (handled by isolated_import)
     class IsolatedBuiltinsModule:
-        """Fake builtins module that prevents escaping."""
+        """Fake builtins module that prevents sandbox escape via `import builtins`.
+        
+        When code executes `import builtins`, Python's import system calls __import__("builtins").
+        Our isolated_import function intercepts this and returns an instance of this class
+        instead of the real builtins module. This prevents code from accessing dangerous
+        builtins like eval, exec, __import__, etc.
+        """
 
         def __getattr__(self, name: str) -> Any:
             # Block builtins based on current security level
@@ -231,20 +253,47 @@ def create_isolated_import(isolated_builtins_dict: dict[str, Any] | None = None)
     - DISABLED: No restrictions
 
     Args:
-        isolated_builtins_dict: Dictionary containing isolated builtins (for builtins import interception)
+        isolated_builtins_dict: Dictionary containing isolated builtins from create_isolated_builtins().
+            Required when executing code in sandbox (execute_in_sandbox) to prevent `import builtins` bypass.
+            Can be None when only validating imports (validate_code) - in that case, `import builtins` will
+            be blocked with an error rather than returning the isolated version.
 
     Returns:
-        A function that performs isolated imports
+        A function that performs isolated imports (replaces Python's __import__)
     """
-
     def isolated_import(name: str, globals=None, locals=None, fromlist=(), level=0):  # noqa: A002, ARG001
-        """Import function that blocks dangerous modules by default."""
-        # Extract top-level module name
+        """Import function that blocks dangerous modules by default.
+        
+        This function replaces Python's built-in __import__ to prevent sandbox escapes.
+        When code executes `import X`, Python calls __import__("X"), which calls this function.
+        
+        Note: The globals, locals, fromlist, and level parameters are required to match
+        Python's __import__ signature, but we don't use them. Python's import system will
+        call this function with all these arguments, so we must accept them for compatibility.
+        We only need the `name` parameter to determine which module is being imported.
+        """
+        # Extract top-level module name (e.g., "os.path" -> "os")
         module_name = name.split(".")[0]
 
-        # Intercept builtins import to return isolated version
-        if module_name == "builtins" and isolated_builtins_dict is not None:
-            return isolated_builtins_dict.get("builtins")
+        # CRITICAL SECURITY: Block `import builtins` to prevent sandbox escape
+        if module_name == "builtins":
+            if isolated_builtins_dict is None:
+                # Validation context: No isolated builtins available, so block the import
+                msg = (
+                    "Import of 'builtins' module is not allowed in sandbox. "
+                    "This is a security restriction to prevent sandbox escape."
+                )
+                raise SecurityViolationError(msg)
+            isolated_builtins_module = isolated_builtins_dict.get("builtins")
+            if isolated_builtins_module is None:
+                # Safety check: Should never happen if create_isolated_builtins() worked correctly
+                msg = (
+                    "Import of 'builtins' module is not allowed in sandbox. "
+                    "This is a security restriction to prevent sandbox escape."
+                )
+                raise SecurityViolationError(msg)
+            # Return the fake IsolatedBuiltinsModule, not the real builtins module
+            return isolated_builtins_module
 
         # Block modules based on current security level
         if module_name in BLOCKED_MODULES:
@@ -254,12 +303,10 @@ def create_isolated_import(isolated_builtins_dict: dict[str, Any] | None = None)
                 f"Set LANGFLOW_SANDBOX_SECURITY_LEVEL=disabled to allow (not recommended)."
             )
             raise SecurityViolationError(msg)
-        # Allow langflow.* and lfx.* modules, and any module not in BLOCKED_MODULES
-        # This allows users to import legitimate third-party libraries (AI libraries, etc.)
-        # while still blocking dangerous system-level operations
-        # (We've already checked BLOCKED_MODULES above, so anything reaching here is safe)
-
-        # Import the module (still isolated namespace-wise)
+        
+        # Allow all other modules (whitelist approach)
+        # This allows users to import legitimate third-party libraries (AI libraries, utilities, etc.)
+        # while still blocking dangerous system-level operations.
         return importlib.import_module(name)
 
     return isolated_import
@@ -292,10 +339,13 @@ def execute_in_sandbox(code_obj: Any, exec_globals: dict[str, Any]) -> None:
         SecurityViolationError: If code attempts to escape the sandbox or use blocked operations
         Exception: Any other exception from code execution (validation errors, etc.)
     """
-    # Create isolated builtins - prevents accessing real __builtins__
+    # Step 1: Create isolated builtins dictionary
+    # This replaces __builtins__ so code can't access dangerous builtins like eval, exec, etc.
     isolated_builtins = create_isolated_builtins()
 
-    # Create isolated import function (pass isolated_builtins to intercept builtins import)
+    # Step 2: Create isolated import function
+    # This replaces __import__ to block dangerous modules and prevent `import builtins` bypass
+    # Pass isolated_builtins so that if code does `import builtins`, it gets our fake module
     isolated_import = create_isolated_import(isolated_builtins)
 
     # Create completely isolated execution environment
@@ -313,7 +363,9 @@ def execute_in_sandbox(code_obj: Any, exec_globals: dict[str, Any]) -> None:
         "__cached__": None,
     }
 
-    # Add isolated import to builtins
+    # Step 3: Hook __import__ to use our isolated version
+    # When code does `import X`, Python calls __import__("X"), which will now call our
+    # isolated_import function instead of the real one. This is how we intercept imports.
     isolated_builtins["__import__"] = isolated_import
 
     # Merge with provided exec_globals (like Langflow types: Message, Data, DataFrame, Component)

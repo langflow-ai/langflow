@@ -48,9 +48,11 @@ def validate_code(code):
     add_type_ignores()
     tree.type_ignores = []
 
-    # Evaluate the import statements using sandbox's isolated import
-    # This will block dangerous modules by default
-    isolated_import = create_isolated_import()
+    # Phase 1: Validate import statements (syntax check only, no code execution)
+    # We use isolated_import to check if imports are valid and not blocked by security policy.
+    # Note: We don't pass isolated_builtins_dict here because we're only validating imports,
+    # not executing code. If someone tries `import builtins`, it will be blocked with an error.
+    isolated_import = create_isolated_import()  # None = validation-only mode
     for node in tree.body:
         if isinstance(node, ast.Import):
             for alias in node.names:
@@ -71,9 +73,10 @@ def validate_code(code):
                 except Exception as e:  # noqa: BLE001
                     errors["imports"]["errors"].append(str(e))
 
-    # Evaluate the function definition in isolated sandbox
-    # This will catch function-definition-time evaluations like decorators and default arguments
-    # Code executes in complete isolation - cannot access server environment
+    # Phase 2: Execute function definitions in isolated sandbox
+    # This actually runs the code (for decorators, default args, etc.) in a sandboxed environment.
+    # Unlike Phase 1, this uses execute_in_sandbox() which creates full isolation including
+    # isolated builtins
     for node in tree.body:
         if isinstance(node, ast.FunctionDef):
             code_obj = compile(ast.Module(body=[node], type_ignores=[]), "<string>", "exec")

@@ -426,6 +426,18 @@ def test():
     with pytest.raises(SecurityViolationErrorCurrent, match="blocked"):
         execute_in_sandbox_current(code_obj3, exec_globals3)
 
+    # Test that importlib is blocked even in MODERATE mode (CRITICAL_MODULES)
+    # This prevents bypass via importlib.import_module("builtins")
+    code4 = """
+import importlib
+def test():
+    return importlib.__version__
+"""
+    code_obj4 = compile(code4, "<test>", "exec")
+    exec_globals4 = {}
+    with pytest.raises(SecurityViolationErrorCurrent, match="blocked"):
+        execute_in_sandbox_current(code_obj4, exec_globals4)
+
 
 def test_strict_mode_blocks_all_dangerous_operations(monkeypatch):
     """Test that STRICT mode blocks all potentially dangerous operations."""
@@ -473,6 +485,18 @@ import asyncio
         exec_globals3 = {}
         try:
             execute_in_sandbox_strict(code_obj3, exec_globals3)
+            pytest.fail("Should have raised SecurityViolationError")
+        except SecurityViolationErrorStrict:
+            pass  # Expected
+
+        # Test that importlib is also blocked in STRICT mode
+        code4 = """
+import importlib
+"""
+        code_obj4 = compile(code4, "<test>", "exec")
+        exec_globals4 = {}
+        try:
+            execute_in_sandbox_strict(code_obj4, exec_globals4)
             pytest.fail("Should have raised SecurityViolationError")
         except SecurityViolationErrorStrict:
             pass  # Expected
