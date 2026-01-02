@@ -354,6 +354,7 @@ class FileComponent(BaseFileComponent, StorageSettingsMixin):
         # Update storage location options dynamically based on cloud environment
         if "storage_location" in build_config:
             from lfx.base.data.storage_settings_mixin import _get_storage_location_options
+
             updated_options = _get_storage_location_options()
             build_config["storage_location"]["options"] = updated_options
 
