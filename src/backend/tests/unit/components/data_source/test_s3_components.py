@@ -156,6 +156,7 @@ class TestS3CompatibleComponents:
                 test_data = DataFrame(data=[Data(data={"text": "test content"})])
                 component.input = test_data  # Use 'input' not 'data'
                 component.file_name = "test_output.csv"
+                component.use_custom_storage = True  # Enable custom storage to use component-level settings
                 component.storage_location = [{"name": "AWS"}]  # Set S3 storage location
                 # Set required AWS credentials (will be mocked out anyway)
                 component.aws_access_key_id = "test_key"
