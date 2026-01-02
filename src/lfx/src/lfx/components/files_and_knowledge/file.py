@@ -101,6 +101,14 @@ class FileComponent(BaseFileComponent):
             break
 
     inputs = [
+        BoolInput(
+            name="use_custom_storage",
+            display_name="Override Global Storage",
+            value=False,
+            advanced=True,
+            real_time_refresh=True,
+            info="Enable to override global storage settings for this component.",
+        ),
         SortableListInput(
             name="storage_location",
             display_name="Storage Location",
@@ -109,6 +117,7 @@ class FileComponent(BaseFileComponent):
             options=_get_storage_location_options(),
             real_time_refresh=True,
             limit=1,
+            show=False,
         ),
         *_base_inputs,
         StrInput(
@@ -372,6 +381,29 @@ class FileComponent(BaseFileComponent):
             updated_options = _get_storage_location_options()
             build_config["storage_location"]["options"] = updated_options
 
+        # Handle use_custom_storage toggle
+        if field_name == "use_custom_storage":
+            # Show/hide storage location fields based on toggle
+            if "storage_location" in build_config:
+                build_config["storage_location"]["show"] = bool(field_value)
+
+            # If disabling custom storage, hide all storage-specific fields
+            if not field_value:
+                storage_fields = [
+                    "aws_access_key_id",
+                    "aws_secret_access_key",
+                    "bucket_name",
+                    "aws_region",
+                    "s3_file_key",
+                    "service_account_key",
+                    "file_id",
+                ]
+                for f_name in storage_fields:
+                    if f_name in build_config:
+                        build_config[f_name]["show"] = False
+
+            return build_config
+
         # Handle storage location selection
         if field_name == "storage_location":
             # Extract selected storage location
@@ -552,13 +584,25 @@ class FileComponent(BaseFileComponent):
     # ------------------------------ Core processing ----------------------------------
 
     def _get_selected_storage_location(self) -> str:
-        """Get the selected storage location from the SortableListInput."""
-        if hasattr(self, "storage_location") and self.storage_location:
-            if isinstance(self.storage_location, list) and len(self.storage_location) > 0:
-                return self.storage_location[0].get("name", "")
-            if isinstance(self.storage_location, dict):
-                return self.storage_location.get("name", "")
-        return "Local"  # Default to Local if not specified
+        """Get the selected storage location.
+
+        Uses component-level settings if use_custom_storage is True,
+        otherwise uses global settings.
+        """
+        use_custom = getattr(self, "use_custom_storage", False)
+
+        if use_custom:
+            # Use component-level storage location
+            if hasattr(self, "storage_location") and self.storage_location:
+                if isinstance(self.storage_location, list) and len(self.storage_location) > 0:
+                    return self.storage_location[0].get("name", "")
+                if isinstance(self.storage_location, dict):
+                    return self.storage_location.get("name", "")
+            return "Local"  # Default to Local if not specified
+
+        # Use global settings
+        settings = get_settings_service().settings
+        return settings.default_storage_location
 
     def _validate_and_resolve_paths(self) -> list[BaseFileComponent.BaseFile]:
         """Override to handle file_path_str input from tool mode and cloud storage.
@@ -605,14 +649,39 @@ class FileComponent(BaseFileComponent):
         """Read file from AWS S3."""
         from lfx.base.data.cloud_storage_utils import create_s3_client, validate_aws_credentials
 
-        # Validate AWS credentials
-        validate_aws_credentials(self)
-        if not getattr(self, "s3_file_key", None):
-            msg = "S3 File Key is required"
-            raise ValueError(msg)
+        use_custom = getattr(self, "use_custom_storage", False)
+        settings = get_settings_service().settings
 
-        # Create S3 client
-        s3_client = create_s3_client(self)
+        # Get credentials from component or global settings
+        if use_custom:
+            # Validate AWS credentials from component
+            validate_aws_credentials(self)
+            if not getattr(self, "s3_file_key", None):
+                msg = "S3 File Key is required"
+                raise ValueError(msg)
+            # Create S3 client with component credentials
+            s3_client = create_s3_client(self)
+        else:
+            # Use global settings
+            if not settings.component_aws_access_key_id:
+                msg = "AWS Access Key ID not configured in global storage settings"
+                raise ValueError(msg)
+            if not settings.component_aws_secret_access_key:
+                msg = "AWS Secret Access Key not configured in global storage settings"
+                raise ValueError(msg)
+            if not settings.component_aws_default_bucket:
+                msg = "AWS Default Bucket not configured in global storage settings"
+                raise ValueError(msg)
+            if not getattr(self, "s3_file_key", None):
+                msg = "S3 File Key is required"
+                raise ValueError(msg)
+
+            # Temporarily set credentials on self for create_s3_client
+            self.aws_access_key_id = settings.component_aws_access_key_id
+            self.aws_secret_access_key = settings.component_aws_secret_access_key
+            self.bucket_name = settings.component_aws_default_bucket
+            self.aws_region = settings.component_aws_default_region
+            s3_client = create_s3_client(self)
 
         # Download file to temp location
         import tempfile
@@ -646,17 +715,32 @@ class FileComponent(BaseFileComponent):
 
         from lfx.base.data.cloud_storage_utils import create_google_drive_service
 
-        # Validate Google Drive credentials
-        if not getattr(self, "service_account_key", None):
-            msg = "GCP Credentials Secret Key is required for Google Drive storage"
-            raise ValueError(msg)
-        if not getattr(self, "file_id", None):
-            msg = "Google Drive File ID is required"
-            raise ValueError(msg)
+        use_custom = getattr(self, "use_custom_storage", False)
+        settings = get_settings_service().settings
+
+        # Get credentials from component or global settings
+        if use_custom:
+            # Validate Google Drive credentials from component
+            if not getattr(self, "service_account_key", None):
+                msg = "GCP Credentials Secret Key is required for Google Drive storage"
+                raise ValueError(msg)
+            if not getattr(self, "file_id", None):
+                msg = "Google Drive File ID is required"
+                raise ValueError(msg)
+            service_key = self.service_account_key
+        else:
+            # Use global settings
+            if not settings.component_google_drive_service_account_key:
+                msg = "Google Drive service account key not configured in global storage settings"
+                raise ValueError(msg)
+            if not getattr(self, "file_id", None):
+                msg = "Google Drive File ID is required"
+                raise ValueError(msg)
+            service_key = settings.component_google_drive_service_account_key
 
         # Create Google Drive service with read-only scope
         drive_service = create_google_drive_service(
-            self.service_account_key, scopes=["https://www.googleapis.com/auth/drive.readonly"]
+            service_key, scopes=["https://www.googleapis.com/auth/drive.readonly"]
         )
 
         # Get file metadata to determine file name and extension

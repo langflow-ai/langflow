@@ -37,6 +37,7 @@ import MCPServersPage from "./pages/SettingsPage/pages/MCPServersPage";
 import ModelProvidersPage from "./pages/SettingsPage/pages/ModelProvidersPage";
 import MessagesPage from "./pages/SettingsPage/pages/messagesPage";
 import ShortcutsPage from "./pages/SettingsPage/pages/ShortcutsPage";
+import StorageSettingsPage from "./pages/SettingsPage/pages/StorageSettingsPage";
 import ViewPage from "./pages/ViewPage";
 
 const AdminPage = lazy(() => import("./pages/AdminPage"));
@@ -136,6 +137,7 @@ const router = createBrowserRouter(
                     index
                     element={<CustomNavigate replace to={"general"} />}
                   />
+                  <Route path="storage" element={<StorageSettingsPage />} />
                   <Route
                     path="global-variables"
                     element={<GlobalVariablesPage />}

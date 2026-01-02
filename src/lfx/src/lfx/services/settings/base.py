@@ -199,6 +199,22 @@ class Settings(BaseSettings):
     object_storage_tags: dict[str, str] | None = None
     """Object storage tags for file storage."""
 
+    # Global Component Storage Settings
+    default_storage_location: str = "Local"
+    """Default storage location for file components. Options: 'Local', 'AWS', 'Google Drive'."""
+    component_aws_access_key_id: str | None = None
+    """AWS Access Key ID for file components. If not set, will fallback to environment variable."""
+    component_aws_secret_access_key: str | None = None
+    """AWS Secret Access Key for file components. If not set, will fallback to environment variable."""
+    component_aws_default_bucket: str | None = None
+    """Default S3 bucket name for file components."""
+    component_aws_default_region: str | None = None
+    """Default AWS region for file components."""
+    component_google_drive_service_account_key: str | None = None
+    """Google Drive service account key (JSON) for file components."""
+    component_google_drive_default_folder_id: str | None = None
+    """Default Google Drive folder ID for file components."""
+
     celery_enabled: bool = False
 
     fallback_to_env_var: bool = True
@@ -624,7 +640,7 @@ class Settings(BaseSettings):
         dotenv_settings: PydanticBaseSettingsSource,
         file_secret_settings: PydanticBaseSettingsSource,
     ) -> tuple[PydanticBaseSettingsSource, ...]:
-        return (CustomSource(settings_cls),)
+        return (init_settings, CustomSource(settings_cls))
 
 
 def save_settings_to_yaml(settings: Settings, file_path: str) -> None:
