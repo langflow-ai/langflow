@@ -6462,7 +6462,7 @@ requires-dist = [
     { name = "langchain-anthropic", marker = "extra == 'anthropic'", specifier = "==0.3.14" },
     { name = "langchain-astradb", marker = "extra == 'astradb'", specifier = ">=0.6.1,<1.0.0" },
     { name = "langchain-aws", marker = "extra == 'aws'", specifier = ">=0.2.33,<1.0.0" },
-    { name = "langchain-chroma", specifier = ">=0.1.4,<1.0.0" },
+    { name = "langchain-chroma", specifier = ">=0.2.6,<1.0.0" },
     { name = "langchain-chroma", marker = "extra == 'chroma'", specifier = ">=0.2.6,<1.0.0" },
     { name = "langchain-cohere", marker = "extra == 'cohere'", specifier = ">=0.3.3,<1.0.0" },
     { name = "langchain-community", specifier = ">=0.3.0,<1.0.0" },
