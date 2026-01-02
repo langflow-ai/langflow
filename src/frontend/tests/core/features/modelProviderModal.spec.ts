@@ -1,59 +1,48 @@
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { navigateSettingsPages } from "../../utils/go-to-settings";
 
 test.describe("ModelProviderModal", () => {
   test(
-    "should open model provider modal from header button",
+    "should open model provider page from settings",
     { tag: ["@release", "@components", "@workspace"] },
     async ({ page }) => {
-      await awaitBootstrapTest(page);
+      await awaitBootstrapTest(page, { skipModal: true });
 
-      const closeButton = page
-        .locator("button")
-        .filter({ hasText: "Close" })
-        .or(page.locator('button[aria-label="Close"]'))
-        .or(page.locator('button[data-testid="close-button"]'))
-        .first();
+      // Wait for page to be ready
+      await page.waitForTimeout(1000);
 
-      await closeButton.click();
+      // Navigate to Settings > Model Providers
+      await navigateSettingsPages(page, "Settings", "Model Providers");
 
-      // Click the model provider count button in header
-      const modelProviderButton = page.getByTestId(
-        "model-provider-count-button",
-      );
-      await modelProviderButton.click();
+      // Page should open with "Model Providers" title
+      await expect(
+        page.getByTestId("settings_menu_header").last(),
+      ).toContainText("Model Providers", { timeout: 5000 });
 
-      // Modal should open with "Model providers" title
-      await expect(page.getByText("Model providers")).toBeVisible({
-        timeout: 5000,
-      });
-
-      // Dialog should be visible
-      const dialog = page.locator('[role="dialog"]');
-      await expect(dialog).toBeVisible();
+      // Provider content should be visible
+      await expect(
+        page.getByText(
+          "Configure AI model providers and manage their API keys.",
+        ),
+      ).toBeVisible();
     },
   );
 
   test(
-    "should display provider list in modal",
+    "should display provider list in page",
     { tag: ["@release", "@components", "@workspace"] },
     async ({ page }) => {
-      await awaitBootstrapTest(page);
+      await awaitBootstrapTest(page, { skipModal: true });
 
-      const closeButton = page
-        .locator("button")
-        .filter({ hasText: "Close" })
-        .or(page.locator('button[aria-label="Close"]'))
-        .or(page.locator('button[data-testid="close-button"]'))
-        .first();
+      // Wait for page to be ready
+      await page.waitForTimeout(1000);
 
-      await closeButton.click();
-
-      // Open the modal
-      await page.getByTestId("model-provider-count-button").click();
-      await expect(page.getByText("Model providers")).toBeVisible({
-        timeout: 5000,
-      });
+      // Navigate to Settings > Model Providers
+      await navigateSettingsPages(page, "Settings", "Model Providers");
+      await expect(
+        page.getByTestId("settings_menu_header").last(),
+      ).toContainText("Model Providers", { timeout: 5000 });
 
       // Provider list should be visible
       const providerList = page.getByTestId("provider-list");
@@ -67,22 +56,16 @@ test.describe("ModelProviderModal", () => {
     "should show provider details when a provider is selected",
     { tag: ["@release", "@components", "@workspace"] },
     async ({ page }) => {
-      await awaitBootstrapTest(page);
+      await awaitBootstrapTest(page, { skipModal: true });
 
-      const closeButton = page
-        .locator("button")
-        .filter({ hasText: "Close" })
-        .or(page.locator('button[aria-label="Close"]'))
-        .or(page.locator('button[data-testid="close-button"]'))
-        .first();
+      // Wait for page to be ready
+      await page.waitForTimeout(1000);
 
-      await closeButton.click();
-
-      // Open the modal
-      await page.getByTestId("model-provider-count-button").click();
-      await expect(page.getByText("Model providers")).toBeVisible({
-        timeout: 5000,
-      });
+      // Navigate to Settings > Model Providers
+      await navigateSettingsPages(page, "Settings", "Model Providers");
+      await expect(
+        page.getByTestId("settings_menu_header").last(),
+      ).toContainText("Model Providers", { timeout: 5000 });
 
       // Wait for provider list to load
       await page.waitForTimeout(1000);
@@ -97,41 +80,38 @@ test.describe("ModelProviderModal", () => {
         // Should show API Key section or model selection
         await page.waitForTimeout(500);
 
-        // The panel should expand to show provider configuration
-        const dialog = page.locator('[role="dialog"]');
-        await expect(dialog).toBeVisible();
+        // The page content should be visible
+        await expect(
+          page.locator('[data-testid^="provider-item-"]').first(),
+        ).toBeVisible();
       }
     },
   );
 
   test(
-    "should close modal when pressing Escape",
+    "should navigate back from model provider page",
     { tag: ["@release", "@components", "@workspace"] },
     async ({ page }) => {
-      await awaitBootstrapTest(page);
+      await awaitBootstrapTest(page, { skipModal: true });
 
-      const closeButton = page
-        .locator("button")
-        .filter({ hasText: "Close" })
-        .or(page.locator('button[aria-label="Close"]'))
-        .or(page.locator('button[data-testid="close-button"]'))
-        .first();
+      // Wait for page to be ready
+      await page.waitForTimeout(1000);
 
-      await closeButton.click();
+      // Navigate to Settings > Model Providers
+      await navigateSettingsPages(page, "Settings", "Model Providers");
+      await expect(
+        page.getByTestId("settings_menu_header").last(),
+      ).toContainText("Model Providers", { timeout: 5000 });
 
-      // Open the modal
-      await page.getByTestId("model-provider-count-button").click();
-      await expect(page.getByText("Model providers")).toBeVisible({
-        timeout: 5000,
-      });
+      // Navigate back
+      await page.getByTestId("icon-ChevronLeft").first().click();
 
-      // Press Escape to close
-      await page.keyboard.press("Escape");
-
-      // Modal should be closed
-      await expect(page.getByText("Model providers")).not.toBeVisible({
-        timeout: 3000,
-      });
+      // Page should be closed/navigated away - description text should not be visible
+      await expect(
+        page.getByText(
+          "Configure AI model providers and manage their API keys.",
+        ),
+      ).not.toBeVisible({ timeout: 3000 });
     },
   );
 
@@ -139,22 +119,16 @@ test.describe("ModelProviderModal", () => {
     "should display model selection panel for enabled provider",
     { tag: ["@release", "@components", "@workspace"] },
     async ({ page }) => {
-      await awaitBootstrapTest(page);
+      await awaitBootstrapTest(page, { skipModal: true });
 
-      const closeButton = page
-        .locator("button")
-        .filter({ hasText: "Close" })
-        .or(page.locator('button[aria-label="Close"]'))
-        .or(page.locator('button[data-testid="close-button"]'))
-        .first();
+      // Wait for page to be ready
+      await page.waitForTimeout(1000);
 
-      await closeButton.click();
-
-      // Open the modal
-      await page.getByTestId("model-provider-count-button").click();
-      await expect(page.getByText("Model providers")).toBeVisible({
-        timeout: 5000,
-      });
+      // Navigate to Settings > Model Providers
+      await navigateSettingsPages(page, "Settings", "Model Providers");
+      await expect(
+        page.getByTestId("settings_menu_header").last(),
+      ).toContainText("Model Providers", { timeout: 5000 });
 
       await page.waitForTimeout(1000);
 
@@ -180,32 +154,28 @@ test.describe("ModelProviderModal", () => {
   );
 
   test(
-    "should have accessible modal structure",
+    "should have accessible page structure",
     { tag: ["@release", "@components", "@workspace"] },
     async ({ page }) => {
-      await awaitBootstrapTest(page);
+      await awaitBootstrapTest(page, { skipModal: true });
 
-      const closeButton = page
-        .locator("button")
-        .filter({ hasText: "Close" })
-        .or(page.locator('button[aria-label="Close"]'))
-        .or(page.locator('button[data-testid="close-button"]'))
-        .first();
+      // Wait for page to be ready
+      await page.waitForTimeout(1000);
 
-      await closeButton.click();
+      // Navigate to Settings > Model Providers
+      await navigateSettingsPages(page, "Settings", "Model Providers");
 
-      // Open the modal
-      await page.getByTestId("model-provider-count-button").click();
-      await expect(page.getByText("Model providers")).toBeVisible({
-        timeout: 5000,
-      });
+      // Page should have proper heading
+      await expect(
+        page.getByTestId("settings_menu_header").last(),
+      ).toContainText("Model Providers", { timeout: 5000 });
 
-      // Check dialog role
-      const dialog = page.locator('[role="dialog"]');
-      await expect(dialog).toBeVisible();
-
-      // Modal should have proper heading
-      await expect(page.getByText("Model providers")).toBeVisible();
+      // Content should be visible
+      await expect(
+        page.getByText(
+          "Configure AI model providers and manage their API keys.",
+        ),
+      ).toBeVisible();
     },
   );
 });

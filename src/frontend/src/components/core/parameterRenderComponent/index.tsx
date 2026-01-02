@@ -252,6 +252,7 @@ export function ParameterRenderComponent({
             options={templateData?.options}
             searchCategory={templateData?.search_category}
             limit={templateData?.limit}
+            id={`sortablelist_${id}`}
           />
         );
       case "connect": {
