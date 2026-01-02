@@ -81,7 +81,6 @@ async def get_workflow_status(
 
 @router.post(
     "/stop",
-    response_model=WorkflowStopResponse,
     summary="Stop Workflow",
     description="Stop a running workflow execution",
 )
