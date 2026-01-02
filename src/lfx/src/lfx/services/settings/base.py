@@ -640,7 +640,7 @@ class Settings(BaseSettings):
         dotenv_settings: PydanticBaseSettingsSource,
         file_secret_settings: PydanticBaseSettingsSource,
     ) -> tuple[PydanticBaseSettingsSource, ...]:
-        return (init_settings, CustomSource(settings_cls))
+        return (init_settings, CustomSource(settings_cls), file_secret_settings)
 
 
 def save_settings_to_yaml(settings: Settings, file_path: str) -> None:
