@@ -216,7 +216,7 @@ mongodb-vectors = ["langchain-mongodb==0.7.0"]
 astradb = ["langchain-astradb>=0.6.1,<1.0.0"]
 
 # Individual LLM providers
-openai = ["langchain-openai>=0.3.0,<1.0.0"]
+openai = ["langchain-openai>=0.3.0,<1.0.0", "openai>=1.68.2,<2.0.0"]
 anthropic = ["langchain-anthropic==0.3.14"]
 cohere = ["langchain-cohere>=0.3.3,<1.0.0"]
 google = [
@@ -307,6 +307,56 @@ pydantic-ai = ["pydantic-ai>=0.0.19"]
 apify = ["apify-client>=1.8.1"]
 spider = ["spider-client>=0.0.27,<1.0.0"]
 
+# ALTK (Agent Lifecycle Toolkit)
+altk = ["agent-lifecycle-toolkit~=0.4.4"]
+
+# Additional LangChain integrations
+langchain-huggingface = ["langchain-huggingface==0.3.1"]
+langchain-unstructured = ["langchain-unstructured==0.1.5"]
+graph-retriever = ["langchain-graph-retriever==0.8.0", "graph-retriever==0.8.0"]
+langchain-mcp-adapters = ["langchain-mcp-adapters>=0.1.14,<0.2.0"]
+
+# Additional monitoring
+opik = ["opik>=1.6.3,<2.0.0"]
+traceloop = ["traceloop-sdk>=0.43.1,<1.0.0"]
+
+# Document processing / OCR
+docling = [
+    "docling-core>=2.36.1,<3.0.0",
+    "docling>=2.36.1,<3.0.0; sys_platform != 'darwin' or platform_machine != 'x86_64'",
+]
+easyocr = ["easyocr>=1.7.2,<2.0.0; sys_platform != 'darwin' or platform_machine != 'x86_64'"]
+
+# Additional tools
+cleanlab = ["cleanlab-tlm>=1.1.2,<2.0.0"]
+twelvelabs = ["twelvelabs>=0.4.7,<1.0.0"]
+jigsawstack = ["jigsawstack==0.2.7"]
+assemblyai = ["assemblyai==0.35.1"]
+
+# Data processing
+datasets = ["datasets>2.14.7,<4.0.0"]
+fastparquet = ["fastparquet>=2024.11.0,<2025.0.0"]
+
+# Vision / ML
+vlmrun = ["vlmrun[all]>=0.2.0"]
+cuga = ["cuga~=0.2.6"]
+mlx = [
+    "mlx>=0.29.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version >= '3.12'",
+    "mlx-vlm==0.3.3; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version >= '3.12'",
+]
+
+# MCP
+fastmcp = ["fastmcp==2.13.0"]
+
+# AWS extras
+aioboto3 = ["aioboto3>=15.2.0,<16.0.0"]
+
+# Astra
+astrapy = ["astrapy>=2.1.0,<3.0.0"]
+
+# Windows-specific
+gassist = ["gassist>=0.0.1; sys_platform == 'win32'"]
+
 # Complete installation
 complete = [
     "langflow-base[couchbase]",
@@ -386,6 +436,39 @@ complete = [
     "langflow-base[pydantic-ai]",
     "langflow-base[apify]",
     "langflow-base[spider]",
+    # ALTK
+    "langflow-base[altk]",
+    # Additional LangChain integrations
+    "langflow-base[langchain-huggingface]",
+    "langflow-base[langchain-unstructured]",
+    "langflow-base[graph-retriever]",
+    "langflow-base[langchain-mcp-adapters]",
+    # Additional monitoring
+    "langflow-base[opik]",
+    "langflow-base[traceloop]",
+    # Document processing / OCR
+    "langflow-base[docling]",
+    "langflow-base[easyocr]",
+    # Additional tools
+    "langflow-base[cleanlab]",
+    "langflow-base[twelvelabs]",
+    "langflow-base[jigsawstack]",
+    "langflow-base[assemblyai]",
+    # Data processing
+    "langflow-base[datasets]",
+    "langflow-base[fastparquet]",
+    # Vision / ML
+    "langflow-base[vlmrun]",
+    "langflow-base[cuga]",
+    "langflow-base[mlx]",
+    # MCP
+    "langflow-base[fastmcp]",
+    # AWS extras
+    "langflow-base[aioboto3]",
+    # Astra
+    "langflow-base[astrapy]",
+    # Windows-specific
+    "langflow-base[gassist]",
 ]
 
 all = [
