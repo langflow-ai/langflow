@@ -32,11 +32,16 @@ export const useUpdateStorageSettings: useMutationFunctionType<
     StorageSettings,
     any,
     UpdateStorageSettingsParams
+  const mutation: UseMutationResult<
+    StorageSettings,
+    any,
+    UpdateStorageSettingsParams
   > = mutate(["useUpdateStorageSettings"], updateStorageSettings, {
-    onSettled: () => {
-      queryClient.refetchQueries({ queryKey: ["useGetStorageSettings"] });
-    },
     ...options,
+    onSettled: (data, error, variables, context) => {
+      queryClient.refetchQueries({ queryKey: ["useGetStorageSettings"] });
+      options?.onSettled?.(data, error, variables, context);
+    },
     retry: false,
   });
 
