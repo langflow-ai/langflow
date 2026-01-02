@@ -87,9 +87,8 @@ async def update_storage_settings(
             else settings.component_aws_access_key_id
         )
         final_aws_secret = settings.component_aws_secret_access_key
-        if (
-            settings_update.component_aws_secret_access_key is not None
-            and not all(c == "*" for c in settings_update.component_aws_secret_access_key)
+        if settings_update.component_aws_secret_access_key is not None and not all(
+            c == "*" for c in settings_update.component_aws_secret_access_key
         ):
             final_aws_secret = settings_update.component_aws_secret_access_key
 
@@ -120,9 +119,8 @@ async def update_storage_settings(
     if final_storage_location == "Google Drive":
         # Check if we're updating credentials or if they already exist
         final_gdrive_key = settings.component_google_drive_service_account_key
-        if (
-            settings_update.component_google_drive_service_account_key is not None
-            and not all(c == "*" for c in settings_update.component_google_drive_service_account_key)
+        if settings_update.component_google_drive_service_account_key is not None and not all(
+            c == "*" for c in settings_update.component_google_drive_service_account_key
         ):
             final_gdrive_key = settings_update.component_google_drive_service_account_key
 
@@ -141,11 +139,10 @@ async def update_storage_settings(
         settings.component_aws_access_key_id = settings_update.component_aws_access_key_id
 
     # Only update secret if not masked (not just asterisks)
-    if (
-        settings_update.component_aws_secret_access_key is not None
-        and not all(c == "*" for c in settings_update.component_aws_secret_access_key)
+    if settings_update.component_aws_secret_access_key is not None and not all(
+        c == "*" for c in settings_update.component_aws_secret_access_key
     ):
-            settings.component_aws_secret_access_key = settings_update.component_aws_secret_access_key
+        settings.component_aws_secret_access_key = settings_update.component_aws_secret_access_key
 
     if settings_update.component_aws_default_bucket is not None:
         settings.component_aws_default_bucket = settings_update.component_aws_default_bucket
@@ -154,18 +151,13 @@ async def update_storage_settings(
         settings.component_aws_default_region = settings_update.component_aws_default_region
 
     # Only update service account key if not masked
-    if (
-        settings_update.component_google_drive_service_account_key is not None
-        and not all(c == "*" for c in settings_update.component_google_drive_service_account_key)
+    if settings_update.component_google_drive_service_account_key is not None and not all(
+        c == "*" for c in settings_update.component_google_drive_service_account_key
     ):
-            settings.component_google_drive_service_account_key = (
-                settings_update.component_google_drive_service_account_key
-            )
+        settings.component_google_drive_service_account_key = settings_update.component_google_drive_service_account_key
 
     if settings_update.component_google_drive_default_folder_id is not None:
-        settings.component_google_drive_default_folder_id = (
-            settings_update.component_google_drive_default_folder_id
-        )
+        settings.component_google_drive_default_folder_id = settings_update.component_google_drive_default_folder_id
 
     # Return masked values for security
     masked_aws_secret = None

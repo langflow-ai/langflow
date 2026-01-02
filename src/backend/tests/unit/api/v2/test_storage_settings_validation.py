@@ -44,9 +44,7 @@ async def test_validation_fails_when_switching_to_aws_without_credentials(settin
 @pytest.mark.asyncio
 async def test_validation_fails_when_switching_to_aws_with_only_key_id(settings_service, mock_user):
     """Test that validation fails when switching to AWS with only access key ID."""
-    settings_update = StorageSettingsUpdate(
-        default_storage_location="AWS", component_aws_access_key_id="test-key-id"
-    )
+    settings_update = StorageSettingsUpdate(default_storage_location="AWS", component_aws_access_key_id="test-key-id")
 
     with pytest.raises(HTTPException) as exc_info:
         await update_storage_settings(settings_update, mock_user, settings_service)

@@ -1,4 +1,5 @@
 """Tests for storage settings functionality."""
+
 import os
 from pathlib import Path
 

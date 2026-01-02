@@ -76,6 +76,7 @@ class TestFileComponentStorageSettings:
             mock_settings = MagicMock()
             mock_settings.component_aws_access_key_id = "global_key_id"
             import os
+
             mock_settings.component_aws_secret_access_key = os.getenv(
                 "COMPONENT_AWS_SECRET_ACCESS_KEY", "default_secret"
             )
@@ -83,25 +84,27 @@ class TestFileComponentStorageSettings:
             mock_settings.component_aws_default_region = "us-east-1"
             mock_service.return_value.settings = mock_settings
 
-            with patch("lfx.base.data.cloud_storage_utils.create_s3_client"), \
-                 patch("lfx.base.data.cloud_storage_utils.validate_aws_credentials"):
-                    import contextlib
-                    import logging
-                    logger = logging.getLogger(__name__)
+            with (
+                patch("lfx.base.data.cloud_storage_utils.create_s3_client"),
+                patch("lfx.base.data.cloud_storage_utils.validate_aws_credentials"),
+            ):
+                import contextlib
+                import logging
 
-                    with contextlib.suppress(Exception) as exc:
-                        component._read_from_aws_s3()
-                        if exc:
-                            logger.exception("Exception occurred during AWS S3 read")
+                logger = logging.getLogger(__name__)
 
-                    # Verify global credentials were set on component
-                    assert component.aws_access_key_id == "global_key_id"
-                    import os
-                    assert component.aws_secret_access_key == os.getenv(
-                        "COMPONENT_AWS_SECRET_ACCESS_KEY", "default_secret"
-                    )
-                    assert component.bucket_name == "global-bucket"
-                    assert component.aws_region == "us-east-1"
+                with contextlib.suppress(Exception) as exc:
+                    component._read_from_aws_s3()
+                    if exc:
+                        logger.exception("Exception occurred during AWS S3 read")
+
+                # Verify global credentials were set on component
+                assert component.aws_access_key_id == "global_key_id"
+                import os
+
+                assert component.aws_secret_access_key == os.getenv("COMPONENT_AWS_SECRET_ACCESS_KEY", "default_secret")
+                assert component.bucket_name == "global-bucket"
+                assert component.aws_region == "us-east-1"
 
 
 class TestSaveFileComponentStorageSettings:
@@ -181,6 +184,7 @@ class TestSaveFileComponentStorageSettings:
                     # We just want to verify credentials are retrieved from global settings
                     # The actual save would require more complex mocking
                     from lfx.services.deps import get_settings_service
+
                     _ = get_settings_service().settings
 
                     # This would fail in the actual method, but we're testing the logic path
@@ -188,5 +192,6 @@ class TestSaveFileComponentStorageSettings:
                     assert mock_settings.component_google_drive_default_folder_id is not None
                 except Exception:
                     import logging
+
                     logger = logging.getLogger(__name__)
                     logger.exception("Exception occurred during Google Drive save")
