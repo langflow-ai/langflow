@@ -44,6 +44,12 @@ AUTO_LOGIN_ERROR = (
 REFRESH_TOKEN_TYPE: Final[str] = "refresh"  # noqa: S105
 ACCESS_TOKEN_TYPE: Final[str] = "access"  # noqa: S105
 
+# JWT key configuration error messages
+PUBLIC_KEY_NOT_CONFIGURED_ERROR: Final[str] = (
+    "Server configuration error: Public key not configured for asymmetric JWT algorithm."
+)
+SECRET_KEY_NOT_CONFIGURED_ERROR: Final[str] = "Server configuration error: Secret key not configured."  # noqa: S105
+
 
 class JWTKeyError(HTTPException):
     """Raised when JWT key configuration is invalid."""
@@ -69,15 +75,13 @@ def get_jwt_verification_key(settings_service: SettingsService) -> str:
         verification_key = settings_service.auth_settings.PUBLIC_KEY
         if not verification_key:
             logger.error("Public key is not set in settings for RS256/RS512.")
-            raise JWTKeyError(
-                "Server configuration error: Public key not configured for asymmetric JWT algorithm."
-            )
+            raise JWTKeyError(PUBLIC_KEY_NOT_CONFIGURED_ERROR)
         return verification_key
 
     secret_key = settings_service.auth_settings.SECRET_KEY.get_secret_value()
     if secret_key is None:
         logger.error("Secret key is not set in settings.")
-        raise JWTKeyError("Server configuration error: Secret key not configured.")
+        raise JWTKeyError(SECRET_KEY_NOT_CONFIGURED_ERROR)
     return secret_key
 
 
