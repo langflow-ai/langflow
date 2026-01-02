@@ -22,14 +22,17 @@ class TestWorkflowDeveloperAPIProtection:
             yield mock_settings
 
     async def test_execute_workflow_blocked_when_dev_api_disabled(
-        self, client: AsyncClient, created_api_key, mock_settings_dev_api_disabled  # noqa: ARG002
+        self,
+        client: AsyncClient,
+        created_api_key,
+        mock_settings_dev_api_disabled,  # noqa: ARG002
     ):
         """Test workflow execution is blocked when developer API is disabled."""
         request_data = {
             "flow_id": "550e8400-e29b-41d4-a716-446655440000",
             "background": False,
             "stream": False,
-            "inputs": None
+            "inputs": None,
         }
 
         headers = {"x-api-key": created_api_key.api_key}
@@ -44,12 +47,13 @@ class TestWorkflowDeveloperAPIProtection:
         assert "This endpoint is not available" in result["detail"]
 
     async def test_stop_workflow_blocked_when_dev_api_disabled(
-        self, client: AsyncClient, created_api_key, mock_settings_dev_api_disabled  # noqa: ARG002
+        self,
+        client: AsyncClient,
+        created_api_key,
+        mock_settings_dev_api_disabled,  # noqa: ARG002
     ):
         """Test POST workflow/stop endpoint is blocked when developer API is disabled."""
-        request_data = {
-            "job_id": "550e8400-e29b-41d4-a716-446655440001"
-        }
+        request_data = {"job_id": "550e8400-e29b-41d4-a716-446655440001"}
 
         headers = {"x-api-key": created_api_key.api_key}
         response = await client.post(
@@ -74,14 +78,17 @@ class TestWorkflowDeveloperAPIProtection:
             yield mock_settings
 
     async def test_execute_workflow_allowed_when_dev_api_enabled_flow_not_found(
-        self, client: AsyncClient, created_api_key, mock_settings_dev_api_enabled  # noqa: ARG002
+        self,
+        client: AsyncClient,
+        created_api_key,
+        mock_settings_dev_api_enabled,  # noqa: ARG002
     ):
         """Test POST workflow execution is allowed when developer API is enabled - flow not found."""
         request_data = {
             "flow_id": "550e8400-e29b-41d4-a716-446655440000",  # Non-existent flow ID
             "background": False,
             "stream": False,
-            "inputs": None
+            "inputs": None,
         }
 
         headers = {"x-api-key": created_api_key.api_key}
@@ -98,7 +105,10 @@ class TestWorkflowDeveloperAPIProtection:
         assert "This endpoint is not available" not in response.text
 
     async def test_get_workflow_allowed_when_dev_api_enabled_job_not_found(
-        self, client: AsyncClient, created_api_key, mock_settings_dev_api_enabled  # noqa: ARG002
+        self,
+        client: AsyncClient,
+        created_api_key,
+        mock_settings_dev_api_enabled,  # noqa: ARG002
     ):
         """Test GET workflow endpoint is allowed when developer API is enabled - job not found."""
         headers = {"x-api-key": created_api_key.api_key}
@@ -113,7 +123,10 @@ class TestWorkflowDeveloperAPIProtection:
         assert "This endpoint is not available" not in response.text
 
     async def test_stop_workflow_allowed_when_dev_api_enabled_job_not_found(
-        self, client: AsyncClient, created_api_key, mock_settings_dev_api_enabled  # noqa: ARG002
+        self,
+        client: AsyncClient,
+        created_api_key,
+        mock_settings_dev_api_enabled,  # noqa: ARG002
     ):
         """Test POST workflow/stop endpoint is allowed when developer API is enabled - job not found."""
         request_data = {
@@ -133,7 +146,10 @@ class TestWorkflowDeveloperAPIProtection:
         assert "This endpoint is not available" not in response.text
 
     async def test_get_workflow_blocked_when_dev_api_disabled(
-        self, client: AsyncClient, created_api_key, mock_settings_dev_api_disabled  # noqa: ARG002
+        self,
+        client: AsyncClient,
+        created_api_key,
+        mock_settings_dev_api_disabled,  # noqa: ARG002
     ):
         """Test GET workflow endpoint is blocked when developer API is disabled."""
         headers = {"x-api-key": created_api_key.api_key}
@@ -147,7 +163,10 @@ class TestWorkflowDeveloperAPIProtection:
         assert "This endpoint is not available" in result["detail"]
 
     async def test_execute_workflow_allowed_when_dev_api_enabled_flow_exists(
-        self, client: AsyncClient, created_api_key, mock_settings_dev_api_enabled  # noqa: ARG002
+        self,
+        client: AsyncClient,
+        created_api_key,
+        mock_settings_dev_api_enabled,  # noqa: ARG002
     ):
         """Test POST /workflow allowed when dev API enabled - flow exists (501 not implemented)."""
         flow_id = uuid4()
@@ -166,12 +185,7 @@ class TestWorkflowDeveloperAPIProtection:
             await session.refresh(flow)
 
         try:
-            request_data = {
-                "flow_id": str(flow.id),
-                "background": False,
-                "stream": False,
-                "inputs": None
-            }
+            request_data = {"flow_id": str(flow.id), "background": False, "stream": False, "inputs": None}
 
             headers = {"x-api-key": created_api_key.api_key}
             response = await client.post(
@@ -193,7 +207,10 @@ class TestWorkflowDeveloperAPIProtection:
                     await session.delete(flow)
 
     async def test_get_workflow_allowed_when_dev_api_enabled_job_exists(
-        self, client: AsyncClient, created_api_key, mock_settings_dev_api_enabled  # noqa: ARG002
+        self,
+        client: AsyncClient,
+        created_api_key,
+        mock_settings_dev_api_enabled,  # noqa: ARG002
     ):
         """Test GET /workflow allowed when dev API enabled - job exists (501 not implemented)."""
         # Since job management isn't implemented, we'll test with any job_id
@@ -209,14 +226,15 @@ class TestWorkflowDeveloperAPIProtection:
         assert "This endpoint is not available" not in response.text
 
     async def test_stop_workflow_allowed_when_dev_api_enabled_job_exists(
-        self, client: AsyncClient, created_api_key, mock_settings_dev_api_enabled  # noqa: ARG002
+        self,
+        client: AsyncClient,
+        created_api_key,
+        mock_settings_dev_api_enabled,  # noqa: ARG002
     ):
         """Test POST /workflow/stop allowed when dev API enabled - job exists (501 not implemented)."""
         # Since job management isn't implemented, we'll test with any job_id
         # The endpoint should return 501 regardless of whether the job exists
-        request_data = {
-            "job_id": "550e8400-e29b-41d4-a716-446655440002"
-        }
+        request_data = {"job_id": "550e8400-e29b-41d4-a716-446655440002"}
 
         headers = {"x-api-key": created_api_key.api_key}
         response = await client.post(
@@ -230,7 +248,9 @@ class TestWorkflowDeveloperAPIProtection:
         assert "This endpoint is not available" not in response.text
 
     async def test_all_endpoints_require_api_key_authentication(
-        self, client: AsyncClient, mock_settings_dev_api_enabled  # noqa: ARG002
+        self,
+        client: AsyncClient,
+        mock_settings_dev_api_enabled,  # noqa: ARG002
     ):
         """Test that all workflow endpoints require API key authentication."""
         # Test POST /workflow without API key
@@ -238,7 +258,7 @@ class TestWorkflowDeveloperAPIProtection:
             "flow_id": "550e8400-e29b-41d4-a716-446655440000",
             "background": False,
             "stream": False,
-            "inputs": None
+            "inputs": None,
         }
 
         response = await client.post(
@@ -251,9 +271,7 @@ class TestWorkflowDeveloperAPIProtection:
         assert "API key must be passed" in response.json()["detail"]
 
         # Test GET /workflow without API key
-        response = await client.get(
-            "api/v2/workflow?job_id=550e8400-e29b-41d4-a716-446655440001"
-        )
+        response = await client.get("api/v2/workflow?job_id=550e8400-e29b-41d4-a716-446655440001")
         assert response.status_code == 403
         assert "API key must be passed" in response.json()["detail"]
 

@@ -56,16 +56,10 @@ async def execute_workflow(
     """
     flow = await get_flow_by_id_or_endpoint_name(workflow_request.flow_id, api_key_user.id)
     if not flow:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Flow {workflow_request.flow_id} not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Flow {workflow_request.flow_id} not found")
 
     # TODO: Implementation
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Not implemented /workflow execution yet"
-    )
+    raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented /workflow execution yet")
 
 
 @router.get(
@@ -82,10 +76,7 @@ async def get_workflow_status(
 ) -> WorkflowExecutionResponse | StreamingResponse:
     """Get workflow job status and results by job ID."""
     # TODO: Implementation
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Not implemented /status yet"
-    )
+    raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented /status yet")
 
 
 @router.post(
@@ -105,7 +96,4 @@ async def stop_workflow(
     - force: Whether to force stop the workflow (optional)
     """
     # TODO: Implementation
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Not implemented /stop yet"
-    )
+    raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented /stop yet")
