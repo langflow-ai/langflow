@@ -69,9 +69,7 @@ def get_jwt_verification_key(settings_service: SettingsService) -> str:
         verification_key = settings_service.auth_settings.PUBLIC_KEY
         if not verification_key:
             logger.error("Public key is not set in settings for RS256/RS512.")
-            raise JWTKeyError(
-                "Server configuration error: Public key not configured for asymmetric JWT algorithm."
-            )
+            raise JWTKeyError("Server configuration error: Public key not configured for asymmetric JWT algorithm.")
         return verification_key
 
     secret_key = settings_service.auth_settings.SECRET_KEY.get_secret_value()
