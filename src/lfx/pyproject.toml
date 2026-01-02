@@ -92,6 +92,7 @@ omit = [
     "*/tests/*",
     "*/__init__.py",
     "*/components/*",  # Third-party integrations tracked separately
+    "*/schema/workflow.py",  # Schema definitions don't require test coverage
 ]
 
 [tool.coverage.report]

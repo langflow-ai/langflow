@@ -230,7 +230,7 @@ class TestWorkflowDeveloperAPIProtection:
         assert "This endpoint is not available" not in response.text
 
     async def test_all_endpoints_require_api_key_authentication(
-        self, client: AsyncClient
+        self, client: AsyncClient, mock_settings_dev_api_enabled  # noqa: ARG002
     ):
         """Test that all workflow endpoints require API key authentication."""
         # Test POST /workflow without API key

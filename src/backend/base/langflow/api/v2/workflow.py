@@ -21,8 +21,6 @@ from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
 from langflow.services.auth.utils import api_key_security
 from langflow.services.database.models.user.model import UserRead
 
-router = APIRouter(prefix="/workflow", tags=["Workflow"])
-
 
 def check_developer_api_enabled() -> None:
     """Check if developer API is enabled, raise HTTPException if not."""
@@ -33,6 +31,8 @@ def check_developer_api_enabled() -> None:
             detail="This endpoint is not available",
         )
 
+
+router = APIRouter(prefix="/workflow", tags=["Workflow"], dependencies=[Depends(check_developer_api_enabled)])
 
 
 @router.post(
@@ -54,8 +54,6 @@ async def execute_workflow(
     - **stream**: Returns server-sent events in real-time (stream=True)
     - **background**: Starts job and returns job ID immediately (background=True)
     """
-    check_developer_api_enabled()
-
     flow = await get_flow_by_id_or_endpoint_name(workflow_request.flow_id, api_key_user.id)
     if not flow:
         raise HTTPException(
@@ -83,8 +81,6 @@ async def get_workflow_status(
     job_id: Annotated[str, Query(description="Job ID to query")],  # noqa: ARG001
 ) -> WorkflowExecutionResponse | StreamingResponse:
     """Get workflow job status and results by job ID."""
-    check_developer_api_enabled()
-
     # TODO: Implementation
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
@@ -108,8 +104,6 @@ async def stop_workflow(
     - job_id: The specific job ID to stop
     - force: Whether to force stop the workflow (optional)
     """
-    check_developer_api_enabled()
-
     # TODO: Implementation
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
