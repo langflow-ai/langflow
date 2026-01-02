@@ -12,8 +12,14 @@ export type ChatMessageType = {
   componentId?: string;
   id: string;
   timestamp: string;
-  stream_url?: string | null;
+  flow_id?: string;
+  session_id?: string;
+  sender?: string;
   sender_name?: string;
+  text?: string | number;
+  background_color?: string;
+  text_color?: string;
+  stream_url?: string | null;
   session?: string;
   edit?: boolean;
   icon?: string;
@@ -61,7 +67,10 @@ export type FlowPoolObjectType = {
   valid: boolean;
   // list of chat outputs or list of chat inputs
   messages: Array<ChatOutputType | ChatInputType> | [];
-  data: { artifacts: any; results: any | ChatOutputType | ChatInputType };
+  data: {
+    artifacts: Record<string, unknown>;
+    results: unknown | ChatOutputType | ChatInputType;
+  };
   id: string;
 };
 
@@ -98,7 +107,7 @@ export interface MediaContent extends BaseContent {
 
 export interface JSONContent extends BaseContent {
   type: "json";
-  data: Record<string, any>;
+  data: Record<string, unknown>;
 }
 
 export interface CodeContent extends BaseContent {
@@ -111,9 +120,9 @@ export interface CodeContent extends BaseContent {
 export interface ToolContent extends BaseContent {
   type: "tool_use";
   name?: string;
-  tool_input: Record<string, any>;
-  output?: any;
-  error?: any;
+  tool_input: Record<string, unknown>;
+  output?: unknown;
+  error?: unknown;
 }
 
 // Union type for all content types
@@ -152,3 +161,6 @@ export interface PlaygroundEvent {
   session_id?: string;
   edit?: boolean;
 }
+
+// Generic JSON object helper
+export type JSONObject = Record<string, unknown>;
