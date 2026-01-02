@@ -22,7 +22,7 @@ Internal Helpers:
 
 from __future__ import annotations
 
-import time
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
 from lfx.schema.workflow import (
@@ -72,31 +72,24 @@ def parse_flat_inputs(inputs: dict[str, Any]) -> tuple[dict[str, dict[str, Any]]
     tweaks: dict[str, dict[str, Any]] = {}
     session_id: str | None = None
 
-    # Group inputs by component_id
-    component_inputs: dict[str, dict[str, Any]] = {}
-
     for key, value in inputs.items():
         if "." in key:
             # Split component_id.param
             component_id, param_name = key.split(".", 1)
 
-            if component_id not in component_inputs:
-                component_inputs[component_id] = {}
-            component_inputs[component_id][param_name] = value
+            # Extract session_id if present (use first one found)
+            if param_name == "session_id":
+                if session_id is None:
+                    session_id = value
+            else:
+                # Build tweaks for all parameters except session_id
+                if component_id not in tweaks:
+                    tweaks[component_id] = {}
+                tweaks[component_id][param_name] = value
+        # No dot - treat as component-level dict (for backward compatibility)
         # No dot - treat as component-level dict (for backward compatibility)
         elif isinstance(value, dict):
             tweaks[key] = value
-
-    # Process component inputs
-    for component_id, params in component_inputs.items():
-        # Extract session_id if present (use first one found)
-        if "session_id" in params and session_id is None:
-            session_id = params["session_id"]
-
-        # Build tweaks for all parameters except session_id
-        tweak_params = {k: v for k, v in params.items() if k != "session_id"}
-        if tweak_params:
-            tweaks[component_id] = tweak_params
 
     return tweaks, session_id
 
@@ -478,7 +471,6 @@ def run_response_to_workflow_response(
         flow_id=flow_id,
         job_id=job_id,
         object="response",
-        created_timestamp=str(int(time.time())),
         status=JobStatus.COMPLETED,
         errors=[],
         inputs=workflow_request.inputs or {},
@@ -487,18 +479,20 @@ def run_response_to_workflow_response(
     )
 
 
-def create_job_response(job_id: str) -> WorkflowJobResponse:
+def create_job_response(job_id: str, flow_id: str) -> WorkflowJobResponse:
     """Create a background job response.
 
     Args:
         job_id: The generated job ID
+        flow_id: The flow ID
 
     Returns:
         WorkflowJobResponse for background execution
     """
     return WorkflowJobResponse(
         job_id=job_id,
-        created_timestamp=str(int(time.time())),
+        flow_id=flow_id,
+        created_timestamp=datetime.now(timezone.utc).isoformat(),
         status=JobStatus.QUEUED,
         errors=[],
     )
@@ -506,7 +500,7 @@ def create_job_response(job_id: str) -> WorkflowJobResponse:
 
 def create_error_response(
     flow_id: str,
-    job_id: str,
+    job_id: str | None,
     workflow_request: WorkflowExecutionRequest,
     error: Exception,
 ) -> WorkflowExecutionResponse:
@@ -529,7 +523,6 @@ def create_error_response(
         flow_id=flow_id,
         job_id=job_id,
         object="response",
-        created_timestamp=str(int(time.time())),
         status=JobStatus.FAILED,
         errors=[error_detail],
         inputs=workflow_request.inputs or {},

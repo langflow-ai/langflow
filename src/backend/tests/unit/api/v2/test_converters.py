@@ -838,16 +838,18 @@ class TestCreateJobResponse:
     def test_create_job_response_structure(self):
         """Test job response structure and timestamp format."""
         job_id = "job-12345"
-        response = create_job_response(job_id)
+        flow_id = "flow-678"
+        response = create_job_response(job_id, flow_id)
 
         assert isinstance(response, WorkflowJobResponse)
         assert response.job_id == job_id
+        assert response.flow_id == flow_id
         assert response.status == JobStatus.QUEUED
         assert response.errors == []
         assert response.created_timestamp is not None
-        # Verify timestamp format
+        # Verify timestamp format (ISO format should contain 'T')
         assert isinstance(response.created_timestamp, str)
-        assert response.created_timestamp.isdigit()
+        assert "T" in response.created_timestamp
 
 
 class TestCreateErrorResponse:
