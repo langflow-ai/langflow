@@ -68,10 +68,7 @@ export default function StorageSettingsPage() {
 
     // Only include Google Drive settings if Google Drive is selected and fields are not masked
     if (storageLocation === "Google Drive") {
-      if (
-        gdriveServiceAccountKey &&
-        !gdriveServiceAccountKey.startsWith("*")
-      ) {
+      if (gdriveServiceAccountKey && !gdriveServiceAccountKey.startsWith("*")) {
         updates.component_google_drive_service_account_key =
           gdriveServiceAccountKey;
       }
