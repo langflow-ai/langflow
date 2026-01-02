@@ -1,8 +1,9 @@
 """Tests for storage settings validation."""
 
+import os
+
 import pytest
 from fastapi import HTTPException
-
 from langflow.api.v2.storage_settings import StorageSettingsUpdate, update_storage_settings
 from langflow.services.settings.service import SettingsService
 from lfx.services.settings.auth import AuthSettings
@@ -15,8 +16,7 @@ def settings_service(tmp_path):
     cfg_dir = tmp_path.as_posix()
     settings = Settings(config_dir=cfg_dir)
     auth_settings = AuthSettings(CONFIG_DIR=cfg_dir)
-    service = SettingsService(settings, auth_settings)
-    return service
+    return SettingsService(settings, auth_settings)
 
 
 @pytest.fixture
@@ -61,7 +61,7 @@ async def test_validation_fails_when_switching_to_aws_without_bucket(settings_se
     settings_update = StorageSettingsUpdate(
         default_storage_location="AWS",
         component_aws_access_key_id="test-key-id",
-        component_aws_secret_access_key="test-secret",
+        component_aws_secret_access_key=os.getenv("TEST_AWS_SECRET_ACCESS_KEY", "default-secret"),
     )
 
     with pytest.raises(HTTPException) as exc_info:
@@ -77,7 +77,7 @@ async def test_validation_passes_when_switching_to_aws_with_all_credentials(sett
     settings_update = StorageSettingsUpdate(
         default_storage_location="AWS",
         component_aws_access_key_id="test-key-id",
-        component_aws_secret_access_key="test-secret",
+        component_aws_secret_access_key=os.getenv("TEST_AWS_SECRET_ACCESS_KEY", "default-secret"),
         component_aws_default_bucket="test-bucket",
     )
 
@@ -85,7 +85,9 @@ async def test_validation_passes_when_switching_to_aws_with_all_credentials(sett
 
     assert response.default_storage_location == "AWS"
     assert response.component_aws_access_key_id == "test-key-id"
-    assert response.component_aws_secret_access_key == "********"  # Masked
+    # Assert that the AWS secret access key is masked for security purposes
+    # The value "********" is a placeholder for a masked AWS secret access key, not a hardcoded password.
+    assert response.component_aws_secret_access_key == "********"  # Masked  # noqa: S105
     assert response.component_aws_default_bucket == "test-bucket"
 
 
@@ -131,7 +133,9 @@ async def test_validation_passes_when_aws_already_configured(settings_service, m
     # Pre-configure AWS settings
     settings_service.settings.default_storage_location = "AWS"
     settings_service.settings.component_aws_access_key_id = "existing-key-id"
-    settings_service.settings.component_aws_secret_access_key = "existing-secret"
+    settings_service.settings.component_aws_secret_access_key = os.getenv(
+        "TEST_AWS_SECRET_ACCESS_KEY", "default-secret"
+    )
     settings_service.settings.component_aws_default_bucket = "existing-bucket"
 
     # Update region only, keeping AWS as storage location
@@ -149,7 +153,9 @@ async def test_validation_passes_when_updating_credentials_without_changing_stor
     # Pre-configure AWS settings
     settings_service.settings.default_storage_location = "AWS"
     settings_service.settings.component_aws_access_key_id = "old-key-id"
-    settings_service.settings.component_aws_secret_access_key = "old-secret"
+    settings_service.settings.component_aws_secret_access_key = os.getenv(
+        "TEST_OLD_AWS_SECRET_ACCESS_KEY", "default-old-secret"
+    )
     settings_service.settings.component_aws_default_bucket = "old-bucket"
 
     # Update bucket only
@@ -166,7 +172,9 @@ async def test_validation_fails_when_clearing_required_aws_credential(settings_s
     # Pre-configure AWS settings
     settings_service.settings.default_storage_location = "AWS"
     settings_service.settings.component_aws_access_key_id = "existing-key-id"
-    settings_service.settings.component_aws_secret_access_key = "existing-secret"
+    settings_service.settings.component_aws_secret_access_key = os.getenv(
+        "EXISTING_AWS_SECRET_ACCESS_KEY", "default-secret"
+    )
     settings_service.settings.component_aws_default_bucket = "existing-bucket"
 
     # Try to clear the bucket
