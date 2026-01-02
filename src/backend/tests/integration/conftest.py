@@ -1,4 +1,9 @@
+import os
+
 import pytest
+
+# Enable agentic experience for integration tests
+os.environ["LANGFLOW_AGENTIC_EXPERIENCE"] = "true"
 
 
 @pytest.fixture(autouse=True)
