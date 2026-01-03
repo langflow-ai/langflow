@@ -73,11 +73,33 @@ import { createRandomKey, toTitleCase } from "./utils";
 const uid = new ShortUniqueId();
 
 export function checkChatInput(nodes: Node[]) {
-  return nodes.some((node) => node.data.type === "ChatInput");
+  return nodes.some((node) => {
+    // Check for legacy ChatInput component
+    if (node.data.type === "ChatInput") {
+      return true;
+    }
+    // Check for FlowStart component in Chat mode
+    if (node.data.type === "FlowStart") {
+      const inputTypeValue = node.data.node?.template?.input_type?.value;
+      return inputTypeValue === "Chat";
+    }
+    return false;
+  });
 }
 
 export function checkWebhookInput(nodes: Node[]) {
-  return nodes.some((node) => node.data.type === "Webhook");
+  return nodes.some((node) => {
+    // Check for legacy Webhook component
+    if (node.data.type === "Webhook") {
+      return true;
+    }
+    // Check for FlowStart component in Webhook mode
+    if (node.data.type === "FlowStart") {
+      const inputTypeValue = node.data.node?.template?.input_type?.value;
+      return inputTypeValue === "Webhook";
+    }
+    return false;
+  });
 }
 
 export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {

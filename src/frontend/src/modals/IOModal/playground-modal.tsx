@@ -60,8 +60,26 @@ export default function IOModal({
       flowName: state.currentFlow?.name,
     })),
   );
-  const filteredInputs = inputs.filter((input) => input.type !== "ChatInput");
-  const chatInput = inputs.find((input) => input.type === "ChatInput");
+  const filteredInputs = inputs.filter((input) => {
+    if (input.type === "ChatInput") return false;
+    // Check if FlowStart in Chat mode
+    if (input.type === "FlowStart") {
+      const node = nodes.find((n) => n.id === input.id);
+      return node?.data?.node?.template?.input_type?.value !== "Chat";
+    }
+    return true;
+  });
+
+  const chatInput = inputs.find((input) => {
+    if (input.type === "ChatInput") return true;
+    // Check if FlowStart in Chat mode
+    if (input.type === "FlowStart") {
+      const node = nodes.find((n) => n.id === input.id);
+      return node?.data?.node?.template?.input_type?.value === "Chat";
+    }
+    return false;
+  });
+
   const filteredOutputs = outputs.filter(
     (output) => output.type !== "ChatOutput",
   );

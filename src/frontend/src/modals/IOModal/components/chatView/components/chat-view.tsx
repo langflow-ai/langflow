@@ -57,6 +57,15 @@ export default function ChatView({
   const isBuilding = useFlowStore((state) => state.isBuilding);
 
   const inputTypes = inputs.map((obj) => obj.type);
+
+  // Check if there's a FlowStart in Chat mode
+  const hasFlowStartChat = inputs.some((input) => {
+    if (input.type === "FlowStart") {
+      const node = nodes.find((n) => n.id === input.id);
+      return node?.data?.node?.template?.input_type?.value === "Chat";
+    }
+    return false;
+  });
   const updateFlowPool = useFlowStore((state) => state.updateFlowPool);
   const setChatValueStore = useUtilityStore((state) => state.setChatValueStore);
   const isTabHidden = useTabVisibility();
@@ -232,7 +241,7 @@ export default function ChatView({
       <div className="m-auto w-full max-w-[768px] md:w-5/6">
         <CustomChatInput
           playgroundPage={!!playgroundPage}
-          noInput={!inputTypes.includes("ChatInput")}
+          noInput={!inputTypes.includes("ChatInput") && !hasFlowStartChat}
           sendMessage={async ({ repeat, files }) => {
             await sendMessage({ repeat, files });
             track("Playground Message Sent");
