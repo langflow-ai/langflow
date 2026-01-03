@@ -10,7 +10,6 @@ from pathlib import Path as StdlibPath
 from typing import Annotated
 from uuid import UUID
 
-from langflow.services.publish.utils import MISSING_VERSION_ERR_MSG, require_version
 import orjson
 from aiofile import async_open
 from anyio import Path
@@ -36,7 +35,6 @@ from langflow.services.database.models.flow.model import (
     FlowRead,
     FlowUpdate,
 )
-from langflow.services.database.models.flow.utils import get_webhook_component_in_flow
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import get_service, get_settings_service, get_storage_service
@@ -709,7 +707,6 @@ async def publish_flow_version(
 
     try:
         flow_json = flow.model_dump_json()
-        print(version)
         publish_key = await publish_service.put_flow(
             user_id=str(current_user.id),
             flow_id=str(flow.id),
@@ -747,7 +744,7 @@ async def get_published_flow(
         )
         return orjson.loads(flow_data)
     except Exception as e:
-        raise HTTPException(status_code=404, detail=f"Published flow not found: {str(e)}") from e
+        raise HTTPException(status_code=404, detail=f"Published flow not found: {e!s}") from e
 
 
 ########################################################
