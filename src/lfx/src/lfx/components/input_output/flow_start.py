@@ -1,4 +1,6 @@
+import base64
 import json
+from pathlib import Path
 from typing import Any
 
 from lfx.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES
@@ -331,8 +333,6 @@ class FlowStartComponent(Component):
 
     def build_files_value(self) -> Data:
         """Build output for Files mode - reads file bytes."""
-        from pathlib import Path
-
         value = getattr(self, "files_value", None)
 
         if not value:
@@ -348,8 +348,6 @@ class FlowStartComponent(Component):
             return Data(data={})
 
         # Read file(s) and return structured data
-        import base64
-
         if len(files) == 1:
             # Single file - return flat structure
             file_path = files[0]

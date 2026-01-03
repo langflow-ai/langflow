@@ -11,6 +11,7 @@ import { track } from "@/customization/utils/analytics";
 import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
 import { LangflowButtonRedirectTarget } from "@/customization/utils/urls";
 import { useUtilityStore } from "@/stores/utilityStore";
+import { isFlowStartInMode } from "@/utils/reactflowUtils";
 import { swatchColors } from "@/utils/styleUtils";
 import LangflowLogoColor from "../../assets/LangflowLogoColor.svg?react";
 import IconComponent from "../../components/common/genericIconComponent";
@@ -62,22 +63,14 @@ export default function IOModal({
   );
   const filteredInputs = inputs.filter((input) => {
     if (input.type === "ChatInput") return false;
-    // Check if FlowStart in Chat mode
-    if (input.type === "FlowStart") {
-      const node = nodes.find((n) => n.id === input.id);
-      return node?.data?.node?.template?.input_type?.value !== "Chat";
-    }
-    return true;
+    const node = nodes.find((n) => n.id === input.id);
+    return !(node && isFlowStartInMode(node, "Chat"));
   });
 
   const chatInput = inputs.find((input) => {
     if (input.type === "ChatInput") return true;
-    // Check if FlowStart in Chat mode
-    if (input.type === "FlowStart") {
-      const node = nodes.find((n) => n.id === input.id);
-      return node?.data?.node?.template?.input_type?.value === "Chat";
-    }
-    return false;
+    const node = nodes.find((n) => n.id === input.id);
+    return node && isFlowStartInMode(node, "Chat");
   });
 
   const filteredOutputs = outputs.filter(

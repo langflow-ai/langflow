@@ -989,7 +989,6 @@ export const DESKTOP_URL = "https://www.langflow.org/desktop";
 export const BUG_REPORT_URL = "https://github.com/langflow-ai/langflow/issues";
 
 export const UUID_PARSING_ERROR = "uuid_parsing";
-export const API_REQUEST_TYPE = "apirequest";
 
 // Variable categories
 export const CATEGORY_GLOBAL = "Global";

@@ -12,6 +12,7 @@ import { useMessagesStore } from "@/stores/messagesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { useVoiceStore } from "@/stores/voiceStore";
 import { cn } from "@/utils/utils";
+import { isFlowStartInMode } from "@/utils/reactflowUtils";
 import useTabVisibility from "../../../../../shared/hooks/use-tab-visibility";
 import useFlowStore from "../../../../../stores/flowStore";
 import type { ChatMessageType } from "../../../../../types/chat";
@@ -60,11 +61,8 @@ export default function ChatView({
 
   // Check if there's a FlowStart in Chat mode
   const hasFlowStartChat = inputs.some((input) => {
-    if (input.type === "FlowStart") {
-      const node = nodes.find((n) => n.id === input.id);
-      return node?.data?.node?.template?.input_type?.value === "Chat";
-    }
-    return false;
+    const node = nodes.find((n) => n.id === input.id);
+    return node && isFlowStartInMode(node, "Chat");
   });
   const updateFlowPool = useFlowStore((state) => state.updateFlowPool);
   const setChatValueStore = useUtilityStore((state) => state.setChatValueStore);
