@@ -3,12 +3,14 @@ from __future__ import annotations
 import io
 import json
 import re
+import uuid
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path as StdlibPath
 from typing import Annotated
 from uuid import UUID
 
+from langflow.services.publish.utils import MISSING_VERSION_ERR_MSG, require_version
 import orjson
 from aiofile import async_open
 from anyio import Path
@@ -693,7 +695,7 @@ async def publish_flow_version(
     session: DbSession,
     flow_id: UUID,
     current_user: CurrentActiveUser,
-    version_id: str | None = None,
+    version: str | None = None,
 ):
     """Publish the flow to S3."""
     flow = await _read_flow(session=session, flow_id=flow_id, user_id=current_user.id)
@@ -707,17 +709,22 @@ async def publish_flow_version(
 
     try:
         flow_json = flow.model_dump_json()
-        await publish_service.publish_flow(
+        print(version)
+        publish_key = await publish_service.put_flow(
             user_id=str(current_user.id),
             flow_id=str(flow.id),
             flow_data=flow_json,
-            version_id=version_id,
+            version=version or uuid.uuid4()
         )
     except Exception as e:
         msg = f"Failed to publish flow (please ensure the version_id is unique): {e!s}"
         raise HTTPException(status_code=500, detail=msg) from e
 
-    return {"message": "Flow published successfully", "flow_id": flow_id}
+    return {
+        "message": "Flow published successfully",
+        "flow_id": flow_id,
+        "publish_key": publish_key
+        }
 
 
 @router.get("/{flow_id}/publish", status_code=200)
@@ -725,7 +732,7 @@ async def get_published_flow(
     *,
     flow_id: UUID,
     current_user: CurrentActiveUser,
-    version_id: str | None = None,
+    version: str | None = None,
 ):
     """Retrieve the published flow from S3."""
     try:
@@ -736,11 +743,11 @@ async def get_published_flow(
         flow_data = await publish_service.get_flow(
             user_id=str(current_user.id),
             flow_id=str(flow_id),
-            version_id=version_id,
+            version=version,
         )
         return orjson.loads(flow_data)
     except Exception as e:
-        raise HTTPException(status_code=404, detail="Published flow not found") from e
+        raise HTTPException(status_code=404, detail=f"Published flow not found: {str(e)}") from e
 
 
 ########################################################

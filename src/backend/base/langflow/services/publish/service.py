@@ -1,13 +1,18 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeAlias
+from uuid import UUID
 
 from langflow.services.base import Service
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
 
+
+IDType = str | UUID | None
+IDTypeStrict = str | UUID
+VersionType = str | UUID | int | None
 
 class PublishService(Service):
     name = "publish_service"
@@ -22,33 +27,63 @@ class PublishService(Service):
         self.set_ready()
 
     @abstractmethod
-    async def publish_flow(
-        self,
-        user_id: str,
-        flow_id: str,
-        flow_data: str,
-        version_id: str | None = None,
-    ) -> str:
-        """Publishes a flow to the storage provider."""
-        raise NotImplementedError
-
-    @abstractmethod
     async def get_flow(
         self,
-        user_id: str,
-        flow_id: str,
-        version_id: str | None = None,
+        user_id: IDType,
+        flow_id: IDType,
+        version: VersionType = None,
     ) -> str:
         """Retrieves a published flow from the storage provider."""
         raise NotImplementedError
 
     @abstractmethod
-    async def publish_project(
+    async def put_flow(
         self,
-        user_id: str,
-        project_id: str,
+        user_id: IDType,
+        flow_id: IDType,
+        flow_data: str,
+        version: VersionType = None,
+    ) -> str:
+        """Publishes a flow to the storage provider."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def delete_flow(
+        self,
+        user_id: IDType,
+        flow_id: IDType,
+        version: VersionType = None,
+    ) -> str:
+        """Deletes a published flow from the storage provider."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_project(
+        self,
+        user_id: IDType,
+        project_id: IDType,
+        version: VersionType = None,
+    ) -> str:
+        """Retrieves a published project from the storage provider."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def put_project(
+        self,
+        user_id: IDType,
+        project_id: IDType,
         manifest: dict,
-        version_id: str | None = None,
+        version: VersionType = None,
     ) -> str:
         """Publishes a project manifest to the storage provider."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def delete_project(
+        self,
+        user_id: IDType,
+        project_id: IDType,
+        version: VersionType = None,
+    ) -> str:
+        """Deletes a published project from the storage provider."""
         raise NotImplementedError

@@ -222,10 +222,9 @@ def normalized_flow_data(flow_data: dict | None):
 
 def remove_keys_from_dicts(dictlist : list[dict], exclude_keys : set):
     """Remove a set of keys from each dictionary in a list in-place."""
-    dictlist = [
-        {k: v for (k, v) in d.items() if k not in exclude_keys}
-        for d in dictlist
-    ]
+    for d in dictlist:
+        for key in exclude_keys:
+            d.pop(key, None)
 
 
 ########################################################
