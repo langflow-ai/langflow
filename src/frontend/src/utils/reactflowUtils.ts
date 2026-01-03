@@ -77,7 +77,9 @@ const uid = new ShortUniqueId();
  */
 export function isFlowStartInMode(node: any, mode: string): boolean {
   if (node?.type === "FlowStart" || node?.data?.type === "FlowStart") {
-    const inputTypeValue = node?.data?.node?.template?.input_type?.value || node?.node?.template?.input_type?.value;
+    const inputTypeValue =
+      node?.data?.node?.template?.input_type?.value ||
+      node?.node?.template?.input_type?.value;
     return inputTypeValue === mode;
   }
   return false;
