@@ -192,6 +192,7 @@ async def get_flow_checkpoint(
 ########################################################
 # keys to remove when comparing flows versions
 EXCLUDE_NODE_KEYS = {
+    # "position" # should we consider changes to node position as a meaningful change or not?
     "selected",
     "dragging",
     "positionAbsolute",
@@ -200,13 +201,16 @@ EXCLUDE_NODE_KEYS = {
     "width",
     "height",
     "last_updated",
+    ("data", "node", "lf_version"), # (nested) should we instead update starter projects?
     }
 EXCLUDE_EDGE_KEYS = {
+    "id",
     "selected",
     "animated",
     "className",
     "style",
     }
+
 
 
 def normalized_flow_data(flow_data: dict | None):
@@ -224,7 +228,18 @@ def remove_keys_from_dicts(dictlist : list[dict], exclude_keys : set):
     """Remove a set of keys from each dictionary in a list in-place."""
     for d in dictlist:
         for key in exclude_keys:
-            d.pop(key, None)
+            if key and isinstance(key, tuple):
+                pop_nested(d, key)
+            else:
+                d.pop(key, None)
+
+
+def pop_nested(d: dict, keys: tuple):
+    # nested key, walk down until second last key, then pop the last key
+    cur = d
+    for i in range(len(keys) - 1):
+        cur = cur.get(keys[i], {})
+    cur.pop(keys[-1], None)
 
 
 ########################################################
