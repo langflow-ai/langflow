@@ -53,7 +53,6 @@ class FlowStartComponent(Component):
         super().__init__(*args, **kwargs)
         self.request_data = None  # For JSON Input API injection
 
-
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         """Update build config when input_type changes."""
         if field_name == "input_type":
