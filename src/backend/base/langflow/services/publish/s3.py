@@ -85,14 +85,13 @@ class S3PublishService(PublishService):
                 ContentType="application/json",
             )
 
-        logger.info(f"Published flow {flow_id} to s3://{self.bucket_name}/{key}")
+        logger.info(f"Published flow with key s3://{self.bucket_name}/{key}")
         return key
 
     async def delete_flow(
         self,
         user_id: IDType,
         flow_id: IDType,
-        flow_data: str,
         version: VersionType,
     ) -> str | None:
         validate_all(self.bucket_name, user_id, flow_id, MISSING_USER_OR_FLOW_ID_MSG, version)
@@ -100,15 +99,9 @@ class S3PublishService(PublishService):
         key = self._flow_version_key(user_id, flow_id, version)
 
         async with self._get_client() as client:
-            await client.put_object(
-                IfNoneMatch="*", # prevent creating new s3 versions if the object already exists
-                Bucket=self.bucket_name,
-                Key=key,
-                Body=flow_data,
-                ContentType="application/json",
-            )
+            await client.delete_object(Bucket=self.bucket_name, Key=key)
 
-        logger.info(f"Published flow {flow_id} to s3://{self.bucket_name}/{key}")
+        logger.info(f"Deleted published flow with key s3://{self.bucket_name}/{key}")
         return key
 
     async def get_project(
@@ -134,7 +127,6 @@ class S3PublishService(PublishService):
                 ContentType="application/json",
             )
 
-        logger.info(f"Published project {project_id} to s3://{self.bucket_name}/{key}")
         return key
 
     async def put_project(
@@ -160,7 +152,7 @@ class S3PublishService(PublishService):
                 ContentType="application/json",
             )
 
-        logger.info(f"Published project {project_id} to s3://{self.bucket_name}/{key}")
+        logger.info(f"Published project with key s3://{self.bucket_name}/{key}")
         return key
 
     async def delete_project(
@@ -180,5 +172,5 @@ class S3PublishService(PublishService):
                 Key=key,
             )
 
-        logger.info(f"Published project {project_id} to s3://{self.bucket_name}/{key}")
+        logger.info(f"Deleted published project with key s3://{self.bucket_name}/{key}")
         return key
