@@ -50,6 +50,11 @@ export type FlowVersionType = {
   FlowVersion: FlowVersionDataType;
 } & Partial<FlowVersionDataType>;
 
+export type FlowVersionsResponseType = {
+  flow_id: string;
+  flow_versions: FlowVersionType[];
+};
+
 export type GenericNodeType = Node<NodeDataType, "genericNode">;
 export type NoteNodeType = Node<NoteDataType, "noteNode">;
 

@@ -817,15 +817,14 @@ async def get_flow_versions(
 @router.get("/{flow_id}/versions/{version_id}")
 async def fetch_flow_checkpoint(
     *,
-    flow_id: UUID,
+    flow_id: UUID, # noqa: ARG001
     current_user: CurrentActiveUser,
     version_id: UUID,
 ):
     """Get a checkpoint of the flow."""
-    return get_flow_checkpoint(
+    return await get_flow_checkpoint(
         user_id=current_user.id,
-        flow_id=flow_id,
-        version=version_id
+        version_id=version_id
     )
 
 
@@ -837,7 +836,7 @@ async def create_flow_checkpoint(
     flow: FlowUpdate,
 ):
     """Save a checkpoint of the flow."""
-    await save_flow_checkpoint(
+    return await save_flow_checkpoint(
         session=None,
         user_id=current_user.id,
         flow_id=flow_id,

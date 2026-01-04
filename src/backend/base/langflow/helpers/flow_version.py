@@ -150,21 +150,16 @@ async def list_flow_versions(
         async with session_scope() as session:
             flow_versions = (
                 await session.exec(
-                    select(
-                        FlowVersion.id,
-                        FlowVersion.user_id,
-                        FlowVersion.flow_id,
-                        FlowVersion.version,
-                        FlowVersion.created_at
-                        )
+                    select(FlowVersion.id, FlowVersion.version, FlowVersion.created_at)
                     .where(FlowVersion.user_id == uuid_user_id)
                     .where(FlowVersion.flow_id == uuid_flow_id)
                     .order_by(FlowVersion.version.desc())
                     )
                 ).all()
-        # we should restructure the select to not have flow_id
-        # instead return a json like {flow_id:..., flow_versions: [query result]}
-        return [version._mapping for version in flow_versions] # noqa: SLF001
+        return {
+            "flow_id": uuid_user_id,
+            "flow_versions": [version._mapping for version in flow_versions] # noqa: SLF001
+        }
     except Exception as e:
         msg = f"Error getting flow history: {e}"
         raise ValueError(msg) from e
@@ -224,8 +219,9 @@ EXCLUDE_NODE_KEYS = {
     "resizing",
     "width",
     "height",
-    "last_updated",
-    ("data", "node", "lf_version"), # (nested) should we instead update starter projects?
+    ("data", "node", "last_updated"), # nested
+    ("data", "node", "lf_version"), # should we update starter projects?
+    ("data", "node", "outputs", "hidden"),
     }
 EXCLUDE_EDGE_KEYS = {
     "id",
@@ -236,15 +232,17 @@ EXCLUDE_EDGE_KEYS = {
     }
 
 
-
 def normalized_flow_data(flow_data: dict | None):
     """Filters a deepcopy of flow data to exclude transient state."""
     copy_flow_data = deepcopy(flow_data) # prevent modifying database items
     if copy_flow_data:
-        copy_flow_data.pop("viewport", None)
-        copy_flow_data.pop("chatHistory", None)
-        remove_keys_from_dicts(copy_flow_data["nodes"], EXCLUDE_NODE_KEYS)
-        remove_keys_from_dicts(copy_flow_data["edges"], EXCLUDE_EDGE_KEYS)
+        try:
+            copy_flow_data.pop("viewport", None)
+            copy_flow_data.pop("chatHistory", None)
+            remove_keys_from_dicts(copy_flow_data["nodes"], EXCLUDE_NODE_KEYS)
+            remove_keys_from_dicts(copy_flow_data["edges"], EXCLUDE_EDGE_KEYS)
+        except Exception as e: # noqa: BLE001
+            logger.error(f"failed to filter flow contents: {e!s}")
     return copy_flow_data
 
 
@@ -259,12 +257,14 @@ def remove_keys_from_dicts(dictlist : list[dict], exclude_keys : set):
 
 
 def pop_nested(d: dict, keys: tuple):
-    # nested key, walk down until second last key, then pop the last key
-    cur = d
+    cur = d # walk down until second last key
     for i in range(len(keys) - 1):
         cur = cur.get(keys[i], {})
-    cur.pop(keys[-1], None)
-
+    if isinstance(cur, list): # last key is in a list of dicts
+        for _d in cur:
+            _d.pop(keys[-1], None)
+    else: # dict
+        cur.pop(keys[-1], None)
 
 ########################################################
 # flow configuration
