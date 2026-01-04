@@ -1,5 +1,6 @@
-"""add flow_version and flow_publish tables, and latest_version column to flow table
-
+"""add flow_version and flow_publish tables, and latest_version column to flow table.
+Migration: Add flow_version and flow_publish tables and add latest_version column to flow table.
+Phase: EXPAND
 Revision ID: 0098a9ce61cd
 Revises: 182e5471b900
 Create Date: 2026-01-04 18:02:32.002916
