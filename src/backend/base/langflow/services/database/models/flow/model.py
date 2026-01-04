@@ -73,10 +73,10 @@ class FlowBase(SQLModel):
             default=0,
             nullable=False,
             server_default=text("0"),
-            ),
+        ),
         default=0,
-        description="The latest version number of the flow"
-        )
+        description="The latest version number of the flow",
+    )
 
     @field_validator("endpoint_name")
     @classmethod

@@ -33,5 +33,3 @@ class FlowVersion(SQLModel, table=True):
             "flow_data": serialized.pop("flow_data"),
         }
         return Data(data=data)
-
-

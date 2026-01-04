@@ -11,11 +11,13 @@ from langflow.schema.data import Data
 # published, as recognized by Langflow with PublishStateEnum SUCCESS,
 # to one single storage provider at a time.
 
+
 class PublishStateEnum(Enum):
     PENDING = "PENDING"
     FAILED = "FAILED"
     SUCCESS = "SUCCESS"
-    REMOVED = "REMOVED" # went from published to unpublished
+    REMOVED = "REMOVED"  # went from published to unpublished
+
 
 class PublishProviderEnum(Enum):
     S3 = "s3"
@@ -38,8 +40,6 @@ class FlowPublish(SQLModel, table=True):
     # or that the flow was unpublished.
     # Note the distinction from publish_state.
     publish_provider: PublishProviderEnum | None = Field(default=None, nullable=True)
-
-
 
     __table_args__ = (
         # create index for flow_version_id?

@@ -40,7 +40,7 @@ class S3PublishService(PublishService):
         user_id: IDTypeStrict,
         flow_id: IDTypeStrict,
         publish_id: IDTypeStrict,
-        ) -> str:
+    ) -> str:
         return f"{self.prefix}{user_id!s}/flows/{flow_id!s}/versions/_{publish_id!s}.json"
 
     def _project_version_key(
@@ -48,7 +48,7 @@ class S3PublishService(PublishService):
         user_id: IDTypeStrict,
         project_id: IDTypeStrict,
         publish_id: IDTypeStrict,
-        ) -> str:
+    ) -> str:
         return f"{self.prefix}{user_id!s}/projects/{project_id!s}/versions/_{publish_id!s}.json"
 
     async def get_flow(
@@ -79,13 +79,12 @@ class S3PublishService(PublishService):
 
         async with self._get_client() as client:
             await client.put_object(
-                IfNoneMatch="*", # prevent creating new s3 versions if the object already exists
+                IfNoneMatch="*",  # prevent creating new s3 versions if the object already exists
                 Bucket=self.bucket_name,
                 Key=key,
                 Body=json.dumps(flow_data),
                 ContentType="application/json",
             )
-
 
         logger.info(f"Published flow with key s3://{self.bucket_name}/{key}")
         return key
@@ -134,7 +133,7 @@ class S3PublishService(PublishService):
 
         async with self._get_client() as client:
             await client.put_object(
-                IfNoneMatch="*", # prevent creating new s3 versions if the object already exists
+                IfNoneMatch="*",  # prevent creating new s3 versions if the object already exists
                 Bucket=self.bucket_name,
                 Key=key,
                 Body=json.dumps(manifest),
@@ -156,7 +155,7 @@ class S3PublishService(PublishService):
 
         async with self._get_client() as client:
             await client.delete_object(
-                IfNoneMatch="*", # prevent creating new s3 versions if the object already exists
+                IfNoneMatch="*",  # prevent creating new s3 versions if the object already exists
                 Bucket=self.bucket_name,
                 Key=key,
             )

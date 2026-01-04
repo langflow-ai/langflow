@@ -35,9 +35,9 @@ SORT_DISPATCHER = {
 
 async def save_flow_data(
     *,
-    user_id : str | UUID | None,
+    user_id: str | UUID | None,
     flow_id: str | UUID | None,
-    flow_data : dict | None,
+    flow_data: dict | None,
 ):
     if not (user_id and flow_id):
         msg = "Failed to save flow: user id and flow id are required"
@@ -52,10 +52,7 @@ async def save_flow_data(
     try:
         async with session_scope as session:
             session.exec(
-                update(Flow)
-                .where(Flow.user_id == user_uuid)
-                .where(Flow.id == flow_uuid)
-                .values(data=flow_data)
+                update(Flow).where(Flow.user_id == user_uuid).where(Flow.id == flow_uuid).values(data=flow_data)
             )
     except Exception as e:
         msg = f"Failed to save flow: {e}"

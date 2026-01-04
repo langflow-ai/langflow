@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from copy import deepcopy
@@ -27,13 +26,14 @@ if TYPE_CHECKING:
 FLOW_NOT_FOUND_ERROR_MSG = "Flow not found."
 FLOW_VERSION_NOT_FOUND_ERROR_MSG = "Flow version not found."
 
+
 async def save_flow_checkpoint(
     *,
     session: AsyncSession | None = None,
     user_id: str | UUID | None = None,
     flow_id: str | UUID | None = None,
-    update_data: dict | None = None
-    ) -> Flow | None:
+    update_data: dict | None = None,
+) -> Flow | None:
     """Save a flow in the Flow table and create a checkpoint in the FlowVersion table.
 
     This function updates the provided flow's
@@ -68,7 +68,7 @@ async def save_flow_checkpoint(
             user_id=uuid_user_id,
             flow_id=uuid_flow_id,
             update_data=update_data,
-            )
+        )
 
     async with session_scope() as _session:
         return await _save_flow_checkpoint(
@@ -76,7 +76,7 @@ async def save_flow_checkpoint(
             user_id=uuid_user_id,
             flow_id=uuid_flow_id,
             update_data=update_data,
-            )
+        )
 
 
 async def _save_flow_checkpoint(
@@ -88,13 +88,8 @@ async def _save_flow_checkpoint(
     """Save a checkpoint of a flow."""
     try:
         db_flow = (
-            await session.exec(
-                select(Flow)
-                .where(Flow.user_id == user_id)
-                .where(Flow.id == flow_id)
-                .with_for_update()
-                )
-            ).first()
+            await session.exec(select(Flow).where(Flow.user_id == user_id).where(Flow.id == flow_id).with_for_update())
+        ).first()
     except Exception as e:
         msg = f"Failed to fetch flow {e}"
         raise ValueError(msg) from e
@@ -104,10 +99,9 @@ async def _save_flow_checkpoint(
         raise ValueError(msg)
 
     # save in FlowVersion table iff graph data changed
-    if (
-        "data" in update_data and
-        normalized_flow_data(update_data["data"]) != normalized_flow_data(db_flow.data)
-        ): # note that None and {} (empty dict) are acceptable values for flow data
+    if "data" in update_data and normalized_flow_data(update_data["data"]) != normalized_flow_data(
+        db_flow.data
+    ):  # note that None and {} (empty dict) are acceptable values for flow data
         db_flow.latest_version += 1
         session.add(
             FlowVersion(
@@ -115,16 +109,14 @@ async def _save_flow_checkpoint(
                 flow_id=flow_id,
                 flow_data=update_data["data"],
                 version=db_flow.latest_version,
-                )
             )
+        )
         logger.debug(
-            "Graph data changed for flow %s, created new checkpoint version %s",
-            flow_id,
-            db_flow.latest_version
-            )
+            "Graph data changed for flow %s, created new checkpoint version %s", flow_id, db_flow.latest_version
+        )
 
     # save in Flow table
-    update_data.pop("latest_version", None) # prevent bad update to latest_version
+    update_data.pop("latest_version", None)  # prevent bad update to latest_version
     for key, val in update_data.items():
         setattr(db_flow, key, val)
 
@@ -139,7 +131,7 @@ async def list_flow_versions(
     *,
     user_id: str | UUID | None = None,
     flow_id: str | UUID | None = None,
-    ) -> list[dict] | None:
+) -> list[dict] | None:
     """List the versions of the flow."""
     require_user_and_flow_ids(user_id, flow_id)
 
@@ -154,11 +146,11 @@ async def list_flow_versions(
                     .where(FlowVersion.user_id == uuid_user_id)
                     .where(FlowVersion.flow_id == uuid_flow_id)
                     .order_by(FlowVersion.version.desc())
-                    )
-                ).all()
+                )
+            ).all()
         return {
             "flow_id": uuid_user_id,
-            "flow_versions": [version._mapping for version in flow_versions] # noqa: SLF001
+            "flow_versions": [version._mapping for version in flow_versions],  # noqa: SLF001
         }
     except Exception as e:
         msg = f"Error getting flow history: {e}"
@@ -167,21 +159,21 @@ async def list_flow_versions(
 
 async def restore_flow_checkpoint(
     *,
-    user_id:  str | UUID | None,
-    flow_id:  str | UUID | None,
-    version_id:  str | UUID | None,
-    flow_data_current: dict | None = None, # noqa: ARG001
-    ):
+    user_id: str | UUID | None,
+    flow_id: str | UUID | None,
+    version_id: str | UUID | None,
+    flow_data_current: dict | None = None,  # noqa: ARG001
+):
     """Restore a checkpoint of the flow."""
     require_user_flow_version_ids(user_id, flow_id, version_id)
-    pass # noqa: PIE790
+    pass  # noqa: PIE790
 
 
 async def get_flow_checkpoint(
     *,
-    user_id : str | UUID | None,
-    version_id : str | UUID | None,
-    ) -> dict:
+    user_id: str | UUID | None,
+    version_id: str | UUID | None,
+) -> dict:
     require_user_version_ids(user_id, version_id)
 
     user_uuid = _get_uuid(user_id)
@@ -191,11 +183,9 @@ async def get_flow_checkpoint(
         async with session_scope() as session:
             db_flow = (
                 await session.exec(
-                    select(FlowVersion)
-                    .where(FlowVersion.user_id == user_uuid)
-                    .where(FlowVersion.id == version_uuid)
-                    )
-                ).one()
+                    select(FlowVersion).where(FlowVersion.user_id == user_uuid).where(FlowVersion.id == version_uuid)
+                )
+            ).one()
     except Exception as e:
         msg = f"Failed to fetch flow version: {e!s}"
         raise ValueError(msg) from e
@@ -219,34 +209,34 @@ EXCLUDE_NODE_KEYS = {
     "resizing",
     "width",
     "height",
-    ("data", "node", "last_updated"), # nested
-    ("data", "node", "lf_version"), # should we update starter projects?
+    ("data", "node", "last_updated"),  # nested
+    ("data", "node", "lf_version"),  # should we update starter projects?
     ("data", "node", "outputs", "hidden"),
-    }
+}
 EXCLUDE_EDGE_KEYS = {
     "id",
     "selected",
     "animated",
     "className",
     "style",
-    }
+}
 
 
 def normalized_flow_data(flow_data: dict | None):
     """Filters a deepcopy of flow data to exclude transient state."""
-    copy_flow_data = deepcopy(flow_data) # prevent modifying database items
+    copy_flow_data = deepcopy(flow_data)  # prevent modifying database items
     if copy_flow_data:
         try:
             copy_flow_data.pop("viewport", None)
             copy_flow_data.pop("chatHistory", None)
             remove_keys_from_dicts(copy_flow_data["nodes"], EXCLUDE_NODE_KEYS)
             remove_keys_from_dicts(copy_flow_data["edges"], EXCLUDE_EDGE_KEYS)
-        except Exception as e: # noqa: BLE001
+        except Exception as e:  # noqa: BLE001
             logger.error(f"failed to filter flow contents: {e!s}")
     return copy_flow_data
 
 
-def remove_keys_from_dicts(dictlist : list[dict], exclude_keys : set):
+def remove_keys_from_dicts(dictlist: list[dict], exclude_keys: set):
     """Remove a set of keys from each dictionary in a list in-place."""
     for d in dictlist:
         for key in exclude_keys:
@@ -257,14 +247,15 @@ def remove_keys_from_dicts(dictlist : list[dict], exclude_keys : set):
 
 
 def pop_nested(d: dict, keys: tuple):
-    cur = d # walk down until second last key
+    cur = d  # walk down until second last key
     for i in range(len(keys) - 1):
         cur = cur.get(keys[i], {})
-    if isinstance(cur, list): # last key is in a list of dicts
+    if isinstance(cur, list):  # last key is in a list of dicts
         for _d in cur:
             _d.pop(keys[-1], None)
-    else: # dict
+    else:  # dict
         cur.pop(keys[-1], None)
+
 
 ########################################################
 # flow configuration
@@ -272,12 +263,8 @@ def pop_nested(d: dict, keys: tuple):
 async def get_default_folder(session: AsyncSession, user_id: UUID):
     """Get the default folder for the user."""
     return (
-        await session.exec(
-            select(Folder)
-            .where(Folder.user_id == user_id)
-            .where(Folder.name == DEFAULT_FOLDER_NAME)
-            )
-        ).first()
+        await session.exec(select(Folder).where(Folder.user_id == user_id).where(Folder.name == DEFAULT_FOLDER_NAME))
+    ).first()
 
 
 async def configure_flow_webhook_and_folder(db_flow: Flow, session: AsyncSession, user_id: UUID):
@@ -296,15 +283,14 @@ MISSING_USER_OR_FLOW_ID_MSG = "user_id and flow_id are required."
 MISSING_USER_OR_VERSION_ID_MSG = "user_id and version_id is required."
 MISSING_USER_OR_FLOW_OR_VERSION_ID_MSG = "user_id, flow_id and version_id is required."
 IMPROPER_VERSION_NUMBER_MSG = (
-    "Received invalid value for version number. "
-    "Please provide a version number greater than or equal to 0."
-    )
+    "Received invalid value for version number. Please provide a version number greater than or equal to 0."
+)
 
 
 def require_user_and_flow_ids(
     user_id: str | UUID | None,
     flow_id: str | UUID | None,
-    ):
+):
     """Raise a ValueError if user_id or flow_id is not provided."""
     if not (user_id and flow_id):
         raise ValueError(MISSING_USER_OR_FLOW_ID_MSG)
@@ -314,7 +300,7 @@ def require_user_flow_version_ids(
     user_id: str | UUID | None,
     flow_id: str | UUID | None,
     version_id: str | UUID | None,
-    ):
+):
     """Raise a ValueError if user_id or flow_id is not provided."""
     if not (user_id and flow_id and version_id):
         raise ValueError(MISSING_USER_OR_FLOW_OR_VERSION_ID_MSG)
@@ -323,7 +309,7 @@ def require_user_flow_version_ids(
 def require_user_flow_ids(
     user_id: str | UUID | None,
     flow_id: str | UUID | None,
-    ):
+):
     """Raise a ValueError if user_id or flow_id is not provided."""
     if not (user_id and flow_id):
         raise ValueError(MISSING_USER_OR_FLOW_ID_MSG)
@@ -332,13 +318,13 @@ def require_user_flow_ids(
 def require_user_version_ids(
     user_id: str | UUID | None,
     version_id: str | UUID | None,
-    ):
+):
     """Raise a ValueError if user_id or flow_id is not provided."""
     if not (user_id and version_id):
         raise ValueError(MISSING_USER_OR_VERSION_ID_MSG)
 
 
-def require_proper_version(version : int | None):
+def require_proper_version(version: int | None):
     """Raise a ValueError if version is not provided or is not a positive integer."""
     if not (version and version > -1):
         raise ValueError(IMPROPER_VERSION_NUMBER_MSG)

@@ -266,13 +266,8 @@ async def update_component_field_value(
         # Update the flow in the database
         async with session_scope() as session:
             db_flow = await save_flow_checkpoint(
-                session=session,
-                user_id=user_id,
-                flow_id=flow_id_str,
-                update_data={
-                    "data": flow_data
-                    }
-                )
+                session=session, user_id=user_id, flow_id=flow_id_str, update_data={"data": flow_data}
+            )
 
             await session.commit()
             await session.refresh(db_flow)
