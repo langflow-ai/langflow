@@ -26,7 +26,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow, remove_api_keys, validate_is_component
 from langflow.api.v1.schemas import FlowListCreate
-from langflow.helpers.flow_version import FLOW_NOT_FOUND_ERROR_MSG, get_flow_checkpoint, list_flow_versions, save_flow_checkpoint
+from langflow.helpers.flow_version import FLOW_NOT_FOUND_ERROR_MSG, FLOW_VERSION_NOT_FOUND_ERROR_MSG, get_flow_checkpoint, list_flow_versions, save_flow_checkpoint
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.database.models.flow.model import (
@@ -708,53 +708,62 @@ async def read_basic_examples(
 async def publish_flow_version(
     *,
     session: DbSession,
-    flow_id: UUID,
     current_user: CurrentActiveUser,
+    flow_id: UUID,
     version_id: UUID | None = None,
 ):
     """Publish the flow to S3."""
-    flow_version : FlowVersion | None = await _read_flow_version(
-        user_id=current_user.id,
-        flow_id=flow_id,
-        version_id=version_id
-    )
-    if not flow_version:
-        raise HTTPException(status_code=404, detail="Flow not found")
-
     try:
-        publish_service: PublishService = get_service(ServiceType.PUBLISH_SERVICE)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail="Publish service not available") from e
-
-    try:
-        # TODO: harden validation of flow data
-        if not flow_version.flow_data:
-            msg = "Flow data is empty or missing"
+        flow_version: FlowVersion | None = await _read_flow_version(
+            user_id=current_user.id,
+            flow_id=flow_id,
+            version_id=version_id
+        )
+        if not flow_version:
+            raise HTTPException(status_code=404, detail=FLOW_VERSION_NOT_FOUND_ERROR_MSG)
+        if not flow_version.flow_data: # should we raise 4XX HTTP error here?
+            msg = "Flow data is empty or missing."
             raise ValueError(msg)
-        # noting that any one these services
-        # (database, publish backend) can crash,
-        # resulting in an inconsistent state
+
+        publish_service: PublishService = get_service(ServiceType.PUBLISH_SERVICE)
+        # below we update publish records
+        # in both the LF database and publish backend.
+        # note that any one of these services
+        # can crash, resulting in an inconsistent state.
         # we therefore implement a background task
         # that keeps the database and publish backend
         # in sync: [insert filepath, etc]
-        published_flow = create_flow_publish(
+
+        # we should catch an exception on
+        # the unique constraint between flow_id and version_id
+        # which means a flow_publish record already exists.
+        # in which case, if the publish_state is FAILED
+        # then we allow the publish service's
+        # put_flow to be attempted below
+        flow_publish = await create_flow_publish(
             session=session,
             user_id=current_user.id,
             flow_version=flow_version,
             publish_provider=publish_service.publish_provider
-        )
+            )
+        # we should retry publishing to
+        # the publish backend three times,
+        # and if it still fails, then set
+        # flow_publish.publish_state to FAILED.
         publish_key = await publish_service.put_flow(
-            user_id=str(current_user.id),
-            flow_id=str(flow_version.flow_id),
+            user_id=current_user.id,
+            flow_id=flow_version.flow_id,
             flow_data=flow_version.flow_data,
-            publish_id=published_flow
-        )
+            publish_id=flow_publish.id
+            )
+    except HTTPException as httperr:
+        raise httperr from httperr
     except Exception as e:
         msg = f"Failed to publish flow: {e!s}"
         raise HTTPException(status_code=500, detail=msg) from e
 
     return {
-        "message": "Flow published successfully",
+        "message": "Flow published successfully.",
         "flow_id": flow_id,
         "publish_key": publish_key
         }

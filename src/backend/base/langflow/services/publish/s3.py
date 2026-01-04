@@ -62,13 +62,9 @@ class S3PublishService(PublishService):
         key = self._flow_version_key(user_id, flow_id, publish_id)
 
         async with self._get_client() as client:
-            try:
-                response = await client.get_object(Bucket=self.bucket_name, Key=key)
-                content = await response["Body"].read()
-                return content.decode("utf-8")
-            except Exception as e:
-                logger.error(f"Error fetching flow {flow_id}: {e}")
-                raise
+            response = await client.get_object(Bucket=self.bucket_name, Key=key)
+            content = await response["Body"].read()
+            return content.decode("utf-8")
 
     async def put_flow(
         self,
@@ -89,6 +85,7 @@ class S3PublishService(PublishService):
                 Body=json.dumps(flow_data),
                 ContentType="application/json",
             )
+
 
         logger.info(f"Published flow with key s3://{self.bucket_name}/{key}")
         return key

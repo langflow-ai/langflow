@@ -71,7 +71,7 @@ class FlowBase(SQLModel):
             Integer,
             name="latest_version",
             default=0,
-            nullable=True,
+            nullable=False,
             server_default=text("0"),
             ),
         default=0,

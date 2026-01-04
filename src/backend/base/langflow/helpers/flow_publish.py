@@ -16,10 +16,9 @@ from langflow.services.database.models.flow_publish import FlowPublish
 from langflow.services.database.models.flow_publish.model import PublishProviderEnum, PublishStateEnum
 from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.deps import session_scope
+from langflow.services.publish.service import IDType
 
 FLOW_PUBLISH_NOT_FOUND_ERROR_MSG = "Flow publish data not found."
-
-IDType =  str | UUID | None
 
 
 async def get_flow_publish(
@@ -60,19 +59,22 @@ async def create_flow_publish(
     ) -> FlowPublish:
     require_user_id(user_id)
     require_publish_provider(publish_provider)
+    # should we validate flow_version?
+
+    user_uuid = get_uuid(user_id)
 
     if session:
         return await _create_flow_publish(
             session=session,
-            user_id=user_id,
-            flow_version=flow_version, # should we validate flow_version?
+            user_id=user_uuid,
+            flow_version=flow_version,
             publish_provider=publish_provider,
             )
-    async with session_scope as _session:
+    async with session_scope() as _session:
         return await _create_flow_publish(
             session=_session,
-            user_id=user_id,
-            flow_version=flow_version, # should we validate flow_version?
+            user_id=user_uuid,
+            flow_version=flow_version,
             publish_provider=publish_provider
             )
 
@@ -80,16 +82,16 @@ async def create_flow_publish(
 async def _create_flow_publish(
     *,
     session : DbSession,
-    user_id : IDType,
+    user_id : UUID,
     flow_version : FlowVersion,
     publish_provider : str,
     ) -> FlowPublish:
     try:
         flow_publish = FlowPublish(
-            user_id=get_uuid(user_id),
+            user_id=user_id,
             flow_id=flow_version.flow_id,
             flow_version_id=flow_version.id,
-            publish_state=PublishStateEnum.PENDING,
+            publish_state=PublishStateEnum(PublishStateEnum.PENDING),
             publish_provider=PublishProviderEnum(publish_provider)
             )
         session.add(flow_publish)
