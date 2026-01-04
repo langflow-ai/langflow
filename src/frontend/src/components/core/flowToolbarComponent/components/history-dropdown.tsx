@@ -20,7 +20,9 @@ export default function HistoryDropdown() {
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const userData = useAuthStore((state) => state.userData);
   const currentFlowId = currentFlow?.id;
-  const { data: versions, isLoading } = useGetFlowVersionsQuery({ flowId: currentFlowId });
+  const { data: versions, isLoading } = useGetFlowVersionsQuery({
+    flowId: currentFlowId,
+  });
   const { mutate: restoreVersion, isPending } = usePostRestoreFlowVersion();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -36,16 +38,16 @@ export default function HistoryDropdown() {
         onError: () => {
           setErrorData({ title: "Error restoring version" });
         },
-      }
+      },
     );
   };
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button 
-          variant="ghost" 
-          size="icon" 
+        <Button
+          variant="ghost"
+          size="icon"
           className="h-9 w-9"
           data-testid="flow-history-button"
           disabled={!currentFlowId}
@@ -54,26 +56,32 @@ export default function HistoryDropdown() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-72" align="end">
-        <DropdownMenuLabel className="text-sm font-semibold">Version History</DropdownMenuLabel>
+        <DropdownMenuLabel className="text-sm font-semibold">
+          Version History
+        </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <div className="max-h-[350px] overflow-y-auto py-1">
           {isLoading ? (
-            <div className="p-4 text-center text-sm text-muted-foreground">Loading...</div>
+            <div className="p-4 text-center text-sm text-muted-foreground">
+              Loading...
+            </div>
           ) : !versions || versions.length === 0 ? (
-            <div className="p-4 text-center text-sm text-muted-foreground">No history available</div>
+            <div className="p-4 text-center text-sm text-muted-foreground">
+              No history available
+            </div>
           ) : (
             versions.map((version, index) => {
               // Handle nested FlowVersion structure from backend
               const versionData = version.FlowVersion || version;
               const isLatest = index === 0;
-              
+
               return (
-                <div 
-                  key={versionData.id} 
+                <div
+                  key={versionData.id}
                   className={cn(
                     "relative flex items-start justify-between px-3 py-2.5 mx-1 rounded-md group transition-colors",
                     "hover:bg-accent/60",
-                    isLatest && "border-l-2 border-primary bg-accent/30"
+                    isLatest && "border-l-2 border-primary bg-accent/30",
                   )}
                 >
                   <div className="flex flex-col gap-0.5 min-w-0 flex-1 pr-2">
@@ -81,7 +89,7 @@ export default function HistoryDropdown() {
                       className={cn(
                         isLatest
                           ? "text-sm font-medium text-foreground"
-                          : "text-xs text-muted-foreground"
+                          : "text-xs text-muted-foreground",
                       )}
                     >
                       {isLatest
@@ -115,20 +123,20 @@ export default function HistoryDropdown() {
                       </span>
                     )}
                   </div>
-                  
+
                   {!isLatest && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           className="h-7 w-7 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
                         >
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" side="left">
-                        <DropdownMenuItem 
+                        <DropdownMenuItem
                           onClick={() => handleRestore(versionData.id)}
                           disabled={isPending}
                         >

@@ -30,7 +30,7 @@ export const usePostRestoreFlowVersion = () => {
       queryClient.invalidateQueries({
         queryKey: ["useGetFlow", variables.flowId],
       });
-      
+
       // Update the flow in the store
       if (data) {
         resetFlow(data);
