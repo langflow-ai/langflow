@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 from lfx.log.logger import logger
-from lfx.schema.data import Data
 from sqlmodel import select
 
 from langflow.services.database.models.flow.model import Flow
@@ -114,9 +113,8 @@ async def _save_flow_checkpoint(
             FlowVersion(
                 user_id=user_id,
                 flow_id=flow_id,
-                version=db_flow.latest_version,
-                created_at=datetime.now(timezone.utc),
                 flow_data=update_data["data"],
+                version=db_flow.latest_version,
                 )
             )
         logger.debug(
@@ -164,6 +162,8 @@ async def list_flow_versions(
                     .order_by(FlowVersion.version.desc())
                     )
                 ).all()
+        # we should restructure the select to not have flow_id
+        # instead return a json like {flow_id:..., flow_versions: [query result]}
         return [version._mapping for version in flow_versions] # noqa: SLF001
     except Exception as e:
         msg = f"Error getting flow history: {e}"
