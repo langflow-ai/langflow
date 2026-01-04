@@ -391,21 +391,6 @@ async def _read_flow(
 
     return (await session.exec(stmt)).first()
 
-async def _read_flow_version(
-    session: AsyncSession,
-    user_id: UUID,
-    flow_id: UUID,
-    version_id: UUID,
-) -> FlowVersion | None:
-    """Read a flow."""
-    stmt = (
-        select(FlowVersion)
-        .where(FlowVersion.user_id == user_id)
-        .where(FlowVersion.flow_id == flow_id)
-        .where(Flow.id == version_id)
-        )
-
-    return (await session.exec(stmt)).first()
 
 @router.get("/{flow_id}", response_model=FlowRead, status_code=200)
 async def read_flow(
@@ -704,7 +689,7 @@ async def read_basic_examples(
 ########################################################
 # Publish Flow endpoints
 ########################################################
-@router.post("/{flow_id}/publish", status_code=201)
+@router.post("/{flow_id}/publish/{version_id}", status_code=201)
 async def publish_flow_version(
     *,
     session: DbSession,
@@ -715,8 +700,8 @@ async def publish_flow_version(
     """Publish the flow to S3."""
     try:
         flow_version: FlowVersion | None = await _read_flow_version(
+            session=session,
             user_id=current_user.id,
-            flow_id=flow_id,
             version_id=version_id
         )
         if not flow_version:
@@ -789,11 +774,28 @@ async def get_published_flow(
         flow_data = await publish_service.get_flow(
             user_id=current_user.id,
             flow_id=flow_id,
-            version=publish_id,
+            publish_id=publish_id,
         )
         return orjson.loads(flow_data)
     except Exception as e:
-        raise HTTPException(status_code=404, detail=f"Published flow not found: {e!s}") from e
+        if "NoSuchKey" in str(e):
+            raise HTTPException(status_code=404, detail=f"Published flow not found: {e!s}") from e
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+async def _read_flow_version(
+    session: AsyncSession,
+    user_id: UUID,
+    version_id: UUID,
+) -> FlowVersion | None:
+    """Read a flow."""
+    stmt = (
+        select(FlowVersion)
+        .where(FlowVersion.user_id == user_id)
+        .where(FlowVersion.id == version_id)
+        )
+
+    return (await session.exec(stmt)).first()
 
 
 ########################################################

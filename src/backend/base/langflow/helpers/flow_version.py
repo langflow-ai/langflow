@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 from lfx.log.logger import logger
+from lfx.schema.data import Data
 from sqlmodel import select
 
 from langflow.services.database.models.flow.model import Flow
@@ -151,13 +152,19 @@ async def list_flow_versions(
         async with session_scope() as session:
             flow_versions = (
                 await session.exec(
-                    select(FlowVersion)
+                    select(
+                        FlowVersion.id,
+                        FlowVersion.user_id,
+                        FlowVersion.flow_id,
+                        FlowVersion.version,
+                        FlowVersion.created_at
+                        )
                     .where(FlowVersion.user_id == uuid_user_id)
                     .where(FlowVersion.flow_id == uuid_flow_id)
                     .order_by(FlowVersion.version.desc())
                     )
                 ).all()
-        return [version.model_dump() for version in flow_versions]
+        return [version._mapping for version in flow_versions] # noqa: SLF001
     except Exception as e:
         msg = f"Error getting flow history: {e}"
         raise ValueError(msg) from e

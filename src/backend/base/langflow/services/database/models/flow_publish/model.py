@@ -44,7 +44,6 @@ class FlowPublish(SQLModel, table=True):
     __table_args__ = (
         # create index for flow_version_id?
         # create index for user_id?
-        Index("id_index", "id"),
         Index("flow_id_index", "flow_id"),
         UniqueConstraint("flow_id", "flow_version_id", name="at_most_one_publish_per_flow_version"),
     )

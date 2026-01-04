@@ -18,7 +18,6 @@ class FlowVersion(SQLModel, table=True):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     __table_args__ = (
-        Index("id_index", "id"),
         Index("flow_version_index", "flow_id", "version"),
         UniqueConstraint("flow_id", "version", name="unique_flow_version"),
     )

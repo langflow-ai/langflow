@@ -11,7 +11,7 @@ class PublishServiceFactory(ServiceFactory):
     def create(self, settings_service: SettingsService):
         publish_backend = settings_service.settings.publish_backend
 
-        if publish_backend.lower() == PublishProviderEnum.S3:
+        if publish_backend.lower() == PublishProviderEnum.S3.value:
             return S3PublishService(settings_service)
 
         msg = f"Publish backend {publish_backend} is not supported"

@@ -1,6 +1,7 @@
 from .api_key import ApiKey
 from .file import File
 from .flow import Flow
+from .flow_publish import FlowPublish
 from .flow_version import FlowVersion
 from .folder import Folder
 from .message import MessageTable
@@ -12,6 +13,7 @@ __all__ = [
     "ApiKey",
     "File",
     "Flow",
+    "FlowPublish",
     "FlowVersion",
     "Folder",
     "MessageTable",
