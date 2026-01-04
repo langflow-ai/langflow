@@ -10,6 +10,8 @@ from pathlib import Path as StdlibPath
 from typing import Annotated
 from uuid import UUID
 
+from langflow.helpers.flow_publish import create_flow_publish
+from langflow.services.database.models import FlowVersion
 import orjson
 from aiofile import async_open
 from anyio import Path
@@ -24,7 +26,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow, remove_api_keys, validate_is_component
 from langflow.api.v1.schemas import FlowListCreate
-from langflow.helpers.flow_version import FLOW_NOT_FOUND_ERROR_MSG, list_flow_versions, save_flow_checkpoint
+from langflow.helpers.flow_version import FLOW_NOT_FOUND_ERROR_MSG, get_flow_checkpoint, list_flow_versions, save_flow_checkpoint
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.database.models.flow.model import (
@@ -389,6 +391,21 @@ async def _read_flow(
 
     return (await session.exec(stmt)).first()
 
+async def _read_flow_version(
+    session: AsyncSession,
+    user_id: UUID,
+    flow_id: UUID,
+    version_id: UUID,
+) -> FlowVersion | None:
+    """Read a flow."""
+    stmt = (
+        select(FlowVersion)
+        .where(FlowVersion.user_id == user_id)
+        .where(FlowVersion.flow_id == flow_id)
+        .where(Flow.id == version_id)
+        )
+
+    return (await session.exec(stmt)).first()
 
 @router.get("/{flow_id}", response_model=FlowRead, status_code=200)
 async def read_flow(
@@ -693,11 +710,15 @@ async def publish_flow_version(
     session: DbSession,
     flow_id: UUID,
     current_user: CurrentActiveUser,
-    version: str | None = None,
+    version_id: UUID | None = None,
 ):
     """Publish the flow to S3."""
-    flow = await _read_flow(session=session, flow_id=flow_id, user_id=current_user.id)
-    if not flow:
+    flow_version : FlowVersion | None = await _read_flow_version(
+        user_id=current_user.id,
+        flow_id=flow_id,
+        version_id=version_id
+    )
+    if not flow_version:
         raise HTTPException(status_code=404, detail="Flow not found")
 
     try:
@@ -706,15 +727,30 @@ async def publish_flow_version(
         raise HTTPException(status_code=500, detail="Publish service not available") from e
 
     try:
-        flow_json = flow.model_dump_json()
+        # TODO: harden validation of flow data
+        if not flow_version.flow_data:
+            msg = "Flow data is empty or missing"
+            raise ValueError(msg)
+        # noting that any one these services
+        # (database, publish backend) can crash,
+        # resulting in an inconsistent state
+        # we therefore implement a background task
+        # that keeps the database and publish backend
+        # in sync: [insert filepath, etc]
+        published_flow = create_flow_publish(
+            session=session,
+            user_id=current_user.id,
+            flow_version=flow_version,
+            publish_provider=publish_service.publish_provider
+        )
         publish_key = await publish_service.put_flow(
             user_id=str(current_user.id),
-            flow_id=str(flow.id),
-            flow_data=flow_json,
-            version=version or uuid.uuid4()
+            flow_id=str(flow_version.flow_id),
+            flow_data=flow_version.flow_data,
+            publish_id=published_flow
         )
     except Exception as e:
-        msg = f"Failed to publish flow (please ensure the version_id is unique): {e!s}"
+        msg = f"Failed to publish flow: {e!s}"
         raise HTTPException(status_code=500, detail=msg) from e
 
     return {
@@ -724,23 +760,27 @@ async def publish_flow_version(
         }
 
 
-@router.get("/{flow_id}/publish", status_code=200)
+@router.get("/{flow_id}/publish/{publish_id}", status_code=200)
 async def get_published_flow(
     *,
     flow_id: UUID,
     current_user: CurrentActiveUser,
-    version: str | None = None,
+    publish_id: str | UUID | None,
 ):
     """Retrieve the published flow from S3."""
+    if not (flow_id and publish_id):
+        msg = "flow_id and publish_id are required."
+        raise ValueError(msg)
+
     try:
         publish_service: PublishService = get_service(ServiceType.PUBLISH_SERVICE)
     except Exception as e:
         raise HTTPException(status_code=500, detail="Publish service not available") from e
     try:
         flow_data = await publish_service.get_flow(
-            user_id=str(current_user.id),
-            flow_id=str(flow_id),
-            version=version,
+            user_id=current_user.id,
+            flow_id=flow_id,
+            version=publish_id,
         )
         return orjson.loads(flow_data)
     except Exception as e:
@@ -763,6 +803,21 @@ async def get_flow_versions(
     )
 
 
+@router.get("/{flow_id}/versions/{version_id}")
+async def fetch_flow_checkpoint(
+    *,
+    flow_id: UUID,
+    current_user: CurrentActiveUser,
+    version_id: UUID,
+):
+    """Get a checkpoint of the flow."""
+    return get_flow_checkpoint(
+        user_id=current_user.id,
+        flow_id=flow_id,
+        version=version_id
+    )
+
+
 @router.post("/{flow_id}/versions")
 async def create_flow_checkpoint(
     *,
@@ -777,13 +832,3 @@ async def create_flow_checkpoint(
         flow_id=flow_id,
         flow_data=flow.data
         )
-
-
-@router.post("/{flow_id}/versions/{version_id}")
-async def restore_flow_checkpoint(
-    *,
-    flow_id: UUID,
-    current_user: CurrentActiveUser,
-    version_id: UUID,
-):
-    """Restore a checkpoint of the flow."""

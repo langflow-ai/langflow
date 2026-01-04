@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
-from sqlalchemy import ForeignKey, String, Text
+from sqlalchemy import ForeignKey
 from sqlmodel import JSON, Column, Field, Index, SQLModel, UniqueConstraint
 
 from langflow.schema.data import Data
@@ -18,6 +18,7 @@ class FlowVersion(SQLModel, table=True):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     __table_args__ = (
+        Index("id_index", "id"),
         Index("flow_version_index", "flow_id", "version"),
         UniqueConstraint("flow_id", "version", name="unique_flow_version"),
     )
@@ -33,3 +34,5 @@ class FlowVersion(SQLModel, table=True):
             "flow_data": serialized.pop("flow_data"),
         }
         return Data(data=data)
+
+

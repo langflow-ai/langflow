@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import TYPE_CHECKING, TypeAlias
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from langflow.services.base import Service
+from langflow.services.database.models.flow_publish.model import PublishProviderEnum
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
@@ -12,13 +13,15 @@ if TYPE_CHECKING:
 
 IDType = str | UUID | None
 IDTypeStrict = str | UUID
-VersionType = str | UUID | int | None
+
 
 class PublishService(Service):
     name = "publish_service"
 
     def __init__(self, settings_service: SettingsService):
         self.settings_service = settings_service
+
+        self.publish_provider = settings_service.settings.publish_backend.lower()
 
         self.prefix = settings_service.settings.publish_backend_prefix
         if self.prefix and not self.prefix.endswith("/"):
@@ -31,7 +34,7 @@ class PublishService(Service):
         self,
         user_id: IDType,
         flow_id: IDType,
-        version: VersionType = None,
+        publish_id: IDType,
     ) -> str:
         """Retrieves a published flow from the storage provider."""
         raise NotImplementedError
@@ -41,8 +44,8 @@ class PublishService(Service):
         self,
         user_id: IDType,
         flow_id: IDType,
-        flow_data: str,
-        version: VersionType = None,
+        publish_id: IDType,
+        flow_data: dict,
     ) -> str:
         """Publishes a flow to the storage provider."""
         raise NotImplementedError
@@ -52,7 +55,7 @@ class PublishService(Service):
         self,
         user_id: IDType,
         flow_id: IDType,
-        version: VersionType = None,
+        publish_id: IDType,
     ) -> str:
         """Deletes a published flow from the storage provider."""
         raise NotImplementedError
@@ -62,7 +65,7 @@ class PublishService(Service):
         self,
         user_id: IDType,
         project_id: IDType,
-        version: VersionType = None,
+        publish_id: IDType,
     ) -> str:
         """Retrieves a published project from the storage provider."""
         raise NotImplementedError
@@ -72,8 +75,8 @@ class PublishService(Service):
         self,
         user_id: IDType,
         project_id: IDType,
+        publish_id: IDType,
         manifest: dict,
-        version: VersionType = None,
     ) -> str:
         """Publishes a project manifest to the storage provider."""
         raise NotImplementedError
@@ -83,7 +86,7 @@ class PublishService(Service):
         self,
         user_id: IDType,
         project_id: IDType,
-        version: VersionType = None,
+        publish_id: IDType,
     ) -> str:
         """Deletes a published project from the storage provider."""
         raise NotImplementedError

@@ -165,26 +165,43 @@ async def list_flow_versions(
 
 async def restore_flow_checkpoint(
     *,
-    user_id: str | None = None,
-    flow_id: str | None = None,
-    version: int | None = None,
-    flow_data_current: dict | None = None,
+    user_id:  str | UUID | None,
+    flow_id:  str | UUID | None,
+    version_id:  str | UUID | None,
+    flow_data_current: dict | None = None, # noqa: ARG001
     ):
     """Restore a checkpoint of the flow."""
-    require_user_and_flow_ids(user_id, flow_id)
-    require_proper_version(version)
+    require_user_flow_version_ids(user_id, flow_id, version_id)
     pass # noqa: PIE790
 
 
 async def get_flow_checkpoint(
     *,
     user_id : str | UUID | None,
-    flow_id : str | UUID | None,
-    version : int | None
-    ):
-    require_user_and_flow_ids(user_id, flow_id)
-    require_proper_version(version)
-    pass # noqa: PIE790
+    version_id : str | UUID | None,
+    ) -> dict:
+    require_user_version_ids(user_id, version_id)
+
+    user_uuid = _get_uuid(user_id)
+    version_uuid = _get_uuid(version_id)
+
+    try:
+        async with session_scope() as session:
+            db_flow = (
+                await session.exec(
+                    select(FlowVersion)
+                    .where(FlowVersion.user_id == user_uuid)
+                    .where(FlowVersion.id == version_uuid)
+                    )
+                ).one()
+    except Exception as e:
+        msg = f"Failed to fetch flow version: {e!s}"
+        raise ValueError(msg) from e
+
+    if not db_flow:
+        raise ValueError(FLOW_VERSION_NOT_FOUND_ERROR_MSG)
+
+    return db_flow.model_dump()
 
 
 ########################################################
@@ -269,6 +286,8 @@ async def configure_flow_webhook_and_folder(db_flow: Flow, session: AsyncSession
 # validation
 ########################################################
 MISSING_USER_OR_FLOW_ID_MSG = "user_id and flow_id are required."
+MISSING_USER_OR_VERSION_ID_MSG = "user_id and version_id is required."
+MISSING_USER_OR_FLOW_OR_VERSION_ID_MSG = "user_id, flow_id and version_id is required."
 IMPROPER_VERSION_NUMBER_MSG = (
     "Received invalid value for version number. "
     "Please provide a version number greater than or equal to 0."
@@ -282,6 +301,34 @@ def require_user_and_flow_ids(
     """Raise a ValueError if user_id or flow_id is not provided."""
     if not (user_id and flow_id):
         raise ValueError(MISSING_USER_OR_FLOW_ID_MSG)
+
+
+def require_user_flow_version_ids(
+    user_id: str | UUID | None,
+    flow_id: str | UUID | None,
+    version_id: str | UUID | None,
+    ):
+    """Raise a ValueError if user_id or flow_id is not provided."""
+    if not (user_id and flow_id and version_id):
+        raise ValueError(MISSING_USER_OR_FLOW_OR_VERSION_ID_MSG)
+
+
+def require_user_flow_ids(
+    user_id: str | UUID | None,
+    flow_id: str | UUID | None,
+    ):
+    """Raise a ValueError if user_id or flow_id is not provided."""
+    if not (user_id and flow_id):
+        raise ValueError(MISSING_USER_OR_FLOW_ID_MSG)
+
+
+def require_user_version_ids(
+    user_id: str | UUID | None,
+    version_id: str | UUID | None,
+    ):
+    """Raise a ValueError if user_id or flow_id is not provided."""
+    if not (user_id and version_id):
+        raise ValueError(MISSING_USER_OR_VERSION_ID_MSG)
 
 
 def require_proper_version(version : int | None):
