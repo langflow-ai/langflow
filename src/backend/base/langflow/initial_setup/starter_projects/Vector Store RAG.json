@@ -26,9 +26,9 @@
         "id": "reactflow__edge-ChatInput-tFM3s{œdataTypeœ:œChatInputœ,œidœ:œChatInput-tFM3sœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-dOXUU{œfieldNameœ:œquestionœ,œidœ:œPrompt-dOXUUœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-tFM3s",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-tFM3sœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-tFM3sœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-dOXUU",
-        "targetHandle": "{œfieldNameœ:œquestionœ,œidœ:œPrompt-dOXUUœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œquestionœ, œidœ: œPrompt-dOXUUœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -55,9 +55,9 @@
         "id": "reactflow__edge-parser-w1MvR{œdataTypeœ:œparserœ,œidœ:œparser-w1MvRœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-dOXUU{œfieldNameœ:œcontextœ,œidœ:œPrompt-dOXUUœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "parser-w1MvR",
-        "sourceHandle": "{œdataTypeœ:œparserœ,œidœ:œparser-w1MvRœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-w1MvRœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-dOXUU",
-        "targetHandle": "{œfieldNameœ:œcontextœ,œidœ:œPrompt-dOXUUœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-dOXUUœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -85,9 +85,9 @@
         "id": "reactflow__edge-File-CByFc{œdataTypeœ:œFileœ,œidœ:œFile-CByFcœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-SplitText-dINDR{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-dINDRœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "File-CByFc",
-        "sourceHandle": "{œdataTypeœ:œFileœ,œidœ:œFile-CByFcœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-CByFcœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "SplitText-dINDR",
-        "targetHandle": "{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-dINDRœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œdata_inputsœ, œidœ: œSplitText-dINDRœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -113,9 +113,9 @@
         "id": "reactflow__edge-Prompt-dOXUU{œdataTypeœ:œPromptœ,œidœ:œPrompt-dOXUUœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-GRGRg{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-GRGRgœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-dOXUU",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-dOXUUœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-dOXUUœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "LanguageModelComponent-GRGRg",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-GRGRgœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-GRGRgœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -143,9 +143,9 @@
         "id": "reactflow__edge-LanguageModelComponent-GRGRg{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-GRGRgœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-RZFDG{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-RZFDGœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "LanguageModelComponent-GRGRg",
-        "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-GRGRgœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-GRGRgœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-RZFDG",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-RZFDGœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-RZFDGœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -171,9 +171,9 @@
         "id": "xy-edge__ChatInput-tFM3s{œdataTypeœ:œChatInputœ,œidœ:œChatInput-tFM3sœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraDB-hIUdP{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDB-hIUdPœ,œinputTypesœ:[œMessageœ],œtypeœ:œqueryœ}",
         "selected": false,
         "source": "ChatInput-tFM3s",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-tFM3sœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-tFM3sœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "AstraDB-hIUdP",
-        "targetHandle": "{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDB-hIUdPœ,œinputTypesœ:[œMessageœ],œtypeœ:œqueryœ}"
+        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œAstraDB-hIUdPœ, œinputTypesœ: [œMessageœ], œtypeœ: œqueryœ}"
       },
       {
         "className": "",
@@ -198,9 +198,9 @@
         },
         "id": "xy-edge__SplitText-dINDR{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-dINDRœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-AstraDB-mGHwS{œfieldNameœ:œingest_dataœ,œidœ:œAstraDB-mGHwSœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
         "source": "SplitText-dINDR",
-        "sourceHandle": "{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-dINDRœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œSplitTextœ, œidœ: œSplitText-dINDRœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "AstraDB-mGHwS",
-        "targetHandle": "{œfieldNameœ:œingest_dataœ,œidœ:œAstraDB-mGHwSœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œAstraDB-mGHwSœ, œinputTypesœ: [œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -1526,11 +1526,8 @@
                 "cache": true,
                 "display_name": "Raw Content",
                 "group_outputs": false,
-                "loop_types": null,
                 "method": "load_files_message",
                 "name": "message",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1541,12 +1538,6 @@
             ],
             "pinned": false,
             "template": {
-              "_frontend_node_flow_id": {
-                "value": "4bcefe77-4a90-4884-bef2-98fde72704f4"
-              },
-              "_frontend_node_folder_id": {
-                "value": "e825f5e2-1a12-463c-9774-9d81642ec93f"
-              },
               "_type": "Component",
               "advanced_mode": {
                 "_input_type": "BoolInput",
@@ -1823,7 +1814,6 @@
                 "type": "bool",
                 "value": true
               },
-              "is_refresh": false,
               "markdown": {
                 "_input_type": "BoolInput",
                 "advanced": false,
@@ -2832,11 +2822,8 @@
                 "cache": true,
                 "display_name": "Search Results",
                 "group_outputs": false,
-                "loop_types": null,
                 "method": "search_documents",
                 "name": "search_results",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
@@ -2849,11 +2836,8 @@
                 "cache": true,
                 "display_name": "DataFrame",
                 "group_outputs": false,
-                "loop_types": null,
                 "method": "as_dataframe",
                 "name": "dataframe",
-                "options": null,
-                "required_inputs": null,
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
@@ -2867,11 +2851,8 @@
                 "display_name": "Vector Store Connection",
                 "group_outputs": false,
                 "hidden": false,
-                "loop_types": null,
                 "method": "as_vector_store",
                 "name": "vectorstoreconnection",
-                "options": null,
-                "required_inputs": null,
                 "selected": "VectorStore",
                 "tool_mode": true,
                 "types": [
@@ -2882,12 +2863,6 @@
             ],
             "pinned": false,
             "template": {
-              "_frontend_node_flow_id": {
-                "value": "4bcefe77-4a90-4884-bef2-98fde72704f4"
-              },
-              "_frontend_node_folder_id": {
-                "value": "e825f5e2-1a12-463c-9774-9d81642ec93f"
-              },
               "_type": "Component",
               "advanced_search_filter": {
                 "_input_type": "NestedDictInput",
@@ -3302,7 +3277,9 @@
                   }
                 },
                 "info": "Specify the Embedding Model. Not required for Astra Vectorize collections.",
-                "input_types": [],
+                "input_types": [
+                  "Embeddings"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "model_type": "embedding",
@@ -3584,7 +3561,6 @@
                 "type": "other",
                 "value": ""
               },
-              "is_refresh": false,
               "keyspace": {
                 "_input_type": "DropdownInput",
                 "advanced": true,
@@ -3925,11 +3901,8 @@
                 "cache": true,
                 "display_name": "Search Results",
                 "group_outputs": false,
-                "loop_types": null,
                 "method": "search_documents",
                 "name": "search_results",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
@@ -3942,11 +3915,8 @@
                 "cache": true,
                 "display_name": "DataFrame",
                 "group_outputs": false,
-                "loop_types": null,
                 "method": "as_dataframe",
                 "name": "dataframe",
-                "options": null,
-                "required_inputs": null,
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
@@ -3960,11 +3930,8 @@
                 "display_name": "Vector Store Connection",
                 "group_outputs": false,
                 "hidden": false,
-                "loop_types": null,
                 "method": "as_vector_store",
                 "name": "vectorstoreconnection",
-                "options": null,
-                "required_inputs": null,
                 "selected": "VectorStore",
                 "tool_mode": true,
                 "types": [
@@ -3975,12 +3942,6 @@
             ],
             "pinned": false,
             "template": {
-              "_frontend_node_flow_id": {
-                "value": "4bcefe77-4a90-4884-bef2-98fde72704f4"
-              },
-              "_frontend_node_folder_id": {
-                "value": "e825f5e2-1a12-463c-9774-9d81642ec93f"
-              },
               "_type": "Component",
               "advanced_search_filter": {
                 "_input_type": "NestedDictInput",
@@ -4395,7 +4356,9 @@
                   }
                 },
                 "info": "Specify the Embedding Model. Not required for Astra Vectorize collections.",
-                "input_types": [],
+                "input_types": [
+                  "Embeddings"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "model_type": "embedding",
@@ -4677,7 +4640,6 @@
                 "type": "other",
                 "value": ""
               },
-              "is_refresh": false,
               "keyspace": {
                 "_input_type": "DropdownInput",
                 "advanced": true,
