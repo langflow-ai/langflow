@@ -128,7 +128,7 @@ test(
     );
 
     //user must see just your own flows
-    await page.waitForSelector('[data-testid="sidebar-search-input"]', {
+    await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
       timeout: 100000,
     });
 
