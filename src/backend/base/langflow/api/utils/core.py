@@ -403,7 +403,7 @@ def flow_has_json_input_mode(flow_data: dict | None) -> bool:
 
     # Find FlowStart node and check its mode (there's typically only one per flow)
     for node in flow_data.get("nodes", []):
-        if node.get("type") == "FlowStart":
+        if node.get("data", {}).get("node", {}).get("type") == "FlowStart":
             # Found FlowStart - check if it's JSON mode and return immediately
             input_type = node.get("data", {}).get("node", {}).get("template", {}).get("input_type", {})
             if isinstance(input_type, dict):
