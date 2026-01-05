@@ -80,16 +80,11 @@ export default function AppHeader(): JSX.Element {
         className={`relative left-3 z-30 flex shrink-0 items-center gap-3`}
         data-testid="header_right_section_wrapper"
       >
-        {true && <ModelProviderCount />}
+        {false && <ModelProviderCount />}
         {LANGFLOW_AGENTIC_EXPERIENCE && <AssistantButton type="header" />}
-        <>
-          <Button
-            unstyled
-            className="hidden items-center whitespace-nowrap pr-2 lg:inline"
-          >
-            <CustomLangflowCounts />
-          </Button>
-        </>
+        <div className="hidden pr-2 whitespace-nowrap lg:inline-flex lg:items-center">
+          <CustomLangflowCounts />
+        </div>
         <AlertDropdown
           notificationRef={notificationContentRef}
           onClose={() => setActiveState(null)}
