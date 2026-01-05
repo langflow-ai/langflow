@@ -32,7 +32,6 @@ class FlowStartComponent(Component):
     beta = False
 
     default_keys = ["input_type", "code", "_type"]
-    request_data: dict | None = None  # For JSON Input API injection
 
     inputs = [
         DropdownInput(
@@ -301,15 +300,22 @@ class FlowStartComponent(Component):
 
     # ========== Output Methods: JSON Input Mode ==========
 
-    def set_request_data(self, request_data: dict):
-        """Called by the API endpoint to inject request data."""
-        self.request_data = request_data
-
     def _get_payload_data(self) -> dict:
-        """Get payload data from either API injection or manual input."""
-        if self.request_data is not None:
-            return self.request_data
+        """Get payload data from graph context or manual input.
 
+        Priority:
+        1. Request data from graph context (injected by /run endpoint)
+        2. Manual payload field (for testing in UI)
+        """
+        # Check graph context first (injected by API endpoint)
+        if hasattr(self, "graph") and self.graph is not None:
+            context = getattr(self.graph, "context", None)
+            if context is not None:
+                request_data = context.get("request_data")
+                if request_data is not None:
+                    return request_data
+
+        # Fall back to manual payload field
         try:
             payload_text = getattr(self, "payload", "{}")
             return json.loads(payload_text)
