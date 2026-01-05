@@ -1,19 +1,24 @@
 import json
+import traceback
+from pathlib import Path
 from typing import Any, TypeVar
 
+from langchain_core.messages import ToolCall
+from mcp.types import CallToolResult
 from pydantic import BaseModel
 from toolguard import IToolInvoker, load_toolguards
-from mcp.types import CallToolResult
+
 from lfx.field_typing import Tool
 from lfx.field_typing.constants import BaseTool
 from lfx.log.logger import logger
 
+
 class GuardedTool(Tool):
     _orig_tool: Tool
     _tool_invoker: IToolInvoker
-    _tg_dir: str
+    _tg_dir: Path
 
-    def __init__(self, tool: Tool, all_tools: list[Tool], tg_dir: str):
+    def __init__(self, tool: Tool, all_tools: list[Tool], tg_dir: Path):
         super().__init__(
             name=tool.name,
             description=tool.description,
@@ -33,45 +38,47 @@ class GuardedTool(Tool):
     def args(self) -> dict:
         return self._orig_tool.args
 
-    def parse_input(self, tool_input: str | dict):
+    def parse_input(self, tool_input: str | dict | ToolCall) -> dict:
         if isinstance(tool_input, str):
             try:
                 return json.loads(tool_input)
             except json.JSONDecodeError:
                 return {"input": tool_input}
         else:
-            return tool_input or {}
+            return tool_input or {}  # TODO: ToolCall
 
-    def run(self, tool_input: str | dict, config=None, **kwargs):
+    def run(self, tool_input: str | dict | ToolCall, config=None, **kwargs):
         args = self.parse_input(tool_input)
-        print(f"tool={self.name}, args={args}, config={config}, kwargs={kwargs}")
+        # print(f"tool={self.name}, args={args}, config={config}, kwargs={kwargs}")
         with load_toolguards(self._tg_dir) as toolguard:
-            from rt_toolguard.data_types import PolicyViolationException  # type: ignore
+            from rt_toolguard.data_types import PolicyViolationException  # pyright: ignore[reportMissingImports]
 
             try:
                 toolguard.check_toolcall(self.name, args=args, delegate=self._tool_invoker)
-                return self._orig_tool.run(args, config=config, **kwargs)
+                return self._orig_tool.run(tool_input=args, config=config, **kwargs)
             except PolicyViolationException as ex:
                 return f"Error: {ex.message}"
-            except Exception as ex:
-                logger.exception("Unhandled exception in WrappedTool._arun")
-                raise ex
+            except Exception:
+                logger.exception("Unhandled exception in GuardedTool.run()")
+                traceback.print_exc()
+                raise
 
-    async def arun(self, tool_input: str | dict, config=None, **kwargs):
+    async def arun(self, tool_input: str | dict | ToolCall, config=None, **kwargs):
         args = self.parse_input(tool_input)
-        print(f"tool={self.name}, args={args}, config={config}, kwargs={kwargs}")
+        # print(f"tool={self.name}, args={args}, config={config}, kwargs={kwargs}")
         with load_toolguards(self._tg_dir) as toolguard:
-            from rt_toolguard.data_types import PolicyViolationException  # type: ignore
+            from rt_toolguard.data_types import PolicyViolationException  # pyright: ignore[reportMissingImports]
 
             try:
                 toolguard.check_toolcall(self.name, args=args, delegate=self._tool_invoker)
-                res = await self._orig_tool.arun(tool_input=args, config=config, **kwargs)
-                return res
+                return await self._orig_tool.arun(tool_input=args, config=config, **kwargs)
             except PolicyViolationException as ex:
                 return f"Error: {ex.message}"
-            except Exception as ex:
-                logger.exception("Unhandled exception in WrappedTool._arun")
-                raise ex
+            except Exception:
+                logger.exception("Unhandled exception in class GuardedTool.arun()")
+                traceback.print_exc()
+                raise
+
 
 class ToolInvoker(IToolInvoker):
     T = TypeVar("T")
@@ -85,10 +92,7 @@ class ToolInvoker(IToolInvoker):
         if tool:
             res = tool.invoke(input=arguments)
 
-            if isinstance(res, CallToolResult): #an MCP tool result
-                res_dict = res.structuredContent['result']
-            else: #component tool result
-                res_dict = res["value"]
+            res_dict = res.structuredContent["result"] if isinstance(res, CallToolResult) else res["value"]
 
             if issubclass(return_type, BaseModel):
                 return return_type.model_validate(res_dict)
@@ -96,4 +100,5 @@ class ToolInvoker(IToolInvoker):
                 return return_type(res_dict)
             return res_dict
 
-        raise ValueError(f"unknown tool {toolname}")
+        msg = f"unknown tool {toolname}"
+        raise ValueError(msg)
