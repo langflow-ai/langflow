@@ -32,26 +32,73 @@ class FlowStartComponent(Component):
     beta = False
 
     default_keys = ["input_type", "code", "_type"]
+    request_data: dict | None = None  # For JSON Input API injection
 
-    def __init__(self, *args, **kwargs):
-        # Set initial inputs with Chat mode fields (default)
-        self.inputs = [
-            DropdownInput(
-                name="input_type",
-                display_name="Input Type",
-                options=["Chat", "JSON", "Files", "Webhook"],
-                value="Chat",
-                info="Select how this flow receives input.",
-                real_time_refresh=True,
-                advanced=False,
-            ),
-        ] + self._get_chat_input_fields()
+    inputs = [
+        DropdownInput(
+            name="input_type",
+            display_name="Input Type",
+            options=["Chat", "JSON", "Files", "Webhook"],
+            value="Chat",
+            info="Select how this flow receives input.",
+            real_time_refresh=True,
+            advanced=False,
+        ),
+        # Chat mode fields (default)
+        MultilineInput(
+            name="input_value",
+            display_name="Input Text",
+            value="",
+            info="Message to be passed as input.",
+            input_types=[],
+        ),
+        BoolInput(
+            name="should_store_message",
+            display_name="Store Messages",
+            info="Store the message in the history.",
+            value=True,
+            advanced=True,
+        ),
+        DropdownInput(
+            name="sender",
+            display_name="Sender Type",
+            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],
+            value=MESSAGE_SENDER_USER,
+            info="Type of sender.",
+            advanced=True,
+        ),
+        MessageTextInput(
+            name="sender_name",
+            display_name="Sender Name",
+            info="Name of the sender.",
+            value=MESSAGE_SENDER_NAME_USER,
+            advanced=True,
+        ),
+        MessageTextInput(
+            name="session_id",
+            display_name="Session ID",
+            info="The session ID of the chat. If empty, the current session ID parameter will be used.",
+            advanced=True,
+        ),
+        MessageTextInput(
+            name="context_id",
+            display_name="Context ID",
+            info="The context ID of the chat. Adds an extra layer to the local memory.",
+            value="",
+            advanced=True,
+        ),
+        FileInput(
+            name="files",
+            display_name="Files",
+            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,
+            info="Files to be sent with the message.",
+            advanced=True,
+            is_list=True,
+            temp_file=True,
+        ),
+    ]
 
-        # Set initial outputs for Chat mode (default)
-        self.outputs = [Output(display_name="Message", name="message", method="build_chat_message")]
-
-        super().__init__(*args, **kwargs)
-        self.request_data = None  # For JSON Input API injection
+    outputs = [Output(display_name="Message", name="message", method="build_chat_message")]
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         """Update build config when input_type changes."""
@@ -368,7 +415,7 @@ class FlowStartComponent(Component):
                         "content": file_b64,
                     }
                 )
-            except Exception as e:
+            except OSError as e:
                 return Data(data={"error": f"Error reading {file_path}: {e}"})
         else:
             # Multiple files - return array of file objects
@@ -392,7 +439,7 @@ class FlowStartComponent(Component):
                             "content": file_b64,
                         }
                     )
-                except Exception as e:
+                except OSError as e:
                     file_data.append({"path": str(file_path), "error": str(e)})
 
             self.status = f"Read {len(file_data)} file(s)"
