@@ -17,13 +17,13 @@ class NoopTransactionService(TransactionServiceProtocol):
 
     async def log_transaction(
         self,
-        flow_id: str,  # noqa: ARG002
-        vertex_id: str,  # noqa: ARG002
-        inputs: dict[str, Any] | None,  # noqa: ARG002
-        outputs: dict[str, Any] | None,  # noqa: ARG002
-        status: str,  # noqa: ARG002
-        target_id: str | None = None,  # noqa: ARG002
-        error: str | None = None,  # noqa: ARG002
+        flow_id: str,
+        vertex_id: str,
+        inputs: dict[str, Any] | None,
+        outputs: dict[str, Any] | None,
+        status: str,
+        target_id: str | None = None,
+        error: str | None = None,
     ) -> None:
         """No-op implementation of transaction logging.
 
