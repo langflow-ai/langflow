@@ -324,3 +324,141 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
             # Clean up temp file
             if tmp_path.exists():
                 tmp_path.unlink()
+
+    @pytest.mark.asyncio
+    async def test_google_drive_credential_parsing_with_control_characters(self, component_class):
+        """Test that GCP service account JSON with literal newlines (control characters) can be parsed.
+
+        This tests the fix for the bug where pasted GCP service account JSON fails with:
+        'Invalid control character at: line 1 column 183 (char 182)'
+        """
+        component = component_class(_user_id=str(uuid4()))
+
+        # Simulate a GCP service account JSON with literal newlines in the private_key field.
+        # Use a clearly fake, short key to avoid tripping secret scanners while preserving the newline pattern.
+        fake_private_key = "-----BEGIN KEY-----\nFAKE\n-----END KEY-----\n"
+        service_account_json = (
+            f'{{"type": "service_account", "project_id": "test-project-123", "private_key": "{fake_private_key}"}}'
+        )
+
+        message = Message(text="test content")
+        component.set_attributes(
+            {
+                "input": message,
+                "file_name": "test_gdrive_file",
+                "gdrive_format": "txt",
+                "storage_location": [{"name": "Google Drive"}],
+                "service_account_key": service_account_json,
+                "folder_id": "test_folder_id_123",
+            }
+        )
+
+        # Mock Google Drive dependencies
+        with (
+            patch("google.oauth2.service_account.Credentials.from_service_account_info") as mock_creds,
+            patch("googleapiclient.discovery.build") as mock_build,
+        ):
+            mock_drive_service = MagicMock()
+            mock_build.return_value = mock_drive_service
+
+            # Mock the file upload response
+            mock_drive_service.files().create().execute.return_value = {"id": "file123"}
+
+            result = await component.save_to_file()
+
+            # Verify credentials were parsed successfully (should not raise JSONDecodeError)
+            mock_creds.assert_called_once()
+            creds_dict = mock_creds.call_args[0][0]
+
+            # Verify the parsed credentials have the expected structure
+            assert creds_dict["type"] == "service_account"
+            assert creds_dict["project_id"] == "test-project-123"
+            assert "private_key" in creds_dict
+            assert "BEGIN KEY" in creds_dict["private_key"]
+
+            # Verify successful upload message
+            assert "successfully uploaded to Google Drive" in result.text
+            assert "file123" in result.text
+
+    @pytest.mark.asyncio
+    async def test_google_drive_credential_parsing_strategies(self, component_class):
+        """Test various GCP credential parsing strategies."""
+        component = component_class(_user_id=str(uuid4()))
+
+        test_cases = [
+            # Case 1: Normal JSON (should work)
+            ('{"type": "service_account", "project_id": "test"}', "Normal JSON"),
+            # Case 2: JSON with literal newlines (the bug case)
+            ('{"type": "service_account", "private_key": "-----BEGIN\nKEY\n-----END"}', "With control chars"),
+            # Case 3: JSON with extra whitespace
+            ('  \n{"type": "service_account", "project_id": "test"}  \n', "With whitespace"),
+        ]
+
+        for service_account_json, test_name in test_cases:
+            message = Message(text="test")
+            component.set_attributes(
+                {
+                    "input": message,
+                    "file_name": "test_file",
+                    "gdrive_format": "txt",
+                    "storage_location": [{"name": "Google Drive"}],
+                    "service_account_key": service_account_json,
+                    "folder_id": "test_folder",
+                }
+            )
+
+            with (
+                patch("google.oauth2.service_account.Credentials.from_service_account_info") as mock_creds,
+                patch("googleapiclient.discovery.build") as mock_build,
+            ):
+                mock_drive_service = MagicMock()
+                mock_build.return_value = mock_drive_service
+                mock_drive_service.files().create().execute.return_value = {"id": f"file_{test_name}"}
+
+                # Should not raise JSONDecodeError for any case
+                await component.save_to_file()
+
+                # Verify credentials were parsed
+                mock_creds.assert_called_once()
+                creds_dict = mock_creds.call_args[0][0]
+                assert isinstance(creds_dict, dict)
+                assert creds_dict["type"] == "service_account"
+
+                mock_creds.reset_mock()
+
+    def test_append_mode_hidden_for_cloud_storage(self, component_class):
+        """Test that append_mode is hidden for AWS and Google Drive storage."""
+        component = component_class()
+
+        # Test Local storage - append_mode should be visible
+        build_config = {
+            "file_name": {"show": False},
+            "append_mode": {"show": False},
+            "local_format": {"show": False},
+        }
+        result = component.update_build_config(build_config, [{"name": "Local"}], "storage_location")
+        assert result["append_mode"]["show"] is True, "append_mode should be visible for Local storage"
+        assert result["file_name"]["show"] is True
+        assert result["local_format"]["show"] is True
+
+        # Test AWS storage - append_mode should be hidden
+        build_config = {
+            "file_name": {"show": False},
+            "append_mode": {"show": False},
+            "aws_format": {"show": False},
+        }
+        result = component.update_build_config(build_config, [{"name": "AWS"}], "storage_location")
+        assert result["append_mode"]["show"] is False, "append_mode should be hidden for AWS storage"
+        assert result["file_name"]["show"] is True
+        assert result["aws_format"]["show"] is True
+
+        # Test Google Drive storage - append_mode should be hidden
+        build_config = {
+            "file_name": {"show": False},
+            "append_mode": {"show": False},
+            "gdrive_format": {"show": False},
+        }
+        result = component.update_build_config(build_config, [{"name": "Google Drive"}], "storage_location")
+        assert result["append_mode"]["show"] is False, "append_mode should be hidden for Google Drive storage"
+        assert result["file_name"]["show"] is True
+        assert result["gdrive_format"]["show"] is True

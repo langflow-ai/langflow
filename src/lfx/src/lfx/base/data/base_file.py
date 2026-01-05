@@ -260,8 +260,6 @@ class BaseFileComponent(Component, ABC):
         filename = file_path_obj.name
 
         settings = get_settings_service().settings
-
-        # Get file size - use storage service for S3, filesystem for local
         if settings.storage_type == "s3":
             try:
                 file_size = get_file_size(file_path)

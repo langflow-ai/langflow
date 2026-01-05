@@ -22,7 +22,11 @@ from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow
 from langflow.api.utils.mcp.config_utils import validate_mcp_server_for_project
 from langflow.api.v1.auth_helpers import handle_auth_settings_update
 from langflow.api.v1.flows import create_flows
-from langflow.api.v1.mcp_projects import get_project_sse_url, register_project_with_composer
+from langflow.api.v1.mcp_projects import (
+    get_project_sse_url,  # noqa: F401
+    get_project_streamable_http_url,
+    register_project_with_composer,
+)
 from langflow.api.v1.schemas import FlowListCreate
 from langflow.api.v2.mcp import update_server
 from langflow.helpers.flow import generate_unique_flow_name
@@ -75,6 +79,7 @@ async def create_project(
             )
             if project_results:
                 project_names = [project.name for project in project_results]
+                # TODO: this throws an error if the name contains non-numeric content in parentheses
                 project_numbers = [int(name.split("(")[-1].split(")")[0]) for name in project_names if "(" in name]
                 if project_numbers:
                     new_project.name = f"{new_project.name} ({max(project_numbers) + 1})"
@@ -100,22 +105,26 @@ async def create_project(
         # Auto-register MCP server for this project with configured default auth
         if get_settings_service().settings.add_projects_to_mcp_servers:
             try:
-                # Build SSE URL
-                sse_url = await get_project_sse_url(new_project.id)
+                # Build Streamable HTTP URL (preferred transport) and legacy SSE URL (for docs/errors)
+                streamable_http_url = await get_project_streamable_http_url(new_project.id)
+                # legacy SSE URL
+                # sse_url = await get_project_sse_url(new_project.id)
 
                 # Prepare server config based on auth type same as new project
                 if default_auth.get("auth_type", "none") == "apikey":
                     # Create API key for API key authentication
                     api_key_name = f"MCP Project {new_project.name} - default"
                     unmasked_api_key = await create_api_key(session, ApiKeyCreate(name=api_key_name), current_user.id)
-
+                    # Starting v>=1.7.1, we use Streamable HTTP transport by default
                     command = "uvx"
                     args = [
                         "mcp-proxy",
+                        "--transport",
+                        "streamablehttp",
                         "--headers",
                         "x-api-key",
                         unmasked_api_key.api_key,
-                        sse_url,
+                        streamable_http_url,
                     ]
                 elif default_auth.get("auth_type", "none") == "oauth":
                     msg = "OAuth authentication is not yet implemented for MCP server creation during project creation."
@@ -126,7 +135,9 @@ async def create_project(
                     command = "uvx"
                     args = [
                         "mcp-proxy",
-                        sse_url,
+                        "--transport",
+                        "streamablehttp",
+                        streamable_http_url,
                     ]
 
                 server_config = {"command": command, "args": args}

@@ -22,6 +22,7 @@ from .input_mixin import (
     LinkMixin,
     ListableInputMixin,
     MetadataTraceMixin,
+    ModelInputMixin,
     MultilineMixin,
     QueryMixin,
     RangeMixin,
@@ -121,6 +122,119 @@ class PromptInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeM
 
 class CodeInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMixin):
     field_type: SerializableFieldTypes = FieldTypes.CODE
+
+
+class ModelInput(BaseInputMixin, ModelInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMixin):
+    """Represents a model input field with optional LanguageModel connection support.
+
+    By default:
+    - input_types=[] (no handle shown)
+    - external_options with "Connect other models" button
+    - refresh_button=True
+
+    When "Connect other models" is selected (value="connect_other_models"):
+    - input_types is set to ["LanguageModel"] to show the connection handle
+
+    Value format:
+    - Can be a list of dicts: [{'name': 'gpt-4o', 'provider': 'OpenAI', ...}]
+    - Can be a simple list of strings: ['gpt-4o', 'gpt-4o-mini'] (auto-converted)
+    - Can be a single string: 'gpt-4o' (auto-converted to list)
+    - Can be "connect_other_models" string to enable connection mode
+    """
+
+    field_type: SerializableFieldTypes = FieldTypes.MODEL
+    placeholder: str | None = "Setup Provider"
+    input_types: list[str] = Field(default_factory=list)  # Empty by default, no handle shown
+    refresh_button: bool | None = True
+    external_options: dict = Field(
+        default_factory=lambda: {
+            "fields": {
+                "data": {
+                    "node": {
+                        "name": "connect_other_models",
+                        "display_name": "Connect other models",
+                        "icon": "CornerDownLeft",
+                    }
+                }
+            },
+        }
+    )
+
+    @field_validator("value", mode="before")
+    @classmethod
+    def normalize_value(cls, v):
+        """Convert simple string or list of strings to list of dicts format.
+
+        Allows passing:
+        - 'gpt-4o' -> [{'name': 'gpt-4o', ...}]
+        - ['gpt-4o', 'claude-3'] -> [{'name': 'gpt-4o', ...}, {'name': 'claude-3', ...}]
+        - [{'name': 'gpt-4o'}] -> [{'name': 'gpt-4o'}] (unchanged)
+        - 'connect_other_models' -> 'connect_other_models' (special value, keep as string)
+        """
+        # Handle empty or None values
+        if v is None or v == "":
+            return v
+
+        # Special case: keep "connect_other_models" as a string to enable connection mode
+        if v == "connect_other_models":
+            return v
+
+        # If it's not a list or string, return as-is (could be a BaseLanguageModel)
+        if not isinstance(v, list | str):
+            return v
+
+        # If it's a list and already in dict format, return as-is
+        if isinstance(v, list) and all(isinstance(item, dict) for item in v):
+            return v
+
+        # If it's a string or list of strings, convert to dict format
+        if isinstance(v, str) or (isinstance(v, list) and all(isinstance(item, str) for item in v)):
+            # Avoid circular import by importing the module directly (not through package __init__)
+            try:
+                from lfx.base.models.unified_models import normalize_model_names_to_dicts
+
+                return normalize_model_names_to_dicts(v)
+            except Exception:  # noqa: BLE001
+                # Fallback if import or normalization fails
+                # This can happen during module initialization or in test environments
+                if isinstance(v, str):
+                    return [{"name": v}]
+                return [{"name": item} for item in v]
+
+        # Return as-is for all other cases
+        return v
+
+    @model_validator(mode="after")
+    def set_defaults(self):
+        """Handle connection mode and set defaults.
+
+        When value is "connect_other_models", set input_types to ["LanguageModel"]
+        to enable the connection handle. Otherwise, keep input_types empty.
+        """
+        # Check if we're in connection mode (user selected "Connect other models")
+        if self.value == "connect_other_models" and not self.input_types:
+            # Enable connection handle by setting input_types
+            # Use object.__setattr__ to avoid triggering validation recursion
+            object.__setattr__(self, "input_types", ["LanguageModel"])
+
+        # Set external_options if not explicitly provided
+        if self.external_options is None or len(self.external_options) == 0:
+            object.__setattr__(
+                self,
+                "external_options",
+                {
+                    "fields": {
+                        "data": {
+                            "node": {
+                                "name": "connect_other_models",
+                                "display_name": "Connect other models",
+                                "icon": "CornerDownLeft",
+                            }
+                        }
+                    },
+                },
+            )
+        return self
 
 
 # Applying mixins to a specific input type
@@ -687,6 +801,7 @@ InputTypes: TypeAlias = (
     | HandleInput
     | IntInput
     | McpInput
+    | ModelInput
     | MultilineInput
     | MultilineSecretInput
     | NestedDictInput

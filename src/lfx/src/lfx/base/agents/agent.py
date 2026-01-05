@@ -71,8 +71,8 @@ class LCAgentComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Agent", name="agent", method="build_agent", hidden=True, tool_mode=False),
         Output(display_name="Response", name="response", method="message_response"),
+        Output(display_name="Agent", name="agent", method="build_agent", tool_mode=False),
     ]
 
     # Get shared callbacks for tracing and save them to self.shared_callbacks
@@ -181,7 +181,10 @@ class LCAgentComponent(Component):
         else:
             input_dict = {"input": self.input_value}
 
-        # Add system_prompt and chat_history to input_dict (preserve existing input)
+        # Ensure input_dict is initialized
+        if "input" not in input_dict:
+            input_dict = {"input": self.input_value}
+
         if hasattr(self, "system_prompt") and self.system_prompt and self.system_prompt.strip():
             input_dict["system_prompt"] = self.system_prompt
 
@@ -197,8 +200,9 @@ class LCAgentComponent(Component):
         # Note: Agent input must be a string, so we extract text and move images to chat_history
         if lc_message is not None and hasattr(lc_message, "content") and isinstance(lc_message.content, list):
             # Extract images and text from the text content items
-            image_dicts = [item for item in lc_message.content if item.get("type") == "image"]
-            text_content = [item for item in lc_message.content if item.get("type") != "image"]
+            # Support both "image" (legacy) and "image_url" (standard) types
+            image_dicts = [item for item in lc_message.content if item.get("type") in ("image", "image_url")]
+            text_content = [item for item in lc_message.content if item.get("type") not in ("image", "image_url")]
 
             text_strings = [
                 item.get("text", "")
