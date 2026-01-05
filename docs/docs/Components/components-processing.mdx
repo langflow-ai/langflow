@@ -1,0 +1,1228 @@
+---
+title: Processing components
+slug: /components-processing
+---
+
+import Icon from "@site/src/components/icon";
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialCurlyBraces from '@site/docs/_partial-escape-curly-braces.mdx';
+
+Processing components process and transform data within a flow.
+They have many uses, including:
+
+* Feed instructions and context to your LLMs and agents with the [**Prompt Template** component](#prompt-template).
+* Extract content from larger chunks of data with a [**Parser** component](#parser).
+* Filter data with natural language with the [**Smart Function** component](#smart-transform).
+* Save data to your local machine with the [**Save File** component](#save-file).
+* Transform data into a different data type with the [**Type Convert** component](#type-convert) to pass it between incompatible components.
+
+## Prompt Template
+
+See [**Prompt Template** component](/components-prompts).
+
+## Batch Run
+
+The **Batch Run** component runs a language model over _each row of one text column_ in a [`DataFrame`](/data-types#dataframe), and then returns a new `DataFrame` with the original text and an LLM response.
+The output contains the following columns:
+
+* `text_input`: The original text from the input `DataFrame`
+* `model_response`: The model's response for each input
+* `batch_index`: The 0-indexed processing order for all rows in the `DataFrame`
+* `metadata` (optional): Additional information about the processing
+
+### Use the Batch Run component in a flow
+
+If you pass the **Batch Run** output to a [**Parser** component](/components-processing#parser), you can use variables in the parsing template to reference these keys, such as `{text_input}` and `{model_response}`.
+This is demonstrated in the following example.
+
+![A batch run component connected to OpenAI and a Parser](/img/component-batch-run.png)
+
+1. Connect any language model component to a **Batch Run** component's **Language model** port.
+
+2. Connect `DataFrame` output from another component to the **Batch Run** component's **DataFrame** input.
+For example, you could connect a **File** component with a CSV file.
+
+3. In the **Batch Run** component's **Column Name** field, enter the name of the column in the incoming `DataFrame` that contains the text to process.
+For example, if you want to extract text from a `name` column in a CSV file, enter `name` in the **Column Name** field.
+
+4. Connect the **Batch Run** component's **Batch Results** output to a **Parser** component's **DataFrame** input.
+
+5. Optional: In the **Batch Run** [component's header menu](/concepts-components#component-menus), click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**, enable the **System Message** parameter, click **Close**, and then enter an instruction for how you want the LLM to process each cell extracted from the file.
+For example, `Create a business card for each name.`
+
+6. In the **Parser** component's **Template** field, enter a template for processing the **Batch Run** component's new `DataFrame` columns (`text_input`, `model_response`, and `batch_index`):
+
+    For example, this template uses three columns from the resulting, post-batch `DataFrame`:
+
+    ```text
+    record_number: {batch_index}, name: {text_input}, summary: {model_response}
+    ```
+
+7. To test the processing, click the **Parser** component, click <Icon name="Play" aria-hidden="true" /> **Run component**, and then click <Icon name="TextSearch" aria-hidden="true" /> **Inspect output** to view the final `DataFrame`.
+
+    You can also connect a **Chat Output** component to the **Parser** component if you want to see the output in the **Playground**.
+
+### Batch Run parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| model | HandleInput | Input parameter. Connect the 'Language Model' output from a language model component. Required. |
+| system_message | MultilineInput | Input parameter. A multi-line system instruction for all rows in the DataFrame. |
+| df | DataFrameInput | Input parameter. The DataFrame whose column is treated as text messages, as specified by 'column_name'. Required. |
+| column_name | MessageTextInput | Input parameter. The name of the DataFrame column to treat as text messages. If empty, all columns are formatted in TOML. |
+| output_column_name | MessageTextInput | Input parameter. Name of the column where the model's response is stored. Default=`model_response`. |
+| enable_metadata | BoolInput | Input parameter. If `True`, add metadata to the output DataFrame. |
+| batch_results | DataFrame | Output parameter. A DataFrame with all original columns plus the model's response column. |
+
+## Data Operations
+
+The **Data Operations** component performs operations on [`Data`](/data-types#data) objects, including extracting, filtering, and editing keys and values in the `Data`.
+For all options, see [Available data operations](#available-data-operations).
+The output is a new `Data` object containing the modified data after running the selected operation.
+
+### Use the Data Operations component in a flow
+
+The following example demonstrates how to use a **Data Operations** component in a flow using data from a webhook payload:
+
+1. Create a flow with a **Webhook** component and a **Data Operations** component, and then connect the **Webhook** component's output to the **Data Operations** component's **Data** input.
+
+    All operations in the **Data Operations** component require at least one `Data` input from another component.
+    If the preceding component doesn't produce `Data` output, you can use another component, such as the **Type Convert** component, to reformat the data before passing it to the **Data Operations** component.
+    Alternatively, you could consider using a component that is designed to process the original data type, such as the **Parser** or **DataFrame Operations** components.
+
+2. In the **Operations** field, select the operation you want to perform on the incoming `Data`.
+For this example, select the **Select Keys** operation.
+
+    :::tip
+    You can select only one operation.
+    If you need to perform multiple operations on the data, you can chain multiple **Data Operations** components together to execute each operation in sequence.
+    For more complex multi-step operations, consider using a component like the **Smart Function** component.
+    :::
+
+3. Under **Select Keys**, add keys for `name`, `username`, and `email`.
+Click <Icon name="Plus" aria-hidden="true" /> **Add more** to add a field for each key.
+
+    For this example, assume that the webhook will receive consistent payloads that always contain `name`, `username`, and `email` keys.
+    The **Select Keys** operation extracts the value of these keys from each incoming payload.
+
+4. Optional: If you want to view the output in the **Playground**, connect the **Data Operations** component's output to a **Chat Output** component.
+
+    ![A flow with Webhook, Data Operations, and Chat Output components](/img/component-data-operations-select-key.png)
+
+5. To test the flow, send the following request to your flow's webhook endpoint.
+For more information about the webhook endpoint, see [Trigger flows with webhooks](/webhook).
+
+    ```bash
+    curl -X POST "http://$LANGFLOW_SERVER_URL/api/v1/webhook/$FLOW_ID" \
+    -H "Content-Type: application/json" \
+    -H "x-api-key: $LANGFLOW_API_KEY" \
+    -d '{
+      "id": 1,
+      "name": "Leanne Graham",
+      "username": "Bret",
+      "email": "Sincere@april.biz",
+      "address": {
+        "street": "Main Street",
+        "suite": "Apt. 556",
+        "city": "Springfield",
+        "zipcode": "92998-3874",
+        "geo": {
+          "lat": "-37.3159",
+          "lng": "81.1496"
+        }
+      },
+      "phone": "1-770-736-8031 x56442",
+      "website": "hildegard.org",
+      "company": {
+        "name": "Acme-Corp",
+        "catchPhrase": "Multi-layered client-server neural-net",
+        "bs": "harness real-time e-markets"
+      }
+    }'
+    ```
+
+6. To view the `Data` resulting from the **Select Keys** operation, do one of the following:
+
+   * If you attached a **Chat Output** component, open the **Playground** to see the result as a chat message.
+   * Click <Icon name="TextSearch" aria-hidden="true" /> **Inspect output** on the **Data Operations** component.
+
+### Data Operations parameters
+
+Many parameters are conditional based on the selected **Operation** (`operation`).
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | Data | Input parameter. The `Data` object to operate on. |
+| operation | Operation | Input parameter. The operation to perform on the data. See [Available data operations](#available-data-operations) |
+| select_keys_input | Select Keys | Input parameter. A list of keys to select from the data. |
+| filter_key | Filter Key | Input parameter. The key to filter by. |
+| operator | Comparison Operator | Input parameter. The operator to apply for comparing values. |
+| filter_values | Filter Values | Input parameter. A list of values to filter by. |
+| append_update_data | Append or Update | Input parameter. The data to append or update the existing data with. |
+| remove_keys_input | Remove Keys | Input parameter. A list of keys to remove from the data. |
+| rename_keys_input | Rename Keys | Input parameter. A list of keys to rename in the data. |
+
+#### Available data operations
+
+Options for the `operations` input parameter are as follows.
+All operations act on an incoming `Data` object.
+
+| Name | Required Inputs | Process |
+|-----------|----------------|-------------|
+| Select Keys | `select_keys_input` | Selects specific keys from the data. |
+| Literal Eval | None | Evaluates string values as Python literals. |
+| Combine | None | Combines multiple data objects into one. |
+| Filter Values | `filter_key`, `filter_values`, `operator` | Filters data based on key-value pair. |
+| Append or Update | `append_update_data` | Adds or updates key-value pairs. |
+| Remove Keys | `remove_keys_input` | Removes specified keys from the data. |
+| Rename Keys | `rename_keys_input` | Renames keys in the data. |
+
+## DataFrame Operations
+
+The **DataFrame Operations** component performs operations on [`DataFrame`](/data-types#dataframe) (table) rows and columns, including schema changes, record changes, sorting, and filtering.
+For all options, see [DataFrame Operations parameters](#dataframe-operations-parameters).
+
+The output is a new `DataFrame` containing the modified data after running the selected operation.
+
+### Use the DataFrame Operations component in a flow
+
+The following steps explain how to configure a **DataFrame Operations** component in a flow.
+You can follow along with an example or use your own flow.
+The only requirement is that the preceding component must create `DataFrame` output that you can pass to the **DataFrame Operations** component.
+
+1. Create a new flow or use an existing flow.
+
+    <details>
+    <summary>Example: API response extraction flow</summary>
+
+    The following example flow uses five components to extract `Data` from an API response, transform it to a `DataFrame`, and then perform further processing on the tabular data using a **DataFrame Operations** component.
+    The sixth component, **Chat Output**, is optional in this example.
+    It only serves as a convenient way for you to view the final output in the **Playground**, rather than inspecting the component logs.
+
+    ![A flow that ingests an API response, extracts it to a DataFrame with a Smart Function component, and the processes it through a DataFrame Operations component](/img/component-dataframe-operations.png)
+
+    If you want to use this example to test the **DataFrame Operations** component, do the following:
+
+    1. Create a flow with the following components:
+
+        * **API Request**
+        * **Language Model**
+        * **Smart Function**
+        * **Type Convert**
+
+    2. Configure the [**Smart Function** component](#smart-transform) and its dependencies:
+
+        * **API Request**: Configure the [**API Request** component](/components-data#api-request) to get JSON data from an endpoint of your choice, and then connect the **API Response** output to the **Smart Function** component's **Data** input.
+        * **Language Model**: Select your preferred provider and model, and then enter a valid API key.
+        Change the output to **Language Model**, and then connect the `LanguageModel` output to the **Smart Function** component's **Language Model** input.
+        * **Smart Function**: In the **Instructions** field, enter natural language instructions to extract data from the API response.
+        Your instructions depend on the response content and desired outcome.
+        For example, if the response contains a large `result` field, you might provide instructions like `explode the result field out into a Data object`.
+
+    3. Convert the **Smart Function** component's `Data` output to `DataFrame`:
+
+        1. Connect the **Filtered Data** output to the **Type Convert** component's **Data** input.
+        2. Set the **Type Convert** component's **Output Type** to **DataFrame**.
+
+    Now the flow is ready for you to add the **DataFrame Operations** component.
+
+    </details>
+
+2. Add a **DataFrame Operations** component to the flow, and then connect `DataFrame` output from another component to the **DataFrame** input.
+
+    All operations in the **DataFrame Operations** component require at least one `DataFrame` input from another component.
+    If a component doesn't produce `DataFrame` output, you can use another component, such as the **Type Convert** component, to reformat the data before passing it to the **DataFrame Operations** component.
+    Alternatively, you could consider using a component that is designed to process the original data type, such as the **Parser** or **Data Operations** components.
+
+    If you are following along with the example flow, connect the **Type Convert** component's **DataFrame Output** port to the **DataFrame** input.
+
+3. In the **Operations** field, select the operation you want to perform on the incoming `DataFrame`.
+For example, the **Filter** operation filters the rows based on a specified column and value.
+
+    :::tip
+    You can select only one operation.
+    If you need to perform multiple operations on the data, you can chain multiple **DataFrame Operations** components together to execute each operation in sequence.
+    For more complex multi-step operations, like dramatic schema changes or pivots, consider using an LLM-powered component, like the **Structured Output** or **Smart Function** component, as a replacement or preparation for the **DataFrame Operations** component.
+    :::
+
+    If you're following along with the example flow, select any operation that you want to apply to the data that was extracted by the **Smart Function** component.
+    To view the contents of the incoming `DataFrame`, click <Icon name="Play" aria-hidden="true" /> **Run component** on the **Type Convert** component, and then <Icon name="TextSearch" aria-hidden="true" /> **Inspect output**.
+    If the `DataFrame` seems malformed, click <Icon name="TextSearch" aria-hidden="true" /> **Inspect output** on each upstream component to determine where the error occurs, and then modify your flow's configuration as needed.
+    For example, if the **Smart Function** component didn't extract the expected fields, modify your instructions or verify that the given fields are present in the **API Response** output.
+
+4. Configure the operation's parameters.
+The specific parameters depend on the selected operation.
+For example, if you select the **Filter** operation, you must define a filter condition using the **Column Name**, **Filter Value**, and **Filter Operator** parameters.
+For more information, see [DataFrame Operations parameters](#dataframe-operations-parameters)
+
+5. To test the flow, click <Icon name="Play" aria-hidden="true" /> **Run component** on the **DataFrame Operations** component, and then click <Icon name="TextSearch" aria-hidden="true" /> **Inspect output** to view the new `DataFrame` created from the **Filter** operation.
+
+   If you want to view the output in the **Playground**, connect the **DataFrame Operations** component's output to a **Chat Output** component, rerun the **DataFrame Operations** component, and then click **Playground**.
+
+For another example, see [Conditional looping](/components-logic#conditional-looping).
+
+### DataFrame Operations parameters
+
+Most **DataFrame Operations** parameters are conditional because they only apply to specific operations.
+
+The only permanent parameters are **DataFrame** (`df`), which is the `DataFrame` input, and **Operation** (`operation`), which is the operation to perform on the `DataFrame`.
+Once you select an operation, the conditional parameters for that operation appear on the **DataFrame Operations** component.
+
+<Tabs>
+<TabItem value="addcolumn" label="Add Column" default>
+
+The **Add Column** operation allows you to add a new column to the `DataFrame` with a constant value.
+
+The parameters are **New Column Name** (`new_column_name`) and **New Column Value** (`new_column_value`).
+
+</TabItem>
+<TabItem value="dropcolumn" label="Drop Column">
+
+The **Drop Column** operation allows you to remove a column from the `DataFrame`, specified by **Column Name** (`column_name`).
+
+</TabItem>
+<TabItem value="filter" label="Filter">
+
+The **Filter** operation allows you to filter the `DataFrame` based on a specified condition.
+The output is a `DataFrame` containing only the rows that matched the filter condition.
+
+Provide the following parameters:
+
+* **Column Name** (`column_name`): The name of the column to filter on.
+* **Filter Value** (`filter_value`): The value to filter on.
+* **Filter Operator** (`filter_operator`): The operator to use for filtering, one of `equals` (default), `not equals`, `contains`, `starts with`, `ends with`, `greater than`, or `less than`.
+
+</TabItem>
+<TabItem value="head" label="Head">
+
+The **Head** operation allows you to retrieve the first `n` rows of the `DataFrame`, where `n` is set in **Number of Rows** (`num_rows`).
+The default is `5`.
+
+The output is a `DataFrame` containing only the selected rows.
+
+</TabItem>
+<TabItem value="renamecolumn" label="Rename Column">
+
+The **Rename Column** operation allows you to rename an existing column in the `DataFrame`.
+
+The parameters are **Column Name** (`column_name`), which is the current name, and **New Column Name** (`new_column_name`).
+
+</TabItem>
+<TabItem value="replacevalue" label="Replace Value">
+
+The **Replace Value** operation allows you to replace values in a specific column of the `DataFrame`.
+This operation replaces a target value with a new value.
+All cells matching the target value are replaced with the new value in the new `DataFrame` output.
+
+Provide the following parameters:
+
+* **Column Name** (`column_name`): The name of the column to modify.
+* **Value to Replace** (`replace_value`): The value that you want to replace.
+* **Replacement Value** (`replacement_value`): The new value to use.
+
+</TabItem>
+<TabItem value="selectcolumns" label="Select Columns">
+
+The **Select Columns** operation allows you to select one or more specific columns from the `DataFrame`.
+
+Provide a list of column names in **Columns to Select** (`columns_to_select`).
+In the visual editor, click <Icon name="Plus" aria-hidden="true"/> **Add More** to add multiple fields, and then enter one column name in each field.
+
+The output is a `DataFrame` containing only the specified columns.
+
+</TabItem>
+<TabItem value="sort" label="Sort">
+
+The **Sort** operation allows you to sort the `DataFrame` on a specific column in ascending or descending order.
+
+Provide the following parameters:
+
+* **Column Name** (`column_name`): The name of the column to sort on.
+* **Sort Ascending** (`ascending`): Whether to sort in ascending or descending order. If enabled (`true`), sorts in ascending order; if disabled (`false`), sorts in descending order. Default: Enabled (`true`)
+
+</TabItem>
+<TabItem value="tail" label="Tail">
+
+The **Tail** operation allows you to retrieve the last `n` rows of the `DataFrame`, where `n` is set in **Number of Rows** (`num_rows`).
+The default is `5`.
+
+The output is a `DataFrame` containing only the selected rows.
+
+</TabItem>
+<TabItem value="dropduplicates" label="Drop Duplicates">
+
+The **Drop Duplicates** operation removes rows from the `DataFrame` by identifying all duplicate values within a single column.
+
+The only parameter is the **Column Name** (`column_name`).
+
+When the flow runs, all rows with duplicate values in the given column are removed.
+The output is a `DataFrame` containing all columns from the original `DataFrame`, but only rows with non-duplicate values.
+
+</TabItem>
+</Tabs>
+
+## LLM Router
+
+The **LLM Router** component routes requests to the most appropriate LLM based on [OpenRouter](https://openrouter.ai/docs/quickstart) model specifications.
+
+To use the component in a flow, you connect multiple language model components to the **LLM Router** components.
+One model is the judge LLM that analyzes input messages to understand the evaluation context, selects the most appropriate model from the other attached LLMs, and then routes the input to the selected model.
+The selected model processes the input, and then returns the generated response.
+
+The following example flow has three language model components.
+One is the judge LLM, and the other two are in the LLM pool for request routing.
+The input and output components create a seamless chat interaction where you send a message and receive a response without any user awareness of the underlying routing.
+
+![LLM Router component](/img/component-llm-router.png)
+
+### LLM Router parameters
+
+<PartialParams />
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| `models` | **Language Models** | Input parameter. Connect [`LanguageModel`](/data-types#languagemodel) output from multiple [language model components](/components-models) to create a pool of models. The `judge_llm` selects models from this pool when routing requests. The first model you connect is the default model if there is a problem with model selection or routing. |
+| `input_value` | **Input** | Input parameter. The incoming query to be routed to the model selected by the judge LLM. |
+| `judge_llm` | **Judge LLM** | Input parameter. Connect `LanguageModel` output from _one_ **Language Model** component to serve as the judge LLM for request routing. |
+| `optimization` | **Optimization** | Input parameter. Set a preferred characteristic for model selection by the judge LLM. The options are `quality` (highest response quality), `speed` (fastest response time), `cost` (most cost-effective model), or `balanced` (equal weight for quality, speed, and cost). Default: `balanced` |
+| `use_openrouter_specs` | **Use OpenRouter Specs** | Input parameter. Whether to fetch model specifications from the OpenRouter API.
+If `false`, only the model name is provided to the judge LLM. Default: Enabled (`true`) |
+| `timeout` | **API Timeout** | Input parameter. Set a timeout duration in seconds for API requests made by the router. Default: `10` |
+| `fallback_to_first` | **Fallback to First Model** | Input parameter. Whether to use the first LLM in `models` as a backup if routing fails to reach the selected model. Default: Enabled (`true`) |
+
+### LLM Router outputs
+
+The **LLM Router** component provides three output options.
+You can set the desired output type near the component's output port.
+
+* **Output**: A `Message` containing the response to the original query as generated by the selected LLM.
+Use this output for regular chat interactions.
+
+* **Selected Model Info**: A `Data` object containing information about the selected model, such as its name and version.
+
+* **Routing Decision**: A `Message` containing the judge model's reasoning for selecting a particular model, including input query length and number of models considered.
+For example:
+
+    ```text
+    Model Selection Decision:
+    - Selected Model Index: 0
+    - Selected Langflow Model Name: gpt-4o-mini
+    - Selected API Model ID (if resolved): openai/gpt-4o-mini
+    - Optimization Preference: cost
+    - Input Query Length: 27 characters (~5 tokens)
+    - Number of Models Considered: 2
+    - Specifications Source: OpenRouter API
+    ```
+
+    This is useful for debugging if you feel the judge model isn't selecting the best model.
+
+## Parser {#parser}
+
+The **Parser** component extracts text from structured data (`DataFrame` or `Data`) using a template or direct stringification.
+The output is a `Message` containing the parsed text.
+
+This is a versatile component for data extraction and manipulation in your flows.
+For examples of **Parser** components in flows, see the following:
+
+* [**Batch Run** component example](#batch-run)
+* [**Structured Output** component example](#structured-output)
+* **Financial Report Parser** template
+* [Trigger flows with webhooks](/webhook)
+* [Create a vector RAG chatbot](/chat-with-rag)
+
+![A flow that uses a Parser component to extract text from a Structured Output component.](/img/component-parser.png)
+
+### Parsing modes
+
+The **Parser** component has two modes: **Parser** and **Stringify**.
+
+<Tabs>
+<TabItem value="template" label="Parser (template) mode" default>
+
+In **Parser** mode, you create a template for text output that can include literal strings and variables for extracted keys.
+
+Use curly braces to define variables anywhere in the template.
+Variables must match keys in the `DataFrame` or `Data` input, such as column names.
+For example, `{name}` extracts the value of a `name` key.
+For more information about the content and structure of `DataFrame` and `Data` objects, see [Langflow data types](/data-types).
+
+<PartialCurlyBraces />
+
+When the flow runs, the **Parser** component iterates over the input, producing a `Message` for each parsed item.
+For example, parsing a `DataFrame` creates a `Message` for each row, populated with the unique values from that row.
+
+<details>
+<summary>Employee summary template</summary>
+
+This example template extracts employee data into a natural language summary about an employee's hire date and current role:
+
+```text
+{employee_first_name} {employee_last_name} was hired on {start_date}.
+Their current position is {job_title} ({grade}).
+```
+
+The resulting `Message` output replaces the variables with the corresponding extracted values.
+For example:
+
+```text
+Renlo Kai was hired on 11-July-2017.
+Their current position is Software Engineer (Principal).
+```
+
+</details>
+
+<details>
+<summary>Employee profile template</summary>
+
+This example template uses Markdown syntax and extracted employee data to create an employee profile:
+
+```text
+# Employee Profile
+## Personal Information
+- **Name:** {name}
+- **ID:** {id}
+- **Email:** {email}
+```
+
+When the flow runs, the **Parser** component iterates over each row of the `DataFrame`, populating the template's variables with the appropriate extracted values.
+The resulting text for each row is output as a [`Message`](/data-types#message).
+
+</details>
+
+The following parameters are available in **Parser** mode.
+<PartialParams />
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| input_data | Data or DataFrame | Input parameter. The `Data` or `DataFrame` input to parse. |
+| pattern | Template | Input parameter. The formatting template using plaintext and variables for keys (`{KEY_NAME}`). See the preceding examples for more information. |
+| sep | Separator | Input parameter. A string defining the separator for rows or lines. Default: `\n` (new line). |
+| clean_data | Clean Data | Whether to remove empty rows and lines in each cell or key of the `DataFrame` or `Data` input. Default: Enabled (`true`) |
+
+</TabItem>
+<TabItem value="stringify" label="Stringify mode">
+
+Use **Stringify** mode to convert the entire input directly to text.
+This mode doesn't support templates or key selection.
+
+The following parameters are available in **Stringify** mode.
+<PartialParams />
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| input_data | Data or DataFrame | Input parameter. The `Data` or `DataFrame` input to parse. |
+| sep | Separator | Input parameter. A string defining the separator for rows or lines. Default: `\n` (new line). |
+| clean_data | Clean Data | Whether to remove empty rows and lines in each cell or key of the `DataFrame` or `Data` input. Default: Enabled (`true`) |
+
+</TabItem>
+</Tabs>
+
+### Test and troubleshoot parsed text
+
+To test the **Parser** component, click <Icon name="Play" aria-hidden="true"/> **Run component**, and then click <Icon name="TextSearch" aria-hidden="true"/> **Inspect output** to see the `Message` output with the parsed text.
+You can also connect a **Chat Output** component if you want to view the output in the **Playground**.
+
+If the `Message` output from the **Parser** component has empty or unexpected values, there might be a mapping error between the input and the parsing mode, the input has empty values, or the input isn't suitable for plaintext extraction.
+
+For example, assume you use the following template to parse a `DataFrame`:
+
+```text
+{employee_first_name} {employee_last_name} is a {job_title} ({grade}).
+```
+
+The following `Message` could result from parsing a row where `employee_first_name` was empty and `grade` was `null`:
+
+```text
+ Smith is a Software Engineer (null).
+```
+
+To troubleshoot missing or unexpected values, you can do the following:
+
+* Make sure the variables in your template map to keys in the incoming `Data` or `DataFrame`.
+To see the data being passed directly to the **Parser** component, click <Icon name="TextSearch" aria-hidden="true"/> **Inspect output** on the component that is sending data to the **Parser** component.
+
+* Check the source data for missing or incorrect values.
+There are several ways you can address these inconsistencies:
+
+    * Rectify the source data directly.
+    * Use other components to amend or filter anomalies before passing the data to the **Parser** component.
+    There are many components you can use for this depending on your goal, such as the **Data Operations**, **Structured Output**, and **Smart Function** components.
+    * Enable the **Parser** component's **Clean Data** parameter to skip empty rows or lines.
+
+## Python Interpreter
+
+This component allows you to execute Python code with imported packages.
+
+The **Python Interpreter** component can only import packages that are already installed in your Langflow environment.
+If you encounter an `ImportError` when trying to use a package, you need to install it first.
+
+To install custom packages, see [Install custom dependencies](/install-custom-dependencies).
+
+### Use the Python Interpreter in a flow
+
+1. To use this component in a flow, in the **Global Imports** field, add the packages you want to import as a comma-separated list, such as `math,pandas`.
+At least one import is required.
+2. In the **Python Code** field, enter the Python code you want to execute. Use `print()` to see the output.
+3. Optional: Enable **Tool Mode**, and then connect the **Python Interpreter** component to an **Agent** component as a tool.
+For example, connect a **Python Interpreter** component and a [**Calculator** component](/components-helpers#calculator) as tools for an **Agent** component, and then test how it chooses different tools to solve math problems.
+![Python Interpreter and Calculator components connected to an Agent component](/img/component-python-interpreter.png)
+4. Ask the agent an easier math question.
+The **Calculator** tool can add, subtract, multiple, divide, or perform exponentiation.
+The agent executes the `evaluate_expression` tool to correctly answer the question.
+
+Result:
+```text
+Executed evaluate_expression
+Input:
+{
+  "expression": "2+5"
+}
+Output:
+{
+  "result": "7"
+}
+```
+
+5. Give the agent complete Python code.
+This example creates a Pandas DataFrame table with the imported `pandas` packages, and returns the square root of the mean squares.
+
+```python
+import pandas as pd
+import math
+
+# Create a simple DataFrame
+df = pd.DataFrame({
+    'numbers': [1, 2, 3, 4, 5],
+    'squares': [x**2 for x in range(1, 6)]
+})
+
+# Calculate the square root of the mean
+result = math.sqrt(df['squares'].mean())
+print(f"Square root of mean squares: {result}")
+```
+
+The agent correctly chooses the `run_python_repl` tool to solve the problem.
+
+Result:
+```text
+Executed run_python_repl
+
+Input:
+
+{
+  "python_code": "import pandas as pd\nimport math\n\n# Create a simple DataFrame\ndf = pd.DataFrame({\n    'numbers': [1, 2, 3, 4, 5],\n    'squares': [x**2 for x in range(1, 6)]\n})\n\n# Calculate the square root of the mean\nresult = math.sqrt(df['squares'].mean())\nprint(f\"Square root of mean squares: {result}\")"
+}
+Output:
+
+{
+  "result": "Square root of mean squares: 3.3166247903554"
+}
+```
+
+If you don't include the package imports in the chat, the agent can still create the table using `pd.DataFrame`, because the `pandas` package is imported globally by the **Python Interpreter** component in the **Global Imports** field.
+
+### Python Interpreter parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| global_imports | String | Input parameter. A comma-separated list of modules to import globally, such as `math,pandas,numpy`. |
+| python_code | Code | Input parameter. The Python code to execute. Only modules specified in Global Imports can be used. |
+| results | Data | Output parameter. The output of the executed Python code, including any printed results or errors. |
+
+## Save File
+
+The **Save File** component creates a file containing data produced by another component.
+Several file formats are supported, and you can store files in [Langflow storage](/memory) or the local file system.
+
+To configure the **Save File** component and use it in a flow, do the following:
+
+1. Connect [`DataFrame`](/data-types#dataframe), [`Data`](/data-types#data), or [`Message`](/data-types#message) output from another component to the **Save File** component's **Input** port.
+
+    You can connect the same output to multiple **Save File** components if you want to create multiple files, save the data in different file formats, or save files to multiple locations.
+
+2. In **File Name**, enter a file name and an optional path.
+
+    The **File Name** parameter controls where the file is saved.
+    It can contain a file name or an entire file path:
+
+    * **Default location**: If you only provide a file name, then the file is stored in the Langflow data directory. For example,`~/Library/Caches/langflow/data` on macOS.
+
+    * **Subdirectory**: To store files in subdirectories, add the path to the **File Name** parameter.
+    If a given subdirectory doesn't already exist, Langflow automatically creates it.
+    For example, `files/my_file` creates `my_file` in `/data/files`, and it creates the `files` subdirectory if it doesn't already exist.
+
+    * **Absolute or relative path**: To store files elsewhere in your environment or local file storage, provide the absolute or relative path to the desired location.
+    For example, `~/Desktop/my_file` saves `my_file` to the desktop.
+
+    Don't include an extension in the file name.
+    If you do, the extension is treated as part of the file name; it has no impact on the **File Format** parameter.
+
+3. In the [component's header menu](/concepts-components#component-menus), click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**, select the desired file format, and then click **Close**.
+
+    The available **File Format** options depend on the input data type:
+
+    * `DataFrame` can be saved to CSV (default), Excel (requires `openpyxl` [custom dependency](/install-custom-dependencies)), JSON (fallback default), or Markdown.
+
+    * `Data` can be saved to CSV, Excel (requires `openpyxl` [custom dependency](/install-custom-dependencies)), JSON (default), or Markdown.
+
+    * `Message` can be saved to TXT, JSON (default), or Markdown.
+
+    :::warning Overwrites allowed
+    If you have multiple **Save File** components, in one or more flows, with the same file name, path, and extension, the file contains the data from the most recent run only.
+    Langflow doesn't block overwrites if a matching file already exists.
+    To avoid unintended overwrites, use unique file names and paths.
+    :::
+
+4. To test the **Save File** component, click <Icon name="Play" aria-hidden="true" /> **Run component**, and then click <Icon name="TextSearch" aria-hidden="true" /> **Inspect output** to get the filepath where the file was saved.
+
+    The component's literal output is a `Message` containing the original data type, the file name and extension, and the absolute filepath to the file based on the **File Name** parameter.
+    For example:
+
+    ```text
+    DataFrame saved successfully as 'my_file.csv' at /Users/user.name/Library/Caches/langflow/data/my_file.csv
+    ```
+
+    If the **File Name** contains a subdirectory or other non-default path, this is reflected in the `Message` output.
+    For example, a CSV file with the file name `~/Desktop/my_file` could produce the following output:
+
+    ```text
+    DataFrame saved successfully as '/Users/user.name/Desktop/my_file.csv' at /Users/user.name/Desktop/my_file.csv
+    ```
+
+
+5. Optional: If you want to use the saved file in a flow, you must use an API call or another component to retrieve the file from the given filepath.
+
+## Smart Function {#smart-transform}
+
+In Langflow version 1.5, this component was renamed from **Lambda Filter** to **Smart Function**.
+
+The **Smart Function** component uses an LLM to generate a Lambda function to filter or transform structured data based on natural language instructions.
+You must connect this component to a [language model component](/components-models), which is used to generate a function based on the natural language instructions you provide in the **Instructions** parameter.
+The LLM runs the function against the data input, and then outputs the results as [`Data`](/data-types#data).
+
+:::tip
+Provide brief, clear instructions, focusing on the desired outcome or specific actions, such as `Filter the data to only include items where the 'status' is 'active'`.
+One sentence or less is preferred because end punctuation, like periods, can cause errors or unexpected behavior.
+
+If you need to provide more details instructions that aren't directly relevant to the Lambda function, you can input them in the **Language Model** component's **Input** field or through a **Prompt Template** component.
+:::
+
+The following example uses the **API Request** endpoint to pass JSON data from the `https://jsonplaceholder.typicode.com/users` endpoint to the **Smart Function** component.
+Then, the **Smart Function** component passes the data and the instruction `extract emails` to the attached **Language Model** component.
+From there, the LLM generates a filter function that extracts email addresses from the JSON data, returning the filtered data as chat output.
+
+![A small flow using a Smart Function component to extract data from an API response.](/img/component-lambda-filter.png)
+
+### Smart Function parameters
+
+<PartialParams />
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | Data | Input parameter. The structured data to filter or transform using a Lambda function. |
+| llm | Language Model | Input parameter. Connect [`LanguageModel`](/data-types#languagemodel) output from a **Language Model** component. |
+| filter_instruction | Instructions | Input parameter. The natural language instructions for how to filter or transform the data. The LLM uses these instructions to create a Lambda function. |
+| sample_size | Sample Size | Input parameter. For large datasets, the number of characters to sample from the dataset head and tail. Only applied if the dataset meets or exceeds `max_size`. Default: `1000`. |
+| max_size | Max Size | Input parameter. The number of characters for the dataset to be considered large, which triggers sampling by the `sample_size` value. Default: `30000`. |
+
+## Split Text
+
+The **Split Text** component splits data into chunks based on parameters like chunk size and separator.
+It is often used to chunk data to be tokenized and embedded into vector databases.
+For examples, see [Use embedding model components in a flow](/components-embedding-models#use-embedding-model-components-in-a-flow) and [Create a Vector RAG chatbot](/chat-with-rag).
+
+![An embedding generation flow that uses a Split Text component to chunk data.](/img/component-split-text.png)
+
+The component accepts `Message`, `Data`, or `DataFrame`, and then outputs either **Chunks** or **DataFrame**.
+The **Chunks** output returns a list of [`Data`](/data-types#data) objects containing individual text chunks.
+The **DataFrame** output returns the list of chunks as a structured [`DataFrame`](/data-types#dataframe) with additional `text` and `metadata` columns.
+
+### Split Text parameters
+
+The **Split Text** component's parameters control how the text is split into chunks, specifically the `chunk_size`, `chunk_overlap`, and `separator` parameters.
+
+To test the chunking behavior, add a **Text Input** or **File** component with some sample data to chunk, click <Icon name="Play" aria-hidden="true" /> **Run component** on the **Split Text** component, and then click <Icon name="TextSearch" aria-hidden="true" /> **Inspect output** to view the list of chunks and their metadata. The **text** column contains the actual text chunks created from your chunking settings.
+If the chunks aren't split as you expect, adjust the parameters, rerun the component, and then inspect the new output.
+
+<PartialParams />
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data_inputs | Input | Input parameter. The data to split. Input must be in `Message`, `Data`, or `DataFrame` format. |
+| chunk_overlap | Chunk Overlap | Input parameter. The number of characters to overlap between chunks. This helps maintain context across chunks. When a separator is encountered, the overlap is applied at the point of the separator so that the subsequent chunk contains the last _n_ characters of the preceding chunk. Default: `200`. |
+| chunk_size | Chunk Size | Input parameter. The target length for each chunk after splitting. The data is first split by separator, and then chunks smaller than the `chunk_size` are merged up to this limit. However, if the initial separator split produces any chunks larger than the `chunk_size`, those chunks are neither further subdivided nor combined with any smaller chunks; these chunks will be output as-is even though they exceed the `chunk_size`. Default: `1000`. See [Tokenization errors due to chunk size](#chunk-size) for important considerations. |
+| separator | Separator | Input parameter. A string defining a character to split on, such as `\n` to split on new line characters, `\n\n` to split at paragraph breaks, or `},` to split at the end of JSON objects. You can directly provide the separator string, or pass a separator string from another component as `Message` input. |
+| text_key | Text Key | Input parameter. The key to use for the text column that is extracted from the input and then split. Default: `text`. |
+| keep_separator | Keep Separator | Input parameter. Select how to handle separators in output chunks. If `False`, separators are omitted from output chunks. Options include `False` (remove separators), `True` (keep separators in chunks without preference for placement), `Start` (place separators at the beginning of chunks), or `End` (place separators at the end of chunks). Default: `False`. |
+
+### Tokenization errors due to chunk size {#chunk-size}
+
+When using **Split Text** with embedding models (especially NVIDIA models like `nvidia/nv-embed-v1`), you may need to use smaller chunk sizes (`500` or less) even though the model supports larger token limits.
+The **Split Text** component doesn't always enforce the exact chunk size you set, and individual chunks may exceed your specified limit.
+If you encounter tokenization errors, modify your text splitting strategy by reducing the chunk size, changing the overlap length, or using a more common separator.
+Then, test your configuration by running the flow and inspecting the component's output.
+
+### Other text splitters
+
+See [LangChain text splitter components](/bundles-langchain#text-splitters).
+
+## Structured Output
+
+The **Structured Output** component uses an LLM to transform any input into structured data (`Data` or `DataFrame`) using natural language formatting instructions and an output schema definition.
+For example, you can extract specific details from documents, like email messages or scientific papers.
+
+### Use the Structured Output component in a flow
+
+To use the **Structured Output** component in a flow, do the following:
+
+1. Provide an **Input Message**, which is the source material from which you want to extract structured data.
+This can come from practically any component, but it is typically a **Chat Input**, **File**, or other component that provides some unstructured or semi-structured input.
+
+    :::tip
+    Not all source material has to become structured output.
+    The power of the **Structured Output** component is that you can specify the information you want to extract, even if that data isn't explicitly labeled or an exact keyword match.
+    Then, the LLM can use your instructions to analyze the source material, extract the relevant data, and format it according to your specifications.
+    Any irrelevant source material isn't included in the structured output.
+    :::
+
+2. Define **Format Instructions** and an **Output Schema** to specify the data to extract from the source material and how to structure it in the final `Data` or `DataFrame` output.
+
+    The instructions are a prompt that tell the LLM what data to extract, how to format it, how to handle exceptions, and any other instructions relevant to preparing the structured data.
+
+    The schema is a table that defines the fields (keys) and data types to organize the data extracted by the LLM into a structured `Data` or `DataFrame` object.
+    For more information, see [Output Schema options](#output-schema-options)
+
+3. Attach a [language model component](/components-models) that is set to emit [`LanguageModel`](/data-types#languagemodel) output.
+
+    The LLM uses the **Input Message** and **Format Instructions** from the **Structured Output** component to extract specific pieces of data from the input text.
+    The output schema is applied to the model's response to produce the final `Data` or `DataFrame` structured object.
+
+4. Optional: Typically, the structured output is passed to downstream components that use the extracted data for other processes, such as the **Parser** or **Data Operations** components.
+
+![A basic flow with Structured Output, Language Model, Type Convert, and Chat Input and Output components.](/img/component-structured-output.png)
+
+<details>
+<summary>Structured Output example: Financial Report Parser template</summary>
+
+The **Financial Report Parser** template provides an example of how the **Structured Output** component can be used to extract structured data from unstructured text.
+
+The template's **Structured Output** component has the following configuration:
+
+* The **Input Message** comes from a **Chat Input** component that is preloaded with quotes from sample financial reports
+
+* The **Format Instructions** are as follows:
+
+    ```text
+    You are an AI that extracts structured JSON objects from unstructured text.
+    Use a predefined schema with expected types (str, int, float, bool, dict).
+    Extract ALL relevant instances that match the schema - if multiple patterns exist, capture them all.
+    Fill missing or ambiguous values with defaults: null for missing values.
+    Remove exact duplicates but keep variations that have different field values.
+    Always return valid JSON in the expected format, never throw errors.
+    If multiple objects can be extracted, return them all in the structured format.
+    ```
+
+* The **Output Schema** includes keys for `EBITDA`, `NET_INCOME`, and `GROSS_PROFIT`.
+
+The structured `Data` object is passed to a **Parser** component that produces a text string by mapping the schema keys to variables in the parsing template:
+
+```text
+EBITDA: {EBITDA}  ,  Net Income: {NET_INCOME} , GROSS_PROFIT: {GROSS_PROFIT}
+```
+
+When printed to the **Playground**, the resulting `Message` replaces the variables with the actual values extracted by the **Structured Output** component. For example:
+
+```text
+EBITDA: 900 million , Net Income: 500 million , GROSS_PROFIT: 1.2 billion
+```
+
+</details>
+
+### Structured Output parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| Language Model (`llm`) | `LanguageModel` | Input parameter. The [`LanguageModel`](/data-types#languagemodel) output from a **Language Model** component that defines the LLM to use to analyze, extract, and prepare the structured output. |
+| Input Message (`input_value`) | String | Input parameter. The input message containing source material for extraction. |
+| Format Instructions (`system_prompt`) | String | Input parameter. The instructions to the language model for extracting and formatting the output. |
+| Schema Name (`schema_name`) | String | Input parameter. An optional title for the **Output Schema**. |
+| Output Schema (`output_schema`)| Table | Input parameter. A table describing the schema of the desired structured output, ultimately determining the content of the `Data` or `DataFrame` output. See [Output Schema options](#output-schema-options). |
+| Structured Output (`structured_output`) | `Data` or `DataFrame` | Output parameter. The final structured output produced by the component. Near the component's output port, you can select the output data type as either **Structured Output Data** or **Structured Output DataFrame**. The specific content and structure of the output depends on the input parameters. |
+
+#### Output Schema options {#output-schema-options}
+
+After the LLM extracts the relevant data from the **Input Message** and **Format Instructions**, the data is organized according to the **Output Schema**.
+
+The schema is a table that defines the fields (keys) and data types for the final `Data` or `DataFrame` output from the **Structured Output** component.
+
+The default schema is a single `field` string.
+
+To add a key to the schema, click <Icon name="Plus" aria-hidden="true"/> **Add a new row**, and then edit each column to define the schema:
+
+* **Name**: The name of the output field. Typically a specific key for which you want to extract a value.
+
+    You can reference these keys as variables in downstream components, such as a **Parser** component's template.
+    For example, the schema key `NET_INCOME` could be referenced by the variable `{NET_INCOME}`.
+
+* **Description**: An optional metadata description of the field's contents and purpose.
+
+* **Type**: The data type of the value stored in the field.
+Supported types are `str` (default), `int`, `float`, `bool`, and `dict`.
+
+* **As List**: Enable this setting if you want the field to contain a list of values rather than a single value.
+
+For simple schemas, you might only extract a few `string` or `int` fields.
+For more complex schemas with lists and dictionaries, it might help to refer to the `Data` and `DataFrame` structures and attributes, as described in [Langflow data types](/data-types).
+You can also emit a rough `Data` or `DataFrame`, and then use downstream components for further refinement, such as a **Data Operations** component.
+
+## Type Convert
+
+The **Type Convert** component converts data from one type to another.
+It supports `Data`, `DataFrame`, and `Message` data types.
+
+<Tabs>
+<TabItem value="data" label="Data" default>
+
+A `Data` object is a structured object that contains a primary `text` key and other key-value pairs:
+
+```json
+"data": {
+  "text": "User Profile",
+  "name": "Charlie Lastname",
+  "age": 28,
+  "email": "charlie.lastname@example.com"
+},
+```
+
+The larger context associated with a component's `data` dictionary also identifies which key is the primary `text_key`, and it can provide an optional default value if the primary key isn't specified.
+For example:
+
+```json
+{
+  "text_key": "text",
+  "data": {
+    "text": "User Profile",
+    "name": "Charlie Lastname",
+    "age": 28,
+    "email": "charlie.lastname@example.com"
+  },
+  "default_value": ""
+}
+```
+
+</TabItem>
+<TabItem value="dataframe" label="DataFrame">
+
+A `DataFrame` is an array that represents a tabular data structure with rows and columns.
+
+It consists of a list (array) of dictionary objects, where each dictionary represents a row.
+Each key in the dictionaries corresponds to a column name.
+For example, the following `DataFrame` contains two rows with columns for `name`, `age`, and `email`:
+
+```json
+[
+  {
+    "name": "Charlie Lastname",
+    "age": 28,
+    "email": "charlie.lastname@example.com"
+  },
+  {
+    "name": "Bobby Othername",
+    "age": 25,
+    "email": "bobby.othername@example.com"
+  }
+]
+```
+
+</TabItem>
+<TabItem value="message" label="Message">
+
+A `Message` is primarily for passing a `text` string, such as`"Name: Charlie Lastname, Age: 28, Email: charlie.lastname@example.com"`.
+However, the entire `Message` object can include metadata about the message, particularly when used as chat input or output.
+
+</TabItem>
+</Tabs>
+
+For more information, see [Langflow data types](/data-types).
+
+### Use the Type Convert component in a flow
+
+The **Type Convert** component is typically used to transform data into a format required by a downstream component.
+For example, if a component outputs a `Message`, but the following component requires `Data`, then you can use the **Type Convert** component to reformat the `Message` as `Data` before passing it to the downstream component.
+
+The following example uses the **Type Convert** component to convert the `DataFrame` output from a **Web Search** component into `Message` data that is passed as text input for an LLM:
+
+1. Create a flow based on the **Basic prompting** template.
+
+2. Add a **Web Search** component to the flow, and then enter a search query, such as `environmental news`.
+
+3. In the **Prompt Template** component, replace the contents of the **Template** field with the following text:
+
+    ```text
+    Answer the user's question using the {context}
+    ```
+
+    The curly braces define a [prompt variable](/components-prompts#define-variables-in-prompts) that becomes an input field on the **Prompt Template** component.
+    In this example, you will use the **context** field to pass the search results into the template, as explained in the next steps.
+
+3. Add a **Type Convert** component to the flow, and then set the **Output Type** to **Message**.
+
+    Because the **Web Search** component's `DataFrame` output is incompatible with the **context** variable's `Message` input, you must use the **Type Convert** component to change the `DataFrame` to a `Message` in order to pass the search results to the **Prompt Template** component.
+
+4. Connect the additional components to the rest of the flow:
+
+    * Connect the **Web Search** component's output to the **Type Convert** component's input.
+    * Connect the **Type Convert** component's output to the **Prompt Template** component's **context** input.
+
+    ![Convert web search output to text input](/img/component-type-convert-and-web-search.png)
+
+5. In the **Language Model** component, add your OpenAI API key.
+
+    If you want to use a different provider or model, edit the **Model Provider**, **Model Name**, and **API Key** fields accordingly.
+
+6. Click **Playground**, and then ask something relevant to your search query, such as `latest news` or `what's the latest research on the environment?`.
+
+    <details>
+    <summary>Result</summary>
+
+    The LLM uses the search results context, your chat message, and it's built-in training data to respond to your question.
+    For example:
+
+    ```text
+    Here are some of the latest news articles related to the environment:
+    Ozone Pollution and Global Warming: A recent study highlights that ozone pollution is a significant global environmental concern, threatening human health and crop production while exacerbating global warming. Read more
+    ...
+    ```
+
+    </details>
+
+### Type Convert parameters
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| input_data | Input Data | Input parameter. The data to convert. Accepts `Data`, `DataFrame`, or `Message` input. |
+| output_type | Output Type | Input parameter. The desired output type, as one of **Data**, **DataFrame** or **Message**. |
+| output | Output | Output parameter. The converted data in the specified format. The output port changes depending on the selected **Output Type**. |
+
+## Legacy Processing components
+
+import PartialLegacy from '@site/docs/_partial-legacy.mdx';
+
+<PartialLegacy />
+
+The following Processing components are in legacy status:
+
+<details>
+<summary>Alter Metadata</summary>
+
+Replace this legacy component with the [**Data Operations** component](#data-operations).
+
+This component modifies metadata of input objects. It can add new metadata, update existing metadata, and remove specified metadata fields. The component works with both `Message` and `Data` objects, and can also create a new `Data` object from user-provided text.
+
+It accepts the following parameters:
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| input_value | Input | Input parameter. Objects to which Metadata should be added. |
+| text_in | User Text | Input parameter. Text input; the value is contained in the 'text' attribute of the `Data` object. Empty text entries are ignored. |
+| metadata | Metadata | Input parameter. Metadata to add to each object. |
+| remove_fields | Fields to Remove | Input parameter. Metadata fields to remove. |
+| data | Data | Output parameter. List of Input objects, each with added metadata. |
+
+</details>
+
+<details>
+<summary>Combine Data</summary>
+
+Replace this legacy component with the [**Data Operations** component](#data-operations) or the [**Loop** component](/components-logic#loop).
+
+This component combines multiple data sources into a single unified `Data` object.
+
+The component iterates through a list of `Data` objects, merging them into a single `Data` object (`merged_data`).
+If the input list is empty, it returns an empty data object.
+If there's only one input data object, it returns that object unchanged.
+
+The merging process uses the addition operator to combine data objects.
+
+</details>
+
+<details>
+<summary>Combine Text</summary>
+
+Replace this legacy component with the [**Data Operations** component](#data-operations).
+
+This component concatenates two text inputs into a single text chunk using a specified delimiter, outputting a `Message` object with the combined text.
+
+</details>
+
+<details>
+<summary>Create Data</summary>
+
+Replace this legacy component with the [**Data Operations** component](#data-operations).
+
+This component dynamically creates a `Data` object with a specified number of fields and a text key.
+
+It accepts the following parameters:
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| number_of_fields | Number of Fields | Input parameter. The number of fields to be added to the record. |
+| text_key | Text Key | Input parameter. Key that identifies the field to be used as the text content. |
+| text_key_validator | Text Key Validator | Input parameter. If enabled, checks if the given `Text Key` is present in the given `Data`. |
+
+</details>
+
+<details>
+<summary>Extract Key</summary>
+
+Replace this legacy component with the [**Data Operations** component](#data-operations).
+
+This component extracts a specific key from a `Data` object and returns the value associated with that key.
+
+</details>
+
+<details>
+<summary>Data to DataFrame/Data to Message</summary>
+
+Replace these legacy components with newer Processing components, such as the [**Data Operations** component](#data-operations) and [**Type Convert** component](#type-convert).
+
+These components converted one or more `Data` objects into a `DataFrame` or `Message` object.
+
+For the **Data to DataFrame** component, each `Data` object corresponds to one row in the resulting `DataFrame`.
+Fields from the `.data` attribute become columns, and the `.text` field (if present) is placed in a `text` column.
+
+</details>
+
+<details>
+<summary>Filter Data</summary>
+
+Replace this legacy component with the [**Data Operations** component](#data-operations).
+
+This component filters a `Data` object based on a list of keys (`filter_criteria`), returning a new `Data` object (`filtered_data`) that contains only the key-value pairs that match the filter criteria.
+
+</details>
+
+<details>
+<summary>Filter Values</summary>
+
+Replace this legacy component with the [**Data Operations** component](#data-operations).
+
+The Filter values component filters a list of data items based on a specified key, filter value, and comparison operator.
+
+It accepts the following parameters:
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| input_data | Input data | Input parameter. The list of data items to filter. |
+| filter_key | Filter Key | Input parameter. The key to filter on. |
+| filter_value | Filter Value | Input parameter. The value to filter by. |
+| operator | Comparison Operator | Input parameter. The operator to apply for comparing the values. |
+| filtered_data | Filtered data | Output parameter. The resulting list of filtered data items. |
+
+</details>
+
+<details>
+<summary>JSON Cleaner</summary>
+
+Replace this legacy component with the [**Parser** component](#parser).
+
+This component cleans JSON strings to ensure they are fully compliant with the JSON specification.
+
+It accepts the following parameters:
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| json_str | JSON String | Input parameter. The JSON string to be cleaned. This can be a raw, potentially malformed JSON string produced by language models or other sources that may not fully comply with JSON specifications. |
+| remove_control_chars | Remove Control Characters | Input parameter. If set to `True`, this option removes control characters (ASCII characters 0-31 and 127) from the JSON string. This can help eliminate invisible characters that might cause parsing issues or make the JSON invalid. |
+| normalize_unicode | Normalize Unicode | Input parameter. When enabled, this option normalizes Unicode characters in the JSON string to their canonical composition form (NFC). This ensures consistent representation of Unicode characters across different systems and prevents potential issues with character encoding. |
+| validate_json | Validate JSON | Input parameter. If set to `True`, this option attempts to parse the JSON string to ensure it is well-formed before applying the final repair operation. It raises a ValueError if the JSON is invalid, allowing for early detection of major structural issues in the JSON. |
+| output | Cleaned JSON String | Output parameter. The resulting cleaned, repaired, and validated JSON string that fully complies with the JSON specification. |
+
+</details>
+
+<details>
+<summary>Message to Data</summary>
+
+Replace this legacy component with the [**Type Convert** component](#type-convert).
+
+This component converts `Message` objects to `Data` objects.
+
+</details>
+
+<details>
+<summary>Parse DataFrame</summary>
+
+Replace this legacy component with the [**DataFrame Operations** component](#dataframe-operations) or [**Parser** component](#parser).
+
+This component converts `DataFrame` objects into plain text using templates.
+
+It accepts the following parameters:
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| df | DataFrame | Input parameter. The DataFrame to convert to text rows. |
+| template | Template | Input parameter. Template for formatting (use `{column_name}` placeholders). |
+| sep | Separator | Input parameter. String to join rows in output. |
+| text | Text | Output parameter. All rows combined into single text. |
+
+</details>
+
+<details>
+<summary>Parse JSON</summary>
+
+Replace this legacy component with the [**Parser** component](#parser).
+
+This component converts and extracts JSON fields in `Message` and `Data` objects using JQ queries, then returns `filtered_data`, which is a list of `Data` objects.
+
+</details>
+
+<details>
+<summary>Regex Extractor</summary>
+
+Replace this legacy component with the [**Parser** component](#parser).
+
+This component extracts patterns in text using regular expressions. It can be used to find and extract specific patterns or information in text.
+
+</details>
+
+<details>
+<summary>Select Data</summary>
+
+Replace this legacy component with the [**Data Operations** component](#data-operations).
+
+This component selects a single `Data` object from a list.
+
+It accepts the following parameters:
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data_list | Data List | Input parameter. List of data to select from |
+| data_index | Data Index | Input parameter. Index of the data to select |
+| selected_data | Selected Data | Output parameter. The selected `Data` object. |
+
+</details>
+
+<details>
+<summary>Update Data</summary>
+
+Replace this legacy component with the [**Data Operations** component](#data-operations).
+
+This component dynamically updates or appends data with specified fields.
+
+It accepts the following parameters:
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| old_data | Data | Input parameter. The records to update. |
+| number_of_fields | Number of Fields | Input parameter. The number of fields to add. The maximum is 15. |
+| text_key | Text Key | Input parameter. The key for text content. |
+| text_key_validator | Text Key Validator | Input parameter. Validates the text key presence. |
+| data | Data | Output parameter. The updated Data objects. |
+
+</details>

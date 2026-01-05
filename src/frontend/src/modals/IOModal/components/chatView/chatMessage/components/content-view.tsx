@@ -96,11 +96,12 @@ export const ErrorView = ({
                             {content.reason && (
                               <span className="">
                                 <Markdown
+                                  linkTarget="_blank"
                                   remarkPlugins={[remarkGfm]}
                                   components={{
                                     a: ({ node, ...props }) => (
                                       <a
-                                        {...props}
+                                        href={props.href}
                                         target="_blank"
                                         className="underline"
                                         rel="noopener noreferrer"
@@ -117,13 +118,11 @@ export const ErrorView = ({
                                     },
                                     code: ({
                                       node,
+                                      inline,
                                       className,
                                       children,
                                       ...props
                                     }) => {
-                                      const inline = !(
-                                        props as any
-                                      ).hasOwnProperty("data-language");
                                       let content = children as string;
                                       if (
                                         Array.isArray(children) &&

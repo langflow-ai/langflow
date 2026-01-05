@@ -32,7 +32,7 @@ For more information, see [Agent component parameters](#agent-component-paramete
 4. Enter a valid credential for your selected model provider.
 Make sure that the credential has permission to call the selected model.
 
-5. Add [**Chat Input** and **Chat Output** components](/chat-input-and-output) to your flow, and then connect them to the **Agent** component.
+5. Add [**Chat Input** and **Chat Output** components](/components-io) to your flow, and then connect them to the **Agent** component.
 
     At this point, you have created a basic LLM-based chat flow that you can test in the <Icon name="Play" aria-hidden="true" /> **Playground**.
     However, this flow only chats with the LLM.
@@ -40,10 +40,10 @@ Make sure that the credential has permission to call the selected model.
 
     ![A basic agent chat flow with Chat Input, Agent, and Chat Output components.](/img/agent-example-add-chat.png)
 
-6. Add **Web Search**, **URL**, and **Calculator** components to your flow.
-7. Enable **Tool Mode** in the **Web Search**, **URL**, and **Calculator** components:
+6. Add **News Search**, **URL**, and **Calculator** components to your flow.
+7. Enable **Tool Mode** in the **News Search**, **URL**, and **Calculator** components:
 
-    1. Click the **Web Search** component to expose the [component's header menu](/concepts-components#component-menus), and then enable **Tool Mode**.
+    1. Click the **News Search** component to expose the [component's header menu](/concepts-components#component-menus), and then enable **Tool Mode**.
     2. Repeat for the **URL** and **Calculator** components.
     3. Connect the **Toolset** port for each tool component to the **Tools** port on the **Agent** component.
 
@@ -73,7 +73,7 @@ Make sure that the credential has permission to call the selected model.
 9. To test a specific tool, ask the agent a question that uses one of the tools, such as `Summarize today's tech news`.
 
     To help you debug and test your flows, the **Playground** displays the agent's tool calls, the provided input, and the raw output the agent received before generating the summary.
-    With the given example, the agent should call the **Web Search** component with **Search Mode** set to **News**.
+    With the given example, the agent should call the **News Search** component's `search_news` action.
 
 You've successfully created a basic agent flow that uses some generic tools.
 
@@ -127,7 +127,7 @@ To attach a component as a tool, you must enable **Tool Mode** on the component 
 For more information, see [Configure tools for agents](/agents-tools).
 
 :::tip
-To allow agents to use tools from MCP servers, use the [**MCP Tools** component](/mcp-tools).
+To allow agents to use tools from MCP servers, use the [**MCP Tools** component](/components-agents#mcp-connection).
 :::
 
 ### Agent memory
@@ -143,7 +143,7 @@ By default, the **Agent** component uses your Langflow installation's storage, a
 The **Message History** component isn't required for default chat memory, but it is required if you want to use external chat memory like Mem0.
 Additionally, the **Message History** component provides more options for sorting, filtering, and limiting memories. Although, most of these options are built-in to the **Agent** component with default values.
 
-For more information, see [Store chat memory](/memory#store-chat-memory) and [**Message History** component](/message-history).
+For more information, see [Store chat memory](/memory#store-chat-memory) and [**Message History** component](/components-helpers#message-history).
 
 ### Additional parameters
 

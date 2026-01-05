@@ -23,7 +23,7 @@ To use the **Webhook** component in a flow, do the following:
 
 1. In Langflow, open the flow where you want to use the **Webhook** component.
 
-2. Add a [**Webhook** component](/webhook) and a [**Parser** component](/parser) to your flow.
+2. Add a [**Webhook** component](/components-data#webhook) and a [**Parser** component](/components-processing#parser) to your flow.
 
     These two components are commonly paired together because the **Parser** component extracts relevant data from the raw payload received by the **Webhook** component.
 
@@ -88,33 +88,6 @@ For the preceding example, the parsed payload would be a string like `ID: 12345 
 Typically, you won't manually trigger the **Webhook** component.
 To learn about triggering flows with payloads from external applications, see the video tutorial [How to Use Webhooks in Langflow](https://www.youtube.com/watch?v=IC1CAtzFRE0).
 
-## Require authentication for webhooks {#require-authentication-for-webhooks}
-
-By default, webhooks run as the flow owner without authentication (`LANGFLOW_WEBHOOK_AUTH_ENABLE=False`).
-
-To require API key authentication for webhooks, in your Langflow `.env` file, set `LANGFLOW_WEBHOOK_AUTH_ENABLE=True`.
-
-When webhook authentication is enabled, you must provide a Langflow API key with each webhook request.
-
-To include the API key with a request as an HTTP header:
-```bash
-curl -X POST "http://LANGFLOW_SERVER_ADDRESS/api/v1/webhook/FLOW_ID" \
-    -H "Content-Type: application/json" \
-    -H "x-api-key: LANGFLOW_API_KEY" \
-    -d '{"id": "12345", "name": "alex", "email": "alex@email.com"}'
-```
-
-To include the API key with a request as a query parameter:
-```bash
-curl -X POST "http://LANGFLOW_SERVER_ADDRESS/api/v1/webhook/FLOW_ID?x-api-key=LANGFLOW_API_KEY" \
-    -H "Content-Type: application/json" \
-    -d '{"id": "12345", "name": "alex", "email": "alex@email.com"}'
-```
-
-Replace `LANGFLOW_SERVER_ADDRESS`, `FLOW_ID`, and `LANGFLOW_API_KEY` with values from your deployment.
-
-For more information, see [API keys and authentication](/api-keys-and-authentication).
-
 ## Troubleshoot flows with Webhook components
 
 Use the following information to help address common issues that can occur with the **Webhook** component.
@@ -145,5 +118,5 @@ Then, you can examine the string output and troubleshoot your parsing template, 
 ## See also
 
 - [Get started with the Langflow API](/api-reference-api-examples)
-- [**Webhook** component](/webhook)
+- [**Webhook** component](/components-data#webhook)
 - [Flow trigger endpoints](/api-flows-run)

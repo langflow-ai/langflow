@@ -1,9 +1,3 @@
-export function CustomAPIGenerator({
-  isOpen,
-  isEmbedded,
-}: {
-  isOpen: boolean;
-  isEmbedded?: boolean;
-}) {
+export function CustomAPIGenerator({ isOpen }: { isOpen: boolean }) {
   return <></>;
 }

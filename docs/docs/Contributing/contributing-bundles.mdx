@@ -1,5 +1,5 @@
 ---
-title: Contribute component bundles
+title: Contribute bundles
 slug: /contributing-bundles
 ---
 
@@ -11,26 +11,24 @@ If you want to contribute your custom components back to the Langflow project, y
 Follow these steps to add components to <Icon name="Blocks" aria-hidden="true" /> **Bundles** in the Langflow visual editor.
 This example adds a bundle named `DarthVader`.
 
-For more information on creating custom components, see [Create custom Python components](/components-custom-components).
+## Add the bundle to the backend folder
 
-## Add the bundle to the lfx components folder
-
-1. Navigate to the lfx directory in the Langflow repository and create a new folder for your bundle.
-The path for your new component is `src/lfx/src/lfx/components/darth_vader`.
-You can view the [components folder](https://github.com/langflow-ai/langflow/tree/main/src/lfx/src/lfx/components) in the Langflow repository.
+1. Navigate to the backend directory in the Langflow repository and create a new folder for your bundle.
+The path for your new component is `src > backend > base > langflow > components > darth_vader`.
+You can view the [components folder](https://github.com/langflow-ai/langflow/tree/main/src/backend/base/langflow/components) in the Langflow repository.
 
 2. Within the newly created `darth_vader` folder, add the following files:
 
-    * `darth_vader_component.py` — This file contains the backend logic for the new bundle. Create multiple `.py` files for multiple components.
-    * `__init__.py` — This file initializes the bundle components. You can use any existing `__init__.py` as an example to see how it should be structured.
+* `darth_vader_component.py` — This file contains the backend logic for the new bundle. Create multiple `.py` files for multiple components.
+* `__init__.py` — This file initializes the bundle components. You can use any existing `__init__.py` as an example to see how it should be structured.
 
-    For an example of adding multiple components in a bundle, see the [Notion](https://github.com/langflow-ai/langflow/tree/main/src/lfx/src/lfx/components/Notion) bundle.
+For an example of adding multiple components in a bundle, see the [Notion](https://github.com/langflow-ai/langflow/tree/main/src/backend/base/langflow/components/Notion) bundle.
 
 
 ## Add the bundle to the frontend folder
 
 1. Navigate to the frontend directory in the Langflow repository to add your bundle's icon.
-The path for your new component icon is `src/frontend/src/icons/DarthVader`
+The path for your new component icon is `src > frontend > src > icons > DarthVader`
 You can view the [icons folder](https://github.com/langflow-ai/langflow/tree/main/src/frontend/src/icons) in the Langflow repository.
 To add your icon, create **three** files inside the `icons/darth_vader` folder.
 
@@ -107,12 +105,12 @@ For example:
         import("@/icons/DeepSeek").then((mod) => ({ default: mod.DeepSeekIcon })),
     ```
 
-8. To add your bundle to the <Icon name="Blocks" aria-hidden="true" /> **Bundles** menu, edit the [`SIDEBAR_BUNDLES` array](https://github.com/langflow-ai/langflow/blob/main/src/frontend/src/utils/styleUtils.ts#L243) in `/src/frontend/src/utils/styleUtils.ts`.
+8. To add your bundle to the <Icon name="Blocks" aria-hidden="true" /> **Bundles** menu, edit the [`SIDEBAR_BUNDLES` array](https://github.com/langflow-ai/langflow/blob/main/src/frontend/src/utils/styleUtils.ts#L231) in `/src/frontend/src/utils/styleUtils.ts`.
 
     Add an object to the array with the following keys:
 
     * `display_name`: The text label shown in the Langflow visual editor
-    * `name`: The name of the folder you created within the `/src/lfx/src/lfx/components` directory
+    * `name`: The name of the folder you created within the `/src/backend/base/langflow/components` directory
     * `icon`: The name of the bundle's icon that you defined in the previous steps
 
     For example:
@@ -128,7 +126,7 @@ For example:
 In your component bundle, associate the icon variable with your new bundle.
 
 In your `darth_vader_component.py` file, in the component class, include the icon that you defined in the frontend.
-The `icon` must point to the directory you created for your icons within the `src/frontend/src/icons` directory.
+The `icon` must point to the directory you created for your icons within the `src > frontend > src > icons` directory.
 For example:
 ```
 class DarthVaderAPIComponent(LCToolComponent):

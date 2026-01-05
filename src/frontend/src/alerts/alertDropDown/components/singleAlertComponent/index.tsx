@@ -30,12 +30,13 @@ export default function SingleAlert({
               {dropItem.list.map((item, idx) => (
                 <li className="word-break-break-word" key={idx}>
                   <Markdown
+                    linkTarget="_blank"
                     remarkPlugins={[remarkGfm]}
                     className="align-text-top"
                     components={{
                       a: ({ node, ...props }) => (
                         <a
-                          {...props}
+                          href={props.href}
                           target="_blank"
                           className="underline"
                           rel="noopener noreferrer"

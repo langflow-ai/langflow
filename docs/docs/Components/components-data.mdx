@@ -1,0 +1,605 @@
+---
+title: Data
+slug: /components-data
+---
+
+import Icon from "@site/src/components/icon";
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialDevModeWindows from '@site/docs/_partial-dev-mode-windows.mdx';
+
+Data components bring data into your flows from various sources like files, API endpoints, and URLs.
+For example:
+
+* **Load files**: Import data from a file or directory with the [**File** component](#file) and [**Directory** component](#directory).
+
+* **Search the web**: Fetch data from the web with components like the [**News Search** component](#news-search), [**RSS Reader** component](#rss-reader), [**Web Search** component](#web-search), and [**URL** component](#url).
+
+* **Make API calls**: Use APIs to trigger flows or perform actions with the [**API Request** component](#api-request) and [**Webhook** component](#webhook).
+
+* **Run SQL queries**: Query an SQL database with the [**SQL Database** component](#sql-database).
+
+Each component runs different commands for retrieval, processing, and type checking.
+Some components are a minimal wrapper for a command that you provide, and others include built-in scripts to fetch and process data based on variable inputs.
+Additionally, some components return raw data, whereas others can convert, restructure, or validate the data before outputting it.
+This means that some similar components might produce different results.
+
+:::tip
+Data components pair well with [Processing components](/components-processing) that can perform additional parsing, transformation, and validation after retrieving the data.
+
+This can include basic operations, like saving a file in a specific format, or more complex tasks, like using a **Text Splitter** component to break down a large document into smaller chunks before generating embeddings for vector search.
+:::
+
+## Use Data components in flows
+
+Data components are used often in flows because they offer a versatile way to perform common functions.
+
+You can use these components to perform their base functions as isolated steps in your flow, or you can connect them to an **Agent** component as tools.
+
+![An agent flow with three Data components connected to the agent as tools](/img/connect-data-components-to-agent.png)
+
+For example flows, see the following:
+
+* [Create a chatbot that can ingest files](/chat-with-files): Learn how to use a **File** component to load a file as context for a chatbot.
+The file and user input are both passed to the LLM so you can ask questions about the file you uploaded.
+
+* [Create a vector RAG chatbot](/chat-with-rag): Learn how to ingest files for use in Retrieval-Augmented Generation (RAG), and then set up a chatbot that can use the ingested files as context.
+The two flows in this tutorial prepare files for RAG, and then let your LLM use vector search to retrieve contextually relevant data during a chat session.
+
+* [Configure tools for agents](/agents-tools): Learn how to use any component as a tool for an agent.
+When used as tools, the agent autonomously decides when to call a component based on the user's query.
+
+* [Trigger flows with webhooks](/webhook): Learn how to use the **Webhook** component to trigger a flow run in response to an external event.
+
+## API Request
+
+The **API Request** component constructs and sends HTTP requests using URLs or curl commands:
+
+* **URL mode**: Enter one or more comma-separated URLs, and then select the method for the request to each URL.
+* **curl mode**: Enter the curl command to execute.
+
+You can enable additional request options and fields in the component's parameters.
+
+Returns a [`Data` object](/data-types#data) containing the response.
+
+For provider-specific API components, see <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components).
+
+### API Request parameters
+
+<PartialParams />
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| mode | Mode | Input parameter. Set the mode to either **URL** or **curl**. |
+| urls | URL | Input parameter. Enter one or more comma-separated URLs for the request. |
+| curl | curl | Input parameter. **curl mode** only. Enter a complete curl command. Other component parameters are populated from the command arguments. |
+| method | Method | Input parameter. The HTTP method to use. |
+| query_params | Query Parameters | Input parameter. The query parameters to append to the URL. |
+| body | Body | Input parameter. The body to send with POST, PATCH, and PUT requests as a dictionary. |
+| headers | Headers | Input parameter. The headers to send with the request as a dictionary. |
+| timeout | Timeout | Input parameter. The timeout to use for the request. |
+| follow_redirects | Follow Redirects | Input parameter. Whether to follow HTTP redirects. The default is enabled (`true`). If disabled (`false`), HTTP redirects aren't followed. |
+| save_to_file | Save to File | Input parameter. Whether to save the API response to a temporary file. Default: Disabled (`false`) |
+| include_httpx_metadata | Include HTTPx Metadata | Input parameter. Whether to include properties such as `headers`, `status_code`, `response_headers`, and `redirection_history` in the output. Default: Disabled (`false`) |
+
+## Directory
+
+The **Directory** component recursively loads files from a directory, with options for file types, depth, and concurrency.
+
+Files must be of a [supported type and size](#file-type-and-size-limits) to be loaded.
+
+Outputs either a [`Data`](/data-types#data) or [`DataFrame`](/data-types#dataframe) object, depending on the directory contents.
+
+### Directory parameters
+
+<PartialParams />
+
+| Name               | Type             | Description                                        |
+| ------------------ | ---------------- | -------------------------------------------------- |
+| path               | MessageTextInput | Input parameter. The path to the directory to load files from. Default: Current directory (`.`) |
+| types              | MessageTextInput | Input parameter. The file types to load. Select one or more, or leave empty to attempt to load all files. |
+| depth              | IntInput         | Input parameter. The depth to search for files. |
+| max_concurrency    | IntInput         | Input parameter. The maximum concurrency for loading multiple files. |
+| load_hidden        | BoolInput        | Input parameter. If `true`, hidden files are loaded.                  |
+| recursive          | BoolInput        | Input parameter. If `true`, the search is recursive.                  |
+| silent_errors      | BoolInput        | Input parameter. If `true`, errors don't raise an exception.         |
+| use_multithreading | BoolInput        | Input parameter. If `true`, multithreading is used.                   |
+
+## File
+
+The **File** component loads and parses files, converts the content into a `Data`, `DataFrame`, or `Message` object.
+It supports multiple file types, provides parameters for parallel processing and error handling, and supports advanced parsing with the Docling library.
+
+You can add files to the **File** component in the visual editor or at runtime, and you can upload multiple files at once.
+For more information about uploading files and working with files in flows, see [File management](/concepts-file-management) and [Create a chatbot that can ingest files](/chat-with-files).
+
+### File type and size limits
+
+By default, the maximum file size is 1024 MB.
+To modify this value, change the `LANGFLOW_MAX_FILE_SIZE_UPLOAD` [environment variable](/environment-variables).
+
+<details>
+<summary>Supported file types</summary>
+
+The following file types are supported by the **File** component.
+Use archive and compressed formats to bundle multiple files together, or use the [**Directory** component](#directory) to load all files in a directory.
+
+- `.bz2`
+- `.csv`
+- `.docx`
+- `.gz`
+- `.htm`
+- `.html`
+- `.json`
+- `.js`
+- `.md`
+- `.mdx`
+- `.pdf`
+- `.py`
+- `.sh`
+- `.sql`
+- `.tar`
+- `.tgz`
+- `.ts`
+- `.tsx`
+- `.txt`
+- `.xml`
+- `.yaml`
+- `.yml`
+- `.zip`
+
+</details>
+
+If you need to load an unsupported file type, you must use a different component that supports that file type and, potentially, parses it outside Langflow, or you must convert it to a supported type before uploading it.
+
+For images, see [Upload images](/concepts-file-management#upload-images).
+
+For videos, see the **Twelve Labs** and **YouTube** <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components).
+
+### File parameters
+
+<PartialParams />
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| path | Files | Input parameter. The path to files to load. Can be local or in [Langflow file management](/concepts-file-management). Supports individual files and bundled archives. |
+| file_path | Server File Path | Input parameter. A `Data` object with a `file_path` property pointing to a file in [Langflow file management](/concepts-file-management) or a `Message` object with a path to the file. Supersedes **Files** (`path`) but supports the same file types. |
+| separator | Separator | Input parameter. The separator to use between multiple outputs in `Message` format. |
+| silent_errors | Silent Errors | Input parameter. If `true`, errors in the component don't raise an exception. Default: Disabled (`false`). |
+| delete_server_file_after_processing | Delete Server File After Processing | Input parameter. If `true` (default), the **Server File Path** (`file_path`) is deleted after processing. |
+| ignore_unsupported_extensions | Ignore Unsupported Extensions | Input parameter. If enabled (`true`), files with unsupported extensions are accepted but not processed. If disabled (`false`), the **File** component either can throw an error if an unsupported file type is provided. The default is `true`. |
+| ignore_unspecified_files | Ignore Unspecified Files | Input parameter. If `true`, `Data` with no `file_path` property is ignored. If `false` (default), the component errors when a file isn't specified. |
+| concurrency_multithreading | Processing Concurrency | Input parameter. The number of files to process concurrently if multiple files are uploaded. Default is 1. Values greater than 1 enable parallel processing for 2 or more files. Ignored for single-file uploads and advanced parsing. |
+| advanced_parser | Advanced Parser | Input parameter. If `true`, enables [advanced parsing](#advanced-parsing). Only available for single-file uploads of compatible file types. Default: Disabled (`false`). |
+
+### Advanced parsing
+
+Starting in Langflow version 1.6, the **File** component supports advanced document parsing using the [Docling](https://docling-project.github.io/docling/) library for supported file types.
+
+To use advanced parsing, do the following:
+
+1. Complete the following prerequisites, if applicable:
+
+    * **Install Langflow version 1.6 or later**: Earlier versions don't support advanced parsing with the **File** component. For upgrade guidance, see the [Release notes](/release-notes).
+
+    * **Install Docling dependency on macOS Intel (x86_64)**: The Docling dependency isn't installed by default for macOS Intel (x86_64). Use the [Docling installation guide](https://docling-project.github.io/docling/installation/) to install the Docling dependency.
+
+        For all other operating systems, the Docling dependency is installed by default.
+
+    * **Enable Developer Mode for Windows**:
+    <PartialDevModeWindows />
+
+        Developer Mode isn't required for Langflow OSS on Windows.
+
+2. Add one valid file to the **File** component.
+
+    :::info Advanced parsing limitations
+    * Advanced parsing processes only one file.
+    If you select multiple files, the **File** component processes the first file only, ignoring any additional files.
+    To process multiple files with advanced parsing, pass each file to a separate **File** components, or use the dedicated [**Docling** components](/bundles-docling).
+
+    * Advanced parsing can process any of the **File** component's supported file types except `.csv`, `.xlsx`, and `.parquet` files because it is designed for document processing, such as extracting text from PDFs.
+    For structured data analysis, use the [**Parser** component](/components-processing#parser).
+    :::
+
+3. Enable **Advanced Parsing**.
+
+4. Click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus) to configure advanced parsing parameters, which are hidden by default:
+
+    | Name | Display Name | Info |
+    |------|--------------|------|
+    | pipeline | Pipeline | Input parameter, advanced parsing. The Docling pipeline to use, either `standard` (default, recommended) or `vlm` (may produce inconsistent results). |
+    | ocr_engine | OCR Engine | Input parameter, advanced parsing. The OCR parser to use if `pipeline` is `standard`. Options are `None` (default) or [`EasyOCR`](https://pypi.org/project/easyocr/). `None` means that no OCR engine is used, and this can produce inconsistent or broken results for some documents. This setting has no effect with the `vlm` pipeline. |
+    | md_image_placeholder | Markdown Image Placeholder | Input parameter, advanced parsing. Defines the placeholder for image files if the output type is **Markdown**. Default: `<!-- image -->`. |
+    | md_page_break_placeholder | Markdown Page Break Placeholder | Input parameter, advanced parsing. Defines the placeholder for page breaks if the output type is **Markdown**. Default: `""` (empty string). |
+    | doc_key | Document Key | Input parameter, advanced parsing. The key to use for the `DoclingDocument` column, which holds the structured information extracted from the source document. See [Docling Document](https://docling-project.github.io/docling/concepts/docling_document/) for details. Default: `doc`. |
+
+    :::tip
+    For additional Docling features, including other components and OCR parsers, use the [**Docling** bundle](/bundles-docling).
+    :::
+
+### File output
+
+The output of the **File** component depends on the number of files loaded and whether advanced parsing is enabled.
+If multiple options are available, you can set the output type near the component's output port.
+
+<Tabs>
+<TabItem value="zero" label="No files">
+
+If you run the **File** component with no file selected, it throws an error, or, if **Silent Errors** is enabled, produces no output.
+
+</TabItem>
+<TabItem value="one-false" label="One file without advanced parsing">
+
+If advanced parsing is disabled and you upload one file, the following output types are available:
+
+- **Structured Content**: Available only for `.csv`, `.xlsx`, `.parquet`, and `.json` files.
+
+    - For `.csv` files, produces a [`DataFrame`](/data-types#dataframe) representing the table data.
+    - For `.json` files, produces a [`Data`](/data-types#data) object with the parsed JSON data.
+
+- **Raw Content**: A [`Message`](/data-types#message) containing the file's raw text content.
+
+- **File Path**: A [`Message`](/data-types#message) containing the path to the file in [Langflow file management](/concepts-file-management).
+
+</TabItem>
+<TabItem value="one-true" label="One file with advanced parsing">
+
+If advanced parsing is enabled and you upload one file, the following output types are available:
+
+- **Structured Output**: A [`DataFrame`](/data-types#dataframe) containing the Docling-processed document data with text elements, page numbers, and metadata.
+
+- **Markdown**: A [`Message`](/data-types#message) containing the uploaded document contents in Markdown format with image placeholders.
+
+- **File Path**: A [`Message`](/data-types#message) containing the path to the file in [Langflow file management](/concepts-file-management).
+
+</TabItem>
+<TabItem value="multi" label="Multiple files">
+
+If you upload multiple files, the component outputs **Files**, which is a [`DataFrame`](/data-types#dataframe) containing the content and metadata of all selected files.
+
+[Advanced parsing](#advanced-parsing) doesn't support multiple files; it processes only the first file.
+
+</TabItem>
+</Tabs>
+
+## News Search
+
+The **News Search** component searches Google News through RSS, and then returns clean article data as a [`DataFrame`](/data-types#dataframe) containing article titles, links, publication dates, and summaries.
+The component's `clean_html` method parses the HTML content with the BeautifulSoup library, removes HTML markup, and strips whitespace to output clean data.
+
+For other RSS feeds, use the [**RSS Reader** component](#rss-reader), and for other searches use the [**Web Search** component](#web-search) or provider-specific <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components).
+
+When used as a standard component in a flow, the **News Search** component must be connected to a component that accepts `DataFrame` input.
+You can connect the **News Search** component directly to a compatible component, or you can use a [Processing component](/components-processing) to convert or extract data of a different type between components.
+
+When used in **Tool Mode** with an **Agent** component, the **News Search** component can be connected directly to the **Agent** component's **Tools** port without converting the data.
+The agent decides whether to use the **News Search** component based on the user's query, and it can process the `DataFrame` output directly.
+
+### News Search parameters
+
+<PartialParams />
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| query | Search Query | Input parameter. Search keywords for news articles. |
+| hl | Language (hl) | Input parameter. Language code, such as en-US, fr, de. Default: `en-US`. |
+| gl | Country (gl) | Input parameter. Country code, such as US, FR, DE. Default: `US`. |
+| ceid | Country:Language (ceid) | Input parameter. Language, such as US:en, FR:fr. Default: `US:en`. |
+| topic | Topic | Input parameter. One of: `WORLD`, `NATION`, `BUSINESS`, `TECHNOLOGY`, `ENTERTAINMENT`, `SCIENCE`, `SPORTS`, `HEALTH`. |
+| location | Location (Geo) | Input parameter. City, state, or country for location-based news. Leave blank for keyword search. |
+| timeout | Timeout | Input parameter. Timeout for the request in seconds. |
+| articles | News Articles | Output parameter. A `DataFrame` with the key columns `title`, `link`, `published` and `summary`. |
+
+## RSS Reader
+
+The **RSS Reader** component fetches and parses RSS feeds from any valid RSS feed URL, and then returns the feed content as a [`DataFrame`](/data-types#dataframe) containing article titles, links, publication dates, and summaries.
+
+When used as a standard component in a flow, the **RSS Reader** component must be connected to a component that accepts `DataFrame` input.
+You can connect the **RSS Reader** component directly to a compatible component, or you can use a [Processing component](/components-processing) to convert or extract data of a different type between components.
+
+When used in **Tool Mode** with an **Agent** component, the **RSS Reader** component can be connected directly to the **Agent** component's **Tools** port without converting the data.
+The agent decides whether to use the **RSS Reader** component based on the user's query, and it can process the `DataFrame` output directly.
+
+### RSS Reader parameters
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| rss_url | RSS Feed URL | Input parameter. URL of the RSS feed to parse, such as `https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml`. |
+| timeout | Timeout | Input parameter. Timeout for the RSS feed request in seconds. Default: `5`. |
+| articles | Articles | Output parameter. A `DataFrame` containing the key columns `title`, `link`, `published` and `summary`. |
+
+## SQL Database
+
+The **SQL Database** component executes SQL queries on [SQLAlchemy-compatible databases](https://docs.sqlalchemy.org/en/20/).
+It supports any SQLAlchemy-compatible database, such as PostgreSQL, MySQL, and SQLite.
+
+For CQL queries, see the [**DataStax** bundle](/bundles-datastax).
+
+### Query an SQL database with natural language prompts
+
+The following example demonstrates how to use the **SQL Database** component in a flow, and then modify the component to support natural language queries through an **Agent** component.
+
+This allows you to use the same **SQL Database** component for any query, rather than limiting it to a single manually entered query or requiring the user, application, or another component to provide valid SQL syntax as input.
+Users don't need to master SQL syntax because the **Agent** component translates the users' natural language prompts into SQL queries, passes the query to the **SQL Database** component, and then returns the results to the user.
+
+Additionally, input from applications and other components doesn't have to be extracted and transformed to exact SQL queries.
+Instead, you only need to provide enough context for the agent to understand that it should create and run a SQL query according to the incoming data.
+
+1. Use your own sample database or create a test database.
+
+    <details>
+    <summary>Create a test SQL database</summary>
+
+    1. Create a database called `test.db`:
+
+        ```shell
+        sqlite3 test.db
+        ```
+
+    2. Add some values to the database:
+
+        ```shell
+        sqlite3 test.db "
+        CREATE TABLE users (
+            id INTEGER PRIMARY KEY,
+            name TEXT,
+            email TEXT,
+            age INTEGER
+        );
+
+        INSERT INTO users (name, email, age) VALUES
+            ('John Doe', 'john@example.com', 30),
+            ('Jane Smith', 'jane@example.com', 25),
+            ('Bob Johnson', 'bob@example.com', 35);
+        "
+        ```
+
+    3. Verify that the database has been created and contains your data:
+
+        ```shell
+        sqlite3 test.db "SELECT * FROM users;"
+        ```
+
+        The result should list the text data you entered in the previous step:
+
+        ```shell
+        1|John Doe|john@example.com
+        2|Jane Smith|jane@example.com
+        3|John Doe|john@example.com
+        4|Jane Smith|jane@example.com
+        ```
+
+    </details>
+
+2. Add an **SQL Database** component to your flow.
+
+3. In the **Database URL** field, add the connection string for your database, such as `sqlite:///test.db`.
+
+    At this point, you can enter an SQL query in the **SQL Query** field or use the [port](/concepts-components#component-ports) to pass a query from another component, such as a **Chat Input** component.
+    If you need more space, click <Icon name="Expand" aria-hidden="true"/> **Expand** to open a full-screen text field.
+
+    However, to make this component more dynamic in an agentic context, use an **Agent** component to transform natural language input to SQL queries, as explained in the following steps.
+
+4. Click the **SQL Database** component to expose the [component's header menu](/concepts-components#component-menus), and then enable **Tool Mode**.
+
+    You can now use this component as a tool for an agent.
+    In **Tool Mode**, no query is set in the **SQL Database** component because the agent will generate and send one if it determines that the tool is required to complete the user's request.
+    For more information, see [Configure tools for agents](/agents-tools).
+
+5. Add an **Agent** component to your flow, and then enter your OpenAI API key.
+
+    The default model is an OpenAI model.
+    If you want to use a different model, edit the **Model Provider**, **Model Name**, and **API Key** fields accordingly.
+
+    If you need to execute highly specialized queries, consider selecting a model that is trained for tasks like advanced SQL queries.
+    If your preferred model isn't in the **Agent** component's built-in model list, set **Model Provider** to **Connect other models**, and then connect any [language model component](/components-models).
+
+6. Connect the **SQL Database** component's **Toolset** output to the **Agent** component's **Tools** input.
+
+    ![SQL Database component connected to an Agent component](/img/component-sql-database.png)
+
+7. Click **Playground**, and then ask the agent a question about the data in your database, such as `Which users are in my database?`
+
+    The agent determines that it needs to query the database to answer the question, uses the LLM to generate an SQL query, and then uses the **SQL Database** component's `RUN_SQL_QUERY` action to run the query on your database.
+    Finally, it returns the results in a conversational format, unless you provide instructions to return raw results or a different format.
+
+    The following example queried a test database with little data, but with a more robust dataset you could ask more detailed or complex questions.
+
+    ```text
+    Here are the users in your database:
+
+    1. **John Doe** - Email: john@example.com
+    2. **Jane Smith** - Email: jane@example.com
+    3. **John Doe** - Email: john@example.com
+    4. **Jane Smith** - Email: jane@example.com
+
+    It seems there are duplicate entries for the users.
+    ```
+
+### SQL Database parameters
+
+<PartialParams />
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| database_url | Database URL | Input parameter. The SQLAlchemy-compatible database connection URL. |
+| query | SQL Query | Input parameter. The SQL query to execute, which can be entered directly, passed in from another component, or, in **Tool Mode**, automatically provided by an **Agent** component. |
+| include_columns | Include Columns | Input parameter. Whether to include column names in the result. The default is enabled (`true`). |
+| add_error | Add Error | Input parameter. If enabled, adds any error messages to the result, if any are returned. The default is disabled (`false`). |
+| run_sql_query | Result Table | Output parameter. The query results as a [`DataFrame`](/data-types#dataframe). |
+
+## URL
+
+The **URL** component fetches content from one or more URLs, processes the content, and returns it in various formats.
+It follows links recursively to a given depth, and it supports output in plain text or raw HTML.
+
+### URL parameters
+
+<PartialParams />
+
+Some of the available parameters include the following:
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| urls | URLs | Input parameter. One or more URLs to crawl recursively. In the visual editor, click <Icon name="Plus" aria-hidden="true"/> **Add URL** to add multiple URLs. |
+| max_depth | Depth | Input parameter. Controls link traversal: how many "clicks" away from the initial page the crawler will go. A depth of 1 limits the crawl to the first page at the given URL only. A depth of 2 means the crawler crawls the first page plus each page directly linked from the first page, then stops. This setting exclusively controls link traversal; it doesn't limit the number of URL path segments or the domain. |
+| prevent_outside | Prevent Outside | Input parameter. If enabled, only crawls URLs within the same domain as the root URL. This prevents the crawler from accessing sites outside the given URL's domain, even if they are linked from one of the crawled pages. |
+| use_async | Use Async | Input parameter. If enabled, uses asynchronous loading which can be significantly faster but might use more system resources. |
+| format | Output Format | Input parameter. Sets the desired output format as **Text** or **HTML**. The default is **Text**. For more information, see [URL output](#url-output).|
+| timeout | Timeout | Input parameter. Timeout for the request in seconds. |
+| headers | Headers | Input parameter. The headers to send with the request if needed for authentication or otherwise. |
+
+Additional input parameters are available for error handling and encoding.
+
+### URL output
+
+There are two settings that control the output of the **URL** component at different stages:
+
+* **Output Format**: This optional parameter controls the content extracted from the crawled pages:
+
+    * **Text (default)**: The component extracts only the text from the HTML of the crawled pages.
+    * **HTML**: The component extracts the entire raw HTML content of the crawled pages.
+
+* **Output data type**: In the component's output field (near the output port) you can select the structure of the outgoing data when it is passed to other components:
+
+    * **Extracted Pages**: Outputs a [`DataFrame`](/data-types#dataframe) that breaks the crawled pages into columns for the entire page content (`text`) and metadata like `url` and `title`.
+    * **Raw Content**: Outputs a [`Message`](/data-types#message) containing the entire text or HTML from the crawled pages, including metadata, in a single block of text.
+
+When used as a standard component in a flow, the **URL** component must be connected to a component that accepts the selected output data type (`DataFrame` or `Message`).
+You can connect the **URL** component directly to a compatible component, or you can use a [**Type Convert** component](/components-processing#type-convert) to convert the output to another type before passing the data to other components if the data types aren't directly compatible.
+
+Processing components like the **Type Convert** component are useful with the **URL** component because it can extract a large amount of data from the crawled pages.
+For example, if you only want to pass specific fields to other components, you can use a [**Parser** component](/components-processing#parser) to extract only that data from the crawled pages before passing the data to other components.
+
+When used in **Tool Mode** with an **Agent** component, the **URL** component can be connected directly to the **Agent** component's **Tools** port without converting the data.
+The agent decides whether to use the **URL** component based on the user's query, and it can process the `DataFrame` or `Message` output directly.
+
+## Web Search
+
+The **Web Search** component performs a basic web search using DuckDuckGo's HTML scraping interface.
+For other search APIs, see <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components).
+
+:::info
+The **Web Search** component uses web scraping that can be subject to rate limits.
+
+For production use, consider using another search component with more robust API support, such as provider-specific bundles.
+:::
+
+### Use the Web Search component in a flow
+
+The following steps demonstrate one way that you can use a **Web Search** component in a flow:
+
+1. Create a flow based on the **Basic Prompting** template.
+
+2. Add a **Web Search** component, and then enter a search query, such as `environmental news`.
+
+3. Add a [**Type Convert** component](/components-processing#type-convert), set the **Output Type** to **Message**, and then connect the **Web Search** component's output to the **Type Convert** component's input.
+
+    By default, the **Web Search** component outputs a `DataFrame`.
+    Because the **Prompt Template** component only accepts `Message` data, this conversion is required so that the flow can pass the search results to the **Prompt Template** component.
+    For more information, see [Web Search output](#web-search-output).
+
+5. In the **Prompt Template** component's **Template** field, add a variable like `{searchresults}` or `{context}`.
+
+    This adds a field to the **Prompt Template** component that you can use to pass the converted search results to the prompt.
+    For more information, see [Define variables in prompts](/components-prompts#define-variables-in-prompts).
+
+6. Connect the **Type Convert** component's output to the new variable field on the **Prompt Template** component.
+
+    ![Type convert web search output to chat](/img/component-type-convert-and-web-search.png)
+
+7. In the **Language Model** component, add your OpenAI API key, or select a different provider and model.
+
+8. Click **Playground**, and then enter `latest news`.
+
+    The LLM processes the request, including the context passed through the **Prompt Template** component, and then prints the response in the **Playground** chat interface.
+
+    <details>
+    <summary>Result</summary>
+
+    The following is an example of a possible response.
+    Your response may vary based on the current state of the web, your specific query, the model, and other factors.
+
+    ```text
+    Here are some of the latest news articles related to the environment:
+    Ozone Pollution and Global Warming: A recent study highlights that ozone pollution is a significant global environmental concern, threatening human health and crop production while exacerbating global warming. Read more
+    ...
+    ```
+
+    </details>
+
+### Web Search parameters
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| query | Search Query | Input parameter. Keywords to search for. |
+| timeout | Timeout | Input parameter. Timeout for the web search request in seconds. Default: `5`. |
+| results | Search Results | Output parameter. Returns a `DataFrame` containing `title`, `links`, and `snippets`. For more information, see [Web Search output](#web-search-output). |
+
+### Web Search output
+
+The **Web Search** component outputs a [`DataFrame`](/data-types#dataframe) containing the key columns `title`, `links`, and `snippets`.
+
+When used as a standard component in a flow, the **Web Search** component must be connected to a component that accepts `DataFrame` input, or you must use a [**Type Convert** component](/components-processing#type-convert) to convert the output to `Data` or `Message` type before passing the data to other components.
+
+When used in **Tool Mode** with an **Agent** component, the **Web Search** component can be connected directly to the **Agent** component's **Tools** port without converting the data.
+The agent decides whether to use the **Web Search** component based on the user's query, and it can process the `DataFrame` output directly.
+
+## Webhook
+
+The **Webhook** component defines a webhook trigger that runs a flow when it receives an HTTP POST request.
+
+### Trigger the webhook
+
+When you add a **Webhook** component to your flow, a **Webhook curl** tab is added to the flow's [**API Access** pane](/concepts-publish#api-access).
+This tab automatically generates an HTTP POST request code snippet that you can use to trigger your flow through the **Webhook** component.
+For example:
+
+```bash
+curl -X POST \
+  "http://$LANGFLOW_SERVER_ADDRESS/api/v1/webhook/$FLOW_ID" \
+  -H 'Content-Type: application/json' \
+  -H 'x-api-key: $LANGFLOW_API_KEY' \
+  -d '{"any": "data"}'
+```
+
+For more information, see [Trigger flows with webhooks](/webhook).
+
+### Webhook parameters
+
+| Name | Display Name | Description |
+|------|--------------|-------------|
+| data | Payload | Input parameter. Receives a payload from external systems through HTTP POST requests. |
+| curl | curl | Input parameter. The curl command template for making requests to this webhook. |
+| endpoint | Endpoint | Input parameter. The endpoint URL where this webhook receives requests. |
+| output_data | Data | Output parameter. The processed data from the webhook input. Returns an empty [`Data`](/data-types#data) object if no input is provided. If the input isn't valid JSON, the **Webhook** component wraps it in a `payload` object so that it can be accepted as input to trigger the flow. |
+
+## Additional Data components
+
+Langflow's core components are meant to be generic and support a range of use cases.
+Core components typically aren't limited to a single provider.
+
+If the core components don't meet your needs, you can find provider-specific components in <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components).
+
+For example, the [**DataStax** bundle](/bundles-datastax) includes components for CQL queries, and the [**Google** bundle](/bundles-google) includes components for Google Search APIs.
+
+## Legacy Data components
+
+import PartialLegacy from '@site/docs/_partial-legacy.mdx';
+
+<PartialLegacy />
+
+The following Data components are in legacy status:
+
+* **Load CSV**
+* **Load JSON**
+
+Replace these components with the **File** component, which supports loading CSV and JSON files, as well as many other file types.
+
+## See also
+
+- [**Google** bundle](/bundles-google)
+- [**Composio** bundle](/bundles-composio)
+- [File management](/concepts-file-management)

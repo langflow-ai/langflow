@@ -22,7 +22,7 @@ export type SingleAlertComponentType = {
 };
 export type AlertDropdownType = {
   children: JSX.Element;
-  notificationRef?: React.RefObject<HTMLDivElement | null>;
+  notificationRef?: React.RefObject<HTMLDivElement>;
   onClose?: () => void;
 };
 export type AlertItemType = {

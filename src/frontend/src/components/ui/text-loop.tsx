@@ -35,7 +35,7 @@ export function TextLoop({
 }: TextLoopProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const items = Children.toArray(children);
-  const timerRef = useRef<NodeJS.Timeout>(undefined);
+  const timerRef = useRef<NodeJS.Timeout>();
 
   const updateIndex = useCallback(() => {
     setCurrentIndex((current) => {

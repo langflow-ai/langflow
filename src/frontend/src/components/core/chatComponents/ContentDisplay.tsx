@@ -55,14 +55,10 @@ export default function ContentDisplay({
         <div className="ml-1 pr-20">
           <Markdown
             remarkPlugins={[remarkGfm]}
+            linkTarget="_blank"
             rehypePlugins={[rehypeMathjax]}
             className="markdown prose max-w-full text-sm font-normal dark:prose-invert"
             components={{
-              a: ({ node, ...props }) => (
-                <a {...props} target="_blank" rel="noopener noreferrer">
-                  {props.children}
-                </a>
-              ),
               p({ node, ...props }) {
                 return (
                   <span className="block w-fit max-w-full">
@@ -73,8 +69,7 @@ export default function ContentDisplay({
               pre({ node, ...props }) {
                 return <>{props.children}</>;
               },
-              code: ({ node, className, children, ...props }) => {
-                const inline = !(props as any).hasOwnProperty("data-language");
+              code: ({ node, inline, className, children, ...props }) => {
                 let content = children as string;
                 if (
                   Array.isArray(children) &&
@@ -170,10 +165,7 @@ export default function ContentDisplay({
                 ul({ node, ...props }) {
                   return <ul className="max-w-full">{props.children}</ul>;
                 },
-                code: ({ node, className, children, ...props }) => {
-                  const inline = !(props as any).hasOwnProperty(
-                    "data-language",
-                  );
+                code: ({ node, inline, className, children, ...props }) => {
                   const match = /language-(\w+)/.exec(className || "");
                   return !inline ? (
                     <SimplifiedCodeTabComponent

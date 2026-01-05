@@ -43,6 +43,9 @@ test(
         "say a random number between 1 and 300000 and a random animal that lives in the sea",
       );
 
+    await page.getByTestId("dropdown_str_model_name").click();
+    await page.getByTestId("gpt-4o-1-option").click();
+
     await adjustScreenView(page);
 
     await page.waitForSelector('[data-testid="button_run_chat output"]', {
@@ -66,8 +69,8 @@ test(
     await page.getByText("Close").last().click();
 
     // Change model to force different output
-    await page.getByTestId("model_model").click();
-    await page.getByTestId("gpt-4o-option").click();
+    await page.getByTestId("dropdown_str_model_name").click();
+    await page.getByTestId("gpt-4o-mini-0-option").click();
 
     await page.waitForSelector('[data-testid="button_run_chat output"]', {
       timeout: 3000,
@@ -92,7 +95,7 @@ test(
       timeout: 3000,
     });
 
-    await page.getByText("Language Model", { exact: true }).last().click();
+    await page.getByText("OpenAI", { exact: true }).last().click();
 
     await page.waitForSelector('[data-testid="more-options-modal"]', {
       timeout: 3000,

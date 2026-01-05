@@ -41,12 +41,9 @@ async def create_api_key(session: AsyncSession, api_key_create: ApiKeyCreate, us
     return unmasked
 
 
-async def delete_api_key(session: AsyncSession, api_key_id: UUID, user_id: UUID) -> None:
+async def delete_api_key(session: AsyncSession, api_key_id: UUID) -> None:
     api_key = await session.get(ApiKey, api_key_id)
     if api_key is None:
-        msg = "API Key not found"
-        raise ValueError(msg)
-    if api_key.user_id != user_id:
         msg = "API Key not found"
         raise ValueError(msg)
     await session.delete(api_key)

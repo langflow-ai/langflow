@@ -25,7 +25,7 @@ If you still cannot locate the component, see [Langflow GitHub Issues and Discus
 
 ## No input in the Playground
 
-If there is no message input field in the **Playground**, make sure your flow has a [**Chat Input** component](/chat-input-and-output) that is connected, directly or indirectly, to the **Input** port of a **Language Model** or **Agent** component.
+If there is no message input field in the **Playground**, make sure your flow has a [**Chat Input** component](/components-io#chat-io) that is connected, directly or indirectly, to the **Input** port of a **Language Model** or **Agent** component.
 
 Because the **Playground** is designed for flows that use an LLM in a query-and-response format, such as chatbots and agents, a flow must have **Chat Input**, **Language Model**/**Agent**, and **Chat Output** components to be fully supported by the **Playground** chat interface.
 
@@ -231,7 +231,7 @@ If Claude for Desktop doesn't use your server's tools correctly, try explicitly 
           "command": "PATH_TO_UVX",
           "args": [
             "mcp-proxy",
-            "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/streamable"
+            "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/sse"
           ]
         }
       }
@@ -250,7 +250,7 @@ If Claude for Desktop doesn't use your server's tools correctly, try explicitly 
             "-y",
             "supergateway",
             "--sse",
-            "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/streamable"
+            "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/sse"
           ]
         }
       }
@@ -267,8 +267,7 @@ This is a known issue when using MCP Tools with browser navigation actions, such
 This issue occurs because the MCP server runs from a Python process, which prevents it from opening browser windows in WSL or Windows.
 
 To work around this issue, use the standalone MCP server approach documented in the [Playwright MCP repository](https://github.com/microsoft/playwright-mcp?tab=readme-ov-file#standalone-mcp-server).
-After the server is up and running, you can add it as an HTTP/SSE server in Langflow.
-
+After the server is up and running, you can add it as an SSE server in Langflow.
 For other browser navigation tools, see the provider's documentation for specific troubleshooting guidance.
 
 ### "No tools or prompts connected" on MCP servers in mixed Windows/WSL environments
@@ -284,21 +283,7 @@ Alternatively, configure Langflow Desktop to accept connections from WSL at the 
 ## Token length limit errors in Embedding Model components
 
 Token length errors can happen if your chunking strategy doesn't align with your embedding model's tokenization limits.
-For more information, see [Tokenization errors due to chunk size](/split-text#chunk-size).
-
-## Document processing errors in Docker containers
-
-If you're running Langflow in a Docker container, you might encounter errors when using components that handle files or images, such as the [**Read File** component](/read-file) or [**Docling** components](/bundles-docling). To resolve these errors, you might need to install additional system dependencies.
-
-When running Langflow in a Linux-based Docker container, Docling requires system libraries that aren't included in the base Docker image. If you see errors related to document or image processing, add the following to your Dockerfile:
-
-```dockerfile
-RUN apt-get update && apt-get install -y libgl1 libglib2.0-0
-```
-
-These dependencies are required by Docling for document processing operations.
-
-For more information about customizing Docker images, see [Customize the Langflow Docker image with your own code](/deployment-docker#customize-the-langflow-docker-image).
+For more information, see [Tokenization errors due to chunk size](/components-processing#chunk-size).
 
 ## Custom components and integrations issues
 

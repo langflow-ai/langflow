@@ -75,7 +75,7 @@ test(
 
     await page.getByTestId("save-name-description-button").click();
 
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(500);
 
     await page
       .getByTestId("handle-conditionalrouter-shownode-true-right")
@@ -97,13 +97,11 @@ test(
     await page.getByTestId("popover-anchor-input-input_text").fill("1");
     await page.getByTestId("popover-anchor-input-match_text").fill("1");
 
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(500);
 
     await page.getByTestId("button_run_text output").click();
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
-
-    await page.waitForTimeout(3000);
 
     let numberOfSuccessfullComponentsRun = 0;
     let numberOfInactiveComponentsRun = 0;
@@ -120,16 +118,14 @@ test(
 
     // Now we will change the input to make the flow go through the other branch of the If-Else component
 
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(500);
 
     await page.getByTestId("popover-anchor-input-input_text").fill("2");
     await page.getByTestId("button_run_textoutputfalse").click();
 
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(500);
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
-
-    await page.waitForTimeout(3000);
 
     numberOfSuccessfullComponentsRun = 0;
     numberOfInactiveComponentsRun = 0;
@@ -146,18 +142,16 @@ test(
 
     // retest to make sure we can run again the flow with the first branch of the If-Else component
 
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(500);
 
     await page.getByTestId("popover-anchor-input-input_text").fill("1");
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(500);
 
     await page.getByTestId("button_run_text output").click();
 
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(500);
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
-
-    await page.waitForTimeout(3000);
 
     numberOfSuccessfullComponentsRun = 0;
     numberOfInactiveComponentsRun = 0;

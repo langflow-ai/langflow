@@ -887,7 +887,7 @@ def api_key(
             stmt = select(ApiKey).where(ApiKey.user_id == superuser.id)
             api_key = (await session.exec(stmt)).first()
             if api_key:
-                await delete_api_key(session, api_key.id, superuser.id)
+                await delete_api_key(session, api_key.id)
 
             api_key_create = ApiKeyCreate(name="CLI")
             return await create_api_key(session, api_key_create, user_id=superuser.id)

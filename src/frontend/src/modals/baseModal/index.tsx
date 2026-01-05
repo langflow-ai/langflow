@@ -56,36 +56,14 @@ const Trigger: React.FC<TriggerProps> = ({
   disable,
   className,
 }) => {
-  const childCount = React.Children.count(children);
-  const isEmptyFragment =
-    React.isValidElement(children) &&
-    children.type === React.Fragment &&
-    React.Children.count(
-      // children.props is unknown by default; narrow with a type guard
-      (children.props as { children?: React.ReactNode }).children,
-    ) === 0;
-
-  // Only show the trigger as “visible” when there is usable child content
-  const hasUsableChild = childCount > 0 && !isEmptyFragment;
-
-  // Ensure a valid element for Radix asChild (fragments can't receive props)
-  const triggerChild =
-    hasUsableChild &&
-    React.isValidElement(children) &&
-    children.type !== React.Fragment ? (
-      children
-    ) : (
-      <span />
-    );
-
   return (
     <DialogTrigger
       className={asChild ? "" : cn("w-full", className)}
-      hidden={!hasUsableChild}
+      hidden={children ? false : true}
       disabled={disable}
       asChild={asChild}
     >
-      {triggerChild}
+      {children}
     </DialogTrigger>
   );
 };
@@ -289,6 +267,7 @@ function BaseModal({
           {dialogContentWithouFixed ? (
             <DialogContentWithouFixed
               onClick={(e) => e.stopPropagation()}
+              onOpenAutoFocus={(event) => event.preventDefault()}
               onEscapeKeyDown={onEscapeKeyDown}
               className={contentClasses}
               closeButtonClassName={closeButtonClassName}
@@ -310,6 +289,7 @@ function BaseModal({
           ) : (
             <DialogContent
               onClick={(e) => e.stopPropagation()}
+              onOpenAutoFocus={(event) => event.preventDefault()}
               onEscapeKeyDown={onEscapeKeyDown}
               className={contentClasses}
               closeButtonClassName={closeButtonClassName}

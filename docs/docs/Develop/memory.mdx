@@ -100,8 +100,6 @@ To fine-tune your database connection pool and timeout settings, you can set the
     Don't use the deprecated environment variables `LANGFLOW_DB_POOL_SIZE` or `LANGFLOW_DB_MAX_OVERFLOW`.
     Instead, use `pool_size` and `max_overflow` in `LANGFLOW_DB_CONNECTION_SETTINGS`.
 
-* `LANGFLOW_MIGRATION_LOCK_NAMESPACE`: Optional namespace for PostgreSQL advisory locks used during database migrations. This is useful when running multiple Langflow instances that share the same PostgreSQL database. Each instance should use a unique namespace to avoid conflicts. If not set, Langflow uses a default namespace. This setting only applies when using PostgreSQL as your database backend.
-
 ## Configure cache memory
 
 The default Langflow caching behavior is an asynchronous, in-memory cache:
@@ -176,7 +174,7 @@ All messages are stored in [Langflow storage](#storage-options-and-paths), and t
 Typically, this is necessary only if you have specific storage needs that aren't met by Langflow storage.
 For example, if you want to manage chat memory data by directly working with the database, or if you want to use a different database than the default Langflow storage.
 
-For more information and examples, see [**Message History** component](/message-history) and [Agent memory](/agents#agent-memory).
+For more information and examples, see [**Message History** component](/components-helpers#message-history) and [Agent memory](/agents#agent-memory).
 
 ## See also
 

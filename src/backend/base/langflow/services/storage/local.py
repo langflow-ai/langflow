@@ -59,12 +59,11 @@ class LocalStorageService(StorageService):
         return str(self.data_dir / flow_id / file_name)
 
     def parse_file_path(self, full_path: str) -> tuple[str, str]:
-        r"""Parse a full local storage path to extract flow_id and file_name.
+        """Parse a full local storage path to extract flow_id and file_name.
 
         Args:
             full_path: Filesystem path, may or may not include data_dir
-                e.g., "/data/user_123/image.png" or "user_123/image.png". On Windows the
-                separators may be backslashes ("\\"). This method handles both.
+                e.g., "/data/user_123/image.png" or "user_123/image.png"
 
         Returns:
             tuple[str, str]: A tuple of (flow_id, file_name)
@@ -80,19 +79,15 @@ class LocalStorageService(StorageService):
         # Remove data_dir if present (but don't require it)
         path_without_prefix = full_path
         if full_path.startswith(data_dir_str):
-            # Strip both POSIX and Windows separators
-            path_without_prefix = full_path[len(data_dir_str) :].lstrip("/").lstrip("\\")
+            path_without_prefix = full_path[len(data_dir_str) :].lstrip("/")
 
-        # Normalize separators so downstream logic is platform-agnostic
-        normalized_path = path_without_prefix.replace("\\", "/")
-
-        # Split from the right to get the filename; everything before the last
-        # "/" is the flow_id
-        if "/" not in normalized_path:
-            return "", normalized_path
+        # Split from the right to get the filename
+        # Everything before the last "/" is the flow_id
+        if "/" not in path_without_prefix:
+            return "", path_without_prefix
 
         # Use rsplit to split from the right, limiting to 1 split
-        flow_id, file_name = normalized_path.rsplit("/", 1)
+        flow_id, file_name = path_without_prefix.rsplit("/", 1)
         return flow_id, file_name
 
     async def save_file(self, flow_id: str, file_name: str, data: bytes, *, append: bool = False) -> None:

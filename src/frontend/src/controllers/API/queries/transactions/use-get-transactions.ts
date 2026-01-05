@@ -1,16 +1,13 @@
 import { keepPreviousData } from "@tanstack/react-query";
 import type { ColDef, ColGroupDef } from "ag-grid-community";
-import type {
-  TransactionLogsRow,
-  useQueryFunctionType,
-} from "../../../../types/api";
+import type { useQueryFunctionType } from "../../../../types/api";
 import { extractColumnsFromRows } from "../../../../utils/utils";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
 interface TransactionsQueryParams {
-  id: string | null;
+  id: string;
   params?: Record<string, unknown>;
   mode: "union" | "intersection";
   excludedColumns?: string[];
@@ -24,12 +21,12 @@ interface PaginationType {
 }
 
 interface TransactionsPagination extends PaginationType {
-  items?: TransactionLogsRow[];
+  items?: Array<object>;
 }
 
 interface TransactionsResponse {
   pagination: PaginationType;
-  rows: TransactionLogsRow[];
+  rows: Array<object>;
   columns: Array<ColDef | ColGroupDef>;
 }
 

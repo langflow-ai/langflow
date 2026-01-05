@@ -164,9 +164,7 @@ async def aupdate_messages(messages: Message | list[Message]) -> list[Message]:
                 # Convert flow_id to UUID if it's a string preventing error when saving to database
                 if msg.flow_id and isinstance(msg.flow_id, str):
                     msg.flow_id = UUID(msg.flow_id)
-                result = session.add(msg)
-                if asyncio.iscoroutine(result):
-                    await result
+                session.add(msg)
                 updated_messages.append(msg)
             else:
                 error_message = f"Message with id {message.id} not found"
@@ -192,9 +190,7 @@ async def aadd_messagetables(messages: list[MessageTable], session: AsyncSession
     try:
         try:
             for message in messages:
-                result = session.add(message)
-                if asyncio.iscoroutine(result):
-                    await result
+                session.add(message)
             await session.commit()
             # This is a hack.
             # We are doing this because build_public_tmp causes the CancelledError to be raised

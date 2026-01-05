@@ -5,9 +5,6 @@ slug: /api-files
 
 Use the `/files` endpoints to move files between your local machine and Langflow.
 
-All `/files` endpoints (both `/v1/files` and `/v2/files`) require authentication with a Langflow API key.
-You can only access files that belong to your own user account, even as a superuser.
-
 ## Differences between `/v1/files` and `/v2/files`
 
 There are two versions of the `/files` endpoints.
@@ -238,7 +235,7 @@ To send image files to your flows through the API, see [Upload image files (v1)]
 :::
 
 This endpoint uploads files to your Langflow server's file management system.
-To use an uploaded file in a flow, send the file path to a flow with a [**Read File** component](/read-file).
+To use an uploaded file in a flow, send the file path to a flow with a [**File** component](/components-data#file).
 
 The default file limit is 1024 MB. To configure this value, change the `LANGFLOW_MAX_FILE_SIZE_UPLOAD` [environment variable](/environment-variables).
 
@@ -268,10 +265,10 @@ The default file limit is 1024 MB. To configure this value, change the `LANGFLOW
     }
     ```
 
-2. To use this file in your flow, add a **Read File** component to your flow.
+2. To use this file in your flow, add a **File** component to your flow.
 This component loads files into flows from your local machine or Langflow file management.
 
-3. Run the flow, passing the `path` to the `Read-File` component in the `tweaks` object:
+3. Run the flow, passing the `path` to the `File` component in the `tweaks` object:
 
     ```text
     curl --request POST \
@@ -283,7 +280,7 @@ This component loads files into flows from your local machine or Langflow file m
       "output_type": "chat",
       "input_type": "text",
       "tweaks": {
-        "Read-File-1olS3": {
+        "File-1olS3": {
           "path": [
             "07e5b864-e367-4f52-b647-a48035ae7e5e/3a290013-fe1e-4d3d-a454-cacae81288f3.pdf"
           ]
@@ -292,7 +289,7 @@ This component loads files into flows from your local machine or Langflow file m
     }'
     ```
 
-    To get the `Read-File` component's ID, call the [Read flow](/api-flows#read-flow) endpoint or inspect the component in the visual editor.
+    To get the `File` component's ID, call the [Read flow](/api-flows#read-flow) endpoint or inspect the component in the visual editor.
 
     If the file path is valid, the flow runs successfully.
 

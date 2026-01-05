@@ -186,7 +186,7 @@ async def upload_user_file(
             if existing_file:
                 # File exists, append to it by reusing the same filename
                 # Extract the filename from the path
-                unique_filename = Path(existing_file.path).name
+                unique_filename = existing_file.path.split("/")[-1] if "/" in existing_file.path else existing_file.path
             else:
                 # File doesn't exist yet, create new one with extension
                 unique_filename = f"{root_filename}.{file_extension}" if file_extension else root_filename
@@ -383,7 +383,7 @@ async def delete_files_batch(
         # Delete all files from the storage service
         for file in files:
             # Extract just the filename from the path (strip user_id prefix)
-            file_name = Path(file.path).name
+            file_name = file.path.split("/")[-1]
             storage_deleted = False
 
             try:
@@ -480,7 +480,7 @@ async def download_files_batch(
             for file in files:
                 # Get the file content from storage
                 file_content = await storage_service.get_file(
-                    flow_id=str(current_user.id), file_name=Path(file.path).name
+                    flow_id=str(current_user.id), file_name=file.path.split("/")[-1]
                 )
 
                 # Get the file extension from the original filename
@@ -574,7 +574,7 @@ async def download_file(
             raise HTTPException(status_code=404, detail="File not found")
 
         # Get the basename of the file path
-        file_name = Path(file.path).name
+        file_name = file.path.split("/")[-1]
 
         # If return_content is True, read the file content and return it
         if return_content:
@@ -650,7 +650,7 @@ async def delete_file(
             raise HTTPException(status_code=404, detail="File not found")
 
         # Extract just the filename from the path (strip user_id prefix)
-        file_name = Path(file_to_delete.path).name
+        file_name = file_to_delete.path.split("/")[-1]
 
         # Delete the file from the storage service first
         storage_deleted = False
@@ -724,7 +724,7 @@ async def delete_all_files(
         # Delete all files from the storage service
         for file in files:
             # Extract just the filename from the path (strip user_id prefix)
-            file_name = Path(file.path).name
+            file_name = file.path.split("/")[-1]
             storage_deleted = False
 
             try:

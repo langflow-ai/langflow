@@ -31,10 +31,13 @@ test(
 
     await initialGPTsetup(page, {
       skipAdjustScreenView: true,
+      skipSelectGptModel: true,
     });
 
     await page.waitForTimeout(3000);
 
+    await page.getByTestId("dropdown_str_model_name").first().click();
+    await page.getByTestId("dropdown-option-0-container").first().click();
     await page.getByText("Loading Options").isVisible({ timeout: 5000 });
   },
 );

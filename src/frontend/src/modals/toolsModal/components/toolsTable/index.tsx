@@ -49,7 +49,6 @@ export default function ToolsTable({
   const applyingSelection = useRef<boolean>(false);
   const previousRowsCount = useRef<number>(0);
   const skipSelectionReapply = useRef<number>(0);
-  const [isGridReady, setIsGridReady] = useState(false);
 
   const { setOpen: setSidebarOpen } = useSidebar();
 
@@ -60,10 +59,7 @@ export default function ToolsTable({
   }, []);
 
   useEffect(() => {
-    if (!open) {
-      setIsGridReady(false);
-      return;
-    }
+    if (!open) return;
     previousRowsCount.current = rows.length;
     const initialData = cloneDeep(rows).map((row, index) => ({
       ...row,
@@ -97,7 +93,7 @@ export default function ToolsTable({
   }, [rows]);
 
   useEffect(() => {
-    if (!agGrid.current?.api || !selectedRows || !open || !isGridReady) return;
+    if (!agGrid.current?.api || !selectedRows || !open) return;
 
     // Don't re-apply selection if we're just editing data fields (slug/description)
     if (skipSelectionReapply.current > 0) {
@@ -120,7 +116,7 @@ export default function ToolsTable({
     setTimeout(() => {
       applyingSelection.current = false;
     }, 50);
-  }, [selectedRows, open, isGridReady]);
+  }, [selectedRows, open]);
 
   useEffect(() => {
     if (!open) {
@@ -319,10 +315,6 @@ export default function ToolsTable({
     setSidebarOpen(false);
   };
 
-  const handleGridReady = () => {
-    setIsGridReady(true);
-  };
-
   return (
     <>
       <main className="flex h-full w-full flex-1 flex-col gap-2 overflow-hidden py-4">
@@ -352,7 +344,6 @@ export default function ToolsTable({
             getRowId={getRowId}
             pagination={true}
             paginationPageSize={50}
-            onGridReady={handleGridReady}
           />
         </div>
       </main>

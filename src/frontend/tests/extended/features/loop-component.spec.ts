@@ -172,12 +172,9 @@ test(
       .getByTestId("inputlist_str_urls_1")
       .fill("https://en.wikipedia.org/wiki/Human_intelligence");
 
-    await page.getByTestId("title-Data Operations").click();
+    await page.getByTestId("div-generic-node").nth(2).click();
 
-    await page.waitForTimeout(1000);
-
-    // Click on the "Select Operation" text/button in the Data Operations component
-    await page.getByText("Select Operation").click();
+    await page.getByTestId("button_open_list_selection").click();
 
     await page.getByTestId("list_item_append_or_update").click();
 

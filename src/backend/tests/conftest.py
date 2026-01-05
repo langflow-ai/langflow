@@ -201,10 +201,7 @@ async def _delete_transactions_and_vertex_builds(session, flows: list[Flow]):
 @pytest.fixture
 async def async_client() -> AsyncGenerator:
     app = create_app()
-    async with (
-        LifespanManager(app, startup_timeout=None, shutdown_timeout=None) as manager,
-        AsyncClient(transport=ASGITransport(app=manager.app), base_url="http://testserver", http2=True) as client,
-    ):
+    async with AsyncClient(app=app, base_url="http://testserver", http2=True) as client:
         yield client
 
 
@@ -227,15 +224,12 @@ def session_fixture():
 @pytest.fixture
 async def async_session():
     engine = create_async_engine("sqlite+aiosqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
-    try:
-        async with engine.begin() as conn:
-            await conn.run_sync(SQLModel.metadata.create_all)
-        async with AsyncSession(engine, expire_on_commit=False) as session:
-            yield session
-        async with engine.begin() as conn:
-            await conn.run_sync(SQLModel.metadata.drop_all)
-    finally:
-        await engine.dispose()
+    async with engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.create_all)
+    async with AsyncSession(engine, expire_on_commit=False) as session:
+        yield session
+    async with engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.drop_all)
 
 
 class Config:

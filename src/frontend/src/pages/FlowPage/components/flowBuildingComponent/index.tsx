@@ -252,12 +252,13 @@ export default function FlowBuildingComponent() {
                         transition={{ duration: 0.2 }}
                       >
                         <Markdown
+                          linkTarget="_blank"
                           remarkPlugins={[remarkGfm]}
                           className="my-1.5 align-text-top truncate-doubleline"
                           components={{
                             a: ({ node, ...props }) => (
                               <a
-                                {...props}
+                                href={props.href}
                                 target="_blank"
                                 className="underline"
                                 rel="noopener noreferrer"

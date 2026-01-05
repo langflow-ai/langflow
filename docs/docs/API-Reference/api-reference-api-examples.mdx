@@ -173,14 +173,12 @@ curl -X GET \
 
 ### Get configuration
 
-Returns configuration details for your Langflow deployment.
-Requires a [Langflow API key](/api-keys-and-authentication).
+Returns configuration details for your Langflow deployment:
 
 ```bash
 curl -X GET \
   "$LANGFLOW_SERVER_URL/api/v1/config" \
-  -H "accept: application/json" \
-  -H "x-api-key: $LANGFLOW_API_KEY"
+  -H "accept: application/json"
 ```
 
 <details>
@@ -315,7 +313,6 @@ Other endpoints are helpful for specific use cases, such as administration and f
   * POST `/v1/custom_component`: Build a custom component from code and return its node.
   * POST `/v1/custom_component/update`: Update an existing custom component's build config and outputs.
   * POST `/v1/validate/code`: Validate a Python code snippet for a custom component.
-  * POST `/v1/validate/prompt`: Validate a prompt payload.
 
 </TabItem>
 <TabItem value="Codebase contribution" label="Codebase development">
@@ -367,22 +364,14 @@ The following endpoints are most often used when contributing to the Langflow co
 
 * MCP servers: The following endpoints are for managing Langflow MCP servers and MCP server connections.
 They aren't typically called directly; instead, they are used to drive internal functionality in the Langflow frontend and when running flows that call MCP servers.
-Langflow MCP servers support both streamable HTTP and SSE transport.
-  * HEAD `/v1/mcp/streamable`: Health check for streamable HTTP MCP.
-  * GET `/v1/mcp/streamable`: Open streamable HTTP connection for MCP server.
-  * POST `/v1/mcp/streamable`: Post messages to the MCP server via streamable HTTP.
-  * DELETE `/v1/mcp/streamable`: Close streamable HTTP connection.
-  * HEAD `/v1/mcp/sse` (LEGACY): Health check for MCP SSE.
-  * GET `/v1/mcp/sse` (LEGACY): Open SSE stream for MCP server events.
-  * POST `/v1/mcp/` (LEGACY): Post messages to the MCP server.
+  * HEAD `/v1/mcp/sse`: Health check for MCP SSE.
+  * GET `/v1/mcp/sse`: Open SSE stream for MCP server events.
+  * POST `/v1/mcp/`: Post messages to the MCP server.
   * GET `/v1/mcp/project/{project_id}`: List MCP-enabled tools and project auth settings.
-  * HEAD `/v1/mcp/project/{project_id}/streamable`: Health check for project streamable HTTP MCP.
-  * GET `/v1/mcp/project/{project_id}/streamable`: Open project-scoped streamable HTTP connection.
-  * POST `/v1/mcp/project/{project_id}/streamable`: Post messages to project MCP server via streamable HTTP.
-  * DELETE `/v1/mcp/project/{project_id}/streamable`: Close project streamable HTTP connection.
-  * HEAD `/v1/mcp/project/{project_id}/sse` (LEGACY): Health check for project SSE.
-  * GET `/v1/mcp/project/{project_id}/sse` (LEGACY): Open project-scoped MCP SSE.
-  * POST `/v1/mcp/project/{project_id}` (LEGACY): Post messages to project MCP server.
+  * HEAD `/v1/mcp/project/{project_id}/sse`: Health check for project SSE.
+  * GET `/v1/mcp/project/{project_id}/sse`: Open project-scoped MCP SSE.
+  * POST `/v1/mcp/project/{project_id}`: Post messages to project MCP server.
+  * POST `/v1/mcp/project/{project_id}/` (trailing slash): Same as above.
   * PATCH `/v1/mcp/project/{project_id}`: Update MCP settings for flows and project auth settings.
   * POST `/v1/mcp/project/{project_id}/install`: Install MCP client config for Cursor/Windsurf/Claude (local only).
   * GET `/v1/mcp/project/{project_id}/installed`: Check which clients have MCP config installed.
@@ -392,7 +381,6 @@ Langflow MCP servers support both streamable HTTP and SSE transport.
   * POST `/v1/custom_component`: Build a custom component from code and return its node.
   * POST `/v1/custom_component/update`: Update an existing custom component's build config and outputs.
   * POST `/v1/validate/code`: Validate a Python code snippet for a custom component.
-  * POST `/v1/validate/prompt`: Validate a prompt payload.
 
 </TabItem>
 <TabItem value="Deprecated" label="Deprecated">

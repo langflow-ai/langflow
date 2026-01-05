@@ -11,7 +11,6 @@
  * software for all.
  */
 
-// biome-ignore-all lint/suspicious/noExplicitAny: TODO We need to fix this. added suppression for 1.7.1 merge
 import {
   type Connection,
   type Edge,

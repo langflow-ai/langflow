@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 from langflow.services.schema import ServiceType
 
@@ -176,7 +176,7 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
         yield session
 
 
-def get_cache_service() -> Union[CacheService, AsyncBaseCacheService]:  # noqa: UP007
+def get_cache_service() -> CacheService | AsyncBaseCacheService:
     """Retrieves the cache service from the service manager.
 
     Returns:

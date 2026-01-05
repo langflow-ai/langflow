@@ -497,13 +497,7 @@ class Settings(BaseSettings):
             if info.data["save_db_in_config_dir"]:
                 database_dir = info.data["config_dir"]
             else:
-                # Use langflow package path, not lfx, for backwards compatibility
-                try:
-                    import langflow
-
-                    database_dir = Path(langflow.__file__).parent.resolve()
-                except ImportError:
-                    database_dir = Path(__file__).parent.parent.parent.resolve()
+                database_dir = Path(__file__).parent.parent.parent.resolve()
 
             pre_db_file_name = "langflow-pre.db"
             db_file_name = "langflow.db"

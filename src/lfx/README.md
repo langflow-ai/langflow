@@ -216,10 +216,7 @@ async def get_graph() -> Graph:
 uv pip install lfx
 
 # Install additional dependencies required for the agent
-uv pip install 'langchain-core>=0.3.0,<1.0.0' \
-               'langchain-openai>=0.3.0,<1.0.0' \
-               'langchain-community>=0.3.0,<1.0.0' \
-               beautifulsoup4 lxml
+uv pip install langchain-community langchain beautifulsoup4 lxml langchain-openai
 ```
 
 **Step 3: Set up environment**

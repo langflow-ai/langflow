@@ -105,6 +105,7 @@ class Vertex:
         self.use_result = False
         self.build_times: list[float] = []
         self.state = VertexStates.ACTIVE
+        self.log_transaction_tasks: set[asyncio.Task] = set()
         self.output_names: list[str] = [
             output["name"] for output in self.outputs if isinstance(output, dict) and "name" in output
         ]
@@ -530,12 +531,11 @@ class Vertex:
         self,
         flow_id: str | UUID,
         source: Vertex,
-        status: str,
+        status,
         target: Vertex | None = None,
-        error: str | Exception | None = None,
-        outputs: dict[str, Any] | None = None,
+        error=None,
     ) -> None:
-        """Log a transaction asynchronously.
+        """Log a transaction asynchronously with proper task handling and cancellation.
 
         Args:
             flow_id: The ID of the flow
@@ -543,16 +543,20 @@ class Vertex:
             status: Transaction status
             target: Optional target vertex
             error: Optional error information
-            outputs: Optional explicit outputs dict (component execution results)
         """
-        try:
-            await log_transaction(flow_id, source, status, target, error, outputs)
-        except Exception as exc:  # noqa: BLE001
-            logger.debug(f"Error logging transaction: {exc!s}")
+        if self.log_transaction_tasks:
+            # Safely await and remove completed tasks
+            task = self.log_transaction_tasks.pop()
+            await task
+
+            # Create and track new task
+        task = asyncio.create_task(log_transaction(flow_id, source, status, target, error))
+        self.log_transaction_tasks.add(task)
+        task.add_done_callback(self.log_transaction_tasks.discard)
 
     async def _get_result(
         self,
-        requester: Vertex,  # noqa: ARG002
+        requester: Vertex,
         target_handle_name: str | None = None,  # noqa: ARG002
     ) -> Any:
         """Retrieves the result of the built component.
@@ -562,11 +566,17 @@ class Vertex:
         Returns:
             The built result if use_result is True, else the built object.
         """
+        flow_id = self.graph.flow_id
         if not self.built:
+            if flow_id:
+                await self._log_transaction_async(str(flow_id), source=self, target=requester, status="error")
             msg = f"Component {self.display_name} has not been built yet"
             raise ValueError(msg)
 
-        return self.built_result if self.use_result else self.built_object
+        result = self.built_result if self.use_result else self.built_object
+        if flow_id:
+            await self._log_transaction_async(str(flow_id), source=self, target=requester, status="success")
+        return result
 
     async def _build_vertex_and_update_params(self, key, vertex: Vertex) -> None:
         """Builds a given vertex and updates the params dictionary accordingly."""
@@ -647,12 +657,6 @@ class Vertex:
         except Exception as exc:
             tb = traceback.format_exc()
             await logger.aexception(exc)
-            # Log transaction error
-            flow_id = self.graph.flow_id
-            if flow_id:
-                await self._log_transaction_async(
-                    str(flow_id), source=self, target=None, status="error", error=str(exc)
-                )
             msg = f"Error building Component {self.display_name}: \n\n{exc}"
             raise ComponentBuildError(msg, tb) from exc
 
@@ -767,19 +771,6 @@ class Vertex:
                     self.steps_ran.append(step)
 
             self.finalize_build()
-
-            # Log transaction after successful build
-            flow_id = self.graph.flow_id
-            if flow_id:
-                # Extract outputs from outputs_logs for transaction logging
-                outputs_dict = None
-                if self.outputs_logs:
-                    outputs_dict = {
-                        k: v.model_dump() if hasattr(v, "model_dump") else v for k, v in self.outputs_logs.items()
-                    }
-                await self._log_transaction_async(
-                    str(flow_id), source=self, target=None, status="success", outputs=outputs_dict
-                )
 
         return await self.get_requester_result(requester)
 
