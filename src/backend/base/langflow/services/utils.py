@@ -239,6 +239,7 @@ def register_all_service_factories() -> None:
     from langflow.services.task import factory as task_factory
     from langflow.services.telemetry import factory as telemetry_factory
     from langflow.services.tracing import factory as tracing_factory
+    from langflow.services.transaction import factory as transaction_factory
     from langflow.services.variable import factory as variable_factory
 
     # Register all factories
@@ -251,6 +252,7 @@ def register_all_service_factories() -> None:
     service_manager.register_factory(variable_factory.VariableServiceFactory())
     service_manager.register_factory(telemetry_factory.TelemetryServiceFactory())
     service_manager.register_factory(tracing_factory.TracingServiceFactory())
+    service_manager.register_factory(transaction_factory.TransactionServiceFactory())
     service_manager.register_factory(state_factory.StateServiceFactory())
     service_manager.register_factory(job_queue_factory.JobQueueServiceFactory())
     service_manager.register_factory(task_factory.TaskServiceFactory())

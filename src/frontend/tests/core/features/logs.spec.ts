@@ -60,12 +60,20 @@ test(
 
     await page.getByText("Logs").click();
 
-    await page.getByText("timestamp").first().isVisible();
-    await page.getByText("flow_id").first().isVisible();
-    await page.getByText("source").first().isVisible();
-    await page.getByText("target", { exact: true }).first().isVisible();
-    await page.getByText("target_args", { exact: true }).first().isVisible();
-    await page.getByRole("gridcell").first().isVisible();
+    // Verify the new column headers are present (inside the dialog)
+    const dialog = page.getByLabel("Dialog");
+    await expect(dialog.getByText("Timestamp", { exact: true })).toBeVisible();
+    await expect(dialog.getByText("Component", { exact: true })).toBeVisible();
+    await expect(dialog.getByText("Target", { exact: true })).toBeVisible();
+    await expect(dialog.getByText("Inputs", { exact: true })).toBeVisible();
+    await expect(dialog.getByText("Outputs", { exact: true })).toBeVisible();
+    await expect(dialog.getByText("Status", { exact: true })).toBeVisible();
+
+    // Verify there are log entries (grid cells)
+    await expect(dialog.getByRole("gridcell").first()).toBeVisible();
+
+    // Verify success status badge is displayed (scoped to dialog)
+    await expect(dialog.locator("text=success").first()).toBeVisible();
 
     await page.keyboard.press("Escape");
 
@@ -73,17 +81,17 @@ test(
     await page.getByText("Settings", { exact: true }).click();
 
     await page.getByText("Messages", { exact: true }).click();
-    await page.getByText("index", { exact: true }).last().isVisible();
-    await page.getByText("timestamp", { exact: true }).isVisible();
-    await page.getByText("flow_id", { exact: true }).isVisible();
-    await page.getByText("source", { exact: true }).isVisible();
-    await page.getByText("target", { exact: true }).isVisible();
-    await page.getByText("vertex_id", { exact: true }).isVisible();
-    await page.getByText("status", { exact: true }).isVisible();
-    await page.getByText("error", { exact: true }).isVisible();
-    await page.getByText("outputs", { exact: true }).isVisible();
-    await page.getByText("inputs", { exact: true }).isVisible();
+    await expect(page.getByText("index", { exact: true }).last()).toBeVisible();
+    await expect(page.getByText("timestamp", { exact: true })).toBeVisible();
+    await expect(page.getByText("flow_id", { exact: true })).toBeVisible();
+    await expect(page.getByText("source", { exact: true })).toBeVisible();
+    await expect(page.getByText("target", { exact: true })).toBeVisible();
+    await expect(page.getByText("vertex_id", { exact: true })).toBeVisible();
+    await expect(page.getByText("status", { exact: true })).toBeVisible();
+    await expect(page.getByText("error", { exact: true })).toBeVisible();
+    await expect(page.getByText("outputs", { exact: true })).toBeVisible();
+    await expect(page.getByText("inputs", { exact: true })).toBeVisible();
 
-    await page.getByRole("gridcell").first().isVisible();
+    await expect(page.getByRole("gridcell").first()).toBeVisible();
   },
 );
