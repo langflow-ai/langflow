@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from lfx.log.logger import logger
 from lfx.services.interfaces import TransactionServiceProtocol
 
 
@@ -19,10 +18,10 @@ class NoopTransactionService(TransactionServiceProtocol):
     async def log_transaction(
         self,
         flow_id: str,  # noqa: ARG002
-        vertex_id: str,
+        vertex_id: str,  # noqa: ARG002
         inputs: dict[str, Any] | None,  # noqa: ARG002
         outputs: dict[str, Any] | None,  # noqa: ARG002
-        status: str,
+        status: str,  # noqa: ARG002
         target_id: str | None = None,  # noqa: ARG002
         error: str | None = None,  # noqa: ARG002
     ) -> None:
@@ -30,7 +29,6 @@ class NoopTransactionService(TransactionServiceProtocol):
 
         In standalone mode, transactions are not persisted.
         """
-        logger.debug(f"NoopTransactionService: skipping log for vertex {vertex_id} (status={status})")
 
     def is_enabled(self) -> bool:
         """Transaction logging is disabled in noop mode."""
