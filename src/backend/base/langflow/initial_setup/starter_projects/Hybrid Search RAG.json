@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ParserComponent",
-            "id": "ParserComponent-NUETC",
+            "id": "ParserComponent-TR5bm",
             "name": "parsed_text",
             "output_types": [
               "Message"
@@ -15,7 +15,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-HTCA7",
+            "id": "ChatOutput-uBHDy",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -24,12 +24,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-ParserComponent-NUETC{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-NUETCœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-HTCA7{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-HTCA7œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-ParserComponent-TR5bm{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-TR5bmœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-uBHDy{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-uBHDyœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "ParserComponent-NUETC",
-        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-NUETCœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-HTCA7",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-HTCA7œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "source": "ParserComponent-TR5bm",
+        "sourceHandle": "{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-TR5bmœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-uBHDy",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-uBHDyœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -37,35 +37,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-RLI5m",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "search_query",
-            "id": "AstraDB-u1JXb",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "query"
-          }
-        },
-        "id": "reactflow__edge-ChatInput-RLI5m{œdataTypeœ:œChatInputœ,œidœ:œChatInput-RLI5mœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraDB-u1JXb{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDB-u1JXbœ,œinputTypesœ:[œMessageœ],œtypeœ:œqueryœ}",
-        "selected": false,
-        "source": "ChatInput-RLI5m",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-RLI5mœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "AstraDB-u1JXb",
-        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œAstraDB-u1JXbœ, œinputTypesœ: [œMessageœ], œtypeœ: œqueryœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-RLI5m",
+            "id": "ChatInput-ozpcK",
             "name": "message",
             "output_types": [
               "Message"
@@ -73,19 +45,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "StructuredOutput-MyXBb",
+            "id": "StructuredOutput-dSKGb",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-RLI5m{œdataTypeœ:œChatInputœ,œidœ:œChatInput-RLI5mœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-MyXBb{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-MyXBbœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-ozpcK{œdataTypeœ:œChatInputœ,œidœ:œChatInput-ozpcKœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-dSKGb{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-dSKGbœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-RLI5m",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-RLI5mœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "StructuredOutput-MyXBb",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutput-MyXBbœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-ozpcK",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-ozpcKœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "StructuredOutput-dSKGb",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-dSKGbœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -93,7 +65,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "StructuredOutput",
-            "id": "StructuredOutput-MyXBb",
+            "id": "StructuredOutput-dSKGb",
             "name": "dataframe_output",
             "output_types": [
               "DataFrame"
@@ -101,7 +73,7 @@
           },
           "targetHandle": {
             "fieldName": "input_data",
-            "id": "ParserComponent-HTPnn",
+            "id": "ParserComponent-3GmW3",
             "inputTypes": [
               "DataFrame",
               "Data"
@@ -109,20 +81,47 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-StructuredOutput-MyXBb{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-MyXBbœ,œnameœ:œdataframe_outputœ,œoutput_typesœ:[œDataFrameœ]}-ParserComponent-HTPnn{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-HTPnnœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-StructuredOutput-dSKGb{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-dSKGbœ,œnameœ:œdataframe_outputœ,œoutput_typesœ:[œDataFrameœ]}-ParserComponent-3GmW3{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-3GmW3œ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "StructuredOutput-MyXBb",
-        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-MyXBbœ, œnameœ: œdataframe_outputœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "ParserComponent-HTPnn",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-HTPnnœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
+        "source": "StructuredOutput-dSKGb",
+        "sourceHandle": "{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-dSKGbœ,œnameœ:œdataframe_outputœ,œoutput_typesœ:[œDataFrameœ]}",
+        "target": "ParserComponent-3GmW3",
+        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-3GmW3œ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-ozpcK",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "search_query",
+            "id": "AstraDB-AkDya",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "query"
+          }
+        },
+        "id": "xy-edge__ChatInput-ozpcK{œdataTypeœ:œChatInputœ,œidœ:œChatInput-ozpcKœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraDB-AkDya{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDB-AkDyaœ,œinputTypesœ:[œMessageœ],œtypeœ:œqueryœ}",
+        "selected": false,
+        "source": "ChatInput-ozpcK",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-ozpcKœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "AstraDB-AkDya",
+        "targetHandle": "{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDB-AkDyaœ,œinputTypesœ:[œMessageœ],œtypeœ:œqueryœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
             "dataType": "ParserComponent",
-            "id": "ParserComponent-HTPnn",
+            "id": "ParserComponent-3GmW3",
             "name": "parsed_text",
             "output_types": [
               "Message"
@@ -130,35 +129,33 @@
           },
           "targetHandle": {
             "fieldName": "lexical_terms",
-            "id": "AstraDB-u1JXb",
+            "id": "AstraDB-AkDya",
             "inputTypes": [
               "Message"
             ],
             "type": "query"
           }
         },
-        "id": "xy-edge__ParserComponent-HTPnn{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-HTPnnœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-AstraDB-u1JXb{œfieldNameœ:œlexical_termsœ,œidœ:œAstraDB-u1JXbœ,œinputTypesœ:[œMessageœ],œtypeœ:œqueryœ}",
-        "selected": false,
-        "source": "ParserComponent-HTPnn",
-        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-HTPnnœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "AstraDB-u1JXb",
-        "targetHandle": "{œfieldNameœ: œlexical_termsœ, œidœ: œAstraDB-u1JXbœ, œinputTypesœ: [œMessageœ], œtypeœ: œqueryœ}"
+        "id": "xy-edge__ParserComponent-3GmW3{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-3GmW3œ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-AstraDB-AkDya{œfieldNameœ:œlexical_termsœ,œidœ:œAstraDB-AkDyaœ,œinputTypesœ:[œMessageœ],œtypeœ:œqueryœ}",
+        "source": "ParserComponent-3GmW3",
+        "sourceHandle": "{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-3GmW3œ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "AstraDB-AkDya",
+        "targetHandle": "{œfieldNameœ:œlexical_termsœ,œidœ:œAstraDB-AkDyaœ,œinputTypesœ:[œMessageœ],œtypeœ:œqueryœ}"
       },
       {
-        "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "AstraDB",
-            "id": "AstraDB-u1JXb",
-            "name": "dataframe",
+            "id": "AstraDB-AkDya",
+            "name": "search_results",
             "output_types": [
-              "DataFrame"
+              "Data"
             ]
           },
           "targetHandle": {
             "fieldName": "input_data",
-            "id": "ParserComponent-NUETC",
+            "id": "ParserComponent-TR5bm",
             "inputTypes": [
               "DataFrame",
               "Data"
@@ -166,18 +163,17 @@
             "type": "other"
           }
         },
-        "id": "xy-edge__AstraDB-u1JXb{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-u1JXbœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-ParserComponent-NUETC{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-NUETCœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "AstraDB-u1JXb",
-        "sourceHandle": "{œdataTypeœ: œAstraDBœ, œidœ: œAstraDB-u1JXbœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "ParserComponent-NUETC",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-NUETCœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
+        "id": "xy-edge__AstraDB-AkDya{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-AkDyaœ,œnameœ:œsearch_resultsœ,œoutput_typesœ:[œDataœ]}-ParserComponent-TR5bm{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-TR5bmœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
+        "source": "AstraDB-AkDya",
+        "sourceHandle": "{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-AkDyaœ,œnameœ:œsearch_resultsœ,œoutput_typesœ:[œDataœ]}",
+        "target": "ParserComponent-TR5bm",
+        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-TR5bmœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-RLI5m",
+          "id": "ChatInput-ozpcK",
           "node": {
             "base_classes": [
               "Message"
@@ -441,7 +437,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-RLI5m",
+        "id": "ChatInput-ozpcK",
         "measured": {
           "height": 48,
           "width": 192
@@ -455,7 +451,7 @@
       },
       {
         "data": {
-          "id": "ParserComponent-HTPnn",
+          "id": "ParserComponent-3GmW3",
           "node": {
             "base_classes": [
               "Message"
@@ -626,7 +622,7 @@
           "type": "ParserComponent"
         },
         "dragging": false,
-        "id": "ParserComponent-HTPnn",
+        "id": "ParserComponent-3GmW3",
         "measured": {
           "height": 329,
           "width": 320
@@ -640,7 +636,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-HTCA7",
+          "id": "ChatOutput-uBHDy",
           "node": {
             "base_classes": [
               "Message"
@@ -908,7 +904,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-HTCA7",
+        "id": "ChatOutput-uBHDy",
         "measured": {
           "height": 48,
           "width": 192
@@ -922,7 +918,7 @@
       },
       {
         "data": {
-          "id": "ParserComponent-NUETC",
+          "id": "ParserComponent-TR5bm",
           "node": {
             "base_classes": [
               "Message"
@@ -1094,7 +1090,7 @@
           "type": "ParserComponent"
         },
         "dragging": false,
-        "id": "ParserComponent-NUETC",
+        "id": "ParserComponent-TR5bm",
         "measured": {
           "height": 329,
           "width": 320
@@ -1108,7 +1104,7 @@
       },
       {
         "data": {
-          "id": "note-jle0B",
+          "id": "note-A21ou",
           "node": {
             "description": "# Hybrid Search RAG\n\nHybrid search performs a vector similarity search and a lexical search, compares the results of both searches, and then returns the most relevant results overall.\n\n## Prerequisites\n\n* An [OpenAI API key](https://platform.openai.com/)\n* An [Astra DB Application Token](https://docs.datastax.com/en/astra-db-serverless/databases/create-database.html) for the Astra DB component.\n\n## Quickstart\n\n1. In the Astra DB component, add your Astra DB Application Token.\nThis connects Langflow to your Astra database.\n2. Select an Astra collection that is hybrid-enabled.\nFor more information, see the [Datastax documentation](https://docs.datastax.com/en/astra-db-serverless/databases/hybrid-search.html).\nThe connection appears between the Parser component and the Astra DB component when a vector database is connected.\n3. Ensure the **Lexical Terms** and **Parsed Text** ports are connected.\n4. Add your OpenAI API key in the **Language Model** model component.\n5. Open the Playground and ask a question, like \"What are the features of my data?\"",
             "display_name": "",
@@ -1120,7 +1116,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-jle0B",
+        "id": "note-A21ou",
         "measured": {
           "height": 601,
           "width": 575
@@ -1134,833 +1130,7 @@
       },
       {
         "data": {
-          "id": "AstraDB-u1JXb",
-          "node": {
-            "base_classes": [
-              "Data",
-              "DataFrame",
-              "VectorStore"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Ingest and search documents in Astra DB",
-            "display_name": "Astra DB",
-            "documentation": "https://docs.datastax.com/en/langflow/astra-components.html",
-            "edited": false,
-            "field_order": [
-              "token",
-              "environment",
-              "database_name",
-              "api_endpoint",
-              "keyspace",
-              "collection_name",
-              "embedding_model",
-              "ingest_data",
-              "search_query",
-              "should_cache_vector_store",
-              "search_method",
-              "reranker",
-              "lexical_terms",
-              "number_of_results",
-              "search_type",
-              "search_score_threshold",
-              "advanced_search_filter",
-              "autodetect_collection",
-              "content_field",
-              "deletion_field",
-              "ignore_invalid_documents",
-              "astradb_vectorstore_kwargs"
-            ],
-            "frozen": false,
-            "icon": "AstraDB",
-            "last_updated": "2025-09-29T15:16:26.306Z",
-            "legacy": false,
-            "lf_version": "1.6.0",
-            "metadata": {
-              "code_hash": "9ca3747e73d6",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "astrapy",
-                    "version": "2.1.0"
-                  },
-                  {
-                    "name": "langchain_core",
-                    "version": "0.3.80"
-                  },
-                  {
-                    "name": "lfx",
-                    "version": null
-                  },
-                  {
-                    "name": "langchain_astradb",
-                    "version": "0.6.1"
-                  }
-                ],
-                "total_dependencies": 4
-              },
-              "module": "lfx.components.datastax.astradb_vectorstore.AstraDBVectorStoreComponent"
-            },
-            "minimized": false,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Search Results",
-                "group_outputs": false,
-                "method": "search_documents",
-                "name": "search_results",
-                "selected": null,
-                "tool_mode": true,
-                "types": [
-                  "Data"
-                ],
-                "value": "__UNDEFINED__"
-              },
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "DataFrame",
-                "group_outputs": false,
-                "method": "as_dataframe",
-                "name": "dataframe",
-                "selected": "DataFrame",
-                "tool_mode": true,
-                "types": [
-                  "DataFrame"
-                ],
-                "value": "__UNDEFINED__"
-              },
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Vector Store Connection",
-                "group_outputs": false,
-                "hidden": false,
-                "method": "as_vector_store",
-                "name": "vectorstoreconnection",
-                "selected": null,
-                "tool_mode": true,
-                "types": [
-                  "VectorStore"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "template": {
-              "_type": "Component",
-              "advanced_search_filter": {
-                "_input_type": "NestedDictInput",
-                "advanced": true,
-                "display_name": "Search Metadata Filter",
-                "dynamic": false,
-                "info": "Optional dictionary of filters to apply to the search query.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "advanced_search_filter",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "NestedDict",
-                "value": {}
-              },
-              "api_endpoint": {
-                "_input_type": "DropdownInput",
-                "advanced": true,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Astra DB API Endpoint",
-                "dynamic": false,
-                "info": "The API Endpoint for the Astra DB instance. Supercedes database selection.",
-                "name": "api_endpoint",
-                "options": [],
-                "options_metadata": [],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "toggle": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "https://f3166ac4-3e2f-4b32-880c-231d1f9e3f3e-us-east-2.apps.astra.datastax.com"
-              },
-              "astradb_vectorstore_kwargs": {
-                "_input_type": "NestedDictInput",
-                "advanced": true,
-                "display_name": "AstraDBVectorStore Parameters",
-                "dynamic": false,
-                "info": "Optional dictionary of additional parameters for the AstraDBVectorStore.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "astradb_vectorstore_kwargs",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "NestedDict",
-                "value": {}
-              },
-              "autodetect_collection": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Autodetect Collection",
-                "dynamic": false,
-                "info": "Boolean flag to determine whether to autodetect the collection.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "autodetect_collection",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": true
-              },
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from astrapy import DataAPIClient\nfrom langchain_core.documents import Document\n\nfrom lfx.base.datastax.astradb_base import AstraDBBaseComponent\nfrom lfx.base.models.unified_models import get_embedding_model_options, update_model_options_in_build_config\nfrom lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store\nfrom lfx.base.vectorstores.vector_store_connection_decorator import vector_store_connection\nfrom lfx.helpers.data import docs_to_data\nfrom lfx.io import (\n    BoolInput,\n    DropdownInput,\n    FloatInput,\n    IntInput,\n    ModelInput,\n    NestedDictInput,\n    QueryInput,\n    StrInput,\n)\nfrom lfx.schema.data import Data\nfrom lfx.serialization import serialize\nfrom lfx.utils.version import get_version_info\n\n\n@vector_store_connection\nclass AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):\n    display_name: str = \"Astra DB\"\n    description: str = \"Ingest and search documents in Astra DB\"\n    documentation: str = \"https://docs.langflow.org/bundles-datastax\"\n    name = \"AstraDB\"\n    icon: str = \"AstraDB\"\n\n    inputs = [\n        *AstraDBBaseComponent.inputs,\n        *LCVectorStoreComponent.inputs,\n        ModelInput(\n            name=\"embedding_model\",\n            display_name=\"Embedding Model\",\n            info=\"Specify the Embedding Model. Not required for Astra Vectorize collections.\",\n            required=False,\n            show=True,\n            model_type=\"embedding\",\n            input_types=[\"Embeddings\"],\n            real_time_refresh=True,\n        ),\n        StrInput(\n            name=\"content_field\",\n            display_name=\"Content Field\",\n            info=\"Field to use as the text content field for the vector store.\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"deletion_field\",\n            display_name=\"Deletion Based On Field\",\n            info=\"When this parameter is provided, documents in the target collection with \"\n            \"metadata field values matching the input metadata field value will be deleted \"\n            \"before new data is loaded.\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"ignore_invalid_documents\",\n            display_name=\"Ignore Invalid Documents\",\n            info=\"Boolean flag to determine whether to ignore invalid documents at runtime.\",\n            advanced=True,\n        ),\n        NestedDictInput(\n            name=\"astradb_vectorstore_kwargs\",\n            display_name=\"AstraDBVectorStore Parameters\",\n            info=\"Optional dictionary of additional parameters for the AstraDBVectorStore.\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"search_method\",\n            display_name=\"Search Method\",\n            info=(\n                \"Determine how your content is matched: Vector finds semantic similarity, \"\n                \"and Hybrid Search (suggested) combines both approaches \"\n                \"with a reranker.\"\n            ),\n            options=[\"Hybrid Search\", \"Vector Search\"],  # TODO: Restore Lexical Search?\n            options_metadata=[{\"icon\": \"SearchHybrid\"}, {\"icon\": \"SearchVector\"}],\n            value=\"Vector Search\",\n            advanced=True,\n            real_time_refresh=True,\n        ),\n        DropdownInput(\n            name=\"reranker\",\n            display_name=\"Reranker\",\n            info=\"Post-retrieval model that re-scores results for optimal relevance ranking.\",\n            show=False,\n            toggle=True,\n        ),\n        QueryInput(\n            name=\"lexical_terms\",\n            display_name=\"Lexical Terms\",\n            info=\"Add additional terms/keywords to augment search precision.\",\n            placeholder=\"Enter terms to search...\",\n            separator=\" \",\n            show=False,\n            value=\"\",\n        ),\n        IntInput(\n            name=\"number_of_results\",\n            display_name=\"Number of Search Results\",\n            info=\"Number of search results to return.\",\n            advanced=True,\n            value=4,\n        ),\n        DropdownInput(\n            name=\"search_type\",\n            display_name=\"Search Type\",\n            info=\"Search type to use\",\n            options=[\"Similarity\", \"Similarity with score threshold\", \"MMR (Max Marginal Relevance)\"],\n            value=\"Similarity\",\n            advanced=True,\n        ),\n        FloatInput(\n            name=\"search_score_threshold\",\n            display_name=\"Search Score Threshold\",\n            info=\"Minimum similarity score threshold for search results. \"\n            \"(when using 'Similarity with score threshold')\",\n            value=0,\n            advanced=True,\n        ),\n        NestedDictInput(\n            name=\"advanced_search_filter\",\n            display_name=\"Search Metadata Filter\",\n            info=\"Optional dictionary of filters to apply to the search query.\",\n            advanced=True,\n        ),\n    ]\n\n    async def update_build_config(\n        self,\n        build_config: dict,\n        field_value: str | dict,\n        field_name: str | None = None,\n    ) -> dict:\n        \"\"\"Update build configuration with proper handling of embedding and search options.\"\"\"\n        # Update model options for ModelInput only when relevant\n        # Only refresh when: initial load (None), embedding_model field changes, or api_key changes\n        if field_name in (None, \"embedding_model\", \"api_key\"):\n            build_config = update_model_options_in_build_config(\n                component=self,\n                build_config=build_config,\n                cache_key_prefix=\"astradb_embedding_model_options\",\n                get_options_func=get_embedding_model_options,\n                field_name=field_name,\n                field_value=field_value if field_name == \"embedding_model\" else None,\n                model_field_name=\"embedding_model\",\n            )\n\n        # Handle base astra db build config updates\n        build_config = await super().update_build_config(\n            build_config,\n            field_value=field_value,\n            field_name=field_name,\n        )\n\n        # Set embedding model display based on provider selection\n        if isinstance(field_value, dict) and \"02_embedding_generation_provider\" in field_value:\n            embedding_provider = field_value.get(\"02_embedding_generation_provider\")\n            is_custom_provider = embedding_provider and embedding_provider != \"Bring your own\"\n            provider = embedding_provider.lower() if is_custom_provider and embedding_provider is not None else None\n\n            build_config[\"embedding_model\"][\"show\"] = not bool(provider)\n            build_config[\"embedding_model\"][\"required\"] = not bool(provider)\n\n        # Early return if no API endpoint is configured\n        if not self.get_api_endpoint():\n            return build_config\n\n        # Configure search method and related options\n        return self._configure_search_options(build_config)\n\n    def _configure_search_options(self, build_config: dict) -> dict:\n        \"\"\"Configure hybrid search, reranker, and vector search options.\"\"\"\n        # Detect available hybrid search capabilities\n        hybrid_capabilities = self._detect_hybrid_capabilities()\n\n        # Return if we haven't selected a collection\n        if not build_config[\"collection_name\"][\"options\"] or not build_config[\"collection_name\"][\"value\"]:\n            return build_config\n\n        # Get collection options\n        collection_options = self._get_collection_options(build_config)\n\n        # Get the selected collection index\n        index = build_config[\"collection_name\"][\"options\"].index(build_config[\"collection_name\"][\"value\"])\n        provider = build_config[\"collection_name\"][\"options_metadata\"][index][\"provider\"]\n        build_config[\"embedding_model\"][\"show\"] = not bool(provider)\n        build_config[\"embedding_model\"][\"required\"] = not bool(provider)\n\n        # Determine search configuration\n        is_vector_search = build_config[\"search_method\"][\"value\"] == \"Vector Search\"\n        is_autodetect = build_config[\"autodetect_collection\"][\"value\"]\n\n        # Apply hybrid search configuration\n        if hybrid_capabilities[\"available\"]:\n            build_config[\"search_method\"][\"show\"] = True\n            build_config[\"search_method\"][\"options\"] = [\"Hybrid Search\", \"Vector Search\"]\n            build_config[\"search_method\"][\"value\"] = build_config[\"search_method\"].get(\"value\", \"Hybrid Search\")\n\n            build_config[\"reranker\"][\"options\"] = hybrid_capabilities[\"reranker_models\"]\n            build_config[\"reranker\"][\"options_metadata\"] = hybrid_capabilities[\"reranker_metadata\"]\n            if hybrid_capabilities[\"reranker_models\"]:\n                build_config[\"reranker\"][\"value\"] = hybrid_capabilities[\"reranker_models\"][0]\n        else:\n            build_config[\"search_method\"][\"show\"] = False\n            build_config[\"search_method\"][\"options\"] = [\"Vector Search\"]\n            build_config[\"search_method\"][\"value\"] = \"Vector Search\"\n            build_config[\"reranker\"][\"options\"] = []\n            build_config[\"reranker\"][\"options_metadata\"] = []\n\n        # Configure reranker visibility and state\n        hybrid_enabled = (\n            collection_options[\"rerank_enabled\"] and build_config[\"search_method\"][\"value\"] == \"Hybrid Search\"\n        )\n\n        build_config[\"reranker\"][\"show\"] = hybrid_enabled\n        build_config[\"reranker\"][\"toggle_value\"] = hybrid_enabled\n        build_config[\"reranker\"][\"toggle_disable\"] = is_vector_search\n\n        # Configure lexical terms\n        lexical_visible = collection_options[\"lexical_enabled\"] and not is_vector_search\n        build_config[\"lexical_terms\"][\"show\"] = lexical_visible\n        build_config[\"lexical_terms\"][\"value\"] = \"\" if is_vector_search else build_config[\"lexical_terms\"][\"value\"]\n\n        # Configure search type and score threshold\n        build_config[\"search_type\"][\"show\"] = is_vector_search\n        build_config[\"search_score_threshold\"][\"show\"] = is_vector_search\n\n        # Force similarity search for hybrid mode or autodetect\n        if hybrid_enabled or is_autodetect:\n            build_config[\"search_type\"][\"value\"] = \"Similarity\"\n\n        return build_config\n\n    def _detect_hybrid_capabilities(self) -> dict:\n        \"\"\"Detect available hybrid search and reranking capabilities.\"\"\"\n        environment = self.get_environment(self.environment)\n        client = DataAPIClient(environment=environment)\n        admin_client = client.get_admin()\n        db_admin = admin_client.get_database_admin(self.get_api_endpoint(), token=self.token)\n\n        try:\n            providers = db_admin.find_reranking_providers()\n            reranker_models = [\n                model.name for provider_data in providers.reranking_providers.values() for model in provider_data.models\n            ]\n            reranker_metadata = [\n                {\"icon\": self.get_provider_icon(provider_name=model.name.split(\"/\")[0])}\n                for provider in providers.reranking_providers.values()\n                for model in provider.models\n            ]\n        except Exception as e:  # noqa: BLE001\n            self.log(f\"Hybrid search not available: {e}\")\n            return {\n                \"available\": False,\n                \"reranker_models\": [],\n                \"reranker_metadata\": [],\n            }\n        else:\n            return {\n                \"available\": True,\n                \"reranker_models\": reranker_models,\n                \"reranker_metadata\": reranker_metadata,\n            }\n\n    def _get_collection_options(self, build_config: dict) -> dict:\n        \"\"\"Retrieve collection-level search options.\"\"\"\n        database = self.get_database_object(api_endpoint=build_config[\"api_endpoint\"][\"value\"])\n        collection = database.get_collection(\n            name=build_config[\"collection_name\"][\"value\"],\n            keyspace=build_config[\"keyspace\"][\"value\"],\n        )\n\n        col_options = collection.options()\n\n        return {\n            \"rerank_enabled\": bool(col_options.rerank and col_options.rerank.enabled),\n            \"lexical_enabled\": bool(col_options.lexical and col_options.lexical.enabled),\n        }\n\n    @check_cached_vector_store\n    def build_vector_store(self):\n        try:\n            from langchain_astradb import AstraDBVectorStore\n            from langchain_astradb.utils.astradb import HybridSearchMode\n        except ImportError as e:\n            msg = (\n                \"Could not import langchain Astra DB integration package. \"\n                \"Please install it with `pip install langchain-astradb`.\"\n            )\n            raise ImportError(msg) from e\n\n        # Get the embedding model and additional params\n        embedding_params = {\"embedding\": self.embedding_model} if self.embedding_model else {}\n\n        # Get the additional parameters\n        additional_params = self.astradb_vectorstore_kwargs or {}\n\n        # Get Langflow version and platform information\n        __version__ = get_version_info()[\"version\"]\n        langflow_prefix = \"\"\n        # if os.getenv(\"AWS_EXECUTION_ENV\") == \"AWS_ECS_FARGATE\":  # TODO: More precise way of detecting\n        #     langflow_prefix = \"ds-\"\n\n        # Get the database object\n        database = self.get_database_object()\n        autodetect = self.collection_name in database.list_collection_names() and self.autodetect_collection\n\n        # Bundle up the auto-detect parameters\n        autodetect_params = {\n            \"autodetect_collection\": autodetect,\n            \"content_field\": (\n                self.content_field\n                if self.content_field and embedding_params\n                else (\n                    \"page_content\"\n                    if embedding_params\n                    and self.collection_data(collection_name=self.collection_name, database=database) == 0\n                    else None\n                )\n            ),\n            \"ignore_invalid_documents\": self.ignore_invalid_documents,\n        }\n\n        # Choose HybridSearchMode based on the selected param\n        hybrid_search_mode = HybridSearchMode.DEFAULT if self.search_method == \"Hybrid Search\" else HybridSearchMode.OFF\n\n        # Attempt to build the Vector Store object\n        try:\n            vector_store = AstraDBVectorStore(\n                # Astra DB Authentication Parameters\n                token=self.token,\n                api_endpoint=database.api_endpoint,\n                namespace=database.keyspace,\n                collection_name=self.collection_name,\n                environment=self.environment,\n                # Hybrid Search Parameters\n                hybrid_search=hybrid_search_mode,\n                # Astra DB Usage Tracking Parameters\n                ext_callers=[(f\"{langflow_prefix}langflow\", __version__)],\n                # Astra DB Vector Store Parameters\n                **autodetect_params,\n                **embedding_params,\n                **additional_params,\n            )\n        except ValueError as e:\n            msg = f\"Error initializing AstraDBVectorStore: {e}\"\n            raise ValueError(msg) from e\n\n        # Add documents to the vector store\n        self._add_documents_to_vector_store(vector_store)\n\n        return vector_store\n\n    def _add_documents_to_vector_store(self, vector_store) -> None:\n        self.ingest_data = self._prepare_ingest_data()\n\n        documents = []\n        for _input in self.ingest_data or []:\n            if isinstance(_input, Data):\n                documents.append(_input.to_lc_document())\n            else:\n                msg = \"Vector Store Inputs must be Data objects.\"\n                raise TypeError(msg)\n\n        documents = [\n            Document(page_content=doc.page_content, metadata=serialize(doc.metadata, to_str=True)) for doc in documents\n        ]\n\n        if documents and self.deletion_field:\n            self.log(f\"Deleting documents where {self.deletion_field}\")\n            try:\n                database = self.get_database_object()\n                collection = database.get_collection(self.collection_name, keyspace=database.keyspace)\n                delete_values = list({doc.metadata[self.deletion_field] for doc in documents})\n                self.log(f\"Deleting documents where {self.deletion_field} matches {delete_values}.\")\n                collection.delete_many({f\"metadata.{self.deletion_field}\": {\"$in\": delete_values}})\n            except ValueError as e:\n                msg = f\"Error deleting documents from AstraDBVectorStore based on '{self.deletion_field}': {e}\"\n                raise ValueError(msg) from e\n\n        if documents:\n            self.log(f\"Adding {len(documents)} documents to the Vector Store.\")\n            try:\n                vector_store.add_documents(documents)\n            except ValueError as e:\n                msg = f\"Error adding documents to AstraDBVectorStore: {e}\"\n                raise ValueError(msg) from e\n        else:\n            self.log(\"No documents to add to the Vector Store.\")\n\n    def _map_search_type(self) -> str:\n        search_type_mapping = {\n            \"Similarity with score threshold\": \"similarity_score_threshold\",\n            \"MMR (Max Marginal Relevance)\": \"mmr\",\n        }\n\n        return search_type_mapping.get(self.search_type, \"similarity\")\n\n    def _build_search_args(self):\n        # Clean up the search query\n        query = self.search_query if isinstance(self.search_query, str) and self.search_query.strip() else None\n        lexical_terms = self.lexical_terms or None\n\n        # Check if we have a search query, and if so set the args\n        if query:\n            args = {\n                \"query\": query,\n                \"search_type\": self._map_search_type(),\n                \"k\": self.number_of_results,\n                \"score_threshold\": self.search_score_threshold,\n                \"lexical_query\": lexical_terms,\n            }\n        elif self.advanced_search_filter:\n            args = {\n                \"n\": self.number_of_results,\n            }\n        else:\n            return {}\n\n        filter_arg = self.advanced_search_filter or {}\n        if filter_arg:\n            args[\"filter\"] = filter_arg\n\n        return args\n\n    def search_documents(self, vector_store=None) -> list[Data]:\n        vector_store = vector_store or self.build_vector_store()\n\n        self.log(f\"Search input: {self.search_query}\")\n        self.log(f\"Search type: {self.search_type}\")\n        self.log(f\"Number of results: {self.number_of_results}\")\n        self.log(f\"store.hybrid_search: {vector_store.hybrid_search}\")\n        self.log(f\"Lexical terms: {self.lexical_terms}\")\n        self.log(f\"Reranker: {self.reranker}\")\n\n        try:\n            search_args = self._build_search_args()\n        except ValueError as e:\n            msg = f\"Error in AstraDBVectorStore._build_search_args: {e}\"\n            raise ValueError(msg) from e\n\n        if not search_args:\n            self.log(\"No search input or filters provided. Skipping search.\")\n            return []\n\n        docs = []\n        search_method = \"search\" if \"query\" in search_args else \"metadata_search\"\n\n        try:\n            self.log(f\"Calling vector_store.{search_method} with args: {search_args}\")\n            docs = getattr(vector_store, search_method)(**search_args)\n        except ValueError as e:\n            msg = f\"Error performing {search_method} in AstraDBVectorStore: {e}\"\n            raise ValueError(msg) from e\n\n        self.log(f\"Retrieved documents: {len(docs)}\")\n\n        data = docs_to_data(docs)\n        self.log(f\"Converted documents to data: {len(data)}\")\n        self.status = data\n\n        return data\n\n    def get_retriever_kwargs(self):\n        search_args = self._build_search_args()\n\n        return {\n            \"search_type\": self._map_search_type(),\n            \"search_kwargs\": search_args,\n        }\n"
-              },
-              "collection_name": {
-                "_input_type": "DropdownInput",
-                "advanced": false,
-                "combobox": true,
-                "dialog_inputs": {
-                  "fields": {
-                    "data": {
-                      "node": {
-                        "description": "Please allow several seconds for creation to complete.",
-                        "display_name": "Create new collection",
-                        "field_order": [
-                          "01_new_collection_name",
-                          "02_embedding_generation_provider",
-                          "03_embedding_generation_model",
-                          "04_dimension"
-                        ],
-                        "name": "create_collection",
-                        "template": {
-                          "01_new_collection_name": {
-                            "_input_type": "StrInput",
-                            "advanced": false,
-                            "display_name": "Name",
-                            "dynamic": false,
-                            "info": "Name of the new collection to create in Astra DB.",
-                            "list": false,
-                            "list_add_label": "Add More",
-                            "load_from_db": false,
-                            "name": "new_collection_name",
-                            "placeholder": "",
-                            "required": true,
-                            "show": true,
-                            "title_case": false,
-                            "tool_mode": false,
-                            "trace_as_metadata": true,
-                            "type": "str",
-                            "value": ""
-                          },
-                          "02_embedding_generation_provider": {
-                            "_input_type": "DropdownInput",
-                            "advanced": false,
-                            "combobox": false,
-                            "dialog_inputs": {},
-                            "display_name": "Embedding generation method",
-                            "dynamic": false,
-                            "helper_text": "To create collections with more embedding provider options, go to <a class=\"underline\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://astra.datastax.com/org/b7c08322-20a3-4516-80b0-5fa08655143e/database/f3166ac4-3e2f-4b32-880c-231d1f9e3f3e/data-explorer?createCollection=1&namespace=default_keyspace\">your database in Astra DB</a>.",
-                            "info": "Provider to use for generating embeddings.",
-                            "name": "embedding_generation_provider",
-                            "options": [
-                              "Bring your own",
-                              "Nvidia"
-                            ],
-                            "options_metadata": [
-                              {
-                                "icon": "vectorstores"
-                              },
-                              {
-                                "icon": "NVIDIA"
-                              }
-                            ],
-                            "placeholder": "",
-                            "real_time_refresh": true,
-                            "required": true,
-                            "show": true,
-                            "title_case": false,
-                            "toggle": false,
-                            "tool_mode": false,
-                            "trace_as_metadata": true,
-                            "type": "str",
-                            "value": ""
-                          },
-                          "03_embedding_generation_model": {
-                            "_input_type": "DropdownInput",
-                            "advanced": false,
-                            "combobox": false,
-                            "dialog_inputs": {},
-                            "display_name": "Embedding model",
-                            "dynamic": false,
-                            "info": "Model to use for generating embeddings.",
-                            "name": "embedding_generation_model",
-                            "options": [],
-                            "options_metadata": [],
-                            "placeholder": null,
-                            "readonly": "",
-                            "real_time_refresh": true,
-                            "required": true,
-                            "show": true,
-                            "title_case": false,
-                            "toggle": false,
-                            "tool_mode": false,
-                            "trace_as_metadata": true,
-                            "type": "str",
-                            "value": null
-                          },
-                          "04_dimension": {
-                            "_input_type": "IntInput",
-                            "advanced": false,
-                            "display_name": "Dimensions",
-                            "dynamic": false,
-                            "info": "Dimensions of the embeddings to generate.",
-                            "list": false,
-                            "list_add_label": "Add More",
-                            "name": "dimension",
-                            "placeholder": 1024,
-                            "readonly": true,
-                            "required": "",
-                            "show": true,
-                            "title_case": false,
-                            "tool_mode": false,
-                            "trace_as_metadata": true,
-                            "type": "int",
-                            "value": 1024
-                          }
-                        }
-                      }
-                    }
-                  },
-                  "functionality": "create"
-                },
-                "display_name": "Collection",
-                "dynamic": false,
-                "info": "The name of the collection within Astra DB where the vectors will be stored.",
-                "name": "collection_name",
-                "options": [],
-                "options_metadata": [],
-                "placeholder": "",
-                "real_time_refresh": true,
-                "refresh_button": true,
-                "required": true,
-                "show": false,
-                "title_case": false,
-                "toggle": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "content_field": {
-                "_input_type": "StrInput",
-                "advanced": true,
-                "display_name": "Content Field",
-                "dynamic": false,
-                "info": "Field to use as the text content field for the vector store.",
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "content_field",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "database_name": {
-                "_input_type": "DropdownInput",
-                "advanced": false,
-                "combobox": true,
-                "dialog_inputs": {
-                  "fields": {
-                    "data": {
-                      "node": {
-                        "description": "Please allow several minutes for creation to complete.",
-                        "display_name": "Create new database",
-                        "field_order": [
-                          "01_new_database_name",
-                          "02_cloud_provider",
-                          "03_region"
-                        ],
-                        "name": "create_database",
-                        "template": {
-                          "01_new_database_name": {
-                            "_input_type": "StrInput",
-                            "advanced": false,
-                            "display_name": "Name",
-                            "dynamic": false,
-                            "info": "Name of the new database to create in Astra DB.",
-                            "list": false,
-                            "list_add_label": "Add More",
-                            "load_from_db": false,
-                            "name": "new_database_name",
-                            "placeholder": "",
-                            "required": true,
-                            "show": true,
-                            "title_case": false,
-                            "tool_mode": false,
-                            "trace_as_metadata": true,
-                            "type": "str",
-                            "value": ""
-                          },
-                          "02_cloud_provider": {
-                            "_input_type": "DropdownInput",
-                            "advanced": false,
-                            "combobox": false,
-                            "dialog_inputs": {},
-                            "display_name": "Cloud provider",
-                            "dynamic": false,
-                            "info": "Cloud provider for the new database.",
-                            "name": "cloud_provider",
-                            "options": [
-                              "Amazon Web Services",
-                              "Google Cloud Platform",
-                              "Microsoft Azure"
-                            ],
-                            "options_metadata": [],
-                            "placeholder": "",
-                            "real_time_refresh": true,
-                            "required": true,
-                            "show": true,
-                            "title_case": false,
-                            "toggle": false,
-                            "tool_mode": false,
-                            "trace_as_metadata": true,
-                            "type": "str",
-                            "value": ""
-                          },
-                          "03_region": {
-                            "_input_type": "DropdownInput",
-                            "advanced": false,
-                            "combobox": false,
-                            "dialog_inputs": {},
-                            "display_name": "Region",
-                            "dynamic": false,
-                            "info": "Region for the new database.",
-                            "name": "region",
-                            "options": [],
-                            "options_metadata": [],
-                            "placeholder": "",
-                            "required": true,
-                            "show": true,
-                            "title_case": false,
-                            "toggle": false,
-                            "tool_mode": false,
-                            "trace_as_metadata": true,
-                            "type": "str",
-                            "value": ""
-                          }
-                        }
-                      }
-                    }
-                  },
-                  "functionality": "create"
-                },
-                "display_name": "Database",
-                "dynamic": false,
-                "info": "The Database name for the Astra DB instance.",
-                "name": "database_name",
-                "options": [],
-                "options_metadata": [],
-                "placeholder": "",
-                "real_time_refresh": true,
-                "refresh_button": true,
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "toggle": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "deletion_field": {
-                "_input_type": "StrInput",
-                "advanced": true,
-                "display_name": "Deletion Based On Field",
-                "dynamic": false,
-                "info": "When this parameter is provided, documents in the target collection with metadata field values matching the input metadata field value will be deleted before new data is loaded.",
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "deletion_field",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "embedding_model": {
-                "_input_type": "HandleInput",
-                "advanced": false,
-                "display_name": "Embedding Model",
-                "dynamic": false,
-                "info": "Specify the Embedding Model. Not required for Astra Vectorize collections.",
-                "input_types": [
-                  "Embeddings"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "embedding_model",
-                "placeholder": "",
-                "required": false,
-                "show": false,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "other",
-                "value": ""
-              },
-              "environment": {
-                "_input_type": "DropdownInput",
-                "advanced": true,
-                "combobox": true,
-                "dialog_inputs": {},
-                "display_name": "Environment",
-                "dynamic": false,
-                "info": "The environment for the Astra DB API Endpoint.",
-                "name": "environment",
-                "options": [
-                  "prod",
-                  "test",
-                  "dev"
-                ],
-                "options_metadata": [],
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "toggle": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "prod"
-              },
-              "ignore_invalid_documents": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Ignore Invalid Documents",
-                "dynamic": false,
-                "info": "Boolean flag to determine whether to ignore invalid documents at runtime.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "ignore_invalid_documents",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": false
-              },
-              "ingest_data": {
-                "_input_type": "HandleInput",
-                "advanced": false,
-                "display_name": "Ingest Data",
-                "dynamic": false,
-                "info": "",
-                "input_types": [
-                  "Data",
-                  "DataFrame"
-                ],
-                "list": true,
-                "list_add_label": "Add More",
-                "name": "ingest_data",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "other",
-                "value": ""
-              },
-              "keyspace": {
-                "_input_type": "DropdownInput",
-                "advanced": true,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Keyspace",
-                "dynamic": false,
-                "info": "Optional keyspace within Astra DB to use for the collection.",
-                "name": "keyspace",
-                "options": [],
-                "options_metadata": [],
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "toggle": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "default_keyspace"
-              },
-              "lexical_terms": {
-                "_input_type": "QueryInput",
-                "advanced": false,
-                "display_name": "Lexical Terms",
-                "dynamic": false,
-                "info": "Add additional terms/keywords to augment search precision.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "lexical_terms",
-                "placeholder": "Enter terms to search...",
-                "required": false,
-                "separator": " ",
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "query",
-                "value": ""
-              },
-              "number_of_results": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Number of Search Results",
-                "dynamic": false,
-                "info": "Number of search results to return.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "number_of_results",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": 4
-              },
-              "reranker": {
-                "_input_type": "DropdownInput",
-                "advanced": false,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Reranker",
-                "dynamic": false,
-                "info": "Post-retrieval model that re-scores results for optimal relevance ranking.",
-                "name": "reranker",
-                "options": [],
-                "options_metadata": [
-                  {
-                    "icon": "NVIDIA"
-                  }
-                ],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "toggle": true,
-                "toggle_disable": false,
-                "toggle_value": true,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "nvidia/llama-3.2-nv-rerankqa-1b-v2"
-              },
-              "search_method": {
-                "_input_type": "DropdownInput",
-                "advanced": true,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Search Method",
-                "dynamic": false,
-                "info": "Determine how your content is matched: Vector finds semantic similarity, and Hybrid Search (suggested) combines both approaches with a reranker.",
-                "name": "search_method",
-                "options": [
-                  "Hybrid Search",
-                  "Vector Search"
-                ],
-                "options_metadata": [
-                  {
-                    "icon": "SearchHybrid"
-                  },
-                  {
-                    "icon": "SearchVector"
-                  }
-                ],
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "toggle": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "Hybrid Search"
-              },
-              "search_query": {
-                "_input_type": "QueryInput",
-                "advanced": false,
-                "display_name": "Search Query",
-                "dynamic": false,
-                "info": "Enter a query to run a similarity search.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "search_query",
-                "placeholder": "Enter a query...",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": true,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "query",
-                "value": ""
-              },
-              "search_score_threshold": {
-                "_input_type": "FloatInput",
-                "advanced": true,
-                "display_name": "Search Score Threshold",
-                "dynamic": false,
-                "info": "Minimum similarity score threshold for search results. (when using 'Similarity with score threshold')",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "search_score_threshold",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "float",
-                "value": 0
-              },
-              "search_type": {
-                "_input_type": "DropdownInput",
-                "advanced": true,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Search Type",
-                "dynamic": false,
-                "info": "Search type to use",
-                "name": "search_type",
-                "options": [
-                  "Similarity",
-                  "Similarity with score threshold",
-                  "MMR (Max Marginal Relevance)"
-                ],
-                "options_metadata": [],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "toggle": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "Similarity"
-              },
-              "should_cache_vector_store": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Cache Vector Store",
-                "dynamic": false,
-                "info": "If True, the vector store will be cached for the current build of the component. This is useful for components that have multiple output methods and want to share the same vector store.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "should_cache_vector_store",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": true
-              },
-              "token": {
-                "_input_type": "SecretStrInput",
-                "advanced": false,
-                "display_name": "Astra DB Application Token",
-                "dynamic": false,
-                "info": "Authentication token for accessing Astra DB.",
-                "input_types": [],
-                "load_from_db": true,
-                "name": "token",
-                "password": true,
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": "ASTRA_DB_APPLICATION_TOKEN"
-              }
-            },
-            "tool_mode": false
-          },
-          "selected_output": "dataframe",
-          "showNode": true,
-          "type": "AstraDB"
-        },
-        "dragging": false,
-        "id": "AstraDB-u1JXb",
-        "measured": {
-          "height": 649,
-          "width": 320
-        },
-        "position": {
-          "x": 1543.865583824125,
-          "y": 203.52413742118927
-        },
-        "selected": false,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "StructuredOutput-MyXBb",
+          "id": "StructuredOutput-dSKGb",
           "node": {
             "base_classes": [
               "Data",
@@ -1982,6 +1152,7 @@
             ],
             "frozen": false,
             "icon": "braces",
+            "last_updated": "2026-01-05T20:30:02.423Z",
             "legacy": false,
             "lf_version": "1.6.0",
             "metadata": {
@@ -2013,9 +1184,12 @@
                 "cache": true,
                 "display_name": "Structured Output",
                 "group_outputs": false,
+                "loop_types": null,
                 "method": "build_structured_output",
                 "name": "structured_output",
-                "selected": null,
+                "options": null,
+                "required_inputs": null,
+                "selected": "Data",
                 "tool_mode": true,
                 "types": [
                   "Data"
@@ -2027,8 +1201,11 @@
                 "cache": true,
                 "display_name": "Structured Output",
                 "group_outputs": false,
+                "loop_types": null,
                 "method": "build_structured_dataframe",
                 "name": "dataframe_output",
+                "options": null,
+                "required_inputs": null,
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
@@ -2039,6 +1216,12 @@
             ],
             "pinned": false,
             "template": {
+              "_frontend_node_flow_id": {
+                "value": "4c82d6d5-fffe-4c1c-a0f5-4248308a454c"
+              },
+              "_frontend_node_folder_id": {
+                "value": "e825f5e2-1a12-463c-9774-9d81642ec93f"
+              },
               "_type": "Component",
               "api_key": {
                 "_input_type": "SecretStrInput",
@@ -2047,7 +1230,7 @@
                 "dynamic": false,
                 "info": "Model Provider API key",
                 "input_types": [],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "api_key",
                 "override_skip": false,
                 "password": true,
@@ -2103,6 +1286,7 @@
                 "type": "str",
                 "value": ""
               },
+              "is_refresh": false,
               "model": {
                 "_input_type": "ModelInput",
                 "advanced": false,
@@ -2125,6 +1309,228 @@
                 "list_add_label": "Add More",
                 "model_type": "language",
                 "name": "model",
+                "options": [
+                  {
+                    "category": "Anthropic",
+                    "icon": "Anthropic",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatAnthropic",
+                      "model_name_param": "model"
+                    },
+                    "name": "claude-opus-4-5-20251101",
+                    "provider": "Anthropic"
+                  },
+                  {
+                    "category": "Anthropic",
+                    "icon": "Anthropic",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatAnthropic",
+                      "model_name_param": "model"
+                    },
+                    "name": "claude-haiku-4-5-20251001",
+                    "provider": "Anthropic"
+                  },
+                  {
+                    "category": "Anthropic",
+                    "icon": "Anthropic",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatAnthropic",
+                      "model_name_param": "model"
+                    },
+                    "name": "claude-sonnet-4-5-20250929",
+                    "provider": "Anthropic"
+                  },
+                  {
+                    "category": "Anthropic",
+                    "icon": "Anthropic",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatAnthropic",
+                      "model_name_param": "model"
+                    },
+                    "name": "claude-opus-4-1-20250805",
+                    "provider": "Anthropic"
+                  },
+                  {
+                    "category": "Anthropic",
+                    "icon": "Anthropic",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatAnthropic",
+                      "model_name_param": "model"
+                    },
+                    "name": "claude-opus-4-20250514",
+                    "provider": "Anthropic"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5.1"
+                      ]
+                    },
+                    "name": "gpt-5.1",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5"
+                      ]
+                    },
+                    "name": "gpt-5",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5-mini"
+                      ]
+                    },
+                    "name": "gpt-5-mini",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5-nano"
+                      ]
+                    },
+                    "name": "gpt-5-nano",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5-chat-latest"
+                      ]
+                    },
+                    "name": "gpt-5-chat-latest",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "Ollama",
+                    "icon": "Ollama",
+                    "metadata": {
+                      "api_key_param": "base_url",
+                      "base_url_param": "base_url",
+                      "context_length": 128000,
+                      "model_class": "ChatOllama",
+                      "model_name_param": "model"
+                    },
+                    "name": "llama3.3",
+                    "provider": "Ollama"
+                  },
+                  {
+                    "category": "Ollama",
+                    "icon": "Ollama",
+                    "metadata": {
+                      "api_key_param": "base_url",
+                      "base_url_param": "base_url",
+                      "context_length": 128000,
+                      "model_class": "ChatOllama",
+                      "model_name_param": "model"
+                    },
+                    "name": "qwq",
+                    "provider": "Ollama"
+                  },
+                  {
+                    "category": "Ollama",
+                    "icon": "Ollama",
+                    "metadata": {
+                      "api_key_param": "base_url",
+                      "base_url_param": "base_url",
+                      "context_length": 128000,
+                      "model_class": "ChatOllama",
+                      "model_name_param": "model"
+                    },
+                    "name": "llama3.2",
+                    "provider": "Ollama"
+                  },
+                  {
+                    "category": "Ollama",
+                    "icon": "Ollama",
+                    "metadata": {
+                      "api_key_param": "base_url",
+                      "base_url_param": "base_url",
+                      "context_length": 128000,
+                      "model_class": "ChatOllama",
+                      "model_name_param": "model"
+                    },
+                    "name": "llama3.1",
+                    "provider": "Ollama"
+                  },
+                  {
+                    "category": "Ollama",
+                    "icon": "Ollama",
+                    "metadata": {
+                      "api_key_param": "base_url",
+                      "base_url_param": "base_url",
+                      "context_length": 128000,
+                      "model_class": "ChatOllama",
+                      "model_name_param": "model"
+                    },
+                    "name": "mistral",
+                    "provider": "Ollama"
+                  },
+                  {
+                    "category": "Google Generative AI",
+                    "icon": "GoogleGenerativeAI",
+                    "metadata": {
+                      "is_disabled_provider": true,
+                      "variable_name": "GOOGLE_API_KEY"
+                    },
+                    "name": "__enable_provider_Google Generative AI__",
+                    "provider": "Google Generative AI"
+                  },
+                  {
+                    "category": "IBM WatsonX",
+                    "icon": "WatsonxAI",
+                    "metadata": {
+                      "is_disabled_provider": true,
+                      "variable_name": "WATSONX_APIKEY"
+                    },
+                    "name": "__enable_provider_IBM WatsonX__",
+                    "provider": "IBM WatsonX"
+                  }
+                ],
                 "override_skip": false,
                 "placeholder": "Setup Provider",
                 "real_time_refresh": true,
@@ -2136,7 +1542,20 @@
                 "trace_as_input": true,
                 "track_in_telemetry": false,
                 "type": "model",
-                "value": ""
+                "value": [
+                  {
+                    "category": "Anthropic",
+                    "icon": "Anthropic",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatAnthropic",
+                      "model_name_param": "model"
+                    },
+                    "name": "claude-opus-4-5-20251101",
+                    "provider": "Anthropic"
+                  }
+                ]
               },
               "output_schema": {
                 "_input_type": "TableInput",
@@ -2267,9 +1686,9 @@
           "type": "StructuredOutput"
         },
         "dragging": false,
-        "id": "StructuredOutput-MyXBb",
+        "id": "StructuredOutput-dSKGb",
         "measured": {
-          "height": 431,
+          "height": 469,
           "width": 320
         },
         "position": {
@@ -2278,19 +1697,1116 @@
         },
         "selected": false,
         "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "AstraDB-AkDya",
+          "node": {
+            "base_classes": [
+              "Data",
+              "DataFrame",
+              "VectorStore"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Ingest and search documents in Astra DB",
+            "display_name": "Astra DB",
+            "documentation": "https://docs.langflow.org/bundles-datastax",
+            "edited": true,
+            "field_order": [
+              "token",
+              "environment",
+              "database_name",
+              "api_endpoint",
+              "keyspace",
+              "collection_name",
+              "autodetect_collection",
+              "ingest_data",
+              "search_query",
+              "should_cache_vector_store",
+              "embedding_model",
+              "content_field",
+              "deletion_field",
+              "ignore_invalid_documents",
+              "astradb_vectorstore_kwargs",
+              "search_method",
+              "reranker",
+              "lexical_terms",
+              "number_of_results",
+              "search_type",
+              "search_score_threshold",
+              "advanced_search_filter"
+            ],
+            "frozen": false,
+            "icon": "AstraDB",
+            "last_updated": "2026-01-05T20:31:04.587Z",
+            "legacy": false,
+            "metadata": {
+              "code_hash": "64da01addef6",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "astrapy",
+                    "version": "2.1.0"
+                  },
+                  {
+                    "name": "langchain_core",
+                    "version": "0.3.80"
+                  },
+                  {
+                    "name": "lfx",
+                    "version": null
+                  },
+                  {
+                    "name": "langchain_astradb",
+                    "version": "0.6.1"
+                  }
+                ],
+                "total_dependencies": 4
+              },
+              "module": "custom_components.astra_db"
+            },
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Search Results",
+                "group_outputs": false,
+                "hidden": null,
+                "loop_types": null,
+                "method": "search_documents",
+                "name": "search_results",
+                "options": null,
+                "required_inputs": null,
+                "selected": "Data",
+                "tool_mode": true,
+                "types": [
+                  "Data"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "DataFrame",
+                "group_outputs": false,
+                "hidden": null,
+                "loop_types": null,
+                "method": "as_dataframe",
+                "name": "dataframe",
+                "options": null,
+                "required_inputs": null,
+                "selected": "DataFrame",
+                "tool_mode": true,
+                "types": [
+                  "DataFrame"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Vector Store Connection",
+                "group_outputs": false,
+                "hidden": false,
+                "loop_types": null,
+                "method": "as_vector_store",
+                "name": "vectorstoreconnection",
+                "options": null,
+                "required_inputs": null,
+                "selected": "VectorStore",
+                "tool_mode": true,
+                "types": [
+                  "VectorStore"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_frontend_node_flow_id": {
+                "value": "4c82d6d5-fffe-4c1c-a0f5-4248308a454c"
+              },
+              "_frontend_node_folder_id": {
+                "value": "e825f5e2-1a12-463c-9774-9d81642ec93f"
+              },
+              "_type": "Component",
+              "advanced_search_filter": {
+                "_input_type": "NestedDictInput",
+                "advanced": true,
+                "display_name": "Search Metadata Filter",
+                "dynamic": false,
+                "info": "Optional dictionary of filters to apply to the search query.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "advanced_search_filter",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "NestedDict",
+                "value": {}
+              },
+              "api_endpoint": {
+                "_input_type": "DropdownInput",
+                "advanced": true,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Astra DB API Endpoint",
+                "dynamic": false,
+                "external_options": {},
+                "info": "The API Endpoint for the Astra DB instance. Supercedes database selection.",
+                "name": "api_endpoint",
+                "options": [],
+                "options_metadata": [],
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "str",
+                "value": ""
+              },
+              "astradb_vectorstore_kwargs": {
+                "_input_type": "NestedDictInput",
+                "advanced": true,
+                "display_name": "AstraDBVectorStore Parameters",
+                "dynamic": false,
+                "info": "Optional dictionary of additional parameters for the AstraDBVectorStore.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "astradb_vectorstore_kwargs",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "NestedDict",
+                "value": {}
+              },
+              "autodetect_collection": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Autodetect Collection",
+                "dynamic": false,
+                "info": "Boolean flag to determine whether to autodetect the collection.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "autodetect_collection",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": true
+              },
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from astrapy import DataAPIClient\nfrom langchain_core.documents import Document\n\nfrom lfx.base.datastax.astradb_base import AstraDBBaseComponent\nfrom lfx.base.models.unified_models import get_embedding_model_options, update_model_options_in_build_config\nfrom lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store\nfrom lfx.base.vectorstores.vector_store_connection_decorator import vector_store_connection\nfrom lfx.helpers.data import docs_to_data\nfrom lfx.io import (\n    BoolInput,\n    DropdownInput,\n    FloatInput,\n    IntInput,\n    ModelInput,\n    NestedDictInput,\n    QueryInput,\n    StrInput,\n)\nfrom lfx.schema.data import Data\nfrom lfx.serialization import serialize\nfrom lfx.utils.version import get_version_info\n\n\n@vector_store_connection\nclass AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):\n    display_name: str = \"Astra DB\"\n    description: str = \"Ingest and search documents in Astra DB\"\n    documentation: str = \"https://docs.langflow.org/bundles-datastax\"\n    name = \"AstraDB\"\n    icon: str = \"AstraDB\"\n\n    inputs = [\n        *AstraDBBaseComponent.inputs,\n        *LCVectorStoreComponent.inputs,\n        ModelInput(\n            name=\"embedding_model\",\n            display_name=\"Embedding Model\",\n            info=\"Specify the Embedding Model. Not required for Astra Vectorize collections.\",\n            required=False,\n            show=True,\n            model_type=\"embedding\",\n            input_types=[\"Embeddings\"],\n            real_time_refresh=True,\n        ),\n        StrInput(\n            name=\"content_field\",\n            display_name=\"Content Field\",\n            info=\"Field to use as the text content field for the vector store.\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"deletion_field\",\n            display_name=\"Deletion Based On Field\",\n            info=\"When this parameter is provided, documents in the target collection with \"\n            \"metadata field values matching the input metadata field value will be deleted \"\n            \"before new data is loaded.\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"ignore_invalid_documents\",\n            display_name=\"Ignore Invalid Documents\",\n            info=\"Boolean flag to determine whether to ignore invalid documents at runtime.\",\n            advanced=True,\n        ),\n        NestedDictInput(\n            name=\"astradb_vectorstore_kwargs\",\n            display_name=\"AstraDBVectorStore Parameters\",\n            info=\"Optional dictionary of additional parameters for the AstraDBVectorStore.\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"search_method\",\n            display_name=\"Search Method\",\n            info=(\n                \"Determine how your content is matched: Vector finds semantic similarity, \"\n                \"and Hybrid Search (suggested) combines both approaches \"\n                \"with a reranker.\"\n            ),\n            options=[\"Hybrid Search\", \"Vector Search\"],  # TODO: Restore Lexical Search?\n            options_metadata=[{\"icon\": \"SearchHybrid\"}, {\"icon\": \"SearchVector\"}],\n            value=\"Vector Search\",\n            advanced=True,\n            real_time_refresh=True,\n        ),\n        DropdownInput(\n            name=\"reranker\",\n            display_name=\"Reranker\",\n            info=\"Post-retrieval model that re-scores results for optimal relevance ranking.\",\n            show=False,\n            toggle=True,\n        ),\n        QueryInput(\n            name=\"lexical_terms\",\n            display_name=\"Lexical Terms\",\n            info=\"Add additional terms/keywords to augment search precision.\",\n            placeholder=\"Enter terms to search...\",\n            separator=\" \",\n            show=True,\n            value=\"\",\n        ),\n        IntInput(\n            name=\"number_of_results\",\n            display_name=\"Number of Search Results\",\n            info=\"Number of search results to return.\",\n            advanced=True,\n            value=4,\n        ),\n        DropdownInput(\n            name=\"search_type\",\n            display_name=\"Search Type\",\n            info=\"Search type to use\",\n            options=[\"Similarity\", \"Similarity with score threshold\", \"MMR (Max Marginal Relevance)\"],\n            value=\"Similarity\",\n            advanced=True,\n        ),\n        FloatInput(\n            name=\"search_score_threshold\",\n            display_name=\"Search Score Threshold\",\n            info=\"Minimum similarity score threshold for search results. \"\n            \"(when using 'Similarity with score threshold')\",\n            value=0,\n            advanced=True,\n        ),\n        NestedDictInput(\n            name=\"advanced_search_filter\",\n            display_name=\"Search Metadata Filter\",\n            info=\"Optional dictionary of filters to apply to the search query.\",\n            advanced=True,\n        ),\n    ]\n\n    async def update_build_config(\n        self,\n        build_config: dict,\n        field_value: str | dict,\n        field_name: str | None = None,\n    ) -> dict:\n        \"\"\"Update build configuration with proper handling of embedding and search options.\"\"\"\n        # Update model options for ModelInput only when relevant\n        # Only refresh when: initial load (None), embedding_model field changes, or api_key changes\n        if field_name in (None, \"embedding_model\", \"api_key\"):\n            build_config = update_model_options_in_build_config(\n                component=self,\n                build_config=build_config,\n                cache_key_prefix=\"astradb_embedding_model_options\",\n                get_options_func=get_embedding_model_options,\n                field_name=field_name,\n                field_value=field_value if field_name == \"embedding_model\" else None,\n                model_field_name=\"embedding_model\",\n            )\n\n        # Handle base astra db build config updates\n        build_config = await super().update_build_config(\n            build_config,\n            field_value=field_value,\n            field_name=field_name,\n        )\n\n        # Set embedding model display based on provider selection\n        if isinstance(field_value, dict) and \"02_embedding_generation_provider\" in field_value:\n            embedding_provider = field_value.get(\"02_embedding_generation_provider\")\n            is_custom_provider = embedding_provider and embedding_provider != \"Bring your own\"\n            provider = embedding_provider.lower() if is_custom_provider and embedding_provider is not None else None\n\n            build_config[\"embedding_model\"][\"show\"] = not bool(provider)\n            build_config[\"embedding_model\"][\"required\"] = not bool(provider)\n\n        # Early return if no API endpoint is configured\n        if not self.get_api_endpoint():\n            return build_config\n\n        # Configure search method and related options\n        return self._configure_search_options(build_config)\n\n    def _configure_search_options(self, build_config: dict) -> dict:\n        \"\"\"Configure hybrid search, reranker, and vector search options.\"\"\"\n        # Detect available hybrid search capabilities\n        hybrid_capabilities = self._detect_hybrid_capabilities()\n\n        # Return if we haven't selected a collection\n        if not build_config[\"collection_name\"][\"options\"] or not build_config[\"collection_name\"][\"value\"]:\n            return build_config\n\n        # Get collection options\n        collection_options = self._get_collection_options(build_config)\n\n        # Get the selected collection index\n        index = build_config[\"collection_name\"][\"options\"].index(build_config[\"collection_name\"][\"value\"])\n        provider = build_config[\"collection_name\"][\"options_metadata\"][index][\"provider\"]\n        build_config[\"embedding_model\"][\"show\"] = not bool(provider)\n        build_config[\"embedding_model\"][\"required\"] = not bool(provider)\n\n        # Determine search configuration\n        is_vector_search = build_config[\"search_method\"][\"value\"] == \"Vector Search\"\n        is_autodetect = build_config[\"autodetect_collection\"][\"value\"]\n\n        # Apply hybrid search configuration\n        if hybrid_capabilities[\"available\"]:\n            build_config[\"search_method\"][\"show\"] = True\n            build_config[\"search_method\"][\"options\"] = [\"Hybrid Search\", \"Vector Search\"]\n            build_config[\"search_method\"][\"value\"] = build_config[\"search_method\"].get(\"value\", \"Hybrid Search\")\n\n            build_config[\"reranker\"][\"options\"] = hybrid_capabilities[\"reranker_models\"]\n            build_config[\"reranker\"][\"options_metadata\"] = hybrid_capabilities[\"reranker_metadata\"]\n            if hybrid_capabilities[\"reranker_models\"]:\n                build_config[\"reranker\"][\"value\"] = hybrid_capabilities[\"reranker_models\"][0]\n        else:\n            build_config[\"search_method\"][\"show\"] = False\n            build_config[\"search_method\"][\"options\"] = [\"Vector Search\"]\n            build_config[\"search_method\"][\"value\"] = \"Vector Search\"\n            build_config[\"reranker\"][\"options\"] = []\n            build_config[\"reranker\"][\"options_metadata\"] = []\n\n        # Configure reranker visibility and state\n        hybrid_enabled = (\n            collection_options[\"rerank_enabled\"] and build_config[\"search_method\"][\"value\"] == \"Hybrid Search\"\n        )\n\n        build_config[\"reranker\"][\"show\"] = hybrid_enabled\n        build_config[\"reranker\"][\"toggle_value\"] = hybrid_enabled\n        build_config[\"reranker\"][\"toggle_disable\"] = is_vector_search\n\n        # Configure lexical terms\n        lexical_visible = collection_options[\"lexical_enabled\"] and not is_vector_search\n        build_config[\"lexical_terms\"][\"show\"] = lexical_visible\n        build_config[\"lexical_terms\"][\"value\"] = \"\" if is_vector_search else build_config[\"lexical_terms\"][\"value\"]\n\n        # Configure search type and score threshold\n        build_config[\"search_type\"][\"show\"] = is_vector_search\n        build_config[\"search_score_threshold\"][\"show\"] = is_vector_search\n\n        # Force similarity search for hybrid mode or autodetect\n        if hybrid_enabled or is_autodetect:\n            build_config[\"search_type\"][\"value\"] = \"Similarity\"\n\n        return build_config\n\n    def _detect_hybrid_capabilities(self) -> dict:\n        \"\"\"Detect available hybrid search and reranking capabilities.\"\"\"\n        environment = self.get_environment(self.environment)\n        client = DataAPIClient(environment=environment)\n        admin_client = client.get_admin()\n        db_admin = admin_client.get_database_admin(self.get_api_endpoint(), token=self.token)\n\n        try:\n            providers = db_admin.find_reranking_providers()\n            reranker_models = [\n                model.name for provider_data in providers.reranking_providers.values() for model in provider_data.models\n            ]\n            reranker_metadata = [\n                {\"icon\": self.get_provider_icon(provider_name=model.name.split(\"/\")[0])}\n                for provider in providers.reranking_providers.values()\n                for model in provider.models\n            ]\n        except Exception as e:  # noqa: BLE001\n            self.log(f\"Hybrid search not available: {e}\")\n            return {\n                \"available\": False,\n                \"reranker_models\": [],\n                \"reranker_metadata\": [],\n            }\n        else:\n            return {\n                \"available\": True,\n                \"reranker_models\": reranker_models,\n                \"reranker_metadata\": reranker_metadata,\n            }\n\n    def _get_collection_options(self, build_config: dict) -> dict:\n        \"\"\"Retrieve collection-level search options.\"\"\"\n        database = self.get_database_object(api_endpoint=build_config[\"api_endpoint\"][\"value\"])\n        collection = database.get_collection(\n            name=build_config[\"collection_name\"][\"value\"],\n            keyspace=build_config[\"keyspace\"][\"value\"],\n        )\n\n        col_options = collection.options()\n\n        return {\n            \"rerank_enabled\": bool(col_options.rerank and col_options.rerank.enabled),\n            \"lexical_enabled\": bool(col_options.lexical and col_options.lexical.enabled),\n        }\n\n    @check_cached_vector_store\n    def build_vector_store(self):\n        try:\n            from langchain_astradb import AstraDBVectorStore\n            from langchain_astradb.utils.astradb import HybridSearchMode\n        except ImportError as e:\n            msg = (\n                \"Could not import langchain Astra DB integration package. \"\n                \"Please install it with `pip install langchain-astradb`.\"\n            )\n            raise ImportError(msg) from e\n\n        # Get the embedding model and additional params\n        embedding_params = {\"embedding\": self.embedding_model} if self.embedding_model else {}\n\n        # Get the additional parameters\n        additional_params = self.astradb_vectorstore_kwargs or {}\n\n        # Get Langflow version and platform information\n        __version__ = get_version_info()[\"version\"]\n        langflow_prefix = \"\"\n        # if os.getenv(\"AWS_EXECUTION_ENV\") == \"AWS_ECS_FARGATE\":  # TODO: More precise way of detecting\n        #     langflow_prefix = \"ds-\"\n\n        # Get the database object\n        database = self.get_database_object()\n        autodetect = self.collection_name in database.list_collection_names() and self.autodetect_collection\n\n        # Bundle up the auto-detect parameters\n        autodetect_params = {\n            \"autodetect_collection\": autodetect,\n            \"content_field\": (\n                self.content_field\n                if self.content_field and embedding_params\n                else (\n                    \"page_content\"\n                    if embedding_params\n                    and self.collection_data(collection_name=self.collection_name, database=database) == 0\n                    else None\n                )\n            ),\n            \"ignore_invalid_documents\": self.ignore_invalid_documents,\n        }\n\n        # Choose HybridSearchMode based on the selected param\n        hybrid_search_mode = HybridSearchMode.DEFAULT if self.search_method == \"Hybrid Search\" else HybridSearchMode.OFF\n\n        # Attempt to build the Vector Store object\n        try:\n            vector_store = AstraDBVectorStore(\n                # Astra DB Authentication Parameters\n                token=self.token,\n                api_endpoint=database.api_endpoint,\n                namespace=database.keyspace,\n                collection_name=self.collection_name,\n                environment=self.environment,\n                # Hybrid Search Parameters\n                hybrid_search=hybrid_search_mode,\n                # Astra DB Usage Tracking Parameters\n                ext_callers=[(f\"{langflow_prefix}langflow\", __version__)],\n                # Astra DB Vector Store Parameters\n                **autodetect_params,\n                **embedding_params,\n                **additional_params,\n            )\n        except ValueError as e:\n            msg = f\"Error initializing AstraDBVectorStore: {e}\"\n            raise ValueError(msg) from e\n\n        # Add documents to the vector store\n        self._add_documents_to_vector_store(vector_store)\n\n        return vector_store\n\n    def _add_documents_to_vector_store(self, vector_store) -> None:\n        self.ingest_data = self._prepare_ingest_data()\n\n        documents = []\n        for _input in self.ingest_data or []:\n            if isinstance(_input, Data):\n                documents.append(_input.to_lc_document())\n            else:\n                msg = \"Vector Store Inputs must be Data objects.\"\n                raise TypeError(msg)\n\n        documents = [\n            Document(page_content=doc.page_content, metadata=serialize(doc.metadata, to_str=True)) for doc in documents\n        ]\n\n        if documents and self.deletion_field:\n            self.log(f\"Deleting documents where {self.deletion_field}\")\n            try:\n                database = self.get_database_object()\n                collection = database.get_collection(self.collection_name, keyspace=database.keyspace)\n                delete_values = list({doc.metadata[self.deletion_field] for doc in documents})\n                self.log(f\"Deleting documents where {self.deletion_field} matches {delete_values}.\")\n                collection.delete_many({f\"metadata.{self.deletion_field}\": {\"$in\": delete_values}})\n            except ValueError as e:\n                msg = f\"Error deleting documents from AstraDBVectorStore based on '{self.deletion_field}': {e}\"\n                raise ValueError(msg) from e\n\n        if documents:\n            self.log(f\"Adding {len(documents)} documents to the Vector Store.\")\n            try:\n                vector_store.add_documents(documents)\n            except ValueError as e:\n                msg = f\"Error adding documents to AstraDBVectorStore: {e}\"\n                raise ValueError(msg) from e\n        else:\n            self.log(\"No documents to add to the Vector Store.\")\n\n    def _map_search_type(self) -> str:\n        search_type_mapping = {\n            \"Similarity with score threshold\": \"similarity_score_threshold\",\n            \"MMR (Max Marginal Relevance)\": \"mmr\",\n        }\n\n        return search_type_mapping.get(self.search_type, \"similarity\")\n\n    def _build_search_args(self):\n        # Clean up the search query\n        query = self.search_query if isinstance(self.search_query, str) and self.search_query.strip() else None\n        lexical_terms = self.lexical_terms or None\n\n        # Check if we have a search query, and if so set the args\n        if query:\n            args = {\n                \"query\": query,\n                \"search_type\": self._map_search_type(),\n                \"k\": self.number_of_results,\n                \"score_threshold\": self.search_score_threshold,\n                \"lexical_query\": lexical_terms,\n            }\n        elif self.advanced_search_filter:\n            args = {\n                \"n\": self.number_of_results,\n            }\n        else:\n            return {}\n\n        filter_arg = self.advanced_search_filter or {}\n        if filter_arg:\n            args[\"filter\"] = filter_arg\n\n        return args\n\n    def search_documents(self, vector_store=None) -> list[Data]:\n        vector_store = vector_store or self.build_vector_store()\n\n        self.log(f\"Search input: {self.search_query}\")\n        self.log(f\"Search type: {self.search_type}\")\n        self.log(f\"Number of results: {self.number_of_results}\")\n        self.log(f\"store.hybrid_search: {vector_store.hybrid_search}\")\n        self.log(f\"Lexical terms: {self.lexical_terms}\")\n        self.log(f\"Reranker: {self.reranker}\")\n\n        try:\n            search_args = self._build_search_args()\n        except ValueError as e:\n            msg = f\"Error in AstraDBVectorStore._build_search_args: {e}\"\n            raise ValueError(msg) from e\n\n        if not search_args:\n            self.log(\"No search input or filters provided. Skipping search.\")\n            return []\n\n        docs = []\n        search_method = \"search\" if \"query\" in search_args else \"metadata_search\"\n\n        try:\n            self.log(f\"Calling vector_store.{search_method} with args: {search_args}\")\n            docs = getattr(vector_store, search_method)(**search_args)\n        except ValueError as e:\n            msg = f\"Error performing {search_method} in AstraDBVectorStore: {e}\"\n            raise ValueError(msg) from e\n\n        self.log(f\"Retrieved documents: {len(docs)}\")\n\n        data = docs_to_data(docs)\n        self.log(f\"Converted documents to data: {len(data)}\")\n        self.status = data\n\n        return data\n\n    def get_retriever_kwargs(self):\n        search_args = self._build_search_args()\n\n        return {\n            \"search_type\": self._map_search_type(),\n            \"search_kwargs\": search_args,\n        }\n"
+              },
+              "collection_name": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": true,
+                "dialog_inputs": {
+                  "fields": {
+                    "data": {
+                      "node": {
+                        "description": "Please allow several seconds for creation to complete.",
+                        "display_name": "Create new collection",
+                        "field_order": [
+                          "01_new_collection_name",
+                          "02_embedding_generation_provider",
+                          "03_embedding_generation_model",
+                          "04_dimension"
+                        ],
+                        "name": "create_collection",
+                        "template": {
+                          "01_new_collection_name": {
+                            "_input_type": "StrInput",
+                            "advanced": false,
+                            "display_name": "Name",
+                            "dynamic": false,
+                            "info": "Name of the new collection to create in Astra DB.",
+                            "list": false,
+                            "list_add_label": "Add More",
+                            "load_from_db": false,
+                            "name": "new_collection_name",
+                            "override_skip": false,
+                            "placeholder": "",
+                            "required": true,
+                            "show": true,
+                            "title_case": false,
+                            "tool_mode": false,
+                            "trace_as_metadata": true,
+                            "track_in_telemetry": false,
+                            "type": "str",
+                            "value": ""
+                          },
+                          "02_embedding_generation_provider": {
+                            "_input_type": "DropdownInput",
+                            "advanced": false,
+                            "combobox": false,
+                            "dialog_inputs": {},
+                            "display_name": "Embedding generation method",
+                            "dynamic": false,
+                            "external_options": {},
+                            "helper_text": "To create collections with more embedding provider options, go to <a class=\"underline\" href=\"https://astra.datastax.com/\" target=\" _blank\" rel=\"noopener noreferrer\">your database in Astra DB</a>",
+                            "info": "Provider to use for generating embeddings.",
+                            "name": "embedding_generation_provider",
+                            "options": [],
+                            "options_metadata": [],
+                            "override_skip": false,
+                            "placeholder": "",
+                            "real_time_refresh": true,
+                            "required": true,
+                            "show": true,
+                            "title_case": false,
+                            "toggle": false,
+                            "tool_mode": false,
+                            "trace_as_metadata": true,
+                            "track_in_telemetry": true,
+                            "type": "str",
+                            "value": ""
+                          },
+                          "03_embedding_generation_model": {
+                            "_input_type": "DropdownInput",
+                            "advanced": false,
+                            "combobox": false,
+                            "dialog_inputs": {},
+                            "display_name": "Embedding model",
+                            "dynamic": false,
+                            "external_options": {},
+                            "info": "Model to use for generating embeddings.",
+                            "name": "embedding_generation_model",
+                            "options": [],
+                            "options_metadata": [],
+                            "override_skip": false,
+                            "placeholder": "",
+                            "real_time_refresh": true,
+                            "required": false,
+                            "show": true,
+                            "title_case": false,
+                            "toggle": false,
+                            "tool_mode": false,
+                            "trace_as_metadata": true,
+                            "track_in_telemetry": true,
+                            "type": "str",
+                            "value": ""
+                          },
+                          "04_dimension": {
+                            "_input_type": "IntInput",
+                            "advanced": false,
+                            "display_name": "Dimensions",
+                            "dynamic": false,
+                            "info": "Dimensions of the embeddings to generate.",
+                            "list": false,
+                            "list_add_label": "Add More",
+                            "name": "dimension",
+                            "override_skip": false,
+                            "placeholder": "",
+                            "required": false,
+                            "show": true,
+                            "title_case": false,
+                            "tool_mode": false,
+                            "trace_as_metadata": true,
+                            "track_in_telemetry": true,
+                            "type": "int"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "functionality": "create"
+                },
+                "display_name": "Collection",
+                "dynamic": false,
+                "external_options": {},
+                "info": "The name of the collection within Astra DB where the vectors will be stored.",
+                "name": "collection_name",
+                "options": [],
+                "options_metadata": [],
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "refresh_button": true,
+                "required": true,
+                "show": false,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "str",
+                "value": ""
+              },
+              "content_field": {
+                "_input_type": "StrInput",
+                "advanced": true,
+                "display_name": "Content Field",
+                "dynamic": false,
+                "info": "Field to use as the text content field for the vector store.",
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "content_field",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "database_name": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": true,
+                "dialog_inputs": {
+                  "fields": {
+                    "data": {
+                      "node": {
+                        "description": "Please allow several minutes for creation to complete.",
+                        "display_name": "Create new database",
+                        "field_order": [
+                          "01_new_database_name",
+                          "02_cloud_provider",
+                          "03_region"
+                        ],
+                        "name": "create_database",
+                        "template": {
+                          "01_new_database_name": {
+                            "_input_type": "StrInput",
+                            "advanced": false,
+                            "display_name": "Name",
+                            "dynamic": false,
+                            "info": "Name of the new database to create in Astra DB.",
+                            "list": false,
+                            "list_add_label": "Add More",
+                            "load_from_db": false,
+                            "name": "new_database_name",
+                            "override_skip": false,
+                            "placeholder": "",
+                            "required": true,
+                            "show": true,
+                            "title_case": false,
+                            "tool_mode": false,
+                            "trace_as_metadata": true,
+                            "track_in_telemetry": false,
+                            "type": "str",
+                            "value": ""
+                          },
+                          "02_cloud_provider": {
+                            "_input_type": "DropdownInput",
+                            "advanced": false,
+                            "combobox": false,
+                            "dialog_inputs": {},
+                            "display_name": "Cloud provider",
+                            "dynamic": false,
+                            "external_options": {},
+                            "info": "Cloud provider for the new database.",
+                            "name": "cloud_provider",
+                            "options": [],
+                            "options_metadata": [],
+                            "override_skip": false,
+                            "placeholder": "",
+                            "real_time_refresh": true,
+                            "required": true,
+                            "show": true,
+                            "title_case": false,
+                            "toggle": false,
+                            "tool_mode": false,
+                            "trace_as_metadata": true,
+                            "track_in_telemetry": true,
+                            "type": "str",
+                            "value": ""
+                          },
+                          "03_region": {
+                            "_input_type": "DropdownInput",
+                            "advanced": false,
+                            "combobox": false,
+                            "dialog_inputs": {},
+                            "display_name": "Region",
+                            "dynamic": false,
+                            "external_options": {},
+                            "info": "Region for the new database.",
+                            "name": "region",
+                            "options": [],
+                            "options_metadata": [],
+                            "override_skip": false,
+                            "placeholder": "",
+                            "required": true,
+                            "show": true,
+                            "title_case": false,
+                            "toggle": false,
+                            "tool_mode": false,
+                            "trace_as_metadata": true,
+                            "track_in_telemetry": true,
+                            "type": "str",
+                            "value": ""
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "functionality": "create"
+                },
+                "display_name": "Database",
+                "dynamic": false,
+                "external_options": {},
+                "info": "The Database name for the Astra DB instance.",
+                "name": "database_name",
+                "options": [],
+                "options_metadata": [],
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "refresh_button": true,
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "str",
+                "value": ""
+              },
+              "deletion_field": {
+                "_input_type": "StrInput",
+                "advanced": true,
+                "display_name": "Deletion Based On Field",
+                "dynamic": false,
+                "info": "When this parameter is provided, documents in the target collection with metadata field values matching the input metadata field value will be deleted before new data is loaded.",
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "deletion_field",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "embedding_model": {
+                "_input_type": "ModelInput",
+                "advanced": false,
+                "display_name": "Embedding Model",
+                "dynamic": false,
+                "external_options": {
+                  "fields": {
+                    "data": {
+                      "node": {
+                        "display_name": "Connect other models",
+                        "icon": "CornerDownLeft",
+                        "name": "connect_other_models"
+                      }
+                    }
+                  }
+                },
+                "info": "Specify the Embedding Model. Not required for Astra Vectorize collections.",
+                "input_types": [],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "model_type": "embedding",
+                "name": "embedding_model",
+                "options": [
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "embedding_class": "OpenAIEmbeddings",
+                      "model_type": "embeddings",
+                      "param_mapping": {
+                        "api_base": "base_url",
+                        "api_key": "api_key",
+                        "chunk_size": "chunk_size",
+                        "dimensions": "dimensions",
+                        "max_retries": "max_retries",
+                        "model": "model",
+                        "model_kwargs": "model_kwargs",
+                        "request_timeout": "timeout",
+                        "show_progress_bar": "show_progress_bar"
+                      }
+                    },
+                    "name": "text-embedding-3-small",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "embedding_class": "OpenAIEmbeddings",
+                      "model_type": "embeddings",
+                      "param_mapping": {
+                        "api_base": "base_url",
+                        "api_key": "api_key",
+                        "chunk_size": "chunk_size",
+                        "dimensions": "dimensions",
+                        "max_retries": "max_retries",
+                        "model": "model",
+                        "model_kwargs": "model_kwargs",
+                        "request_timeout": "timeout",
+                        "show_progress_bar": "show_progress_bar"
+                      }
+                    },
+                    "name": "text-embedding-3-large",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "embedding_class": "OpenAIEmbeddings",
+                      "model_type": "embeddings",
+                      "param_mapping": {
+                        "api_base": "base_url",
+                        "api_key": "api_key",
+                        "chunk_size": "chunk_size",
+                        "dimensions": "dimensions",
+                        "max_retries": "max_retries",
+                        "model": "model",
+                        "model_kwargs": "model_kwargs",
+                        "request_timeout": "timeout",
+                        "show_progress_bar": "show_progress_bar"
+                      }
+                    },
+                    "name": "text-embedding-ada-002",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "Ollama",
+                    "icon": "Ollama",
+                    "metadata": {
+                      "embedding_class": "OllamaEmbeddings",
+                      "model_type": "embeddings",
+                      "param_mapping": {
+                        "base_url": "base_url",
+                        "model": "model",
+                        "model_kwargs": "model_kwargs",
+                        "num_ctx": "num_ctx",
+                        "request_timeout": "request_timeout"
+                      }
+                    },
+                    "name": "nomic-embed-text",
+                    "provider": "Ollama"
+                  },
+                  {
+                    "category": "Ollama",
+                    "icon": "Ollama",
+                    "metadata": {
+                      "embedding_class": "OllamaEmbeddings",
+                      "model_type": "embeddings",
+                      "param_mapping": {
+                        "base_url": "base_url",
+                        "model": "model",
+                        "model_kwargs": "model_kwargs",
+                        "num_ctx": "num_ctx",
+                        "request_timeout": "request_timeout"
+                      }
+                    },
+                    "name": "mxbai-embed-large",
+                    "provider": "Ollama"
+                  },
+                  {
+                    "category": "Ollama",
+                    "icon": "Ollama",
+                    "metadata": {
+                      "embedding_class": "OllamaEmbeddings",
+                      "model_type": "embeddings",
+                      "param_mapping": {
+                        "base_url": "base_url",
+                        "model": "model",
+                        "model_kwargs": "model_kwargs",
+                        "num_ctx": "num_ctx",
+                        "request_timeout": "request_timeout"
+                      }
+                    },
+                    "name": "snowflake-arctic-embed",
+                    "provider": "Ollama"
+                  },
+                  {
+                    "category": "Ollama",
+                    "icon": "Ollama",
+                    "metadata": {
+                      "embedding_class": "OllamaEmbeddings",
+                      "model_type": "embeddings",
+                      "param_mapping": {
+                        "base_url": "base_url",
+                        "model": "model",
+                        "model_kwargs": "model_kwargs",
+                        "num_ctx": "num_ctx",
+                        "request_timeout": "request_timeout"
+                      }
+                    },
+                    "name": "all-minilm",
+                    "provider": "Ollama"
+                  },
+                  {
+                    "category": "Ollama",
+                    "icon": "Ollama",
+                    "metadata": {
+                      "embedding_class": "OllamaEmbeddings",
+                      "model_type": "embeddings",
+                      "param_mapping": {
+                        "base_url": "base_url",
+                        "model": "model",
+                        "model_kwargs": "model_kwargs",
+                        "num_ctx": "num_ctx",
+                        "request_timeout": "request_timeout"
+                      }
+                    },
+                    "name": "bge-m3",
+                    "provider": "Ollama"
+                  },
+                  {
+                    "category": "Google Generative AI",
+                    "icon": "GoogleGenerativeAI",
+                    "metadata": {
+                      "is_disabled_provider": true,
+                      "variable_name": "GOOGLE_API_KEY"
+                    },
+                    "name": "__enable_provider_Google Generative AI__",
+                    "provider": "Google Generative AI"
+                  },
+                  {
+                    "category": "IBM WatsonX",
+                    "icon": "WatsonxAI",
+                    "metadata": {
+                      "is_disabled_provider": true,
+                      "variable_name": "WATSONX_APIKEY"
+                    },
+                    "name": "__enable_provider_IBM WatsonX__",
+                    "provider": "IBM WatsonX"
+                  }
+                ],
+                "override_skip": false,
+                "placeholder": "Setup Provider",
+                "real_time_refresh": true,
+                "refresh_button": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "track_in_telemetry": false,
+                "type": "model",
+                "value": [
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "embedding_class": "OpenAIEmbeddings",
+                      "model_type": "embeddings",
+                      "param_mapping": {
+                        "api_base": "base_url",
+                        "api_key": "api_key",
+                        "chunk_size": "chunk_size",
+                        "dimensions": "dimensions",
+                        "max_retries": "max_retries",
+                        "model": "model",
+                        "model_kwargs": "model_kwargs",
+                        "request_timeout": "timeout",
+                        "show_progress_bar": "show_progress_bar"
+                      }
+                    },
+                    "name": "text-embedding-3-small",
+                    "provider": "OpenAI"
+                  }
+                ]
+              },
+              "environment": {
+                "_input_type": "DropdownInput",
+                "advanced": true,
+                "combobox": true,
+                "dialog_inputs": {},
+                "display_name": "Environment",
+                "dynamic": false,
+                "external_options": {},
+                "info": "The environment for the Astra DB API Endpoint.",
+                "name": "environment",
+                "options": [
+                  "prod",
+                  "test",
+                  "dev"
+                ],
+                "options_metadata": [],
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "str",
+                "value": "prod"
+              },
+              "ignore_invalid_documents": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Ignore Invalid Documents",
+                "dynamic": false,
+                "info": "Boolean flag to determine whether to ignore invalid documents at runtime.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "ignore_invalid_documents",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": false
+              },
+              "ingest_data": {
+                "_input_type": "HandleInput",
+                "advanced": false,
+                "display_name": "Ingest Data",
+                "dynamic": false,
+                "info": "",
+                "input_types": [
+                  "Data",
+                  "DataFrame"
+                ],
+                "list": true,
+                "list_add_label": "Add More",
+                "name": "ingest_data",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "other",
+                "value": ""
+              },
+              "is_refresh": false,
+              "keyspace": {
+                "_input_type": "DropdownInput",
+                "advanced": true,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Keyspace",
+                "dynamic": false,
+                "external_options": {},
+                "info": "Optional keyspace within Astra DB to use for the collection.",
+                "name": "keyspace",
+                "options": [],
+                "options_metadata": [],
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "str",
+                "value": ""
+              },
+              "lexical_terms": {
+                "_input_type": "QueryInput",
+                "advanced": false,
+                "display_name": "Lexical Terms",
+                "dynamic": false,
+                "info": "Add additional terms/keywords to augment search precision.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "lexical_terms",
+                "override_skip": false,
+                "placeholder": "Enter terms to search...",
+                "required": false,
+                "separator": " ",
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "query",
+                "value": ""
+              },
+              "number_of_results": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Number of Search Results",
+                "dynamic": false,
+                "info": "Number of search results to return.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "number_of_results",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "int",
+                "value": 4
+              },
+              "reranker": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Reranker",
+                "dynamic": false,
+                "external_options": {},
+                "info": "Post-retrieval model that re-scores results for optimal relevance ranking.",
+                "name": "reranker",
+                "options": [],
+                "options_metadata": [],
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "toggle": true,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "str",
+                "value": ""
+              },
+              "search_method": {
+                "_input_type": "DropdownInput",
+                "advanced": true,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Search Method",
+                "dynamic": false,
+                "external_options": {},
+                "info": "Determine how your content is matched: Vector finds semantic similarity, and Hybrid Search (suggested) combines both approaches with a reranker.",
+                "load_from_db": false,
+                "name": "search_method",
+                "options": [
+                  "Hybrid Search",
+                  "Vector Search"
+                ],
+                "options_metadata": [
+                  {
+                    "icon": "SearchHybrid"
+                  },
+                  {
+                    "icon": "SearchVector"
+                  }
+                ],
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "str",
+                "value": "Hybrid Search"
+              },
+              "search_query": {
+                "_input_type": "QueryInput",
+                "advanced": false,
+                "display_name": "Search Query",
+                "dynamic": false,
+                "info": "Enter a query to run a similarity search.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "search_query",
+                "override_skip": false,
+                "placeholder": "Enter a query...",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": true,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "query",
+                "value": ""
+              },
+              "search_score_threshold": {
+                "_input_type": "FloatInput",
+                "advanced": true,
+                "display_name": "Search Score Threshold",
+                "dynamic": false,
+                "info": "Minimum similarity score threshold for search results. (when using 'Similarity with score threshold')",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "search_score_threshold",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "float",
+                "value": 0
+              },
+              "search_type": {
+                "_input_type": "DropdownInput",
+                "advanced": true,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Search Type",
+                "dynamic": false,
+                "external_options": {},
+                "info": "Search type to use",
+                "name": "search_type",
+                "options": [
+                  "Similarity",
+                  "Similarity with score threshold",
+                  "MMR (Max Marginal Relevance)"
+                ],
+                "options_metadata": [],
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "str",
+                "value": "Similarity"
+              },
+              "should_cache_vector_store": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Cache Vector Store",
+                "dynamic": false,
+                "info": "If True, the vector store will be cached for the current build of the component. This is useful for components that have multiple output methods and want to share the same vector store.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "should_cache_vector_store",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": true
+              },
+              "token": {
+                "_input_type": "SecretStrInput",
+                "advanced": false,
+                "display_name": "Astra DB Application Token",
+                "dynamic": false,
+                "info": "Authentication token for accessing Astra DB.",
+                "input_types": [],
+                "load_from_db": true,
+                "name": "token",
+                "override_skip": false,
+                "password": true,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              }
+            },
+            "tool_mode": false
+          },
+          "selected_output": "search_results",
+          "showNode": true,
+          "type": "AstraDB"
+        },
+        "dragging": false,
+        "id": "AstraDB-AkDya",
+        "measured": {
+          "height": 578,
+          "width": 320
+        },
+        "position": {
+          "x": 1556.5651816538448,
+          "y": 323.109212192931
+        },
+        "selected": false,
+        "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": 33.46155008085384,
-      "y": 224.1121954362004,
-      "zoom": 0.5772708829209525
+      "x": 32.44834776044456,
+      "y": 252.25444387188276,
+      "zoom": 0.5624895523548105
     }
   },
   "description": "Explore Hybrid Search with a vector database.",
   "endpoint_name": null,
-  "id": "8a27c275-a763-4c9b-9b5e-9614b71acddc",
+  "id": "4c82d6d5-fffe-4c1c-a0f5-4248308a454c",
   "is_component": false,
-  "last_tested_version": "1.6.0",
+  "last_tested_version": "1.7.1",
   "name": "Hybrid Search RAG",
   "tags": [
     "openai",
