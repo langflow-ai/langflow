@@ -1,6 +1,7 @@
-import pandas as pd
 import re
-from typing import Any, List, Dict
+from typing import Any
+
+import pandas as pd
 
 from lfx.custom import Component
 from lfx.inputs import (
@@ -240,17 +241,27 @@ class TextOperations(Component):
         """Update build configuration to show/hide relevant inputs based on operation."""
         # Hide all dynamic inputs by default
         dynamic_fields = [
-            "table_separator", "has_header",
-            "count_words", "count_characters", "count_lines",
+            "table_separator",
+            "has_header",
+            "count_words",
+            "count_characters",
+            "count_lines",
             "case_type",
-            "search_pattern", "replacement_text", "use_regex",
-            "extract_pattern", "max_matches",
-            "head_characters", "tail_characters",
-            "strip_mode", "strip_characters",
+            "search_pattern",
+            "replacement_text",
+            "use_regex",
+            "extract_pattern",
+            "max_matches",
+            "head_characters",
+            "tail_characters",
+            "strip_mode",
+            "strip_characters",
             "text_input_2",
-            "remove_extra_spaces", "remove_special_chars", "remove_empty_lines",
+            "remove_extra_spaces",
+            "remove_special_chars",
+            "remove_empty_lines",
         ]
-        
+
         for field in dynamic_fields:
             if field in build_config:
                 build_config[field]["show"] = False
@@ -299,36 +310,28 @@ class TextOperations(Component):
         """Create dynamic outputs based on selected operation."""
         if field_name == "operation":
             frontend_node["outputs"] = []
-            
+
             # Get the selected operation
             if isinstance(field_value, list) and len(field_value) > 0:
                 operation_name = field_value[0].get("name", "")
             else:
                 operation_name = ""
-            
+
             # Add outputs based on operation type
             if operation_name == "Word Count":
-                frontend_node["outputs"].append(
-                    Output(display_name="Data", name="data", method="get_data")
-                )
+                frontend_node["outputs"].append(Output(display_name="Data", name="data", method="get_data"))
             elif operation_name == "Text to DataFrame":
                 frontend_node["outputs"].append(
                     Output(display_name="DataFrame", name="dataframe", method="get_dataframe")
                 )
             elif operation_name == "Text Join":
-                frontend_node["outputs"].append(
-                    Output(display_name="Text", name="text", method="get_text")
-                )
-                frontend_node["outputs"].append(
-                    Output(display_name="Message", name="message", method="get_message")
-                )
-            
+                frontend_node["outputs"].append(Output(display_name="Text", name="text", method="get_text"))
+                frontend_node["outputs"].append(Output(display_name="Message", name="message", method="get_message"))
+
             # Add Message output for all operations except Word Count, Text to DataFrame, and Text Join
             if operation_name not in ["Word Count", "Text to DataFrame", "Text Join"]:
-                frontend_node["outputs"].append(
-                    Output(display_name="Message", name="message", method="get_message")
-                )
-        
+                frontend_node["outputs"].append(Output(display_name="Message", name="message", method="get_message"))
+
         return frontend_node
 
     def get_operation_name(self) -> str:
@@ -345,43 +348,42 @@ class TextOperations(Component):
             return None
 
         operation = self.get_operation_name()
-        
+
         if operation == "Text to DataFrame":
             return self.text_to_dataframe(text)
-        elif operation == "Word Count":
+        if operation == "Word Count":
             return self.word_count(text)
-        elif operation == "Case Conversion":
+        if operation == "Case Conversion":
             return self.case_conversion(text)
-        elif operation == "Text Replace":
+        if operation == "Text Replace":
             return self.text_replace(text)
-        elif operation == "Text Extract":
+        if operation == "Text Extract":
             return self.text_extract(text)
-        elif operation == "Text Head":
+        if operation == "Text Head":
             return self.text_head(text)
-        elif operation == "Text Tail":
+        if operation == "Text Tail":
             return self.text_tail(text)
-        elif operation == "Text Strip":
+        if operation == "Text Strip":
             return self.text_strip(text)
-        elif operation == "Text Join":
+        if operation == "Text Join":
             return self.text_join(text)
-        elif operation == "Text Clean":
+        if operation == "Text Clean":
             return self.text_clean(text)
-        else:
-            return text
+        return text
 
     def text_to_dataframe(self, text: str) -> DataFrame:
         """Convert markdown-style table text to DataFrame."""
         try:
-            lines = text.strip().split('\n')
+            lines = text.strip().split("\n")
             if not lines:
                 return DataFrame(pd.DataFrame())
-            
+
             # Remove empty lines
             lines = [line.strip() for line in lines if line.strip()]
-            
+
             separator = getattr(self, "table_separator", "|")
             has_header = getattr(self, "has_header", True)
-            
+
             # Parse table rows
             rows = []
             for line in lines:
@@ -390,14 +392,14 @@ class TextOperations(Component):
                     line = line[1:]
                 if line.endswith(separator):
                     line = line[:-1]
-                
+
                 # Split by separator and clean up
                 cells = [cell.strip() for cell in line.split(separator)]
                 rows.append(cells)
-            
+
             if not rows:
                 return DataFrame(pd.DataFrame())
-            
+
             # Create DataFrame
             if has_header and len(rows) > 1:
                 # Use first row as header
@@ -407,54 +409,54 @@ class TextOperations(Component):
                 max_cols = max(len(row) for row in rows) if rows else 0
                 columns = [f"col_{i}" for i in range(max_cols)]
                 df = pd.DataFrame(rows, columns=columns)
-            
+
             # Try to convert numeric columns
             for col in df.columns:
                 try:
-                    df[col] = pd.to_numeric(df[col], errors='ignore')
+                    df[col] = pd.to_numeric(df[col], errors="ignore")
                 except:
                     pass
-            
+
             self._result = df
             self.log(f"Successfully converted text to DataFrame with {len(df)} rows and {len(df.columns)} columns")
             return DataFrame(df)
-            
+
         except Exception as e:
-            self.log(f"Error converting text to DataFrame: {str(e)}")
+            self.log(f"Error converting text to DataFrame: {e!s}")
             return DataFrame(pd.DataFrame({"error": [str(e)]}))
 
-    def word_count(self, text: str) -> Dict[str, Any]:
+    def word_count(self, text: str) -> dict[str, Any]:
         """Count words, characters, and lines in text."""
         try:
             result = {}
-            
+
             if getattr(self, "count_words", True):
                 words = text.split()
                 result["word_count"] = len(words)
                 result["unique_words"] = len(set(words))
-            
+
             if getattr(self, "count_characters", True):
                 result["character_count"] = len(text)
                 result["character_count_no_spaces"] = len(text.replace(" ", ""))
-            
+
             if getattr(self, "count_lines", True):
-                lines = text.split('\n')
+                lines = text.split("\n")
                 result["line_count"] = len(lines)
                 result["non_empty_lines"] = len([line for line in lines if line.strip()])
-            
+
             self._result = result
             self.log(f"Text analysis completed: {result}")
             return result
-            
+
         except Exception as e:
-            self.log(f"Error analyzing text: {str(e)}")
+            self.log(f"Error analyzing text: {e!s}")
             return {}
 
     def case_conversion(self, text: str) -> str:
         """Convert text case."""
         try:
             case_type = getattr(self, "case_type", "lowercase")
-            
+
             if case_type == "uppercase":
                 result = text.upper()
             elif case_type == "lowercase":
@@ -467,13 +469,13 @@ class TextOperations(Component):
                 result = text.swapcase()
             else:
                 result = text
-            
+
             self._result = result
             self.log(f"Text converted to {case_type}")
             return result
-            
+
         except Exception as e:
-            self.log(f"Error converting case: {str(e)}")
+            self.log(f"Error converting case: {e!s}")
             return text
 
     def text_replace(self, text: str) -> str:
@@ -482,76 +484,76 @@ class TextOperations(Component):
             search_pattern = getattr(self, "search_pattern", "")
             replacement_text = getattr(self, "replacement_text", "")
             use_regex = getattr(self, "use_regex", False)
-            
+
             if not search_pattern:
                 return text
-            
+
             if use_regex:
                 result = re.sub(search_pattern, replacement_text, text)
             else:
                 result = text.replace(search_pattern, replacement_text)
-            
+
             self._result = result
-            self.log(f"Text replacement completed")
+            self.log("Text replacement completed")
             return result
-            
+
         except Exception as e:
-            self.log(f"Error replacing text: {str(e)}")
+            self.log(f"Error replacing text: {e!s}")
             return text
 
-    def text_extract(self, text: str) -> List[str]:
+    def text_extract(self, text: str) -> list[str]:
         """Extract text matching patterns."""
         try:
             extract_pattern = getattr(self, "extract_pattern", "")
             max_matches = getattr(self, "max_matches", 10)
-            
+
             if not extract_pattern:
                 return []
-            
+
             matches = re.findall(extract_pattern, text)
             if max_matches > 0:
                 matches = matches[:max_matches]
-            
+
             self._result = matches
             self.log(f"Extracted {len(matches)} matches")
             return matches
-            
+
         except Exception as e:
-            self.log(f"Error extracting text: {str(e)}")
+            self.log(f"Error extracting text: {e!s}")
             return []
 
     def text_head(self, text: str) -> str:
         """Extract characters from the beginning of text."""
         try:
             head_characters = getattr(self, "head_characters", 100)
-            
+
             if head_characters <= 0:
                 return ""
-            
+
             result = text[:head_characters]
             self._result = result
             self.log(f"Extracted {len(result)} characters from start")
             return result
-            
+
         except Exception as e:
-            self.log(f"Error extracting head: {str(e)}")
+            self.log(f"Error extracting head: {e!s}")
             return text
 
     def text_tail(self, text: str) -> str:
         """Extract characters from the end of text."""
         try:
             tail_characters = getattr(self, "tail_characters", 100)
-            
+
             if tail_characters <= 0:
                 return ""
-            
+
             result = text[-tail_characters:]
             self._result = result
             self.log(f"Extracted {len(result)} characters from end")
             return result
-            
+
         except Exception as e:
-            self.log(f"Error extracting tail: {str(e)}")
+            self.log(f"Error extracting tail: {e!s}")
             return text
 
     def text_strip(self, text: str) -> str:
@@ -559,7 +561,7 @@ class TextOperations(Component):
         try:
             strip_mode = getattr(self, "strip_mode", "both")
             strip_characters = getattr(self, "strip_characters", "")
-            
+
             if strip_characters:
                 # Strip specific characters
                 if strip_mode == "both":
@@ -570,47 +572,45 @@ class TextOperations(Component):
                     result = text.rstrip(strip_characters)
                 else:
                     result = text.strip(strip_characters)
+            # Strip whitespace (default behavior)
+            elif strip_mode == "both":
+                result = text.strip()
+            elif strip_mode == "left":
+                result = text.lstrip()
+            elif strip_mode == "right":
+                result = text.rstrip()
             else:
-                # Strip whitespace (default behavior)
-                if strip_mode == "both":
-                    result = text.strip()
-                elif strip_mode == "left":
-                    result = text.lstrip()
-                elif strip_mode == "right":
-                    result = text.rstrip()
-                else:
-                    result = text.strip()
-            
+                result = text.strip()
+
             self._result = result
             removed_chars = len(text) - len(result)
             self.log(f"Stripped {removed_chars} characters from {strip_mode} side(s)")
             return result
-            
+
         except Exception as e:
-            self.log(f"Error stripping text: {str(e)}")
+            self.log(f"Error stripping text: {e!s}")
             return text
 
-
-    def text_split(self, text: str) -> List[str]:
+    def text_split(self, text: str) -> list[str]:
         """Split text by delimiter."""
         try:
             split_delimiter = getattr(self, "split_delimiter", ",")
             max_splits = getattr(self, "max_splits", -1)
-            
+
             if max_splits > 0:
                 result = text.split(split_delimiter, max_splits)
             else:
                 result = text.split(split_delimiter)
-            
+
             # Clean up whitespace
             result = [part.strip() for part in result]
-            
+
             self._result = result
             self.log(f"Text split into {len(result)} parts")
             return result
-            
+
         except Exception as e:
-            self.log(f"Error splitting text: {str(e)}")
+            self.log(f"Error splitting text: {e!s}")
             return [text]
 
     def text_join(self, text: str) -> str:
@@ -618,11 +618,11 @@ class TextOperations(Component):
         try:
             text_input_2 = getattr(self, "text_input_2", "")
             join_separator = "\n"  # Line break as default separator
-            
+
             # Get both texts
             text1 = str(text) if text else ""
             text2 = str(text_input_2) if text_input_2 else ""
-            
+
             # Join the two texts with line break
             if text1 and text2:
                 result = f"{text1}{join_separator}{text2}"
@@ -632,105 +632,110 @@ class TextOperations(Component):
                 result = text2
             else:
                 result = ""
-            
+
             self._result = result
             self.log("Texts joined with line break separator")
             return result
-            
+
         except Exception as e:
-            self.log(f"Error joining texts: {str(e)}")
+            self.log(f"Error joining texts: {e!s}")
             return text
 
     def text_clean(self, text: str) -> str:
         """Clean text by removing extra spaces, special chars, etc."""
         try:
             result = text
-            
+
             if getattr(self, "remove_extra_spaces", True):
                 # Replace multiple spaces with single space
-                result = re.sub(r'\s+', ' ', result)
-            
+                result = re.sub(r"\s+", " ", result)
+
             if getattr(self, "remove_special_chars", False):
                 # Keep only alphanumeric, spaces, and basic punctuation
-                result = re.sub(r'[^\w\s.,!?;:-]', '', result)
-            
+                result = re.sub(r"[^\w\s.,!?;:-]", "", result)
+
             if getattr(self, "remove_empty_lines", False):
                 # Remove empty lines
-                lines = result.split('\n')
+                lines = result.split("\n")
                 lines = [line for line in lines if line.strip()]
-                result = '\n'.join(lines)
-            
+                result = "\n".join(lines)
+
             self._result = result
             self.log("Text cleaned successfully")
             return result
-            
+
         except Exception as e:
-            self.log(f"Error cleaning text: {str(e)}")
+            self.log(f"Error cleaning text: {e!s}")
             return text
 
     def get_dataframe(self) -> DataFrame:
         """Return result as DataFrame - only for Text to DataFrame operation."""
         operation = self.get_operation_name()
-        
+
         # Only return DataFrame for Text to DataFrame operation
         if operation == "Text to DataFrame":
             text = getattr(self, "text_input", "")
             if text:
                 return self.text_to_dataframe(text)
             return DataFrame(pd.DataFrame())
-        
+
         # For all other operations, return empty DataFrame
         return DataFrame(pd.DataFrame())
 
     def get_text(self) -> Message:
         """Return result as Message - for text operations only."""
         operation = self.get_operation_name()
-        
+
         # Text operations that should return text
         text_operations = [
-            "Case Conversion", "Text Replace", "Text Extract", 
-            "Text Head", "Text Tail", "Text Strip", 
-            "Text Format", "Text Join", "Text Clean"
+            "Case Conversion",
+            "Text Replace",
+            "Text Extract",
+            "Text Head",
+            "Text Tail",
+            "Text Strip",
+            "Text Format",
+            "Text Join",
+            "Text Clean",
         ]
-        
+
         if operation in text_operations:
             result = self.process_text()
             if result is not None:
                 if isinstance(result, list):
-                    message_text = '\n'.join(str(item) for item in result)
+                    message_text = "\n".join(str(item) for item in result)
                 else:
                     message_text = str(result)
                 return Message(text=message_text)
-        
+
         return Message(text="")
 
     def get_data(self) -> Data:
         """Return result as Data object - only for Word Count operation."""
         operation = self.get_operation_name()
-        
+
         # Only return Data for Word Count operation
         if operation == "Word Count":
             result = self.process_text()
             if result is not None:
                 if isinstance(result, dict):
                     return Data(data=result)
-                elif isinstance(result, list):
+                if isinstance(result, list):
                     return Data(data={"items": result})
-                else:
-                    return Data(data={"result": str(result)})
-        
+                return Data(data={"result": str(result)})
+
         return Data(data={})
 
     def get_message(self) -> Message:
         """Return result as simple message with just the converted text."""
         result = self.process_text()
-        
+
         if result is not None:
             if isinstance(result, list):
-                message_text = '\n'.join(str(item) for item in result)
+                message_text = "\n".join(str(item) for item in result)
             else:
                 message_text = str(result)
         else:
             message_text = ""
-        
+
         return Message(text=message_text)
