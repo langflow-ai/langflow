@@ -172,3 +172,4 @@ def create_isolated_import(isolated_builtins_dict: dict[str, Any] | None = None)
 
     return isolated_import
 
+

@@ -47,3 +47,4 @@ class DunderAccessTransformer(ast.NodeTransformer):
         # Continue visiting child nodes
         return self.generic_visit(node)
 
+

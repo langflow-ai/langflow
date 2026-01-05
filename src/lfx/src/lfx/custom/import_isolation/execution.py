@@ -142,3 +142,4 @@ def execute_in_isolated_env(code_obj: Any, exec_globals: dict[str, Any]) -> None
         # These are expected and should be reported to the user
         raise
 
+
