@@ -1,10 +1,12 @@
 /* Custom override for Ace Editor GitHub Dark theme background */
-.ace-github-dark, .ace-github-dark .ace_scroller {
+.ace-github-dark,
+.ace-github-dark .ace_scroller {
   background-color: #111 !important;
 }
 
 /* Custom override for Ace Editor Monokai theme background - only in dark mode */
-.dark .ace-monokai, .dark .ace-monokai .ace_scroller {
+.dark .ace-monokai,
+.dark .ace-monokai .ace_scroller {
   background-color: #141417 !important;
 }
 
@@ -43,14 +45,10 @@
 }
 
 .dark .ace-monokai .ace_content,
-.ace-github
-
-.dark .ace-monokai .ace_gutter,
-.ace-github
-
-.dark .ace-monokai,
+.ace-github .dark .ace-monokai .ace_gutter,
+.ace-github .dark .ace-monokai,
 .ace-github {
-  border: 1px solid rgba(255,255,255,0.18) !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
   box-shadow: none !important;
 }
 
@@ -60,11 +58,12 @@
   bottom: 24px !important;
 }
 
-.ace-github, .ace-github .ace_scroller {
+.ace-github,
+.ace-github .ace_scroller {
   background-color: #fafbfc !important;
 }
 
 .ace-github {
-  border: 1px solid rgba(0,0,0,0.10) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
   box-shadow: none !important;
-} 
+}
