@@ -213,8 +213,7 @@ describe("formatFileName", () => {
 
   describe("Real-world scenarios", () => {
     it("should handle image file from chat upload", () => {
-      const fileName =
-        "Screenshot_2024-12-26_at_15.30.45_conversation.png";
+      const fileName = "Screenshot_2024-12-26_at_15.30.45_conversation.png";
       const result = formatFileName(fileName, 25);
 
       expect(result.length).toBeLessThan(fileName.length);
@@ -230,8 +229,7 @@ describe("formatFileName", () => {
     });
 
     it("should handle code file", () => {
-      const fileName =
-        "very_long_component_name_with_description.tsx";
+      const fileName = "very_long_component_name_with_description.tsx";
       const result = formatFileName(fileName, 25);
 
       expect(result.endsWith("tsx")).toBe(true);
