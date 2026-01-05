@@ -1320,14 +1320,14 @@
                     "provider": "Google Generative AI"
                   },
                   {
-                    "category": "IBM Watsonx",
+                    "category": "IBM WatsonX",
                     "icon": "WatsonxAI",
                     "metadata": {
                       "is_disabled_provider": true,
                       "variable_name": "WATSONX_APIKEY"
                     },
-                    "name": "__enable_provider_IBM Watsonx__",
-                    "provider": "IBM Watsonx"
+                    "name": "__enable_provider_IBM WatsonX__",
+                    "provider": "IBM WatsonX"
                   }
                 ],
                 "override_skip": false,
@@ -1840,14 +1840,14 @@
                     "provider": "Google Generative AI"
                   },
                   {
-                    "category": "IBM Watsonx",
+                    "category": "IBM WatsonX",
                     "icon": "WatsonxAI",
                     "metadata": {
                       "is_disabled_provider": true,
                       "variable_name": "WATSONX_APIKEY"
                     },
-                    "name": "__enable_provider_IBM Watsonx__",
-                    "provider": "IBM Watsonx"
+                    "name": "__enable_provider_IBM WatsonX__",
+                    "provider": "IBM WatsonX"
                   }
                 ],
                 "override_skip": false,
