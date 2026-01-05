@@ -132,8 +132,8 @@ test.skip(
     if (isApiKeyInputVisible) {
       await apiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
     }
-    await page.getByTestId("dropdown_str_model_name").click();
-    await page.getByTestId("gpt-4o-1-option").click();
+    await page.getByTestId("model_model").click();
+    await page.getByTestId("gpt-4o-mini-option").click();
     await page.waitForTimeout(1000);
     await page.getByRole("button", { name: "Playground", exact: true }).click();
     await page.getByTestId("button_run_text_output").click();

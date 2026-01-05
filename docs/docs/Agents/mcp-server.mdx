@@ -11,11 +11,13 @@ Langflow integrates with the [Model Context Protocol (MCP)](https://modelcontext
 
 This page describes how to use Langflow as an MCP server that exposes your flows as [tools](https://modelcontextprotocol.io/docs/concepts/tools) that [MCP clients](https://modelcontextprotocol.io/clients) can use when generating responses.
 
+Langflow MCP servers support both the **streamable HTTP** transport and **Server-Sent Events (SSE)** as a fallback.
+
 For information about using Langflow as an MCP client and managing MCP server connections within flows, see [Use Langflow as an MCP client](/mcp-client).
 
 ## Prerequisites
 
-* A [Langflow project](/concepts-flows#projects) with at least one flow that has a [**Chat Output** component](/components-io#chat-output).
+* A [Langflow project](/concepts-flows#projects) with at least one flow that has a [**Chat Output** component](/chat-input-and-output).
 
     The **Chat Output** component is required to use a flow as an MCP tool.
 
@@ -25,10 +27,20 @@ For information about using Langflow as an MCP client and managing MCP server co
 
 ## Serve flows as MCP tools {#select-flows-to-serve}
 
-Each [Langflow project](/concepts-flows#projects) has an MCP server that exposes the project's flows as tools for use by MCP clients.
+When you create a [Langflow project](/concepts-flows#projects), Langflow automatically adds the project to your MCP server's configuration and makes the project's flows available as MCP tools.
 
-By default, all flows in a project are exposed as tools on the project's MCP server.
-You can change the exposed flows and tool metadata by managing the MCP server settings:
+If your Langflow server has authentication enabled (`AUTO_LOGIN=false`), the project's MCP server is automatically configured with API key authentication, and a new API key is generated specifically for accessing the new project's flows.
+For more information, see [MCP server authentication](#authentication).
+
+
+### Prevent automatic MCP server configuration for Langflow projects
+
+To disable automatic MCP server configuration for new projects, set the `LANGFLOW_ADD_PROJECTS_TO_MCP_SERVERS` environment variable to `false`.
+For more information, see [MCP server environment variables](#mcp-server-environment-variables).
+
+### Selectively enable and disable MCP servers for Langflow projects
+
+With or without automatic MCP server configuration enabled, you can selectively enable and disable the projects that are exposed as MCP tools:
 
 1. Click the **MCP Server** tab on the [**Projects** page](/concepts-flows#projects), or, when editing a flow, click **Share**, and then select **MCP Server**.
 
@@ -36,7 +48,7 @@ You can change the exposed flows and tool metadata by managing the MCP server se
 
     The **Flows/Tools** section lists the flows that are currently being served as tools on this MCP server.
 
-2. To toggle exposed flows, click <Icon name="Settings2" aria-hidden="true"/> **Edit Tools**, and then select the flows that you want exposed as tools.
+2. To toggle exposed flows, click <Icon name="Wrench" aria-hidden="true"/> **Edit Tools**, and then select the flows that you want exposed as tools.
 To prevent a flow from being used as a tool, clear the checkbox in the first column.
 
 3. Close the **MCP Server Tools** dialog to save your changes.
@@ -52,7 +64,7 @@ To edit the names and descriptions of flow tools on a Langflow MCP server, do th
 
 1. Click the **MCP Server** tab on the [**Projects** page](/concepts-flows#projects), or, when editing a flow, click **Share**, and then select **MCP Server**.
 
-2. Click <Icon name="Settings2" aria-hidden="true"/> **Edit Tools**.
+2. Click <Icon name="Wrench" aria-hidden="true"/> **Edit Tools**.
 
 3. Click the **Description** or **Tool** that you want to edit:
 
@@ -134,14 +146,14 @@ For example:
           "command": "uvx",
           "args": [
             "mcp-proxy",
-            "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/sse"
+            "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/streamable"
           ]
         }
       }
     }
     ```
 
-    The **MCP Server** tab automatically populates the `PROJECT_NAME`, `LANGFLOW_SERVER_ADDRESS`, and `PROJECT_ID` values.
+    The **MCP Server** tab automatically populates the `LANGFLOW_SERVER_ADDRESS` and `PROJECT_ID` values.
 
     The default Langflow server address is `http://localhost:7860`.
     If you are using a [public Langflow server](/deployment-public-server), the server address is automatically included.
@@ -158,7 +170,7 @@ For example:
           "command": "uvx",
           "args": [
             "mcp-proxy",
-            "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/sse"
+            "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/streamable"
           ],
           "env": {
             "KEY": "VALUE"
@@ -206,6 +218,8 @@ For more information, see the MCP documentation for your client, such as [Cursor
 ## MCP server authentication {#authentication}
 
 Each [Langflow project](/concepts-flows#projects) has its own MCP server with its own MCP server authentication settings.
+
+When you create a new project, Langflow automatically configures authentication for the project's MCP server based on your Langflow server's authentication settings. If authentication is enabled (`AUTO_LOGIN=false`), the project is automatically configured with API key authentication, and a new API key is generated for accessing the project's flows.
 
 To configure authentication for a Langflow MCP server, go to the **Projects** page in Langflow, click the **MCP Server** tab, click <Icon name="Fingerprint" aria-hidden="true"/> **Edit Auth**, and then select your preferred authentication method:
 
@@ -287,6 +301,7 @@ The following environment variables set behaviors related to your Langflow proje
 | `LANGFLOW_MCP_SERVER_ENABLE_PROGRESS_NOTIFICATIONS` | Boolean | `False` | If `true`, Langflow MCP servers send progress notifications. |
 | `LANGFLOW_MCP_SERVER_TIMEOUT` | Integer | `20` | The number of seconds to wait before an MCP server operation expires due to poor connectivity or long-running requests. |
 | `LANGFLOW_MCP_MAX_SESSIONS_PER_SERVER` | Integer | `10` | Maximum number of MCP sessions to keep per unique server. |
+| `LANGFLOW_ADD_PROJECTS_TO_MCP_SERVERS` | Boolean | `True` | Whether to automatically add newly created projects to the user's MCP servers configuration. If `false`, projects must be manually added to MCP servers. |
 
 {/* The anchor on this section (deploy-your-server-externally) is currently a link target in the Langflow UI. Do not change. */}
 ### Deploy your Langflow MCP server externally {#deploy-your-server-externally}
@@ -321,7 +336,7 @@ The default address is `http://localhost:6274`.
         - **Command**: `uvx`
         - **Arguments**: Enter the following list of arguments, separated by spaces. Replace the values for `YOUR_API_KEY`, `LANGFLOW_SERVER_ADDRESS`, and `PROJECT_ID` with the values from your Langflow MCP server. For example:
             ```bash
-            mcp-proxy --headers x-api-key YOUR_API_KEY http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/sse
+            mcp-proxy --headers x-api-key YOUR_API_KEY http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/streamable
             ```
 
       </TabItem>
@@ -338,9 +353,9 @@ The default address is `http://localhost:6274`.
       <TabItem value="None" label="None">
 
         - **Transport Type**: Select **SSE**.
-        - **URL**: Enter the Langflow MCP server's `sse` endpoint. For example:
+        - **URL**: Enter the Langflow MCP server's endpoint. For example:
             ```bash
-            http://localhost:7860/api/v1/mcp/project/d359cbd4-6fa2-4002-9d53-fa05c645319c/sse
+            http://localhost:7860/api/v1/mcp/project/d359cbd4-6fa2-4002-9d53-fa05c645319c/streamable
             ```
 
       </TabItem>
