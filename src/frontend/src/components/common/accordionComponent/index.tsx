@@ -1,12 +1,12 @@
+import { useState } from "react";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { AccordionComponentType } from "@/types/components";
+import type { AccordionComponentType } from "@/types/components";
 import { cn } from "@/utils/utils";
-import { useState } from "react";
 
 export default function AccordionComponent({
   trigger,

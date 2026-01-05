@@ -1,14 +1,21 @@
+import axios, {
+  type AxiosError,
+  type AxiosInstance,
+  type AxiosRequestConfig,
+} from "axios";
+import * as fetchIntercept from "fetch-intercept";
+import { useEffect } from "react";
 import { IS_AUTO_LOGIN } from "@/constants/constants";
 import { baseURL } from "@/customization/constants";
 import { useCustomApiHeaders } from "@/customization/hooks/use-custom-api-headers";
 import { customGetAccessToken } from "@/customization/utils/custom-get-access-token";
+import {
+  getAxiosWithCredentials,
+  getFetchCredentials,
+} from "@/customization/utils/get-fetch-credentials";
 import useAuthStore from "@/stores/authStore";
 import { useUtilityStore } from "@/stores/utilityStore";
-import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from "axios";
-import * as fetchIntercept from "fetch-intercept";
-import { useEffect } from "react";
-import { Cookies } from "react-cookie";
-import { BuildStatus, EventDeliveryType } from "../../constants/enums";
+import { BuildStatus, type EventDeliveryType } from "../../constants/enums";
 import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
 import { checkDuplicateRequestAndStoreRequest } from "./helpers/check-duplicate-requests";
@@ -17,9 +24,8 @@ import { useLogout, useRefreshAccessToken } from "./queries/auth";
 // Create a new Axios instance
 const api: AxiosInstance = axios.create({
   baseURL: baseURL,
+  withCredentials: getAxiosWithCredentials(),
 });
-
-const cookies = new Cookies();
 function ApiInterceptor() {
   const autoLogin = useAuthStore((state) => state.autoLogin);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -42,14 +48,14 @@ function ApiInterceptor() {
 
   useEffect(() => {
     const unregister = fetchIntercept.register({
-      request: function (url, config) {
+      request: (url, config) => {
         const accessToken = customGetAccessToken();
 
-        if (accessToken && !isAuthorizedURL(config?.url)) {
-          config.headers["Authorization"] = `Bearer ${accessToken}`;
-        }
-
         if (!isExternalURL(url)) {
+          if (accessToken && !isAuthorizedURL(config?.url)) {
+            config.headers["Authorization"] = `Bearer ${accessToken}`;
+          }
+
           for (const [key, value] of Object.entries(customHeaders)) {
             config.headers[key] = value;
           }
@@ -121,7 +127,7 @@ function ApiInterceptor() {
         );
 
         return isDomainAllowed || isEndpointAllowed;
-      } catch (e) {
+      } catch (_e) {
         // Invalid URL
         return false;
       }
@@ -139,7 +145,7 @@ function ApiInterceptor() {
       try {
         const parsedURL = new URL(url);
         return EXTERNAL_DOMAINS.some((domain) => parsedURL.origin === domain);
-      } catch (e) {
+      } catch (_e) {
         return false;
       }
     };
@@ -291,22 +297,23 @@ async function performStreamingRequest({
   onNetworkError,
   buildController,
 }: StreamingRequestParams) {
-  let headers = {
+  const headers = {
     "Content-Type": "application/json",
     // this flag is fundamental to ensure server stops tasks when client disconnects
     Connection: "close",
   };
 
-  const params = {
+  const params: RequestInit = {
     method: method,
     headers: headers,
     signal: buildController.signal,
+    credentials: getFetchCredentials(),
   };
   if (body) {
-    params["body"] = JSON.stringify(body);
+    params.body = JSON.stringify(body);
   }
   let current: string[] = [];
-  let textDecoder = new TextDecoder();
+  const textDecoder = new TextDecoder();
 
   try {
     const response = await fetch(url, params);
@@ -327,7 +334,7 @@ async function performStreamingRequest({
         break;
       }
       const decodedChunk = textDecoder.decode(value);
-      let all = decodedChunk.split("\n\n");
+      const all = decodedChunk.split("\n\n");
       for (const string of all) {
         if (string.endsWith("}")) {
           const allString = current.join("") + string;
@@ -336,7 +343,7 @@ async function performStreamingRequest({
             const sanitizedJson = sanitizeJsonString(allString);
             data = JSON.parse(sanitizedJson);
             current = [];
-          } catch (e) {
+          } catch (_e) {
             current.push(string);
             continue;
           }

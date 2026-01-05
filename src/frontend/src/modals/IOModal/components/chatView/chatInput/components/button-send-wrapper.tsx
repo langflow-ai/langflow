@@ -2,7 +2,7 @@ import Loading from "@/components/ui/loading";
 import useFlowStore from "@/stores/flowStore";
 import { Button } from "../../../../../../components/ui/button";
 import { Case } from "../../../../../../shared/components/caseComponent";
-import { FilePreviewType } from "../../../../../../types/components";
+import type { FilePreviewType } from "../../../../../../types/components";
 import { classNames } from "../../../../../../utils/utils";
 
 const BUTTON_STATES = {
@@ -44,7 +44,8 @@ const ButtonSendWrapper = ({
 
   const buttonClasses = classNames("form-modal-send-button", getButtonState());
 
-  const handleClick = () => {
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
     if (showStopButton && isBuilding) {
       stopBuilding();
     } else if (!showStopButton) {

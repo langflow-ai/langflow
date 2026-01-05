@@ -1,4 +1,4 @@
-import { MenuItem, Mode } from "vanilla-jsoneditor";
+import type { MenuItem, Mode } from "vanilla-jsoneditor";
 import { processTextModeItems, processTreeModeItems } from "./menuUtils";
 
 export const useMenuCustomization = (

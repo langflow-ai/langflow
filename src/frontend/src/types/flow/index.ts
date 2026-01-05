@@ -1,6 +1,6 @@
-import { Edge, Node, ReactFlowJsonObject } from "@xyflow/react";
-import { BuildStatus } from "../../constants/enums";
-import { APIClassType, OutputFieldType } from "../api/index";
+import type { Edge, Node, ReactFlowJsonObject } from "@xyflow/react";
+import type { BuildStatus } from "../../constants/enums";
+import type { APIClassType, OutputFieldType } from "../api/index";
 
 export type PaginatedFlowsType = {
   items: FlowType[];

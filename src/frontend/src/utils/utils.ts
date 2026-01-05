@@ -1,11 +1,12 @@
+import type { ColDef, ColGroupDef, ValueParserParams } from "ag-grid-community";
+import clsx, { type ClassValue } from "clsx";
+import moment from "moment";
 import TableAutoCellRender from "@/components/core/parameterRenderComponent/components/tableComponent/components/tableAutoCellRender";
 import TableDropdownCellEditor from "@/components/core/parameterRenderComponent/components/tableComponent/components/tableDropdownCellEditor";
 import useAlertStore from "@/stores/alertStore";
-import { ColumnField, FormatterType } from "@/types/utils/functions";
-import { ColDef, ColGroupDef, ValueParserParams } from "ag-grid-community";
-import clsx, { ClassValue } from "clsx";
-import moment from "moment";
+import { type ColumnField, FormatterType } from "@/types/utils/functions";
 import "moment-timezone";
+import type { Cookies } from "react-cookie";
 import { twMerge } from "tailwind-merge";
 import {
   DRAG_EVENTS_CUSTOM_TYPESS,
@@ -13,20 +14,21 @@ import {
   MODAL_CLASSES,
   SHORTCUT_KEYS,
 } from "../constants/constants";
-import {
+import type {
   APIDataType,
   InputFieldType,
   TableOptionsTypeAPI,
   VertexDataTypeAPI,
 } from "../types/api";
-import {
+import type {
   groupedObjType,
   nodeGroupedObjType,
   tweakType,
 } from "../types/components";
-import { AllNodeType, NodeDataType } from "../types/flow";
-import { FlowState } from "../types/tabs";
+import type { AllNodeType, NodeDataType } from "../types/flow";
+import type { FlowState } from "../types/tabs";
 import { isErrorLog } from "../types/utils/typeCheckingUtils";
+import { getLocalStorage } from "./local-storage-util";
 import { parseString } from "./stringManipulation";
 
 export function classNames(...classes: Array<string>): string {
@@ -45,7 +47,7 @@ export function toCamelCase(str: string): string {
 }
 
 export function toNormalCase(str: string): string {
-  let result = str
+  const result = str
     .split("_")
     .map((word, index) => {
       if (index === 0) {
@@ -83,7 +85,7 @@ export function toTitleCase(
   isNodeField?: boolean,
 ): string {
   if (!str) return "";
-  let result = str
+  const result = str
     ?.split("_")
     ?.map((word, index) => {
       if (isNodeField) return word;
@@ -141,7 +143,7 @@ export function getNumberFromString(str: string): number {
 export function buildTweakObject(tweak: tweakType) {
   tweak.forEach((el) => {
     Object.keys(el).forEach((key) => {
-      for (let kp in el[key]) {
+      for (const kp in el[key]) {
         try {
           el[key][kp] = JSON.parse(el[key][kp]);
         } catch {}
@@ -194,7 +196,7 @@ export function truncateLongId(id: string): string {
 }
 
 export function extractIdFromLongId(id: string): string {
-  let [_, newId] = id.split("-");
+  const [_, newId] = id.split("-");
   return newId;
 }
 
@@ -235,7 +237,7 @@ export function removeCountFromString(input: string): string {
 }
 
 export function extractTypeFromLongId(id: string): string {
-  let [newId, _] = id.split("-");
+  const [newId, _] = id.split("-");
   return newId;
 }
 
@@ -250,19 +252,19 @@ export function groupByFamily(
   flow?: AllNodeType[],
 ): groupedObjType[] {
   const baseClassesSet = new Set(baseClasses.split("\n"));
-  let arrOfPossibleInputs: Array<{
+  const arrOfPossibleInputs: Array<{
     category: string;
     nodes: nodeGroupedObjType[];
     full: boolean;
     display_name?: string;
   }> = [];
-  let arrOfPossibleOutputs: Array<{
+  const arrOfPossibleOutputs: Array<{
     category: string;
     nodes: nodeGroupedObjType[];
     full: boolean;
     display_name?: string;
   }> = [];
-  let checkedNodes = new Map();
+  const checkedNodes = new Map();
   const excludeTypes = new Set(["bool", "float", "code", "file", "int"]);
 
   const checkBaseClass = (template: InputFieldType) => {
@@ -307,7 +309,7 @@ export function groupByFamily(
   }
 
   for (const [d, nodes] of Object.entries(data)) {
-    let tempInputs: nodeGroupedObjType[] = [],
+    const tempInputs: nodeGroupedObjType[] = [],
       tempOutputs: nodeGroupedObjType[] = [];
 
     for (const [n, node] of Object.entries(nodes!)) {
@@ -393,7 +395,7 @@ export function extractColumnsFromRows(
   mode: "intersection" | "union",
   excludeColumns?: Array<string>,
 ): ColDef<any>[] {
-  let columnsKeys: { [key: string]: ColDef<any> | ColGroupDef<any> } = {};
+  const columnsKeys: { [key: string]: ColDef<any> | ColGroupDef<any> } = {};
   if (rows.length === 0) {
     return [];
   }
@@ -536,18 +538,23 @@ export function brokenEdgeMessage({
     field: string;
   };
 }) {
-  return `${source.nodeDisplayName}${source.outputDisplayName ? " | " + source.outputDisplayName : ""} -> ${target.displayName}${target.field ? " | " + target.field : ""}`;
+  return `${source.nodeDisplayName}${
+    source.outputDisplayName ? " | " + source.outputDisplayName : ""
+  } -> ${target.displayName}${target.field ? " | " + target.field : ""}`;
 }
 export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
   if (!columns) return [];
   const basic_types = new Set(["date", "number"]);
   const colDefs = columns.map((col) => {
-    let newCol: ColDef = {
+    const newCol: ColDef = {
       headerName: col.display_name,
       field: col.name,
       sortable: col.sortable,
       filter: col.filterable,
-      context: col.description ? { info: col.description } : {},
+      context: {
+        ...(col.description ? { info: col.description } : {}),
+        ...(col.load_from_db ? { globalVariable: col.load_from_db } : {}),
+      },
       cellClass: col.disable_edit ? "cell-disable-edit" : "",
       hide: col.hidden,
       valueParser: (params: ValueParserParams) => {
@@ -613,6 +620,10 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
           newCol.cellClass = "no-border !py-2";
           newCol.type = "boolean";
         } else {
+          if (col.load_from_db) {
+            newCol.editable = false;
+            newCol.cellClass = "no-border !py-0 !pr-0";
+          }
           newCol.cellRenderer = TableAutoCellRender;
         }
       }
@@ -681,7 +692,7 @@ export function tryParseJson(json: string) {
   try {
     const parsedJson = JSON.parse(json);
     return parsedJson;
-  } catch (error) {
+  } catch (_error) {
     return;
   }
 }
@@ -823,7 +834,8 @@ export interface CookieOptions {
   maxAge?: number;
   expires?: Date;
   secure?: boolean;
-  sameSite?: "Strict" | "Lax" | "None";
+  sameSite?: "strict" | "lax" | "none";
+  httpOnly?: boolean;
 }
 
 /**
@@ -992,3 +1004,41 @@ export function prepareSessionIdForAPI(session_id: string): string {
   const formatted = sessionIdFormatted(session_id);
   return encodeSessionId(formatted);
 }
+
+export const stripReleaseStageFromVersion = (version: string): string => {
+  const releaseStageKeywords = ["a", "b", "rc", "dev", "post"];
+  for (const keyword of releaseStageKeywords) {
+    if (version.includes(keyword)) {
+      return version.split(keyword)[0].slice(0, -1);
+    }
+  }
+  return version;
+};
+
+export const getAuthCookie = (cookies: Cookies, tokenName: string) => {
+  return cookies.get(tokenName);
+};
+
+export const setAuthCookie = (
+  cookies: Cookies,
+  tokenName: string,
+  value: string,
+) => {
+  // Only use secure flag if the connection is HTTPS
+  const isSecure =
+    typeof window !== "undefined" && window.location.protocol === "https:";
+
+  cookies.set(tokenName, value, {
+    path: "/",
+    secure: isSecure,
+    sameSite: isSecure ? "strict" : "lax",
+  });
+};
+
+export const getBooleanFromStorage = (
+  key: string,
+  defaultValue: boolean,
+): boolean => {
+  const stored = getLocalStorage(key);
+  return stored === null ? defaultValue : stored === "true";
+};

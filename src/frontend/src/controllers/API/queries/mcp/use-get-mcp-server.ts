@@ -1,5 +1,5 @@
-import { useMutationFunctionType } from "@/types/api";
-import { MCPServerType } from "@/types/mcp";
+import type { useMutationFunctionType } from "@/types/api";
+import type { MCPServerType } from "@/types/mcp";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";

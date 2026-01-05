@@ -1,62 +1,76 @@
 module.exports = {
   docs: [
-    "Get-Started/welcome-to-langflow",
     {
       type: "category",
       label: "Get started",
       items: [
-        "Get-Started/get-started-installation",
-        "Get-Started/get-started-quickstart",
+        {
+          type: "doc",
+          id: "Get-Started/about-langflow",
+          label: "About Langflow"
+        },
+        {
+          type: "doc",
+          id: "Get-Started/get-started-installation",
+          label: "Install Langflow"
+        },
+        {
+          type: "doc",
+          id: "Get-Started/get-started-quickstart",
+          label: "Quickstart"
+        },
+        {
+          type: "category",
+          label: "Tutorials",
+          items: [
+            "Tutorials/chat-with-rag",
+            "Tutorials/chat-with-files",
+            "Tutorials/agent",
+            "Tutorials/mcp-tutorial",
+          ],
+        },
       ],
     },
     {
       type: "category",
-      label: "Templates",
+      label: "Flows",
       items: [
-        'Templates/basic-prompting',
-        'Templates/simple-agent',
-        'Templates/blog-writer',
-        'Templates/document-qa',
-        'Templates/memory-chatbot',
-        'Templates/vector-store-rag',
-        'Templates/financial-report-parser',
-        'Templates/sequential-agent',
-        'Templates/travel-planning-agent',
-      ],
-    },
-    {
-      type: "category",
-      label: "Concepts",
-      items: [
-        "Concepts/concepts-overview",
-        "Concepts/concepts-playground",
-        "Concepts/concepts-flows",
-        "Concepts/concepts-objects",
-        "Concepts/concepts-publish",
-        "Concepts/embedded-chat-widget",
-        "Concepts/concepts-file-management",
-        "Concepts/concepts-voice-mode",
-      ],
-    },
-    {
-      type: "category",
-      label: "Components",
-      items: [
-        "Concepts/concepts-components",
-        "Components/components-agents",
-        "Components/components-bundles",
-        "Components/components-custom-components",
-        "Components/components-data",
-        "Components/components-embedding-models",
-        "Components/components-helpers",
-        "Components/components-io",
-        "Components/components-logic",
-        "Components/components-memories",
-        "Components/components-models",
-        "Components/components-processing",
-        "Components/components-prompts",
-        "Components/components-tools",
-        "Components/components-vector-stores",
+        {
+          type: "doc",
+          id: "Flows/concepts-overview",
+          label: "Use the visual editor"
+        },
+        {
+          type: "doc",
+          id: "Flows/concepts-flows",
+          label: "Build flows"
+        },
+        {
+          type: "category",
+          label: "Run flows",
+          items: [
+            {
+              type: "doc",
+              id: "Flows/concepts-publish",
+              label: "Trigger flows with the Langflow API"
+            },
+            {
+              type: "doc",
+              id: "Flows/webhook",
+              label: "Trigger flows with webhooks"
+            },
+          ],
+        },
+        {
+          type: "doc",
+          id: "Flows/concepts-playground",
+          label: "Test flows"
+        },
+        {
+          type: "doc",
+          id: "Flows/concepts-flows-import",
+          label: "Import and export flows"
+        },
       ],
     },
     {
@@ -71,88 +85,91 @@ module.exports = {
       type: "category",
       label: "Model Context Protocol (MCP)",
       items: [
-        "Concepts/mcp-server",
-        "Components/mcp-client",
-      ],
-    },
-    {
-      type: "category",
-      label: "Configuration",
-      items: [
-        "Configuration/configuration-api-keys",
-        "Configuration/configuration-authentication",
-        "Configuration/configuration-cli",
-        "Configuration/configuration-custom-database",
-        "Configuration/configuration-global-variables",
-        "Configuration/environment-variables",
-        "Contributing/contributing-telemetry",
+        "Agents/mcp-client",
+        "Agents/mcp-server",
+        "Agents/mcp-component-astra",
       ],
     },
     {
       type: "category",
       label: "Develop",
       items: [
-        {
-          type: "doc",
-          id: "Develop/develop-overview",
-          label: "Overview"
-        },
-        {
-          type: "doc",
-          id: "Develop/develop-application",
-          label: "Develop an application in Langflow"
-        },
-        {
-          type: "doc",
-          id: "Develop/install-custom-dependencies",
-          label: "Install custom dependencies"
-        },
-        {
-          type: "doc",
-          id: "Develop/memory",
-          label: "Memory management"
-        },
-        {
-          type: "doc",
-          id: "Develop/session-id",
-          label: "Session ID"
-        },
-        {
-          type: "doc",
-          id: "Develop/logging",
-          label: "Logging"
-        },
-        {
-          type: "doc",
-          id: "Develop/webhook",
-          label: "Webhook"
-        },
+        "Develop/api-keys-and-authentication",
+        "Develop/install-custom-dependencies",
+        "Develop/configuration-global-variables",
+        "Develop/environment-variables",
         {
           type: "category",
-          label: "Clients",
+          label: "Storage and memory",
           items: [
             {
               type: "doc",
-              id: "Develop/Clients/typescript-client",
-              label: "TypeScript Client"
-            }
-          ]
+              id: "Develop/concepts-file-management",
+              label: "Manage files"
+            },
+            {
+              type: "doc",
+              id: "Develop/memory",
+              label: "Manage memory"
+            },
+            {
+              type: "doc",
+              id: "Develop/session-id",
+              label: "Use Session IDs"
+            },
+            "Develop/configuration-custom-database",
+            {
+              type: "doc",
+              id: "Develop/enterprise-database-guide",
+              label: "Database guide for enterprise administrators"
+            },
+          ],
+        },
+        {
+          type: "category",
+          label: "Observability",
+          items: [
+            "Develop/logging",
+            {
+              type: "category",
+              label: "Monitoring",
+              items: [
+                "Develop/integrations-arize",
+                "Develop/integrations-langfuse",
+                "Develop/integrations-langsmith",
+                "Develop/integrations-langwatch",
+                "Develop/integrations-opik",
+                "Develop/integrations-instana-traceloop",
+              ],
+            },
+            "Develop/contributing-telemetry",
+          ],
+        },
+        {
+          type: "doc",
+          id: "Develop/data-types",
+          label: "Use Langflow data types"
+        },
+        {
+          type: "doc",
+          id: "Develop/concepts-voice-mode",
+          label: "Use voice mode"
+        },
+        {
+          type: "doc",
+          id: "Develop/configuration-cli",
+          label: "Use the Langflow CLI"
         },
       ],
     },
     {
       type: "category",
-      label: "Deployment",
+      label: "Deploy",
       items: [
         {
           type:"doc",
           id: "Deployment/deployment-overview",
-          label: "Deployment overview"
-        },
-        {
-          type: "doc",
-          id: "Deployment/deployment-docker",
-          label: "Docker"
+          label: "Langflow deployment overview"
         },
         {
           type: "doc",
@@ -161,50 +178,250 @@ module.exports = {
         },
         {
           type: "doc",
-          id: "Deployment/deployment-caddyfile",
-          label: "Deploy Langflow on a remote server"
+          id: "Deployment/deployment-nginx-ssl",
+          label: "Deploy Langflow with Nginx and SSL"
         },
         {
           type: "category",
-          label: "Kubernetes",
+          label: "Containerized deployments",
+          items: [
+            "Deployment/develop-application",
+            {
+              type: "doc",
+              id: "Deployment/deployment-docker",
+              label: "Langflow Docker images"
+            },
+            {
+              type: "doc",
+              id: "Deployment/deployment-caddyfile",
+              label: "Deploy Langflow on a remote server"
+            },
+            {
+              type: "category",
+              label: "Kubernetes",
+              items: [
+                {
+                  type: "doc",
+                  id: "Deployment/deployment-architecture",
+                  label: "Deployment architecture"
+                },
+                {
+                  type: "doc",
+                  id: "Deployment/deployment-prod-best-practices",
+                  label: "Best practices"
+                },
+                {
+                  type: "doc",
+                  id: "Deployment/deployment-kubernetes-dev",
+                  label: "Deploy in development"
+                },
+                {
+                  type: "doc",
+                  id: "Deployment/deployment-kubernetes-prod",
+                  label: "Deploy in production"
+                },
+              ]
+            },
+          ],
+        },
+        {
+          type: "category",
+          label: "Cloud platforms",
           items: [
             {
               type: "doc",
-              id: "Deployment/deployment-prod-best-practices",
-              label: "Langflow architecture and best practices"
+              id: "Deployment/deployment-gcp",
+              label: "Google Cloud Platform"
             },
             {
               type: "doc",
-              id: "Deployment/deployment-kubernetes-dev",
-              label: "Deploy in development"
+              id: "Deployment/deployment-hugging-face-spaces",
+              label: "Hugging Face Spaces"
             },
             {
               type: "doc",
-              id: "Deployment/deployment-kubernetes-prod",
-              label: "Deploy in production"
-            }
+              id: "Deployment/deployment-railway",
+              label: "Railway"
+            },
+            {
+              type: "doc",
+              id: "Deployment/deployment-render",
+              label: "Render"
+            },
           ]
         },
         {
           type: "doc",
-          id: "Deployment/deployment-gcp",
-          label: "Google Cloud Platform"
+          id: "Deployment/security",
+          label: "Security",
+        },
+      ],
+    },
+    {
+      type: "category",
+      label: "Components reference",
+      items: [
+        "Components/concepts-components",
+        {
+          type: "category",
+          label: "Core components",
+          items: [
+            {
+              type: "category",
+              label: "Input / Output",
+              items: [
+                "Components/chat-input-and-output",
+                "Components/text-input-and-output",
+                "Components/webhook",
+              ]
+            },
+            {
+              type: "category",
+              label: "Processing",
+              items: [
+                "Components/data-operations",
+                "Components/dataframe-operations",
+                "Components/dynamic-create-data",
+                "Components/parser",
+                "Components/split-text",
+                "Components/type-convert",
+              ]
+            },
+            {
+              type: "category",
+              label: "Data Source",
+              items: [
+                "Components/api-request",
+                "Components/mock-data",
+                "Components/url",
+                "Components/web-search",
+              ]
+            },
+            {
+              type: "category",
+              label: "Files",
+              items: [
+                "Components/directory",
+                "Components/read-file",
+                "Components/write-file",
+              ]
+            },
+            {
+              type: "category",
+              label: "Flow Controls",
+              items: [
+                "Components/if-else",
+                "Components/loop",
+                "Components/notify-and-listen",
+                "Components/run-flow",
+              ]
+            },
+            {
+              type: "category",
+              label: "LLM Operations",
+              items: [
+                "Components/batch-run",
+                "Components/llm-selector",
+                "Components/smart-router",
+                "Components/smart-transform",
+                "Components/structured-output",
+              ]
+            },
+            {
+              type: "category",
+              label: "Models and Agents",
+              items: [
+                "Components/components-models",
+                "Components/components-prompts",
+                "Components/components-agents",
+                "Components/mcp-tools",
+                "Components/components-embedding-models",
+                "Components/message-history",
+              ]
+            },
+            {
+              type: "category",
+              label: "Utilities",
+              items: [
+                "Components/calculator",
+                "Components/current-date",
+                "Components/python-interpreter",
+                "Components/sql-database",
+              ]
+            },
+            "Components/legacy-core-components",
+          ],
         },
         {
-          type: "doc",
-          id: "Deployment/deployment-hugging-face-spaces",
-          label: "Hugging Face Spaces"
+          type: "category",
+          label: "Bundles",
+          items: [
+            "Components/components-bundles",
+            "Components/bundles-aiml",
+            "Components/bundles-altk",
+            "Components/bundles-amazon",
+            "Components/bundles-anthropic",
+            "Components/bundles-apify",
+            "Components/bundles-arxiv",
+            "Components/bundles-assemblyai",
+            "Components/bundles-azure",
+            "Components/bundles-baidu",
+            "Components/bundles-bing",
+            "Components/bundles-cassandra",
+            "Components/bundles-chroma",
+            "Components/bundles-cleanlab",
+            "Components/bundles-clickhouse",
+            "Components/bundles-cloudflare",
+            "Components/bundles-cohere",
+            "Components/bundles-cometapi",
+            "Components/bundles-composio",
+            "Components/bundles-couchbase",
+            "Components/bundles-cuga",
+            "Components/bundles-datastax",
+            "Components/bundles-deepseek",
+            "Components/bundles-docling",
+            "Components/bundles-duckduckgo",
+            "Components/bundles-elastic",
+            "Components/bundles-exa",
+            "Components/bundles-faiss",
+            "Components/bundles-glean",
+            "Components/bundles-google",
+            "Components/bundles-groq",
+            "Components/bundles-huggingface",
+            "Components/bundles-ibm",
+            "Components/bundles-icosacomputing",
+            "Components/bundles-langchain",
+            "Components/bundles-lmstudio",
+            "Components/bundles-maritalk",
+            "Components/bundles-mem0",
+            "Components/bundles-milvus",
+            "Components/bundles-mistralai",
+            "Components/bundles-mongodb",
+            "Components/bundles-notion",
+            "Components/bundles-novita",
+            "Components/bundles-nvidia",
+            "Components/bundles-ollama",
+            "Components/bundles-openai",
+            "Components/bundles-openrouter",
+            "Components/bundles-perplexity",
+            "Components/bundles-pgvector",
+            "Components/bundles-pinecone",
+            "Components/bundles-qdrant",
+            "Components/bundles-redis",
+            "Components/bundles-sambanova",
+            "Components/bundles-searchapi",
+            "Components/bundles-serper",
+            "Components/bundles-supabase",
+            "Components/bundles-upstash",
+            "Components/bundles-vllm",
+            "Components/bundles-vectara",
+            "Components/bundles-vertexai",
+            "Components/bundles-weaviate",
+            "Components/bundles-wikipedia",
+            "Components/bundles-xai",
+          ],
         },
-        {
-          type: "doc",
-          id: "Deployment/deployment-railway",
-          label: "Railway"
-        },
-        {
-          type: "doc",
-          id: "Deployment/deployment-render",
-          label: "Render"
-        },
+        "Components/components-custom-components",
       ],
     },
     {
@@ -218,8 +435,18 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "API-Reference/typescript-client",
+          label: "Use the TypeScript client"
+        },
+        {
+          type: "doc",
           id: "API-Reference/api-flows-run",
           label: "Flow trigger endpoints",
+        },
+        {
+          type: "doc",
+          id: "API-Reference/api-openai-responses",
+          label: "OpenAI Responses endpoints",
         },
         {
           type: "doc",
@@ -265,100 +492,14 @@ module.exports = {
     },
     {
       type: "category",
-      label: "Integrations",
-      items: [
-        "Integrations/Apify/integrations-apify",
-        {
-          type: "doc",
-          id: "Integrations/Arize/integrations-arize",
-          label: "Arize",
-        },
-        {
-          type: "doc",
-          id: "Integrations/integrations-assemblyai",
-          label: "AssemblyAI",
-        },
-        {
-          type: "doc",
-          id: "Integrations/mcp-component-astra",
-          label: "Astra DB MCP server",
-        },
-        {
-          type: "doc",
-          id: "Integrations/Cleanlab/integrations-cleanlab",
-          label: "Cleanlab",
-        },
-        {
-          type: "doc",
-          id: "Integrations/Composio/integrations-composio",
-          label: "Composio",
-        },
-        {
-          type: 'category',
-          label: 'Google',
-          items: [
-            'Integrations/Google/integrations-setup-google-oauth-langflow',
-            'Integrations/Google/integrations-setup-google-cloud-vertex-ai-langflow',
-            'Integrations/Google/integrations-google-big-query',
-          ],
-        },
-        "Integrations/integrations-langfuse",
-        "Integrations/integrations-langsmith",
-        "Integrations/integrations-langwatch",
-        "Integrations/integrations-opik",
-        {
-          type: "category",
-          label: "Notion",
-          items: [
-            "Integrations/Notion/integrations-notion",
-            "Integrations/Notion/notion-agent-conversational",
-            "Integrations/Notion/notion-agent-meeting-notes",
-          ],
-        },
-        {
-          type: "category",
-          label: "NVIDIA",
-          items: [
-            {
-              type: "doc",
-              id: "Integrations/Nvidia/integrations-nvidia-ingest",
-              label: "NVIDIA Ingest"
-            },
-            {
-              type: "doc",
-              id: "Integrations/Nvidia/integrations-nvidia-nim-wsl2",
-              label: "NVIDIA NIM on WSL2"
-            },
-            {
-              type: "doc",
-              id: "Integrations/Nvidia/integrations-nvidia-g-assist",
-              label: "NVIDIA G-Assist"
-            },
-          ],
-        },
-      ],
-    },
-    {
-      type: "category",
       label: "Contribute",
       items: [
         "Contributing/contributing-community",
         "Contributing/contributing-how-to-contribute",
         "Contributing/contributing-components",
+        "Contributing/contributing-bundles",
         "Contributing/contributing-component-tests",
         "Contributing/contributing-templates",
-        "Contributing/contributing-bundles",
-      ],
-    },
-    {
-      type: "category",
-      label: "Changelog",
-      items: [
-        {
-          type: "link",
-          label: "Changelog",
-          href: "https://github.com/langflow-ai/langflow/releases/latest",
-        },
       ],
     },
     {
@@ -372,13 +513,18 @@ module.exports = {
         },
         {
           type: "doc",
-          id: "Contributing/contributing-github-issues",
+          id: "Support/contributing-github-issues",
           label: "Get help and request enhancements",
         },
         {
           type: "doc",
           id: "Support/luna-for-langflow",
-          label: "Enterprise support",
+          label: "IBM Elite Support for Langflow",
+        },
+        {
+          type: "doc",
+          id: "Support/release-notes",
+          label: "Release notes",
         },
       ],
     },
@@ -386,11 +532,20 @@ module.exports = {
       type: "html",
       className: "sidebar-ad",
       value: `
-        <a href="https://astra.datastax.com/signup?type=langflow" target="_blank" class="menu__link">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-cloud"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
+        <a href="https://www.langflow.org/desktop" target="_blank" class="menu__link">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <g clip-path="url(#clip0_1645_37)">
+              <path d="M12 17H20C21.1046 17 22 16.1046 22 15V13M12 17H4C2.89543 17 2 16.1046 2 15V5C2 3.89543 2.89543 3 4 3H10M12 17V21M8 21H12M12 21H16M11.75 10.2917H13.2083L16.125 7.375H17.5833L20.5 4.45833H21.9583M16.125 11.75H17.5833L20.5 8.83333H21.9583M11.75 5.91667H13.2083L16.125 3H17.5833" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </g>
+            <defs>
+              <clipPath id="clip0_1645_37">
+                <rect width="24" height="24" fill="white"/>
+              </clipPath>
+            </defs>
+          </svg>
           <div class="sidebar-ad-text-container">
-            <span class="sidebar-ad-text">Use Langflow in the cloud</span>
-            <span class="sidebar-ad-text sidebar-ad-text-gradient">Sign up for DataStax Langflow</span>
+            <span class="sidebar-ad-text">Get started in minutes</span>
+            <span class="sidebar-ad-text sidebar-ad-text-gradient">Download Langflow Desktop</span>
           </div>
         </a>
       `,

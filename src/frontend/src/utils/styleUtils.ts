@@ -1,10 +1,11 @@
-import { BotMessageSquareIcon } from "@/icons/BotMessageSquare";
-import { GradientSave } from "@/icons/GradientSparkles";
-import { fontAwesomeIcons, isFontAwesomeIcon } from "@/icons/fontAwesomeIcons";
 import { TwitterLogoIcon } from "@radix-ui/react-icons";
 import dynamicIconImports from "lucide-react/dynamicIconImports";
 import { lazy } from "react";
 import { FaApple, FaDiscord, FaGithub } from "react-icons/fa";
+import { ENABLE_KNOWLEDGE_BASES } from "@/customization/feature-flags";
+import { BotMessageSquareIcon } from "@/icons/BotMessageSquare";
+import { fontAwesomeIcons, isFontAwesomeIcon } from "@/icons/fontAwesomeIcons";
+import { GradientSave } from "@/icons/GradientSparkles";
 
 const iconCache = new Map<string, any>();
 
@@ -122,6 +123,7 @@ export const nodeColors: { [char: string]: string } = {
   Document: "#65a30d",
   Data: "#dc2626",
   Message: "#4f46e5",
+  number: "#7E22CF",
   Prompt: "#7c3aed",
   Embeddings: "#10b981",
   BaseLanguageModel: "#c026d3",
@@ -151,6 +153,7 @@ export const nodeColorsName: { [char: string]: string } = {
   embeddings: "teal",
   documentloaders: "lime",
   vectorstores: "yellow",
+  VectorStore: "yellow",
   vectorsearch: "yellow",
   textsplitters: "fuchsia",
   toolkits: "red",
@@ -166,6 +169,7 @@ export const nodeColorsName: { [char: string]: string } = {
   output_parsers: "yellow",
   retrievers: "yellow",
   str: "indigo",
+  number: "purple",
   Text: "indigo",
   unknown: "gray",
   Document: "lime",
@@ -205,14 +209,34 @@ export const FILE_ICONS = {
 
 export const SIDEBAR_CATEGORIES = [
   { display_name: "Saved", name: "saved_components", icon: "GradientSave" },
-  { display_name: "Input / Output", name: "input_output", icon: "Cable" },
-  { display_name: "Agents", name: "agents", icon: "Bot" },
-  { display_name: "Models", name: "models", icon: "BrainCog" },
-  { display_name: "Data", name: "data", icon: "Database" },
-  { display_name: "Vector Stores", name: "vectorstores", icon: "Layers" },
+  { display_name: "Input & Output", name: "input_output", icon: "Cable" },
+  { display_name: "Data Sources", name: "data_source", icon: "Database" },
+  { display_name: "Models & Agents", name: "models_and_agents", icon: "Bot" },
+  {
+    display_name: "LLM Operations",
+    name: "llm_operations",
+    icon: "BrainCircuit",
+  },
+  {
+    display_name: ENABLE_KNOWLEDGE_BASES ? "Files & Knowledge" : "Files",
+    name: "files_and_knowledge",
+    icon: "Layers",
+  },
   { display_name: "Processing", name: "processing", icon: "ListFilter" },
+  {
+    display_name: "Flow Control",
+    name: "flow_controls",
+    icon: "ArrowRightLeft",
+  },
+  { display_name: "Utilities", name: "utilities", icon: "Wand2" },
+  { display_name: "Prototypes", name: "prototypes", icon: "FlaskConical" },
+  { display_name: "Tools", name: "tools", icon: "Hammer" },
+  { display_name: "Agents", name: "agents", icon: "Bot" },
+  { display_name: "Data", name: "data", icon: "Database" },
   { display_name: "Logic", name: "logic", icon: "ArrowRightLeft" },
   { display_name: "Helpers", name: "helpers", icon: "Wand2" },
+  { display_name: "Models", name: "models", icon: "BrainCog" },
+  { display_name: "Vector Stores", name: "vectorstores", icon: "Layers" },
   { display_name: "Inputs", name: "inputs", icon: "Download" },
   { display_name: "Outputs", name: "outputs", icon: "Upload" },
   { display_name: "Prompts", name: "prompts", icon: "braces" },
@@ -220,55 +244,61 @@ export const SIDEBAR_CATEGORIES = [
   { display_name: "Loaders", name: "documentloaders", icon: "Paperclip" },
   { display_name: "Link Extractors", name: "link_extractors", icon: "Link2" },
   { display_name: "Output Parsers", name: "output_parsers", icon: "Compass" },
-  { display_name: "Prototypes", name: "prototypes", icon: "FlaskConical" },
   { display_name: "Retrievers", name: "retrievers", icon: "FileSearch" },
   { display_name: "Text Splitters", name: "textsplitters", icon: "Scissors" },
   { display_name: "Toolkits", name: "toolkits", icon: "Package2" },
-  { display_name: "Tools", name: "tools", icon: "Hammer" },
 ];
 
 export const SIDEBAR_BUNDLES = [
-  { display_name: "AI/ML", name: "aiml", icon: "AI/ML" },
+  { display_name: "AI/ML API", name: "aiml", icon: "AIML" },
   { display_name: "AgentQL", name: "agentql", icon: "AgentQL" },
+  { display_name: "ALTK", name: "altk", icon: "Zap" },
+  {
+    display_name: "Language Models",
+    name: "languagemodels",
+    icon: "BrainCircuit",
+  },
+  { display_name: "Embeddings", name: "embeddings", icon: "Binary" },
+  { display_name: "Memories", name: "memories", icon: "Cpu" },
   { display_name: "Amazon", name: "amazon", icon: "Amazon" },
   { display_name: "Anthropic", name: "anthropic", icon: "Anthropic" },
   { display_name: "Apify", name: "apify", icon: "Apify" },
-
-  { display_name: "Arxiv", name: "arxiv", icon: "arXiv" },
+  { display_name: "arXiv", name: "arxiv", icon: "arXiv" },
   { display_name: "AssemblyAI", name: "assemblyai", icon: "AssemblyAI" },
   { display_name: "Azure", name: "azure", icon: "Azure" },
   { display_name: "Baidu", name: "baidu", icon: "BaiduQianfan" },
   { display_name: "Bing", name: "bing", icon: "Bing" },
+  { display_name: "Cassandra", name: "cassandra", icon: "Cassandra" },
+  { display_name: "Chroma", name: "chroma", icon: "Chroma" },
+  { display_name: "ClickHouse", name: "clickhouse", icon: "Clickhouse" },
   { display_name: "Cleanlab", name: "cleanlab", icon: "Cleanlab" },
   { display_name: "Cloudflare", name: "cloudflare", icon: "Cloudflare" },
   { display_name: "Cohere", name: "cohere", icon: "Cohere" },
+  { display_name: "CometAPI", name: "cometapi", icon: "CometAPI" },
   { display_name: "Composio", name: "composio", icon: "Composio" },
   { display_name: "Confluence", name: "confluence", icon: "Confluence" },
+  { display_name: "Couchbase", name: "couchbase", icon: "Couchbase" },
   { display_name: "CrewAI", name: "crewai", icon: "CrewAI" },
+  { display_name: "CUGA", name: "cuga", icon: "Bot" },
   { display_name: "DataStax", name: "datastax", icon: "AstraDB" },
   { display_name: "DeepSeek", name: "deepseek", icon: "DeepSeek" },
   { display_name: "Docling", name: "docling", icon: "Docling" },
   { display_name: "DuckDuckGo", name: "duckduckgo", icon: "DuckDuckGo" },
-  { display_name: "Embeddings", name: "embeddings", icon: "Binary" },
+  { display_name: "Elastic", name: "elastic", icon: "ElasticsearchStore" },
   { display_name: "Exa", name: "exa", icon: "Exa" },
+  { display_name: "FAISS", name: "FAISS", icon: "FAISS" },
   { display_name: "Firecrawl", name: "firecrawl", icon: "FirecrawlCrawlApi" },
   { display_name: "Git", name: "git", icon: "GitLoader" },
-  { display_name: "GitHub", name: "github", icon: "Github" },
   { display_name: "Glean", name: "glean", icon: "Glean" },
   { display_name: "Gmail", name: "gmail", icon: "Gmail" },
   { display_name: "Google", name: "google", icon: "Google" },
-  {
-    display_name: "Googlecalendar",
-    name: "googlecalendar",
-    icon: "Googlecalendar",
-  },
   { display_name: "Groq", name: "groq", icon: "Groq" },
   {
     display_name: "Home Assistant",
     name: "homeassistant",
     icon: "HomeAssistant",
   },
-  { display_name: "HuggingFace", name: "huggingface", icon: "HuggingFace" },
+  { display_name: "Hugging Face", name: "huggingface", icon: "HuggingFace" },
   { display_name: "IBM", name: "ibm", icon: "WatsonxAI" },
   { display_name: "Icosa Computing", name: "icosacomputing", icon: "Icosa" },
   { display_name: "JigsawStack", name: "jigsawstack", icon: "JigsawStack" },
@@ -278,9 +308,11 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "MariTalk", name: "maritalk", icon: "Maritalk" },
   { display_name: "Mem0", name: "mem0", icon: "Mem0" },
   { display_name: "Memories", name: "memories", icon: "Cpu" },
+  { display_name: "Milvus", name: "milvus", icon: "Milvus" },
   { display_name: "MistralAI", name: "mistral", icon: "MistralAI" },
+  { display_name: "MongoDB", name: "mongodb", icon: "MongoDB" },
   { display_name: "Needle", name: "needle", icon: "Needle" },
-  { display_name: "NotDiamond", name: "notdiamond", icon: "NotDiamond" },
+  { display_name: "Not Diamond", name: "notdiamond", icon: "NotDiamond" },
   { display_name: "Notion", name: "Notion", icon: "Notion" },
   { display_name: "Novita", name: "novita", icon: "Novita" },
   { display_name: "NVIDIA", name: "nvidia", icon: "NVIDIA" },
@@ -288,18 +320,27 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Ollama", name: "ollama", icon: "Ollama" },
   { display_name: "OpenAI", name: "openai", icon: "OpenAI" },
   { display_name: "OpenRouter", name: "openrouter", icon: "OpenRouter" },
-  { display_name: "Outlook", name: "outlook", icon: "Outlook" },
   { display_name: "Perplexity", name: "perplexity", icon: "Perplexity" },
+  { display_name: "pgvector", name: "pgvector", icon: "cpu" },
+  { display_name: "Pinecone", name: "pinecone", icon: "Pinecone" },
+  { display_name: "Qdrant", name: "qdrant", icon: "Qdrant" },
   { display_name: "Redis", name: "redis", icon: "Redis" },
   { display_name: "SambaNova", name: "sambanova", icon: "SambaNova" },
   { display_name: "ScrapeGraph AI", name: "scrapegraph", icon: "ScrapeGraph" },
-  { display_name: "SearchAPI", name: "searchapi", icon: "SearchAPI" },
+  { display_name: "SearchApi", name: "searchapi", icon: "SearchAPI" },
   { display_name: "SerpApi", name: "serpapi", icon: "SerpSearch" },
+  { display_name: "Serper", name: "serper", icon: "Serper" },
+  { display_name: "Supabase", name: "supabase", icon: "Supabase" },
   { display_name: "Tavily", name: "tavily", icon: "TavilyIcon" },
-  { display_name: "Twelve Labs", name: "twelvelabs", icon: "TwelveLabs" },
+  { display_name: "TwelveLabs", name: "twelvelabs", icon: "TwelveLabs" },
   { display_name: "Unstructured", name: "unstructured", icon: "Unstructured" },
+  { display_name: "Upstash", name: "upstash", icon: "Upstash" },
+  { display_name: "VLM Run", name: "vlmrun", icon: "VLMRun" },
   { display_name: "Vectara", name: "vectara", icon: "Vectara" },
-  { display_name: "VertexAI", name: "vertexai", icon: "VertexAI" },
+  { display_name: "Vector Stores", name: "vectorstores", icon: "Layers" },
+  { display_name: "vLLM", name: "vllm", icon: "vLLM" },
+  { display_name: "Weaviate", name: "weaviate", icon: "Weaviate" },
+  { display_name: "Vertex AI", name: "vertexai", icon: "VertexAI" },
   { display_name: "Wikipedia", name: "wikipedia", icon: "Wikipedia" },
   {
     display_name: "WolframAlpha",
@@ -307,8 +348,8 @@ export const SIDEBAR_BUNDLES = [
     icon: "WolframAlphaAPI",
   },
   { display_name: "xAI", name: "xai", icon: "xAI" },
-  { display_name: "YahooSearch", name: "yahoosearch", icon: "trending-up" },
-  { display_name: "Youtube", name: "youtube", icon: "YouTube" },
+  { display_name: "Yahoo! Finance", name: "yahoosearch", icon: "trending-up" },
+  { display_name: "YouTube", name: "youtube", icon: "YouTube" },
   { display_name: "Zep", name: "zep", icon: "ZepMemory" },
 ];
 
@@ -369,7 +410,12 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   ChatOutput: "MessagesSquare",
   //Integration Icons
   Outlook: "Outlook",
-  AIML: "AI/ML",
+  Linear: "Linear",
+  Reddit: "Reddit",
+  Googlemaps: "Googlemaps",
+  Todoist: "Todoist",
+  Zoom: "Zoom",
+  AIML: "AIML",
   AgentQL: "AgentQL",
   LanguageModels: "BrainCircuit",
   EmbeddingModels: "Binary",
@@ -406,8 +452,11 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   FirecrawlScrapeApi: "Firecrawl",
   GitbookLoader: "GitBook",
   GoogleGenerativeAI: "GoogleGenerativeAI",
+  Googlesheets: "Googlesheets",
   GoogleSearchAPI: "Google",
   GoogleSearchAPIWrapper: "Google",
+  Googlemeet: "Googlemeet",
+  GoogleTasks: "GoogleTasks",
   GoogleSearchResults: "Google",
   GoogleSearchRun: "Google",
   GoogleSerperAPI: "Google",
@@ -526,7 +575,7 @@ export const getNodeIcon = async (name: string) => {
   if (dynamicIconImports[lucideIconName]) {
     try {
       return cacheAndReturn(lazy(dynamicIconImports[lucideIconName]));
-    } catch (e) {
+    } catch (_e) {
       // Fall through to next option
     }
   }

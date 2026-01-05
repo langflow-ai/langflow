@@ -1,3 +1,5 @@
+import { debounce } from "lodash";
+import { useCallback, useEffect, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
@@ -9,8 +11,6 @@ import { ENABLE_MCP } from "@/customization/feature-flags";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import useAlertStore from "@/stores/alertStore";
 import { cn } from "@/utils/utils";
-import { debounce } from "lodash";
-import { useCallback, useEffect, useState } from "react";
 
 interface HeaderComponentProps {
   flowType: "flows" | "components" | "mcp";
@@ -90,6 +90,8 @@ const HeaderComponent = ({
       },
     );
   };
+
+  const hasSelection = selectedFlows.length > 0;
 
   return (
     <>
@@ -197,11 +199,12 @@ const HeaderComponent = ({
                     data-testid="download-bulk-btn"
                     onClick={handleDownload}
                     loading={isDownloading}
+                    tabIndex={hasSelection ? 0 : -1}
                   >
                     <ForwardedIconComponent name="Download" />
                   </Button>
-
                   <DeleteConfirmationModal
+                    asChild
                     onConfirm={handleDelete}
                     description={"flow" + (selectedFlows.length > 1 ? "s" : "")}
                     note={
@@ -216,6 +219,7 @@ const HeaderComponent = ({
                       className="px-2.5 !text-mmd"
                       data-testid="delete-bulk-btn"
                       loading={isDeleting}
+                      tabIndex={hasSelection ? 0 : -1}
                     >
                       <ForwardedIconComponent name="Trash2" />
                       Delete

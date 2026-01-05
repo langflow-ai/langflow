@@ -1,0 +1,378 @@
+from typing_extensions import TypedDict
+
+from lfx.base.models.model import LCModelComponent
+from lfx.inputs.inputs import InputTypes, SecretStrInput
+from lfx.template.field.base import Input
+
+
+class ModelProvidersDict(TypedDict):
+    fields: dict
+    inputs: list[InputTypes]
+    prefix: str
+    component_class: LCModelComponent
+    icon: str
+    is_active: bool
+
+
+def get_filtered_inputs(component_class, provider_name: str | None = None):
+    base_input_names = {field.name for field in LCModelComponent.get_base_inputs()}
+    component_instance = component_class()
+
+    return [
+        process_inputs(input_, provider_name)
+        for input_ in component_instance.inputs
+        if input_.name not in base_input_names
+    ]
+
+
+def process_inputs(component_data: Input, provider_name: str | None = None):
+    """Processes and modifies an input configuration based on its type or name.
+
+    Adjusts properties such as value, advanced status, real-time refresh, and additional information for specific
+    input types or names to ensure correct behavior in the UI and provider integration.
+
+    Args:
+        component_data: The input configuration to process.
+        provider_name: The name of the provider to process the inputs for.
+
+    Returns:
+        The modified input configuration.
+    """
+    if isinstance(component_data, SecretStrInput):
+        component_data.value = ""
+        component_data.load_from_db = False
+        component_data.real_time_refresh = True
+        if component_data.name == "api_key":
+            component_data.required = False
+    elif component_data.name == "tool_model_enabled":
+        component_data.advanced = True
+        component_data.value = True
+    elif component_data.name in {"temperature", "base_url"}:
+        if provider_name not in ["IBM watsonx.ai", "Ollama"]:
+            component_data = set_advanced_true(component_data)
+    elif component_data.name == "model_name":
+        if provider_name not in ["IBM watsonx.ai"]:
+            component_data = set_real_time_refresh_false(component_data)
+        component_data = add_combobox_true(component_data)
+        component_data = add_info(
+            component_data,
+            "To see the model names, first choose a provider. Then, enter your API key and click the refresh button "
+            "next to the model name.",
+        )
+    return component_data
+
+
+def set_advanced_true(component_input):
+    component_input.advanced = True
+    return component_input
+
+
+def set_real_time_refresh_false(component_input):
+    component_input.real_time_refresh = False
+    return component_input
+
+
+def add_info(component_input, info_str: str):
+    component_input.info = info_str
+    return component_input
+
+
+def add_combobox_true(component_input):
+    component_input.combobox = True
+    return component_input
+
+
+def create_input_fields_dict(inputs: list[Input], prefix: str) -> dict[str, Input]:
+    return {f"{prefix}{input_.name}": input_.to_dict() for input_ in inputs}
+
+
+def _get_ollama_inputs_and_fields():
+    try:
+        from lfx.components.ollama.ollama import ChatOllamaComponent
+
+        ollama_inputs = get_filtered_inputs(ChatOllamaComponent, provider_name="Ollama")
+    except ImportError as e:
+        msg = "Ollama is not installed. Please install it with `pip install langchain-ollama`."
+        raise ImportError(msg) from e
+    return ollama_inputs, create_input_fields_dict(ollama_inputs, "")
+
+
+def _get_watsonx_inputs_and_fields():
+    try:
+        from lfx.components.ibm.watsonx import WatsonxAIComponent
+
+        watsonx_inputs = get_filtered_inputs(WatsonxAIComponent, provider_name="IBM watsonx.ai")
+    except ImportError as e:
+        msg = "IBM watsonx.ai is not installed. Please install it with `pip install langchain-ibm-watsonx`."
+        raise ImportError(msg) from e
+    return watsonx_inputs, create_input_fields_dict(watsonx_inputs, "")
+
+
+def _get_google_generative_ai_inputs_and_fields():
+    try:
+        from lfx.components.google.google_generative_ai import GoogleGenerativeAIComponent
+
+        google_generative_ai_inputs = get_filtered_inputs(GoogleGenerativeAIComponent)
+    except ImportError as e:
+        msg = (
+            "Google Generative AI is not installed. Please install it with "
+            "`pip install langchain-google-generative-ai`."
+        )
+        raise ImportError(msg) from e
+    return google_generative_ai_inputs, create_input_fields_dict(google_generative_ai_inputs, "")
+
+
+def _get_openai_inputs_and_fields():
+    try:
+        from lfx.components.openai.openai_chat_model import OpenAIModelComponent
+
+        openai_inputs = get_filtered_inputs(OpenAIModelComponent)
+    except ImportError as e:
+        msg = "OpenAI is not installed. Please install it with `pip install langchain-openai`."
+        raise ImportError(msg) from e
+    return openai_inputs, create_input_fields_dict(openai_inputs, "")
+
+
+def _get_azure_inputs_and_fields():
+    try:
+        from lfx.components.azure.azure_openai import AzureChatOpenAIComponent
+
+        azure_inputs = get_filtered_inputs(AzureChatOpenAIComponent)
+    except ImportError as e:
+        msg = "Azure OpenAI is not installed. Please install it with `pip install langchain-azure-openai`."
+        raise ImportError(msg) from e
+    return azure_inputs, create_input_fields_dict(azure_inputs, "")
+
+
+def _get_groq_inputs_and_fields():
+    try:
+        from lfx.components.groq.groq import GroqModel
+
+        groq_inputs = get_filtered_inputs(GroqModel)
+    except ImportError as e:
+        msg = "Groq is not installed. Please install it with `pip install langchain-groq`."
+        raise ImportError(msg) from e
+    return groq_inputs, create_input_fields_dict(groq_inputs, "")
+
+
+def _get_anthropic_inputs_and_fields():
+    try:
+        from lfx.components.anthropic.anthropic import AnthropicModelComponent
+
+        anthropic_inputs = get_filtered_inputs(AnthropicModelComponent)
+    except ImportError as e:
+        msg = "Anthropic is not installed. Please install it with `pip install langchain-anthropic`."
+        raise ImportError(msg) from e
+    return anthropic_inputs, create_input_fields_dict(anthropic_inputs, "")
+
+
+def _get_nvidia_inputs_and_fields():
+    try:
+        from lfx.components.nvidia.nvidia import NVIDIAModelComponent
+
+        nvidia_inputs = get_filtered_inputs(NVIDIAModelComponent)
+    except ImportError as e:
+        msg = "NVIDIA is not installed. Please install it with `pip install langchain-nvidia`."
+        raise ImportError(msg) from e
+    return nvidia_inputs, create_input_fields_dict(nvidia_inputs, "")
+
+
+def _get_amazon_bedrock_inputs_and_fields():
+    try:
+        from lfx.components.amazon.amazon_bedrock_model import AmazonBedrockComponent
+
+        amazon_bedrock_inputs = get_filtered_inputs(AmazonBedrockComponent)
+    except ImportError as e:
+        msg = "Amazon Bedrock is not installed. Please install it with `pip install langchain-amazon-bedrock`."
+        raise ImportError(msg) from e
+    return amazon_bedrock_inputs, create_input_fields_dict(amazon_bedrock_inputs, "")
+
+
+def _get_sambanova_inputs_and_fields():
+    try:
+        from lfx.components.sambanova.sambanova import SambaNovaComponent
+
+        sambanova_inputs = get_filtered_inputs(SambaNovaComponent)
+    except ImportError as e:
+        msg = "SambaNova is not installed. Please install it with `pip install langchain-sambanova`."
+        raise ImportError(msg) from e
+    return sambanova_inputs, create_input_fields_dict(sambanova_inputs, "")
+
+
+MODEL_PROVIDERS_DICT: dict[str, ModelProvidersDict] = {}
+
+# Try to add each provider
+try:
+    from lfx.components.openai.openai_chat_model import OpenAIModelComponent
+
+    openai_inputs, openai_fields = _get_openai_inputs_and_fields()
+    MODEL_PROVIDERS_DICT["OpenAI"] = {
+        "fields": openai_fields,
+        "inputs": openai_inputs,
+        "prefix": "",
+        "component_class": OpenAIModelComponent(),
+        "icon": OpenAIModelComponent.icon,
+        "is_active": True,
+    }
+except ImportError:
+    pass
+
+try:
+    from lfx.components.azure.azure_openai import AzureChatOpenAIComponent
+
+    azure_inputs, azure_fields = _get_azure_inputs_and_fields()
+    MODEL_PROVIDERS_DICT["Azure OpenAI"] = {
+        "fields": azure_fields,
+        "inputs": azure_inputs,
+        "prefix": "",
+        "component_class": AzureChatOpenAIComponent(),
+        "icon": AzureChatOpenAIComponent.icon,
+        "is_active": False,
+    }
+except ImportError:
+    pass
+
+try:
+    from lfx.components.groq.groq import GroqModel
+
+    groq_inputs, groq_fields = _get_groq_inputs_and_fields()
+    MODEL_PROVIDERS_DICT["Groq"] = {
+        "fields": groq_fields,
+        "inputs": groq_inputs,
+        "prefix": "",
+        "component_class": GroqModel(),
+        "icon": GroqModel.icon,
+        "is_active": False,
+    }
+except ImportError:
+    pass
+
+try:
+    from lfx.components.anthropic.anthropic import AnthropicModelComponent
+
+    anthropic_inputs, anthropic_fields = _get_anthropic_inputs_and_fields()
+    MODEL_PROVIDERS_DICT["Anthropic"] = {
+        "fields": anthropic_fields,
+        "inputs": anthropic_inputs,
+        "prefix": "",
+        "component_class": AnthropicModelComponent(),
+        "icon": AnthropicModelComponent.icon,
+        "is_active": True,
+    }
+except ImportError:
+    pass
+
+try:
+    from lfx.components.nvidia.nvidia import NVIDIAModelComponent
+
+    nvidia_inputs, nvidia_fields = _get_nvidia_inputs_and_fields()
+    MODEL_PROVIDERS_DICT["NVIDIA"] = {
+        "fields": nvidia_fields,
+        "inputs": nvidia_inputs,
+        "prefix": "",
+        "component_class": NVIDIAModelComponent(),
+        "icon": NVIDIAModelComponent.icon,
+        "is_active": False,
+    }
+except ImportError:
+    pass
+
+try:
+    from lfx.components.amazon.amazon_bedrock_model import AmazonBedrockComponent
+
+    bedrock_inputs, bedrock_fields = _get_amazon_bedrock_inputs_and_fields()
+    MODEL_PROVIDERS_DICT["Amazon Bedrock"] = {
+        "fields": bedrock_fields,
+        "inputs": bedrock_inputs,
+        "prefix": "",
+        "component_class": AmazonBedrockComponent(),
+        "icon": AmazonBedrockComponent.icon,
+        "is_active": False,
+    }
+except ImportError:
+    pass
+
+try:
+    from lfx.components.google.google_generative_ai import GoogleGenerativeAIComponent
+
+    google_generative_ai_inputs, google_generative_ai_fields = _get_google_generative_ai_inputs_and_fields()
+    MODEL_PROVIDERS_DICT["Google Generative AI"] = {
+        "fields": google_generative_ai_fields,
+        "inputs": google_generative_ai_inputs,
+        "prefix": "",
+        "component_class": GoogleGenerativeAIComponent(),
+        "icon": GoogleGenerativeAIComponent.icon,
+        "is_active": True,
+    }
+except ImportError:
+    pass
+
+try:
+    from lfx.components.sambanova.sambanova import SambaNovaComponent
+
+    sambanova_inputs, sambanova_fields = _get_sambanova_inputs_and_fields()
+    MODEL_PROVIDERS_DICT["SambaNova"] = {
+        "fields": sambanova_fields,
+        "inputs": sambanova_inputs,
+        "prefix": "",
+        "component_class": SambaNovaComponent(),
+        "icon": SambaNovaComponent.icon,
+        "is_active": False,
+    }
+except ImportError:
+    pass
+
+try:
+    from lfx.components.ibm.watsonx import WatsonxAIComponent
+
+    watsonx_inputs, watsonx_fields = _get_watsonx_inputs_and_fields()
+    MODEL_PROVIDERS_DICT["IBM watsonx.ai"] = {
+        "fields": watsonx_fields,
+        "inputs": watsonx_inputs,
+        "prefix": "",
+        "component_class": WatsonxAIComponent(),
+        "icon": WatsonxAIComponent.icon,
+        "is_active": True,
+    }
+except ImportError:
+    pass
+
+try:
+    from lfx.components.ollama.ollama import ChatOllamaComponent
+
+    ollama_inputs, ollama_fields = _get_ollama_inputs_and_fields()
+    MODEL_PROVIDERS_DICT["Ollama"] = {
+        "fields": ollama_fields,
+        "inputs": ollama_inputs,
+        "prefix": "",
+        "component_class": ChatOllamaComponent(),
+        "icon": ChatOllamaComponent.icon,
+        "is_active": True,
+    }
+except ImportError:
+    pass
+
+# Expose only active providers ----------------------------------------------
+ACTIVE_MODEL_PROVIDERS_DICT: dict[str, ModelProvidersDict] = {
+    name: prov for name, prov in MODEL_PROVIDERS_DICT.items() if prov.get("is_active", True)
+}
+
+MODEL_PROVIDERS: list[str] = list(ACTIVE_MODEL_PROVIDERS_DICT.keys())
+
+ALL_PROVIDER_FIELDS: list[str] = [field for prov in ACTIVE_MODEL_PROVIDERS_DICT.values() for field in prov["fields"]]
+
+MODEL_DYNAMIC_UPDATE_FIELDS = [
+    "api_key",
+    "model",
+    "tool_model_enabled",
+    "base_url",
+    "model_name",
+    "watsonx_endpoint",
+    "url",
+]
+
+MODELS_METADATA = {name: {"icon": prov["icon"]} for name, prov in ACTIVE_MODEL_PROVIDERS_DICT.items()}
+
+MODEL_PROVIDERS_LIST = ["Anthropic", "Google Generative AI", "OpenAI", "IBM watsonx.ai", "Ollama"]
+
+MODEL_OPTIONS_METADATA = [MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST if key in MODELS_METADATA]

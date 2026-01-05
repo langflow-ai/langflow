@@ -1,0 +1,115 @@
+codecov:
+  # Don't block CI if codecov fails to process reports
+  require_ci_to_pass: false
+  notify:
+    after_n_builds: 1  # Comment after each report (don't wait for all)
+
+coverage:
+  precision: 2
+  round: down
+  # Display range from 30-100% to provide meaningful color gradients
+  range: "30...100"
+
+  status:
+    project:
+      # Backend coverage strategy: Aspirational target for progress tracking
+      # Current coverage: ~33%, Target: 55% (intentionally higher than current)
+      # This creates visual progress indicators (red->yellow->green) without blocking PRs
+      # Shows improvement over time while encouraging better test coverage
+      backend:
+        target: 55%
+        # Threshold: Allowable drop in coverage before failing the check
+        # 5% = coverage can drop from 33% to 28% without failing status
+        # Higher threshold to avoid blocking PRs during improvement phase
+        threshold: 5%
+        flags:
+          - backend
+
+      # Frontend coverage: Realistic target based on current state
+      # Current coverage: ~1.5%, Target: 10% (achievable improvement goal)
+      frontend:
+        target: 10%
+        # Threshold: Allowable drop in coverage before failing the check
+        # 1% = coverage can drop from 1.5% to 0.5% without failing status
+        # Small threshold appropriate for very low baseline coverage
+        threshold: 1%
+        flags:
+          - frontend
+
+      # LFX coverage: Target for core package (excludes components)
+      # Components (third-party integrations) tracked separately
+      # Current core coverage: ~44%, Target: 60% (aspirational improvement)
+      lfx:
+        target: 60%
+        # Threshold: Allowable drop in coverage before failing the check
+        # 5% = coverage can drop from 44% to 39% without failing status
+        threshold: 5%
+        flags:
+          - lfx
+
+    # New code coverage requirements - realistic target for current state
+    # Encourages testing new features without blocking development
+    patch:
+      default:
+        target: 40%
+        threshold: 5%
+
+# PR comment configuration - what information to show in coverage reports
+comment:
+  layout: "reach,diff,flags,tree"  # Show coverage, changes, flags, and file tree
+  behavior: default
+  require_changes: false  # Comment even if no changes
+  require_base: false     # Don't require base branch comparison
+  require_head: true      # Require current branch coverage
+
+# Define separate coverage tracking for frontend, backend, and lfx
+flags:
+  backend:
+    paths:
+      - src/backend/
+    carryforward: true  # Preserve coverage data across builds if missing
+  frontend:
+    paths:
+      - src/frontend/
+    carryforward: true  # Preserve coverage data across builds if missing
+  lfx:
+    paths:
+      - src/lfx/
+    carryforward: true  # Preserve coverage data across builds if missing
+
+# Define coverage components for granular reporting
+component_management:
+  default_rules:  # default rules that will be inherited by all components
+    statuses:
+      - type: project # in this case every component that doens't have a status defined will have a project type one
+        target: auto
+        branches:
+          - "!main"
+  individual_components:
+    - component_id: backend_components
+      name: "Backend Components"
+      paths:
+        - src/backend/base/langflow/components/**
+    # Note: Many components excluded by .coveragerc (bundled + legacy)
+    # This tracks coverage of remaining "core" components only
+
+# Files/directories to exclude from coverage calculations
+ignore:
+  # Database migrations - infrastructure code, not business logic
+  - "src/backend/base/langflow/alembic/**"
+  # Test files themselves don't need coverage
+  - "src/backend/tests/**"
+  - "src/frontend/tests/**"
+  - "src/frontend/test-results/**"
+  - "src/lfx/tests/**"
+  # Build artifacts and dependencies
+  - "**/__pycache__/**"
+  - "**/*.pyc"
+  - "**/node_modules/**"
+  - "**/coverage/**"
+  # Python package init files - typically just imports
+  - "**/__init__.py"
+  # Database migrations
+  - "**/migrations/**"
+  # LFX components - third-party integrations tracked separately
+  - "src/lfx/components/**"

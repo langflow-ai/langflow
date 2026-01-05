@@ -8,7 +8,7 @@ import {
 } from "../../components/ui/popover";
 import { ZERO_NOTIFICATIONS } from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
-import { AlertDropdownType } from "../../types/alerts";
+import type { AlertDropdownType } from "../../types/alerts";
 import SingleAlert from "./components/singleAlertComponent";
 
 const AlertDropdown = forwardRef<HTMLDivElement, AlertDropdownType>(

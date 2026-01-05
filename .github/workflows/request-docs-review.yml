@@ -1,0 +1,37 @@
+name: Request Docs Review
+on:
+  pull_request:
+    types: [labeled]
+
+jobs:
+  request-docs-review:
+    if: github.event.label.name == 'needs-docs'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const prAuthor = context.payload.pull_request.user.login;
+            console.log(`PR author: ${prAuthor}`);
+
+            const reviewers = '${{ vars.DOCS_TEAM_MEMBERS }}'
+              .split(',')
+              .map(u => u.trim())
+              .filter(u => u.length > 0 && u !== prAuthor);
+
+            if (reviewers.length > 0) {
+              console.log(`Requesting review from: ${reviewers.join(', ')}`);
+
+              await github.rest.pulls.requestReviewers({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.issue.number,
+                reviewers: reviewers
+              });
+
+              console.log('Review request sent successfully');
+            } else {
+              console.log('No eligible reviewers found (all team members may be the PR author)');
+            }

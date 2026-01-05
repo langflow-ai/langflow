@@ -1,4 +1,4 @@
-import { NodeDataType } from "@/types/flow";
+import type { NodeDataType } from "@/types/flow";
 import { OutputParameter } from ".";
 
 export default function NodeOutputs({

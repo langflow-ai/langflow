@@ -1,4 +1,5 @@
-import React, { forwardRef } from "react";
+import type React from "react";
+import { forwardRef } from "react";
 import SvgChroma from "./BotMessageSquare";
 
 export const BotMessageSquareIcon = forwardRef<

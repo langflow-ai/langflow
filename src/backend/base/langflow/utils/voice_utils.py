@@ -3,9 +3,8 @@ import base64
 from pathlib import Path
 
 import numpy as np
+from lfx.log import logger
 from scipy.signal import resample
-
-from langflow.logging import logger
 
 SAMPLE_RATE_24K = 24000
 VAD_SAMPLE_RATE_16K = 16000
@@ -81,9 +80,9 @@ async def write_audio_to_file(audio_base64: str, filename: str = "output_audio.r
         audio_bytes = base64.b64decode(audio_base64)
         # Use asyncio.to_thread to perform file I/O without blocking the event loop
         await asyncio.to_thread(_write_bytes_to_file, audio_bytes, filename)
-        logger.info(f"Wrote {len(audio_bytes)} bytes to {filename}")
+        await logger.ainfo(f"Wrote {len(audio_bytes)} bytes to {filename}")
     except (OSError, base64.binascii.Error) as e:  # type: ignore[attr-defined]
-        logger.error(f"Error writing audio to file: {e}")
+        await logger.aerror(f"Error writing audio to file: {e}")
 
 
 def _write_bytes_to_file(data: bytes, filename: str) -> None:

@@ -1,5 +1,5 @@
-import { useMutationFunctionType } from "@/types/api";
-import { UseMutationResult } from "@tanstack/react-query";
+import type { UseMutationResult } from "@tanstack/react-query";
+import type { useMutationFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -12,8 +12,11 @@ interface PatchInstallMCPResponse {
   message: string;
 }
 
+export type MCPTransport = "sse" | "streamablehttp";
+
 interface PatchInstallMCPBody {
   client: string;
+  transport?: MCPTransport;
 }
 
 export const usePatchInstallMCP: useMutationFunctionType<
@@ -47,7 +50,7 @@ export const usePatchInstallMCP: useMutationFunctionType<
     PatchInstallMCPResponse,
     any,
     PatchInstallMCPBody
-  > = mutate(["usePatchInstallMCP"], patchInstallMCP, {
+  > = mutate(["usePatchInstallMCP", params.project_id], patchInstallMCP, {
     ...options,
     onSuccess: (data, variables, context) => {
       queryClient.invalidateQueries({

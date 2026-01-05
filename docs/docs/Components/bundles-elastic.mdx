@@ -1,0 +1,106 @@
+---
+title: Elastic
+slug: /bundles-elastic
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialConditionalParams from '@site/docs/_partial-conditional-params.mdx';
+import PartialVectorSearchResults from '@site/docs/_partial-vector-search-results.mdx';
+import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Elastic** bundle.
+
+## Elasticsearch
+
+The **Elasticsearch** component reads and writes to an Elasticsearch instance using [`ElasticsearchStore`](https://docs.langchain.com/oss/python/integrations/vectorstores/elasticsearch).
+
+<details>
+<summary>About vector store instances</summary>
+
+<PartialVectorStoreInstance />
+
+</details>
+
+<PartialVectorSearchResults />
+
+### Elasticsearch parameters
+
+You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
+
+<PartialParams />
+
+<PartialConditionalParams />
+
+For information about accepted values and functionality, see the [Elasticsearch documentation](https://www.elastic.co/guide/en/elasticsearch/reference/current/dense-vector.html) or inspect [component code](/concepts-components#component-code).
+
+| Name | Type | Description |
+|------|------|-------------|
+| elasticsearch_url | String | Input parameter. Elasticsearch server URL. |
+| cloud_id | String | Input parameter. Elasticsearch Cloud ID. |
+| index_name | String | Input parameter. Name of the Elasticsearch index. |
+| ingest_data | Data | Input parameter. Records to load into the vector store. |
+| search_query | String | Input parameter. Query string for similarity search. |
+| cache_vector_store | Boolean | Input parameter. If `true`, the component caches the vector store in memory for faster reads. Default: Enabled (`true`). |
+| username | String | Input parameter. Username for Elasticsearch authentication. Required for all local deployments. Required for cloud deployments if `api_key` is empty. |
+| password | SecretString | Input parameter. Password for Elasticsearch authentication. Required for all local deployments. Required for cloud deployments if `api_key` is empty |
+| embedding | Embeddings | Input parameter. The embedding model to use. |
+| search_type | String | Input parameter. The type of search to perform. Options are `similarity` (default) or `mmr`. |
+| number_of_results | Integer | Input parameter. Number of search results to return. Default: 4. |
+| search_score_threshold | Float | Input parameter. The minimum similarity score threshold for search results. Default: 0. |
+| api_key | SecretString | Input parameter. API key for Elastic Cloud authentication. If provided, `username` and `password` aren't required. |
+| verify_certs | Boolean | Input parameter. Whether to verify SSL certificates when connecting to Elasticsearch. Default: Enabled (`true`). |
+
+## OpenSearch
+
+The **OpenSearch** component reads and writes to OpenSearch instances using [`OpenSearchVectorSearch`](https://docs.langchain.com/oss/python/integrations/vectorstores/opensearch).
+
+<details>
+<summary>About vector store instances</summary>
+
+<PartialVectorStoreInstance />
+
+</details>
+
+### OpenSearch parameters
+
+You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.;
+
+<PartialParams />
+
+<PartialConditionalParams />
+
+For information about accepted values and functionality, see the [OpenSearch documentation](https://opensearch.org/platform/search/vector-database.html) or inspect [component code](/concepts-components#component-code).
+
+| Name | Type | Description |
+|------|------|-------------|
+| opensearch_url | String | Input parameter. URL for OpenSearch cluster, such as `https://192.168.1.1:9200`. |
+| index_name | String | Input parameter. The index name where the vectors are stored in OpenSearch cluster. Default: `langflow`. |
+| ingest_data | Data | Input parameter. The data to be ingested into the vector store. |
+| search_input | String | Input parameter. Enter a search query. Leave empty to retrieve all documents or if hybrid search is being used. |
+| cache_vector_store | Boolean | Input parameter. If `true`, the component caches the vector store in memory for faster reads. Default: Enabled (`true`). |
+| embedding | Embeddings | Input parameter. Attach an [embedding model component](/components-embedding-models) to use to generate an embedding from the search query. |
+| search_type | String | Input parameter. The type of search to perform. Options are `similarity` (default), `similarity_score_threshold`, `mmr`. |
+| number_of_results | Integer | Input parameter. The number of results to return in search. Default: 4. |
+| search_score_threshold | Float | Input parameter. The minimum similarity score threshold for search results. Default: 0. |
+| username | String | Input parameter. The username for the OpenSearch cluster. Default: `admin`.|
+| password | SecretString | Input parameter. The password for the OpenSearch cluster. |
+| use_ssl | Boolean | Input parameter. Whether to use SSL. Default: Enabled (`true`). |
+| verify_certs | Boolean | Input parameter. Whether to verify SSL certificates. Default: Disabled (`false`). |
+| hybrid_search_query | String | Input parameter. Provide a custom hybrid search query in JSON format. This allows you to combine vector similarity and keyword matching. |
+
+### OpenSearch output
+
+<PartialVectorSearchResults />
+
+<details>
+<summary>Vector Store Connection port</summary>
+
+The **OpenSearch** component has an additional deprecated **Vector Store Connection** output.
+This output can only connect to a `VectorStore` input port, and it was intended for use with dedicated Graph RAG components.
+
+The **OpenSearch** component doesn't require a separate Graph RAG component because OpenSearch instances support Graph traversal through built-in RAG functionality and plugins.
+
+</details>

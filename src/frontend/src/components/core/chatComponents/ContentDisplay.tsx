@@ -1,8 +1,8 @@
-import { ContentType } from "@/types/chat";
-import { ReactNode } from "react";
+import type { ReactNode } from "react";
 import Markdown from "react-markdown";
-import rehypeMathjax from "rehype-mathjax";
+import rehypeMathjax from "rehype-mathjax/browser";
 import remarkGfm from "remark-gfm";
+import type { ContentType } from "@/types/chat";
 import ForwardedIconComponent from "../../common/genericIconComponent";
 import SimplifiedCodeTabComponent from "../codeTabsComponent";
 import DurationDisplay from "./DurationDisplay";
@@ -55,10 +55,14 @@ export default function ContentDisplay({
         <div className="ml-1 pr-20">
           <Markdown
             remarkPlugins={[remarkGfm]}
-            linkTarget="_blank"
             rehypePlugins={[rehypeMathjax]}
             className="markdown prose max-w-full text-sm font-normal dark:prose-invert"
             components={{
+              a: ({ node, ...props }) => (
+                <a {...props} target="_blank" rel="noopener noreferrer">
+                  {props.children}
+                </a>
+              ),
               p({ node, ...props }) {
                 return (
                   <span className="block w-fit max-w-full">
@@ -69,7 +73,8 @@ export default function ContentDisplay({
               pre({ node, ...props }) {
                 return <>{props.children}</>;
               },
-              code: ({ node, inline, className, children, ...props }) => {
+              code: ({ node, className, children, ...props }) => {
+                const inline = !(props as any).hasOwnProperty("data-language");
                 let content = children as string;
                 if (
                   Array.isArray(children) &&
@@ -144,7 +149,7 @@ export default function ContentDisplay({
       );
       break;
 
-    case "tool_use":
+    case "tool_use": {
       const formatToolOutput = (output: any) => {
         if (output === null || output === undefined) return "";
 
@@ -165,7 +170,10 @@ export default function ContentDisplay({
                 ul({ node, ...props }) {
                   return <ul className="max-w-full">{props.children}</ul>;
                 },
-                code: ({ node, inline, className, children, ...props }) => {
+                code: ({ node, className, children, ...props }) => {
+                  const inline = !(props as any).hasOwnProperty(
+                    "data-language",
+                  );
                   const match = /language-(\w+)/.exec(className || "");
                   return !inline ? (
                     <SimplifiedCodeTabComponent
@@ -241,6 +249,7 @@ export default function ContentDisplay({
         </div>
       );
       break;
+    }
 
     case "media":
       contentData = (

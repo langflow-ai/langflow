@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import useFlowStore from "@/stores/flowStore";
 import { useVoiceStore } from "@/stores/voiceStore";
 import IconComponent from "../../../components/common/genericIconComponent";
-import { SidebarOpenViewProps } from "../types/sidebar-open-view";
+import type { SidebarOpenViewProps } from "../types/sidebar-open-view";
 import SessionSelector from "./IOFieldView/components/session-selector";
 
 export const SidebarOpenView = ({

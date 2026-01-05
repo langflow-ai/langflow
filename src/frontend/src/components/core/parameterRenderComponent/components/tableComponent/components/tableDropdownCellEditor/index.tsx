@@ -1,4 +1,4 @@
-import { CustomCellEditorProps } from "ag-grid-react";
+import type { CustomCellEditorProps } from "ag-grid-react";
 import InputComponent from "../../../inputComponent";
 
 export default function TableDropdownCellEditor({

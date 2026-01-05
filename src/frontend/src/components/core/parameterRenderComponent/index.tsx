@@ -1,18 +1,17 @@
-import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
-import TableNodeComponent from "@/components/core/parameterRenderComponent/components/TableNodeComponent";
+import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import CodeAreaComponent from "@/components/core/parameterRenderComponent/components/codeAreaComponent";
+import ModelInputComponent from "@/components/core/parameterRenderComponent/components/modelInputComponent";
 import SliderComponent from "@/components/core/parameterRenderComponent/components/sliderComponent";
+import TableNodeComponent from "@/components/core/parameterRenderComponent/components/TableNodeComponent";
 import TabComponent from "@/components/core/parameterRenderComponent/components/tabComponent";
 import { TEXT_FIELD_TYPES } from "@/constants/constants";
 import CustomConnectionComponent from "@/customization/components/custom-connectionComponent";
+import CustomInputFileComponent from "@/customization/components/custom-input-file";
 import CustomLinkComponent from "@/customization/components/custom-linkComponent";
-import { APIClassType, InputFieldType } from "@/types/api";
-import { useMemo } from "react";
-import ToolsComponent from "./components/ToolsComponent";
+import type { APIClassType, InputFieldType } from "@/types/api";
 import DictComponent from "./components/dictComponent";
 import { EmptyParameterComponent } from "./components/emptyParameterComponent";
 import FloatComponent from "./components/floatComponent";
-import InputFileComponent from "./components/inputFileComponent";
 import InputListComponent from "./components/inputListComponent";
 import IntComponent from "./components/intComponent";
 import KeypairListComponent from "./components/keypairListComponent";
@@ -22,8 +21,9 @@ import PromptAreaComponent from "./components/promptComponent";
 import QueryComponent from "./components/queryComponent";
 import SortableListComponent from "./components/sortableListComponent";
 import { StrRenderComponent } from "./components/strRenderComponent";
+import ToolsComponent from "./components/ToolsComponent";
 import ToggleShadComponent from "./components/toggleShadComponent";
-import { InputProps, NodeInfoType } from "./types";
+import type { InputProps, NodeInfoType } from "./types";
 
 export function ParameterRenderComponent({
   handleOnNewValue,
@@ -54,6 +54,7 @@ export function ParameterRenderComponent({
   isToolMode?: boolean;
   nodeInformationMetadata?: NodeInfoType;
 }) {
+  // no-op
   const id = (
     templateData.type +
     "_" +
@@ -73,7 +74,7 @@ export function ParameterRenderComponent({
       nodeId,
       helperText: templateData?.helper_text,
       readonly: templateData.readonly,
-      placeholder,
+      placeholder: placeholder || templateData?.placeholder,
       isToolMode,
       nodeInformationMetadata,
       hasRefreshButton: templateData.refresh_button,
@@ -91,7 +92,7 @@ export function ParameterRenderComponent({
             />
           );
         }
-        if (!!templateData.options) {
+        if (templateData.options) {
           return (
             <MultiselectComponent
               {...baseInputProps}
@@ -171,7 +172,7 @@ export function ParameterRenderComponent({
         );
       case "file":
         return (
-          <InputFileComponent
+          <CustomInputFileComponent
             {...baseInputProps}
             fileTypes={templateData.fileTypes}
             file_path={templateData.file_path}
@@ -196,7 +197,9 @@ export function ParameterRenderComponent({
           <TableNodeComponent
             {...baseInputProps}
             description={templateData.info || "Add or edit data"}
-            columns={templateData?.table_schema?.columns}
+            columns={
+              templateData?.table_schema?.columns ?? templateData?.table_schema
+            }
             tableTitle={templateData?.display_name ?? "Table"}
             table_options={templateData?.table_options}
             trigger_icon={templateData?.trigger_icon}
@@ -239,9 +242,10 @@ export function ParameterRenderComponent({
             options={templateData?.options}
             searchCategory={templateData?.search_category}
             limit={templateData?.limit}
+            id={`sortablelist_${id}`}
           />
         );
-      case "connect":
+      case "connect": {
         const link =
           templateData?.options?.find(
             (option: any) => option?.name === templateValue,
@@ -261,6 +265,7 @@ export function ParameterRenderComponent({
             connectionLink={link as string}
           />
         );
+      }
       case "tab":
         return (
           <TabComponent
@@ -287,6 +292,15 @@ export function ParameterRenderComponent({
             editNode={editNode}
             disabled={disabled}
             value={templateValue}
+          />
+        );
+      case "model":
+        return (
+          <ModelInputComponent
+            {...baseInputProps}
+            options={templateData?.options || []}
+            placeholder={templateData?.placeholder}
+            externalOptions={templateData?.external_options}
           />
         );
       default:

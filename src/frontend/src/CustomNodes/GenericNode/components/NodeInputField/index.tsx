@@ -1,16 +1,18 @@
+import { useEffect, useMemo, useRef } from "react";
+import { useShallow } from "zustand/react/shallow";
 import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
-import { NodeInfoType } from "@/components/core/parameterRenderComponent/types";
+import { AssistantButton } from "@/components/common/assistant";
+import type { NodeInfoType } from "@/components/core/parameterRenderComponent/types";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import {
   CustomParameterComponent,
   CustomParameterLabel,
   getCustomParameterTitle,
 } from "@/customization/components/custom-parameter";
+import { LANGFLOW_AGENTIC_EXPERIENCE } from "@/customization/feature-flags";
 import { useIsAutoLogin } from "@/hooks/use-is-auto-login";
 import useAuthStore from "@/stores/authStore";
 import { cn } from "@/utils/utils";
-import { useEffect, useMemo, useRef } from "react";
-import { useShallow } from "zustand/react/shallow";
 import { default as IconComponent } from "../../../../components/common/genericIconComponent";
 import ShadTooltip from "../../../../components/common/shadTooltipComponent";
 import {
@@ -22,11 +24,11 @@ import {
 } from "../../../../constants/constants";
 import useFlowStore from "../../../../stores/flowStore";
 import { useTypesStore } from "../../../../stores/typesStore";
-import { NodeInputFieldComponentType } from "../../../../types/components";
+import type { NodeInputFieldComponentType } from "../../../../types/components";
 import useFetchDataOnMount from "../../../hooks/use-fetch-data-on-mount";
 import useHandleOnNewValue from "../../../hooks/use-handle-new-value";
-import NodeInputInfo from "../NodeInputInfo";
 import HandleRenderComponent from "../handleRenderComponent";
+import NodeInputInfo from "../NodeInputInfo";
 
 export default function NodeInputField({
   id,
@@ -100,11 +102,20 @@ export default function NodeInputField({
     }
   }, [optionalHandle]);
 
+  // For ModelInput (type === "model"), only show handle if input_types is not empty
+  const isModelInput = type === "model";
+  const hasInputTypes =
+    optionalHandle &&
+    Array.isArray(optionalHandle) &&
+    optionalHandle.length > 0;
+
+  // Allow refresh buttons and connection handles to coexist for ModelInput
   const displayHandle =
     (!LANGFLOW_SUPPORTED_TYPES.has(type ?? "") ||
       (optionalHandle && optionalHandle.length > 0)) &&
     !isToolMode &&
-    !hasRefreshButton;
+    (!hasRefreshButton || isModelInput) &&
+    (!isModelInput || hasInputTypes); // Hide handle for ModelInput when input_types is empty
 
   const isFlexView = FLEX_VIEW_TYPES.includes(type ?? "");
 
@@ -119,7 +130,9 @@ export default function NodeInputField({
       colors={colors}
       setFilterEdge={setFilterEdge}
       showNode={showNode}
-      testIdComplement={`${data?.type?.toLowerCase()}-${showNode ? "shownode" : "noshownode"}`}
+      testIdComplement={`${data?.type?.toLowerCase()}-${
+        showNode ? "shownode" : "noshownode"
+      }`}
       nodeId={data.id}
       colorName={colorName}
     />
@@ -195,6 +208,15 @@ export default function NodeInputField({
                 </ShadTooltip>
               )}
             </div>
+            {LANGFLOW_AGENTIC_EXPERIENCE &&
+              data.node?.template[name]?.ai_enabled && (
+                <AssistantButton
+                  compData={id}
+                  handleOnNewValue={handleOnNewValue}
+                  inputValue={data.node?.template[name]?.value}
+                  type="field"
+                />
+              )}
           </div>
           <CustomParameterLabel
             name={name}

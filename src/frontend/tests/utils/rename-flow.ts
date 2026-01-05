@@ -1,4 +1,4 @@
-import { Page } from "playwright/test";
+import type { Page } from "@playwright/test";
 
 export const renameFlow = async (
   page: Page,
@@ -8,7 +8,9 @@ export const renameFlow = async (
   }: { flowName?: string; flowDescription?: string } = {},
 ) => {
   await page.getByTestId("flow_name").isVisible({ timeout: 3000 });
+  await page.getByTestId("flow_name").hover({ timeout: 3000 });
   await page.getByTestId("flow_name").click({ timeout: 3000 });
+
   await page.waitForTimeout(500);
   await page.getByTestId("input-flow-name").click({ timeout: 3000 });
 

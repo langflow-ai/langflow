@@ -2,12 +2,11 @@ import _ from "lodash";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "../../../../ui/input";
-import { ButtonInputList } from "./components/button-input-list";
-
 import { cn } from "../../../../../utils/utils";
 import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
-import { InputListComponentType, InputProps } from "../../types";
+import type { InputListComponentType, InputProps } from "../../types";
+import { ButtonInputList } from "./components/button-input-list";
+import { CursorInput } from "./components/cursor-input";
 import { DeleteButtonInputList } from "./components/delete-button-input-list";
 
 export default function InputListComponent({
@@ -20,7 +19,7 @@ export default function InputListComponent({
   placeholder,
   listAddLabel,
 }: InputProps<string[], InputListComponentType>): JSX.Element {
-  const [dropdownOpen, setDropdownOpen] = useState<number | null>(null);
+  const [_dropdownOpen, setDropdownOpen] = useState<number | null>(null);
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -93,22 +92,15 @@ export default function InputListComponent({
         {value.map((singleValue, index) => (
           <div key={index} className="flex w-full items-center">
             <div className="group relative flex-1">
-              <Input
+              <CursorInput
                 ref={index === 0 ? inputRef : null}
                 disabled={disabled}
-                type="text"
                 value={singleValue}
-                className={cn(
-                  "w-full text-primary",
-                  value.length > 1 && "pr-10",
-                  editNode ? "input-edit-node" : "",
-                  disabled ? "disabled-state" : "",
-                )}
+                className={cn(value.length > 1 && "pr-10")}
                 placeholder={getPlaceholder(disabled, placeholder)}
-                onChange={(event) =>
-                  handleInputChange(index, event.target.value)
-                }
-                data-testid={`${id}_${index}`}
+                onChange={(newValue) => handleInputChange(index, newValue)}
+                dataTestId={`${id}_${index}`}
+                editNode={editNode}
                 onFocus={() => setFocusedIndex(index)}
                 onBlur={() => setFocusedIndex(null)}
               />

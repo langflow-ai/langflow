@@ -1,10 +1,10 @@
-import { Textarea } from "@/components/ui/textarea";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import useFlowStore from "@/stores/flowStore";
-import { handleKeyDown } from "@/utils/reactflowUtils";
-import { cn } from "@/utils/utils";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import Markdown from "react-markdown";
+import { Textarea } from "@/components/ui/textarea";
+import useFlowStore from "@/stores/flowStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { handleKeyDown } from "@/utils/reactflowUtils";
+import { cn } from "@/utils/utils";
 
 export default function NodeDescription({
   description,
@@ -76,12 +76,18 @@ export default function NodeDescription({
     }
     return (
       <MemoizedMarkdown
-        linkTarget="_blank"
         className={cn(
           "markdown prose flex w-full flex-col leading-5 word-break-break-word [&_pre]:whitespace-break-spaces [&_pre]:!bg-code-description-background [&_pre_code]:!bg-code-description-background",
           stickyNote ? "text-mmd" : "text-xs",
           mdClassName,
         )}
+        components={{
+          a: ({ node, ...props }) => (
+            <a {...props} target="_blank" rel="noopener noreferrer">
+              {props.children}
+            </a>
+          ),
+        }}
       >
         {String(description)}
       </MemoizedMarkdown>

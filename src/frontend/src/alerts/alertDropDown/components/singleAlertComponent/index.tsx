@@ -1,15 +1,15 @@
-import { CustomLink } from "@/customization/components/custom-link";
 import { useState } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { CustomLink } from "@/customization/components/custom-link";
 import IconComponent from "../../../../components/common/genericIconComponent";
-import { SingleAlertComponentType } from "../../../../types/alerts";
+import type { SingleAlertComponentType } from "../../../../types/alerts";
 
 export default function SingleAlert({
   dropItem,
   removeAlert,
 }: SingleAlertComponentType): JSX.Element {
-  const [show, setShow] = useState(true);
+  const [_show, setShow] = useState(true);
   const type = dropItem.type;
 
   return type === "error" ? (
@@ -30,13 +30,12 @@ export default function SingleAlert({
               {dropItem.list.map((item, idx) => (
                 <li className="word-break-break-word" key={idx}>
                   <Markdown
-                    linkTarget="_blank"
                     remarkPlugins={[remarkGfm]}
                     className="align-text-top"
                     components={{
                       a: ({ node, ...props }) => (
                         <a
-                          href={props.href}
+                          {...props}
                           target="_blank"
                           className="underline"
                           rel="noopener noreferrer"

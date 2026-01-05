@@ -1,11 +1,10 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { zoomOut } from "../../utils/zoom-out";
 
 // Helper function to verify prompt variables
 async function verifyPromptVariables(
-  page,
+  page: any,
   template: string,
   expectedVars: string[],
   isFirstTime = true,
@@ -60,12 +59,15 @@ test(
     await page.getByTestId("blank-flow").click();
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("prompt");
-    await page.waitForSelector('[data-testid="processingPrompt Template"]', {
-      timeout: 3000,
-    });
+    await page.waitForSelector(
+      '[data-testid="models_and_agentsPrompt Template"]',
+      {
+        timeout: 3000,
+      },
+    );
 
     await page
-      .locator('//*[@id="processingPrompt Template"]')
+      .locator('//*[@id="models_and_agentsPrompt Template"]')
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
@@ -145,12 +147,15 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("prompt");
 
-    await page.waitForSelector('[data-testid="processingPrompt Template"]', {
-      timeout: 3000,
-    });
+    await page.waitForSelector(
+      '[data-testid="models_and_agentsPrompt Template"]',
+      {
+        timeout: 3000,
+      },
+    );
 
     await page
-      .locator('//*[@id="processingPrompt Template"]')
+      .locator('//*[@id="models_and_agentsPrompt Template"]')
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
@@ -169,12 +174,12 @@ test(
       expect(false).toBeTruthy();
     }
 
-    let valueBadgeOne = await page.locator('//*[@id="badge0"]').innerText();
+    const valueBadgeOne = await page.locator('//*[@id="badge0"]').innerText();
     if (valueBadgeOne != "prompt") {
       expect(false).toBeTruthy();
     }
 
-    let valueBadgeTwo = await page.locator('//*[@id="badge1"]').innerText();
+    const valueBadgeTwo = await page.locator('//*[@id="badge1"]').innerText();
     if (valueBadgeTwo != "prompt1") {
       expect(false).toBeTruthy();
     }
@@ -315,8 +320,8 @@ test(
     ).toBeTruthy();
 
     await page.getByText("Close").last().click();
+    await adjustScreenView(page, { numberOfZoomOut: 2 });
 
-    await zoomOut(page, 2);
     await page.getByTestId("edit-button-modal").last().click();
 
     await page.locator('//*[@id="showprompt1"]').click();
