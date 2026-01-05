@@ -26,7 +26,14 @@ from lfx.schema.schema import InputValueRequest
 from lfx.services.settings.service import SettingsService
 from sqlmodel import select
 
-from langflow.api.utils import CurrentActiveUser, DbSession, extract_global_variables_from_headers, parse_value
+from langflow.api.utils import (
+    CurrentActiveUser,
+    DbSession,
+    extract_global_variables_from_headers,
+    extract_request_data_for_flow,
+    flow_has_json_input_mode,
+    parse_value,
+)
 from langflow.api.v1.schemas import (
     ConfigResponse,
     CustomComponentRequest,
@@ -393,12 +400,15 @@ async def _run_flow_internal(
     request_variables = extract_global_variables_from_headers(http_request.headers)
 
     # Merge request variables with existing context
+    context = {} if context is None else context.copy()
+
     if request_variables:
-        if context is None:
-            context = {"request_variables": request_variables}
-        else:
-            context = context.copy()  # Don't modify the original context
-            context["request_variables"] = request_variables
+        context["request_variables"] = request_variables
+
+    # Only extract request data if the flow has a FlowStartComponent in JSON mode
+    if flow_has_json_input_mode(flow.data):
+        request_data = await extract_request_data_for_flow(http_request)
+        context["request_data"] = request_data
 
     start_time = time.perf_counter()
 
