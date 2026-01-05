@@ -202,9 +202,7 @@ def create_granite_agent(llm, tools: list, prompt: ChatPromptTemplate, forced_it
 
         response = llm_to_use.invoke(messages)
         response = _limit_to_single_tool_call(response)
-        response = _handle_placeholder_in_response(response, messages, llm_auto)
-
-        return response
+        return _handle_placeholder_in_response(response, messages, llm_auto)
 
     return RunnableLambda(invoke) | ToolsAgentOutputParser()
 
