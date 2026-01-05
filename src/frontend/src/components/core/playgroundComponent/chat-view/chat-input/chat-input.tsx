@@ -180,6 +180,14 @@ export default function ChatInput({
   }, [currentFlowId, isBuilding]);
 
   const send = async () => {
+    // Debug instrumentation to verify send is triggered and payload is built
+    const debugPayload = {
+      chatValue,
+      filesCount: files.length,
+      filePaths: files.map((f) => f.path ?? ""),
+    };
+    console.debug("[chat-input] send called", debugPayload);
+
     const storedChatValue = chatValue;
     const filesToSend = files
       .map((file) => file.path ?? "")
@@ -192,7 +200,9 @@ export default function ChatInput({
         inputValue: storedChatValue,
         files: filesToSend,
       });
-    } catch (_error) {
+      console.debug("[chat-input] sendMessage success");
+    } catch (error) {
+      console.error("[chat-input] sendMessage failed", error);
       setChatValueStore(storedChatValue);
       setFiles(storedFiles);
     }
