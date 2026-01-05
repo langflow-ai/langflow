@@ -54,22 +54,27 @@ def is_granite_model(llm) -> bool:
 
 
 def _get_tool_schema_description(tool) -> str:
-    """Extract a brief description of the tool's expected parameters."""
-    try:
-        # Try to get the tool's input schema
-        if hasattr(tool, "args_schema") and tool.args_schema:
-            schema = tool.args_schema
-            if hasattr(schema, "model_fields"):
-                fields = schema.model_fields
-                params = []
-                for name, field in fields.items():
-                    required = field.is_required() if hasattr(field, "is_required") else True
-                    req_str = "(required)" if required else "(optional)"
-                    params.append(f"{name} {req_str}")
-                return f"Parameters: {', '.join(params)}" if params else ""
-    except Exception:  # noqa: BLE001
+    """Extract a brief description of the tool's expected parameters.
+
+    Returns empty string if schema extraction fails (graceful degradation).
+    """
+    if not hasattr(tool, "args_schema") or not tool.args_schema:
         return ""
-    else:
+
+    schema = tool.args_schema
+    if not hasattr(schema, "model_fields"):
+        return ""
+
+    try:
+        fields = schema.model_fields
+        params = []
+        for name, field in fields.items():
+            required = field.is_required() if hasattr(field, "is_required") else True
+            req_str = "(required)" if required else "(optional)"
+            params.append(f"{name} {req_str}")
+        return f"Parameters: {', '.join(params)}" if params else ""
+    except (AttributeError, TypeError) as e:
+        logger.debug(f"Could not extract schema for tool {getattr(tool, 'name', 'unknown')}: {e}")
         return ""
 
 
@@ -89,21 +94,19 @@ def get_enhanced_system_prompt(base_prompt: str, tools: list) -> str:
 
     tools_section = "\n".join(tool_descriptions)
 
+    # Note: "one tool at a time" is a WatsonX platform limitation, not a design choice.
+    # WatsonX models don't reliably support parallel tool calls.
     enhancement = f"""
 
-IMPORTANT INSTRUCTIONS FOR TOOL USAGE:
+TOOL USAGE GUIDELINES:
 
 1. ALWAYS call tools when you need information - never say "I cannot" or "I don't have access".
-2. Call ONE tool at a time, wait for the result, then decide your next action.
-3. NEVER use placeholder syntax like <result-from-...> or <previous-value> in tool arguments.
-4. After getting tool results, extract the ACTUAL values and use them directly.
-5. For date calculations, compute the result yourself and include it in your final answer.
-6. CRITICAL: Each tool has DIFFERENT parameters. Use the CORRECT parameters for each tool.
+2. Call one tool at a time, then use its result before calling another tool.
+3. Use ACTUAL values in tool arguments - never use placeholder syntax like <result-from-...>.
+4. Each tool has specific parameters - use the correct ones for each tool.
 
-AVAILABLE TOOLS AND THEIR PARAMETERS:
-{tools_section}
-
-Remember: Use the correct parameter names for each tool. Do not mix parameters between tools."""
+AVAILABLE TOOLS:
+{tools_section}"""
 
     return base_prompt + enhancement
 
@@ -127,79 +130,83 @@ def detect_placeholder_in_args(tool_calls: list) -> tuple[bool, str | None]:
     return False, None
 
 
+def _limit_to_single_tool_call(llm_response):
+    """Limit response to single tool call (WatsonX platform limitation)."""
+    if not hasattr(llm_response, "tool_calls") or not llm_response.tool_calls:
+        return llm_response
+
+    if len(llm_response.tool_calls) > 1:
+        logger.debug(f"[WatsonX] Limiting {len(llm_response.tool_calls)} tool calls to 1")
+        llm_response.tool_calls = [llm_response.tool_calls[0]]
+
+    return llm_response
+
+
+def _handle_placeholder_in_response(llm_response, messages, llm_auto):
+    """Re-invoke with corrective message if placeholder syntax detected."""
+    if not hasattr(llm_response, "tool_calls") or not llm_response.tool_calls:
+        return llm_response
+
+    has_placeholder, _ = detect_placeholder_in_args(llm_response.tool_calls)
+    if not has_placeholder:
+        return llm_response
+
+    logger.warning("[WatsonX] Placeholder detected, requesting actual values")
+    from langchain_core.messages import SystemMessage
+
+    corrective_msg = SystemMessage(
+        content="Provide your final answer using the actual values from previous tool results."
+    )
+    messages_list = list(messages.messages) if hasattr(messages, "messages") else list(messages)
+    messages_list.append(corrective_msg)
+    return llm_auto.invoke(messages_list)
+
+
 def create_granite_agent(llm, tools: list, prompt: ChatPromptTemplate, forced_iterations: int = 2):
-    """Create a tool calling agent optimized for IBM WatsonX models.
+    """Create a tool calling agent for IBM WatsonX/Granite models.
 
-    IBM WatsonX models (including Granite, Llama, Mistral, etc.) have issues with tool calling:
-    - tool_choice='auto': Model outputs text descriptions instead of actual tool calls
-    - tool_choice='required': Model can't provide final answers (infinite loop)
-    - Some models only support single tool calls at once
+    Why this exists: WatsonX models have platform-specific tool calling behavior:
+    - With tool_choice='auto': Models often describe tools in text instead of calling them
+    - With tool_choice='required': Models can't provide final answers (causes infinite loops)
+    - Models only reliably support single tool calls per turn
 
-    This uses dynamic tool_choice switching to solve both issues.
+    Solution: Dynamic switching between 'required' (to force tool use) and 'auto' (to allow answers).
 
     Args:
-        llm: The language model instance (any WatsonX model)
-        tools: List of tools available to the agent
-        prompt: The chat prompt template
-        forced_iterations: Number of iterations to force tool_choice='required'
+        llm: WatsonX language model instance
+        tools: Available tools for the agent
+        prompt: Chat prompt template
+        forced_iterations: Iterations to force tool_choice='required' before allowing 'auto'
 
     Returns:
-        A Runnable agent chain
+        Runnable agent chain compatible with AgentExecutor
     """
     if not hasattr(llm, "bind_tools"):
-        msg = "IBM WatsonX handler requires a language model with bind_tools support."
+        msg = "WatsonX handler requires a language model with bind_tools support."
         raise ValueError(msg)
 
-    # Create LLM variants with different tool_choice settings
-    # Note: WatsonX doesn't support parallel_tool_calls parameter, we handle multiple
-    # tool calls manually by keeping only the first one
     llm_required = llm.bind_tools(tools or [], tool_choice="required")
     llm_auto = llm.bind_tools(tools or [], tool_choice="auto")
 
-    def dynamic_invoke(inputs: dict):
-        """Dynamically choose tool_choice based on iteration count."""
+    def invoke(inputs: dict):
         intermediate_steps = inputs.get("intermediate_steps", [])
         num_steps = len(intermediate_steps)
 
-        inputs_with_scratchpad = {**inputs, "agent_scratchpad": format_to_tool_messages(intermediate_steps)}
-        messages = prompt.invoke(inputs_with_scratchpad)
+        scratchpad = format_to_tool_messages(intermediate_steps)
+        messages = prompt.invoke({**inputs, "agent_scratchpad": scratchpad})
 
-        # Force tool calls for first N iterations, then allow final answers
-        if num_steps < forced_iterations:
-            logger.info(f"[IBM WatsonX] Iteration {num_steps + 1} - tool_choice='required'")
-            llm_response = llm_required.invoke(messages)
-        else:
-            logger.info(f"[IBM WatsonX] Iteration {num_steps + 1} - tool_choice='auto'")
-            llm_response = llm_auto.invoke(messages)
+        # Use 'required' for first N iterations, then 'auto' to allow final answers
+        use_required = num_steps < forced_iterations
+        llm_to_use = llm_required if use_required else llm_auto
+        logger.debug(f"[WatsonX] Step {num_steps + 1}, tool_choice={'required' if use_required else 'auto'}")
 
-        # Handle multiple tool calls - some WatsonX models only support single tool calls
-        if hasattr(llm_response, "tool_calls") and llm_response.tool_calls:
-            if len(llm_response.tool_calls) > 1:
-                num_calls = len(llm_response.tool_calls)
-                logger.warning(f"[IBM WatsonX] Multiple tool calls detected ({num_calls}), keeping first")
-                # Keep only the first tool call
-                llm_response.tool_calls = [llm_response.tool_calls[0]]
+        response = llm_to_use.invoke(messages)
+        response = _limit_to_single_tool_call(response)
+        response = _handle_placeholder_in_response(response, messages, llm_auto)
 
-            # Handle placeholder detection - force final answer if detected
-            has_placeholder, _ = detect_placeholder_in_args(llm_response.tool_calls)
-            if has_placeholder:
-                logger.warning("[IBM WatsonX] Placeholder detected, forcing final answer")
-                from langchain_core.messages import SystemMessage
+        return response
 
-                corrective_msg = SystemMessage(
-                    content=(
-                        "STOP! Do not use placeholders. Provide your final answer NOW "
-                        "based on the information you already have."
-                    )
-                )
-                messages_list = list(messages.messages) if hasattr(messages, "messages") else list(messages)
-                messages_list.append(corrective_msg)
-                llm_response = llm_auto.invoke(messages_list)
-
-        return llm_response
-
-    logger.info("[IBM WatsonX] Created agent with dynamic tool_choice")
-    return RunnableLambda(dynamic_invoke) | ToolsAgentOutputParser()
+    return RunnableLambda(invoke) | ToolsAgentOutputParser()
 
 
 # Alias for backwards compatibility

@@ -274,7 +274,7 @@ class TestGetEnhancedSystemPrompt:
         result = get_enhanced_system_prompt(base_prompt, mock_tools)
 
         assert base_prompt in result
-        assert "IMPORTANT INSTRUCTIONS FOR TOOL USAGE" in result
+        assert "TOOL USAGE GUIDELINES" in result
         assert "search_tool" in result
         assert "calculator_tool" in result
         assert "date_tool" in result
@@ -311,7 +311,7 @@ class TestGetEnhancedSystemPrompt:
 
         result = get_enhanced_system_prompt(base_prompt, mock_tools)
 
-        assert "IMPORTANT INSTRUCTIONS FOR TOOL USAGE" in result
+        assert "TOOL USAGE GUIDELINES" in result
 
     def test_empty_base_prompt(self):
         """Test with empty base prompt."""
@@ -319,7 +319,7 @@ class TestGetEnhancedSystemPrompt:
 
         result = get_enhanced_system_prompt("", mock_tools)
 
-        assert "IMPORTANT INSTRUCTIONS FOR TOOL USAGE" in result
+        assert "TOOL USAGE GUIDELINES" in result
 
     def test_enhancement_contains_key_instructions(self):
         """Test that enhancement contains all key instructions."""
@@ -329,8 +329,8 @@ class TestGetEnhancedSystemPrompt:
         result = get_enhanced_system_prompt(base_prompt, mock_tools)
 
         assert "ALWAYS call tools" in result
-        assert "ONE tool at a time" in result
-        assert "NEVER use placeholder syntax" in result
+        assert "one tool at a time" in result
+        assert "placeholder syntax" in result
         assert "AVAILABLE TOOLS" in result
 
     def test_tool_names_listed(self):
@@ -854,8 +854,10 @@ class TestToolCallingAgentIntegration:
 
             component.create_agent_runnable()
 
-            # Verify system prompt was enhanced
-            assert "IMPORTANT INSTRUCTIONS" in component.system_prompt
+            # Verify enhanced prompt is stored separately (original is not mutated)
+            assert component.system_prompt == "Original prompt"
+            assert hasattr(component, "_effective_system_prompt")
+            assert "TOOL USAGE GUIDELINES" in component._effective_system_prompt
 
     def test_system_prompt_not_enhanced_without_tools(self):
         """Test that system prompt is not enhanced when no tools."""
@@ -876,8 +878,9 @@ class TestToolCallingAgentIntegration:
 
             component.create_agent_runnable()
 
-            # Verify system prompt was NOT enhanced
+            # Verify system prompt was NOT enhanced (no _effective_system_prompt set)
             assert component.system_prompt == "Original prompt"
+            assert not hasattr(component, "_effective_system_prompt")
 
 
 # =============================================================================

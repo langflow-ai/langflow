@@ -53,13 +53,17 @@ class ToolCallingAgentComponent(LCToolsAgentComponent):
     def create_agent_runnable(self):
         messages = []
 
-        # Check if using IBM Granite model - enhance system prompt if so
-        # Only Granite models get special handling, other WatsonX models use default behavior
+        # Use local variable to avoid mutating component state on repeated calls
+        effective_system_prompt = self.system_prompt or ""
+
+        # Enhance prompt for IBM Granite models (they need explicit tool usage instructions)
         if is_granite_model(self.llm) and self.tools:
-            self.system_prompt = get_enhanced_system_prompt(self.system_prompt or "", self.tools)
+            effective_system_prompt = get_enhanced_system_prompt(effective_system_prompt, self.tools)
+            # Store enhanced prompt for use in agent.py without mutating original
+            self._effective_system_prompt = effective_system_prompt
 
         # Only include system message if system_prompt is provided and not empty
-        if hasattr(self, "system_prompt") and self.system_prompt and self.system_prompt.strip():
+        if effective_system_prompt.strip():
             messages.append(("system", "{system_prompt}"))
 
         messages.extend(
