@@ -1,5 +1,6 @@
 import re
 from datetime import datetime, timezone
+from functools import cache
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -74,7 +75,7 @@ def _sanitize_dict(data: dict[str, Any]) -> dict[str, Any]:
     for key, value in data.items():
         if key in EXCLUDED_KEYS:
             continue
-        if _is_sensitive_key(key):
+        if _is_sensitive_key_cached(key):
             if isinstance(value, str) and value:
                 result[key] = _mask_sensitive_value(value)
             else:
@@ -108,6 +109,12 @@ def sanitize_data(data: dict[str, Any] | None) -> dict[str, Any] | None:
     if not isinstance(data, dict):
         return data
     return _sanitize_dict(data)
+
+
+@cache
+def _is_sensitive_key_cached(key: str) -> bool:
+    """Cached wrapper for _is_sensitive_key to avoid repeated lookups."""
+    return _is_sensitive_key(key)
 
 
 class TransactionBase(SQLModel):
