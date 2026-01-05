@@ -1,6 +1,4 @@
-"""
-details of the models supported for the buildtime step
-"""
+"""details of the models supported for the buildtime step."""
 
 BUILDTIME_MODELS = [
     {
@@ -12,9 +10,9 @@ BUILDTIME_MODELS = [
             "context_length": 128000,
             "model_class": "ChatOpenAI",
             "model_name_param": "model",
-            "api_key_param": "api_key",
-            "reasoning_models": ["gpt-4o"]
-        }
+            "api_key_param": "api_key", # pragma: allowlist secret
+            "reasoning_models": ["gpt-4o"],
+        },
     },
     {
         "name": "claude-sonnet-4",
@@ -25,7 +23,7 @@ BUILDTIME_MODELS = [
             "context_length": 128000,
             "model_class": "ChatAnthropic",
             "model_name_param": "model",
-            "api_key_param": "api_key"
-        }
-    }
+            "api_key_param": "api_key", # pragma: allowlist secret
+        },
+    },
 ]

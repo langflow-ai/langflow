@@ -8,9 +8,6 @@ from os.path import join
 
 
 from lfx.base.models import LCModelComponent
-from lfx.components.policies.models import BUILDTIME_MODELS
-from lfx.components.policies.wrapped_tool import WrappedTool
-
 from lfx.base.models.unified_models import (
     get_language_model_options,
     get_llm,
@@ -27,9 +24,8 @@ from toolguard.data_types import MelleaSessionData
 
 from lfx.io import ModelInput
 from lfx.log.logger import logger
-
-from langflow.inputs import DropdownInput, MultilineInput
-from lfx.schema.table import EditMode
+from toolguard import ToolGuardsCodeGenerationResult, ToolGuardSpec
+from toolguard.buildtime import generate_guard_specs, generate_guards_from_specs
 
 STEP1 = "Step_1"
 STEP2 = "Step_2"
@@ -50,7 +46,9 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         BoolInput(
             name="bypass_policies",
             display_name="Bypass",
-            info="If `true` - skip policy validation. If `false`, invokes ToolGuard code prior to tool execution, ensuring that tool-related policies are enforced.",
+            info="""If `true` - skip policy validation.
+    If `false`, invokes ToolGuard code prior to tool execution, ensuring that tool-related policies are enforced.
+    """,
             value=False,
         ),
         TabInput(
@@ -90,7 +88,7 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         MessageTextInput(
             name="policies",
             display_name="Policies",
-            info="Enter one or more clear, well-defined and self-contained business policies, by clicking the '+' button.",
+            info="Enter one or more clear, well-defined and self-contained business policies, using the '+' button.",
             is_list=True,
             tool_mode=True,
             placeholder="Add business policy...",
@@ -102,7 +100,7 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             display_name="ToolGuards Generated Code Path",
             info="Automatically generated ToolGuards code",
             # show_if={"enable_tool_guard": True},
-            value='tmp',  # todo: decide on the path
+            value="tmp",  # TODO: decide on the path
             advanced=True,
         ),
         ModelInput(
@@ -110,7 +108,7 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             display_name="Language Model",
             info="Select your model provider",
             options=BUILDTIME_MODELS,
-            required=True
+            required=True,
         ),
         SecretStrInput(
             name="api_key",
@@ -135,13 +133,18 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
     ]
 
     def build_model(self) -> LanguageModel:
-        return get_llm(
+        logger.info(f"model={self.model}")
+        llm_model = get_llm(
             model=self.model,
-            user_id=None,
+            user_id=self.user_id,
             api_key=self.api_key,
             # temperature=self.temperature,
             stream=False,
         )
+        if llm_model is None:
+            msg = "No language model selected. Please choose a model to proceed."
+            raise ValueError(msg)
+        return llm_model
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         """Dynamically update build config with user-filtered model options."""
@@ -154,51 +157,24 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             field_value=field_value,
         )
 
-    def _get_step1_llm(self)->I_TG_LLM:
-        return LitellmModel(
-            model_name=self.model[0].get("name"),
-            provider=self.model[0].get("provider").lower(),
-            kw_args={
-                # 'base_url': "",
-                'api_key': self.api_key
-            }
-        )
-
     async def _build_guard_specs(self) -> list[ToolGuardSpec]:
-        logger.info(f"🔒️ToolGuard: Starting step 1")
+        logger.info("🔒️ToolGuard: Starting step 1")
         logger.info(f"model = {self.model}")
-        llm = self._get_step1_llm()
-        toolguard_step1_dir = join(self.guard_code_path, STEP1)
+        llm = LangchainModelWrapper(self.build_model())
+        toolguard_step1_dir = Path(self.guard_code_path) / STEP1
         policy_text = "\n".join(self.policies)
         specs = await generate_guard_specs(
-            policy_text=policy_text,
-            tools=self.in_tools,
-            llm=llm,
-            work_dir=toolguard_step1_dir
+            policy_text=policy_text, tools=self.in_tools, llm=llm, work_dir=toolguard_step1_dir, short=False
         )
-        logger.info(f"🔒️ToolGuard: Step 1 Done")
+        logger.info("🔒️ToolGuard: Step 1 Done")
         return specs
 
-    def _get_mellea_session(self )->MelleaSessionData:
-        return MelleaSessionData(
-            backend_name=self.model[0].get("provider").lower(),
-            model_id=self.model[0].get("name"),
-            kw_args={
-                "base_url": "https://ete-litellm.bx.cloud9.ibm.com",
-                "api_key": self.api_key
-            }
-        )
-
     async def _build_guards(self, specs: list[ToolGuardSpec]) -> ToolGuardsCodeGenerationResult:
-        logger.info(f"🔒️ToolGuard: Starting step 2")
-        out_dir = join(self.guard_code_path, STEP2)
-        gen_result = await generate_guards_from_specs(
-            tools=self.in_tools,
-            tool_specs=specs,
-            work_dir=out_dir,
-            llm_data=self._get_mellea_session()
-        )
-        logger.info(f"🔒️ToolGuard: Step 2 Done")
+        logger.info("🔒️ToolGuard: Starting step 2")
+        out_dir = Path(self.guard_code_path) / STEP2
+        llm = LangchainModelWrapper(self.build_model())
+        gen_result = await generate_guards_from_specs(tools=self.in_tools, tool_specs=specs, work_dir=out_dir, llm=llm)
+        logger.info("🔒️ToolGuard: Step 2 Done")
         return gen_result
 
     def wrap_tools(self, tools:List[Tool], guard_gen_result: ToolGuardsCodeGenerationResult) -> List[Tool]:

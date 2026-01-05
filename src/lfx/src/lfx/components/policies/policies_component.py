@@ -8,6 +8,8 @@ from lfx.base.models.model import LCModelComponent
 from lfx.log.logger import logger
 from os.path import join
 
+from toolguard import ToolGuardsCodeGenerationResult, ToolGuardSpec
+from toolguard.buildtime import generate_guard_specs, generate_guards_from_specs
 
 from lfx.base.models import LCModelComponent
 from lfx.components.policies.wrapped_tool import LangchainModelWrapper, WrappedTool
@@ -42,7 +44,7 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         BoolInput(
             name="bypass_policies",
             display_name="Bypass",
-            info="If `true` - skip policy validation. If `false`, invokes ToolGuard code prior to tool execution, ensuring that tool-related policies are enforced.",
+            info="If `true` - skip policy validation. If `false`, invokes ToolGuard code prior to tool execution.",
             value=False,
         ),
         TabInput(
@@ -82,7 +84,7 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         MessageTextInput(
             name="policies",
             display_name="Policies",
-            info="Enter one or more clear, well-defined and self-contained business policies, by clicking the '+' button.",
+            info="Enter one or more clear, well-defined and self-contained business policies, Using the '+' button.",
             is_list=True,
             tool_mode=True,
             placeholder="Add business policy...",
@@ -94,7 +96,7 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             display_name="ToolGuards Generated Code Path",
             info="Automatically generated ToolGuards code",
             # show_if={"enable_tool_guard": True},
-            value='tmp',  # todo: decide on the path
+            value="tmp",  # TODO: decide on the path
             advanced=True,
         ),
         DropdownInput(
@@ -164,30 +166,23 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         toolguard_step1_dir = join(self.guard_code_path, STEP1)
         policy_text = "\n".join(self.policies)
         specs = await generate_guard_specs(
-            policy_text=policy_text,
-            tools=self.in_tools,
-            llm=llm, 
-            work_dir=toolguard_step1_dir,
-            short=False
+            policy_text=policy_text, tools=self.in_tools, llm=llm, work_dir=toolguard_step1_dir, short=False
         )
-        logger.info(f"🔒️ToolGuard: Step 1 Done")
+        logger.info("🔒️ToolGuard: Step 1 Done")
         return specs
-    
+
     async def _build_guards(self, specs: list[ToolGuardSpec]) -> ToolGuardsCodeGenerationResult:
-        logger.info(f"🔒️ToolGuard: Starting step 2")
-        out_dir = join(self.guard_code_path, STEP2)
+        logger.info("🔒️ToolGuard: Starting step 2")
+        out_dir = Path(self.guard_code_path) / STEP2
         llm = LangchainModelWrapper(self.build_model())
-        gen_result = await generate_guards_from_specs(
-            tools=self.in_tools,
-            tool_specs=specs,
-            work_dir=out_dir,
-            llm=llm
-        )
-        logger.info(f"🔒️ToolGuard: Step 2 Done")
+        gen_result = await generate_guards_from_specs(tools=self.in_tools, tool_specs=specs, work_dir=out_dir, llm=llm)
+        logger.info("🔒️ToolGuard: Step 2 Done")
         return gen_result
 
     async def build_guards(self) -> list[Tool]:
-        assert self.policies, "🔒️ToolGuard: policies cannot be empty!"
+        if not self.policies:
+            msg = "🔒️ToolGuard: policies cannot be empty!"
+            raise ValueError(msg)
 
         if self.enabled:
             # specs = await self._build_guard_specs()
