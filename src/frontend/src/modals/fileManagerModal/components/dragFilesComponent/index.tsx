@@ -1,6 +1,7 @@
 import { useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { Switch } from "@/components/ui/switch";
 import useUploadFile from "@/hooks/files/use-upload-file";
 import useAlertStore from "@/stores/alertStore";
 import { useUtilityStore } from "@/stores/utilityStore";
@@ -10,15 +11,19 @@ export default function DragFilesComponent({
   onUpload,
   types,
   isList,
+  allowFolderSelection = false,
 }: {
   onUpload: (filesPaths: string[]) => void;
   types: string[];
   isList: boolean;
+  allowFolderSelection?: boolean;
 }) {
   const [isDragging, setIsDragging] = useState(false);
+  const [isFolderMode, setIsFolderMode] = useState(false);
   const uploadFile = useUploadFile({
     types,
-    multiple: isList,
+    multiple: isList || isFolderMode,
+    webkitdirectory: isFolderMode,
   });
   const maxFileSizeUpload = useUtilityStore((state) => state.maxFileSizeUpload);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -90,6 +95,23 @@ export default function DragFilesComponent({
 
   return (
     <div className="flex flex-col items-center justify-center">
+      {allowFolderSelection && (
+        <div className="flex items-center justify-center gap-3 mb-4 p-2 rounded-lg border border-border">
+          <div className="flex items-center gap-2">
+            <ForwardedIconComponent name="File" className="h-4 w-4" />
+            <span className="text-sm font-medium">Files</span>
+          </div>
+          <Switch
+            checked={isFolderMode}
+            onCheckedChange={setIsFolderMode}
+            className="data-[state=checked]:bg-primary"
+          />
+          <div className="flex items-center gap-2">
+            <ForwardedIconComponent name="Folder" className="h-4 w-4" />
+            <span className="text-sm font-medium">Folder</span>
+          </div>
+        </div>
+      )}
       <div
         className={`relative flex h-full w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl p-8 transition-colors ${
           isDragging ? "bg-accent-foreground/10" : ""
@@ -104,8 +126,25 @@ export default function DragFilesComponent({
         tabIndex={0}
       >
         <h3 className="text-sm font-semibold">
-          {isDragging ? "Drop files here" : "Click or drag files here"}
+          {isDragging
+            ? isFolderMode
+              ? "Drop folder here"
+              : "Drop files here"
+            : isFolderMode
+              ? "Click to select a folder"
+              : "Click or drag files here"}
         </h3>
+        {isFolderMode && (
+          <div className="text-xs text-muted-foreground text-center max-w-md space-y-1">
+            <p>
+              Select a folder to upload all supported files from that folder
+            </p>
+            <p className="text-amber-600 dark:text-amber-400 font-medium">
+              ⚠️ Avoid folders with large hidden directories (.mypy_cache, .git,
+              node_modules, etc.)
+            </p>
+          </div>
+        )}
         <p className="flex items-center gap-2 text-xs text-muted-foreground">
           <div className="flex items-center gap-1">
             <span>{types.slice(0, 3).join(", ")}</span>

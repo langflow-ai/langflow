@@ -13,6 +13,20 @@ test(
     });
     await page.getByTestId("blank-flow").click();
 
+    // Open the sidebar options dropdown
+    await page.getByTestId("sidebar-options-trigger").click();
+
+    // Wait for and click the legacy switch
+    await page
+      .getByTestId("sidebar-legacy-switch")
+      .waitFor({ state: "visible" });
+    await page.getByTestId("sidebar-legacy-switch").click();
+    expect(
+      await page
+        .getByTestId("sidebar-legacy-switch")
+        .getAttribute("aria-checked"),
+    ).toBe("true");
+
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("directory");
 

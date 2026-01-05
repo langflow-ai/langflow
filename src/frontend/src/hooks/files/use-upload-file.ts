@@ -5,9 +5,11 @@ import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 const useUploadFile = ({
   types,
   multiple,
+  webkitdirectory,
 }: {
   types?: string[];
   multiple?: boolean;
+  webkitdirectory?: boolean;
 }) => {
   const { mutateAsync: uploadFileMutation } = customPostUploadFileV2();
   const { validateFileSize } = useFileSizeValidator();
@@ -21,6 +23,7 @@ const useUploadFile = ({
       files = await createFileUpload({
         accept: types?.map((type) => `.${type}`).join(",") ?? "",
         multiple: multiple ?? false,
+        webkitdirectory: webkitdirectory ?? false,
       });
     }
     return files;
@@ -35,20 +38,34 @@ const useUploadFile = ({
       const filesToUpload = await getFilesToUpload({ files });
       const filesIds: string[] = [];
 
-      for (const file of filesToUpload) {
-        validateFileSize(file);
-        // Check if file extension is allowed
-        const fileExtension = file.name.split(".").pop()?.toLowerCase();
-        if (!fileExtension || (types && !types.includes(fileExtension))) {
+      // Filter files by supported types when using folder selection
+      let validFiles = filesToUpload;
+      if (webkitdirectory && types) {
+        validFiles = filesToUpload.filter((file) => {
+          const fileExtension = file.name.split(".").pop()?.toLowerCase();
+          return fileExtension && types.includes(fileExtension);
+        });
+
+        if (validFiles.length === 0) {
           throw new Error(
-            `File type ${fileExtension} not allowed. Allowed types: ${types?.join(", ")}`,
+            `No supported files found in folder. Allowed types: ${types?.join(", ")}`,
           );
         }
-        if (!fileExtension) {
-          throw new Error("File type not allowed");
-        }
-        if (!multiple && filesToUpload.length !== 1) {
-          throw new Error("Multiple files are not allowed");
+      }
+
+      for (const file of validFiles) {
+        validateFileSize(file);
+        // Check if file extension is allowed (for non-folder selection)
+        if (!webkitdirectory) {
+          const fileExtension = file.name.split(".").pop()?.toLowerCase();
+          if (!fileExtension || (types && !types.includes(fileExtension))) {
+            throw new Error(
+              `File type ${fileExtension} not allowed. Allowed types: ${types?.join(", ")}`,
+            );
+          }
+          if (!multiple && filesToUpload.length !== 1) {
+            throw new Error("Multiple files are not allowed");
+          }
         }
 
         const res = await uploadFileMutation({
