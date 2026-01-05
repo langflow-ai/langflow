@@ -17,8 +17,8 @@ import importlib
 import os
 
 import pytest
-from lfx.custom import sandbox
-from lfx.custom.sandbox import SecurityViolationError, execute_in_sandbox
+from lfx.custom import import_isolation
+from lfx.custom.import_isolation import SecurityViolationError, execute_in_isolated_env
 
 
 def test_sandbox_blocks_dangerous_modules_by_default():
@@ -33,7 +33,7 @@ def test():
 
     # Should raise SecurityViolationError because os is blocked
     with pytest.raises(SecurityViolationError, match="blocked"):
-        execute_in_sandbox(code_obj, exec_globals)
+        execute_in_isolated_env(code_obj, exec_globals)
 
 
 def test_sandbox_blocks_dangerous_builtins_by_default():
@@ -49,7 +49,7 @@ def test():
     exec_globals = {}
 
     # Should raise NameError because eval is not in isolated __builtins__ (blocked even in MODERATE)
-    execute_in_sandbox(code_obj, exec_globals)
+    execute_in_isolated_env(code_obj, exec_globals)
     test_func = exec_globals["test"]
     with pytest.raises(NameError, match="eval"):
         test_func()
@@ -78,7 +78,7 @@ def test():
     code_obj = compile(code, "<test>", "exec")
     exec_globals = {}
 
-    execute_in_sandbox(code_obj, exec_globals)
+    execute_in_isolated_env(code_obj, exec_globals)
 
     # Call the function
     test_func = exec_globals["test"]
@@ -114,7 +114,7 @@ def test():
     code_obj = compile(code, "<test>", "exec")
     exec_globals = {}
 
-    execute_in_sandbox(code_obj, exec_globals)
+    execute_in_isolated_env(code_obj, exec_globals)
 
     # Call the function
     test_func = exec_globals["test"]
@@ -133,9 +133,15 @@ def test_sandbox_cannot_access_server_python_state(monkeypatch):
     """
     # Enable dangerous code for this test to demonstrate isolation still works
     monkeypatch.setenv("LANGFLOW_SANDBOX_SECURITY_LEVEL", "disabled")
-    # Reload module to pick up new env var value
-    importlib.reload(sandbox)
-    from lfx.custom.sandbox import execute_in_sandbox as execute_in_sandbox_allowed
+    # Reload modules to pick up new env var value
+    import lfx.custom.import_isolation.config as config_module
+    import lfx.custom.import_isolation.isolation as isolation_module
+    import lfx.custom.import_isolation.execution as execution_module
+    importlib.reload(config_module)
+    importlib.reload(isolation_module)
+    importlib.reload(execution_module)
+    importlib.reload(import_isolation)
+    from lfx.custom.import_isolation import execute_in_isolated_env as execute_in_isolated_env_allowed
 
     # Server stores secrets in Python variables (not just env vars)
     server_secrets = {  # noqa: F841
@@ -162,7 +168,7 @@ def test():
     os.environ["TEST_ENV_VAR"] = "env_value"
 
     try:
-        execute_in_sandbox_allowed(code_obj, exec_globals)
+        execute_in_isolated_env_allowed(code_obj, exec_globals)
 
         # Call the function
         test_func = exec_globals["test"]
@@ -176,8 +182,14 @@ def test():
             del os.environ["TEST_ENV_VAR"]
         # Explicitly restore environment variable before reloading
         monkeypatch.setenv("LANGFLOW_SANDBOX_SECURITY_LEVEL", "moderate")
-        # Reload module to restore default blocking
-        importlib.reload(sandbox)
+        # Reload modules to restore default blocking
+        import lfx.custom.import_isolation.config as config_module
+        import lfx.custom.import_isolation.isolation as isolation_module
+        import lfx.custom.import_isolation.execution as execution_module
+        importlib.reload(config_module)
+        importlib.reload(isolation_module)
+        importlib.reload(execution_module)
+        importlib.reload(import_isolation)
 
 
 def test_sandbox_cannot_exfiltrate_secrets_via_commands(monkeypatch):
@@ -188,9 +200,15 @@ def test_sandbox_cannot_exfiltrate_secrets_via_commands(monkeypatch):
     """
     # Enable dangerous code for this test to demonstrate isolation still works
     monkeypatch.setenv("LANGFLOW_SANDBOX_SECURITY_LEVEL", "disabled")
-    # Reload module to pick up new env var value
-    importlib.reload(sandbox)
-    from lfx.custom.sandbox import execute_in_sandbox as execute_in_sandbox_allowed
+    # Reload modules to pick up new env var value
+    import lfx.custom.import_isolation.config as config_module
+    import lfx.custom.import_isolation.isolation as isolation_module
+    import lfx.custom.import_isolation.execution as execution_module
+    importlib.reload(config_module)
+    importlib.reload(isolation_module)
+    importlib.reload(execution_module)
+    importlib.reload(import_isolation)
+    from lfx.custom.import_isolation import execute_in_isolated_env as execute_in_isolated_env_allowed
 
     # Server secret stored in Python variable
     server_secret = "secret_password_12345"  # noqa: F841, S105
@@ -207,7 +225,7 @@ def test():
     code_obj = compile(code, "<test>", "exec")
     exec_globals = {}
 
-    execute_in_sandbox_allowed(code_obj, exec_globals)
+    execute_in_isolated_env_allowed(code_obj, exec_globals)
 
     # Call the function
     test_func = exec_globals["test"]
@@ -220,7 +238,9 @@ def test():
     # Explicitly restore environment variable before reloading
     monkeypatch.setenv("LANGFLOW_SANDBOX_SECURITY_LEVEL", "moderate")
     # Reload module to restore default blocking
-    importlib.reload(sandbox)
+    import lfx.custom.import_isolation.config as config_module
+    importlib.reload(config_module)
+    importlib.reload(import_isolation)
 
 
 def test_sandbox_cannot_access_server_python_variables():
@@ -241,7 +261,7 @@ def test():
     code_obj = compile(code, "<test>", "exec")
     exec_globals = {}
 
-    execute_in_sandbox(code_obj, exec_globals)
+    execute_in_isolated_env(code_obj, exec_globals)
 
     # Call the function
     test_func = exec_globals["test"]
@@ -264,7 +284,7 @@ def test():
     code_obj = compile(code, "<test>", "exec")
     exec_globals = {}
 
-    execute_in_sandbox(code_obj, exec_globals)
+    execute_in_isolated_env(code_obj, exec_globals)
 
     # Call the function
     test_func = exec_globals["test"]
@@ -285,9 +305,15 @@ def test_sandbox_cannot_exfiltrate_secrets_via_network(monkeypatch):
     """
     # Enable dangerous code for this test to demonstrate isolation still works
     monkeypatch.setenv("LANGFLOW_SANDBOX_SECURITY_LEVEL", "disabled")
-    # Reload module to pick up new env var value
-    importlib.reload(sandbox)
-    from lfx.custom.sandbox import execute_in_sandbox as execute_in_sandbox_allowed
+    # Reload modules to pick up new env var value
+    import lfx.custom.import_isolation.config as config_module
+    import lfx.custom.import_isolation.isolation as isolation_module
+    import lfx.custom.import_isolation.execution as execution_module
+    importlib.reload(config_module)
+    importlib.reload(isolation_module)
+    importlib.reload(execution_module)
+    importlib.reload(import_isolation)
+    from lfx.custom.import_isolation import execute_in_isolated_env as execute_in_isolated_env_allowed
 
     # Server secret stored in Python variable
     server_api_key = "sk-secret-key-to-exfiltrate"  # noqa: F841
@@ -309,7 +335,7 @@ def test():
     code_obj = compile(code, "<test>", "exec")
     exec_globals = {}
 
-    execute_in_sandbox_allowed(code_obj, exec_globals)
+    execute_in_isolated_env_allowed(code_obj, exec_globals)
 
     # Call the function
     test_func = exec_globals["test"]
@@ -322,7 +348,9 @@ def test():
     # Explicitly restore environment variable before reloading
     monkeypatch.setenv("LANGFLOW_SANDBOX_SECURITY_LEVEL", "moderate")
     # Reload module to restore default blocking
-    importlib.reload(sandbox)
+    import lfx.custom.import_isolation.config as config_module
+    importlib.reload(config_module)
+    importlib.reload(import_isolation)
 
 
 def test_moderate_mode_allows_common_operations():
@@ -335,7 +363,7 @@ def test():
 """
     code_obj1 = compile(code1, "<test>", "exec")
     exec_globals1 = {}
-    execute_in_sandbox(code_obj1, exec_globals1)
+    execute_in_isolated_env(code_obj1, exec_globals1)
     assert exec_globals1["test"]() == "requests_imported"
 
     # Test that asyncio is allowed in MODERATE mode
@@ -346,7 +374,7 @@ def test():
 """
     code_obj2 = compile(code2, "<test>", "exec")
     exec_globals2 = {}
-    execute_in_sandbox(code_obj2, exec_globals2)
+    execute_in_isolated_env(code_obj2, exec_globals2)
     assert exec_globals2["test"]() == "asyncio_imported"
 
     # Test that tempfile is allowed in MODERATE mode
@@ -357,7 +385,7 @@ def test():
 """
     code_obj3 = compile(code3, "<test>", "exec")
     exec_globals3 = {}
-    execute_in_sandbox(code_obj3, exec_globals3)
+    execute_in_isolated_env(code_obj3, exec_globals3)
     assert exec_globals3["test"]() == "tempfile_imported"
 
     # Test that open() is allowed in MODERATE mode
@@ -373,7 +401,7 @@ def test():
 """
     code_obj4 = compile(code4, "<test>", "exec")
     exec_globals4 = {}
-    execute_in_sandbox(code_obj4, exec_globals4)
+    execute_in_isolated_env(code_obj4, exec_globals4)
     # Note: open() may fail due to file not existing, but it shouldn't be blocked
     result = exec_globals4["test"]()
     # Either accessible or blocked by file system, but not by security
@@ -383,9 +411,15 @@ def test():
 def test_moderate_mode_blocks_critical_operations():
     """Test that MODERATE mode still blocks critical security risks."""
     # Re-import to ensure we're using the current module state (in case previous tests reloaded it)
-    importlib.reload(sandbox)
-    from lfx.custom.sandbox import SecurityViolationError as SecurityViolationErrorCurrent
-    from lfx.custom.sandbox import execute_in_sandbox as execute_in_sandbox_current
+    import lfx.custom.import_isolation.config as config_module
+    import lfx.custom.import_isolation.isolation as isolation_module
+    import lfx.custom.import_isolation.execution as execution_module
+    importlib.reload(config_module)
+    importlib.reload(isolation_module)
+    importlib.reload(execution_module)
+    importlib.reload(import_isolation)
+    from lfx.custom.import_isolation import SecurityViolationError as SecurityViolationErrorCurrent
+    from lfx.custom.import_isolation import execute_in_isolated_env as execute_in_isolated_env_current
 
     # Test that eval is blocked even in MODERATE mode
     # eval is not in __builtins__, so direct access raises NameError
@@ -400,7 +434,7 @@ def test():
 """
     code_obj1 = compile(code1, "<test>", "exec")
     exec_globals1 = {}
-    execute_in_sandbox_current(code_obj1, exec_globals1)
+    execute_in_isolated_env_current(code_obj1, exec_globals1)
     result = exec_globals1["test"]()
     assert result == "eval_blocked"
 
@@ -413,7 +447,7 @@ def test():
     code_obj2 = compile(code2, "<test>", "exec")
     exec_globals2 = {}
     with pytest.raises(SecurityViolationErrorCurrent, match="blocked"):
-        execute_in_sandbox_current(code_obj2, exec_globals2)
+        execute_in_isolated_env_current(code_obj2, exec_globals2)
 
     # Test that subprocess is blocked even in MODERATE mode
     code3 = """
@@ -424,7 +458,7 @@ def test():
     code_obj3 = compile(code3, "<test>", "exec")
     exec_globals3 = {}
     with pytest.raises(SecurityViolationErrorCurrent, match="blocked"):
-        execute_in_sandbox_current(code_obj3, exec_globals3)
+        execute_in_isolated_env_current(code_obj3, exec_globals3)
 
     # Test that importlib is blocked even in MODERATE mode (CRITICAL_MODULES)
     # This prevents bypass via importlib.import_module("builtins")
@@ -436,17 +470,24 @@ def test():
     code_obj4 = compile(code4, "<test>", "exec")
     exec_globals4 = {}
     with pytest.raises(SecurityViolationErrorCurrent, match="blocked"):
-        execute_in_sandbox_current(code_obj4, exec_globals4)
+        execute_in_isolated_env_current(code_obj4, exec_globals4)
 
 
 def test_strict_mode_blocks_all_dangerous_operations(monkeypatch):
     """Test that STRICT mode blocks all potentially dangerous operations."""
     # Set STRICT mode
     monkeypatch.setenv("LANGFLOW_SANDBOX_SECURITY_LEVEL", "strict")
-    importlib.reload(sandbox)
-    # Import execute_in_sandbox and SecurityViolationError from reloaded module
-    from lfx.custom.sandbox import SecurityViolationError as SecurityViolationErrorStrict
-    from lfx.custom.sandbox import execute_in_sandbox as execute_in_sandbox_strict
+    # Reload modules to pick up new env var value
+    import lfx.custom.import_isolation.config as config_module
+    import lfx.custom.import_isolation.isolation as isolation_module
+    import lfx.custom.import_isolation.execution as execution_module
+    importlib.reload(config_module)
+    importlib.reload(isolation_module)
+    importlib.reload(execution_module)
+    importlib.reload(import_isolation)
+    # Import execute_in_isolated_env and SecurityViolationError from reloaded module
+    from lfx.custom.import_isolation import SecurityViolationError as SecurityViolationErrorStrict
+    from lfx.custom.import_isolation import execute_in_isolated_env as execute_in_isolated_env_strict
 
     try:
         # Test that requests is blocked in STRICT mode
@@ -455,9 +496,9 @@ import requests
 """
         code_obj1 = compile(code1, "<test>", "exec")
         exec_globals1 = {}
-        # Exception is raised during execute_in_sandbox, not after
+        # Exception is raised during execute_in_isolated_env, not after
         try:
-            execute_in_sandbox_strict(code_obj1, exec_globals1)
+            execute_in_isolated_env_strict(code_obj1, exec_globals1)
             pytest.fail("Should have raised SecurityViolationError")
         except SecurityViolationErrorStrict:
             pass  # Expected
@@ -473,7 +514,7 @@ def test():
 """
         code_obj2 = compile(code2, "<test>", "exec")
         exec_globals2 = {}
-        execute_in_sandbox_strict(code_obj2, exec_globals2)
+        execute_in_isolated_env_strict(code_obj2, exec_globals2)
         result = exec_globals2["test"]()
         assert result == "open_blocked"
 
@@ -484,7 +525,7 @@ import asyncio
         code_obj3 = compile(code3, "<test>", "exec")
         exec_globals3 = {}
         try:
-            execute_in_sandbox_strict(code_obj3, exec_globals3)
+            execute_in_isolated_env_strict(code_obj3, exec_globals3)
             pytest.fail("Should have raised SecurityViolationError")
         except SecurityViolationErrorStrict:
             pass  # Expected
@@ -496,14 +537,14 @@ import importlib
         code_obj4 = compile(code4, "<test>", "exec")
         exec_globals4 = {}
         try:
-            execute_in_sandbox_strict(code_obj4, exec_globals4)
+            execute_in_isolated_env_strict(code_obj4, exec_globals4)
             pytest.fail("Should have raised SecurityViolationError")
         except SecurityViolationErrorStrict:
             pass  # Expected
     finally:
         # Restore MODERATE mode
         monkeypatch.setenv("LANGFLOW_SANDBOX_SECURITY_LEVEL", "moderate")
-        importlib.reload(sandbox)
+        importlib.reload(import_isolation)
 
 
 def test_sandbox_cannot_access_server_variables_via_module_attributes():
@@ -535,7 +576,7 @@ def test():
         code_obj = compile(code, "<test>", "exec")
         exec_globals = {}
 
-        execute_in_sandbox(code_obj, exec_globals)
+        execute_in_isolated_env(code_obj, exec_globals)
 
         # Call the function
         test_func = exec_globals["test"]

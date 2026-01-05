@@ -5,7 +5,7 @@ server resources. They prove isolation by showing that access attempts fail.
 """
 
 import pytest
-from lfx.custom.sandbox import execute_in_sandbox
+from lfx.custom.import_isolation import execute_in_isolated_env
 
 
 def test_sandbox_cannot_access_parent_globals():
@@ -23,7 +23,7 @@ def test():
     exec_globals = {}
 
     # Execute in sandbox
-    execute_in_sandbox(code_obj, exec_globals)
+    execute_in_isolated_env(code_obj, exec_globals)
 
     # Try to call the function
     test_func = exec_globals["test"]
@@ -47,7 +47,7 @@ def test():
     code_obj = compile(code, "<test>", "exec")
     exec_globals = {}
 
-    execute_in_sandbox(code_obj, exec_globals)
+    execute_in_isolated_env(code_obj, exec_globals)
 
     # Call the function - should fail because parent_dict is not accessible
     test_func = exec_globals["test"]
@@ -87,7 +87,7 @@ def test():
         code_obj = compile(code, "<test>", "exec")
         exec_globals = {}
 
-        execute_in_sandbox(code_obj, exec_globals)
+        execute_in_isolated_env(code_obj, exec_globals)
 
         # Call the function
         test_func = exec_globals["test"]
@@ -113,7 +113,7 @@ def test():
 """
     code_obj1 = compile(code1, "<test>", "exec")
     exec_globals1 = {}
-    execute_in_sandbox(code_obj1, exec_globals1)
+    execute_in_isolated_env(code_obj1, exec_globals1)
 
     # Second execution with different code
     code2 = """
@@ -124,7 +124,7 @@ def test():
 """
     code_obj2 = compile(code2, "<test>", "exec")
     exec_globals2 = {}
-    execute_in_sandbox(code_obj2, exec_globals2)
+    execute_in_isolated_env(code_obj2, exec_globals2)
 
     # Should raise NameError because GLOBAL_VAR doesn't exist in this execution
     test_func = exec_globals2["test"]
@@ -147,7 +147,7 @@ def test():
         code_obj = compile(code, "<test>", "exec")
         exec_globals = {}
 
-        execute_in_sandbox(code_obj, exec_globals)
+        execute_in_isolated_env(code_obj, exec_globals)
 
         # Call the function
         test_func = exec_globals["test"]
@@ -179,7 +179,7 @@ def test():
     code_obj = compile(code, "<test>", "exec")
     exec_globals = {}
 
-    execute_in_sandbox(code_obj, exec_globals)
+    execute_in_isolated_env(code_obj, exec_globals)
 
     # Verify json module is accessible in exec_globals
     assert "json" in exec_globals
@@ -211,7 +211,7 @@ def test(x=parent_var):
     # Execute in sandbox - definition time code runs here
     # Should raise NameError when function is defined because parent_var is not accessible
     with pytest.raises(NameError, match="parent_var"):
-        execute_in_sandbox(code_obj, exec_globals)
+        execute_in_isolated_env(code_obj, exec_globals)
 
 
 def test_sandbox_decorator_isolation():
@@ -232,7 +232,7 @@ def test():
     # Execute in sandbox - decorator evaluation happens here
     # Should raise NameError because parent_var is not accessible
     with pytest.raises(NameError):
-        execute_in_sandbox(code_obj, exec_globals)
+        execute_in_isolated_env(code_obj, exec_globals)
 
 
 # Module-level variable to test that sandbox cannot access module globals
@@ -250,7 +250,7 @@ def test():
     code_obj = compile(code, "<test>", "exec")
     exec_globals = {}
 
-    execute_in_sandbox(code_obj, exec_globals)
+    execute_in_isolated_env(code_obj, exec_globals)
 
     # Call the function - should fail because MODULE_LEVEL_VAR is not accessible
     test_func = exec_globals["test"]
@@ -275,7 +275,7 @@ def test():
     code_obj = compile(code, "<test>", "exec")
     exec_globals = {}
 
-    execute_in_sandbox(code_obj, exec_globals)
+    execute_in_isolated_env(code_obj, exec_globals)
 
     # Call the function
     test_func = exec_globals["test"]
@@ -303,7 +303,7 @@ def test():
         code_obj = compile(code, "<test>", "exec")
         exec_globals = {}
 
-        execute_in_sandbox(code_obj, exec_globals)
+        execute_in_isolated_env(code_obj, exec_globals)
 
         # Call the function
         test_func = exec_globals["test"]
@@ -332,7 +332,7 @@ def test():
     code_obj = compile(code, "<test>", "exec")
     exec_globals = {}
 
-    execute_in_sandbox(code_obj, exec_globals)
+    execute_in_isolated_env(code_obj, exec_globals)
 
     # Call the function
     test_func = exec_globals["test"]
@@ -360,7 +360,7 @@ def test():
     code_obj = compile(code, "<test>", "exec")
     exec_globals = {}
 
-    execute_in_sandbox(code_obj, exec_globals)
+    execute_in_isolated_env(code_obj, exec_globals)
 
     # Call the function
     test_func = exec_globals["test"]
@@ -380,13 +380,13 @@ def test_sandbox_blocks_import_builtins_in_validation_context():
     validation-only mode. In this mode, `import builtins` should be blocked with an error
     rather than returning the isolated version (since isolated builtins aren't created).
     """
-    from lfx.custom.sandbox import SecurityViolationError, create_isolated_import
+    from lfx.custom.import_isolation import SecurityViolationError, create_isolated_import
 
     # Create isolated_import without isolated_builtins_dict (validation context)
     isolated_import = create_isolated_import()  # None = validation-only mode
 
     # Try to import builtins - should raise SecurityViolationError
-    with pytest.raises(SecurityViolationError, match="not allowed in sandbox"):
+    with pytest.raises(SecurityViolationError, match="not allowed"):
         isolated_import("builtins", None, None, (), 0)
 
 
@@ -396,7 +396,7 @@ def test_sandbox_prevents_importlib_bypass():
     CRITICAL SECURITY: importlib.import_module("builtins") would bypass our __import__ hook
     and get the real builtins module. By blocking importlib entirely, we prevent this bypass.
     """
-    from lfx.custom.sandbox import SecurityViolationError, execute_in_sandbox
+    from lfx.custom.import_isolation import SecurityViolationError, execute_in_isolated_env
 
     # Test that importlib is blocked (prevents bypass)
     code = """
@@ -412,4 +412,67 @@ def test():
 
     # Should raise SecurityViolationError because importlib is blocked
     with pytest.raises(SecurityViolationError, match="blocked"):
-        execute_in_sandbox(code_obj, exec_globals)
+        execute_in_isolated_env(code_obj, exec_globals)
+
+
+def test_sandbox_blocks_dunder_method_escape():
+    """Test that sandbox blocks classic Python dunder method escape attacks.
+    
+    CRITICAL SECURITY: Prevents escapes like:
+    ().__class__.__bases__[0].__subclasses__()[XX].__init__.__globals__['os']
+    
+    The AST transformer converts dangerous dunder access (obj.__class__) to
+    getattr(obj, '__class__') which we can intercept and block.
+    """
+    from lfx.custom.import_isolation import SecurityViolationError, execute_in_isolated_env, DunderAccessTransformer
+    import ast
+
+    # Test the classic escape attack
+    code_str = """
+def test():
+    # Classic escape: get os via dunder methods
+    os = ().__class__.__bases__[0].__subclasses__()[160].__init__.__globals__['os']
+    return os.getcwd()
+"""
+    
+    # Parse and transform the AST
+    tree = ast.parse(code_str)
+    transformer = DunderAccessTransformer()
+    transformed = transformer.visit(tree)
+    ast.fix_missing_locations(transformed)
+    
+    # Compile and execute
+    code_obj = compile(transformed, "<test>", "exec")
+    exec_globals = {}
+    
+    # Should raise SecurityViolationError when function is called
+    execute_in_isolated_env(code_obj, exec_globals)
+    
+    # Try to call the function - should raise SecurityViolationError
+    test_func = exec_globals.get("test")
+    assert test_func is not None, "Function should be defined"
+    
+    with pytest.raises(SecurityViolationError, match="dunder attribute"):
+        test_func()
+
+
+def test_sandbox_blocks_individual_dunder_access():
+    """Test that individual dangerous dunder attributes are blocked."""
+    from lfx.custom.import_isolation import SecurityViolationError, execute_in_isolated_env, DunderAccessTransformer
+    import ast
+
+    dangerous_attrs = ["__class__", "__bases__", "__subclasses__", "__globals__", "__init__"]
+    
+    for attr in dangerous_attrs:
+        code_str = f"result = ().{attr}"
+        tree = ast.parse(code_str)
+        transformer = DunderAccessTransformer()
+        transformed = transformer.visit(tree)
+        ast.fix_missing_locations(transformed)
+        
+        code_obj = compile(transformed, "<test>", "exec")
+        exec_globals = {}
+        
+        # Should raise SecurityViolationError
+        with pytest.raises(SecurityViolationError, match="dunder attribute"):
+            execute_in_isolated_env(code_obj, exec_globals)

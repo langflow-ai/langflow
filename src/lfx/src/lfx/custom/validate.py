@@ -8,7 +8,12 @@ from typing import Optional, Union
 from langchain_core._api.deprecation import LangChainDeprecationWarning
 from pydantic import ValidationError
 
-from lfx.custom.sandbox import SecurityViolationError, create_isolated_import, execute_in_sandbox
+from lfx.custom.import_isolation import (
+    DunderAccessTransformer,
+    SecurityViolationError,
+    create_isolated_import,
+    execute_in_isolated_env,
+)
 from lfx.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES, DEFAULT_IMPORT_STRING
 from lfx.log.logger import logger
 
@@ -57,11 +62,11 @@ def validate_code(code):
         if isinstance(node, ast.Import):
             for alias in node.names:
                 try:
-                    # Use sandbox's isolated import - blocks dangerous modules
+                    # Use isolated import - blocks dangerous modules
                     isolated_import(alias.name, None, None, (), 0)
                 except SecurityViolationError as e:
                     # SecurityViolationError means the module is blocked by security policy.
-                    # Since the sandbox will be used during runtime execution (planned),
+                    # Since import isolation will be used during runtime execution (planned),
                     # we should fail validation here so users get early feedback about
                     # blocked modules. This prevents code from passing validation but
                     # failing at runtime.
@@ -73,11 +78,11 @@ def validate_code(code):
         elif isinstance(node, ast.ImportFrom):
             if node.module:
                 try:
-                    # Use sandbox's isolated import - blocks dangerous modules
+                    # Use isolated import - blocks dangerous modules
                     isolated_import(node.module, None, None, (), 0)
                 except SecurityViolationError as e:
                     # SecurityViolationError means the module is blocked by security policy.
-                    # Since the sandbox will be used during runtime execution (planned),
+                    # Since import isolation will be used during runtime execution (planned),
                     # we should fail validation here so users get early feedback about
                     # blocked modules. This prevents code from passing validation but
                     # failing at runtime.
@@ -87,18 +92,28 @@ def validate_code(code):
                 except Exception as e:  # noqa: BLE001
                     errors["imports"]["errors"].append(str(e))
 
-    # Phase 2: Execute function definitions in isolated sandbox
-    # This actually runs the code (for decorators, default args, etc.) in a sandboxed environment.
-    # Unlike Phase 1, this uses execute_in_sandbox() which creates full isolation including
-    # isolated builtins
+    # Phase 2: Transform AST to block dangerous dunder access, then execute function definitions
+    # This actually runs the code (for decorators, default args, etc.) in an isolated environment.
+    # Unlike Phase 1, this uses execute_in_isolated_env() which creates full isolation including
+    # isolated builtins. This is where the real security isolation happens.
+    #
+    # CRITICAL: Transform AST to block dangerous dunder access before compilation
+    # This prevents escapes like: ().__class__.__bases__[0].__subclasses__()[XX].__init__.__globals__['os']
+    transformer = DunderAccessTransformer()
+    
     for node in tree.body:
         if isinstance(node, ast.FunctionDef):
-            code_obj = compile(ast.Module(body=[node], type_ignores=[]), "<string>", "exec")
+            # Transform the function node's AST to block dangerous dunder access
+            # Visit the entire function node (which will recursively transform all attributes)
+            transformed_func = transformer.visit(node)
+            # Fix missing location information
+            ast.fix_missing_locations(transformed_func)
+            code_obj = compile(ast.Module(body=[transformed_func], type_ignores=[]), "<string>", "exec")
             try:
                 # Create execution context with common langflow imports
                 exec_globals = _create_langflow_execution_context()
-                # Execute in isolated sandbox - code cannot access server environment
-                execute_in_sandbox(code_obj, exec_globals)
+                # Execute in isolated environment - code cannot access server environment
+                execute_in_isolated_env(code_obj, exec_globals)
             except Exception as e:  # noqa: BLE001
                 logger.debug("Error executing function code", exc_info=True)
                 errors["function"]["errors"].append(str(e))
