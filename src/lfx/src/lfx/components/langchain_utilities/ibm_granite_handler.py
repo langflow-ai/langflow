@@ -10,6 +10,7 @@ not just Granite models. This includes:
 - granite models
 - any other model running through WatsonX
 """
+
 import re
 
 from langchain.agents.format_scratchpad.tools import format_to_tool_messages
@@ -22,7 +23,7 @@ from lfx.log.logger import logger
 # Pattern to detect placeholder usage in tool arguments
 PLACEHOLDER_PATTERN = re.compile(
     r"<[^>]*(?:result|value|output|response|data|from|extract|previous|current|date|input|query|search|tool)[^>]*>",
-    re.IGNORECASE
+    re.IGNORECASE,
 )
 
 
@@ -160,10 +161,7 @@ def create_granite_agent(llm, tools: list, prompt: ChatPromptTemplate, forced_it
         intermediate_steps = inputs.get("intermediate_steps", [])
         num_steps = len(intermediate_steps)
 
-        inputs_with_scratchpad = {
-            **inputs,
-            "agent_scratchpad": format_to_tool_messages(intermediate_steps)
-        }
+        inputs_with_scratchpad = {**inputs, "agent_scratchpad": format_to_tool_messages(intermediate_steps)}
         messages = prompt.invoke(inputs_with_scratchpad)
 
         # Force tool calls for first N iterations, then allow final answers
@@ -187,10 +185,13 @@ def create_granite_agent(llm, tools: list, prompt: ChatPromptTemplate, forced_it
             if has_placeholder:
                 logger.warning("[IBM WatsonX] Placeholder detected, forcing final answer")
                 from langchain_core.messages import SystemMessage
-                corrective_msg = SystemMessage(content=(
-                    "STOP! Do not use placeholders. Provide your final answer NOW "
-                    "based on the information you already have."
-                ))
+
+                corrective_msg = SystemMessage(
+                    content=(
+                        "STOP! Do not use placeholders. Provide your final answer NOW "
+                        "based on the information you already have."
+                    )
+                )
                 messages_list = list(messages.messages) if hasattr(messages, "messages") else list(messages)
                 messages_list.append(corrective_msg)
                 llm_response = llm_auto.invoke(messages_list)

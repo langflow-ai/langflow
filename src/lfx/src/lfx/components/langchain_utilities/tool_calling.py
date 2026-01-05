@@ -56,10 +56,7 @@ class ToolCallingAgentComponent(LCToolsAgentComponent):
         # Check if using IBM Granite model - enhance system prompt if so
         # Only Granite models get special handling, other WatsonX models use default behavior
         if is_granite_model(self.llm) and self.tools:
-            self.system_prompt = get_enhanced_system_prompt(
-                self.system_prompt or "",
-                self.tools
-            )
+            self.system_prompt = get_enhanced_system_prompt(self.system_prompt or "", self.tools)
 
         # Only include system message if system_prompt is provided and not empty
         if hasattr(self, "system_prompt") and self.system_prompt and self.system_prompt.strip():

@@ -112,6 +112,7 @@ class TestIsWatsonxModel:
 
     def test_works_with_real_mock_structure(self):
         """Test with a more realistic mock structure."""
+
         # Simulate what a real ChatWatsonx instance would look like
         class FakeChatWatsonx:
             pass
@@ -357,9 +358,7 @@ class TestDetectPlaceholderInArgs:
 
     def test_detects_result_from_placeholder(self):
         """Test detection of <result-from-...> placeholder."""
-        tool_calls = [
-            {"name": "calculator", "args": {"expression": "<result-from-search>"}}
-        ]
+        tool_calls = [{"name": "calculator", "args": {"expression": "<result-from-search>"}}]
 
         has_placeholder, value = detect_placeholder_in_args(tool_calls)
 
@@ -368,9 +367,7 @@ class TestDetectPlaceholderInArgs:
 
     def test_detects_extracted_date_placeholder(self):
         """Test detection of <extracted_date> placeholder."""
-        tool_calls = [
-            {"name": "calculator", "args": {"expression": "<extracted_date>-18"}}
-        ]
+        tool_calls = [{"name": "calculator", "args": {"expression": "<extracted_date>-18"}}]
 
         has_placeholder, value = detect_placeholder_in_args(tool_calls)
 
@@ -379,9 +376,7 @@ class TestDetectPlaceholderInArgs:
 
     def test_detects_previous_value_placeholder(self):
         """Test detection of <previous-value> placeholder."""
-        tool_calls = [
-            {"name": "tool", "args": {"input": "<previous-value>"}}
-        ]
+        tool_calls = [{"name": "tool", "args": {"input": "<previous-value>"}}]
 
         has_placeholder, _ = detect_placeholder_in_args(tool_calls)
 
@@ -389,9 +384,7 @@ class TestDetectPlaceholderInArgs:
 
     def test_detects_output_placeholder(self):
         """Test detection of <output-...> placeholder."""
-        tool_calls = [
-            {"name": "tool", "args": {"data": "<output-from-api>"}}
-        ]
+        tool_calls = [{"name": "tool", "args": {"data": "<output-from-api>"}}]
 
         has_placeholder, _ = detect_placeholder_in_args(tool_calls)
 
@@ -399,9 +392,7 @@ class TestDetectPlaceholderInArgs:
 
     def test_detects_response_placeholder(self):
         """Test detection of <response-...> placeholder."""
-        tool_calls = [
-            {"name": "tool", "args": {"value": "<response-data>"}}
-        ]
+        tool_calls = [{"name": "tool", "args": {"value": "<response-data>"}}]
 
         has_placeholder, _ = detect_placeholder_in_args(tool_calls)
 
@@ -409,9 +400,7 @@ class TestDetectPlaceholderInArgs:
 
     def test_detects_current_placeholder(self):
         """Test detection of <current-...> placeholder."""
-        tool_calls = [
-            {"name": "tool", "args": {"date": "<current-date>"}}
-        ]
+        tool_calls = [{"name": "tool", "args": {"date": "<current-date>"}}]
 
         has_placeholder, _ = detect_placeholder_in_args(tool_calls)
 
@@ -419,9 +408,7 @@ class TestDetectPlaceholderInArgs:
 
     def test_detects_search_result_placeholder(self):
         """Test detection of <search-result> placeholder."""
-        tool_calls = [
-            {"name": "tool", "args": {"query": "<search-result>"}}
-        ]
+        tool_calls = [{"name": "tool", "args": {"query": "<search-result>"}}]
 
         has_placeholder, _ = detect_placeholder_in_args(tool_calls)
 
@@ -429,9 +416,7 @@ class TestDetectPlaceholderInArgs:
 
     def test_detects_tool_result_placeholder(self):
         """Test detection of <tool-output> placeholder."""
-        tool_calls = [
-            {"name": "tool", "args": {"input": "<tool-output>"}}
-        ]
+        tool_calls = [{"name": "tool", "args": {"input": "<tool-output>"}}]
 
         has_placeholder, _ = detect_placeholder_in_args(tool_calls)
 
@@ -439,9 +424,7 @@ class TestDetectPlaceholderInArgs:
 
     def test_no_placeholder_returns_false(self):
         """Test returns False when no placeholder is present."""
-        tool_calls = [
-            {"name": "calculator", "args": {"expression": "2 + 2"}}
-        ]
+        tool_calls = [{"name": "calculator", "args": {"expression": "2 + 2"}}]
 
         has_placeholder, value = detect_placeholder_in_args(tool_calls)
 
@@ -464,9 +447,7 @@ class TestDetectPlaceholderInArgs:
 
     def test_args_as_string(self):
         """Test detection when args is a string instead of dict."""
-        tool_calls = [
-            {"name": "tool", "args": "<result-from-previous>"}
-        ]
+        tool_calls = [{"name": "tool", "args": "<result-from-previous>"}]
 
         has_placeholder, _ = detect_placeholder_in_args(tool_calls)
 
@@ -496,9 +477,7 @@ class TestDetectPlaceholderInArgs:
 
     def test_nested_args_with_placeholder(self):
         """Test with nested args structure."""
-        tool_calls = [
-            {"name": "tool", "args": {"outer": {"inner": "<result>"}}}
-        ]
+        tool_calls = [{"name": "tool", "args": {"outer": {"inner": "<result>"}}}]
 
         # Note: Current implementation only checks top-level values
         has_placeholder, _ = detect_placeholder_in_args(tool_calls)
@@ -508,9 +487,7 @@ class TestDetectPlaceholderInArgs:
 
     def test_case_insensitive_detection(self):
         """Test that detection is case insensitive."""
-        tool_calls = [
-            {"name": "tool", "args": {"value": "<RESULT-FROM-API>"}}
-        ]
+        tool_calls = [{"name": "tool", "args": {"value": "<RESULT-FROM-API>"}}]
 
         has_placeholder, _ = detect_placeholder_in_args(tool_calls)
 
@@ -518,9 +495,7 @@ class TestDetectPlaceholderInArgs:
 
     def test_tool_call_without_name(self):
         """Test tool call without name field."""
-        tool_calls = [
-            {"args": {"value": "<result>"}}
-        ]
+        tool_calls = [{"args": {"value": "<result>"}}]
 
         has_placeholder, _ = detect_placeholder_in_args(tool_calls)
 
@@ -528,9 +503,7 @@ class TestDetectPlaceholderInArgs:
 
     def test_tool_call_without_args(self):
         """Test tool call without args field."""
-        tool_calls = [
-            {"name": "tool"}
-        ]
+        tool_calls = [{"name": "tool"}]
 
         has_placeholder, _ = detect_placeholder_in_args(tool_calls)
 
@@ -538,9 +511,7 @@ class TestDetectPlaceholderInArgs:
 
     def test_normal_angle_brackets_not_detected(self):
         """Test that normal angle brackets in code are not detected."""
-        tool_calls = [
-            {"name": "tool", "args": {"code": "if x < 10 and y > 5:"}}
-        ]
+        tool_calls = [{"name": "tool", "args": {"code": "if x < 10 and y > 5:"}}]
 
         has_placeholder, _ = detect_placeholder_in_args(tool_calls)
 
@@ -548,9 +519,7 @@ class TestDetectPlaceholderInArgs:
 
     def test_html_tags_not_detected(self):
         """Test that HTML tags are not detected as placeholders."""
-        tool_calls = [
-            {"name": "tool", "args": {"html": "<div>content</div>"}}
-        ]
+        tool_calls = [{"name": "tool", "args": {"html": "<div>content</div>"}}]
 
         has_placeholder, _ = detect_placeholder_in_args(tool_calls)
 
@@ -565,38 +534,41 @@ class TestDetectPlaceholderInArgs:
 class TestPlaceholderPattern:
     """Test suite for PLACEHOLDER_PATTERN regex."""
 
-    @pytest.mark.parametrize(("test_input", "expected"), [
-        # Should match
-        ("<result-from-search>", True),
-        ("<value-extracted>", True),
-        ("<output-data>", True),
-        ("<response-from-api>", True),
-        ("<data-field>", True),
-        ("<from-previous-step>", True),
-        ("<extract-this>", True),
-        ("<previous-result>", True),
-        ("<current-date>", True),
-        ("<date-value>", True),
-        ("<input-from-user>", True),
-        ("<query-result>", True),
-        ("<search-output>", True),
-        ("<tool-output>", True),
-        ("<RESULT-FROM-API>", True),  # Case insensitive
-        ("<Result-Value>", True),  # Mixed case
-        # Should not match
-        ("<div>", False),
-        ("<span>", False),
-        ("<button>", False),
-        ("<html>", False),
-        ("<p>", False),
-        ("<a>", False),
-        ("< >", False),
-        ("<>", False),
-        ("<123>", False),
-        ("<abc>", False),  # No keywords
-        ("normal text", False),
-        ("", False),
-    ])
+    @pytest.mark.parametrize(
+        ("test_input", "expected"),
+        [
+            # Should match
+            ("<result-from-search>", True),
+            ("<value-extracted>", True),
+            ("<output-data>", True),
+            ("<response-from-api>", True),
+            ("<data-field>", True),
+            ("<from-previous-step>", True),
+            ("<extract-this>", True),
+            ("<previous-result>", True),
+            ("<current-date>", True),
+            ("<date-value>", True),
+            ("<input-from-user>", True),
+            ("<query-result>", True),
+            ("<search-output>", True),
+            ("<tool-output>", True),
+            ("<RESULT-FROM-API>", True),  # Case insensitive
+            ("<Result-Value>", True),  # Mixed case
+            # Should not match
+            ("<div>", False),
+            ("<span>", False),
+            ("<button>", False),
+            ("<html>", False),
+            ("<p>", False),
+            ("<a>", False),
+            ("< >", False),
+            ("<>", False),
+            ("<123>", False),
+            ("<abc>", False),  # No keywords
+            ("normal text", False),
+            ("", False),
+        ],
+    )
     def test_placeholder_pattern_matching(self, test_input, expected):
         """Test PLACEHOLDER_PATTERN matches expected patterns."""
         result = bool(PLACEHOLDER_PATTERN.search(test_input))
@@ -745,10 +717,7 @@ class TestCreateGraniteAgentDynamicInvoke:
         agent = create_granite_agent(self.mock_llm, self.mock_tools, self.mock_prompt, forced_iterations=2)
 
         # Invoke with 2 intermediate steps (past forced iterations)
-        inputs = {
-            "input": "test",
-            "intermediate_steps": [("action1", "result1"), ("action2", "result2")]
-        }
+        inputs = {"input": "test", "intermediate_steps": [("action1", "result1"), ("action2", "result2")]}
 
         with (
             patch("lfx.components.langchain_utilities.ibm_granite_handler.format_to_tool_messages", return_value=[]),
@@ -762,9 +731,7 @@ class TestCreateGraniteAgentDynamicInvoke:
         """Test that placeholder detection triggers corrective message."""
         # Create response with placeholder in tool calls
         mock_response = Mock()
-        mock_response.tool_calls = [
-            {"name": "calculator", "args": {"expression": "<result-from-search>"}}
-        ]
+        mock_response.tool_calls = [{"name": "calculator", "args": {"expression": "<result-from-search>"}}]
         self.mock_llm_required.invoke = Mock(return_value=mock_response)
         self.mock_llm_auto.invoke = Mock(return_value=AIMessage(content="corrected response"))
 
@@ -932,9 +899,7 @@ class TestEdgeCases:
 
     def test_detect_placeholder_with_special_characters(self):
         """Test placeholder detection with special regex characters."""
-        tool_calls = [
-            {"name": "tool", "args": {"value": "<result-from-search.+*?>"}}
-        ]
+        tool_calls = [{"name": "tool", "args": {"value": "<result-from-search.+*?>"}}]
 
         # Should not raise regex error
         has_placeholder, _ = detect_placeholder_in_args(tool_calls)
@@ -963,9 +928,7 @@ class TestEdgeCases:
 
     def test_placeholder_in_numeric_value(self):
         """Test that numeric values don't trigger placeholder detection."""
-        tool_calls = [
-            {"name": "calculator", "args": {"value": 12345}}
-        ]
+        tool_calls = [{"name": "calculator", "args": {"value": 12345}}]
 
         has_placeholder, _ = detect_placeholder_in_args(tool_calls)
 
@@ -973,9 +936,7 @@ class TestEdgeCases:
 
     def test_placeholder_in_list_value(self):
         """Test handling of list values in args."""
-        tool_calls = [
-            {"name": "tool", "args": {"items": ["<result>", "normal"]}}
-        ]
+        tool_calls = [{"name": "tool", "args": {"items": ["<result>", "normal"]}}]
 
         # Current implementation doesn't check list items
         has_placeholder, _ = detect_placeholder_in_args(tool_calls)
@@ -993,9 +954,7 @@ class TestEdgeCases:
 
     def test_empty_args_dict(self):
         """Test with empty args dictionary."""
-        tool_calls = [
-            {"name": "tool", "args": {}}
-        ]
+        tool_calls = [{"name": "tool", "args": {}}]
 
         has_placeholder, _ = detect_placeholder_in_args(tool_calls)
 
