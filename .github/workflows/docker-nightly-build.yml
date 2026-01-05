@@ -51,7 +51,7 @@ jobs:
           - arch: amd64
             runner: [Langflow-runner]
           - arch: arm64
-            runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
+            runner: [self-hosted, Linux, ARM64, langflow-ai-arm64-40gb]
     runs-on: ${{ matrix.runner }}
     steps:
 
@@ -145,7 +145,7 @@ jobs:
           - arch: amd64
             runner: [Langflow-runner]
           - arch: arm64
-            runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
+            runner: [self-hosted, Linux, ARM64, langflow-ai-arm64-40gb]
     runs-on: ${{ matrix.runner }}
     steps:
 
@@ -238,7 +238,7 @@ jobs:
           - arch: amd64
             runner: [Langflow-runner]
           - arch: arm64
-            runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
+            runner: [self-hosted, Linux, ARM64, langflow-ai-arm64-40gb]
     runs-on: ${{ matrix.runner }}
     steps:
 

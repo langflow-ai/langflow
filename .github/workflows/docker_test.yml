@@ -14,7 +14,7 @@ env:
 
 jobs:
   test-docker:
-    runs-on: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
+    runs-on: [self-hosted, Linux, ARM64, langflow-ai-arm64-40gb]
     name: Test docker images
     steps:
       - uses: actions/checkout@v6

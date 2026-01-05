@@ -63,7 +63,7 @@ jobs:
           - arch: amd64
             runner: [Langflow-runner]
           - arch: arm64
-            runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
+            runner: [self-hosted, Linux, ARM64, langflow-ai-arm64-40gb]
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Check out the code
@@ -148,7 +148,7 @@ jobs:
           - arch: amd64
             runner: [Langflow-runner]
           - arch: arm64
-            runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
+            runner: [self-hosted, Linux, ARM64, langflow-ai-arm64-40gb]
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Check out the code
@@ -237,7 +237,7 @@ jobs:
 
           - component: docker-backend
             arch: arm64
-            runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
+            runner: [self-hosted, Linux, ARM64, langflow-ai-arm64-40gb]
 
           - component: ghcr-backend
             arch: amd64
@@ -245,7 +245,7 @@ jobs:
 
           - component: ghcr-backend
             arch: arm64
-            runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
+            runner: [self-hosted, Linux, ARM64, langflow-ai-arm64-40gb]
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Check out the code
@@ -342,7 +342,7 @@ jobs:
 
           - component: docker-frontend
             arch: arm64
-            runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
+            runner: [self-hosted, Linux, ARM64, langflow-ai-arm64-40gb]
 
           - component: ghcr-frontend
             arch: amd64
@@ -350,7 +350,7 @@ jobs:
 
           - component: ghcr-frontend
             arch: arm64
-            runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
+            runner: [self-hosted, Linux, ARM64, langflow-ai-arm64-40gb]
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Check out the code
@@ -439,7 +439,7 @@ jobs:
           - arch: amd64
             runner: [Langflow-runner]
           - arch: arm64
-            runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
+            runner: [self-hosted, Linux, ARM64, langflow-ai-arm64-40gb]
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Check out the code
@@ -524,7 +524,7 @@ jobs:
           - arch: amd64
             runner: [Langflow-runner]
           - arch: arm64
-            runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
+            runner: [self-hosted, Linux, ARM64, langflow-ai-arm64-40gb]
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Check out the code

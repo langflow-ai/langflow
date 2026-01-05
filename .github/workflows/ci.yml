@@ -58,7 +58,7 @@ on:
         options:
           - ubuntu-latest
           - self-hosted
-          - "[self-hosted, linux, ARM64, langflow-ai-arm64-40gb]"
+          - "[self-hosted, Linux, ARM64, langflow-ai-arm64-40gb]"
         default: ubuntu-latest
   pull_request:
     types: [opened, synchronize, labeled]
