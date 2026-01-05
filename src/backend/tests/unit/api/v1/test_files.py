@@ -917,13 +917,47 @@ async def test_download_file_path_traversal_rejected(
 
     assert response.status_code == 400, f"Path traversal should be rejected: {malicious_filename}"
     assert "invalid file name" in response.json()["detail"].lower()
+    assert "simple file name" in response.json()["detail"].lower()
 
 
 @pytest.mark.parametrize(
     "malicious_filename",
     [
+        # Forward slashes in URL path are treated as path separators by FastAPI,
+        # so the router returns 404 (route not found) - this is defense in depth
+        "../../../etc/passwd",
+        "../secret.txt",
+        "subdir/file.txt",
+        # URL-encoded forward slashes are also decoded by FastAPI and treated as path separators
+        "..%2F..%2F..%2Fetc%2Fpasswd",
+        "subdir%2Ffile.txt",
+    ],
+)
+async def test_download_file_forward_slash_traversal_blocked(
+    files_client, files_created_api_key, files_flow, malicious_filename
+):
+    """Test that forward slash path traversal is blocked by FastAPI routing.
+
+    FastAPI treats both literal and URL-encoded forward slashes as path separators,
+    providing defense in depth before our validation layer is reached.
+    """
+    headers = {"x-api-key": files_created_api_key.api_key}
+    url = f"api/v1/files/download/{files_flow.id}/{malicious_filename}"
+    response = await files_client.get(url, headers=headers)
+
+    # FastAPI returns 404 because the path with slashes doesn't match any route
+    assert response.status_code == 404, (
+        f"Forward slash traversal should be blocked by routing: {malicious_filename}, got {response.status_code}"
+    )
+
+
+@pytest.mark.parametrize(
+    "malicious_filename",
+    [
+        # Backslash-based traversal (Windows style)
         "..\\..\\..\\etc\\passwd.png",
         "..\\secret.png",
+        # Double-dot embedded in filename
         "..png",
     ],
 )
@@ -935,13 +969,40 @@ async def test_download_image_path_traversal_rejected(files_client, files_flow, 
 
     assert response.status_code == 400, f"Path traversal should be rejected: {malicious_filename}"
     assert "invalid file name" in response.json()["detail"].lower()
+    assert "simple file name" in response.json()["detail"].lower()
 
 
 @pytest.mark.parametrize(
     "malicious_filename",
     [
+        # Forward slashes in URL path are treated as path separators by FastAPI,
+        # so the router returns 404 (route not found) - this is defense in depth
+        "../../../etc/passwd.png",
+        "../secret.png",
+        "subdir/image.png",
+        # URL-encoded forward slashes are also decoded by FastAPI and treated as path separators
+        "..%2F..%2Fimage.png",
+        "subdir%2Fimage.png",
+    ],
+)
+async def test_download_image_forward_slash_traversal_blocked(files_client, files_flow, malicious_filename):
+    """Test that forward slash path traversal is blocked by FastAPI routing on /images endpoint."""
+    url = f"api/v1/files/images/{files_flow.id}/{malicious_filename}"
+    response = await files_client.get(url)
+
+    # FastAPI returns 404 because the path with slashes doesn't match any route
+    assert response.status_code == 404, (
+        f"Forward slash traversal should be blocked by routing: {malicious_filename}, got {response.status_code}"
+    )
+
+
+@pytest.mark.parametrize(
+    "malicious_filename",
+    [
+        # Backslash-based traversal (Windows style)
         "..\\..\\..\\etc\\passwd",
         "..\\secret.txt",
+        # Double-dot embedded in filename
         "..txt",
     ],
 )
@@ -956,3 +1017,31 @@ async def test_delete_file_path_traversal_rejected(files_client, files_created_a
 
     assert response.status_code == 400, f"Path traversal should be rejected: {malicious_filename}"
     assert "invalid file name" in response.json()["detail"].lower()
+    assert "simple file name" in response.json()["detail"].lower()
+
+
+@pytest.mark.parametrize(
+    "malicious_filename",
+    [
+        # Forward slashes in URL path are treated as path separators by FastAPI,
+        # so the router returns 404 (route not found) - this is defense in depth
+        "../../../etc/passwd",
+        "../secret.txt",
+        "subdir/file.txt",
+        # URL-encoded forward slashes are also decoded by FastAPI and treated as path separators
+        "..%2F..%2F..%2Fetc%2Fpasswd",
+        "subdir%2Ffile.txt",
+    ],
+)
+async def test_delete_file_forward_slash_traversal_blocked(
+    files_client, files_created_api_key, files_flow, malicious_filename
+):
+    """Test that forward slash path traversal is blocked by FastAPI routing on /delete endpoint."""
+    headers = {"x-api-key": files_created_api_key.api_key}
+    url = f"api/v1/files/delete/{files_flow.id}/{malicious_filename}"
+    response = await files_client.delete(url, headers=headers)
+
+    # FastAPI returns 404 because the path with slashes doesn't match any route
+    assert response.status_code == 404, (
+        f"Forward slash traversal should be blocked by routing: {malicious_filename}, got {response.status_code}"
+    )

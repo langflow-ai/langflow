@@ -45,7 +45,10 @@ DbSessionReadOnly = Annotated[AsyncSession, Depends(injectable_session_scope_rea
 def _get_validated_file_name(file_name: str = Path()) -> str:
     """Validate file_name path parameter to prevent path traversal attacks."""
     if ".." in file_name or "/" in file_name or "\\" in file_name:
-        raise HTTPException(status_code=400, detail="Invalid file name")
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid file name. Use a simple file name without directory paths or '..'.",
+        )
     return file_name
 
 
