@@ -17,8 +17,8 @@ import importlib
 import os
 
 import pytest
-from lfx.custom import import_isolation
-from lfx.custom.import_isolation import SecurityViolationError, execute_in_isolated_env
+from lfx.custom import isolation as isolation_module
+from lfx.custom.isolation import SecurityViolationError, execute_in_isolated_env
 
 
 def test_sandbox_blocks_dangerous_modules_by_default():
@@ -134,14 +134,14 @@ def test_sandbox_cannot_access_server_python_state(monkeypatch):
     # Enable dangerous code for this test to demonstrate isolation still works
     monkeypatch.setenv("LANGFLOW_SANDBOX_SECURITY_LEVEL", "disabled")
     # Reload modules to pick up new env var value
-    import lfx.custom.import_isolation.config as config_module
-    import lfx.custom.import_isolation.isolation as isolation_module
-    import lfx.custom.import_isolation.execution as execution_module
+    import lfx.custom.isolation.config as config_module
+    import lfx.custom.isolation.isolation as isolation_module
+    import lfx.custom.isolation.execution as execution_module
     importlib.reload(config_module)
     importlib.reload(isolation_module)
     importlib.reload(execution_module)
-    importlib.reload(import_isolation)
-    from lfx.custom.import_isolation import execute_in_isolated_env as execute_in_isolated_env_allowed
+    importlib.reload(isolation_module)
+    from lfx.custom.isolation import execute_in_isolated_env as execute_in_isolated_env_allowed
 
     # Server stores secrets in Python variables (not just env vars)
     server_secrets = {  # noqa: F841
@@ -183,13 +183,13 @@ def test():
         # Explicitly restore environment variable before reloading
         monkeypatch.setenv("LANGFLOW_SANDBOX_SECURITY_LEVEL", "moderate")
         # Reload modules to restore default blocking
-        import lfx.custom.import_isolation.config as config_module
-        import lfx.custom.import_isolation.isolation as isolation_module
-        import lfx.custom.import_isolation.execution as execution_module
+        import lfx.custom.isolation.config as config_module
+        import lfx.custom.isolation.isolation as isolation_module
+        import lfx.custom.isolation.execution as execution_module
         importlib.reload(config_module)
         importlib.reload(isolation_module)
         importlib.reload(execution_module)
-        importlib.reload(import_isolation)
+        importlib.reload(isolation_module)
 
 
 def test_sandbox_cannot_exfiltrate_secrets_via_commands(monkeypatch):
@@ -201,14 +201,14 @@ def test_sandbox_cannot_exfiltrate_secrets_via_commands(monkeypatch):
     # Enable dangerous code for this test to demonstrate isolation still works
     monkeypatch.setenv("LANGFLOW_SANDBOX_SECURITY_LEVEL", "disabled")
     # Reload modules to pick up new env var value
-    import lfx.custom.import_isolation.config as config_module
-    import lfx.custom.import_isolation.isolation as isolation_module
-    import lfx.custom.import_isolation.execution as execution_module
+    import lfx.custom.isolation.config as config_module
+    import lfx.custom.isolation.isolation as isolation_module
+    import lfx.custom.isolation.execution as execution_module
     importlib.reload(config_module)
     importlib.reload(isolation_module)
     importlib.reload(execution_module)
-    importlib.reload(import_isolation)
-    from lfx.custom.import_isolation import execute_in_isolated_env as execute_in_isolated_env_allowed
+    importlib.reload(isolation_module)
+    from lfx.custom.isolation import execute_in_isolated_env as execute_in_isolated_env_allowed
 
     # Server secret stored in Python variable
     server_secret = "secret_password_12345"  # noqa: F841, S105
@@ -238,9 +238,9 @@ def test():
     # Explicitly restore environment variable before reloading
     monkeypatch.setenv("LANGFLOW_SANDBOX_SECURITY_LEVEL", "moderate")
     # Reload module to restore default blocking
-    import lfx.custom.import_isolation.config as config_module
+    import lfx.custom.isolation.config as config_module
     importlib.reload(config_module)
-    importlib.reload(import_isolation)
+    importlib.reload(isolation_module)
 
 
 def test_sandbox_cannot_access_server_python_variables():
@@ -306,14 +306,14 @@ def test_sandbox_cannot_exfiltrate_secrets_via_network(monkeypatch):
     # Enable dangerous code for this test to demonstrate isolation still works
     monkeypatch.setenv("LANGFLOW_SANDBOX_SECURITY_LEVEL", "disabled")
     # Reload modules to pick up new env var value
-    import lfx.custom.import_isolation.config as config_module
-    import lfx.custom.import_isolation.isolation as isolation_module
-    import lfx.custom.import_isolation.execution as execution_module
+    import lfx.custom.isolation.config as config_module
+    import lfx.custom.isolation.isolation as isolation_module
+    import lfx.custom.isolation.execution as execution_module
     importlib.reload(config_module)
     importlib.reload(isolation_module)
     importlib.reload(execution_module)
-    importlib.reload(import_isolation)
-    from lfx.custom.import_isolation import execute_in_isolated_env as execute_in_isolated_env_allowed
+    importlib.reload(isolation_module)
+    from lfx.custom.isolation import execute_in_isolated_env as execute_in_isolated_env_allowed
 
     # Server secret stored in Python variable
     server_api_key = "sk-secret-key-to-exfiltrate"  # noqa: F841
@@ -348,9 +348,9 @@ def test():
     # Explicitly restore environment variable before reloading
     monkeypatch.setenv("LANGFLOW_SANDBOX_SECURITY_LEVEL", "moderate")
     # Reload module to restore default blocking
-    import lfx.custom.import_isolation.config as config_module
+    import lfx.custom.isolation.config as config_module
     importlib.reload(config_module)
-    importlib.reload(import_isolation)
+    importlib.reload(isolation_module)
 
 
 def test_moderate_mode_allows_common_operations():
@@ -411,15 +411,15 @@ def test():
 def test_moderate_mode_blocks_critical_operations():
     """Test that MODERATE mode still blocks critical security risks."""
     # Re-import to ensure we're using the current module state (in case previous tests reloaded it)
-    import lfx.custom.import_isolation.config as config_module
-    import lfx.custom.import_isolation.isolation as isolation_module
-    import lfx.custom.import_isolation.execution as execution_module
+    import lfx.custom.isolation.config as config_module
+    import lfx.custom.isolation.isolation as isolation_module
+    import lfx.custom.isolation.execution as execution_module
     importlib.reload(config_module)
     importlib.reload(isolation_module)
     importlib.reload(execution_module)
-    importlib.reload(import_isolation)
-    from lfx.custom.import_isolation import SecurityViolationError as SecurityViolationErrorCurrent
-    from lfx.custom.import_isolation import execute_in_isolated_env as execute_in_isolated_env_current
+    importlib.reload(isolation_module)
+    from lfx.custom.isolation import SecurityViolationError as SecurityViolationErrorCurrent
+    from lfx.custom.isolation import execute_in_isolated_env as execute_in_isolated_env_current
 
     # Test that eval is blocked even in MODERATE mode
     # eval is not in __builtins__, so direct access raises NameError
@@ -478,16 +478,16 @@ def test_strict_mode_blocks_all_dangerous_operations(monkeypatch):
     # Set STRICT mode
     monkeypatch.setenv("LANGFLOW_SANDBOX_SECURITY_LEVEL", "strict")
     # Reload modules to pick up new env var value
-    import lfx.custom.import_isolation.config as config_module
-    import lfx.custom.import_isolation.isolation as isolation_module
-    import lfx.custom.import_isolation.execution as execution_module
+    import lfx.custom.isolation.config as config_module
+    import lfx.custom.isolation.isolation as isolation_module
+    import lfx.custom.isolation.execution as execution_module
     importlib.reload(config_module)
     importlib.reload(isolation_module)
     importlib.reload(execution_module)
-    importlib.reload(import_isolation)
+    importlib.reload(isolation_module)
     # Import execute_in_isolated_env and SecurityViolationError from reloaded module
-    from lfx.custom.import_isolation import SecurityViolationError as SecurityViolationErrorStrict
-    from lfx.custom.import_isolation import execute_in_isolated_env as execute_in_isolated_env_strict
+    from lfx.custom.isolation import SecurityViolationError as SecurityViolationErrorStrict
+    from lfx.custom.isolation import execute_in_isolated_env as execute_in_isolated_env_strict
 
     try:
         # Test that requests is blocked in STRICT mode
@@ -544,7 +544,7 @@ import importlib
     finally:
         # Restore MODERATE mode
         monkeypatch.setenv("LANGFLOW_SANDBOX_SECURITY_LEVEL", "moderate")
-        importlib.reload(import_isolation)
+        importlib.reload(isolation_module)
 
 
 def test_sandbox_cannot_access_server_variables_via_module_attributes():

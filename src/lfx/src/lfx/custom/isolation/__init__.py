@@ -1,4 +1,4 @@
-"""Import isolation for code validation.
+"""Isolation for code validation and execution.
 
 This module provides isolated import and execution environments to ensure
 user-provided code executes in an isolated namespace without access to
@@ -9,7 +9,7 @@ NOTE: Currently, this isolation is ONLY used during code validation
 flow execution. Code that passes validation will execute with full
 system access during flow runs.
 
-TODO: Consider adding import isolation to runtime flow execution
+TODO: Consider adding isolation to runtime flow execution
 for additional security. This would require modifying create_class()
 and execute_function() in validate.py to use execute_in_isolated_env()
 instead of regular exec().
@@ -31,10 +31,10 @@ Configuration:
     Default: "moderate"
 """
 
-from lfx.custom.import_isolation.config import SecurityLevel, SecurityViolationError
-from lfx.custom.import_isolation.execution import execute_in_isolated_env
-from lfx.custom.import_isolation.isolation import create_isolated_import, create_isolated_builtins
-from lfx.custom.import_isolation.transformer import DunderAccessTransformer
+from lfx.custom.isolation.config import SecurityLevel, SecurityViolationError
+from lfx.custom.isolation.execution import execute_in_isolated_env
+from lfx.custom.isolation.isolation import create_isolated_import, create_isolated_builtins
+from lfx.custom.isolation.transformer import DunderAccessTransformer
 
 __all__ = [
     "SecurityViolationError",

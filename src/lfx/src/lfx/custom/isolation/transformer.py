@@ -3,7 +3,7 @@
 import ast
 from typing import Any
 
-from lfx.custom.import_isolation.config import SecurityViolationError
+from lfx.custom.isolation.config import SecurityViolationError
 
 # Dangerous dunder methods that enable isolation escapes
 # These allow access to __globals__, __subclasses__, etc. which can be used to escape

@@ -1,4 +1,4 @@
-"""Security configuration for import isolation.
+"""Security configuration for isolation.
 
 Defines security levels and blocked modules/builtins.
 """
@@ -12,7 +12,7 @@ class SecurityViolationError(Exception):
 
 
 class SecurityLevel(str, Enum):
-    """Security levels for import isolation."""
+    """Security levels for isolation."""
 
     MODERATE = "moderate"  # Default: Allows common operations, blocks system access
     STRICT = "strict"  # Maximum security: Blocks most operations

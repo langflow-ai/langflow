@@ -5,7 +5,7 @@ server resources. They prove isolation by showing that access attempts fail.
 """
 
 import pytest
-from lfx.custom.import_isolation import execute_in_isolated_env
+from lfx.custom.isolation import execute_in_isolated_env
 
 
 def test_sandbox_cannot_access_parent_globals():
@@ -380,7 +380,7 @@ def test_sandbox_blocks_import_builtins_in_validation_context():
     validation-only mode. In this mode, `import builtins` should be blocked with an error
     rather than returning the isolated version (since isolated builtins aren't created).
     """
-    from lfx.custom.import_isolation import SecurityViolationError, create_isolated_import
+    from lfx.custom.isolation import SecurityViolationError, create_isolated_import
 
     # Create isolated_import without isolated_builtins_dict (validation context)
     isolated_import = create_isolated_import()  # None = validation-only mode
@@ -396,7 +396,7 @@ def test_sandbox_prevents_importlib_bypass():
     CRITICAL SECURITY: importlib.import_module("builtins") would bypass our __import__ hook
     and get the real builtins module. By blocking importlib entirely, we prevent this bypass.
     """
-    from lfx.custom.import_isolation import SecurityViolationError, execute_in_isolated_env
+    from lfx.custom.isolation import SecurityViolationError, execute_in_isolated_env
 
     # Test that importlib is blocked (prevents bypass)
     code = """
@@ -424,7 +424,7 @@ def test_sandbox_blocks_dunder_method_escape():
     The AST transformer converts dangerous dunder access (obj.__class__) to
     getattr(obj, '__class__') which we can intercept and block.
     """
-    from lfx.custom.import_isolation import SecurityViolationError, execute_in_isolated_env, DunderAccessTransformer
+    from lfx.custom.isolation import SecurityViolationError, execute_in_isolated_env, DunderAccessTransformer
     import ast
 
     # Test the classic escape attack
@@ -458,7 +458,7 @@ def test():
 
 def test_sandbox_blocks_individual_dunder_access():
     """Test that individual dangerous dunder attributes are blocked."""
-    from lfx.custom.import_isolation import SecurityViolationError, execute_in_isolated_env, DunderAccessTransformer
+    from lfx.custom.isolation import SecurityViolationError, execute_in_isolated_env, DunderAccessTransformer
     import ast
 
     dangerous_attrs = ["__class__", "__bases__", "__subclasses__", "__globals__", "__init__"]

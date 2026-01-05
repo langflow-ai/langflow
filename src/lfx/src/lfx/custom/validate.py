@@ -8,7 +8,7 @@ from typing import Optional, Union
 from langchain_core._api.deprecation import LangChainDeprecationWarning
 from pydantic import ValidationError
 
-from lfx.custom.import_isolation import (
+from lfx.custom.isolation import (
     DunderAccessTransformer,
     SecurityViolationError,
     create_isolated_import,
@@ -66,7 +66,7 @@ def validate_code(code):
                     isolated_import(alias.name, None, None, (), 0)
                 except SecurityViolationError as e:
                     # SecurityViolationError means the module is blocked by security policy.
-                    # Since import isolation will be used during runtime execution (planned),
+                    # Since isolation will be used during runtime execution (planned),
                     # we should fail validation here so users get early feedback about
                     # blocked modules. This prevents code from passing validation but
                     # failing at runtime.
@@ -82,7 +82,7 @@ def validate_code(code):
                     isolated_import(node.module, None, None, (), 0)
                 except SecurityViolationError as e:
                     # SecurityViolationError means the module is blocked by security policy.
-                    # Since import isolation will be used during runtime execution (planned),
+                    # Since isolation will be used during runtime execution (planned),
                     # we should fail validation here so users get early feedback about
                     # blocked modules. This prevents code from passing validation but
                     # failing at runtime.

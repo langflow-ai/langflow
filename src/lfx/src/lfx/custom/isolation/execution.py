@@ -3,9 +3,9 @@
 import builtins
 from typing import Any
 
-from lfx.custom.import_isolation.config import SecurityViolationError
-from lfx.custom.import_isolation.isolation import create_isolated_builtins, create_isolated_import
-from lfx.custom.import_isolation.transformer import DANGEROUS_DUNDER_ATTRS
+from lfx.custom.isolation.config import SecurityViolationError
+from lfx.custom.isolation.isolation import create_isolated_builtins, create_isolated_import
+from lfx.custom.isolation.transformer import DANGEROUS_DUNDER_ATTRS
 
 
 def execute_in_isolated_env(code_obj: Any, exec_globals: dict[str, Any]) -> None:

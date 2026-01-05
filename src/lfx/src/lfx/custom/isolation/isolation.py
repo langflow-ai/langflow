@@ -5,7 +5,7 @@ import contextlib
 import importlib
 from typing import Any
 
-from lfx.custom.import_isolation.config import (
+from lfx.custom.isolation.config import (
     BLOCKED_BUILTINS,
     BLOCKED_MODULES,
     SECURITY_LEVEL,
