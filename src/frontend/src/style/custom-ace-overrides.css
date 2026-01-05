@@ -52,12 +52,6 @@
   box-shadow: none !important;
 }
 
-.dark .ace-monokai .ace_marker-layer .ace_active-line,
-.ace-github .ace_marker-layer .ace_active-line {
-  top: 24px !important;
-  bottom: 24px !important;
-}
-
 .ace-github,
 .ace-github .ace_scroller {
   background-color: #fafbfc !important;
