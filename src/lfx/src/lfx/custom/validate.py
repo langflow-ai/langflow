@@ -227,20 +227,15 @@ def execute_function(code, function_name, *args, **kwargs):
     )
     function_code.parent = None
     code_obj = compile(ast.Module(body=[function_code], type_ignores=[]), "<string>", "exec")
-
+    exec_locals = dict(locals())
     try:
-        # Use isolated execution environment for security
-        # execute_in_isolated_env merges results into exec_globals
-        execute_in_isolated_env(code_obj, exec_globals)
-        # The function should now be in exec_globals after isolated execution
+        exec(code_obj, exec_globals, exec_locals)
     except Exception as exc:
         msg = "Function string does not contain a function"
         raise ValueError(msg) from exc
 
-    # Get the function from exec_globals (it was merged by execute_in_isolated_env)
-    if function_name not in exec_globals:
-        msg = f"Function '{function_name}' was not created during execution"
-        raise ValueError(msg)
+    # Add the function to the exec_globals dictionary
+    exec_globals[function_name] = exec_locals[function_name]
 
     return exec_globals[function_name](*args, **kwargs)
 
@@ -449,8 +444,7 @@ def prepare_global_scope(module):
     if definitions:
         combined_module = ast.Module(body=definitions, type_ignores=[])
         compiled_code = compile(combined_module, "<string>", "exec")
-        # Use isolated execution environment for security
-        execute_in_isolated_env(compiled_code, exec_globals)
+        exec(compiled_code, exec_globals)
 
     return exec_globals
 
@@ -494,10 +488,9 @@ def build_class_constructor(compiled_class, exec_globals, class_name):
     Returns:
          Constructor function for the class
     """
-    # Use isolated execution environment for security
-    # execute_in_isolated_env merges results into exec_globals
-    execute_in_isolated_env(compiled_class, exec_globals)
-    # The class should now be in exec_globals after isolated execution
+    exec_locals = dict(locals())
+    exec(compiled_class, exec_globals, exec_locals)
+    exec_globals[class_name] = exec_locals[class_name]
 
     # Return a function that imports necessary modules and creates an instance of the target class
     def build_custom_class():
