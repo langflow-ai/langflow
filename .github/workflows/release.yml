@@ -534,17 +534,18 @@ jobs:
   #         uv pip install dist-lfx/*.whl
   #         uv run lfx --help
 
-  call_docker_build_base:
-    name: Call Docker Build Workflow for Langflow Base
-    if: ${{ inputs.build_docker_base }}
-    needs: [ci]
-    uses: ./.github/workflows/docker-build-v2.yml
-    with:
-      ref: ${{ inputs.release_tag }}
-      release_type: base
-      pre_release: ${{ inputs.pre_release }}
-      push_to_registry: ${{ !inputs.dry_run }}
-    secrets: inherit
+  # REVERT COMMENTED OUT
+  # call_docker_build_base:
+  #   name: Call Docker Build Workflow for Langflow Base
+  #   if: ${{ inputs.build_docker_base }}
+  #   needs: [ci]
+  #   uses: ./.github/workflows/docker-build-v2.yml
+  #   with:
+  #     ref: ${{ inputs.release_tag }}
+  #     release_type: base
+  #     pre_release: ${{ inputs.pre_release }}
+  #     push_to_registry: ${{ !inputs.dry_run }}
+  #   secrets: inherit
 
   call_docker_build_main:
     name: Call Docker Build Workflow for Langflow
@@ -582,29 +583,31 @@ jobs:
       push_to_registry: ${{ !inputs.dry_run }}
     secrets: inherit
 
-  call_docker_build_main_ep:
-    name: Call Docker Build Workflow for Langflow with Entrypoint
-    if: ${{ inputs.build_docker_main }}
-    needs: [ci]
-    uses: ./.github/workflows/docker-build-v2.yml
-    with:
-      ref: ${{ inputs.release_tag }}
-      release_type: main-ep
-      pre_release: ${{ inputs.pre_release }}
-      push_to_registry: ${{ !inputs.dry_run }}
-    secrets: inherit
+  # REVERT COMMENTED OUT
+  # call_docker_build_main_ep:
+  #   name: Call Docker Build Workflow for Langflow with Entrypoint
+  #   if: ${{ inputs.build_docker_main }}
+  #   needs: [ci]
+  #   uses: ./.github/workflows/docker-build-v2.yml
+  #   with:
+  #     ref: ${{ inputs.release_tag }}
+  #     release_type: main-ep
+  #     pre_release: ${{ inputs.pre_release }}
+  #     push_to_registry: ${{ !inputs.dry_run }}
+  #   secrets: inherit
 
-  call_docker_build_main_all:
-    name: Call Docker Build Workflow for langflow-all
-    if: ${{ inputs.build_docker_main }}
-    needs: [ci]
-    uses: ./.github/workflows/docker-build-v2.yml
-    with:
-      ref: ${{ inputs.release_tag }}
-      release_type: main-all
-      pre_release: ${{ inputs.pre_release }}
-      push_to_registry: ${{ !inputs.dry_run }}
-    secrets: inherit
+  # REVERT COMMENTED OUT
+  # call_docker_build_main_all:
+  #   name: Call Docker Build Workflow for langflow-all
+  #   if: ${{ inputs.build_docker_main }}
+  #   needs: [ci]
+  #   uses: ./.github/workflows/docker-build-v2.yml
+  #   with:
+  #     ref: ${{ inputs.release_tag }}
+  #     release_type: main-all
+  #     pre_release: ${{ inputs.pre_release }}
+  #     push_to_registry: ${{ !inputs.dry_run }}
+  #   secrets: inherit
 
   create_release:
     name: Create Release
