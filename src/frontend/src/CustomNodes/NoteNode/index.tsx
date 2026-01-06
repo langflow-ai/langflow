@@ -14,7 +14,6 @@ import NodeDescription from "../GenericNode/components/NodeDescription";
 import NoteToolbarComponent from "./NoteToolbarComponent";
 
 const CHAR_LIMIT = 2500;
-const DEFAULT_NOTE_SIZE = 324;
 const TRANSPARENT_COLOR = "#00000000";
 
 /**
@@ -102,8 +101,8 @@ function NoteNode({
     () => currentFlow?.data?.nodes.find((node) => node.id === data.id),
     [currentFlow, data.id],
   );
-  const nodeWidth = nodeData?.measured?.width ?? DEFAULT_NOTE_SIZE;
-  const nodeHeight = nodeData?.measured?.height ?? DEFAULT_NOTE_SIZE;
+  const nodeWidth = nodeData?.measured?.width ?? NOTE_NODE_MIN_WIDTH;
+  const nodeHeight = nodeData?.measured?.height ?? NOTE_NODE_MIN_HEIGHT;
 
   // Debounced resize handler to avoid excessive state updates during drag
   const debouncedResize = useMemo(
@@ -145,8 +144,8 @@ function NoteNode({
   return (
     <>
       <NodeResizer
-        minWidth={Math.max(DEFAULT_NOTE_SIZE, NOTE_NODE_MIN_WIDTH)}
-        minHeight={Math.max(DEFAULT_NOTE_SIZE, NOTE_NODE_MIN_HEIGHT)}
+        minWidth={NOTE_NODE_MIN_WIDTH}
+        minHeight={NOTE_NODE_MIN_HEIGHT}
         onResize={(_, { width, height }) => debouncedResize(width, height)}
         onResizeEnd={() => {
           debouncedResize.flush();
@@ -187,7 +186,7 @@ function NoteNode({
         >
           <NodeDescription
             inputClassName={cn(
-              "border-0 ring-0 focus:ring-0 resize-none shadow-none rounded-sm h-full min-w-full max-h-full overflow-auto",
+              "border-0 ring-0 focus:ring-0 resize-none shadow-none rounded-sm h-full min-w-full max-h-full overflow-auto pr-2 sticky-note-scroll",
               hasCustomColor
                 ? getTextColorClass()
                 : COLOR_OPTIONS[bgColorKey] === null
@@ -200,7 +199,7 @@ function NoteNode({
                 : COLOR_OPTIONS[bgColorKey] === null
                   ? "dark:prose-invert"
                   : "dark:!text-background",
-              "min-w-full max-h-full overflow-auto",
+              "min-w-full max-h-full overflow-auto pr-2 sticky-note-scroll",
             )}
             style={{ backgroundColor: resolvedBgColor }}
             charLimit={CHAR_LIMIT}

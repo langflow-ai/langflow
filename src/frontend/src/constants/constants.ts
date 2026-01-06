@@ -882,8 +882,8 @@ export const DRAG_EVENTS_CUSTOM_TYPESS = {
   "text/plain": "text/plain",
 };
 
-export const NOTE_NODE_MIN_WIDTH = 324;
-export const NOTE_NODE_MIN_HEIGHT = 324;
+export const NOTE_NODE_MIN_WIDTH = 280;
+export const NOTE_NODE_MIN_HEIGHT = 140;
 
 export const COLOR_OPTIONS = {
   amber: "hsl(var(--note-amber))",

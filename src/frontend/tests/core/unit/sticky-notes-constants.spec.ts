@@ -6,14 +6,14 @@ test(
 
   async ({ page }) => {
     const constants = await page.evaluate(() => ({
-      expectedMinWidth: 260,
-      expectedMinHeight: 100,
+      expectedMinWidth: 280,
+      expectedMinHeight: 140,
       expectedMaxWidth: 1000,
       expectedMaxHeight: 800,
     }));
 
-    expect(constants.expectedMinWidth).toBe(260);
-    expect(constants.expectedMinHeight).toBe(100);
+    expect(constants.expectedMinWidth).toBe(280);
+    expect(constants.expectedMinHeight).toBe(140);
     expect(constants.expectedMaxWidth).toBe(1000);
     expect(constants.expectedMaxHeight).toBe(800);
   },
@@ -41,6 +41,6 @@ test(
     });
 
     expect(textSize.fontSize).toBe("16px");
-    expect(textSize.fontWeight).toBe("400");
+    expect(textSize.fontWeight).toBe("500");
   },
 );

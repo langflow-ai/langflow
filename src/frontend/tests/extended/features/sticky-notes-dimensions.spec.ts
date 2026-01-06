@@ -3,7 +3,7 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
-  "sticky notes should have consistent 260x100px dimensions",
+  "sticky notes should have consistent 280x140px dimensions",
   { tag: ["@release", "@workspace"] },
 
   async ({ page }) => {
@@ -53,10 +53,10 @@ test(
     });
 
     // Verify shadow-box and note have same dimensions
-    expect(shadowBoxSize.width).toBe(260);
-    expect(shadowBoxSize.height).toBe(100);
-    expect(noteSize.width).toBe(260);
-    expect(noteSize.height).toBe(100);
+    expect(shadowBoxSize.width).toBe(280);
+    expect(shadowBoxSize.height).toBe(140);
+    expect(noteSize.width).toBe(280);
+    expect(noteSize.height).toBe(140);
 
     // Verify rounded corners consistency
     expect(shadowBoxSize.borderRadius).toBe("12px");
@@ -121,8 +121,8 @@ test(
     // Verify size hasn't changed
     expect(finalSize.width).toBe(initialSize.width);
     expect(finalSize.height).toBe(initialSize.height);
-    expect(finalSize.width).toBe(260);
-    expect(finalSize.height).toBe(100);
+    expect(finalSize.width).toBe(280);
+    expect(finalSize.height).toBe(140);
   },
 );
 
@@ -179,9 +179,9 @@ test(
 
     // Verify both input and rendered text use same larger size
     expect(inputTextStyle.fontSize).toBe("16px"); // text-base
-    expect(renderedTextStyle.fontSize).toBe("14px"); // actual rendered size
-    expect(inputTextStyle.fontWeight).toBe("400"); // actual font weight
-    expect(renderedTextStyle.fontWeight).toBe("400"); // actual font weight
+    expect(renderedTextStyle.fontSize).toBe("16px"); // text-base from markdown
+    expect(inputTextStyle.fontWeight).toBe("500"); // font-medium
+    expect(renderedTextStyle.fontWeight).toBe("500"); // font-medium
   },
 );
 
@@ -327,9 +327,9 @@ test(
       expect(enlargedSize.height).toBeGreaterThanOrEqual(initialSize.height);
     }
 
-    // Verify it respects minimum constraints (260x100)
-    expect(enlargedSize.width).toBeGreaterThanOrEqual(260);
-    expect(enlargedSize.height).toBeGreaterThanOrEqual(100);
+    // Verify it respects minimum constraints (280x140)
+    expect(enlargedSize.width).toBeGreaterThanOrEqual(280);
+    expect(enlargedSize.height).toBeGreaterThanOrEqual(140);
 
     // Verify it respects maximum constraints (1000x800)
     expect(enlargedSize.width).toBeLessThanOrEqual(1000);
