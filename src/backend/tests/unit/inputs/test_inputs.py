@@ -144,6 +144,23 @@ def test_int_input_valid():
     assert int_input.value == 10
 
 
+def test_int_input_default_value():
+    """Test that IntInput has a default value of 0."""
+    int_input = IntInput(name="default_int")
+    assert int_input.value == 0
+
+
+def test_int_input_null_validation():
+    """Test that IntInput converts null-like values to 0."""
+    # None should be converted to 0
+    int_input_none = IntInput(name="null_int", value=None)
+    assert int_input_none.value == 0
+
+    # Empty string should be converted to 0
+    int_input_empty = IntInput(name="empty_int", value="")
+    assert int_input_empty.value == 0
+
+
 def test_int_input_invalid():
     with pytest.raises(ValidationError):
         IntInput(name="invalid_int", value="not_an_int")

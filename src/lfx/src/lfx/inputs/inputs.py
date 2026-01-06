@@ -466,12 +466,14 @@ class IntInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixi
 
     Attributes:
         field_type (SerializableFieldTypes): The field type of the input. Defaults to FieldTypes.INTEGER.
+        value (int): The value of the integer input. Defaults to 0.
     """
 
     field_type: SerializableFieldTypes = FieldTypes.INTEGER
+    value: int = 0
     track_in_telemetry: CoalesceBool = True  # Safe numeric parameter
 
-    @field_validator("value")
+    @field_validator("value", mode="before")
     @classmethod
     def validate_value(cls, v: Any, info):
         """Validates the given value and returns the processed value.
@@ -481,14 +483,17 @@ class IntInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixi
             info: Additional information about the input.
 
         Returns:
-            The processed value.
+            The processed value. Null-like values (None, empty string) are converted to 0.
 
         Raises:
-            ValueError: If the value is not of a valid type or if the input is missing a required key.
+            ValueError: If the value is not of a valid type.
         """
-        if v and not isinstance(v, int | float):
+        # Auto-convert null-like values to 0 for backwards compatibility
+        if v is None or v == "":
+            return 0
+        if not isinstance(v, int | float):
             msg = f"Invalid value type {type(v)} for input {info.data.get('name')}."
-            raise ValueError(msg)
+            raise ValueError(msg)  # noqa: TRY004
         if isinstance(v, float):
             v = int(v)
         return v
