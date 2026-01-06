@@ -1,6 +1,6 @@
-"""Security tests to verify sandbox prevents access to server's Python state.
+"""Security tests to verify isolation prevents access to server's Python state.
 
-IMPORTANT: The sandbox provides NAMESPACE ISOLATION, not system resource isolation.
+IMPORTANT: The isolation provides NAMESPACE ISOLATION, not system resource isolation.
 This means:
 - ✅ Code CANNOT access server's Python variables/state (namespace isolation)
 - ⚠️ Code CAN access filesystem (file I/O is real, not isolated)
@@ -19,6 +19,7 @@ from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
 
 import pytest
+
 from lfx.custom.isolation import SecurityViolationError, execute_in_isolated_env
 
 
@@ -56,7 +57,7 @@ def mock_isolation_settings(security_level="moderate"):
         importlib.reload(isolation_module)
 
 
-def test_sandbox_blocks_dangerous_modules_by_default():
+def test_isolation_blocks_dangerous_modules_by_default():
     """Test that dangerous modules are blocked by default."""
     code = """
 import os
@@ -71,7 +72,7 @@ def test():
         execute_in_isolated_env(code_obj, exec_globals)
 
 
-def test_sandbox_blocks_dangerous_builtins_by_default():
+def test_isolation_blocks_dangerous_builtins_by_default():
     """Test that critical builtins (eval, exec, compile) are blocked even in MODERATE mode."""
     code = """
 def test():
@@ -90,8 +91,8 @@ def test():
         test_func()
 
 
-def test_sandbox_cannot_access_server_python_secrets():
-    """CRITICAL: Test that sandboxed code cannot access server's Python variables/secrets.
+def test_isolation_cannot_access_server_python_secrets():
+    """CRITICAL: Test that isolated code cannot access server's Python variables/secrets.
 
     This is the KEY security property - code cannot access server secrets stored in memory.
     Even if code can do file I/O or network requests, it can't access server secrets to exfiltrate.
@@ -124,7 +125,7 @@ def test():
         test_func()
 
 
-def test_sandbox_cannot_access_server_credentials_via_python():
+def test_isolation_cannot_access_server_credentials_via_python():
     """Test that code cannot access server credentials stored in Python variables.
 
     Even if code can do file I/O or network requests, it can't access server secrets
@@ -160,7 +161,7 @@ def test():
         test_func()
 
 
-def test_sandbox_cannot_access_server_python_state():
+def test_isolation_cannot_access_server_python_state():
     """Test that code cannot access server's Python state, even if it can access system resources.
 
     This is the key security property: namespace isolation prevents access to server secrets
@@ -209,7 +210,7 @@ def test():
                 del os.environ["TEST_ENV_VAR"]
 
 
-def test_sandbox_cannot_exfiltrate_secrets_via_commands():
+def test_isolation_cannot_exfiltrate_secrets_via_commands():
     """Test that code cannot access server secrets to pass to system commands.
 
     Code CAN execute system commands, but it CANNOT access server secrets
@@ -245,8 +246,8 @@ def test():
             test_func()
 
 
-def test_sandbox_cannot_access_server_python_variables():
-    """Test that sandboxed code cannot access server's Python variables/state.
+def test_isolation_cannot_access_server_python_variables():
+    """Test that isolated code cannot access server's Python variables/state.
 
     This is what namespace isolation actually prevents.
     """
@@ -273,8 +274,8 @@ def test():
         test_func()
 
 
-def test_sandbox_cannot_modify_server_python_state():
-    """Test that sandboxed code cannot modify server's Python state."""
+def test_isolation_cannot_modify_server_python_state():
+    """Test that isolated code cannot modify server's Python state."""
     server_state = {"modified": False}
 
     code = """
@@ -299,7 +300,7 @@ def test():
     assert server_state["modified"] is False
 
 
-def test_sandbox_cannot_exfiltrate_secrets_via_network():
+def test_isolation_cannot_exfiltrate_secrets_via_network():
     """Test that code cannot access server secrets to send via network requests.
 
     Code CAN make network requests, but it CANNOT access server secrets
@@ -414,7 +415,7 @@ def test_moderate_mode_blocks_critical_operations():
     # Clear cache to ensure fresh read of environment
     config_module.clear_cache()
     # Import exception from config module directly to avoid reload issues
-    SecurityViolationErrorCurrent = config_module.SecurityViolationError
+    security_violation_error_current = config_module.SecurityViolationError
     from lfx.custom.isolation import execute_in_isolated_env as execute_in_isolated_env_current
 
     # Test that eval is blocked even in MODERATE mode
@@ -442,7 +443,7 @@ def test():
 """
     code_obj2 = compile(code2, "<test>", "exec")
     exec_globals2 = {}
-    with pytest.raises(SecurityViolationErrorCurrent, match="blocked"):
+    with pytest.raises(security_violation_error_current, match="blocked"):
         execute_in_isolated_env_current(code_obj2, exec_globals2)
 
     # Test that subprocess is blocked even in MODERATE mode
@@ -453,7 +454,7 @@ def test():
 """
     code_obj3 = compile(code3, "<test>", "exec")
     exec_globals3 = {}
-    with pytest.raises(SecurityViolationErrorCurrent, match="blocked"):
+    with pytest.raises(security_violation_error_current, match="blocked"):
         execute_in_isolated_env_current(code_obj3, exec_globals3)
 
     # Test that importlib is blocked even in MODERATE mode (CRITICAL_MODULES)
@@ -465,7 +466,7 @@ def test():
 """
     code_obj4 = compile(code4, "<test>", "exec")
     exec_globals4 = {}
-    with pytest.raises(SecurityViolationErrorCurrent, match="blocked"):
+    with pytest.raises(security_violation_error_current, match="blocked"):
         execute_in_isolated_env_current(code_obj4, exec_globals4)
 
 
@@ -475,7 +476,7 @@ def test_strict_mode_blocks_all_dangerous_operations():
     with mock_isolation_settings("strict"):
         import lfx.custom.isolation.config as config_module
 
-        SecurityViolationErrorStrict = config_module.SecurityViolationError
+        security_violation_error_strict = config_module.SecurityViolationError
         from lfx.custom.isolation import execute_in_isolated_env as execute_in_isolated_env_strict
 
         # Test that requests is blocked in STRICT mode
@@ -488,7 +489,7 @@ import requests
         try:
             execute_in_isolated_env_strict(code_obj1, exec_globals1)
             pytest.fail("Should have raised SecurityViolationError")
-        except SecurityViolationErrorStrict:
+        except security_violation_error_strict:
             pass  # Expected
 
         # Test that open() is blocked in STRICT mode
@@ -515,7 +516,7 @@ import asyncio
         try:
             execute_in_isolated_env_strict(code_obj3, exec_globals3)
             pytest.fail("Should have raised SecurityViolationError")
-        except SecurityViolationErrorStrict:
+        except security_violation_error_strict:
             pass  # Expected
 
         # Test that importlib is also blocked in STRICT mode
@@ -527,12 +528,12 @@ import importlib
         try:
             execute_in_isolated_env_strict(code_obj4, exec_globals4)
             pytest.fail("Should have raised SecurityViolationError")
-        except SecurityViolationErrorStrict:
+        except security_violation_error_strict:
             pass  # Expected
 
 
-def test_sandbox_cannot_access_server_variables_via_module_attributes():
-    """Test that sandboxed code cannot access server variables even via module attributes.
+def test_isolation_cannot_access_server_variables_via_module_attributes():
+    """Test that isolated code cannot access server variables even via module attributes.
 
     This test verifies that even if code can import modules, it cannot access
     server variables that might be stored as module attributes.
@@ -576,3 +577,4 @@ def test():
                 delattr(json, "SERVER_SECRET")
         else:
             json.SERVER_SECRET = original_attr
+

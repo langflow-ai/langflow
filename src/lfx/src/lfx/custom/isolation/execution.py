@@ -19,7 +19,7 @@ def execute_in_isolated_env(code_obj: Any, exec_globals: dict[str, Any]) -> None
 
     Security levels:
     - MODERATE (default): Allows common operations (HTTP requests, async, temp files)
-      while blocking direct system access (os, sys, subprocess, eval, exec, etc.)
+      while blocking direct system access (os, sys, subprocess, eval, exec, open, etc.)
     - STRICT: Blocks all potentially dangerous operations for maximum security
     - DISABLED: No restrictions (use only in trusted environments)
 

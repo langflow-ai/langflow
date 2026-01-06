@@ -28,9 +28,9 @@ def create_isolated_builtins() -> dict[str, Any]:
        our isolated version instead of the real one.
 
     Blocks builtins based on the current security level:
-    - MODERATE (default): Blocks critical builtins (eval, exec, compile, etc.)
-      but allows common operations (open, input, etc.)
-    - STRICT: Blocks all potentially dangerous builtins
+    - MODERATE (default): Blocks critical builtins (eval, exec, compile, open, etc.)
+      but allows common operations (HTTP requests, async, temp files, etc.)
+    - STRICT: Blocks all potentially dangerous builtins.
     - DISABLED: No restrictions
 
     Returns:

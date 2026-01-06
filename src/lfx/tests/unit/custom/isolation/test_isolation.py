@@ -1,15 +1,16 @@
-"""Unit tests to verify sandbox isolation works correctly.
+"""Unit tests to verify isolation works correctly.
 
 These tests verify that if isolation were broken, code would have access to
 server resources. They prove isolation by showing that access attempts fail.
 """
 
 import pytest
+
 from lfx.custom.isolation import execute_in_isolated_env
 
 
-def test_sandbox_cannot_access_parent_globals():
-    """Test that sandboxed code cannot access parent function's globals."""
+def test_isolation_cannot_access_parent_globals():
+    """Test that isolated code cannot access parent function's globals."""
     # Set a variable in the parent scope
     _parent_var = "should_not_be_accessible"
 
@@ -22,7 +23,7 @@ def test():
     code_obj = compile(code, "<test>", "exec")
     exec_globals = {}
 
-    # Execute in sandbox
+    # Execute in isolated environment
     execute_in_isolated_env(code_obj, exec_globals)
 
     # Try to call the function
@@ -33,8 +34,8 @@ def test():
         test_func()
 
 
-def test_sandbox_cannot_modify_parent_globals():
-    """Test that sandboxed code cannot modify parent scope's globals."""
+def test_isolation_cannot_modify_parent_globals():
+    """Test that isolated code cannot modify parent scope's globals."""
     parent_dict = {"value": "original"}
 
     code = """
@@ -59,8 +60,8 @@ def test():
     assert parent_dict["value"] == "original"
 
 
-def test_sandbox_isolated_builtins():
-    """Test that sandbox uses isolated builtins via __builtins__, not via import.
+def test_isolation_isolated_builtins():
+    """Test that isolation uses isolated builtins via __builtins__, not via import.
 
     Note: When code does `import builtins`, it gets the isolated builtins module.
     The isolation is via __builtins__ dict, which prevents direct access to critical builtins
@@ -104,7 +105,7 @@ def test():
             delattr(builtins, "ESCAPE_TEST")
 
 
-def test_sandbox_fresh_namespace_per_execution():
+def test_isolation_fresh_namespace_per_execution():
     """Test that each execution gets a fresh isolated namespace."""
     code1 = """
 GLOBAL_VAR = "first_execution"
@@ -132,8 +133,8 @@ def test():
         test_func()
 
 
-def test_sandbox_cannot_access_frame_locals():
-    """Test that sandboxed code cannot access caller's local variables."""
+def test_isolation_cannot_access_frame_locals():
+    """Test that isolated code cannot access caller's local variables."""
 
     def caller_function():
         _local_var = "should_not_be_accessible"
@@ -159,8 +160,8 @@ def test():
     caller_function()
 
 
-def test_sandbox_isolated_imports():
-    """Test that imports in sandbox cannot access parent scope variables."""
+def test_isolation_isolated_imports():
+    """Test that imports in isolated environment cannot access parent scope variables."""
     # Set a variable at module level that shadows an import name
     json_var = "this_is_not_the_json_module"
 
@@ -195,7 +196,7 @@ def test():
     assert json_var == "this_is_not_the_json_module"
 
 
-def test_sandbox_function_definition_time_isolation():
+def test_isolation_function_definition_time_isolation():
     """Test that function definition time code (default args) executes in isolation."""
     _parent_var = "should_not_be_accessible"
 
@@ -208,13 +209,13 @@ def test(x=parent_var):
     code_obj = compile(code, "<test>", "exec")
     exec_globals = {}
 
-    # Execute in sandbox - definition time code runs here
+    # Execute in isolated environment - definition time code runs here
     # Should raise NameError when function is defined because parent_var is not accessible
     with pytest.raises(NameError, match="parent_var"):
         execute_in_isolated_env(code_obj, exec_globals)
 
 
-def test_sandbox_decorator_isolation():
+def test_isolation_decorator_isolation():
     """Test that decorator evaluation happens in isolation."""
     _parent_var = "should_not_be_accessible"
 
@@ -229,18 +230,18 @@ def test():
     code_obj = compile(code, "<test>", "exec")
     exec_globals = {}
 
-    # Execute in sandbox - decorator evaluation happens here
+    # Execute in isolated environment - decorator evaluation happens here
     # Should raise NameError because parent_var is not accessible
     with pytest.raises(NameError):
         execute_in_isolated_env(code_obj, exec_globals)
 
 
-# Module-level variable to test that sandbox cannot access module globals
-MODULE_LEVEL_VAR = "should_not_be_accessible_from_sandbox"
+# Module-level variable to test that isolation cannot access module globals
+MODULE_LEVEL_VAR = "should_not_be_accessible_from_isolation"
 
 
-def test_sandbox_cannot_access_module_globals():
-    """Test that sandboxed code cannot access module-level globals."""
+def test_isolation_cannot_access_module_globals():
+    """Test that isolated code cannot access module-level globals."""
     code = """
 def test():
     # Try to access MODULE_LEVEL_VAR from module scope
@@ -258,8 +259,8 @@ def test():
         test_func()
 
 
-def test_sandbox_cannot_escape_via_globals():
-    """Test that sandboxed code cannot escape via globals() function."""
+def test_isolation_cannot_escape_via_globals():
+    """Test that isolated code cannot escape via globals() function."""
     # Set a variable at module level
     _module_var = "should_not_be_accessible"
 
@@ -269,7 +270,7 @@ def test():
     # If isolation were broken, this could access the parent's globals
     g = globals()
     # Try to access a variable that would be in parent's globals
-    # The sandbox's globals() should only return sandbox globals, not parent's
+    # The isolated environment's globals() should only return isolated globals, not parent's
     return 'module_var' in g
 """
     code_obj = compile(code, "<test>", "exec")
@@ -281,12 +282,12 @@ def test():
     test_func = exec_globals["test"]
     result = test_func()
 
-    # Should return False - sandbox's globals() should not contain parent's variables
+    # Should return False - isolated environment's globals() should not contain parent's variables
     assert result is False
 
 
-def test_sandbox_cannot_escape_via_locals():
-    """Test that sandboxed code cannot escape via locals() function."""
+def test_isolation_cannot_escape_via_locals():
+    """Test that isolated code cannot escape via locals() function."""
 
     # Set a variable in function scope
     def test_function():
@@ -297,7 +298,7 @@ def test():
     # Try to access parent locals via locals() function
     # If isolation were broken, this could access the parent's locals
     l = locals()
-    # The sandbox's locals() should only return sandbox locals, not parent's
+    # The isolated environment's locals() should only return isolated locals, not parent's
     return 'local_var' in l
 """
         code_obj = compile(code, "<test>", "exec")
@@ -309,14 +310,14 @@ def test():
         test_func = exec_globals["test"]
         result = test_func()
 
-        # Should return False - sandbox's locals() should not contain parent's variables
+        # Should return False - isolated environment's locals() should not contain parent's variables
         assert result is False
 
     test_function()
 
 
-def test_sandbox_can_define_classes():
-    """Test that class definitions work in the sandbox (requires __build_class__)."""
+def test_isolation_can_define_classes():
+    """Test that class definitions work in the isolated environment (requires __build_class__)."""
     code = """
 class TestClass:
     def __init__(self, value):
@@ -342,7 +343,7 @@ def test():
     assert result == "test_value"
 
 
-def test_sandbox_import_builtins_returns_isolated_version():
+def test_isolation_import_builtins_returns_isolated_version():
     """Test that `import builtins` returns isolated version, not real builtins module."""
     import builtins as real_builtins
 
@@ -373,7 +374,7 @@ def test():
     assert hasattr(real_builtins, "eval")
 
 
-def test_sandbox_blocks_import_builtins_in_validation_context():
+def test_isolation_blocks_import_builtins_in_validation_context():
     """Test that `import builtins` is blocked when isolated_builtins_dict is None (validation context).
 
     When validate_code() calls create_isolated_import() without arguments, it's in
@@ -390,7 +391,7 @@ def test_sandbox_blocks_import_builtins_in_validation_context():
         isolated_import("builtins", None, None, (), 0)
 
 
-def test_sandbox_prevents_importlib_bypass():
+def test_isolation_prevents_importlib_bypass():
     """Test that importlib cannot be used to bypass __import__ hook and get real builtins.
 
     CRITICAL SECURITY: importlib.import_module("builtins") would bypass our __import__ hook
@@ -415,8 +416,8 @@ def test():
         execute_in_isolated_env(code_obj, exec_globals)
 
 
-def test_sandbox_blocks_dunder_method_escape():
-    """Test that sandbox blocks classic Python dunder method escape attacks.
+def test_isolation_blocks_dunder_method_escape():
+    """Test that isolation blocks classic Python dunder method escape attacks.
 
     CRITICAL SECURITY: Prevents escapes like:
     ().__class__.__bases__[0].__subclasses__()[XX].__init__.__globals__['os']
@@ -457,7 +458,7 @@ def test():
         test_func()
 
 
-def test_sandbox_blocks_individual_dunder_access():
+def test_isolation_blocks_individual_dunder_access():
     """Test that individual dangerous dunder attributes are blocked."""
     import ast
 
@@ -478,3 +479,4 @@ def test_sandbox_blocks_individual_dunder_access():
         # Should raise SecurityViolationError
         with pytest.raises(SecurityViolationError, match="dunder attribute"):
             execute_in_isolated_env(code_obj, exec_globals)
+

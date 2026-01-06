@@ -77,16 +77,18 @@ CRITICAL_BUILTINS: frozenset[str] = frozenset(
         "breakpoint",  # Debugger access
         "reload",  # Module reloading
         "file",  # File I/O (Python 2)
+        "open",  # File I/O - can access filesystem, read sensitive files
     }
 )
 
 # Builtins blocked in STRICT mode but allowed in MODERATE mode
-# These are common legitimate operations that don't directly access system
-MODERATE_BUILTINS: frozenset[str] = frozenset(
-    {
-        "open",  # File I/O - common but can access filesystem
-    }
-)
+# NOTE: This is intentionally empty. Builtins are binary - they're either safe enough
+# to allow in both MODERATE and STRICT modes, or dangerous enough to block even in MODERATE.
+# Unlike modules (which have legitimate uses like HTTP requests), there aren't builtins
+# that are legitimate in MODERATE but should be blocked in STRICT.
+#
+# Leaving this here in case we decide to add or move some builtins.
+MODERATE_BUILTINS: frozenset[str] = frozenset()
 
 # Modules blocked in STRICT mode but allowed in MODERATE mode
 # These are common legitimate operations (HTTP, async, temp files, etc.)
