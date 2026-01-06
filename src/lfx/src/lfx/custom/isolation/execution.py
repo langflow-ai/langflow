@@ -23,9 +23,7 @@ def execute_in_isolated_env(code_obj: Any, exec_globals: dict[str, Any]) -> None
     - STRICT: Blocks all potentially dangerous operations for maximum security
     - DISABLED: No restrictions (use only in trusted environments)
 
-    Configure via LANGFLOW_ISOLATION_SECURITY_LEVEL environment variable.
-    Even when restrictions are disabled, code runs in isolation and cannot
-    access server Python variables.
+    Security level is configured via the settings service (isolation_security_level setting).
 
     Args:
         code_obj: Compiled code object to execute
@@ -104,9 +102,6 @@ def execute_in_isolated_env(code_obj: Any, exec_globals: dict[str, Any]) -> None
     
     isolated_builtins["hasattr"] = safe_hasattr
 
-    # Execute in isolated environment
-    # Using both globals and locals ensures complete isolation
-    # Code cannot access parent frames or the real server environment
     try:
         exec(code_obj, isolated_globals, isolated_locals)  # noqa: S102
         # Merge isolated_locals back into exec_globals so caller can access defined functions/classes

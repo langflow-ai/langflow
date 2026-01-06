@@ -6,10 +6,10 @@ import importlib
 from typing import Any
 
 from lfx.custom.isolation.config import (
-    BLOCKED_BUILTINS,
-    BLOCKED_MODULES,
-    SECURITY_LEVEL,
     SecurityViolationError,
+    get_blocked_builtins,
+    get_blocked_modules,
+    get_security_level,
 )
 
 
@@ -43,10 +43,11 @@ def create_isolated_builtins() -> dict[str, Any]:
     isolated_builtins = {}
 
     # Copy safe builtins (block dangerous ones based on security level)
+    blocked_builtins = get_blocked_builtins()
     for name in dir(builtins):
         if not name.startswith("_"):
             # Block builtins based on current security level
-            if name in BLOCKED_BUILTINS:
+            if name in blocked_builtins:
                 continue
             with contextlib.suppress(AttributeError):
                 isolated_builtins[name] = getattr(builtins, name)
@@ -84,11 +85,12 @@ def create_isolated_builtins() -> dict[str, Any]:
 
         def __getattr__(self, name: str) -> Any:
             # Block builtins based on current security level
-            if name in BLOCKED_BUILTINS:
-                level_name = SECURITY_LEVEL.value.upper()
+            blocked_builtins = get_blocked_builtins()
+            if name in blocked_builtins:
+                level_name = get_security_level().value.upper()
                 msg = (
                     f"Builtin '{name}' is blocked by security level '{level_name}'. "
-                    f"Set LANGFLOW_ISOLATION_SECURITY_LEVEL=disabled to allow (not recommended)."
+                    f"Configure isolation_security_level setting to change this."
                 )
                 raise SecurityViolationError(msg)
             if name == "__builtins__":
@@ -157,11 +159,12 @@ def create_isolated_import(isolated_builtins_dict: dict[str, Any] | None = None)
             return isolated_builtins_module
 
         # Block modules based on current security level
-        if module_name in BLOCKED_MODULES:
-            level_name = SECURITY_LEVEL.value.upper()
+        blocked_modules = get_blocked_modules()
+        if module_name in blocked_modules:
+            level_name = get_security_level().value.upper()
             msg = (
                 f"Module '{module_name}' is blocked by security level '{level_name}'. "
-                f"Set LANGFLOW_ISOLATION_SECURITY_LEVEL=disabled to allow (not recommended)."
+                f"Configure isolation_security_level setting to change this."
             )
             raise SecurityViolationError(msg)
         

@@ -168,25 +168,13 @@ def get_blocked_builtins() -> frozenset[str]:
 
 
 def get_blocked_modules() -> frozenset[str]:
+
     """Get the set of blocked modules.
     
     Returns:
         frozenset[str]: Set of blocked module names.
     """
     return _get_blocked_modules()
-
-
-# Module-level lazy attributes for backward compatibility
-# Using __getattr__ to make them work as module-level constants
-def __getattr__(name: str):
-    """Lazy module-level attributes for backward compatibility."""
-    if name == "SECURITY_LEVEL":
-        return _get_security_level()
-    if name == "BLOCKED_BUILTINS":
-        return _get_blocked_builtins()
-    if name == "BLOCKED_MODULES":
-        return _get_blocked_modules()
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 # Note: We don't maintain a whitelist of allowed modules.
 # Instead, we block dangerous modules and allow everything else.
