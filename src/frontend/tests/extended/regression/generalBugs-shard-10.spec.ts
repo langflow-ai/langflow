@@ -75,7 +75,7 @@ test(
     const firstResponseText = textContents[textContents.length - 1];
 
     // Ensure we captured a non-empty response
-    expect(concatAllText.length).toBeGreaterThan(0);
+    expect(firstResponseText.length).toBeGreaterThan(0);
 
     await page.getByText("Close").last().click();
 
@@ -127,7 +127,7 @@ test(
 
     // The frozen node should return the same cached output
     textContents2.forEach((text) => {
-      expect(text).toBe(concatAllText);
+      expect(text).toBe(firstResponseText);
     });
   },
 );
