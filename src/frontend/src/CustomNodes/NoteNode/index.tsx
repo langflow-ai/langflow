@@ -158,8 +158,8 @@ function NoteNode({
         ref={nodeRef}
         data-testid="note_node"
         style={{
-          minWidth: nodeWidth,
-          minHeight: nodeHeight,
+          width: nodeWidth,
+          height: nodeHeight,
           backgroundColor: resolvedBgColor,
         }}
         className={cn(
