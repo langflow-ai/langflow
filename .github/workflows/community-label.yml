@@ -11,17 +11,31 @@ jobs:
       pull-requests: write
     steps:
       - name: Add community label
-        if: github.event.pull_request.author_association != 'MEMBER' && github.event.pull_request.author_association != 'OWNER' && github.event.pull_request.author_association != 'COLLABORATOR'
         uses: actions/github-script@v7
         with:
           script: |
-            const pullRequestNumber = context.payload.pull_request.number;
-            const repoDetails = {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: pullRequestNumber
-            };
-            await github.rest.issues.addLabels({
-              ...repoDetails,
-              labels: ['community']
-            });
+            const author = context.payload.pull_request.user.login;
+            const org = context.repo.owner;
+
+            // Check if user is a member of the organization
+            let isOrgMember = false;
+            try {
+              await github.rest.orgs.checkMembershipForUser({
+                org: org,
+                username: author
+              });
+              isOrgMember = true;
+            } catch (error) {
+              // 404 means user is not a member, any other error we assume not a member
+              isOrgMember = false;
+            }
+
+            if (!isOrgMember) {
+              const pullRequestNumber = context.payload.pull_request.number;
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pullRequestNumber,
+                labels: ['community']
+              });
+            }
