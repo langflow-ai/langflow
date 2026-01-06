@@ -19,7 +19,6 @@ from lfx.custom.isolation import (
 from lfx.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES, DEFAULT_IMPORT_STRING
 from lfx.log.logger import logger
 
-
 # Cache for component index hash lookup map
 _component_hash_cache: dict[str, set[str]] | None = None
 _component_name_to_hash_cache: dict[str, str] | None = None
@@ -27,20 +26,20 @@ _component_name_to_hash_cache: dict[str, str] | None = None
 
 def _build_component_hash_cache() -> tuple[dict[str, set[str]], dict[str, str]]:
     """Build hash lookup maps from component index for O(1) hash checking.
-    
+
     Returns:
         Tuple of (hash_to_names_map, name_to_hash_map)
     """
     try:
         from lfx.interface.components import _read_component_index
-        
+
         index = _read_component_index()
         if not index:
             return {}, {}
-        
+
         hash_to_names: dict[str, set[str]] = {}
         name_to_hash: dict[str, str] = {}
-        
+
         entries = index.get("entries", [])
         for category_name, components_dict in entries:
             if not isinstance(components_dict, dict):
@@ -50,16 +49,16 @@ def _build_component_hash_cache() -> tuple[dict[str, set[str]], dict[str, str]]:
                     continue
                 metadata = comp_data.get("metadata", {})
                 code_hash = metadata.get("code_hash")
-                
+
                 if code_hash:
                     # Map hash -> set of component names (for hash-only lookups)
                     if code_hash not in hash_to_names:
                         hash_to_names[code_hash] = set()
                     hash_to_names[code_hash].add(comp_name)
-                    
+
                     # Map component name -> hash (for name+hash lookups)
                     name_to_hash[comp_name] = code_hash
-        
+
         return hash_to_names, name_to_hash
     except Exception as e:  # noqa: BLE001
         logger.debug(f"Error building component hash cache: {e}")
@@ -68,53 +67,52 @@ def _build_component_hash_cache() -> tuple[dict[str, set[str]], dict[str, str]]:
 
 def _get_component_hash_cache() -> tuple[dict[str, set[str]], dict[str, str]]:
     """Get component hash cache, building it if necessary.
-    
+
     Returns:
         Tuple of (hash_to_names_map, name_to_hash_map)
     """
     global _component_hash_cache, _component_name_to_hash_cache
-    
+
     if _component_hash_cache is None or _component_name_to_hash_cache is None:
         _component_hash_cache, _component_name_to_hash_cache = _build_component_hash_cache()
-    
+
     return _component_hash_cache, _component_name_to_hash_cache
 
 
 @functools.lru_cache(maxsize=512)
 def _is_core_component(code: str, component_name: str | None = None) -> bool:
     """Check if a component is a core component by comparing its code_hash with the component index.
-    
+
     Core components have code_hash values that match entries in the component index.
     Custom/edited components have different code_hash values or don't exist in the index.
-    
+
     This function uses cached hash lookup maps for O(1) performance instead of O(n) iteration.
     Results are also cached to avoid repeated hash calculations for the same code.
-    
+
     Args:
         code: The component source code
         component_name: Optional component name to look up in the index
-        
+
     Returns:
         True if the component is a core component (matches index), False otherwise
     """
     try:
         from lfx.custom.utils import _generate_code_hash
-        
+
         # Generate hash for the provided code
         code_hash = _generate_code_hash(code, component_name or "unknown")
-        
+
         # Get cached hash lookup maps
         hash_to_names, name_to_hash = _get_component_hash_cache()
-        
+
         if component_name:
             # Fast path: Check if component_name exists and hash matches
             if component_name in name_to_hash:
                 return name_to_hash[component_name] == code_hash
-        else:
-            # Fast path: Check if hash exists in cache (O(1) lookup)
-            if code_hash in hash_to_names:
-                return True
-        
+        # Fast path: Check if hash exists in cache (O(1) lookup)
+        elif code_hash in hash_to_names:
+            return True
+
         # No match found - it's a custom/edited component
         return False
     except Exception as e:  # noqa: BLE001
@@ -292,7 +290,7 @@ def validate_code(code: str, component_name: str | None = None, skip_isolation_f
             transformed_func = transformer.visit(node)
             # Fix missing location information
             ast.fix_missing_locations(transformed_func)
-            
+
             # Create isolated execution environment
             # We prepend DEFAULT_IMPORT_STRING to match runtime (where it's also prepended)
             # This ensures decorators and default arguments have access to the same types
@@ -306,13 +304,13 @@ def validate_code(code: str, component_name: str | None = None, skip_isolation_f
                 "__package__": None,
                 "__import__": isolated_import_func,
             }
-            
+
             # Execute DEFAULT_IMPORT_STRING first (matches runtime behavior)
             import_code = DEFAULT_IMPORT_STRING + "\n"
             import_module = ast.parse(import_code)
             import_code_obj = compile(import_module, "<string>", "exec")
             execute_in_isolated_env(import_code_obj, exec_globals)
-            
+
             # Now execute the function definition with types available
             code_obj = compile(ast.Module(body=[transformed_func], type_ignores=[]), "<string>", "exec")
             try:
@@ -323,8 +321,6 @@ def validate_code(code: str, component_name: str | None = None, skip_isolation_f
 
     # Return the errors dictionary
     return errors
-
-
 
 
 def eval_function(function_string: str):
@@ -353,9 +349,9 @@ def execute_function(code, function_name, *args, **kwargs):
     # Check if this is a core component - if so, skip isolation
     # Note: function_name might not match component name, so we check by hash only
     is_core = _is_core_component(code, None)
-    
+
     module = ast.parse(code)
-    
+
     # Use prepare_global_scope to handle imports consistently with create_class
     exec_globals = prepare_global_scope(module, use_isolation=not is_core)
 
@@ -377,9 +373,7 @@ def execute_function(code, function_name, *args, **kwargs):
                 raise ValueError(msg)
             exec_locals[function_name] = exec_globals[function_name]
     except SecurityViolationError as e:
-        raise SecurityViolationError(
-            f"Function '{function_name}' contains security violation: {e}"
-        ) from e
+        raise SecurityViolationError(f"Function '{function_name}' contains security violation: {e}") from e
     except Exception as exc:
         msg = "Function string does not contain a function"
         raise ValueError(msg) from exc
@@ -401,9 +395,9 @@ def create_function(code, function_name):
     # Check if this is a core component - if so, skip isolation
     # Note: function_name might not match component name, so we check by hash only
     is_core = _is_core_component(code, None)
-    
+
     module = ast.parse(code)
-    
+
     # Use prepare_global_scope to handle imports consistently with create_class
     exec_globals = prepare_global_scope(module, use_isolation=not is_core)
 
@@ -424,17 +418,15 @@ def create_function(code, function_name):
             if function_name in exec_globals:
                 exec_locals[function_name] = exec_globals[function_name]
     except SecurityViolationError as e:
-        raise SecurityViolationError(
-            f"Function '{function_name}' contains security violation: {e}"
-        ) from e
+        raise SecurityViolationError(f"Function '{function_name}' contains security violation: {e}") from e
     except Exception:  # noqa: BLE001
         # Suppress other exceptions for backward compatibility
         pass
-    
+
     if function_name not in exec_locals and function_name not in exec_globals:
         msg = f"Function '{function_name}' not found in code"
         raise ValueError(msg)
-    
+
     exec_globals[function_name] = exec_locals.get(function_name) or exec_globals.get(function_name)
 
     # Return a function that imports necessary modules and calls the target function
@@ -474,7 +466,7 @@ def create_class(code, class_name):
     )
 
     code = DEFAULT_IMPORT_STRING + "\n" + code
-    
+
     try:
         module = ast.parse(code)
         exec_globals = prepare_global_scope(module, use_isolation=not is_core)
@@ -535,15 +527,11 @@ def _handle_module_attributes(imported_module, node, module_name, exec_globals, 
                 # Use isolated import - blocks dangerous modules
                 isolated_import_func = exec_globals.get("__import__")
                 if not isolated_import_func:
-                    raise RuntimeError(
-                        "Isolation not properly set up: __import__ not found in exec_globals"
-                    )
+                    raise RuntimeError("Isolation not properly set up: __import__ not found in exec_globals")
                 try:
                     exec_globals[alias.name] = isolated_import_func(full_module_path, None, None, (), 0)
                 except SecurityViolationError as e:
-                    raise SecurityViolationError(
-                        f"Component contains blocked import '{full_module_path}': {e}"
-                    ) from e
+                    raise SecurityViolationError(f"Component contains blocked import '{full_module_path}': {e}") from e
             else:
                 exec_globals[alias.name] = importlib.import_module(full_module_path)
 
@@ -575,7 +563,7 @@ def prepare_global_scope(module, use_isolation: bool = False):
         }
     else:
         exec_globals = globals().copy()
-    
+
     imports = []
     import_froms = []
     definitions = []
@@ -596,9 +584,7 @@ def prepare_global_scope(module, use_isolation: bool = False):
                 try:
                     module_obj = isolated_import_func(module_name, None, None, (), 0)
                 except SecurityViolationError as e:
-                    raise SecurityViolationError(
-                        f"Component contains blocked import '{alias.name}': {e}"
-                    ) from e
+                    raise SecurityViolationError(f"Component contains blocked import '{alias.name}': {e}") from e
             else:
                 # Import the full module path to ensure submodules are loaded
                 module_obj = importlib.import_module(module_name)
@@ -617,9 +603,7 @@ def prepare_global_scope(module, use_isolation: bool = False):
                     try:
                         exec_globals[variable_name] = isolated_import_func(variable_name, None, None, (), 0)
                     except SecurityViolationError as e:
-                        raise SecurityViolationError(
-                            f"Component contains blocked import '{variable_name}': {e}"
-                        ) from e
+                        raise SecurityViolationError(f"Component contains blocked import '{variable_name}': {e}") from e
                 else:
                     exec_globals[variable_name] = importlib.import_module(variable_name)
 
@@ -648,9 +632,7 @@ def prepare_global_scope(module, use_isolation: bool = False):
 
             except SecurityViolationError as e:
                 # Security violation - module is blocked
-                raise SecurityViolationError(
-                    f"Component contains blocked import '{node.module}': {e}"
-                ) from e
+                raise SecurityViolationError(f"Component contains blocked import '{node.module}': {e}") from e
             except ModuleNotFoundError as e:
                 last_error = e
                 continue
@@ -714,7 +696,6 @@ def build_class_constructor(compiled_class, exec_globals, class_name, use_isolat
     Returns:
          Constructor function for the class
     """
-    
     exec_locals = dict(locals())
     if use_isolation:
         # Execute in isolated environment for custom components
@@ -768,6 +749,7 @@ def find_names_in_code(code, names):
         A set of names that are found in the code.
     """
     return {name for name in names if name in code}
+
 
 def extract_function_name(code):
     module = ast.parse(code)

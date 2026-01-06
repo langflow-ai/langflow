@@ -28,15 +28,14 @@ class TestComponentExecution:
         """)
 
         # Mock empty component index (custom component)
-        with mock_component_index({"entries": []}):
-            with mock_isolation_settings("moderate"):
-                # Should execute successfully
-                component_class = eval_custom_component_code(code)
-                assert component_class.__name__ == "SafeComponent"
-                
-                # Can instantiate
-                instance = component_class()
-                assert instance is not None
+        with mock_component_index({"entries": []}), mock_isolation_settings("moderate"):
+            # Should execute successfully
+            component_class = eval_custom_component_code(code)
+            assert component_class.__name__ == "SafeComponent"
+
+            # Can instantiate
+            instance = component_class()
+            assert instance is not None
 
     def test_custom_component_with_dangerous_import_fails(self):
         """Test that custom components with dangerous imports are blocked."""
@@ -50,11 +49,10 @@ class TestComponentExecution:
         """)
 
         # Mock empty component index (custom component)
-        with mock_component_index({"entries": []}):
-            with mock_isolation_settings("moderate"):
-                # Should be blocked
-                with pytest.raises(SecurityViolationError, match="Module 'os' is blocked"):
-                    eval_custom_component_code(code)
+        with mock_component_index({"entries": []}), mock_isolation_settings("moderate"):
+            # Should be blocked
+            with pytest.raises(SecurityViolationError, match="Module 'os' is blocked"):
+                eval_custom_component_code(code)
 
     def test_core_component_executes_with_dangerous_import(self):
         """Test that core components can execute even with dangerous imports."""
@@ -71,31 +69,19 @@ class TestComponentExecution:
         from lfx.custom.utils import _generate_code_hash
 
         code_hash = _generate_code_hash(code, "CoreComponent")
-        index_data = {
-            "entries": [
-                (
-                    "test_category",
-                    {
-                        "CoreComponent": {
-                            "metadata": {"code_hash": code_hash}
-                        }
-                    }
-                )
-            ]
-        }
+        index_data = {"entries": [("test_category", {"CoreComponent": {"metadata": {"code_hash": code_hash}}})]}
 
-        with mock_component_index(index_data):
-            with mock_isolation_settings("moderate"):
-                # Core component should execute successfully (bypasses isolation)
-                try:
-                    component_class = eval_custom_component_code(code)
-                    assert component_class.__name__ == "CoreComponent"
-                    
-                    # Can instantiate
-                    instance = component_class()
-                    assert instance is not None
-                except SecurityViolationError:
-                    pytest.fail("Core component should bypass isolation")
+        with mock_component_index(index_data), mock_isolation_settings("moderate"):
+            # Core component should execute successfully (bypasses isolation)
+            try:
+                component_class = eval_custom_component_code(code)
+                assert component_class.__name__ == "CoreComponent"
+
+                # Can instantiate
+                instance = component_class()
+                assert instance is not None
+            except SecurityViolationError:
+                pytest.fail("Core component should bypass isolation")
 
     def test_component_with_class_level_assignment(self):
         """Test that components with class-level assignments execute correctly."""
@@ -111,16 +97,15 @@ class TestComponentExecution:
         """)
 
         # Mock empty component index (custom component)
-        with mock_component_index({"entries": []}):
-            with mock_isolation_settings("moderate"):
-                # Should execute successfully
-                component_class = eval_custom_component_code(code)
-                assert component_class.__name__ == "ComponentWithClassVar"
-                
-                # Can instantiate and access class variable
-                instance = component_class()
-                assert hasattr(component_class, "DEFAULT_VALUE")
-                assert component_class.DEFAULT_VALUE == '{"key": "value"}'
+        with mock_component_index({"entries": []}), mock_isolation_settings("moderate"):
+            # Should execute successfully
+            component_class = eval_custom_component_code(code)
+            assert component_class.__name__ == "ComponentWithClassVar"
+
+            # Can instantiate and access class variable
+            instance = component_class()
+            assert hasattr(component_class, "DEFAULT_VALUE")
+            assert component_class.DEFAULT_VALUE == '{"key": "value"}'
 
     def test_component_with_method_imports(self):
         """Test that components with imports in methods are handled correctly."""
@@ -134,15 +119,14 @@ class TestComponentExecution:
         """)
 
         # Mock empty component index (custom component)
-        with mock_component_index({"entries": []}):
-            with mock_isolation_settings("moderate"):
-                # Should execute successfully (import in method is runtime, not blocked at definition)
-                component_class = eval_custom_component_code(code)
-                assert component_class.__name__ == "ComponentWithMethodImport"
-                
-                # Can instantiate
-                instance = component_class()
-                assert instance is not None
+        with mock_component_index({"entries": []}), mock_isolation_settings("moderate"):
+            # Should execute successfully (import in method is runtime, not blocked at definition)
+            component_class = eval_custom_component_code(code)
+            assert component_class.__name__ == "ComponentWithMethodImport"
+
+            # Can instantiate
+            instance = component_class()
+            assert instance is not None
 
     def test_component_with_dangerous_builtin_in_class_body(self):
         """Test that dangerous builtins in class body are blocked for custom components."""
@@ -157,11 +141,10 @@ class TestComponentExecution:
         """)
 
         # Mock empty component index (custom component)
-        with mock_component_index({"entries": []}):
-            with mock_isolation_settings("moderate"):
-                # Should be blocked
-                with pytest.raises(SecurityViolationError, match="Builtin 'eval' is blocked"):
-                    eval_custom_component_code(code)
+        with mock_component_index({"entries": []}), mock_isolation_settings("moderate"):
+            # Should be blocked
+            with pytest.raises(SecurityViolationError, match="Builtin 'eval' is blocked"):
+                eval_custom_component_code(code)
 
     def test_component_with_dangerous_builtin_in_class_body_core(self):
         """Test that core components allow dangerous builtins in class body."""
@@ -180,27 +163,17 @@ class TestComponentExecution:
 
         code_hash = _generate_code_hash(code, "CoreDangerousClassBody")
         index_data = {
-            "entries": [
-                (
-                    "test_category",
-                    {
-                        "CoreDangerousClassBody": {
-                            "metadata": {"code_hash": code_hash}
-                        }
-                    }
-                )
-            ]
+            "entries": [("test_category", {"CoreDangerousClassBody": {"metadata": {"code_hash": code_hash}}})]
         }
 
-        with mock_component_index(index_data):
-            with mock_isolation_settings("moderate"):
-                # Core component should allow eval in class body
-                try:
-                    component_class = eval_custom_component_code(code)
-                    assert component_class.__name__ == "CoreDangerousClassBody"
-                    assert component_class.value == 2
-                except SecurityViolationError:
-                    pytest.fail("Core component should allow dangerous builtins in class body")
+        with mock_component_index(index_data), mock_isolation_settings("moderate"):
+            # Core component should allow eval in class body
+            try:
+                component_class = eval_custom_component_code(code)
+                assert component_class.__name__ == "CoreDangerousClassBody"
+                assert component_class.value == 2
+            except SecurityViolationError:
+                pytest.fail("Core component should allow dangerous builtins in class body")
 
 
 class TestComponentBuildMethod:
@@ -218,14 +191,13 @@ class TestComponentBuildMethod:
         """)
 
         # Mock empty component index (custom component)
-        with mock_component_index({"entries": []}):
-            with mock_isolation_settings("moderate"):
-                component_class = eval_custom_component_code(code)
-                instance = component_class()
-                
-                # Build method should execute
-                result = instance.build()
-                assert result == '{"result": "success"}'
+        with mock_component_index({"entries": []}), mock_isolation_settings("moderate"):
+            component_class = eval_custom_component_code(code)
+            instance = component_class()
+
+            # Build method should execute
+            result = instance.build()
+            assert result == '{"result": "success"}'
 
     def test_build_method_with_imports(self):
         """Test that build() method can use imports."""
@@ -240,14 +212,13 @@ class TestComponentBuildMethod:
         """)
 
         # Mock empty component index (custom component)
-        with mock_component_index({"entries": []}):
-            with mock_isolation_settings("moderate"):
-                component_class = eval_custom_component_code(code)
-                instance = component_class()
-                
-                # Build method should execute with runtime imports
-                result = instance.build()
-                assert result == '{"sqrt": 4.0}'
+        with mock_component_index({"entries": []}), mock_isolation_settings("moderate"):
+            component_class = eval_custom_component_code(code)
+            instance = component_class()
+
+            # Build method should execute with runtime imports
+            result = instance.build()
+            assert result == '{"sqrt": 4.0}'
 
 
 class TestComponentWithInputs:
@@ -269,14 +240,12 @@ class TestComponentWithInputs:
         """)
 
         # Mock empty component index (custom component)
-        with mock_component_index({"entries": []}):
-            with mock_isolation_settings("moderate"):
-                # Should execute successfully
-                component_class = eval_custom_component_code(code)
-                assert component_class.__name__ == "ComponentWithInput"
-                
-                # Can instantiate
-                instance = component_class()
-                assert instance is not None
-                assert hasattr(instance, "inputs")
+        with mock_component_index({"entries": []}), mock_isolation_settings("moderate"):
+            # Should execute successfully
+            component_class = eval_custom_component_code(code)
+            assert component_class.__name__ == "ComponentWithInput"
 
+            # Can instantiate
+            instance = component_class()
+            assert instance is not None
+            assert hasattr(instance, "inputs")
