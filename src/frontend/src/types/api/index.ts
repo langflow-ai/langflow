@@ -351,3 +351,13 @@ export type TableOptionsTypeAPI = {
   field_parsers?: Array<FieldParserType | { [key: string]: FieldParserType }>;
   description?: string;
 };
+
+export type TransactionLogsRow = {
+  id: string;
+  timestamp: string;
+  vertex_id: string;
+  target_id: string | null;
+  inputs: Record<string, unknown> | null;
+  outputs: Record<string, unknown> | null;
+  status: string;
+};
