@@ -67,7 +67,6 @@ export const MarkdownField = ({
             );
           },
           code: ({ node, className, children, ...props }) => {
-            const inline = !(props as any).hasOwnProperty("data-language");
             let content = children as string;
             if (
               Array.isArray(children) &&
@@ -89,8 +88,10 @@ export const MarkdownField = ({
               }
 
               const match = /language-(\w+)/.exec(className || "");
+              // Code is a block if it has a language class or contains newlines
+              const isBlock = Boolean(match) || content.includes("\n");
 
-              return !inline ? (
+              return isBlock ? (
                 <CodeTabsComponent
                   language={(match && match[1]) || ""}
                   code={String(content).replace(/\n$/, "")}
