@@ -281,8 +281,6 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
         mcpCategoryData[mcp.display_name] = mcp;
       });
 
-      console.log("mcpCategoryData", mcpCategoryData);
-
       return {
         ...data,
         MCP: mcpCategoryData,

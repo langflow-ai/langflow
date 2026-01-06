@@ -35,15 +35,25 @@ def temporary_sys_path(path: str):
 
 def _load_module_from_script(script_path: Path) -> Any:
     """Load a Python module from a script file."""
-    spec = importlib.util.spec_from_file_location("script_module", script_path)
+    # Use the script name as the module name to allow inspect to find it
+    module_name = script_path.stem
+    spec = importlib.util.spec_from_file_location(module_name, script_path)
     if spec is None or spec.loader is None:
         msg = f"Could not create module spec for '{script_path}'"
         raise ImportError(msg)
 
     module = importlib.util.module_from_spec(spec)
 
-    with temporary_sys_path(str(script_path.parent)):
-        spec.loader.exec_module(module)
+    # Register in sys.modules so inspect.getmodule works
+    sys.modules[module_name] = module
+
+    try:
+        with temporary_sys_path(str(script_path.parent)):
+            spec.loader.exec_module(module)
+    except Exception:
+        if module_name in sys.modules:
+            del sys.modules[module_name]
+        raise
 
     return module
 

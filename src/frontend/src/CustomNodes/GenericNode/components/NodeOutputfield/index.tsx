@@ -48,9 +48,8 @@ const _EyeIcon = memo(
     />
   ),
 );
-
 const SnowflakeIcon = memo(() => (
-  <IconComponent className="h-5 w-5 text-ice" name="Snowflake" />
+  <IconComponent className="!w-3 !h-3 text-ice" name="Snowflake" />
 ));
 
 const InspectButton = memo(
@@ -112,6 +111,7 @@ function NodeOutputField({
   data,
   title,
   id,
+  loopInputId,
   colors,
   tooltipTitle,
   showNode,
@@ -298,7 +298,7 @@ function NodeOutputField({
         <HandleRenderComponent
           left={true}
           tooltipTitle={tooltipTitle}
-          id={id}
+          id={loopInputId}
           title={title}
           nodeId={data.id}
           myData={myData}
@@ -312,7 +312,7 @@ function NodeOutputField({
     }
   }, [
     tooltipTitle,
-    id,
+    loopInputId,
     title,
     data.id,
     myData,
@@ -379,7 +379,7 @@ function NodeOutputField({
         </div>
 
         {data.node?.frozen && (
-          <div className="pr-1" data-testid="frozen-icon">
+          <div data-testid="frozen-icon">
             <SnowflakeIcon />
           </div>
         )}

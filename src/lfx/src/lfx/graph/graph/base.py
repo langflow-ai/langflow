@@ -1519,7 +1519,10 @@ class Graph:
         try:
             params = ""
             should_build = False
-            if not vertex.frozen:
+            # Loop components must always build, even when frozen,
+            # because they need to iterate through their data
+            is_loop_component = vertex.display_name == "Loop" or vertex.is_loop
+            if not vertex.frozen or is_loop_component:
                 should_build = True
             else:
                 # Check the cache for the vertex
@@ -2128,6 +2131,17 @@ class Graph:
     def get_vertex_ids(self) -> list[str]:
         """Get all vertex IDs in the graph."""
         return [vertex.id for vertex in self.vertices]
+
+    def get_terminal_nodes(self) -> list[str]:
+        """Returns vertex IDs that are terminal nodes (not source of any edge).
+
+        Terminal nodes are vertices that have no outgoing edges - they are not
+        listed as source_id in any of the graph's edges.
+
+        Returns:
+            list[str]: List of vertex IDs that are terminal nodes.
+        """
+        return [vertex.id for vertex in self.vertices if not self.successor_map.get(vertex.id, [])]
 
     def sort_vertices(
         self,

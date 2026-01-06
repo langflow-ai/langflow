@@ -73,7 +73,9 @@ class MCPComposerService(Service):
 
     def __init__(self):
         super().__init__()
-        self.project_composers: dict[str, dict] = {}  # project_id -> {process, host, port, sse_url, auth_config}
+        self.project_composers: dict[
+            str, dict
+        ] = {}  # project_id -> {process, host, port, streamable_http_url, auth_config}
         self._start_locks: dict[
             str, asyncio.Lock
         ] = {}  # Lock to prevent concurrent start operations for the same project
@@ -949,21 +951,24 @@ class MCPComposerService(Service):
     async def start_project_composer(
         self,
         project_id: str,
-        sse_url: str,
+        streamable_http_url: str,
         auth_config: dict[str, Any] | None,
         max_retries: int = 3,
         max_startup_checks: int = 40,
         startup_delay: float = 2.0,
+        *,
+        legacy_sse_url: str | None = None,
     ) -> None:
         """Start an MCP Composer instance for a specific project.
 
         Args:
             project_id: The project ID
-            sse_url: The SSE URL to connect to
+            streamable_http_url: Streamable HTTP endpoint for the remote Langflow MCP server
             auth_config: Authentication configuration
             max_retries: Maximum number of retry attempts (default: 3)
             max_startup_checks: Number of checks per retry attempt (default: 40)
             startup_delay: Delay between checks in seconds (default: 2.0)
+            legacy_sse_url: Optional legacy SSE URL used for backward compatibility
 
         Raises:
             MCPComposerError: Various specific errors if startup fails
@@ -994,7 +999,13 @@ class MCPComposerService(Service):
 
         try:
             await self._do_start_project_composer(
-                project_id, sse_url, auth_config, max_retries, max_startup_checks, startup_delay
+                project_id,
+                streamable_http_url,
+                auth_config,
+                max_retries,
+                max_startup_checks,
+                startup_delay,
+                legacy_sse_url=legacy_sse_url,
             )
         finally:
             # Clean up the task reference when done
@@ -1004,25 +1015,29 @@ class MCPComposerService(Service):
     async def _do_start_project_composer(
         self,
         project_id: str,
-        sse_url: str,
+        streamable_http_url: str,
         auth_config: dict[str, Any] | None,
         max_retries: int = 3,
         max_startup_checks: int = 40,
         startup_delay: float = 2.0,
+        *,
+        legacy_sse_url: str | None = None,
     ) -> None:
         """Internal method to start an MCP Composer instance.
 
         Args:
             project_id: The project ID
-            sse_url: The SSE URL to connect to
+            streamable_http_url: Streamable HTTP endpoint for the remote Langflow MCP server
             auth_config: Authentication configuration
             max_retries: Maximum number of retry attempts (default: 3)
             max_startup_checks: Number of checks per retry attempt (default: 40)
             startup_delay: Delay between checks in seconds (default: 2.0)
+            legacy_sse_url: Optional legacy SSE URL used for backward compatibility
 
         Raises:
             MCPComposerError: Various specific errors if startup fails
         """
+        legacy_sse_url = legacy_sse_url or f"{streamable_http_url.rstrip('/')}/sse"
         if not auth_config:
             no_auth_error_msg = "No auth settings provided"
             raise MCPComposerConfigError(no_auth_error_msg, project_id)
@@ -1126,10 +1141,11 @@ class MCPComposerService(Service):
                             project_id,
                             project_host,
                             project_port,
-                            sse_url,
+                            streamable_http_url,
                             auth_config,
                             max_startup_checks,
                             startup_delay,
+                            legacy_sse_url=legacy_sse_url,
                         )
 
                     except MCPComposerError as e:
@@ -1174,7 +1190,9 @@ class MCPComposerService(Service):
                             "process": process,
                             "host": project_host,
                             "port": project_port,
-                            "sse_url": sse_url,
+                            "streamable_http_url": streamable_http_url,
+                            "legacy_sse_url": legacy_sse_url,
+                            "sse_url": legacy_sse_url,
                             "auth_config": auth_config,
                         }
                         self._port_to_project[project_port] = project_id
@@ -1209,10 +1227,12 @@ class MCPComposerService(Service):
         project_id: str,
         host: str,
         port: int,
-        sse_url: str,
+        streamable_http_url: str,
         auth_config: dict[str, Any] | None = None,
         max_startup_checks: int = 40,
         startup_delay: float = 2.0,
+        *,
+        legacy_sse_url: str | None = None,
     ) -> subprocess.Popen:
         """Start the MCP Composer subprocess for a specific project.
 
@@ -1220,10 +1240,11 @@ class MCPComposerService(Service):
             project_id: The project ID
             host: Host to bind to
             port: Port to bind to
-            sse_url: SSE URL to connect to
+            streamable_http_url: Streamable HTTP endpoint to connect to
             auth_config: Authentication configuration
             max_startup_checks: Number of port binding checks (default: 40)
             startup_delay: Delay between checks in seconds (default: 2.0)
+            legacy_sse_url: Optional legacy SSE URL used for backward compatibility when required by tooling
 
         Returns:
             The started subprocess
@@ -1232,6 +1253,9 @@ class MCPComposerService(Service):
             MCPComposerStartupError: If startup fails
         """
         settings = get_settings_service().settings
+        # Some composer tooling still uses the --sse-url flag for backwards compatibility even in HTTP mode.
+        effective_legacy_sse_url = legacy_sse_url or f"{streamable_http_url.rstrip('/')}/sse"
+
         cmd = [
             "uvx",
             f"mcp-composer{settings.mcp_composer_version}",
@@ -1240,9 +1264,11 @@ class MCPComposerService(Service):
             "--host",
             host,
             "--mode",
-            "sse",
+            "http",
+            "--endpoint",
+            streamable_http_url,
             "--sse-url",
-            sse_url,
+            effective_legacy_sse_url,
             "--disable-composer-tools",
         ]
 
@@ -1266,7 +1292,7 @@ class MCPComposerService(Service):
                     "oauth_host": "OAUTH_HOST",
                     "oauth_port": "OAUTH_PORT",
                     "oauth_server_url": "OAUTH_SERVER_URL",
-                    "oauth_callback_path": "OAUTH_CALLBACK_PATH",
+                    "oauth_callback_url": "OAUTH_CALLBACK_URL",
                     "oauth_client_id": "OAUTH_CLIENT_ID",
                     "oauth_client_secret": "OAUTH_CLIENT_SECRET",  # pragma: allowlist secret
                     "oauth_auth_url": "OAUTH_AUTH_URL",
@@ -1274,6 +1300,12 @@ class MCPComposerService(Service):
                     "oauth_mcp_scope": "OAUTH_MCP_SCOPE",
                     "oauth_provider_scope": "OAUTH_PROVIDER_SCOPE",
                 }
+
+                # Backwards compatibility: if oauth_callback_url not set, try oauth_callback_path
+                if ("oauth_callback_url" not in auth_config or not auth_config.get("oauth_callback_url")) and (
+                    "oauth_callback_path" in auth_config and auth_config.get("oauth_callback_path")
+                ):
+                    auth_config["oauth_callback_url"] = auth_config["oauth_callback_path"]
 
                 # Add environment variables as command line arguments
                 # Only set non-empty values to avoid Pydantic validation errors

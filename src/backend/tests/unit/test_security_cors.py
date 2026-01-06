@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fastapi import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from lfx.services.settings.auth import JWTAlgorithm
 from lfx.services.settings.base import Settings
 
 
@@ -184,9 +185,9 @@ class TestCORSConfiguration:
         # Check that warning was logged about deprecation/security
         # The actual warning message is different from what we expected
         warning_calls = [str(call) for call in mock_logger.warning.call_args_list]
-        # We expect warnings about the insecure configuration
-        assert any("DEPRECATION" in str(call) or "SECURITY" in str(call) for call in warning_calls), (
-            f"Expected security warning but got: {warning_calls}"
+        # We expect warnings about the insecure configuration - check for the actual message
+        assert any("CORS" in str(call) and "permissive" in str(call) for call in warning_calls), (
+            f"Expected CORS security warning but got: {warning_calls}"
         )
 
         # Find CORS middleware and verify credentials are still allowed (current insecure behavior)
@@ -290,7 +291,7 @@ class TestRefreshTokenSecurity:
 
             with patch("langflow.services.auth.utils.get_settings_service") as mock_settings:
                 mock_settings.return_value.auth_settings.SECRET_KEY.get_secret_value.return_value = "secret"
-                mock_settings.return_value.auth_settings.ALGORITHM = "HS256"
+                mock_settings.return_value.auth_settings.ALGORITHM = JWTAlgorithm.HS256
                 mock_settings.return_value.auth_settings.ACCESS_TOKEN_EXPIRE_SECONDS = 3600
                 mock_settings.return_value.auth_settings.REFRESH_TOKEN_EXPIRE_SECONDS = 604800
 

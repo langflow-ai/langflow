@@ -319,9 +319,9 @@ class ALTKBaseAgentComponent(AgentComponent):
                 input_dict["chat_history"] = data_to_messages([m.to_data() for m in self.chat_history])
         if hasattr(lc_message, "content") and isinstance(lc_message.content, list):
             # ! Because the input has to be a string, we must pass the images in the chat_history
-
-            image_dicts = [item for item in lc_message.content if item.get("type") == "image"]
-            lc_message.content = [item for item in lc_message.content if item.get("type") != "image"]
+            # Support both "image" (legacy) and "image_url" (standard) types
+            image_dicts = [item for item in lc_message.content if item.get("type") in ("image", "image_url")]
+            lc_message.content = [item for item in lc_message.content if item.get("type") not in ("image", "image_url")]
 
             if "chat_history" not in input_dict:
                 input_dict["chat_history"] = []
@@ -330,6 +330,19 @@ class ALTKBaseAgentComponent(AgentComponent):
             else:
                 input_dict["chat_history"] = [HumanMessage(content=[image_dict]) for image_dict in image_dicts]
         input_dict["input"] = input_text
+
+        # Copied from agent.py
+        # Final safety check: ensure input is never empty (prevents Anthropic API errors)
+        current_input = input_dict.get("input", "")
+        if isinstance(current_input, list):
+            current_input = " ".join(map(str, current_input))
+        elif not isinstance(current_input, str):
+            current_input = str(current_input)
+        if not current_input.strip():
+            input_dict["input"] = "Continue the conversation."
+        else:
+            input_dict["input"] = current_input
+
         if hasattr(self, "graph"):
             session_id = self.graph.session_id
         elif hasattr(self, "_session_id"):

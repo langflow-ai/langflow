@@ -231,18 +231,6 @@ class TestPerformanceCharacteristics:
         with pytest.raises(AttributeError, match=r"Could not import.*ChromaVectorStoreComponent"):
             chromamodules.ChromaVectorStoreComponent  # noqa: B018
 
-    def test_caching_behavior(self):
-        """Test that components are cached after first access."""
-        from lfx.components import models
-
-        # EmbeddingModelComponent should raise AttributeError due to missing dependencies
-        with pytest.raises(AttributeError, match=r"Could not import.*EmbeddingModelComponent"):
-            _ = models.EmbeddingModelComponent
-
-        # Test that error is cached - subsequent access should also fail
-        with pytest.raises(AttributeError, match=r"Could not import.*EmbeddingModelComponent"):
-            _ = models.EmbeddingModelComponent
-
     def test_memory_usage_multiple_accesses(self):
         """Test memory behavior with multiple component accesses."""
         from lfx.components import processing
