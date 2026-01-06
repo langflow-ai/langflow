@@ -8,11 +8,13 @@ import orjson
 from lfx.log.logger import logger
 
 
-def list_templates(
+async def list_templates(
     query: str | None = None,
     fields: list[str] | None = None,
     tags: list[str] | None = None,
     starter_projects_path: str | Path | None = None,
+    add_flow_graph_representations: bool = False,
+    add_text_column: bool = False,
 ) -> list[dict[str, Any]]:
     """Search and load template data with configurable field selection.
 
@@ -89,7 +91,15 @@ def list_templates(
             else:
                 # Return all fields if none specified
                 filtered_data = template_data
-
+            if add_flow_graph_representations:
+                from langflow.agentic.utils.flow_graph import get_flow_graph_representations_from_dict
+                result = await get_flow_graph_representations_from_dict(template_data)
+                filtered_data["flow_graph_representations"] = {
+                    "ascii_graph": result.get("ascii_graph"),
+                    "text_repr": result.get("text_repr"),
+                }
+            if add_text_column:
+                filtered_data["text"] = "\n".join([f"{k}: {v}" for k, v in filtered_data.items() if k != "text"])
             results.append(filtered_data)
 
         except (json.JSONDecodeError, orjson.JSONDecodeError) as e:
@@ -190,3 +200,12 @@ def get_templates_count(starter_projects_path: str | Path | None = None) -> int:
     else:
         starter_projects_dir = Path(__file__).parent.parent.parent / "initial_setup" / "starter_projects"
     return len(list(starter_projects_dir.glob("*.json")))
+
+async def main():
+    data = await list_templates(add_flow_graph_representations=True)
+    with open("templates.json", "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(main())

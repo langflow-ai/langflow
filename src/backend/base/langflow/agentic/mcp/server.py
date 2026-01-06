@@ -47,7 +47,12 @@ DEFAULT_COMPONENT_FIELDS = ["name", "type", "display_name", "description"]
 
 
 @mcp.tool()
-def search_templates(query: str | None = None, fields: list[str] = DEFAULT_TEMPLATE_FIELDS) -> list[dict[str, Any]]:
+async def search_templates(
+    query: str | None = None,
+    fields: list[str] = DEFAULT_TEMPLATE_FIELDS,
+    add_flow_graph_representations: bool | None = None,
+    add_text_column: bool | None = None,
+) -> list[dict[str, Any]]:
     """Search and load template data with configurable field selection.
 
     Args:
@@ -84,7 +89,12 @@ def search_templates(query: str | None = None, fields: list[str] = DEFAULT_TEMPL
     # Set default fields if not provided
     if fields is None:
         fields = DEFAULT_TEMPLATE_FIELDS
-    return list_templates(query=query, fields=fields)
+    return await list_templates(
+        query=query,
+        fields=fields,
+        add_flow_graph_representations=add_flow_graph_representations,
+        add_text_column=add_text_column,
+    )
 
 
 @mcp.tool()
