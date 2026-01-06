@@ -13,47 +13,10 @@ even though it can access system resources. This prevents credential theft and d
 of server-side secrets.
 """
 
-import importlib
 import os
-from contextlib import contextmanager
-from unittest.mock import MagicMock, patch
 
 import pytest
 from lfx.custom.isolation import SecurityViolationError, execute_in_isolated_env
-
-
-@contextmanager
-def mock_isolation_settings(security_level="moderate"):
-    """Context manager to mock isolation settings service.
-
-    Args:
-        security_level: The security level to use ("moderate", "strict", or "disabled")
-    """
-    with patch("lfx.services.deps.get_settings_service") as mock_get_settings:
-        mock_settings_service = MagicMock()
-        mock_settings_service.settings.isolation_security_level = security_level
-        mock_get_settings.return_value = mock_settings_service
-
-        # Clear cache and reload modules to pick up new settings
-        import lfx.custom.isolation.config as config_module
-        import lfx.custom.isolation.execution as execution_module
-        import lfx.custom.isolation.isolation as isolation_module
-
-        config_module.clear_cache()
-        importlib.reload(config_module)
-        importlib.reload(isolation_module)
-        importlib.reload(execution_module)
-        importlib.reload(isolation_module)
-
-        yield
-
-        # Restore default
-        mock_settings_service.settings.isolation_security_level = "moderate"
-        config_module.clear_cache()
-        importlib.reload(config_module)
-        importlib.reload(isolation_module)
-        importlib.reload(execution_module)
-        importlib.reload(isolation_module)
 
 
 def test_isolation_blocks_dangerous_modules_by_default():

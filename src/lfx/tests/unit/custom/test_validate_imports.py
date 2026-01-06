@@ -8,43 +8,9 @@ Tests that validate_code() properly blocks dangerous imports at:
 - Default argument level (execution)
 """
 
-import importlib
-from contextlib import contextmanager
 from textwrap import dedent
-from unittest.mock import MagicMock, patch
 
 from lfx.custom.validate import validate_code
-
-
-@contextmanager
-def mock_isolation_settings(security_level="moderate"):
-    """Context manager to mock isolation settings service.
-
-    Args:
-        security_level: The security level to use ("moderate", "strict", or "disabled")
-    """
-    with patch("lfx.services.deps.get_settings_service") as mock_get_settings:
-        mock_settings_service = MagicMock()
-        mock_settings_service.settings.isolation_security_level = security_level
-        mock_get_settings.return_value = mock_settings_service
-
-        # Clear cache and reload modules to pick up new settings
-        import lfx.custom.isolation.config as config_module
-        import lfx.custom.isolation.isolation as isolation_module
-        import lfx.custom.validate as validate_module
-
-        config_module.clear_cache()
-        importlib.reload(config_module)
-        importlib.reload(isolation_module)
-        importlib.reload(validate_module)
-
-        yield
-
-        # Restore default
-        config_module.clear_cache()
-        importlib.reload(config_module)
-        importlib.reload(isolation_module)
-        importlib.reload(validate_module)
 
 
 class TestModuleLevelImports:

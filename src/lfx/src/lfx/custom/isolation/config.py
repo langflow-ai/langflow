@@ -12,7 +12,7 @@ class SecurityViolationError(Exception):
 
 
 class SecurityLevel(str, Enum):
-    """Security levels for isolation."""
+    """Security levels for builtins and modules."""
 
     MODERATE = "moderate"  # Default: Allows common operations, blocks system access
     STRICT = "strict"  # Maximum security: Blocks most operations

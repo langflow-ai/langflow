@@ -90,7 +90,7 @@ def create_isolated_builtins() -> dict[str, Any]:
                 level_name = get_security_level().value.upper()
                 msg = (
                     f"Builtin '{name}' is blocked by security level '{level_name}'. "
-                    f"Configure isolation_security_level setting to change this."
+                    f"Configure isolation_security_level setting to change this"
                 )
                 raise SecurityViolationError(msg)
             if name == "__builtins__":

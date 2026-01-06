@@ -4,48 +4,11 @@ These tests verify that isolation is enforced when code is executed at runtime
 via create_class() and execute_function(), not just during validation.
 """
 
-import importlib
-from contextlib import contextmanager
 from textwrap import dedent
-from unittest.mock import MagicMock, patch
 
 import pytest
 from lfx.custom.isolation import SecurityViolationError
 from lfx.custom.validate import create_class, execute_function
-
-
-@contextmanager
-def mock_isolation_settings(security_level="moderate"):
-    """Context manager to mock isolation settings service.
-
-    Args:
-        security_level: The security level to use ("moderate", "strict", or "disabled")
-    """
-    with patch("lfx.services.deps.get_settings_service") as mock_get_settings:
-        mock_settings_service = MagicMock()
-        mock_settings_service.settings.isolation_security_level = security_level
-        mock_get_settings.return_value = mock_settings_service
-
-        # Clear cache and reload modules to pick up new settings
-        import lfx.custom.isolation.config as config_module
-        import lfx.custom.isolation.execution as execution_module
-        import lfx.custom.isolation.isolation as isolation_module
-        import lfx.custom.validate as validate_module
-
-        config_module.clear_cache()
-        importlib.reload(config_module)
-        importlib.reload(isolation_module)
-        importlib.reload(execution_module)
-        importlib.reload(validate_module)
-
-        yield
-
-        # Restore default
-        config_module.clear_cache()
-        importlib.reload(config_module)
-        importlib.reload(isolation_module)
-        importlib.reload(execution_module)
-        importlib.reload(validate_module)
 
 
 class TestRuntimeIsolationCreateClass:
