@@ -100,7 +100,7 @@ def validate_code(code):
     # CRITICAL: Transform AST to block dangerous dunder access before compilation
     # This prevents escapes like: ().__class__.__bases__[0].__subclasses__()[XX].__init__.__globals__['os']
     transformer = DunderAccessTransformer()
-    
+
     for node in tree.body:
         if isinstance(node, ast.FunctionDef):
             # Transform the function node's AST to block dangerous dunder access
@@ -227,7 +227,7 @@ def execute_function(code, function_name, *args, **kwargs):
     )
     function_code.parent = None
     code_obj = compile(ast.Module(body=[function_code], type_ignores=[]), "<string>", "exec")
-    
+
     try:
         # Use isolated execution environment for security
         # execute_in_isolated_env merges results into exec_globals

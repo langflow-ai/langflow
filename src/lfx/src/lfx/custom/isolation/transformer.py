@@ -1,9 +1,6 @@
 """AST transformer to block dangerous dunder method access."""
 
 import ast
-from typing import Any
-
-from lfx.custom.isolation.config import SecurityViolationError
 
 # Dangerous dunder methods that enable isolation escapes
 # These allow access to __globals__, __subclasses__, etc. which can be used to escape
@@ -23,10 +20,10 @@ DANGEROUS_DUNDER_ATTRS: set[str] = {
 
 class DunderAccessTransformer(ast.NodeTransformer):
     """AST transformer that blocks dangerous dunder method access.
-    
+
     This prevents classic Python isolation escapes like:
     ().__class__.__bases__[0].__subclasses__()[XX].__init__.__globals__['os']
-    
+
     The transformer rewrites dangerous attribute access (like obj.__class__) into
     calls to getattr() which we can intercept and block.
     """
@@ -46,5 +43,3 @@ class DunderAccessTransformer(ast.NodeTransformer):
             )
         # Continue visiting child nodes
         return self.generic_visit(node)
-
-

@@ -375,7 +375,7 @@ def test():
 
 def test_sandbox_blocks_import_builtins_in_validation_context():
     """Test that `import builtins` is blocked when isolated_builtins_dict is None (validation context).
-    
+
     When validate_code() calls create_isolated_import() without arguments, it's in
     validation-only mode. In this mode, `import builtins` should be blocked with an error
     rather than returning the isolated version (since isolated builtins aren't created).
@@ -392,7 +392,7 @@ def test_sandbox_blocks_import_builtins_in_validation_context():
 
 def test_sandbox_prevents_importlib_bypass():
     """Test that importlib cannot be used to bypass __import__ hook and get real builtins.
-    
+
     CRITICAL SECURITY: importlib.import_module("builtins") would bypass our __import__ hook
     and get the real builtins module. By blocking importlib entirely, we prevent this bypass.
     """
@@ -417,15 +417,16 @@ def test():
 
 def test_sandbox_blocks_dunder_method_escape():
     """Test that sandbox blocks classic Python dunder method escape attacks.
-    
+
     CRITICAL SECURITY: Prevents escapes like:
     ().__class__.__bases__[0].__subclasses__()[XX].__init__.__globals__['os']
-    
+
     The AST transformer converts dangerous dunder access (obj.__class__) to
     getattr(obj, '__class__') which we can intercept and block.
     """
-    from lfx.custom.isolation import SecurityViolationError, execute_in_isolated_env, DunderAccessTransformer
     import ast
+
+    from lfx.custom.isolation import DunderAccessTransformer, SecurityViolationError, execute_in_isolated_env
 
     # Test the classic escape attack
     code_str = """
@@ -434,45 +435,46 @@ def test():
     os = ().__class__.__bases__[0].__subclasses__()[160].__init__.__globals__['os']
     return os.getcwd()
 """
-    
+
     # Parse and transform the AST
     tree = ast.parse(code_str)
     transformer = DunderAccessTransformer()
     transformed = transformer.visit(tree)
     ast.fix_missing_locations(transformed)
-    
+
     # Compile and execute
     code_obj = compile(transformed, "<test>", "exec")
     exec_globals = {}
-    
+
     # Should raise SecurityViolationError when function is called
     execute_in_isolated_env(code_obj, exec_globals)
-    
+
     # Try to call the function - should raise SecurityViolationError
     test_func = exec_globals.get("test")
     assert test_func is not None, "Function should be defined"
-    
+
     with pytest.raises(SecurityViolationError, match="dunder attribute"):
         test_func()
 
 
 def test_sandbox_blocks_individual_dunder_access():
     """Test that individual dangerous dunder attributes are blocked."""
-    from lfx.custom.isolation import SecurityViolationError, execute_in_isolated_env, DunderAccessTransformer
     import ast
 
+    from lfx.custom.isolation import DunderAccessTransformer, SecurityViolationError, execute_in_isolated_env
+
     dangerous_attrs = ["__class__", "__bases__", "__subclasses__", "__globals__", "__init__"]
-    
+
     for attr in dangerous_attrs:
         code_str = f"result = ().{attr}"
         tree = ast.parse(code_str)
         transformer = DunderAccessTransformer()
         transformed = transformer.visit(tree)
         ast.fix_missing_locations(transformed)
-        
+
         code_obj = compile(transformed, "<test>", "exec")
         exec_globals = {}
-        
+
         # Should raise SecurityViolationError
         with pytest.raises(SecurityViolationError, match="dunder attribute"):
             execute_in_isolated_env(code_obj, exec_globals)

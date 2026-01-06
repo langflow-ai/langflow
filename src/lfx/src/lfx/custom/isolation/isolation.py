@@ -76,7 +76,7 @@ def create_isolated_builtins() -> dict[str, Any]:
     #    This is returned when code does `import builtins` (handled by isolated_import)
     class IsolatedBuiltinsModule:
         """Fake builtins module that prevents escape via `import builtins`.
-        
+
         When code executes `import builtins`, Python's import system calls __import__("builtins").
         Our isolated_import function intercepts this and returns an instance of this class
         instead of the real builtins module. This prevents code from accessing dangerous
@@ -124,12 +124,13 @@ def create_isolated_import(isolated_builtins_dict: dict[str, Any] | None = None)
     Returns:
         A function that performs isolated imports (replaces Python's __import__)
     """
+
     def isolated_import(name: str, globals=None, locals=None, fromlist=(), level=0):  # noqa: A002, ARG001
         """Import function that blocks dangerous modules by default.
-        
+
         This function replaces Python's built-in __import__ to prevent isolation escapes.
         When code executes `import X`, Python calls __import__("X"), which calls this function.
-        
+
         Note: The globals, locals, fromlist, and level parameters are required to match
         Python's __import__ signature, but we don't use them. Python's import system will
         call this function with all these arguments, so we must accept them for compatibility.
@@ -167,12 +168,10 @@ def create_isolated_import(isolated_builtins_dict: dict[str, Any] | None = None)
                 f"Configure isolation_security_level setting to change this."
             )
             raise SecurityViolationError(msg)
-        
+
         # Allow all other modules (whitelist approach)
         # This allows users to import legitimate third-party libraries (AI libraries, utilities, etc.)
         # while still blocking dangerous system-level operations.
         return importlib.import_module(name)
 
     return isolated_import
-
-

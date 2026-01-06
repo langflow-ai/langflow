@@ -363,7 +363,6 @@ class Settings(BaseSettings):
     - "disabled": No restrictions (use only in trusted environments)
     """
 
-
     @field_validator("cors_origins", mode="before")
     @classmethod
     def validate_cors_origins(cls, value):

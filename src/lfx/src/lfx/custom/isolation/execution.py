@@ -71,35 +71,34 @@ def execute_in_isolated_env(code_obj: Any, exec_globals: dict[str, Any]) -> None
 
     # CRITICAL: Block dangerous dunder access to prevent isolation escapes
     # Attack: ().__class__.__bases__[0].__subclasses__()[XX].__init__.__globals__['os']
-    # 
+    #
     # We intercept attribute access by wrapping getattr() and hasattr().
     # Note: Direct attribute access (obj.__class__) bypasses our wrappers, but
     # the AST transformer in validate_code() converts such access to getattr() calls.
     original_getattr = builtins.getattr
-    
+
     def safe_getattr(obj: Any, name: str, default: Any = None) -> Any:
         """Wrapper for getattr that blocks dangerous dunder access."""
         if name in DANGEROUS_DUNDER_ATTRS:
             msg = (
-                f"Access to dunder attribute '{name}' is blocked for security. "
-                f"This prevents isolation escape attacks."
+                f"Access to dunder attribute '{name}' is blocked for security. This prevents isolation escape attacks."
             )
             raise SecurityViolationError(msg)
         return original_getattr(obj, name, default)
-    
+
     # Replace getattr in isolated builtins (catches getattr() calls)
     isolated_builtins["getattr"] = safe_getattr
-    
+
     # Also wrap hasattr to prevent checking for dangerous attributes
     original_hasattr = builtins.hasattr
-    
+
     def safe_hasattr(obj: Any, name: str) -> bool:
         """Wrapper for hasattr that blocks checking dangerous dunder attributes."""
         if name in DANGEROUS_DUNDER_ATTRS:
             # Return False to prevent discovery, but this won't block direct access
             return False
         return original_hasattr(obj, name)
-    
+
     isolated_builtins["hasattr"] = safe_hasattr
 
     try:
@@ -136,5 +135,3 @@ def execute_in_isolated_env(code_obj: Any, exec_globals: dict[str, Any]) -> None
         # Re-raise all other exceptions as-is (validation errors, syntax errors, etc.)
         # These are expected and should be reported to the user
         raise
-
-

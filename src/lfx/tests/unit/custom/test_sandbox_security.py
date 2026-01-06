@@ -19,14 +19,13 @@ from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
 
 import pytest
-from lfx.custom import isolation as isolation_module
 from lfx.custom.isolation import SecurityViolationError, execute_in_isolated_env
 
 
 @contextmanager
 def mock_isolation_settings(security_level="moderate"):
     """Context manager to mock isolation settings service.
-    
+
     Args:
         security_level: The security level to use ("moderate", "strict", or "disabled")
     """
@@ -34,19 +33,20 @@ def mock_isolation_settings(security_level="moderate"):
         mock_settings_service = MagicMock()
         mock_settings_service.settings.isolation_security_level = security_level
         mock_get_settings.return_value = mock_settings_service
-        
+
         # Clear cache and reload modules to pick up new settings
         import lfx.custom.isolation.config as config_module
-        import lfx.custom.isolation.isolation as isolation_module
         import lfx.custom.isolation.execution as execution_module
+        import lfx.custom.isolation.isolation as isolation_module
+
         config_module.clear_cache()
         importlib.reload(config_module)
         importlib.reload(isolation_module)
         importlib.reload(execution_module)
         importlib.reload(isolation_module)
-        
+
         yield
-        
+
         # Restore default
         mock_settings_service.settings.isolation_security_level = "moderate"
         config_module.clear_cache()
@@ -399,12 +399,14 @@ def test_moderate_mode_blocks_critical_operations():
     """Test that MODERATE mode still blocks critical security risks."""
     # Ensure we're in MODERATE mode (default)
     import os
+
     if "LANGFLOW_ISOLATION_SECURITY_LEVEL" in os.environ:
         del os.environ["LANGFLOW_ISOLATION_SECURITY_LEVEL"]
     # Re-import to ensure we're using the current module state (in case previous tests reloaded it)
     import lfx.custom.isolation.config as config_module
-    import lfx.custom.isolation.isolation as isolation_module
     import lfx.custom.isolation.execution as execution_module
+    import lfx.custom.isolation.isolation as isolation_module
+
     importlib.reload(config_module)
     importlib.reload(isolation_module)
     importlib.reload(execution_module)
@@ -472,8 +474,10 @@ def test_strict_mode_blocks_all_dangerous_operations():
     # Set STRICT mode
     with mock_isolation_settings("strict"):
         import lfx.custom.isolation.config as config_module
+
         SecurityViolationErrorStrict = config_module.SecurityViolationError
         from lfx.custom.isolation import execute_in_isolated_env as execute_in_isolated_env_strict
+
         # Test that requests is blocked in STRICT mode
         code1 = """
 import requests
