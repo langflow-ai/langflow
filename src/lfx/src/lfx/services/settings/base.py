@@ -351,6 +351,18 @@ class Settings(BaseSettings):
     Note: This setting only takes effect when ssrf_protection_enabled is True.
     When protection is disabled, all hosts are allowed regardless of this setting."""
 
+    # Code Validation Security
+    isolation_security_level: str = "moderate"
+    """Security level for code isolation during validation.
+    TODO: Add for runtime execution.
+    
+    Controls which operations are blocked when executing user-provided code:
+    - "moderate" (default): Allows common operations (HTTP requests, async, temp files)
+      while blocking direct system access (os, sys, subprocess, eval, exec, etc.)
+    - "strict": Blocks all potentially dangerous operations for maximum security
+    - "disabled": No restrictions (use only in trusted environments)
+    """
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def validate_cors_origins(cls, value):

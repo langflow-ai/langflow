@@ -67,11 +67,12 @@ def hello_world():
     def test_code_with_valid_imports(self):
         """Test validation passes for code with valid imports."""
         code = """
-import os
-import sys
+from typing import List, Optional
+import json
+import math
 
-def get_path():
-    return os.path.join(sys.path[0], "test")
+def process_data(items: List[str]) -> Optional[str]:
+    return json.dumps({"count": math.sqrt(len(items))})
 """
         result = validate_code(code)
         assert result["imports"]["errors"] == []
@@ -132,7 +133,10 @@ def test_func():
     return json.dumps({"path": os.getcwd()})
 """
         result = validate_code(code)
-        assert len(result["imports"]["errors"]) == 2
+        # Should have 4 errors: 2 blocked modules (os, sys) + 2 missing modules (nonexistent1, nonexistent2)
+        assert len(result["imports"]["errors"]) == 4
+        assert any("os" in err.lower() and "blocked" in err.lower() for err in result["imports"]["errors"])
+        assert any("sys" in err.lower() and "blocked" in err.lower() for err in result["imports"]["errors"])
         assert any("nonexistent1" in err for err in result["imports"]["errors"])
         assert any("nonexistent2" in err for err in result["imports"]["errors"])
 
