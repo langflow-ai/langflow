@@ -151,12 +151,14 @@ def test_int_input_default_value():
 
 
 def test_int_input_null_validation():
-    """Test that IntInput rejects null-like values."""
-    with pytest.raises(ValidationError, match="cannot be null or empty"):
-        IntInput(name="null_int", value=None)
+    """Test that IntInput converts null-like values to 0."""
+    # None should be converted to 0
+    int_input_none = IntInput(name="null_int", value=None)
+    assert int_input_none.value == 0
 
-    with pytest.raises(ValidationError, match="cannot be null or empty"):
-        IntInput(name="empty_int", value="")
+    # Empty string should be converted to 0
+    int_input_empty = IntInput(name="empty_int", value="")
+    assert int_input_empty.value == 0
 
 
 def test_int_input_invalid():

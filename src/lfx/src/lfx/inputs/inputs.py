@@ -483,15 +483,14 @@ class IntInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixi
             info: Additional information about the input.
 
         Returns:
-            The processed value.
+            The processed value. Null-like values (None, empty string) are converted to 0.
 
         Raises:
-            ValueError: If the value is not of a valid type or if the input is missing a required key.
+            TypeError: If the value is not of a valid type.
         """
-        # Check for null-like values (None, empty string, etc.)
+        # Auto-convert null-like values to 0 for backwards compatibility
         if v is None or v == "":
-            msg = f"Value for input {info.data.get('name')} cannot be null or empty."
-            raise ValueError(msg)
+            return 0
         if not isinstance(v, int | float):
             msg = f"Invalid value type {type(v)} for input {info.data.get('name')}."
             raise TypeError(msg)
