@@ -89,10 +89,15 @@ jobs:
             arch: amd64
             runner: ubuntu-latest
             python-version: "3.12"
-          # macOS-13 Brown out
-          # TODO add macos-15-intel
-          # https://github.com/actions/runner-images/issues/13046
-          # https://github.com/godot-rust/gdext/pull/1402
+          # macOS AMD64
+          - os: macos
+            arch: amd64
+            runner: macos-latest-large
+            python-version: "3.10"
+          - os: macos
+            arch: amd64
+            runner: macos-latest-large
+            python-version: "3.12"
           # macOS ARM64 (Apple Silicon)
           - os: macos
             arch: arm64
@@ -387,15 +392,17 @@ jobs:
             arch: amd64
             runner: ubuntu-latest
             python-version: "3.13"
-          # macOS-13 Brown out
-          # TODO add macos-15-intel
-          - os: macos
-            arch: arm64
-            runner: macos-latest
-            python-version: "3.13"
           - os: windows
             arch: amd64
             runner: windows-latest
+            python-version: "3.13"
+          - os: macos
+            arch: amd64
+            runner: macos-latest-large
+            python-version: "3.13"
+          - os: macos
+            arch: arm64
+            runner: macos-latest
             python-version: "3.13"
 
     steps:
