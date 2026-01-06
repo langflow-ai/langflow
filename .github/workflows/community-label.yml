@@ -18,7 +18,8 @@ jobs:
             const org = context.repo.owner;
 
             // Check if user is a member of the organization
-            let isOrgMember = false;
+            // null = unable to determine, true = member, false = confirmed non-member
+            let isOrgMember = null;
             try {
               await github.rest.orgs.checkMembershipForUser({
                 org: org,
@@ -26,11 +27,20 @@ jobs:
               });
               isOrgMember = true;
             } catch (error) {
-              // 404 means user is not a member, any other error we assume not a member
-              isOrgMember = false;
+              const status = error.status || error.response?.status;
+              if (status === 404) {
+                // 404 means user is confirmed not a member
+                isOrgMember = false;
+              } else {
+                // For other errors (network, 403, 429, 5xx), we cannot determine membership
+                // Log the error and skip labeling to avoid false positives
+                console.log(`Unable to determine org membership for ${author}: ${error.message} (status: ${status})`);
+                isOrgMember = null;
+              }
             }
 
-            if (!isOrgMember) {
+            // Only add community label if we confirmed the user is NOT an org member
+            if (isOrgMember === false) {
               const pullRequestNumber = context.payload.pull_request.number;
               await github.rest.issues.addLabels({
                 owner: context.repo.owner,
