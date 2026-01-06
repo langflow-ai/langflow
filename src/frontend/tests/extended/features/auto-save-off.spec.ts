@@ -77,7 +77,7 @@ test(
       .first();
     await newFlowDiv.click();
 
-    await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+    await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 5000,
     });
 
@@ -177,7 +177,7 @@ test(
       .first();
     await newFlow2.click();
 
-    await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+    await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 5000,
     });
 
