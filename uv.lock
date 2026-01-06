@@ -5530,7 +5530,7 @@ wheels = [
 
 [[package]]
 name = "langflow"
-version = "1.7.0"
+version = "1.7.1"
 source = { editable = "." }
 dependencies = [
     { name = "agent-lifecycle-toolkit" },
@@ -5935,7 +5935,7 @@ dev = [
 
 [[package]]
 name = "langflow-base"
-version = "0.7.0"
+version = "0.7.1"
 source = { editable = "src/backend/base" }
 dependencies = [
     { name = "aiofile" },
@@ -6394,7 +6394,7 @@ wheels = [
 
 [[package]]
 name = "lfx"
-version = "0.2.0"
+version = "0.2.1"
 source = { editable = "src/lfx" }
 dependencies = [
     { name = "aiofile" },
@@ -6402,6 +6402,7 @@ dependencies = [
     { name = "asyncer" },
     { name = "cachetools" },
     { name = "chardet" },
+    { name = "cryptography" },
     { name = "defusedxml" },
     { name = "docstring-parser" },
     { name = "emoji" },
@@ -6443,6 +6444,12 @@ dev = [
     { name = "pytest-cov" },
     { name = "ruff" },
 ]
+integration = [
+    { name = "beautifulsoup4" },
+    { name = "langchain-community" },
+    { name = "langchain-openai" },
+    { name = "lxml" },
+]
 
 [package.metadata]
 requires-dist = [
@@ -6451,6 +6458,7 @@ requires-dist = [
     { name = "asyncer", specifier = ">=0.0.8,<1.0.0" },
     { name = "cachetools", specifier = ">=6.0.0" },
     { name = "chardet", specifier = ">=5.2.0,<6.0.0" },
+    { name = "cryptography", specifier = ">=43.0.0" },
     { name = "defusedxml", specifier = ">=0.7.1,<1.0.0" },
     { name = "docstring-parser", specifier = ">=0.16,<1.0.0" },
     { name = "emoji", specifier = ">=2.14.1,<3.0.0" },
@@ -6491,6 +6499,12 @@ dev = [
     { name = "pytest-asyncio", specifier = ">=0.26.0" },
     { name = "pytest-cov", specifier = ">=7.0.0" },
     { name = "ruff", specifier = ">=0.9.10" },
+]
+integration = [
+    { name = "beautifulsoup4", specifier = ">=4.12.0" },
+    { name = "langchain-community", specifier = ">=0.3.0,<1.0.0" },
+    { name = "langchain-openai", specifier = ">=0.3.0,<1.0.0" },
+    { name = "lxml", specifier = ">=5.0.0" },
 ]
 
 [[package]]
