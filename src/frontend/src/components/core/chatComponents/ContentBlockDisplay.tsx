@@ -19,6 +19,7 @@ interface ContentBlockDisplayProps {
   state?: string;
   chatId: string;
   playgroundPage?: boolean;
+  hideHeader?: boolean;
 }
 
 export function ContentBlockDisplay({
@@ -27,28 +28,45 @@ export function ContentBlockDisplay({
   state,
   chatId,
   playgroundPage,
+  hideHeader = false,
 }: ContentBlockDisplayProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [openTools, setOpenTools] = useState<Record<string, boolean>>({});
+
+  const toolItems = contentBlocks.flatMap((block, blockIndex) =>
+    block.contents
+      .filter((content) => content.type === "tool_use")
+      .map((content, contentIndex) => ({
+        content,
+        blockIndex,
+        contentIndex,
+      })),
+  );
+
+  if (!toolItems.length) {
+    return null;
+  }
 
   const totalDuration = isLoading
     ? undefined
-    : contentBlocks[0]?.contents.reduce((acc, curr) => {
-        return acc + (curr.duration || 0);
-      }, 0);
+    : toolItems.reduce((acc, { content }) => acc + (content.duration || 0), 0);
 
   if (!contentBlocks?.length) {
     return null;
   }
 
-  const lastContent =
-    contentBlocks[0]?.contents[contentBlocks[0]?.contents.length - 1];
-  const headerIcon =
-    state === "partial" ? lastContent?.header?.icon || "Bot" : "Check";
+  const formatTime = (ms: number) => {
+    const seconds = ms / 1000;
+    if (seconds < 60) return `${seconds.toFixed(1)}s`;
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}m ${remainingSeconds.toFixed(0)}s`;
+  };
 
-  const headerTitle =
-    state === "partial" ? (lastContent?.header?.title ?? "Steps") : "Finished";
-  // show the block title only if state === "partial"
-  const showBlockTitle = state === "partial";
+  const headerIcon = state === "partial" ? "Bot" : "Check";
+  const headerTitle = state === "partial" ? "Steps" : "Finished";
+  // No block title in flattened tool list
+  const showBlockTitle = false;
 
   return (
     <div className="relative py-3">
@@ -74,55 +92,43 @@ export function ContentBlockDisplay({
             }}
           />
         )}
-        <div
-          className="flex cursor-pointer items-center justify-between p-4"
-          onClick={() => setIsExpanded(!isExpanded)}
-        >
-          <div className="flex items-center gap-2 align-baseline">
-            {headerIcon && (
-              <span data-testid="header-icon">
-                <ForwardedIconComponent
-                  name={headerIcon}
-                  className={cn(
-                    "h-4 w-4",
-                    state !== "partial" && "text-accent-emerald-foreground",
-                  )}
-                  strokeWidth={1.5}
-                />
-              </span>
-            )}
-            <div className="relative h-6 overflow-hidden">
+        {!hideHeader && (
+          <div className="flex items-center justify-between p-4">
+            <div className="flex items-center gap-2 align-baseline">
+              {headerIcon && (
+                <span data-testid="header-icon">
+                  <ForwardedIconComponent
+                    name={headerIcon}
+                    className={cn(
+                      "h-4 w-4",
+                      state !== "partial" && "text-accent-emerald-foreground",
+                    )}
+                    strokeWidth={1.5}
+                  />
+                </span>
+              )}
+              <p className="m-0 flex items-center gap-2 text-sm font-semibold text-primary">
+                {headerTitle}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {!playgroundPage && (
+                <DurationDisplay duration={totalDuration} chatId={chatId} />
+              )}
               <motion.div
-                key={headerTitle}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.2 }}
+                animate={{ rotate: isExpanded ? 180 : 0 }}
+                transition={{ duration: 0.2, ease: "easeInOut" }}
+                onClick={() => setIsExpanded((prev) => !prev)}
+                className="cursor-pointer"
               >
-                <Markdown
-                  remarkPlugins={[remarkGfm]}
-                  rehypePlugins={[rehypeMathjax]}
-                  className="inline-block w-fit max-w-full text-sm font-semibold text-primary"
-                >
-                  {headerTitle}
-                </Markdown>
+                <ChevronDown className="h-5 w-5" />
               </motion.div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            {!playgroundPage && (
-              <DurationDisplay duration={totalDuration} chatId={chatId} />
-            )}
-            <motion.div
-              animate={{ rotate: isExpanded ? 180 : 0 }}
-              transition={{ duration: 0.2, ease: "easeInOut" }}
-            >
-              <ChevronDown className="h-5 w-5" />
-            </motion.div>
-          </div>
-        </div>
+        )}
 
         <AnimatePresence initial={false}>
-          {isExpanded && (
+          {(hideHeader || isExpanded) && (
             <motion.div
               initial={{ height: 0, opacity: 0 }}
               animate={{
@@ -143,73 +149,92 @@ export function ContentBlockDisplay({
               }}
               className="relative border-t border-border"
             >
-              {contentBlocks.map((block, index) => (
-                <motion.div
-                  key={`${block.title}-${index}`}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.2, delay: 0.1 }}
-                  className={cn(
-                    "relative",
-                    index !== contentBlocks.length - 1 &&
-                      "border-b border-border",
-                  )}
-                >
-                  <AnimatePresence>
-                    {showBlockTitle && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0, marginBottom: 0 }}
-                        animate={{
-                          opacity: 1,
-                          height: "auto",
-                          marginBottom: 8,
-                        }}
-                        exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="overflow-hidden pl-4 pt-[16px] font-medium"
+              {toolItems.map(
+                ({ content, blockIndex, contentIndex }, flatIdx) => {
+                  const toolKey = `${blockIndex}-${contentIndex}`;
+                  const isToolOpen = openTools[toolKey] ?? false;
+                  const toolTitle =
+                    content.header?.title ||
+                    content.name ||
+                    `Tool ${flatIdx + 1}`;
+                  const toolIcon = content.header?.icon || "Hammer";
+                  const toolDuration = content.duration || 0;
+
+                  return (
+                    <motion.div
+                      key={toolKey}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.2, delay: 0.05 }}
+                      className="relative border-b border-border last:border-b-0"
+                    >
+                      <div
+                        className="flex cursor-pointer items-center justify-between px-4 py-3"
+                        onClick={() =>
+                          setOpenTools((prev) => ({
+                            ...prev,
+                            [toolKey]: !(prev[toolKey] ?? false),
+                          }))
+                        }
                       >
-                        <Markdown
-                          className="text-sm font-semibold text-foreground"
-                          remarkPlugins={[remarkGfm]}
-                          rehypePlugins={[rehypeMathjax]}
-                          components={{
-                            p({ node, ...props }) {
-                              return (
-                                <span className="inline">{props.children}</span>
-                              );
-                            },
-                          }}
+                        <div className="flex items-center gap-2">
+                          <ForwardedIconComponent
+                            name={toolIcon}
+                            className="h-4 w-4 text-primary"
+                            strokeWidth={1.5}
+                          />
+                          <Markdown
+                            className="text-sm font-semibold text-foreground"
+                            remarkPlugins={[remarkGfm]}
+                            rehypePlugins={[rehypeMathjax]}
+                          >
+                            {toolTitle}
+                          </Markdown>
+                          <span className="text-xs text-emerald-500">
+                            {formatTime(toolDuration)}
+                          </span>
+                        </div>
+                        <motion.div
+                          animate={{ rotate: isToolOpen ? 180 : 0 }}
+                          transition={{ duration: 0.2, ease: "easeInOut" }}
                         >
-                          {block.title}
-                        </Markdown>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                  <div className="text-sm text-muted-foreground">
-                    {block.contents.map((content, index) => (
-                      <motion.div key={index}>
-                        <AnimatePresence>
-                          {index !== 0 && (
-                            <motion.div
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              exit={{ opacity: 0 }}
-                              transition={{ duration: 0.2 }}
-                            >
-                              <Separator orientation="horizontal" />
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                        <ContentDisplay
-                          playgroundPage={playgroundPage}
-                          content={content}
-                          chatId={`${chatId}-${index}`}
-                        />
-                      </motion.div>
-                    ))}
-                  </div>
-                </motion.div>
-              ))}
+                          <ChevronDown className="h-4 w-4" />
+                        </motion.div>
+                      </div>
+                      <AnimatePresence>
+                        {isToolOpen && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{
+                              height: "auto",
+                              opacity: 1,
+                              transition: {
+                                height: { duration: 0.2 },
+                                opacity: { duration: 0.1, delay: 0.1 },
+                              },
+                            }}
+                            exit={{
+                              height: 0,
+                              opacity: 0,
+                              transition: {
+                                height: { duration: 0.2 },
+                                opacity: { duration: 0.1 },
+                              },
+                            }}
+                            className="text-sm text-muted-foreground px-4 pb-4 max-h-96 overflow-auto"
+                          >
+                            <ContentDisplay
+                              playgroundPage={playgroundPage}
+                              content={content}
+                              chatId={`${chatId}-${blockIndex}-${contentIndex}`}
+                            />
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
+                  );
+                },
+              )}
             </motion.div>
           )}
         </AnimatePresence>
