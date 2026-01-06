@@ -18,56 +18,56 @@ from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
 
-# Configuration for operation-specific input fields
-OPERATION_FIELDS: dict[str, list[str]] = {
-    "Text to DataFrame": ["table_separator", "has_header"],
-    "Word Count": ["count_words", "count_characters", "count_lines"],
-    "Case Conversion": ["case_type"],
-    "Text Replace": ["search_pattern", "replacement_text", "use_regex"],
-    "Text Extract": ["extract_pattern", "max_matches"],
-    "Text Head": ["head_characters"],
-    "Text Tail": ["tail_characters"],
-    "Text Strip": ["strip_mode", "strip_characters"],
-    "Text Join": ["text_input_2"],
-    "Text Clean": ["remove_extra_spaces", "remove_special_chars", "remove_empty_lines"],
-}
-
-ALL_DYNAMIC_FIELDS = [
-    "table_separator",
-    "has_header",
-    "count_words",
-    "count_characters",
-    "count_lines",
-    "case_type",
-    "search_pattern",
-    "replacement_text",
-    "use_regex",
-    "extract_pattern",
-    "max_matches",
-    "head_characters",
-    "tail_characters",
-    "strip_mode",
-    "strip_characters",
-    "text_input_2",
-    "remove_extra_spaces",
-    "remove_special_chars",
-    "remove_empty_lines",
-]
-
-CASE_CONVERTERS: dict[str, Any] = {
-    "uppercase": str.upper,
-    "lowercase": str.lower,
-    "title": str.title,
-    "capitalize": str.capitalize,
-    "swapcase": str.swapcase,
-}
-
 
 class TextOperations(Component):
     display_name = "Text Operations"
     description = "Perform various text processing operations including text-to-DataFrame conversion."
     icon = "type"
     name = "TextOperations"
+
+    # Configuration for operation-specific input fields
+    OPERATION_FIELDS: dict[str, list[str]] = {
+        "Text to DataFrame": ["table_separator", "has_header"],
+        "Word Count": ["count_words", "count_characters", "count_lines"],
+        "Case Conversion": ["case_type"],
+        "Text Replace": ["search_pattern", "replacement_text", "use_regex"],
+        "Text Extract": ["extract_pattern", "max_matches"],
+        "Text Head": ["head_characters"],
+        "Text Tail": ["tail_characters"],
+        "Text Strip": ["strip_mode", "strip_characters"],
+        "Text Join": ["text_input_2"],
+        "Text Clean": ["remove_extra_spaces", "remove_special_chars", "remove_empty_lines"],
+    }
+
+    ALL_DYNAMIC_FIELDS: list[str] = [
+        "table_separator",
+        "has_header",
+        "count_words",
+        "count_characters",
+        "count_lines",
+        "case_type",
+        "search_pattern",
+        "replacement_text",
+        "use_regex",
+        "extract_pattern",
+        "max_matches",
+        "head_characters",
+        "tail_characters",
+        "strip_mode",
+        "strip_characters",
+        "text_input_2",
+        "remove_extra_spaces",
+        "remove_special_chars",
+        "remove_empty_lines",
+    ]
+
+    CASE_CONVERTERS: dict[str, Any] = {
+        "uppercase": str.upper,
+        "lowercase": str.lower,
+        "title": str.title,
+        "capitalize": str.capitalize,
+        "swapcase": str.swapcase,
+    }
 
     inputs = [
         MessageTextInput(
@@ -256,7 +256,7 @@ class TextOperations(Component):
 
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
         """Update build configuration to show/hide relevant inputs based on operation."""
-        for field in ALL_DYNAMIC_FIELDS:
+        for field in self.ALL_DYNAMIC_FIELDS:
             if field in build_config:
                 build_config[field]["show"] = False
 
@@ -267,7 +267,7 @@ class TextOperations(Component):
         if not operation_name:
             return build_config
 
-        fields_to_show = OPERATION_FIELDS.get(operation_name, [])
+        fields_to_show = self.OPERATION_FIELDS.get(operation_name, [])
         for field in fields_to_show:
             if field in build_config:
                 build_config[field]["show"] = True
@@ -396,7 +396,7 @@ class TextOperations(Component):
     def _case_conversion(self, text: str) -> str:
         """Convert text case."""
         case_type = getattr(self, "case_type", "lowercase")
-        converter = CASE_CONVERTERS.get(case_type)
+        converter = self.CASE_CONVERTERS.get(case_type)
         return converter(text) if converter else text
 
     def _text_replace(self, text: str) -> str:
