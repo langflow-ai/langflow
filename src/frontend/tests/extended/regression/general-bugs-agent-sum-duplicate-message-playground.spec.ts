@@ -23,8 +23,7 @@ test(
     await page.getByTestId("model_model").click();
     await page.waitForTimeout(200);
 
-      await page.locator('[role="option"]').first().click();
-
+    await page.locator('[role="option"]').first().click();
 
     // Click the Controls button to open the modal
     await page.getByTestId("edit-button-modal").click();
