@@ -93,6 +93,7 @@ async def list_templates(
                 filtered_data = template_data
             if add_flow_graph_representations:
                 from langflow.agentic.utils.flow_graph import get_flow_graph_representations_from_dict
+
                 result = await get_flow_graph_representations_from_dict(template_data)
                 filtered_data["flow_graph_representations"] = {
                     "ascii_graph": result.get("ascii_graph"),
@@ -201,11 +202,14 @@ def get_templates_count(starter_projects_path: str | Path | None = None) -> int:
         starter_projects_dir = Path(__file__).parent.parent.parent / "initial_setup" / "starter_projects"
     return len(list(starter_projects_dir.glob("*.json")))
 
+
 async def main():
     data = await list_templates(add_flow_graph_representations=True)
     with open("templates.json", "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
+
 if __name__ == "__main__":
     import asyncio
+
     asyncio.run(main())

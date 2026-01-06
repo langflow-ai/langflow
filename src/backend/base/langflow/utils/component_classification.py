@@ -92,4 +92,3 @@ def is_core_component(component_type: str) -> bool:
         False
     """
     return not is_bundle_component(component_type)
-
