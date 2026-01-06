@@ -2,6 +2,9 @@
   "name": "langflow",
   "version": "1.7.1",
   "private": true,
+  "engines": {
+    "node": ">=20.19.0"
+  },
   "dependencies": {
     "@chakra-ui/number-input": "^2.1.2",
     "@chakra-ui/system": "^2.6.2",
@@ -86,7 +89,7 @@
     "uuid": "^10.0.0",
     "vanilla-jsoneditor": "^2.3.3",
     "vite-plugin-svgr": "^4.2.0",
-    "vite-tsconfig-paths": "^4.3.2",
+    "vite-tsconfig-paths": "^6.0.3",
     "web-vitals": "^4.1.1",
     "whatwg-fetch": "^3.6.20",
     "zod": "^3.23.8",
@@ -149,7 +152,7 @@
     "@types/react-dom": "^19.2.3",
     "@types/sortablejs": "^1.15.8",
     "@types/uuid": "^9.0.8",
-    "@vitejs/plugin-react-swc": "^3.7.0",
+    "@vitejs/plugin-react-swc": "^4.2.2",
     "autoprefixer": "^10.4.19",
     "jest": "^30.0.3",
     "jest-environment-jsdom": "^30.0.2",
