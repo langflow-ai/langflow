@@ -268,8 +268,8 @@ class FlowStartComponent(Component):
     async def build_chat_message(self) -> Message:
         """Build message for Chat Input mode."""
         # Handle files
-        files = self.files if hasattr(self, "files") else []
-        if files and not isinstance(files, list):
+        files = getattr(self, "files", None) or []
+        if not isinstance(files, list):
             files = [files]
         files = [f for f in files if f is not None and f != ""]
 
