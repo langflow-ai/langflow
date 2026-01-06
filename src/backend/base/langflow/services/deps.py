@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 from langflow.services.schema import ServiceType
 
@@ -29,6 +29,10 @@ from langflow.services.job_queue.service import JobQueueService  # noqa: TC001
 from langflow.services.storage.service import StorageService  # noqa: TC001
 from langflow.services.telemetry.service import TelemetryService  # noqa: TC001
 
+_service_manager = None
+
+_cache_factory = None
+
 
 def get_service(service_type: ServiceType, default=None):
     """Retrieves the service instance for the given service type.
@@ -44,15 +48,19 @@ def get_service(service_type: ServiceType, default=None):
     """
     from lfx.services.manager import get_service_manager
 
-    service_manager = get_service_manager()
+    global _service_manager
 
-    if not service_manager.are_factories_registered():
-        # ! This is a workaround to ensure that the service manager is initialized
-        # ! Not optimal, but it works for now
-        from langflow.services.manager import ServiceManager
+    if _service_manager is None:
+        _service_manager = get_service_manager()
 
-        service_manager.register_factories(ServiceManager.get_factories())
-    return service_manager.get(service_type, default)
+        if not _service_manager.are_factories_registered():
+            # ! This is a workaround to ensure that the service manager is initialized
+            # ! Not optimal, but it works for now
+            from langflow.services.manager import ServiceManager
+
+            _service_manager.register_factories(ServiceManager.get_factories())
+
+    return _service_manager.get(service_type, default)
 
 
 def get_telemetry_service() -> TelemetryService:
@@ -176,7 +184,7 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
         yield session
 
 
-def get_cache_service() -> Union[CacheService, AsyncBaseCacheService]:  # noqa: UP007
+def get_cache_service() -> CacheService | AsyncBaseCacheService:
     """Retrieves the cache service from the service manager.
 
     Returns:
@@ -184,7 +192,12 @@ def get_cache_service() -> Union[CacheService, AsyncBaseCacheService]:  # noqa: 
     """
     from langflow.services.cache.factory import CacheServiceFactory
 
-    return get_service(ServiceType.CACHE_SERVICE, CacheServiceFactory())
+    global _cache_factory
+
+    if _cache_factory is None:
+        _cache_factory = CacheServiceFactory()
+
+    return get_service(ServiceType.CACHE_SERVICE, _cache_factory)
 
 
 def get_shared_component_cache_service() -> CacheService:
