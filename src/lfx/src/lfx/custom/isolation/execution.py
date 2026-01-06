@@ -138,7 +138,7 @@ def execute_in_isolated_env(code_obj: Any, exec_globals: dict[str, Any]) -> None
         isolated_globals.update(
             {k: v for k, v in exec_globals.items() if k not in isolation_infrastructure_keys},
         )
-        
+
         # CRITICAL: Ensure isolated __import__ persists in exec_globals so methods can use it at runtime
         # Methods' __globals__ points to isolated_globals, but we also need exec_globals to have
         # the isolated builtins so that if methods access __builtins__ or __import__, they get the isolated version

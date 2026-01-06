@@ -422,7 +422,7 @@ def prepare_global_scope(module):
     # Use isolated import function to enforce security restrictions
     # This ensures blocked modules (like subprocess, os, etc.) are caught here
     isolated_import = create_isolated_import()
-    
+
     for node in imports:
         for alias in node.names:
             module_name = alias.name
