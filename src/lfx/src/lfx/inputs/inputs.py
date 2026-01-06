@@ -494,7 +494,7 @@ class IntInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixi
             raise ValueError(msg)
         if not isinstance(v, int | float):
             msg = f"Invalid value type {type(v)} for input {info.data.get('name')}."
-            raise ValueError(msg)
+            raise TypeError(msg)
         if isinstance(v, float):
             v = int(v)
         return v

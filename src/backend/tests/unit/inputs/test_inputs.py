@@ -154,7 +154,7 @@ def test_int_input_null_validation():
     """Test that IntInput rejects null-like values."""
     with pytest.raises(ValidationError, match="cannot be null or empty"):
         IntInput(name="null_int", value=None)
-    
+
     with pytest.raises(ValidationError, match="cannot be null or empty"):
         IntInput(name="empty_int", value="")
 
