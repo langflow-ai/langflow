@@ -12,9 +12,10 @@ from uuid import UUID
 from fastapi.encoders import jsonable_encoder
 from langchain_core.load import load
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage
-from langchain_core.prompts.chat import BaseChatPromptTemplate, ChatPromptTemplate
-from langchain_core.prompts.prompt import PromptTemplate
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_serializer, field_validator
+
+if TYPE_CHECKING:
+    from langchain_core.prompts.chat import BaseChatPromptTemplate
 
 from lfx.base.prompts.utils import dict_values_to_string
 from lfx.log.logger import logger
@@ -275,6 +276,8 @@ class Message(Data):
             self.text = formatted_prompt
             return formatted_prompt
         # Use langchain's template for other formats
+        from langchain_core.prompts.prompt import PromptTemplate
+
         prompt_template = PromptTemplate.from_template(self.template, template_format=template_format)
         variables_with_str_values = dict_values_to_string(self.variables)
         formatted_prompt = prompt_template.format(**variables_with_str_values)
@@ -290,6 +293,8 @@ class Message(Data):
     # Define a sync version for backwards compatibility with versions >1.0.15, <1.1
     @classmethod
     def from_template(cls, template: str, template_format: str = "f-string", **variables):
+        from langchain_core.prompts.chat import ChatPromptTemplate
+
         instance = cls(template=template, variables=variables)
         text = instance.format_text(template_format=template_format)
         message = HumanMessage(content=text)
