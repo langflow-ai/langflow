@@ -20,7 +20,7 @@ test(
 
     await page.waitForSelector('[data-testid="openaiOpenAI"]', {
       timeout: 1000,
-    });
+    }); 
 
     await page
       .getByTestId("openaiOpenAI")
@@ -34,7 +34,6 @@ test(
     await initialGPTsetup(page, {
       skipAdjustScreenView: true,
       skipUpdateOldComponents: true,
-      skipAddNewApiKeys: true,
       skipSelectGptModel: true,
     });
 

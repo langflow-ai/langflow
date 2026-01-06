@@ -2,6 +2,7 @@ import * as dotenv from "dotenv";
 import path from "path";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { selectGptModel } from "../../utils/select-gpt-model";
 
 test(
   "should able to see and interact with logs",
@@ -48,8 +49,8 @@ test(
       await apiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
     }
 
-    await page.getByTestId("model_model").click();
-    await page.getByTestId("gpt-4o-mini-option").click();
+    await selectGptModel(page);
+
 
     await page.waitForSelector('[data-testid="button_run_chat output"]', {
       timeout: 1000,

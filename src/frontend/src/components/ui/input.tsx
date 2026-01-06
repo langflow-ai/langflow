@@ -61,6 +61,9 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           {placeholder}
         </span>
         {endIcon && (
+          <div
+          data-testid="input-end-icon"
+          >
           <ForwardedIconComponent
             name={endIcon}
             className={cn(
@@ -68,6 +71,9 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
               endIconClassName,
             )}
           />
+
+          </div>
+
         )}
       </label>
     );
