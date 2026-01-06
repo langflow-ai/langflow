@@ -3480,7 +3480,7 @@ paths:
         - mcp
       summary: Handle Streamable Http
       description: Streamable HTTP endpoint for MCP clients that support the new transport.
-      operationId: handle_streamable_http_api_v1_mcp_streamable__get
+      operationId: handle_streamable_http_api_v1_mcp_streamable__post
       responses:
         '200':
           description: Successful Response
@@ -3493,7 +3493,7 @@ paths:
         - mcp
       summary: Handle Streamable Http
       description: Streamable HTTP endpoint for MCP clients that support the new transport.
-      operationId: handle_streamable_http_api_v1_mcp_streamable__get
+      operationId: handle_streamable_http_api_v1_mcp_streamable__post
       responses:
         '200':
           description: Successful Response
@@ -3506,7 +3506,7 @@ paths:
         - mcp
       summary: Handle Streamable Http
       description: Streamable HTTP endpoint for MCP clients that support the new transport.
-      operationId: handle_streamable_http_api_v1_mcp_streamable__get
+      operationId: handle_streamable_http_api_v1_mcp_streamable__post
       responses:
         '200':
           description: Successful Response
@@ -3520,7 +3520,7 @@ paths:
         - mcp
       summary: Handle Streamable Http
       description: Streamable HTTP endpoint for MCP clients that support the new transport.
-      operationId: handle_streamable_http_api_v1_mcp_streamable_get
+      operationId: handle_streamable_http_api_v1_mcp_streamable_post
       responses:
         '200':
           description: Successful Response
@@ -3533,7 +3533,7 @@ paths:
         - mcp
       summary: Handle Streamable Http
       description: Streamable HTTP endpoint for MCP clients that support the new transport.
-      operationId: handle_streamable_http_api_v1_mcp_streamable_get
+      operationId: handle_streamable_http_api_v1_mcp_streamable_post
       responses:
         '200':
           description: Successful Response
@@ -3546,7 +3546,7 @@ paths:
         - mcp
       summary: Handle Streamable Http
       description: Streamable HTTP endpoint for MCP clients that support the new transport.
-      operationId: handle_streamable_http_api_v1_mcp_streamable_get
+      operationId: handle_streamable_http_api_v1_mcp_streamable_post
       responses:
         '200':
           description: Successful Response
@@ -3731,13 +3731,37 @@ paths:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/mcp/project/{project_id}/streamable/:
+    post:
+      tags:
+        - mcp_projects
+      summary: Handle Project Streamable Http
+      description: Handle Streamable HTTP connections for a specific project.
+      operationId: >-
+        handle_project_streamable_http_api_v1_mcp_project__project_id__streamable__post
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+            title: Project Id
+      responses:
+        '200':
+          description: Successful Response
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
     get:
       tags:
         - mcp_projects
       summary: Handle Project Streamable Http
       description: Handle Streamable HTTP connections for a specific project.
       operationId: >-
-        handle_project_streamable_http_api_v1_mcp_project__project_id__streamable__get
+        handle_project_streamable_http_api_v1_mcp_project__project_id__streamable__post
       parameters:
         - name: project_id
           in: path
@@ -3761,31 +3785,7 @@ paths:
       summary: Handle Project Streamable Http
       description: Handle Streamable HTTP connections for a specific project.
       operationId: >-
-        handle_project_streamable_http_api_v1_mcp_project__project_id__streamable__get
-      parameters:
-        - name: project_id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-            title: Project Id
-      responses:
-        '200':
-          description: Successful Response
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-    post:
-      tags:
-        - mcp_projects
-      summary: Handle Project Streamable Http
-      description: Handle Streamable HTTP connections for a specific project.
-      operationId: >-
-        handle_project_streamable_http_api_v1_mcp_project__project_id__streamable__get
+        handle_project_streamable_http_api_v1_mcp_project__project_id__streamable__post
       parameters:
         - name: project_id
           in: path
@@ -3804,13 +3804,37 @@ paths:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/mcp/project/{project_id}/streamable:
+    post:
+      tags:
+        - mcp_projects
+      summary: Handle Project Streamable Http
+      description: Handle Streamable HTTP connections for a specific project.
+      operationId: >-
+        handle_project_streamable_http_api_v1_mcp_project__project_id__streamable_post
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+            title: Project Id
+      responses:
+        '200':
+          description: Successful Response
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
     get:
       tags:
         - mcp_projects
       summary: Handle Project Streamable Http
       description: Handle Streamable HTTP connections for a specific project.
       operationId: >-
-        handle_project_streamable_http_api_v1_mcp_project__project_id__streamable_get
+        handle_project_streamable_http_api_v1_mcp_project__project_id__streamable_post
       parameters:
         - name: project_id
           in: path
@@ -3834,31 +3858,7 @@ paths:
       summary: Handle Project Streamable Http
       description: Handle Streamable HTTP connections for a specific project.
       operationId: >-
-        handle_project_streamable_http_api_v1_mcp_project__project_id__streamable_get
-      parameters:
-        - name: project_id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-            title: Project Id
-      responses:
-        '200':
-          description: Successful Response
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-    post:
-      tags:
-        - mcp_projects
-      summary: Handle Project Streamable Http
-      description: Handle Streamable HTTP connections for a specific project.
-      operationId: >-
-        handle_project_streamable_http_api_v1_mcp_project__project_id__streamable_get
+        handle_project_streamable_http_api_v1_mcp_project__project_id__streamable_post
       parameters:
         - name: project_id
           in: path
@@ -4586,7 +4586,7 @@ paths:
         - mcp
       summary: Handle Streamable Http
       description: Streamable HTTP endpoint for MCP clients that support the new transport.
-      operationId: handle_streamable_http_api_mcp_streamable__get
+      operationId: handle_streamable_http_api_mcp_streamable__post
       responses:
         '200':
           description: Successful Response
@@ -4599,7 +4599,7 @@ paths:
         - mcp
       summary: Handle Streamable Http
       description: Streamable HTTP endpoint for MCP clients that support the new transport.
-      operationId: handle_streamable_http_api_mcp_streamable__get
+      operationId: handle_streamable_http_api_mcp_streamable__post
       responses:
         '200':
           description: Successful Response
@@ -4612,7 +4612,7 @@ paths:
         - mcp
       summary: Handle Streamable Http
       description: Streamable HTTP endpoint for MCP clients that support the new transport.
-      operationId: handle_streamable_http_api_mcp_streamable__get
+      operationId: handle_streamable_http_api_mcp_streamable__post
       responses:
         '200':
           description: Successful Response
@@ -4626,7 +4626,7 @@ paths:
         - mcp
       summary: Handle Streamable Http
       description: Streamable HTTP endpoint for MCP clients that support the new transport.
-      operationId: handle_streamable_http_api_mcp_streamable_get
+      operationId: handle_streamable_http_api_mcp_streamable_post
       responses:
         '200':
           description: Successful Response
@@ -4639,7 +4639,7 @@ paths:
         - mcp
       summary: Handle Streamable Http
       description: Streamable HTTP endpoint for MCP clients that support the new transport.
-      operationId: handle_streamable_http_api_mcp_streamable_get
+      operationId: handle_streamable_http_api_mcp_streamable_post
       responses:
         '200':
           description: Successful Response
@@ -4652,7 +4652,7 @@ paths:
         - mcp
       summary: Handle Streamable Http
       description: Streamable HTTP endpoint for MCP clients that support the new transport.
-      operationId: handle_streamable_http_api_mcp_streamable_get
+      operationId: handle_streamable_http_api_mcp_streamable_post
       responses:
         '200':
           description: Successful Response
@@ -6878,14 +6878,14 @@ components:
           title: Edit
           default: false
         properties:
-          $ref: '#/components/schemas/lfx__schema__properties__Properties'
+          $ref: '#/components/schemas/langflow__schema__properties__Properties'
         category:
           type: string
           title: Category
           default: message
         content_blocks:
           items:
-            $ref: '#/components/schemas/lfx__schema__content_block__ContentBlock'
+            $ref: '#/components/schemas/langflow__schema__content_block__ContentBlock'
           type: array
           title: Content Blocks
         id:
@@ -6959,7 +6959,7 @@ components:
           title: Duration
         properties:
           anyOf:
-            - $ref: '#/components/schemas/lfx__schema__properties__Properties'
+            - $ref: '#/components/schemas/langflow__schema__properties__Properties'
             - type: 'null'
         category:
           anyOf:
@@ -6969,7 +6969,8 @@ components:
         content_blocks:
           anyOf:
             - items:
-                $ref: '#/components/schemas/lfx__schema__content_block__ContentBlock'
+                $ref: >-
+                  #/components/schemas/langflow__schema__content_block__ContentBlock
               type: array
             - type: 'null'
           title: Content Blocks
@@ -7027,7 +7028,7 @@ components:
           title: Error
         properties:
           anyOf:
-            - $ref: '#/components/schemas/lfx__schema__properties__Properties'
+            - $ref: '#/components/schemas/langflow__schema__properties__Properties'
             - type: 'null'
       type: object
       title: MessageUpdate
@@ -7280,7 +7281,7 @@ components:
       properties:
         properties:
           anyOf:
-            - $ref: '#/components/schemas/lfx__schema__properties__Properties'
+            - $ref: '#/components/schemas/langflow__schema__properties__Properties'
             - type: 'null'
         sender_name:
           anyOf:
@@ -7290,7 +7291,8 @@ components:
         content_blocks:
           anyOf:
             - items:
-                $ref: '#/components/schemas/lfx__schema__content_block__ContentBlock'
+                $ref: >-
+                  #/components/schemas/langflow__schema__content_block__ContentBlock
               type: array
             - type: 'null'
           title: Content Blocks
@@ -8249,43 +8251,7 @@ components:
         - file_path
       title: UploadFileResponse
       description: Upload file response schema.
-    langflow__schema__content_types__JSONContent:
-      additionalProperties: true
-      type: object
-    langflow__schema__content_types__MediaContent:
-      additionalProperties: true
-      type: object
-    langflow__schema__content_types__TextContent:
-      additionalProperties: true
-      type: object
-    langflow__schema__content_types__ToolContent:
-      additionalProperties: true
-      type: object
-    langflow__schema__properties__Source:
-      properties:
-        id:
-          anyOf:
-            - type: string
-            - type: 'null'
-          title: Id
-          description: The id of the source component.
-        display_name:
-          anyOf:
-            - type: string
-            - type: 'null'
-          title: Display Name
-          description: The display name of the source component.
-        source:
-          anyOf:
-            - type: string
-            - type: 'null'
-          title: Source
-          description: >-
-            The source of the message. Normally used to display the model name
-            (e.g. 'gpt-4o')
-      type: object
-      title: Source
-    lfx__schema__content_block__ContentBlock:
+    langflow__schema__content_block__ContentBlock:
       properties:
         title:
           type: string
@@ -8313,13 +8279,10 @@ components:
         - contents
       title: ContentBlock
       description: A block of content that can contain different types of content.
-    lfx__schema__content_types__CodeContent:
+    langflow__schema__content_types__MediaContent:
       additionalProperties: true
       type: object
-    lfx__schema__content_types__ErrorContent:
-      additionalProperties: true
-      type: object
-    lfx__schema__properties__Properties:
+    langflow__schema__properties__Properties:
       properties:
         text_color:
           anyOf:
@@ -8365,6 +8328,45 @@ components:
           default: []
       type: object
       title: Properties
+    langflow__schema__properties__Source:
+      properties:
+        id:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Id
+          description: The id of the source component.
+        display_name:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Display Name
+          description: The display name of the source component.
+        source:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Source
+          description: >-
+            The source of the message. Normally used to display the model name
+            (e.g. 'gpt-4o')
+      type: object
+      title: Source
+    lfx__schema__content_types__CodeContent:
+      additionalProperties: true
+      type: object
+    lfx__schema__content_types__ErrorContent:
+      additionalProperties: true
+      type: object
+    lfx__schema__content_types__JSONContent:
+      additionalProperties: true
+      type: object
+    lfx__schema__content_types__TextContent:
+      additionalProperties: true
+      type: object
+    lfx__schema__content_types__ToolContent:
+      additionalProperties: true
+      type: object
     lfx__utils__schemas__File:
       properties:
         path:
