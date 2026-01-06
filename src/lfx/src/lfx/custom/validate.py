@@ -99,12 +99,19 @@ def validate_code(code):
     #
     # CRITICAL: Transform AST to block dangerous dunder access before compilation
     # This prevents escapes like: ().__class__.__bases__[0].__subclasses__()[XX].__init__.__globals__['os']
+    #
+    # SECURITY: Decorators are evaluated at function definition time, which means they execute
+    # during validation. By executing function definitions in isolation, decorators are also
+    # executed in isolation, blocking RCE attacks via malicious decorators (e.g., @subprocess.run(...)).
+    # The transformer visits the entire FunctionDef node, including decorator_list, ensuring
+    # decorators are also protected from dunder access attacks.
     transformer = DunderAccessTransformer()
 
     for node in tree.body:
         if isinstance(node, ast.FunctionDef):
             # Transform the function node's AST to block dangerous dunder access
             # Visit the entire function node (which will recursively transform all attributes)
+            # This includes decorators (decorator_list), which are part of the FunctionDef node
             transformed_func = transformer.visit(node)
             # Fix missing location information
             ast.fix_missing_locations(transformed_func)
@@ -296,6 +303,9 @@ def create_function(code, function_name):
 def create_class(code, class_name):
     """Dynamically create a class from a string of code and a specified class name.
 
+    NOTE: Module-level imports are blocked, but runtime imports inside methods are NOT blocked.
+    TODO: See RUNTIME_IMPORT_ISOLATION_PLAN.md for plan to block runtime imports in methods.
+
     Args:
         code: String containing the Python code defining the class
         class_name: Name of the class to be created
@@ -335,8 +345,12 @@ def create_class(code, class_name):
         messages = [error["msg"].split(",", 1) for error in e.errors()]
         error_message = "\n".join([message[1] if len(message) > 1 else message[0] for message in messages])
         raise ValueError(error_message) from e
+    except SecurityViolationError as e:
+        # Include component name in security violation errors for better debugging
+        msg = f"Error creating class '{class_name}'. {type(e).__name__}({e!s})."
+        raise ValueError(msg) from e
     except Exception as e:
-        msg = f"Error creating class. {type(e).__name__}({e!s})."
+        msg = f"Error creating class '{class_name}'. {type(e).__name__}({e!s})."
         raise ValueError(msg) from e
 
 
@@ -386,25 +400,42 @@ def prepare_global_scope(module):
 
     Raises:
         ModuleNotFoundError: If a module is not found in the code
+        SecurityViolationError: If a blocked module is imported
     """
     exec_globals = globals().copy()
     imports = []
     import_froms = []
-    definitions = []
+    assignments = []  # Module-level assignments (like DEFAULT_OLLAMA_URL)
+    definitions = []  # Class and function definitions
 
     for node in module.body:
         if isinstance(node, ast.Import):
             imports.append(node)
         elif isinstance(node, ast.ImportFrom) and node.module is not None:
             import_froms.append(node)
-        elif isinstance(node, ast.ClassDef | ast.FunctionDef | ast.Assign):
+        elif isinstance(node, ast.Assign):
+            # Execute assignments first so they're available for class/function definitions
+            assignments.append(node)
+        elif isinstance(node, ast.ClassDef | ast.FunctionDef):
             definitions.append(node)
 
+    # Use isolated import function to enforce security restrictions
+    # This ensures blocked modules (like subprocess, os, etc.) are caught here
+    isolated_import = create_isolated_import()
+    
     for node in imports:
         for alias in node.names:
             module_name = alias.name
-            # Import the full module path to ensure submodules are loaded
-            module_obj = importlib.import_module(module_name)
+            try:
+                # Use isolated import to enforce security - will raise SecurityViolationError for blocked modules
+                module_obj = isolated_import(module_name, None, None, (), 0)
+            except SecurityViolationError:
+                # Re-raise security violations
+                raise
+            except Exception as e:
+                # Convert other import errors to ModuleNotFoundError for consistency
+                msg = f"Module {module_name} not found. Please install it and try again."
+                raise ModuleNotFoundError(msg) from e
 
             # Determine the variable name
             if alias.asname:
@@ -414,7 +445,14 @@ def prepare_global_scope(module):
             else:
                 # For dotted imports like "urllib.request", set the variable to the top-level package
                 variable_name = module_name.split(".")[0]
-                exec_globals[variable_name] = importlib.import_module(variable_name)
+                # Re-import top-level package using isolated import
+                try:
+                    exec_globals[variable_name] = isolated_import(variable_name, None, None, (), 0)
+                except SecurityViolationError:
+                    raise
+                except Exception:
+                    # If top-level import fails, use the already imported module
+                    exec_globals[variable_name] = module_obj
 
     for node in import_froms:
         module_names_to_try = [node.module]
@@ -429,12 +467,16 @@ def prepare_global_scope(module):
 
         for module_name in module_names_to_try:
             try:
-                imported_module = _import_module_with_warnings(module_name)
+                # Use isolated import to enforce security
+                imported_module = isolated_import(module_name, None, None, (), 0)
                 _handle_module_attributes(imported_module, node, module_name, exec_globals)
 
                 success = True
                 break
 
+            except SecurityViolationError:
+                # Re-raise security violations
+                raise
             except ModuleNotFoundError as e:
                 last_error = e
                 continue
@@ -446,10 +488,20 @@ def prepare_global_scope(module):
             msg = f"Module {node.module} not found. Please install it and try again"
             raise ModuleNotFoundError(msg)
 
+    # Execute assignments first so module-level constants are available for class/function definitions
+    if assignments:
+        assignments_module = ast.Module(body=assignments, type_ignores=[])
+        compiled_assignments = compile(assignments_module, "<string>", "exec")
+        # Use isolated execution environment for security
+        execute_in_isolated_env(compiled_assignments, exec_globals)
+        # After execution, assignments are now in exec_globals (merged by execute_in_isolated_env)
+
+    # Now execute class/function definitions, which can reference the assignments above
     if definitions:
         combined_module = ast.Module(body=definitions, type_ignores=[])
         compiled_code = compile(combined_module, "<string>", "exec")
         # Use isolated execution environment for security
+        # exec_globals now contains the assignments from above
         execute_in_isolated_env(compiled_code, exec_globals)
 
     return exec_globals
