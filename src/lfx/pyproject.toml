@@ -41,6 +41,7 @@ dependencies = [
     "validators>=0.34.0,<1.0.0",
     "filelock>=3.20.0",
     "pypdf>=5.1.0",
+    "cryptography>=43.0.0",
 ]
 
 [project.scripts]
