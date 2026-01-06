@@ -19,7 +19,6 @@ from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from lfx.custom.isolation import SecurityViolationError, execute_in_isolated_env
 
 
@@ -577,4 +576,3 @@ def test():
                 delattr(json, "SERVER_SECRET")
         else:
             json.SERVER_SECRET = original_attr
-

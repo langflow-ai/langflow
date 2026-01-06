@@ -5,7 +5,6 @@ server resources. They prove isolation by showing that access attempts fail.
 """
 
 import pytest
-
 from lfx.custom.isolation import execute_in_isolated_env
 
 
@@ -479,4 +478,3 @@ def test_isolation_blocks_individual_dunder_access():
         # Should raise SecurityViolationError
         with pytest.raises(SecurityViolationError, match="dunder attribute"):
             execute_in_isolated_env(code_obj, exec_globals)
-
