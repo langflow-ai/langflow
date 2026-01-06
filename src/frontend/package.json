@@ -73,7 +73,7 @@
     "react-sortablejs": "^6.1.4",
     "react-syntax-highlighter": "^16.1.0",
     "reactflow": "^11.11.3",
-    "rehype-mathjax": "^6.0.0",
+    "rehype-mathjax": "^7.1.0",
     "rehype-raw": "^7.0.0",
     "remark-gfm": "^4.0.1",
     "remark-math": "^6.0.0",
