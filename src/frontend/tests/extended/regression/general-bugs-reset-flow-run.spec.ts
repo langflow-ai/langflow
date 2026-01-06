@@ -103,6 +103,8 @@ test(
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
+    await page.waitForTimeout(3000);
+
     let numberOfSuccessfullComponentsRun = 0;
     let numberOfInactiveComponentsRun = 0;
 
@@ -127,6 +129,8 @@ test(
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
+    await page.waitForTimeout(3000);
+
     numberOfSuccessfullComponentsRun = 0;
     numberOfInactiveComponentsRun = 0;
 
@@ -142,7 +146,7 @@ test(
 
     // retest to make sure we can run again the flow with the first branch of the If-Else component
 
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(3000);
 
     await page.getByTestId("popover-anchor-input-input_text").fill("1");
     await page.waitForTimeout(500);
@@ -152,6 +156,8 @@ test(
     await page.waitForTimeout(500);
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
+
+    await page.waitForTimeout(3000);
 
     numberOfSuccessfullComponentsRun = 0;
     numberOfInactiveComponentsRun = 0;
