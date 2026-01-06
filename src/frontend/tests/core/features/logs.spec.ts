@@ -51,7 +51,6 @@ test(
 
     await selectGptModel(page);
 
-
     await page.waitForSelector('[data-testid="button_run_chat output"]', {
       timeout: 1000,
     });

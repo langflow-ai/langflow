@@ -20,7 +20,7 @@ test(
 
     await page.waitForSelector('[data-testid="openaiOpenAI"]', {
       timeout: 1000,
-    }); 
+    });
 
     await page
       .getByTestId("openaiOpenAI")
