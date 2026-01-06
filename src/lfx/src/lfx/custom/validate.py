@@ -36,33 +36,33 @@ def add_type_ignores() -> None:
 
 def validate_code(code):
     """Validate user-provided code for security violations.
-    
+
     This function performs three-phase validation:
-    
+
     Phase 1: Module-level import validation
         - Checks all top-level imports (import X, from X import Y)
         - Blocks dangerous modules based on security level
         - Returns errors in errors["imports"]["errors"]
-    
+
     Phase 2: Function/method body import validation (static analysis)
         - Statically analyzes function and method bodies for imports
         - Blocks dangerous imports that would execute at runtime
         - Handles nested functions, classes, and async functions
         - Returns errors in errors["function"]["errors"]
-    
+
     Phase 3: Function definition execution (decorators, default args)
         - Executes function definitions in isolated environment
         - Blocks dangerous operations in decorators and default arguments
         - Transforms AST to prevent dunder access attacks
         - Returns errors in errors["function"]["errors"]
-    
+
     Args:
         code: String containing Python code to validate
-        
+
     Returns:
         dict: Dictionary with "imports" and "function" keys, each containing "errors" list
         Example: {"imports": {"errors": []}, "function": {"errors": []}}
-        
+
     Note:
         This validation prevents dangerous code from being created, but actual runtime
         execution isolation is deferred.
@@ -130,7 +130,7 @@ def validate_code(code):
     # during validation, preventing dangerous code from being created even though actual
     # runtime execution is not yet isolated.
     isolated_import = create_isolated_import()
-    
+
     def check_imports_in_body(body_nodes, context_name, context_type="function"):
         """Recursively check for blocked imports in a function/method body."""
         for body_node in body_nodes:
@@ -165,7 +165,7 @@ def validate_code(code):
                 for method in body_node.body:
                     if isinstance(method, (ast.FunctionDef, ast.AsyncFunctionDef)):
                         check_imports_in_body(method.body, f"{body_node.name}.{method.name}", "method")
-    
+
     for node in tree.body:
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             check_imports_in_body(node.body, node.name, "function")

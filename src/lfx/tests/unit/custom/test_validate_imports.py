@@ -13,15 +13,13 @@ from contextlib import contextmanager
 from textwrap import dedent
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from lfx.custom.validate import validate_code
 
 
 @contextmanager
 def mock_isolation_settings(security_level="moderate"):
     """Context manager to mock isolation settings service.
-    
+
     Args:
         security_level: The security level to use ("moderate", "strict", or "disabled")
     """
@@ -29,19 +27,19 @@ def mock_isolation_settings(security_level="moderate"):
         mock_settings_service = MagicMock()
         mock_settings_service.settings.isolation_security_level = security_level
         mock_get_settings.return_value = mock_settings_service
-        
+
         # Clear cache and reload modules to pick up new settings
         import lfx.custom.isolation.config as config_module
         import lfx.custom.isolation.isolation as isolation_module
         import lfx.custom.validate as validate_module
-        
+
         config_module.clear_cache()
         importlib.reload(config_module)
         importlib.reload(isolation_module)
         importlib.reload(validate_module)
-        
+
         yield
-        
+
         # Restore default
         config_module.clear_cache()
         importlib.reload(config_module)
@@ -60,7 +58,7 @@ class TestModuleLevelImports:
         def test():
             return "ok"
         """)
-        
+
         with mock_isolation_settings("moderate"):
             errors = validate_code(code)
             assert len(errors["imports"]["errors"]) > 0
@@ -74,7 +72,7 @@ class TestModuleLevelImports:
         def test():
             return "ok"
         """)
-        
+
         with mock_isolation_settings("moderate"):
             errors = validate_code(code)
             assert len(errors["imports"]["errors"]) > 0
@@ -89,7 +87,7 @@ class TestModuleLevelImports:
         def test():
             return "ok"
         """)
-        
+
         with mock_isolation_settings("moderate"):
             errors = validate_code(code)
             assert len(errors["imports"]["errors"]) == 0
@@ -103,7 +101,7 @@ class TestModuleLevelImports:
         def test():
             return "ok"
         """)
-        
+
         with mock_isolation_settings("strict"):
             errors = validate_code(code)
             assert len(errors["imports"]["errors"]) > 0
@@ -120,7 +118,7 @@ class TestFunctionBodyImports:
             import subprocess
             return subprocess.run(['echo', 'test'])
         """)
-        
+
         with mock_isolation_settings("moderate"):
             errors = validate_code(code)
             assert len(errors["function"]["errors"]) > 0
@@ -134,7 +132,7 @@ class TestFunctionBodyImports:
             from subprocess import run
             return run(['echo', 'test'])
         """)
-        
+
         with mock_isolation_settings("moderate"):
             errors = validate_code(code)
             assert len(errors["function"]["errors"]) > 0
@@ -147,7 +145,7 @@ class TestFunctionBodyImports:
             import json
             return json.dumps({'test': 'data'})
         """)
-        
+
         with mock_isolation_settings("moderate"):
             errors = validate_code(code)
             assert len(errors["function"]["errors"]) == 0
@@ -159,7 +157,7 @@ class TestFunctionBodyImports:
             import requests
             return requests.get('https://example.com')
         """)
-        
+
         with mock_isolation_settings("strict"):
             errors = validate_code(code)
             assert len(errors["function"]["errors"]) > 0
@@ -174,7 +172,7 @@ class TestFunctionBodyImports:
             import sys
             return "test"
         """)
-        
+
         with mock_isolation_settings("moderate"):
             errors = validate_code(code)
             assert len(errors["function"]["errors"]) >= 3  # Should catch all three
@@ -190,7 +188,7 @@ class TestFunctionBodyImports:
                 return subprocess.run(['echo', 'test'])
             return inner()
         """)
-        
+
         with mock_isolation_settings("moderate"):
             errors = validate_code(code)
             assert len(errors["function"]["errors"]) > 0
@@ -211,7 +209,7 @@ class TestMethodBodyImports:
                 import subprocess
                 return subprocess.run(['echo', 'test'])
         """)
-        
+
         with mock_isolation_settings("moderate"):
             errors = validate_code(code)
             assert len(errors["function"]["errors"]) > 0
@@ -230,12 +228,12 @@ class TestMethodBodyImports:
                 import subprocess
                 return subprocess.run(['echo', 'test'])
         """)
-        
+
         with mock_isolation_settings("moderate"):
             errors = validate_code(code)
             assert len(errors["function"]["errors"]) >= 2
             error_text = " ".join(str(e) for e in errors["function"]["errors"]).lower()
-            assert ("os" in error_text or "subprocess" in error_text)
+            assert "os" in error_text or "subprocess" in error_text
 
     def test_allowed_import_in_method_body_moderate(self):
         """Test that allowed imports in method bodies pass validation."""
@@ -245,7 +243,7 @@ class TestMethodBodyImports:
                 import json
                 return json.dumps({'test': 'data'})
         """)
-        
+
         with mock_isolation_settings("moderate"):
             errors = validate_code(code)
             assert len(errors["function"]["errors"]) == 0
@@ -259,7 +257,7 @@ class TestMethodBodyImports:
                     import subprocess
                     return subprocess.run(['echo', 'test'])
         """)
-        
+
         with mock_isolation_settings("moderate"):
             errors = validate_code(code)
             assert len(errors["function"]["errors"]) > 0
@@ -278,7 +276,7 @@ class TestDecoratorImports:
         def test():
             return "ok"
         """)
-        
+
         with mock_isolation_settings("moderate"):
             errors = validate_code(code)
             # Should fail at module-level import OR decorator execution
@@ -291,7 +289,7 @@ class TestDecoratorImports:
         def test():
             return "ok"
         """)
-        
+
         with mock_isolation_settings("moderate"):
             errors = validate_code(code)
             assert len(errors["function"]["errors"]) > 0
@@ -304,7 +302,7 @@ class TestDecoratorImports:
         def test():
             return "ok"
         """)
-        
+
         with mock_isolation_settings("moderate"):
             errors = validate_code(code)
             assert len(errors["function"]["errors"]) > 0
@@ -320,7 +318,7 @@ class TestDefaultArgumentImports:
         def test(x=__import__('subprocess').run(['echo', 'test'])):
             return x
         """)
-        
+
         with mock_isolation_settings("moderate"):
             errors = validate_code(code)
             assert len(errors["function"]["errors"]) > 0
@@ -337,7 +335,7 @@ class TestAsyncFunctions:
             import subprocess
             return subprocess.run(['echo', 'test'])
         """)
-        
+
         with mock_isolation_settings("moderate"):
             errors = validate_code(code)
             assert len(errors["function"]["errors"]) > 0
@@ -351,7 +349,7 @@ class TestAsyncFunctions:
                 import subprocess
                 return subprocess.run(['echo', 'test'])
         """)
-        
+
         with mock_isolation_settings("moderate"):
             errors = validate_code(code)
             assert len(errors["function"]["errors"]) > 0
@@ -370,7 +368,7 @@ class TestComplexScenarios:
             import subprocess
             return "test"
         """)
-        
+
         with mock_isolation_settings("moderate"):
             errors = validate_code(code)
             # Should catch both
@@ -388,7 +386,7 @@ class TestComplexScenarios:
             import os  # Blocked
             return "test"
         """)
-        
+
         with mock_isolation_settings("moderate"):
             errors = validate_code(code)
             # Should catch blocked ones
@@ -402,7 +400,7 @@ class TestComplexScenarios:
             x = 1 + 1
             return x
         """)
-        
+
         with mock_isolation_settings("moderate"):
             errors = validate_code(code)
             assert len(errors["imports"]["errors"]) == 0
@@ -418,7 +416,7 @@ class TestComplexScenarios:
             import sys
             return "test"
         """)
-        
+
         with mock_isolation_settings("disabled"):
             errors = validate_code(code)
             # Should pass - no errors
@@ -436,7 +434,7 @@ class TestErrorMessages:
             import subprocess
             return "test"
         """)
-        
+
         with mock_isolation_settings("moderate"):
             errors = validate_code(code)
             assert len(errors["function"]["errors"]) > 0
@@ -451,7 +449,7 @@ class TestErrorMessages:
                 import subprocess
                 return "test"
         """)
-        
+
         with mock_isolation_settings("moderate"):
             errors = validate_code(code)
             assert len(errors["function"]["errors"]) > 0
@@ -465,10 +463,9 @@ class TestErrorMessages:
             import subprocess
             return "test"
         """)
-        
+
         with mock_isolation_settings("moderate"):
             errors = validate_code(code)
             assert len(errors["function"]["errors"]) > 0
             error_text = " ".join(str(e) for e in errors["function"]["errors"]).lower()
             assert "subprocess" in error_text
-
