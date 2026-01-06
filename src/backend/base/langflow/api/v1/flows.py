@@ -3,12 +3,15 @@ from __future__ import annotations
 import io
 import json
 import re
+import uuid
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path as StdlibPath
 from typing import Annotated
 from uuid import UUID
 
+from langflow.helpers.flow_publish import create_flow_publish
+from langflow.services.database.models import FlowVersion
 import orjson
 from aiofile import async_open
 from anyio import Path
@@ -23,6 +26,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow, remove_api_keys, validate_is_component
 from langflow.api.v1.schemas import FlowListCreate
+from langflow.helpers.flow_version import FLOW_NOT_FOUND_ERROR_MSG, FLOW_VERSION_NOT_FOUND_ERROR_MSG, get_flow_checkpoint, list_flow_versions, save_flow_checkpoint
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.database.models.flow.model import (
@@ -33,10 +37,11 @@ from langflow.services.database.models.flow.model import (
     FlowRead,
     FlowUpdate,
 )
-from langflow.services.database.models.flow.utils import get_webhook_component_in_flow
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
-from langflow.services.deps import get_settings_service, get_storage_service
+from langflow.services.deps import get_service, get_settings_service, get_storage_service
+from langflow.services.publish.service import PublishService
+from langflow.services.schema import ServiceType
 from langflow.services.storage.service import StorageService
 from langflow.utils.compression import compress_response
 
@@ -428,15 +433,7 @@ async def update_flow(
     """Update a flow."""
     settings_service = get_settings_service()
     try:
-        db_flow = await _read_flow(
-            session=session,
-            flow_id=flow_id,
-            user_id=current_user.id,
-        )
-
-        if not db_flow:
-            raise HTTPException(status_code=404, detail="Flow not found")
-
+        # validate the update data
         update_data = flow.model_dump(exclude_unset=True, exclude_none=True)
 
         # Specifically handle endpoint_name when it's explicitly set to null or empty string
@@ -446,23 +443,18 @@ async def update_flow(
         if settings_service.settings.remove_api_keys:
             update_data = remove_api_keys(update_data)
 
-        for key, value in update_data.items():
-            setattr(db_flow, key, value)
-
         # Validate fs_path if it was changed (will raise HTTPException if invalid)
         if "fs_path" in update_data:
-            await _verify_fs_path(db_flow.fs_path, current_user.id, storage_service)
+            await _verify_fs_path(update_data["fs_path"], current_user.id, storage_service)
 
-        webhook_component = get_webhook_component_in_flow(db_flow.data)
-        db_flow.webhook = webhook_component is not None
-        db_flow.updated_at = datetime.now(timezone.utc)
+        # save and checkpoint the flow
+        db_flow =await save_flow_checkpoint(
+            session=session,
+            user_id=current_user.id,
+            flow_id=flow_id,
+            update_data=update_data
+        )
 
-        if db_flow.folder_id is None:
-            default_folder = (await session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME))).first()
-            if default_folder:
-                db_flow.folder_id = default_folder.id
-
-        session.add(db_flow)
         await session.flush()
         await session.refresh(db_flow)
         await _save_flow_to_fs(db_flow, current_user.id, storage_service)
@@ -471,6 +463,9 @@ async def update_flow(
         flow_read = FlowRead.model_validate(db_flow, from_attributes=True)
 
     except Exception as e:
+        if FLOW_NOT_FOUND_ERROR_MSG in str(e):
+            raise HTTPException(status_code=404, detail=str(e)) from e
+
         if "UNIQUE constraint failed" in str(e):
             # Get the name of the column that failed
             columns = str(e).split("UNIQUE constraint failed: ")[1].split(".")[1].split("\n")[0]
@@ -689,3 +684,81 @@ async def read_basic_examples(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+########################################################
+# Publish Flow endpoints
+########################################################
+@router.post("/{flow_id}/publish/", status_code=201)
+async def publish_flow_version(
+    *,
+    session: DbSession,
+    current_user: CurrentActiveUser,
+    flow_id: UUID,
+    publish_tag: str | None
+):
+    """Publish the flow to S3."""
+    try:
+        db_flow = _read_flow_for_validation(session, flow_id, current_user.id)
+        publish_service: PublishService = get_service(ServiceType.PUBLISH_SERVICE)
+        # we should retry publishing to
+        # the publish backend three times,
+        publish_key = await publish_service.put_flow(
+            user_id=current_user.id,
+            flow_id=db_flow.id,
+            flow_blob=db_flow.data,
+            publish_tag=publish_tag
+            )
+    except HTTPException as httperr:
+        raise httperr from httperr
+    except Exception as e:
+        msg = f"Failed to publish flow: {e!s}"
+        raise HTTPException(status_code=500, detail=msg) from e
+
+    return {
+        "message": "Flow published successfully.",
+        "flow_id": flow_id,
+        "publish_key": publish_key
+        }
+
+
+async def _read_flow_for_validation(
+    session: AsyncSession,
+    flow_id: UUID,
+    user_id: UUID,
+):
+    """Read a flow from flow_id and user_id. Raises an HTTP exception it not found."""
+    if not (db_flow := _read_flow(session, flow_id, user_id)):
+        raise HTTPException(status_code=404, detail="Flow not found")
+    return db_flow
+
+
+@router.get("/{flow_id}/publish/{publish_id}", status_code=200)
+async def get_published_flow(
+    *,
+    flow_id: UUID,
+    current_user: CurrentActiveUser,
+    publish_id: str | UUID | None,
+):
+    """Retrieve the published flow from S3."""
+    if not (flow_id and publish_id):
+        msg = "flow_id and publish_id are required."
+        raise ValueError(msg)
+
+    try:
+        publish_service: PublishService = get_service(ServiceType.PUBLISH_SERVICE)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Publish service not available") from e
+    try:
+        flow_data = await publish_service.get_flow(
+            user_id=current_user.id,
+            flow_id=flow_id,
+            publish_id=publish_id,
+        )
+        return orjson.loads(flow_data)
+    except Exception as e:
+        if "NoSuchKey" in str(e):
+            raise HTTPException(status_code=404, detail=f"Published flow not found: {e!s}") from e
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+

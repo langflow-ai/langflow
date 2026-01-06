@@ -113,7 +113,12 @@ class Settings(BaseSettings):
     reap idle sessions."""
 
     # sqlite configuration
-    sqlite_pragmas: dict | None = {"synchronous": "NORMAL", "journal_mode": "WAL", "busy_timeout": 30000}
+    sqlite_pragmas: dict | None = {
+        "synchronous": "NORMAL",
+        "journal_mode": "WAL",
+        "busy_timeout": 30000,
+        "foreign_keys": "ON",
+    }
     """SQLite pragmas to use when connecting to the database."""
 
     db_driver_connection_settings: dict | None = None
@@ -198,6 +203,14 @@ class Settings(BaseSettings):
     """Object storage prefix for file storage. Defaults to 'files'."""
     object_storage_tags: dict[str, str] | None = None
     """Object storage tags for file storage."""
+
+    # Publish Configuration
+    publish_backend: str | None = None
+    """The backend to use for publishing flows (e.g., 's3')."""
+    publish_backend_bucket_name: str | None = "langflow-bucket" # should this be in a different bucket?
+    """The bucket name for the publish backend."""
+    publish_backend_prefix: str | None = "publish"
+    """The prefix for the publish backend."""
 
     celery_enabled: bool = False
 
