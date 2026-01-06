@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import json
 import re
-from typing import TYPE_CHECKING, Any
+from collections.abc import Callable  # noqa: TC003 - required at runtime for dynamic exec()
+from typing import Any
 
 from lfx.base.models.unified_models import (
     get_language_model_options,
@@ -16,12 +17,26 @@ from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
 from lfx.utils.constants import MESSAGE_SENDER_AI
 
-if TYPE_CHECKING:
-    from collections.abc import Callable
+TEXT_TRANSFORM_PROMPT = (
+    "Given this text, create a Python lambda function that transforms it "
+    "according to the instruction.\n"
+    "The lambda should take a string parameter and return the transformed string.\n\n"
+    "Text Preview:\n{text_preview}\n\n"
+    "Instruction: {instruction}\n\n"
+    "Return ONLY the lambda function and nothing else. No need for ```python or whatever.\n"
+    "Just a string starting with lambda.\n"
+    "Example: lambda text: text.upper()"
+)
 
-# # Compute model options once at module level
-# _MODEL_OPTIONS = get_language_model_options()
-# _PROVIDERS = [provider["provider"] for provider in _MODEL_OPTIONS]
+DATA_TRANSFORM_PROMPT = (
+    "Given this data structure and examples, create a Python lambda function "
+    "that implements the following instruction:\n\n"
+    "Data Structure:\n{dump_structure}\n\n"
+    "Example Items:\n{data_sample}\n\n"
+    "Instruction: {instruction}\n\n"
+    "Return ONLY the lambda function and nothing else. No need for ```python or whatever.\n"
+    "Just a string starting with lambda."
+)
 
 
 class LambdaFilterComponent(Component):
@@ -145,223 +160,171 @@ class LambdaFilterComponent(Component):
                 return "Data"
         return "unknown"
 
-    async def _execute_lambda(self) -> Any:
-        # Handle Message input specifically
-        is_message_input = False
-
-        # Check if input is a Message (single or list)
+    def _extract_message_text(self) -> str:
+        """Extract text content from Message input(s)."""
         if isinstance(self.data, Message):
-            is_message_input = True
-            data = self.data.text or ""
-        elif isinstance(self.data, list) and len(self.data) > 0 and isinstance(self.data[0], Message):
-            is_message_input = True
-            # For list of Messages, combine their texts
-            texts = [msg.text or "" for msg in self.data if isinstance(msg, Message)]
-            data = "\n\n".join(texts) if len(texts) > 1 else (texts[0] if texts else "")
-        # Convert input to a unified format
-        elif isinstance(self.data, list):
-            # Handle list of Data or DataFrame objects
-            combined_data = []
-            for item in self.data:
-                if isinstance(item, DataFrame):
-                    # DataFrame to list of dicts
-                    combined_data.extend(item.to_dict(orient="records"))
-                elif hasattr(item, "data"):
-                    # Data object
-                    if isinstance(item.data, dict):
-                        combined_data.append(item.data)
-                    elif isinstance(item.data, list):
-                        combined_data.extend(item.data)
+            return self.data.text or ""
 
-            # If we have a single dict, unwrap it so lambdas can access it directly
-            if len(combined_data) == 1 and isinstance(combined_data[0], dict):
-                data = combined_data[0]
-            elif len(combined_data) == 0:
-                data = {}
-            else:
-                data = combined_data  # type: ignore[assignment]
-        elif isinstance(self.data, DataFrame):
-            # Single DataFrame to list of dicts
-            data = self.data.to_dict(orient="records")
-        elif hasattr(self.data, "data"):
-            # Single Data object
-            data = self.data.data
+        texts = [msg.text or "" for msg in self.data if isinstance(msg, Message)]
+        return "\n\n".join(texts) if len(texts) > 1 else (texts[0] if texts else "")
+
+    def _extract_structured_data(self) -> dict | list:
+        """Extract structured data from Data or DataFrame input(s)."""
+        if isinstance(self.data, DataFrame):
+            return self.data.to_dict(orient="records")
+
+        if hasattr(self.data, "data"):
+            return self.data.data
+
+        if not isinstance(self.data, list):
+            return self.data
+
+        combined_data: list[dict] = []
+        for item in self.data:
+            if isinstance(item, DataFrame):
+                combined_data.extend(item.to_dict(orient="records"))
+            elif hasattr(item, "data"):
+                if isinstance(item.data, dict):
+                    combined_data.append(item.data)
+                elif isinstance(item.data, list):
+                    combined_data.extend(item.data)
+
+        if len(combined_data) == 1 and isinstance(combined_data[0], dict):
+            return combined_data[0]
+        if len(combined_data) == 0:
+            return {}
+        return combined_data
+
+    def _is_message_input(self) -> bool:
+        """Check if input is Message type."""
+        if isinstance(self.data, Message):
+            return True
+        return isinstance(self.data, list) and len(self.data) > 0 and isinstance(self.data[0], Message)
+
+    def _build_text_prompt(self, text: str) -> str:
+        """Build prompt for text/Message transformation."""
+        text_length = len(text)
+        if text_length > self.max_size:
+            text_preview = (
+                f"Text length: {text_length} characters\n\n"
+                f"First {self.sample_size} characters:\n{text[: self.sample_size]}\n\n"
+                f"Last {self.sample_size} characters:\n{text[-self.sample_size :]}"
+            )
         else:
-            data = self.data
+            text_preview = text
 
-        llm = get_llm(model=self.model, user_id=self.user_id, api_key=self.api_key)
-        instruction = self.filter_instruction
-        sample_size = self.sample_size
+        return TEXT_TRANSFORM_PROMPT.format(text_preview=text_preview, instruction=self.filter_instruction)
 
-        # Different handling for Message vs structured data
-        if is_message_input:
-            # For text/Message input, create a text-specific prompt
-            text_length = len(data) if isinstance(data, str) else 0
-            self.log(f"Text length: {text_length}")
+    def _build_data_prompt(self, data: dict | list) -> str:
+        """Build prompt for structured data transformation."""
+        dump = json.dumps(data)
+        dump_structure = json.dumps(self.get_data_structure(data))
 
-            # For large text, show only preview
-            if text_length > self.max_size:
-                text_preview = (
-                    f"Text length: {text_length} characters\n\n"
-                    f"First {sample_size} characters:\n{data[:sample_size]}\n\n"
-                    f"Last {sample_size} characters:\n{data[-sample_size:]}"
-                )
-            else:
-                text_preview = data
-
-            self.log(text_preview)
-
-            prompt = f"""Given this text, create a Python lambda function that transforms it according to the instruction.
-The lambda should take a string parameter and return the transformed string.
-
-Text Preview:
-{text_preview}
-
-Instruction: {instruction}
-
-Return ONLY the lambda function and nothing else. No need for ```python or whatever.
-Just a string starting with lambda.
-Example: lambda text: text.upper()
-"""
+        if len(dump) > self.max_size:
+            data_sample = (
+                f"Data is too long to display...\n\nFirst lines (head): {dump[: self.sample_size]}\n\n"
+                f"Last lines (tail): {dump[-self.sample_size :]}"
+            )
         else:
-            # Original structured data handling
-            dump = json.dumps(data)
+            data_sample = dump
 
-            # Get data structure and samples
-            data_structure = self.get_data_structure(data)
-            dump_structure = json.dumps(data_structure)
-            self.log(dump_structure)
+        return DATA_TRANSFORM_PROMPT.format(
+            dump_structure=dump_structure, data_sample=data_sample, instruction=self.filter_instruction
+        )
 
-            # For large datasets, sample from head and tail
-            if len(dump) > self.max_size:
-                data_sample = (
-                    f"Data is too long to display... \n\n First lines (head): {dump[:sample_size]} \n\n"
-                    f" Last lines (tail): {dump[-sample_size:]})"
-                )
-            else:
-                data_sample = dump
-
-            self.log(data_sample)
-
-            prompt = f"""Given this data structure and examples, create a Python lambda function that
-                        implements the following instruction:
-
-                        Data Structure:
-                        {dump_structure}
-
-                        Example Items:
-                        {data_sample}
-
-                        Instruction: {instruction}
-
-                        Return ONLY the lambda function and nothing else. No need for ```python or whatever.
-                        Just a string starting with lambda.
-                        """
-
-        response = await llm.ainvoke(prompt)
-        response_text = response.content if hasattr(response, "content") else str(response)
-        self.log(response_text)
-
-        # Extract lambda using regex
+    def _parse_lambda_from_response(self, response_text: str) -> Callable[[Any], Any]:
+        """Extract and validate lambda function from LLM response."""
         lambda_match = re.search(r"lambda\s+\w+\s*:.*?(?=\n|$)", response_text)
         if not lambda_match:
             msg = f"Could not find lambda in response: {response_text}"
             raise ValueError(msg)
 
         lambda_text = lambda_match.group().strip()
-        self.log(lambda_text)
+        self.log(f"Generated lambda: {lambda_text}")
 
-        # Validation is commented out as requested
         if not self._validate_lambda(lambda_text):
             msg = f"Invalid lambda format: {lambda_text}"
             raise ValueError(msg)
 
-        # Create and apply the function
-        fn: Callable[[Any], Any] = eval(lambda_text)  # noqa: S307
+        return eval(lambda_text)  # noqa: S307
 
-        # Apply the lambda function to the data
+    async def _execute_lambda(self) -> Any:
+        """Generate and execute a lambda function based on input type."""
+        if self._is_message_input():
+            data: Any = self._extract_message_text()
+            prompt = self._build_text_prompt(data)
+        else:
+            data = self._extract_structured_data()
+            prompt = self._build_data_prompt(data)
+
+        llm = get_llm(model=self.model, user_id=self.user_id, api_key=self.api_key)
+        response = await llm.ainvoke(prompt)
+        response_text = response.content if hasattr(response, "content") else str(response)
+
+        fn = self._parse_lambda_from_response(response_text)
         return fn(data)
+
+    def _handle_process_error(self, error: Exception, output_type: str) -> None:
+        """Handle errors from process methods with context-aware messages."""
+        input_type = self._get_input_type_name()
+        error_msg = (
+            f"Failed to convert result to {output_type} output. "
+            f"Error: {error}. "
+            f"Input type was {input_type}. "
+            f"Try using the same output type as the input."
+        )
+        raise ValueError(error_msg) from error
+
+    def _convert_result_to_data(self, result: Any) -> Data:
+        """Convert lambda result to Data object."""
+        if isinstance(result, dict):
+            return Data(data=result)
+        if isinstance(result, list):
+            return Data(data={"_results": result})
+        return Data(data={"text": str(result)})
+
+    def _convert_result_to_dataframe(self, result: Any) -> DataFrame:
+        """Convert lambda result to DataFrame object."""
+        if isinstance(result, list):
+            if all(isinstance(item, dict) for item in result):
+                return DataFrame(result)
+            return DataFrame([{"value": item} for item in result])
+        if isinstance(result, dict):
+            return DataFrame([result])
+        return DataFrame([{"value": str(result)}])
+
+    def _convert_result_to_message(self, result: Any) -> Message:
+        """Convert lambda result to Message object."""
+        if isinstance(result, str):
+            return Message(text=result, sender=MESSAGE_SENDER_AI)
+        if isinstance(result, list):
+            text = "\n".join(str(item) for item in result)
+            return Message(text=text, sender=MESSAGE_SENDER_AI)
+        if isinstance(result, dict):
+            text = json.dumps(result, indent=2)
+            return Message(text=text, sender=MESSAGE_SENDER_AI)
+        return Message(text=str(result), sender=MESSAGE_SENDER_AI)
 
     async def process_as_data(self) -> Data:
         """Process the data and return as a Data object."""
         try:
             result = await self._execute_lambda()
-
-            # Convert result to Data based on type
-            if isinstance(result, dict):
-                return Data(data=result)
-            if isinstance(result, list):
-                return Data(data={"_results": result})
-            # For other types, convert to string
-            return Data(data={"text": str(result)})
-
-        except Exception as e:
-            input_type = self._get_input_type_name()
-            error_msg = (
-                f"Failed to convert result to Data output. "
-                f"Error: {e}. "
-                f"Input type was {input_type}. "
-                f"Try using the same output type as the input."
-            )
-            self.log(f"Error in process_as_data: {error_msg}")
-            raise ValueError(error_msg) from e
+            return self._convert_result_to_data(result)
+        except Exception as e:  # noqa: BLE001 - dynamic lambda can raise any exception
+            self._handle_process_error(e, "Data")
 
     async def process_as_dataframe(self) -> DataFrame:
         """Process the data and return as a DataFrame."""
         try:
             result = await self._execute_lambda()
-
-            # Convert result to DataFrame based on type
-            if isinstance(result, list):
-                # Check if it's a list of dicts
-                if all(isinstance(item, dict) for item in result):
-                    return DataFrame(result)
-                # List of non-dicts: wrap each value
-                return DataFrame([{"value": item} for item in result])
-            if isinstance(result, dict):
-                # Single dict becomes single-row DataFrame
-                return DataFrame([result])
-            # Other types: convert to string and wrap
-            return DataFrame([{"value": str(result)}])
-
-        except Exception as e:
-            input_type = self._get_input_type_name()
-            error_msg = (
-                f"Failed to convert result to DataFrame output. "
-                f"Error: {e}. "
-                f"Input type was {input_type}. "
-                f"Try using the same output type as the input."
-            )
-            self.log(f"Error in process_as_dataframe: {error_msg}")
-            raise ValueError(error_msg) from e
+            return self._convert_result_to_dataframe(result)
+        except Exception as e:  # noqa: BLE001 - dynamic lambda can raise any exception
+            self._handle_process_error(e, "DataFrame")
 
     async def process_as_message(self) -> Message:
         """Process the data and return as a Message."""
         try:
             result = await self._execute_lambda()
-
-            # Convert result to Message based on type
-            if isinstance(result, str):
-                # String result becomes message text
-                return Message(text=result, sender=MESSAGE_SENDER_AI)
-            if isinstance(result, list):
-                # List converted to joined string
-                text = "\n".join(str(item) for item in result)
-                return Message(text=text, sender=MESSAGE_SENDER_AI)
-            if isinstance(result, dict):
-                # Dict converted to formatted string
-                text = json.dumps(result, indent=2)
-                return Message(text=text, sender=MESSAGE_SENDER_AI)
-            # Other types: convert to string
-            return Message(text=str(result), sender=MESSAGE_SENDER_AI)
-
-        except Exception as e:
-            input_type = self._get_input_type_name()
-            error_msg = (
-                f"Failed to convert result to Message output. "
-                f"Error: {e}. "
-                f"Input type was {input_type}. "
-                f"Try using the same output type as the input."
-            )
-            self.log(f"Error in process_as_message: {error_msg}")
-            raise ValueError(error_msg) from e
+            return self._convert_result_to_message(result)
+        except Exception as e:  # noqa: BLE001 - dynamic lambda can raise any exception
+            self._handle_process_error(e, "Message")
