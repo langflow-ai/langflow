@@ -88,7 +88,7 @@ def create_isolated_builtins() -> dict[str, Any]:
                 level_name = SECURITY_LEVEL.value.upper()
                 msg = (
                     f"Builtin '{name}' is blocked by security level '{level_name}'. "
-                    f"Set LANGFLOW_SANDBOX_SECURITY_LEVEL=disabled to allow (not recommended)."
+                    f"Set LANGFLOW_ISOLATION_SECURITY_LEVEL=disabled to allow (not recommended)."
                 )
                 raise SecurityViolationError(msg)
             if name == "__builtins__":
@@ -161,7 +161,7 @@ def create_isolated_import(isolated_builtins_dict: dict[str, Any] | None = None)
             level_name = SECURITY_LEVEL.value.upper()
             msg = (
                 f"Module '{module_name}' is blocked by security level '{level_name}'. "
-                f"Set LANGFLOW_SANDBOX_SECURITY_LEVEL=disabled to allow (not recommended)."
+                f"Set LANGFLOW_ISOLATION_SECURITY_LEVEL=disabled to allow (not recommended)."
             )
             raise SecurityViolationError(msg)
         

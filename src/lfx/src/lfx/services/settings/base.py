@@ -352,16 +352,17 @@ class Settings(BaseSettings):
     When protection is disabled, all hosts are allowed regardless of this setting."""
 
     # Code Validation Security
-    allow_dangerous_code_validation: bool = False
-    """If set to True, allows dangerous operations (file I/O, subprocess, network access, etc.)
-    during code validation in the /api/v1/validate/code endpoint.
+    isolation_security_level: str = "moderate"
+    """Security level for code isolation during validation.
+    TODO: Add for runtime execution.
     
-    By default (False), dangerous operations are blocked during validation to prevent
-    Remote Code Execution (RCE) vulnerabilities. Even when allowed, code executes in
-    an isolated sandbox environment and cannot access server Python variables.
-    
-    WARNING: Setting this to True reduces security. Only enable if you understand the risks
-    and have other security measures in place. Controlled by LANGFLOW_SANDBOX_SECURITY_LEVEL env variable."""
+    Controls which operations are blocked when executing user-provided code:
+    - "moderate" (default): Allows common operations (HTTP requests, async, temp files)
+      while blocking direct system access (os, sys, subprocess, eval, exec, etc.)
+    - "strict": Blocks all potentially dangerous operations for maximum security
+    - "disabled": No restrictions (use only in trusted environments)
+    """
+
 
     @field_validator("cors_origins", mode="before")
     @classmethod

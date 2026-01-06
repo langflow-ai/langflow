@@ -15,10 +15,45 @@ of server-side secrets.
 
 import importlib
 import os
+from contextlib import contextmanager
+from unittest.mock import MagicMock, patch
 
 import pytest
 from lfx.custom import isolation as isolation_module
 from lfx.custom.isolation import SecurityViolationError, execute_in_isolated_env
+
+
+@contextmanager
+def mock_isolation_settings(security_level="moderate"):
+    """Context manager to mock isolation settings service.
+    
+    Args:
+        security_level: The security level to use ("moderate", "strict", or "disabled")
+    """
+    with patch("lfx.services.deps.get_settings_service") as mock_get_settings:
+        mock_settings_service = MagicMock()
+        mock_settings_service.settings.isolation_security_level = security_level
+        mock_get_settings.return_value = mock_settings_service
+        
+        # Clear cache and reload modules to pick up new settings
+        import lfx.custom.isolation.config as config_module
+        import lfx.custom.isolation.isolation as isolation_module
+        import lfx.custom.isolation.execution as execution_module
+        config_module.clear_cache()
+        importlib.reload(config_module)
+        importlib.reload(isolation_module)
+        importlib.reload(execution_module)
+        importlib.reload(isolation_module)
+        
+        yield
+        
+        # Restore default
+        mock_settings_service.settings.isolation_security_level = "moderate"
+        config_module.clear_cache()
+        importlib.reload(config_module)
+        importlib.reload(isolation_module)
+        importlib.reload(execution_module)
+        importlib.reload(isolation_module)
 
 
 def test_sandbox_blocks_dangerous_modules_by_default():
@@ -125,31 +160,23 @@ def test():
         test_func()
 
 
-def test_sandbox_cannot_access_server_python_state(monkeypatch):
+def test_sandbox_cannot_access_server_python_state():
     """Test that code cannot access server's Python state, even if it can access system resources.
 
     This is the key security property: namespace isolation prevents access to server secrets
     stored in Python variables, even though code can access system resources like os.environ.
     """
     # Enable dangerous code for this test to demonstrate isolation still works
-    monkeypatch.setenv("LANGFLOW_SANDBOX_SECURITY_LEVEL", "disabled")
-    # Reload modules to pick up new env var value
-    import lfx.custom.isolation.config as config_module
-    import lfx.custom.isolation.isolation as isolation_module
-    import lfx.custom.isolation.execution as execution_module
-    importlib.reload(config_module)
-    importlib.reload(isolation_module)
-    importlib.reload(execution_module)
-    importlib.reload(isolation_module)
-    from lfx.custom.isolation import execute_in_isolated_env as execute_in_isolated_env_allowed
+    with mock_isolation_settings("disabled"):
+        from lfx.custom.isolation import execute_in_isolated_env as execute_in_isolated_env_allowed
 
-    # Server stores secrets in Python variables (not just env vars)
-    server_secrets = {  # noqa: F841
-        "api_key": "sk-secret-from-python-var",
-        "db_password": "password-from-python-var",
-    }
+        # Server stores secrets in Python variables (not just env vars)
+        server_secrets = {  # noqa: F841
+            "api_key": "sk-secret-from-python-var",
+            "db_password": "password-from-python-var",
+        }
 
-    code = """
+        code = """
 import os
 def test():
     # Code CAN access os.environ (system resource)
@@ -161,59 +188,41 @@ def test():
 
     return env_key, python_secret
 """
-    code_obj = compile(code, "<test>", "exec")
-    exec_globals = {}
+        code_obj = compile(code, "<test>", "exec")
+        exec_globals = {}
 
-    # Set env var to test that system resources ARE accessible
-    os.environ["TEST_ENV_VAR"] = "env_value"
+        # Set env var to test that system resources ARE accessible
+        os.environ["TEST_ENV_VAR"] = "env_value"
 
-    try:
-        execute_in_isolated_env_allowed(code_obj, exec_globals)
+        try:
+            execute_in_isolated_env_allowed(code_obj, exec_globals)
 
-        # Call the function
-        test_func = exec_globals["test"]
+            # Call the function
+            test_func = exec_globals["test"]
 
-        # Should raise NameError - server_secrets Python variable is not accessible
-        # This proves namespace isolation works, even though os.environ is accessible
-        with pytest.raises(NameError):
-            test_func()
-    finally:
-        if "TEST_ENV_VAR" in os.environ:
-            del os.environ["TEST_ENV_VAR"]
-        # Explicitly restore environment variable before reloading
-        monkeypatch.setenv("LANGFLOW_SANDBOX_SECURITY_LEVEL", "moderate")
-        # Reload modules to restore default blocking
-        import lfx.custom.isolation.config as config_module
-        import lfx.custom.isolation.isolation as isolation_module
-        import lfx.custom.isolation.execution as execution_module
-        importlib.reload(config_module)
-        importlib.reload(isolation_module)
-        importlib.reload(execution_module)
-        importlib.reload(isolation_module)
+            # Should raise NameError - server_secrets Python variable is not accessible
+            # This proves namespace isolation works, even though os.environ is accessible
+            with pytest.raises(NameError):
+                test_func()
+        finally:
+            if "TEST_ENV_VAR" in os.environ:
+                del os.environ["TEST_ENV_VAR"]
 
 
-def test_sandbox_cannot_exfiltrate_secrets_via_commands(monkeypatch):
+def test_sandbox_cannot_exfiltrate_secrets_via_commands():
     """Test that code cannot access server secrets to pass to system commands.
 
     Code CAN execute system commands, but it CANNOT access server secrets
     stored in Python variables to pass to those commands.
     """
     # Enable dangerous code for this test to demonstrate isolation still works
-    monkeypatch.setenv("LANGFLOW_SANDBOX_SECURITY_LEVEL", "disabled")
-    # Reload modules to pick up new env var value
-    import lfx.custom.isolation.config as config_module
-    import lfx.custom.isolation.isolation as isolation_module
-    import lfx.custom.isolation.execution as execution_module
-    importlib.reload(config_module)
-    importlib.reload(isolation_module)
-    importlib.reload(execution_module)
-    importlib.reload(isolation_module)
-    from lfx.custom.isolation import execute_in_isolated_env as execute_in_isolated_env_allowed
+    with mock_isolation_settings("disabled"):
+        from lfx.custom.isolation import execute_in_isolated_env as execute_in_isolated_env_allowed
 
-    # Server secret stored in Python variable
-    server_secret = "secret_password_12345"  # noqa: F841, S105
+        # Server secret stored in Python variable
+        server_secret = "secret_password_12345"  # noqa: F841, S105
 
-    code = """
+        code = """
 import subprocess
 def test():
     # Code CAN execute commands
@@ -222,25 +231,18 @@ def test():
     result = subprocess.check_output(['echo', server_secret], text=True)
     return result.strip()
 """
-    code_obj = compile(code, "<test>", "exec")
-    exec_globals = {}
+        code_obj = compile(code, "<test>", "exec")
+        exec_globals = {}
 
-    execute_in_isolated_env_allowed(code_obj, exec_globals)
+        execute_in_isolated_env_allowed(code_obj, exec_globals)
 
-    # Call the function
-    test_func = exec_globals["test"]
+        # Call the function
+        test_func = exec_globals["test"]
 
-    # CRITICAL: Should raise NameError - server_secret is not accessible
-    # This prevents code from exfiltrating secrets via system commands
-    with pytest.raises(NameError):
-        test_func()
-
-    # Explicitly restore environment variable before reloading
-    monkeypatch.setenv("LANGFLOW_SANDBOX_SECURITY_LEVEL", "moderate")
-    # Reload module to restore default blocking
-    import lfx.custom.isolation.config as config_module
-    importlib.reload(config_module)
-    importlib.reload(isolation_module)
+        # CRITICAL: Should raise NameError - server_secret is not accessible
+        # This prevents code from exfiltrating secrets via system commands
+        with pytest.raises(NameError):
+            test_func()
 
 
 def test_sandbox_cannot_access_server_python_variables():
@@ -297,28 +299,20 @@ def test():
     assert server_state["modified"] is False
 
 
-def test_sandbox_cannot_exfiltrate_secrets_via_network(monkeypatch):
+def test_sandbox_cannot_exfiltrate_secrets_via_network():
     """Test that code cannot access server secrets to send via network requests.
 
     Code CAN make network requests, but it CANNOT access server secrets
     stored in Python variables to send in those requests.
     """
     # Enable dangerous code for this test to demonstrate isolation still works
-    monkeypatch.setenv("LANGFLOW_SANDBOX_SECURITY_LEVEL", "disabled")
-    # Reload modules to pick up new env var value
-    import lfx.custom.isolation.config as config_module
-    import lfx.custom.isolation.isolation as isolation_module
-    import lfx.custom.isolation.execution as execution_module
-    importlib.reload(config_module)
-    importlib.reload(isolation_module)
-    importlib.reload(execution_module)
-    importlib.reload(isolation_module)
-    from lfx.custom.isolation import execute_in_isolated_env as execute_in_isolated_env_allowed
+    with mock_isolation_settings("disabled"):
+        from lfx.custom.isolation import execute_in_isolated_env as execute_in_isolated_env_allowed
 
-    # Server secret stored in Python variable
-    server_api_key = "sk-secret-key-to-exfiltrate"  # noqa: F841
+        # Server secret stored in Python variable
+        server_api_key = "sk-secret-key-to-exfiltrate"  # noqa: F841
 
-    code = """
+        code = """
 import socket
 def test():
     # Code CAN make network requests
@@ -332,25 +326,18 @@ def test():
     s.close()
     return 'sent'
 """
-    code_obj = compile(code, "<test>", "exec")
-    exec_globals = {}
+        code_obj = compile(code, "<test>", "exec")
+        exec_globals = {}
 
-    execute_in_isolated_env_allowed(code_obj, exec_globals)
+        execute_in_isolated_env_allowed(code_obj, exec_globals)
 
-    # Call the function
-    test_func = exec_globals["test"]
+        # Call the function
+        test_func = exec_globals["test"]
 
-    # CRITICAL: Should raise NameError - server_api_key is not accessible
-    # This prevents code from exfiltrating secrets via network requests
-    with pytest.raises(NameError):
-        test_func()
-
-    # Explicitly restore environment variable before reloading
-    monkeypatch.setenv("LANGFLOW_SANDBOX_SECURITY_LEVEL", "moderate")
-    # Reload module to restore default blocking
-    import lfx.custom.isolation.config as config_module
-    importlib.reload(config_module)
-    importlib.reload(isolation_module)
+        # CRITICAL: Should raise NameError - server_api_key is not accessible
+        # This prevents code from exfiltrating secrets via network requests
+        with pytest.raises(NameError):
+            test_func()
 
 
 def test_moderate_mode_allows_common_operations():
@@ -410,6 +397,10 @@ def test():
 
 def test_moderate_mode_blocks_critical_operations():
     """Test that MODERATE mode still blocks critical security risks."""
+    # Ensure we're in MODERATE mode (default)
+    import os
+    if "LANGFLOW_ISOLATION_SECURITY_LEVEL" in os.environ:
+        del os.environ["LANGFLOW_ISOLATION_SECURITY_LEVEL"]
     # Re-import to ensure we're using the current module state (in case previous tests reloaded it)
     import lfx.custom.isolation.config as config_module
     import lfx.custom.isolation.isolation as isolation_module
@@ -418,7 +409,10 @@ def test_moderate_mode_blocks_critical_operations():
     importlib.reload(isolation_module)
     importlib.reload(execution_module)
     importlib.reload(isolation_module)
-    from lfx.custom.isolation import SecurityViolationError as SecurityViolationErrorCurrent
+    # Clear cache to ensure fresh read of environment
+    config_module.clear_cache()
+    # Import exception from config module directly to avoid reload issues
+    SecurityViolationErrorCurrent = config_module.SecurityViolationError
     from lfx.custom.isolation import execute_in_isolated_env as execute_in_isolated_env_current
 
     # Test that eval is blocked even in MODERATE mode
@@ -473,23 +467,13 @@ def test():
         execute_in_isolated_env_current(code_obj4, exec_globals4)
 
 
-def test_strict_mode_blocks_all_dangerous_operations(monkeypatch):
+def test_strict_mode_blocks_all_dangerous_operations():
     """Test that STRICT mode blocks all potentially dangerous operations."""
     # Set STRICT mode
-    monkeypatch.setenv("LANGFLOW_SANDBOX_SECURITY_LEVEL", "strict")
-    # Reload modules to pick up new env var value
-    import lfx.custom.isolation.config as config_module
-    import lfx.custom.isolation.isolation as isolation_module
-    import lfx.custom.isolation.execution as execution_module
-    importlib.reload(config_module)
-    importlib.reload(isolation_module)
-    importlib.reload(execution_module)
-    importlib.reload(isolation_module)
-    # Import execute_in_isolated_env and SecurityViolationError from reloaded module
-    from lfx.custom.isolation import SecurityViolationError as SecurityViolationErrorStrict
-    from lfx.custom.isolation import execute_in_isolated_env as execute_in_isolated_env_strict
-
-    try:
+    with mock_isolation_settings("strict"):
+        import lfx.custom.isolation.config as config_module
+        SecurityViolationErrorStrict = config_module.SecurityViolationError
+        from lfx.custom.isolation import execute_in_isolated_env as execute_in_isolated_env_strict
         # Test that requests is blocked in STRICT mode
         code1 = """
 import requests
@@ -541,10 +525,6 @@ import importlib
             pytest.fail("Should have raised SecurityViolationError")
         except SecurityViolationErrorStrict:
             pass  # Expected
-    finally:
-        # Restore MODERATE mode
-        monkeypatch.setenv("LANGFLOW_SANDBOX_SECURITY_LEVEL", "moderate")
-        importlib.reload(isolation_module)
 
 
 def test_sandbox_cannot_access_server_variables_via_module_attributes():

@@ -3,8 +3,8 @@
 Defines security levels and blocked modules/builtins.
 """
 
-import os
 from enum import Enum
+from functools import lru_cache
 
 
 class SecurityViolationError(Exception):
@@ -19,18 +19,51 @@ class SecurityLevel(str, Enum):
     DISABLED = "disabled"  # No restrictions (use with caution)
 
 
-# Parse security level from environment variable
-_SANDBOX_SECURITY_ENV = os.getenv("LANGFLOW_SANDBOX_SECURITY_LEVEL", "moderate").lower()
+@lru_cache(maxsize=1)
+def _get_security_level() -> SecurityLevel:
+    """Get security level from settings service.
+    
+    Returns:
+        SecurityLevel: The current security level, defaults to MODERATE.
+    """
+    try:
+        from lfx.services.deps import get_settings_service
 
-try:
-    SECURITY_LEVEL = SecurityLevel(_SANDBOX_SECURITY_ENV)
-except ValueError:
-    # Invalid value, default to MODERATE
-    SECURITY_LEVEL = SecurityLevel.MODERATE
+        settings_service = get_settings_service()
+        if not settings_service or not settings_service.settings:
+            # Default to MODERATE if settings service not available
+            return SecurityLevel.MODERATE
+        env_value = getattr(settings_service.settings, "isolation_security_level", None)
+        if not env_value:
+            # Default to MODERATE if not set
+            return SecurityLevel.MODERATE
+        return SecurityLevel(str(env_value).lower())
+    except (ValueError, AttributeError) as e:
+        # Default to MODERATE on error
+        return SecurityLevel.MODERATE
+    except Exception:
+        # Default to MODERATE on any other error
+        return SecurityLevel.MODERATE
+
+
+def get_security_level() -> SecurityLevel:
+    """Get the current security level.
+    
+    Returns:
+        SecurityLevel: The current security level.
+    """
+    return _get_security_level()
+
+
+def clear_cache() -> None:
+    """Clear all cached values."""
+    _get_security_level.cache_clear()
+    _get_blocked_builtins.cache_clear()
+    _get_blocked_modules.cache_clear()
 
 # Builtins that are always blocked (even in MODERATE mode)
 # These allow direct system access or code injection
-CRITICAL_BUILTINS: set[str] = {
+CRITICAL_BUILTINS: frozenset[str] = frozenset({
     "eval",  # Dynamic evaluation - code injection risk
     "exec",  # Dynamic execution - code injection risk
     "compile",  # Code compilation - code injection risk
@@ -42,17 +75,17 @@ CRITICAL_BUILTINS: set[str] = {
     "breakpoint",  # Debugger access
     "reload",  # Module reloading
     "file",  # File I/O (Python 2)
-}
+})
 
 # Builtins blocked in STRICT mode but allowed in MODERATE mode
 # These are common legitimate operations that don't directly access system
-MODERATE_BUILTINS: set[str] = {
+MODERATE_BUILTINS: frozenset[str] = frozenset({
     "open",  # File I/O - common but can access filesystem
-}
+})
 
 # Modules blocked in STRICT mode but allowed in MODERATE mode
 # These are common legitimate operations (HTTP, async, temp files, etc.)
-MODERATE_MODULES: set[str] = {
+MODERATE_MODULES: frozenset[str] = frozenset({
     # HTTP libraries - very common for API calls
     "requests",
     "httpx",
@@ -73,12 +106,11 @@ MODERATE_MODULES: set[str] = {
     "ftplib",
     "telnetlib",
     "smtplib",
-}
+})
 
 # Modules always blocked (even in MODERATE mode)
-# These provide direct system access
-CRITICAL_MODULES: set[str] = {
-    # Direct system access
+CRITICAL_MODULES: frozenset[str] = frozenset({
+    # Direct system access modules
     "os",  # File system, environment, process control
     "sys",  # System-specific parameters, interpreter access
     "subprocess",  # Process execution
@@ -100,20 +132,61 @@ CRITICAL_MODULES: set[str] = {
     "gc",  # Garbage collector manipulation
     "inspect",  # Can be used for introspection attacks
     "importlib",  # importlib allows bypassing our __import__ hook
-}
+})
 
-# Compute blocked sets based on security level
-if SECURITY_LEVEL == SecurityLevel.DISABLED:
-    BLOCKED_BUILTINS: set[str] = set()
-    BLOCKED_MODULES: set[str] = set()
-elif SECURITY_LEVEL == SecurityLevel.STRICT:
-    # STRICT: Block everything potentially dangerous
-    BLOCKED_BUILTINS = CRITICAL_BUILTINS | MODERATE_BUILTINS
-    BLOCKED_MODULES = CRITICAL_MODULES | MODERATE_MODULES
-else:  # MODERATE (default)
-    # MODERATE: Block critical operations, allow common legitimate uses
-    BLOCKED_BUILTINS = CRITICAL_BUILTINS
-    BLOCKED_MODULES = CRITICAL_MODULES
+@lru_cache(maxsize=1)
+def _get_blocked_builtins() -> frozenset[str]:
+    """Get blocked builtins based on current security level."""
+    level = _get_security_level()
+    if level == SecurityLevel.DISABLED:
+        return frozenset()
+    elif level == SecurityLevel.STRICT:
+        return CRITICAL_BUILTINS | MODERATE_BUILTINS
+    else:  # MODERATE (default)
+        return CRITICAL_BUILTINS
+
+
+@lru_cache(maxsize=1)
+def _get_blocked_modules() -> frozenset[str]:
+    """Get blocked modules based on current security level."""
+    level = _get_security_level()
+    if level == SecurityLevel.DISABLED:
+        return frozenset()
+    elif level == SecurityLevel.STRICT:
+        return CRITICAL_MODULES | MODERATE_MODULES
+    else:  # MODERATE (default)
+        return CRITICAL_MODULES
+
+
+def get_blocked_builtins() -> frozenset[str]:
+    """Get the set of blocked builtins.
+    
+    Returns:
+        frozenset[str]: Set of blocked builtin names.
+    """
+    return _get_blocked_builtins()
+
+
+def get_blocked_modules() -> frozenset[str]:
+    """Get the set of blocked modules.
+    
+    Returns:
+        frozenset[str]: Set of blocked module names.
+    """
+    return _get_blocked_modules()
+
+
+# Module-level lazy attributes for backward compatibility
+# Using __getattr__ to make them work as module-level constants
+def __getattr__(name: str):
+    """Lazy module-level attributes for backward compatibility."""
+    if name == "SECURITY_LEVEL":
+        return _get_security_level()
+    if name == "BLOCKED_BUILTINS":
+        return _get_blocked_builtins()
+    if name == "BLOCKED_MODULES":
+        return _get_blocked_modules()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 # Note: We don't maintain a whitelist of allowed modules.
 # Instead, we block dangerous modules and allow everything else.

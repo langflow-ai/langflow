@@ -23,7 +23,7 @@ def execute_in_isolated_env(code_obj: Any, exec_globals: dict[str, Any]) -> None
     - STRICT: Blocks all potentially dangerous operations for maximum security
     - DISABLED: No restrictions (use only in trusted environments)
 
-    Configure via LANGFLOW_SANDBOX_SECURITY_LEVEL environment variable.
+    Configure via LANGFLOW_ISOLATION_SECURITY_LEVEL environment variable.
     Even when restrictions are disabled, code runs in isolation and cannot
     access server Python variables.
 

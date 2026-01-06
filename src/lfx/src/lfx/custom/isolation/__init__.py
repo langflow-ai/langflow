@@ -27,7 +27,7 @@ Security Levels:
         Use only in trusted environments or for debugging.
 
 Configuration:
-    Set LANGFLOW_SANDBOX_SECURITY_LEVEL to one of: "moderate", "strict", "disabled"
+    Set LANGFLOW_ISOLATION_SECURITY_LEVEL to one of: "moderate", "strict", "disabled"
     Default: "moderate"
 """
 
