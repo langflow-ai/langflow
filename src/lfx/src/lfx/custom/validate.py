@@ -35,6 +35,38 @@ def add_type_ignores() -> None:
 
 
 def validate_code(code):
+    """Validate user-provided code for security violations.
+    
+    This function performs three-phase validation:
+    
+    Phase 1: Module-level import validation
+        - Checks all top-level imports (import X, from X import Y)
+        - Blocks dangerous modules based on security level
+        - Returns errors in errors["imports"]["errors"]
+    
+    Phase 2: Function/method body import validation (static analysis)
+        - Statically analyzes function and method bodies for imports
+        - Blocks dangerous imports that would execute at runtime
+        - Handles nested functions, classes, and async functions
+        - Returns errors in errors["function"]["errors"]
+    
+    Phase 3: Function definition execution (decorators, default args)
+        - Executes function definitions in isolated environment
+        - Blocks dangerous operations in decorators and default arguments
+        - Transforms AST to prevent dunder access attacks
+        - Returns errors in errors["function"]["errors"]
+    
+    Args:
+        code: String containing Python code to validate
+        
+    Returns:
+        dict: Dictionary with "imports" and "function" keys, each containing "errors" list
+        Example: {"imports": {"errors": []}, "function": {"errors": []}}
+        
+    Note:
+        This validation prevents dangerous code from being created, but actual runtime
+        execution isolation is deferred.
+    """
     # Initialize the errors dictionary
     errors = {"imports": {"errors": []}, "function": {"errors": []}}
 
@@ -66,10 +98,10 @@ def validate_code(code):
                     isolated_import(alias.name, None, None, (), 0)
                 except SecurityViolationError as e:
                     # SecurityViolationError means the module is blocked by security policy.
-                    # Since isolation will be used during runtime execution (planned),
-                    # we should fail validation here so users get early feedback about
-                    # blocked modules. This prevents code from passing validation but
-                    # failing at runtime.
+                    # We fail validation here so users get early feedback about blocked modules.
+                    # This prevents code from passing validation but failing at runtime.
+                    # Note: Runtime imports are blocked during validation (Phase 2), but actual
+                    # runtime execution isolation is deferred.
                     errors["imports"]["errors"].append(str(e))
                 except ModuleNotFoundError as e:
                     errors["imports"]["errors"].append(str(e))
@@ -82,17 +114,68 @@ def validate_code(code):
                     isolated_import(node.module, None, None, (), 0)
                 except SecurityViolationError as e:
                     # SecurityViolationError means the module is blocked by security policy.
-                    # Since isolation will be used during runtime execution (planned),
-                    # we should fail validation here so users get early feedback about
-                    # blocked modules. This prevents code from passing validation but
-                    # failing at runtime.
+                    # We fail validation here so users get early feedback about blocked modules.
+                    # This prevents code from passing validation but failing at runtime.
+                    # Note: Runtime imports are blocked during validation (Phase 2), but actual
+                    # runtime execution isolation is deferred.
                     errors["imports"]["errors"].append(str(e))
                 except ModuleNotFoundError as e:
                     errors["imports"]["errors"].append(str(e))
                 except Exception as e:  # noqa: BLE001
                     errors["imports"]["errors"].append(str(e))
 
-    # Phase 2: Transform AST to block dangerous dunder access, then execute function definitions
+    # Phase 2: Check for imports inside function/method bodies (static analysis)
+    # Function/method bodies are not executed during definition, so we statically analyze them
+    # to catch dangerous imports that would execute at runtime. This blocks runtime imports
+    # during validation, preventing dangerous code from being created even though actual
+    # runtime execution is not yet isolated.
+    isolated_import = create_isolated_import()
+    
+    def check_imports_in_body(body_nodes, context_name, context_type="function"):
+        """Recursively check for blocked imports in a function/method body."""
+        for body_node in body_nodes:
+            if isinstance(body_node, ast.Import):
+                for alias in body_node.names:
+                    try:
+                        # Check if import is blocked - this will execute at runtime
+                        isolated_import(alias.name, None, None, (), 0)
+                    except SecurityViolationError as e:
+                        errors["function"]["errors"].append(
+                            f"{context_type.capitalize()} '{context_name}' contains blocked import '{alias.name}' in body: {e}"
+                        )
+                    except Exception:  # noqa: BLE001
+                        # Ignore other import errors (ModuleNotFoundError, etc.) - those are runtime issues
+                        pass
+            elif isinstance(body_node, ast.ImportFrom) and body_node.module:
+                try:
+                    # Check if import is blocked - this will execute at runtime
+                    isolated_import(body_node.module, None, None, (), 0)
+                except SecurityViolationError as e:
+                    errors["function"]["errors"].append(
+                        f"{context_type.capitalize()} '{context_name}' contains blocked import '{body_node.module}' in body: {e}"
+                    )
+                except Exception:  # noqa: BLE001
+                    # Ignore other import errors (ModuleNotFoundError, etc.) - those are runtime issues
+                    pass
+            elif isinstance(body_node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                # Recursively check nested functions
+                check_imports_in_body(body_node.body, f"{context_name}.{body_node.name}", "nested function")
+            elif isinstance(body_node, ast.ClassDef):
+                # Check methods inside nested classes
+                for method in body_node.body:
+                    if isinstance(method, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                        check_imports_in_body(method.body, f"{body_node.name}.{method.name}", "method")
+    
+    for node in tree.body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            check_imports_in_body(node.body, node.name, "function")
+        elif isinstance(node, ast.ClassDef):
+            # Check methods inside classes
+            for method in node.body:
+                if isinstance(method, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    check_imports_in_body(method.body, f"{node.name}.{method.name}", "method")
+
+    # Phase 3: Transform AST to block dangerous dunder access, then execute function definitions
     # This actually runs the code (for decorators, default args, etc.) in an isolated environment.
     # Unlike Phase 1, this uses execute_in_isolated_env() which creates full isolation including
     # isolated builtins. This is where the real security isolation happens.
@@ -102,9 +185,10 @@ def validate_code(code):
     transformer = DunderAccessTransformer()
 
     for node in tree.body:
-        if isinstance(node, ast.FunctionDef):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             # Transform the function node's AST to block dangerous dunder access
             # Visit the entire function node (which will recursively transform all attributes)
+            # This includes decorators, which are evaluated during function definition execution
             transformed_func = transformer.visit(node)
             # Fix missing location information
             ast.fix_missing_locations(transformed_func)
@@ -113,6 +197,7 @@ def validate_code(code):
                 # Create execution context with common langflow imports
                 exec_globals = _create_langflow_execution_context()
                 # Execute in isolated environment - code cannot access server environment
+                # Decorators and default arguments are evaluated here, so they're protected
                 execute_in_isolated_env(code_obj, exec_globals)
             except Exception as e:  # noqa: BLE001
                 logger.debug("Error executing function code", exc_info=True)

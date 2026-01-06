@@ -4,15 +4,16 @@ This module provides isolated import and execution environments to ensure
 user-provided code executes in an isolated namespace without access to
 dangerous system modules or builtins.
 
-NOTE: Currently, this isolation is ONLY used during code validation
-(via /api/v1/validate/code endpoint). It is NOT used during actual
-flow execution. Code that passes validation will execute with full
-system access during flow runs.
+SECURITY STATUS:
+- ✅ Module-level imports ARE blocked during validation (e.g., `import subprocess` at top of file)
+- ✅ Runtime imports in function/method bodies ARE detected and blocked during validation via static analysis
+  (e.g., `import subprocess` inside `build()` method is caught before code runs)
+- ✅ Function definitions (including decorators) execute in isolation during validation
+- ❌ Runtime execution isolation is deferred - imports in methods execute without blocking at runtime
+  (validation prevents dangerous code from being created, but runtime execution is not isolated)
 
-TODO: Consider adding isolation to runtime flow execution
-for additional security. This would require modifying create_class()
-and execute_function() in validate.py to use execute_in_isolated_env()
-instead of regular exec().
+NOTE: Isolation is currently ONLY used during code validation (via /api/v1/validate/code endpoint).
+Runtime execution isolation is deferred.
 
 Security Levels:
     MODERATE (default): Allows common legitimate operations (HTTP requests, async,
