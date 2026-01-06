@@ -16,8 +16,19 @@ jobs:
           script: |
             const author = context.payload.pull_request.user.login;
             const org = context.repo.owner;
+            const authorAssociation = context.payload.pull_request.author_association;
 
-            // Check if user is a member of the organization
+            // First check author_association from payload (no API call needed)
+            // OWNER, MEMBER, COLLABORATOR indicate org/repo membership
+            const orgAssociations = ['OWNER', 'MEMBER', 'COLLABORATOR'];
+
+            if (orgAssociations.includes(authorAssociation)) {
+              console.log(`${author} has author_association '${authorAssociation}', skipping community label`);
+              return;
+            }
+
+            // author_association can be CONTRIBUTOR for org members who have committed before,
+            // so we need to verify with an API call
             // null = unable to determine, true = member, false = confirmed non-member
             let isOrgMember = null;
             try {
@@ -26,15 +37,17 @@ jobs:
                 username: author
               });
               isOrgMember = true;
+              console.log(`${author} confirmed as org member via API, skipping community label`);
             } catch (error) {
               const status = error.status || error.response?.status;
               if (status === 404) {
                 // 404 means user is confirmed not a member
                 isOrgMember = false;
+                console.log(`${author} confirmed as non-member (404), adding community label`);
               } else {
                 // For other errors (network, 403, 429, 5xx), we cannot determine membership
-                // Log the error and skip labeling to avoid false positives
-                console.log(`Unable to determine org membership for ${author}: ${error.message} (status: ${status})`);
+                // Skip labeling to avoid false positives on org members
+                console.log(`Unable to determine org membership for ${author}: ${error.message} (status: ${status}), skipping label`);
                 isOrgMember = null;
               }
             }
