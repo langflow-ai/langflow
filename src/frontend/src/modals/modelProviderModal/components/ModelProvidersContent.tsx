@@ -248,7 +248,7 @@ const ModelProvidersContent = ({
   }, [onClose, refreshAllModelInputs]);
 
   return (
-    <div className="flex flex-row w-full overflow-hidden">
+    <div className="flex flex-row w-full h-full overflow-hidden">
       <div
         className={cn(
           "flex border-r p-2 flex-col transition-all duration-300 ease-in-out",
