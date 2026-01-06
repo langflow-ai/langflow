@@ -26,12 +26,6 @@ class DunderAccessTransformer(ast.NodeTransformer):
 
     The transformer rewrites dangerous attribute access (like obj.__class__) into
     calls to getattr() which we can intercept and block.
-
-    NOTE: When visiting a FunctionDef node, generic_visit() automatically visits
-    all child nodes including decorator_list, ensuring decorators are also protected
-    from dunder access attacks. Decorators are evaluated during function definition
-    execution, which happens in isolation, providing protection against RCE via
-    malicious decorators.
     """
 
     def visit_Attribute(self, node: ast.Attribute) -> ast.AST:

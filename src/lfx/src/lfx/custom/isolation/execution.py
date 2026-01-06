@@ -25,10 +25,6 @@ def execute_in_isolated_env(code_obj: Any, exec_globals: dict[str, Any]) -> None
 
     Security level is configured via the settings service (isolation_security_level setting).
 
-    LIMITATION: This only isolates code execution during class/function definition.
-    Runtime method execution (e.g., when `build()` method runs) is NOT isolated.
-    TODO: See RUNTIME_IMPORT_ISOLATION_PLAN.md for plan to block runtime imports in methods.
-
     Args:
         code_obj: Compiled code object to execute
         exec_globals: Global namespace for execution (will be merged into isolated env)
@@ -110,10 +106,8 @@ def execute_in_isolated_env(code_obj: Any, exec_globals: dict[str, Any]) -> None
         # Merge isolated_locals back into exec_globals so caller can access defined functions/classes
         # This is safe because isolated_locals only contains what was defined in the isolated code
         exec_globals.update(isolated_locals)
-        # Also merge new items from isolated_globals (like imports, module-level assignments)
-        # that weren't in original exec_globals. Exclude isolation infrastructure keys.
-        # Note: We merge items that weren't in exec_globals OR that were added during execution
-        # (like module-level constants defined in the code being executed)
+        # Also merge new items from isolated_globals (like imports) that weren't in original exec_globals
+        # Exclude isolation infrastructure keys (__builtins__, __name__, etc.) to maintain isolation
         isolation_infrastructure_keys = {
             "__builtins__",
             "__name__",
@@ -124,12 +118,8 @@ def execute_in_isolated_env(code_obj: Any, exec_globals: dict[str, Any]) -> None
             "__file__",
             "__cached__",
         }
-        # Merge all non-infrastructure items from isolated_globals into exec_globals
-        # This includes module-level assignments (like DEFAULT_OLLAMA_URL) that were executed
         for key, value in isolated_globals.items():
-            if key not in isolation_infrastructure_keys:
-                # Always update exec_globals with values from isolated execution
-                # This ensures module-level constants defined in the code are available
+            if key not in exec_globals and key not in isolation_infrastructure_keys:
                 exec_globals[key] = value
 
         # Update isolated_globals with merged values so functions' __globals__ can access them
@@ -138,13 +128,6 @@ def execute_in_isolated_env(code_obj: Any, exec_globals: dict[str, Any]) -> None
         isolated_globals.update(
             {k: v for k, v in exec_globals.items() if k not in isolation_infrastructure_keys},
         )
-
-        # CRITICAL: Ensure isolated __import__ persists in exec_globals so methods can use it at runtime
-        # Methods' __globals__ points to isolated_globals, but we also need exec_globals to have
-        # the isolated builtins so that if methods access __builtins__ or __import__, they get the isolated version
-        # Note: We don't merge isolated_builtins directly, but methods should use isolated_globals["__builtins__"]
-        # which has the isolated __import__. However, to be safe, we ensure exec_globals has access to isolated imports
-        # by storing a reference to the isolated import function (though methods should use their __globals__)
     except SecurityViolationError:  # noqa: TRY203
         # Re-raise security violations
         raise
