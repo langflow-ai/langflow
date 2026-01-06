@@ -186,7 +186,7 @@ function NoteNode({
         >
           <NodeDescription
             inputClassName={cn(
-              "border-0 ring-0 focus:ring-0 resize-none shadow-none rounded-sm h-full min-w-full max-h-full overflow-auto pr-2 sticky-note-scroll",
+              "border-0 ring-0 focus:ring-0 resize-none shadow-none rounded-sm h-full min-w-full max-h-full overflow-auto pr-4 sticky-note-scroll",
               hasCustomColor
                 ? getTextColorClass()
                 : COLOR_OPTIONS[bgColorKey] === null
@@ -199,7 +199,7 @@ function NoteNode({
                 : COLOR_OPTIONS[bgColorKey] === null
                   ? "dark:prose-invert"
                   : "dark:!text-background",
-              "min-w-full max-h-full overflow-auto pr-2 sticky-note-scroll",
+              "min-w-full max-h-full overflow-auto pr-4 sticky-note-scroll",
             )}
             style={{ backgroundColor: resolvedBgColor }}
             charLimit={CHAR_LIMIT}
