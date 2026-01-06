@@ -470,7 +470,7 @@ class IntInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixi
     """
 
     field_type: SerializableFieldTypes = FieldTypes.INTEGER
-    value: Any = 0
+    value: int = 0
     track_in_telemetry: CoalesceBool = True  # Safe numeric parameter
 
     @field_validator("value", mode="before")
@@ -486,14 +486,14 @@ class IntInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixi
             The processed value. Null-like values (None, empty string) are converted to 0.
 
         Raises:
-            TypeError: If the value is not of a valid type.
+            ValueError: If the value is not of a valid type.
         """
         # Auto-convert null-like values to 0 for backwards compatibility
         if v is None or v == "":
             return 0
         if not isinstance(v, int | float):
             msg = f"Invalid value type {type(v)} for input {info.data.get('name')}."
-            raise TypeError(msg)
+            raise ValueError(msg)  # noqa: TRY004
         if isinstance(v, float):
             v = int(v)
         return v
