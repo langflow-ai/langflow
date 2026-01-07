@@ -51,7 +51,7 @@ export const Messages = ({
   }, [chatHistory.length, isBuilding]);
 
   const messagesContent = (
-    <div className="flex flex-col flex-grow place-self-center w-full">
+    <div className="flex flex-col flex-grow place-self-center w-full relative">
       {chatHistory &&
         (isBuilding || chatHistory.length > 0 ? (
           <>
@@ -71,7 +71,7 @@ export const Messages = ({
             })}
             <div
               ref={bottomRef}
-              className="h-0 w-0 overflow-hidden"
+              className="pointer-events-none absolute bottom-0 left-0 h-0 w-0 overflow-hidden"
               aria-hidden
             />
           </>
