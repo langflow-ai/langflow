@@ -110,12 +110,12 @@ const NodeToolbarComponent = memo(
     const nodeLength = useMemo(() => getNodeLength(data), [data]);
     const { data: config } = useGetConfig();
     const allowCustomComponents = config?.allow_custom_components ?? true;
-    
+
     const hasCode = useMemo(
       () => Object.keys(data.node!.template).includes("code"),
       [data.node],
     );
-    
+
     const canEditCode = useMemo(
       () => hasCode && allowCustomComponents,
       [hasCode, allowCustomComponents],
@@ -246,7 +246,9 @@ const NodeToolbarComponent = memo(
       }
       if (!allowCustomComponents) {
         const componentName = data.node?.display_name || data.id || "Unknown";
-        setNoticeData({ title: `Custom Component '${componentName}' is not allowed` });
+        setNoticeData({
+          title: `Custom Component '${componentName}' is not allowed`,
+        });
         return;
       }
       setOpenModal((state) => !state);
