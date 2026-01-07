@@ -40,7 +40,6 @@ withEventDeliveryModes(
 
     await selectGptModel(page);
 
-
     await page.getByTestId("playground-btn-flow-io").click();
 
     await page.waitForSelector('[data-testid="button-send"]', {
