@@ -111,34 +111,24 @@ class TestStarterProjects:
 
             # Check for 'data' field
             if "data" not in node:
-                issues.append(
-                    f"Node {node_idx} (ID: {node_id}, type: {node_type}): "
-                    f"missing 'data' field"
-                )
+                issues.append(f"Node {node_idx} (ID: {node_id}, type: {node_type}): missing 'data' field")
                 continue
 
             # Check for 'node' field in data
             if "node" not in node["data"]:
-                issues.append(
-                    f"Node {node_idx} (ID: {node_id}, type: {node_type}): "
-                    f"missing 'node' field in 'data'"
-                )
+                issues.append(f"Node {node_idx} (ID: {node_id}, type: {node_type}): missing 'node' field in 'data'")
                 continue
 
             # Check for 'template' field in node
             if "template" not in node["data"]["node"]:
-                issues.append(
-                    f"Node {node_idx} (ID: {node_id}, type: {node_type}): "
-                    f"missing 'template' field in 'node'"
-                )
+                issues.append(f"Node {node_idx} (ID: {node_id}, type: {node_type}): missing 'template' field in 'node'")
                 continue
 
             # Check for 'backgroundColor' field in template
             template = node["data"]["node"]["template"]
             if "backgroundColor" not in template:
                 issues.append(
-                    f"Node {node_idx} (ID: {node_id}, type: {node_type}): "
-                    f"missing 'backgroundColor' field in template"
+                    f"Node {node_idx} (ID: {node_id}, type: {node_type}): missing 'backgroundColor' field in template"
                 )
 
         # Only assert if we found note nodes
@@ -158,10 +148,28 @@ class TestStarterProjects:
         # Define valid background color values
         # Based on common Tailwind/design system color names
         valid_colors = {
-            "neutral", "gray", "slate", "zinc", "stone",
-            "red", "orange", "amber", "yellow", "lime", "green",
-            "emerald", "teal", "cyan", "sky", "blue", "indigo",
-            "violet", "purple", "fuchsia", "pink", "rose"
+            "neutral",
+            "gray",
+            "slate",
+            "zinc",
+            "stone",
+            "red",
+            "orange",
+            "amber",
+            "yellow",
+            "lime",
+            "green",
+            "emerald",
+            "teal",
+            "cyan",
+            "sky",
+            "blue",
+            "indigo",
+            "violet",
+            "purple",
+            "fuchsia",
+            "pink",
+            "rose",
         }
 
         issues = []
@@ -183,16 +191,10 @@ class TestStarterProjects:
 
                 # Check if backgroundColor exists and has a valid value
                 if bg_color is None:
-                    issues.append(
-                        f"Node {node_idx} (ID: {node_id}): "
-                        f"backgroundColor is None"
-                    )
+                    issues.append(f"Node {node_idx} (ID: {node_id}): backgroundColor is None")
                 elif isinstance(bg_color, str):
                     if not bg_color:
-                        issues.append(
-                            f"Node {node_idx} (ID: {node_id}): "
-                            f"backgroundColor is empty string"
-                        )
+                        issues.append(f"Node {node_idx} (ID: {node_id}): backgroundColor is empty string")
                     elif bg_color not in valid_colors:
                         issues.append(
                             f"Node {node_idx} (ID: {node_id}): "
@@ -205,10 +207,7 @@ class TestStarterProjects:
                         f"backgroundColor has invalid type {type(bg_color).__name__}, expected string"
                     )
             except (KeyError, TypeError) as e:
-                issues.append(
-                    f"Node {node_idx} (ID: {node_id}): "
-                    f"error accessing backgroundColor: {e}"
-                )
+                issues.append(f"Node {node_idx} (ID: {node_id}): error accessing backgroundColor: {e}")
 
         # Only assert if we found note nodes
         if note_nodes_found:
@@ -224,11 +223,7 @@ class TestStarterProjects:
         - Research Agent.json
         """
         # Define projects that should have neutral background
-        projects_requiring_neutral = {
-            "Invoice Summarizer.json",
-            "Market Research.json",
-            "Research Agent.json"
-        }
+        projects_requiring_neutral = {"Invoice Summarizer.json", "Market Research.json", "Research Agent.json"}
 
         # Only check files that are in the list
         if json_file.name not in projects_requiring_neutral:
@@ -259,10 +254,7 @@ class TestStarterProjects:
                         f"backgroundColor is '{bg_color}', expected 'neutral' for {json_file.name}"
                     )
             except (KeyError, TypeError) as e:
-                issues.append(
-                    f"Node {node_idx} (ID: {node_id}): "
-                    f"error accessing backgroundColor: {e}"
-                )
+                issues.append(f"Node {node_idx} (ID: {node_id}): error accessing backgroundColor: {e}")
 
         assert note_node_found, f"{json_file.name}: No noteNode found, but expected one with neutral background"
         assert not issues, f"{json_file.name}: Background color validation failed:\n" + "\n".join(issues)
@@ -290,10 +282,7 @@ class TestStarterProjects:
 
             # Check for width
             if "width" not in node:
-                issues.append(
-                    f"Node {node_idx} (ID: {node_id}): "
-                    f"noteNode missing 'width' at root level"
-                )
+                issues.append(f"Node {node_idx} (ID: {node_id}): noteNode missing 'width' at root level")
             elif not isinstance(node["width"], (int, float)) or node["width"] <= 0:
                 issues.append(
                     f"Node {node_idx} (ID: {node_id}): "
@@ -302,10 +291,7 @@ class TestStarterProjects:
 
             # Check for height
             if "height" not in node:
-                issues.append(
-                    f"Node {node_idx} (ID: {node_id}): "
-                    f"noteNode missing 'height' at root level"
-                )
+                issues.append(f"Node {node_idx} (ID: {node_id}): noteNode missing 'height' at root level")
             elif not isinstance(node["height"], (int, float)) or node["height"] <= 0:
                 issues.append(
                     f"Node {node_idx} (ID: {node_id}): "
