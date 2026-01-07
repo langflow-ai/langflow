@@ -37,14 +37,14 @@ You can paste this example JWT to decode the actual JSON data at [jwt.io](https:
 
 Configure JWT authentication in Langflow using the following environment variables:
 
-| Variable | Description | Default | Required |
-|----------|-------------|---------|----------|
-| `LANGFLOW_ALGORITHM` | JWT signing algorithm (`HS256`, `RS256`, or `RS512`) | `HS256` | No |
-| `LANGFLOW_SECRET_KEY` | Secret key for HS256 signing | Auto-generated | No (for HS256) |
-| `LANGFLOW_PRIVATE_KEY` | RSA private key for RS256/RS512 signing | Auto-generated | No (for RS256/RS512) |
-| `LANGFLOW_PUBLIC_KEY` | RSA public key for RS256/RS512 verification | Derived from private key | No |
-| `LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS` | Access token expiration time | `3600` (1 hour) | No |
-| `LANGFLOW_REFRESH_TOKEN_EXPIRE_SECONDS` | Refresh token expiration time | `604800` (7 days) | No |
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `LANGFLOW_ALGORITHM` | JWT signing algorithm (`HS256`, `RS256`, or `RS512`) | `HS256` |
+| `LANGFLOW_SECRET_KEY` | Secret key for HS256 signing | Auto-generated |
+| `LANGFLOW_PRIVATE_KEY` | RSA private key for RS256/RS512 signing | Auto-generated |
+| `LANGFLOW_PUBLIC_KEY` | RSA public key for RS256/RS512 verification | Derived from private key |
+| `LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS` | Access token expiration time | `3600` (1 hour) |
+| `LANGFLOW_REFRESH_TOKEN_EXPIRE_SECONDS` | Refresh token expiration time | `604800` (7 days) |
 
 ## Configure signing algorithms
 
@@ -52,8 +52,7 @@ Langflow supports multiple signing algorithms and both symmetric (HS256) and asy
 
 Which method you choose depends upon your deployment's requirements.
 
-<Tabs>
-<TabItem value="hs256" label="HS256 (Default)" default>
+### HS256 (Default)
 
 HS256 is the default JWT algorithm, with a good security level for single-server deployments.
 Langflow automatically generates and persists a secret key.
@@ -63,22 +62,18 @@ To generate a custom secure key instead of using the Langflow-generated secret k
 
 1. Generate a secure secret key with the Python secrets module or OpenSSL.
     The key must be at least 32 characters long.
-    <Tabs groupId="Cryptography package">
-      <TabItem value="Python" label="Python" default>
 
-        ```
-        python -c "import secrets; print(secrets.token_urlsafe(32))"
-        ```
+    **Using Python:**
 
-      </TabItem>
-      <TabItem value="OpenSSL" label="OpenSSL">
+    ```bash
+    python -c "import secrets; print(secrets.token_urlsafe(32))"
+    ```
 
-        ```
-        openssl rand -base64 32
-        ```
+    **Using OpenSSL:**
 
-      </TabItem>
-    </Tabs>
+    ```bash
+    openssl rand -base64 32
+    ```
 
 2. Set the value for `LANGFLOW_SECRET_KEY` in your `.env` file.
     ```bash
@@ -86,8 +81,7 @@ To generate a custom secure key instead of using the Langflow-generated secret k
     LANGFLOW_SECRET_KEY="your-custom-secret-key"
     ```
 
-</TabItem>
-<TabItem value="rs256" label="RS256">
+### RS256
 
 The RS256 signing algorithm provides better security for production deployments by using a pair of private and public keys.
 The private key signs tokens, and the public verifies them.
@@ -140,8 +134,7 @@ To generate an RSA key pair manually, do the following:
    cat public_key.pem
    ```
 
-</TabItem>
-<TabItem value="rs512" label="RS512">
+### RS512
 
 RS512 uses the same RSA format of private and public keys as RS256, but uses the SHA-512 hashing algorithm for greater security.
 The private key signs tokens, and the public verifies them.
@@ -194,13 +187,13 @@ To generate an RSA key pair manually, do the following:
    cat public_key.pem
    ```
 
-</TabItem>
-</Tabs>
-
 ## Configure Docker and Kubernetes deployments
 
-<Tabs>
-<TabItem value="docker-hs256" label="Docker with HS256">
+Use Docker with HS256 (symmetric) for single-server deployments or development environments where simplicity is preferred.
+
+Use Docker or Kubernetes with RS256 (asymmetric) for production deployments requiring enhanced security with private/public key pairs.
+
+### Docker with HS256
 
 1. Add the value for your JWT secret key to the Langflow `.env` file.
     ```bash
@@ -223,8 +216,7 @@ To generate an RSA key pair manually, do the following:
       langflow_data:
     ```
 
-</TabItem>
-<TabItem value="docker-rs256" label="Docker with RS256">
+### Docker with RS256
 
 To use Langflow's automatically generated key pair, set the `RS256` signing algorithm in the Docker Compose file.
 
@@ -262,8 +254,7 @@ volumes:
   langflow_data:
 ```
 
-</TabItem>
-<TabItem value="kubernetes" label=" Kubernetes with RS256">
+### Kubernetes with RS256
 
 Store JWT keys as Kubernetes Secrets and reference them in your Langflow deployment configuration.
 
@@ -314,9 +305,6 @@ spec:
                   key: public-key
 ```
 
-</TabItem>
-</Tabs>
-
 ## Configure token expiration
 
 To configure access and refresh token expiration times, set the values in the Langflow `.env`.
@@ -336,6 +324,7 @@ This maintains the user's session without prompting for credentials again.
 
 ## See also
 
+- [Langflow API keys and authentication](/api-keys-and-authentication)
 - [JWT.io](https://jwt.io/)
 - [RFC 7519 specification](https://tools.ietf.org/html/rfc7519)
 - [OWASP JWT Security Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_for_Java_Cheat_Sheet.html)
