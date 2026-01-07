@@ -23,10 +23,6 @@ test(
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
-    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
-      timeout: 2000,
-    });
-
     await adjustScreenView(page);
 
     await page.getByTestId("sidebar-search-input").click();
