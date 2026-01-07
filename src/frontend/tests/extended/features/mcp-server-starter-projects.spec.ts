@@ -125,7 +125,10 @@ test(
     await page.keyboard.press(`ControlOrMeta+V`);
     await page.getByTestId("add-mcp-server-button").click();
 
-    await page.waitForTimeout(2000);
+    // Wait for error message to appear
+    await expect(page.getByText("Server already exists.")).toBeVisible({
+      timeout: 10000,
+    });
 
     const numberOfErrors = await page
       .getByText("Server already exists.")
