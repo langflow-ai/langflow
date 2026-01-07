@@ -54,7 +54,10 @@ withEventDeliveryModes(
         for (let i = 0; i < count; i++) {
           const input = apiKeyInputs.nth(i);
           const placeholder = await input.getAttribute("placeholder");
-          if (placeholder?.toLowerCase().includes("tavily") || i === count - 1) {
+          if (
+            placeholder?.toLowerCase().includes("tavily") ||
+            i === count - 1
+          ) {
             await input.fill(tavilyApiKey);
             break;
           }
