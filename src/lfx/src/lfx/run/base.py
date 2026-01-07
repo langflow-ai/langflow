@@ -3,7 +3,6 @@
 import json
 import re
 import sys
-import tempfile
 import time
 from io import StringIO
 from pathlib import Path
@@ -125,21 +124,16 @@ async def run_flow(
         output_error(error_msg, verbose=verbose)
         raise RunError(error_msg, None)
 
-    temp_file_to_cleanup = None
+    # Store parsed JSON dict for direct loading (avoids temp file round-trip)
+    flow_dict: dict | None = None
 
     if flow_json is not None:
         if verbosity > 0:
             sys.stderr.write("Processing inline JSON content...\n")
         try:
-            json_data = json.loads(flow_json)
+            flow_dict = json.loads(flow_json)
             if verbosity > 0:
                 sys.stderr.write("JSON content is valid\n")
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as temp_file:
-                json.dump(json_data, temp_file, indent=2)
-                temp_file_to_cleanup = temp_file.name
-            script_path = Path(temp_file_to_cleanup)
-            if verbosity > 0:
-                sys.stderr.write(f"Created temporary file: {script_path}\n")
         except json.JSONDecodeError as e:
             error_msg = f"Invalid JSON content: {e}"
             output_error(error_msg, verbose=verbose)
@@ -157,15 +151,9 @@ async def run_flow(
                 error_msg = "No content received from stdin"
                 output_error(error_msg, verbose=verbose)
                 raise RunError(error_msg, None)
-            json_data = json.loads(stdin_content)
+            flow_dict = json.loads(stdin_content)
             if verbosity > 0:
                 sys.stderr.write("JSON content from stdin is valid\n")
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as temp_file:
-                json.dump(json_data, temp_file, indent=2)
-                temp_file_to_cleanup = temp_file.name
-            script_path = Path(temp_file_to_cleanup)
-            if verbosity > 0:
-                sys.stderr.write(f"Created temporary file from stdin: {script_path}\n")
         except json.JSONDecodeError as e:
             error_msg = f"Invalid JSON content from stdin: {e}"
             output_error(error_msg, verbose=verbose)
@@ -176,39 +164,52 @@ async def run_flow(
             raise RunError(error_msg, e) from e
 
     try:
-        if not script_path or not script_path.exists():
-            error_msg = f"File '{script_path}' does not exist."
-            raise ValueError(error_msg)
-        if not script_path.is_file():
-            error_msg = f"'{script_path}' is not a file."
-            raise ValueError(error_msg)
-        file_extension = script_path.suffix.lower()
-        if file_extension not in [".py", ".json"]:
-            error_msg = f"'{script_path}' must be a .py or .json file."
-            raise ValueError(error_msg)
-        file_type = "Python script" if file_extension == ".py" else "JSON flow"
-        if verbosity > 0:
-            sys.stderr.write(f"Analyzing {file_type}: {script_path}\n")
-        if file_extension == ".py":
-            graph_info = find_graph_variable(script_path)
-            if not graph_info:
-                error_msg = (
-                    "No 'graph' variable found in the script. Expected to find an assignment like: graph = Graph(...)"
-                )
-                raise ValueError(error_msg)
+        # Handle direct JSON dict (from stdin or --flow-json)
+        if flow_dict is not None:
             if verbosity > 0:
-                sys.stderr.write(f"Found 'graph' variable at line {graph_info['line_number']}\n")
-                sys.stderr.write(f"Type: {graph_info['type']}\n")
-                sys.stderr.write(f"Source: {graph_info['source_line']}\n")
-                sys.stderr.write("Loading and executing script...\n")
-            graph = await load_graph_from_script(script_path)
-        elif file_extension == ".json":
-            if verbosity > 0:
-                sys.stderr.write("Valid JSON flow file detected\n")
-                sys.stderr.write("Loading and executing JSON flow\n")
+                sys.stderr.write("Loading graph from JSON content...\n")
             from lfx.load import aload_flow_from_json
 
-            graph = await aload_flow_from_json(script_path, disable_logs=not verbose)
+            graph = await aload_flow_from_json(flow_dict, disable_logs=not verbose)
+        # Handle file path
+        elif script_path is not None:
+            if not script_path.exists():
+                error_msg = f"File '{script_path}' does not exist."
+                raise ValueError(error_msg)
+            if not script_path.is_file():
+                error_msg = f"'{script_path}' is not a file."
+                raise ValueError(error_msg)
+            file_extension = script_path.suffix.lower()
+            if file_extension not in [".py", ".json"]:
+                error_msg = f"'{script_path}' must be a .py or .json file."
+                raise ValueError(error_msg)
+            file_type = "Python script" if file_extension == ".py" else "JSON flow"
+            if verbosity > 0:
+                sys.stderr.write(f"Analyzing {file_type}: {script_path}\n")
+            if file_extension == ".py":
+                graph_info = find_graph_variable(script_path)
+                if not graph_info:
+                    error_msg = (
+                        "No 'graph' variable found in the script. "
+                        "Expected to find an assignment like: graph = Graph(...)"
+                    )
+                    raise ValueError(error_msg)
+                if verbosity > 0:
+                    sys.stderr.write(f"Found 'graph' variable at line {graph_info['line_number']}\n")
+                    sys.stderr.write(f"Type: {graph_info['type']}\n")
+                    sys.stderr.write(f"Source: {graph_info['source_line']}\n")
+                    sys.stderr.write("Loading and executing script...\n")
+                graph = await load_graph_from_script(script_path)
+            else:  # .json file
+                if verbosity > 0:
+                    sys.stderr.write("Valid JSON flow file detected\n")
+                    sys.stderr.write("Loading and executing JSON flow\n")
+                from lfx.load import aload_flow_from_json
+
+                graph = await aload_flow_from_json(script_path, disable_logs=not verbose)
+        else:
+            error_msg = "No input source provided"
+            raise ValueError(error_msg)
 
         # Inject global variables into graph context
         if global_variables:
@@ -244,12 +245,6 @@ async def run_flow(
 
         error_msg = f"Failed to load graph. {e}"
         output_error(error_msg, verbose=verbose, exception=e)
-        if temp_file_to_cleanup:
-            try:
-                Path(temp_file_to_cleanup).unlink()
-                logger.info(f"Cleaned up temporary file: {temp_file_to_cleanup}")
-            except OSError:
-                pass
         raise RunError(error_msg, e) from e
 
     inputs = InputValueRequest(input_value=final_input_value) if final_input_value else None
@@ -285,13 +280,6 @@ async def run_flow(
                 for error in validation_errors:
                     logger.debug(f"Validation error: {error}")
                 output_error(error_details, verbose=verbose)
-            if temp_file_to_cleanup:
-                try:
-                    Path(temp_file_to_cleanup).unlink()
-                    logger.info(f"Cleaned up temporary file: {temp_file_to_cleanup}")
-                except OSError:
-                    pass
-            if validation_errors:
                 raise RunError(error_details, None)
             logger.info("Global variable validation passed")
         else:
@@ -308,12 +296,6 @@ async def run_flow(
 
         error_msg = f"Failed to prepare graph: {e}"
         output_error(error_msg, verbose=verbose, exception=e)
-        if temp_file_to_cleanup:
-            try:
-                Path(temp_file_to_cleanup).unlink()
-                logger.info(f"Cleaned up temporary file: {temp_file_to_cleanup}")
-            except OSError:
-                pass
         raise RunError(error_msg, e) from e
 
     logger.info("Executing graph...")
@@ -426,12 +408,6 @@ async def run_flow(
 
             logger.exception("Failed to execute graph - full traceback:")
 
-        if temp_file_to_cleanup:
-            try:
-                Path(temp_file_to_cleanup).unlink()
-                logger.info(f"Cleaned up temporary file: {temp_file_to_cleanup}")
-            except OSError:
-                pass
         sys.stdout = original_stdout
         sys.stderr = original_stderr
         error_msg = f"Failed to execute graph: {e}"
@@ -440,12 +416,6 @@ async def run_flow(
     finally:
         sys.stdout = original_stdout
         sys.stderr = original_stderr
-        if temp_file_to_cleanup:
-            try:
-                Path(temp_file_to_cleanup).unlink()
-                logger.info(f"Cleaned up temporary file: {temp_file_to_cleanup}")
-            except OSError:
-                pass
 
     execution_end_time = time.time() if timing else None
 
