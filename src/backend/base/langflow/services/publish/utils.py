@@ -3,12 +3,53 @@ import hashlib
 import re
 from copy import deepcopy
 from datetime import datetime, timezone
+from uuid import UUID
 
 from lfx.log import logger
 
 from langflow.services.database.models.base import orjson_dumps
-from langflow.services.publish.service import IDType
+from langflow.services.publish.schema import PublishedFlowMetadata
 
+# commonly used types
+IDType = str | UUID | None
+IDTypeStrict = str | UUID
+
+
+########################################################
+# normalize the publish backend key prefix
+########################################################
+def add_trailing_slash(s):
+    return s + "/" if (s and not s.endswith("/")) else s
+
+
+########################################################
+# sanitization and parsing of the object key
+########################################################
+ALNUM_PATTERN = re.compile(r"[^a-zA-Z0-9_.-]+") # Allowed: a-z, A-Z, 0-9, _, ., -
+def to_alnum_string(s: str | None):
+    """Returns a new string with invalid characters removed.
+
+    Allowed characters: alphanumeric, underscore, dot, hyphen.
+    """
+    return ALNUM_PATTERN.sub("", s) if s else None
+
+
+def utc_now_strf() -> str:
+    """Return current UTC timestamp as an alphanumeric string with microsecond precision."""
+    return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+
+
+KEY_VAL_PATTERN = re.compile(r"([^/]+)=([^/]+)")
+def parse_flow_key(key: str) -> PublishedFlowMetadata:
+    """Matches key-value pairs in an s3 object key to return a PublishedFlowMetadata object."""
+    data = dict(KEY_VAL_PATTERN.findall(key))
+    data["version_id"] = data["id"]
+    return PublishedFlowMetadata(**data)
+
+
+########################################################
+# validation
+########################################################
 INVALID_FLOW_MSG = (
     "Invalid flow. Flow data must contain ALL of these keys:\n"
     "- name (must be non-empty and contain at least one alphanumeric character)\n"
@@ -22,28 +63,6 @@ MISSING_ITEM_MSG = "{item} is missing or empty."
 INVALID_KEY_MSG = "Invalid key."
 
 
-# normalize the publish backend key prefix
-def add_trailing_slash(s):
-    return s + "/" if (s and not s.endswith("/")) else s
-
-
-########################################################
-# utilities for sanitizing the object key
-########################################################
-pattern = re.compile(r"[\W_]+") # alphanumeric: [^a-zA-Z0-9_]
-def to_alnum_string(s: str | None):
-    """Returns a new string with non-alphanumeric characters removed."""
-    return pattern.sub("", s) if s else None
-
-
-def utc_now_strf() -> str:
-    """Return current UTC timestamp as an alphanumeric string with microsecond precision."""
-    return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
-
-
-########################################################
-# validation for publishing
-########################################################
 def require_bucket_name(bucket_name: str | None):
     """Raises a ValueError if the bucket name is None or empty."""
     if not (bucket_name and bucket_name.strip()):
@@ -75,6 +94,8 @@ def require_valid_flow(flow_data: dict | None):
     - description (must exist, can be None or empty)
     - nodes (must exist, can be None or empty)
     - edges (must exist, can be None or empty)
+
+    Modifies flow_data["name"] in-place to remove all non-alphanumeric characters.
     """
     if not flow_data:
         raise ValueError(MISSING_ITEM_MSG.format(item="Flow data"))
@@ -105,7 +126,7 @@ def validate_all(
         item_type (str): The type of the item being processed (e.g., 'flow').
 
     Raises:
-        ValueError: If bucket_name, IDs, or required item data are missing.
+        ValueError: If bucket_name or IDs are missing.
     """
     require_bucket_name(bucket_name)
     require_all_ids(user_id, item_id, item_type)
@@ -148,6 +169,7 @@ def normalized_flow_data(flow_data: dict | None):
             remove_keys_from_dicts(copy_flow_data["edges"], EXCLUDE_EDGE_KEYS)
         except Exception as e: # noqa: BLE001
             logger.error(f"failed to filter flow contents: {e!s}")
+            # don't want to block publishing, so nothing gets raised here
     return copy_flow_data
 
 
@@ -174,6 +196,7 @@ def pop_nested(d: dict, keys: tuple):
 
 
 def compute_dict_hash(graph_data: dict | None):
+    """Returns the SHA256 of the normalized, key-ordered flow json."""
     graph_data = normalized_flow_data(graph_data)
     cleaned_graph_json = orjson_dumps(graph_data, sort_keys=True)
     return hashlib.sha256(cleaned_graph_json.encode("utf-8")).hexdigest()

@@ -2,23 +2,20 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from typing import TYPE_CHECKING
-from uuid import UUID
 
 from langflow.services.base import Service
+from langflow.services.publish.utils import IDType, add_trailing_slash
 
 if TYPE_CHECKING:
+    from langflow.services.publish.schema import PublishedFlowMetadata
     from langflow.services.settings.service import SettingsService
 
-
-IDType = str | UUID | None
-IDTypeStrict = str | UUID
 
 
 class PublishService(Service):
     name = "publish_service"
 
     def __init__(self, settings_service: SettingsService):
-        from langflow.services.publish.utils import add_trailing_slash
 
         self.settings_service = settings_service
 
@@ -37,7 +34,7 @@ class PublishService(Service):
         self,
         user_id: IDType,
         flow_id: IDType,
-        publish_key: str,
+        key: PublishedFlowMetadata,
         ) -> str:
         """Retrieves a published flow from the storage provider."""
         raise NotImplementedError
@@ -49,7 +46,7 @@ class PublishService(Service):
         flow_id: IDType,
         flow_blob: dict,
         publish_tag: str | None,
-        ) -> str:
+        ) -> PublishedFlowMetadata:
         """Publishes a flow to the storage provider."""
         raise NotImplementedError
 
@@ -58,7 +55,16 @@ class PublishService(Service):
         self,
         user_id: IDType,
         flow_id: IDType,
-        publish_key: str,
-        ) -> str:
+        key: PublishedFlowMetadata,
+        ) -> None:
         """Deletes a published flow from the storage provider."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def list_flow_versions(
+        self,
+        user_id: IDType,
+        flow_id: IDType,
+        ) -> list[PublishedFlowMetadata] | None:
+        """List published versions of the given flow."""
         raise NotImplementedError
