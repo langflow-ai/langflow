@@ -107,7 +107,7 @@ export const UserMessage = memo(
           >
             {/* Avatar */}
             <div
-              className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded border border-border text-2xl hover:border-input max-[45rem]:hidden"
+              className="relative hidden h-8 w-8 items-center justify-center overflow-hidden rounded border border-border text-2xl hover:border-input mdd:flex"
               style={
                 chat.properties?.background_color
                   ? { backgroundColor: chat.properties.background_color }
