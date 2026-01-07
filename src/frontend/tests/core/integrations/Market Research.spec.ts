@@ -35,10 +35,27 @@ withEventDeliveryModes(
     });
 
     await initialGPTsetup(page);
-    await page
-      .getByTestId("popover-anchor-input-api_key")
-      .nth(0)
-      .fill(process.env.TAVILY_API_KEY ?? "");
+
+    // Find the Tavily node and fill the API key with retry
+    const tavilyNode = page.getByTestId(/rf__node-TavilySearchComponent-/);
+    const tavilyApiKeyInput = tavilyNode.getByTestId("popover-anchor-input-api_key");
+
+    const maxRetries = 5;
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      await tavilyApiKeyInput.waitFor({ state: "visible", timeout: 10000 });
+      await tavilyApiKeyInput.click();
+      await tavilyApiKeyInput.clear();
+      await tavilyApiKeyInput.fill(process.env.TAVILY_API_KEY ?? "");
+      await tavilyApiKeyInput.press("Tab"); // Trigger blur to save value
+
+      // Verify the value was filled
+      const value = await tavilyApiKeyInput.inputValue();
+      if (value === process.env.TAVILY_API_KEY) {
+        break;
+      }
+
+      await page.waitForTimeout(500);
+    }
 
     await page
       .getByTestId("handle-parsercomponent-shownode-data or dataframe-left")
