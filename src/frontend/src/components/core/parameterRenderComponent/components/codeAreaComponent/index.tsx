@@ -1,4 +1,5 @@
 import { GRADIENT_CLASS } from "@/constants/constants";
+import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
 import CodeAreaModal from "@/modals/codeAreaModal";
 import { cn } from "../../../../../utils/utils";
 import IconComponent from "../../../../common/genericIconComponent";
@@ -53,6 +54,9 @@ export default function CodeAreaComponent({
   id = "",
   placeholder,
 }: InputProps<string>) {
+  const { data: config } = useGetConfig();
+  const allowCustomComponents = config?.allow_custom_components ?? true;
+  const isBlocked = !allowCustomComponents;
   const renderCodeText = () => (
     <span
       id={id}
@@ -104,6 +108,17 @@ export default function CodeAreaComponent({
       />
     </>
   );
+
+  if (isBlocked) {
+    return (
+      <div className="w-full pointer-events-none">
+        <div className="relative w-full">
+          {renderCodeText()}
+          {renderExternalLinkIcon()}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={cn("w-full", disabled && "pointer-events-none")}>

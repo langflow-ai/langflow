@@ -9,6 +9,7 @@ import ToggleShadComponent from "@/components/core/parameterRenderComponent/comp
 import { Button } from "@/components/ui/button";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { usePostRetrieveVertexOrder } from "@/controllers/API/queries/vertex";
+import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
 import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
 import useAddFlow from "@/hooks/flows/use-add-flow";
 import type { APIClassType } from "@/types/api";
@@ -107,9 +108,17 @@ const NodeToolbarComponent = memo(
     );
 
     const nodeLength = useMemo(() => getNodeLength(data), [data]);
+    const { data: config } = useGetConfig();
+    const allowCustomComponents = config?.allow_custom_components ?? true;
+    
     const hasCode = useMemo(
       () => Object.keys(data.node!.template).includes("code"),
       [data.node],
+    );
+    
+    const canEditCode = useMemo(
+      () => hasCode && allowCustomComponents,
+      [hasCode, allowCustomComponents],
     );
     const isGroup = useMemo(
       () => (data.node?.flow ? true : false),
@@ -233,9 +242,15 @@ const NodeToolbarComponent = memo(
     const handleCodeModal = useCallback(() => {
       if (!hasCode) {
         setNoticeData({ title: `You can not access ${data.id} code` });
+        return;
+      }
+      if (!allowCustomComponents) {
+        const componentName = data.node?.display_name || data.id || "Unknown";
+        setNoticeData({ title: `Custom Component '${componentName}' is not allowed` });
+        return;
       }
       setOpenModal((state) => !state);
-    }, [hasCode, data.id]);
+    }, [hasCode, allowCustomComponents, data.id]);
 
     const saveComponent = useCallback(() => {
       if (isSaved) {
@@ -478,7 +493,7 @@ const NodeToolbarComponent = memo(
     const renderToolbarButtons = useMemo(
       () => (
         <>
-          {hasCode && (
+          {canEditCode && (
             <ToolbarButton
               className={isCustomComponent ? "animate-pulse-pink" : ""}
               icon="Code"
@@ -570,7 +585,7 @@ const NodeToolbarComponent = memo(
         </>
       ),
       [
-        hasCode,
+        canEditCode,
         nodeLength,
         hasToolMode,
         toolMode,

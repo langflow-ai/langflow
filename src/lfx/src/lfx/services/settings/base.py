@@ -169,6 +169,13 @@ class Settings(BaseSettings):
     Set to a file path (e.g., '/path/to/index.json') or URL (e.g., 'https://example.com/index.json')
     to use a custom index.
     """
+    allow_custom_components: bool = True
+    """If False, blocks all custom code execution unless the component hash matches an entry in the component index.
+
+    When disabled (False), only components whose code hash matches an entry in the component index JSON
+    will be allowed to be imported or executed. This provides a security mechanism to prevent
+    execution of unauthorized custom code. Defaults to True to allow custom components.
+    """
     langchain_cache: str = "InMemoryCache"
     load_flows_path: str | None = None
     bundle_urls: list[str] = []
