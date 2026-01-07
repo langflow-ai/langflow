@@ -1,5 +1,4 @@
-"""
-Comprehensive tests for starter project JSON file validation.
+"""Comprehensive tests for starter project JSON file validation.
 
 This test module validates the structure, schema, and configuration
 of starter project JSON files, with focus on the backgroundColor configuration.
@@ -9,7 +8,6 @@ import json
 from pathlib import Path
 
 import pytest
-
 
 # Path to starter projects
 STARTER_PROJECTS_DIR = Path("src/backend/base/langflow/initial_setup/starter_projects")
@@ -87,9 +85,7 @@ class TestStarterProjectJSONStructure:
 
         # Edges are optional but should be a list if present
         if "edges" in data["data"]:
-            assert isinstance(
-                data["data"]["edges"], list
-            ), f"{project_file} 'edges' should be a list"
+            assert isinstance(data["data"]["edges"], list), f"{project_file} 'edges' should be a list"
 
 
 class TestNoteNodeBackgroundColors:
@@ -116,8 +112,7 @@ class TestNoteNodeBackgroundColors:
 
             # Check that backgroundColor is neutral or transparent (not emerald)
             assert bg_color in ["neutral", "transparent"], (
-                f"{project_file} node {node_id} has backgroundColor '{bg_color}', "
-                f"expected 'neutral' or 'transparent'"
+                f"{project_file} node {node_id} has backgroundColor '{bg_color}', expected 'neutral' or 'transparent'"
             )
 
     @pytest.mark.parametrize("project_file", STARTER_PROJECT_FILES)
@@ -135,9 +130,9 @@ class TestNoteNodeBackgroundColors:
             template = node.get("data", {}).get("node", {}).get("template", {})
             bg_color = template.get("backgroundColor")
 
-            assert (
-                bg_color != "emerald"
-            ), f"{project_file} node {node_id} still uses deprecated 'emerald' backgroundColor"
+            assert bg_color != "emerald", (
+                f"{project_file} node {node_id} still uses deprecated 'emerald' backgroundColor"
+            )
 
     @pytest.mark.parametrize("project_file", STARTER_PROJECT_FILES)
     def test_note_nodes_have_background_color_defined(self, project_file: str) -> None:
@@ -153,12 +148,10 @@ class TestNoteNodeBackgroundColors:
             node_id = node.get("id", "unknown")
             template = node.get("data", {}).get("node", {}).get("template", {})
 
-            assert (
-                "backgroundColor" in template
-            ), f"{project_file} note node {node_id} missing backgroundColor"
-            assert (
-                template["backgroundColor"] is not None
-            ), f"{project_file} note node {node_id} backgroundColor is None"
+            assert "backgroundColor" in template, f"{project_file} note node {node_id} missing backgroundColor"
+            assert template["backgroundColor"] is not None, (
+                f"{project_file} note node {node_id} backgroundColor is None"
+            )
 
     def test_all_changed_files_have_consistent_neutral_background(self) -> None:
         """Verify that all changed starter projects use neutral/transparent for note backgrounds."""
@@ -214,15 +207,11 @@ class TestNodeStructureIntegrity:
 
             # Check nested structure
             assert "node" in node_data, f"{project_file} note node {node_id} missing 'node' in data"
-            assert (
-                "template" in node_data["node"]
-            ), f"{project_file} note node {node_id} missing 'template'"
+            assert "template" in node_data["node"], f"{project_file} note node {node_id} missing 'template'"
 
             # Verify template structure
             template = node_data["node"]["template"]
-            assert isinstance(
-                template, dict
-            ), f"{project_file} note node {node_id} template is not a dict"
+            assert isinstance(template, dict), f"{project_file} note node {node_id} template is not a dict"
 
     @pytest.mark.parametrize("project_file", STARTER_PROJECT_FILES)
     def test_node_ids_are_unique(self, project_file: str) -> None:
@@ -235,9 +224,7 @@ class TestNodeStructureIntegrity:
         node_ids = [node.get("id") for node in nodes]
 
         duplicates = [nid for nid in node_ids if node_ids.count(nid) > 1]
-        assert len(node_ids) == len(set(node_ids)), (
-            f"{project_file} has duplicate node IDs: {list(set(duplicates))}"
-        )
+        assert len(node_ids) == len(set(node_ids)), f"{project_file} has duplicate node IDs: {list(set(duplicates))}"
 
 
 class TestJSONFileFormatting:
@@ -309,8 +296,7 @@ class TestBackwardCompatibility:
 
             # Verify that only expected colors are used
             assert found_colors.issubset(set(expected_colors)), (
-                f"{project_file} has unexpected backgroundColor values: "
-                f"{found_colors - set(expected_colors)}"
+                f"{project_file} has unexpected backgroundColor values: {found_colors - set(expected_colors)}"
             )
 
 
@@ -325,9 +311,9 @@ class TestEdgeCasesAndErrorHandling:
             data = json.load(f)
 
         # Valid starter projects should always have nodes
-        assert (
-            "nodes" in data["data"] and len(data["data"]["nodes"]) > 0
-        ), f"{project_file} should have at least one node"
+        assert "nodes" in data["data"] and len(data["data"]["nodes"]) > 0, (
+            f"{project_file} should have at least one node"
+        )
 
     @pytest.mark.parametrize("project_file", STARTER_PROJECT_FILES)
     def test_malformed_template_structure_detection(self, project_file: str) -> None:
@@ -344,17 +330,13 @@ class TestEdgeCasesAndErrorHandling:
             node_data = node.get("data", {})
 
             # Ensure proper nesting
-            assert (
-                "node" in node_data
-            ), f"{project_file} note {node_id} missing 'node' in data structure"
-            assert isinstance(
-                node_data["node"], dict
-            ), f"{project_file} note {node_id} 'node' is not a dict"
+            assert "node" in node_data, f"{project_file} note {node_id} missing 'node' in data structure"
+            assert isinstance(node_data["node"], dict), f"{project_file} note {node_id} 'node' is not a dict"
 
             if "template" in node_data["node"]:
-                assert isinstance(
-                    node_data["node"]["template"], dict
-                ), f"{project_file} note {node_id} 'template' is not a dict"
+                assert isinstance(node_data["node"]["template"], dict), (
+                    f"{project_file} note {node_id} 'template' is not a dict"
+                )
 
     def test_no_unexpected_background_color_values(self) -> None:
         """Ensure no unexpected or invalid backgroundColor values are present."""
@@ -402,7 +384,7 @@ class TestFileMetadata:
         try:
             with file_path.open("r", encoding="utf-8") as f:
                 f.read(1)  # Read just one character to verify readability
-        except (PermissionError, IOError) as e:
+        except (OSError, PermissionError) as e:
             pytest.fail(f"Cannot read {project_file}: {e}")
 
 
