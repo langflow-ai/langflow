@@ -69,7 +69,7 @@ def update_projects_components_with_latest_component_versions(project_data, all_
     }
 
     node_changes_log = defaultdict(list)
-    project_data_copy = deepcopy(project_data)
+    project_data_copy = json.loads(json.dumps(project_data))
 
     for node in project_data_copy.get("nodes", []):
         node_data = node.get("data").get("node")
@@ -94,12 +94,10 @@ def update_projects_components_with_latest_component_versions(project_data, all_
             }
             has_tool_outputs = any(output.get("types") == ["Tool"] for output in node_data.get("outputs", []))
             if "outputs" in latest_node and not has_tool_outputs and not is_tool_or_agent:
-                # Set selected output as the previous selected output
+                # Build lookup dict for faster matching by name
+                outputs_dict = {output["name"]: output for output in node_data.get("outputs", [])}
                 for output in latest_node["outputs"]:
-                    node_data_output = next(
-                        (output_ for output_ in node_data["outputs"] if output_["name"] == output["name"]),
-                        None,
-                    )
+                    node_data_output = outputs_dict.get(output["name"])
                     if node_data_output:
                         output["selected"] = node_data_output.get("selected")
                 node_data["outputs"] = latest_node["outputs"]
