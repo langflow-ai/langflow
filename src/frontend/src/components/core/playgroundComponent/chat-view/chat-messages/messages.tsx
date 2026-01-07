@@ -51,12 +51,7 @@ export const Messages = ({
   }, [chatHistory.length, isBuilding]);
 
   const messagesContent = (
-    <div
-      className={cn(
-        "flex flex-col w-full",
-        playgroundPage ? "" : "flex-grow place-self-center",
-      )}
-    >
+    <div className="flex flex-col flex-grow place-self-center w-full">
       {chatHistory &&
         (isBuilding || chatHistory.length > 0 ? (
           <>
@@ -74,7 +69,11 @@ export const Messages = ({
                 />
               );
             })}
-            <div ref={bottomRef} />
+            <div
+              ref={bottomRef}
+              className="h-0 w-0 overflow-hidden"
+              aria-hidden
+            />
           </>
         ) : (
           <div className="flex flex-grow w-full flex-col items-center justify-center">
