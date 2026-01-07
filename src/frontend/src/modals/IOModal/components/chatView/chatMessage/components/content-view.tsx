@@ -121,9 +121,6 @@ export const ErrorView = ({
                                       children,
                                       ...props
                                     }) => {
-                                      const inline = !(
-                                        props as any
-                                      ).hasOwnProperty("data-language");
                                       let content = children as string;
                                       if (
                                         Array.isArray(children) &&
@@ -144,8 +141,12 @@ export const ErrorView = ({
                                         const match = /language-(\w+)/.exec(
                                           className || "",
                                         );
+                                        const hasDataLanguage = (props as any).hasOwnProperty("data-language");
+                                        // Code is a block if it has a language class, data-language attr, or contains newlines
+                                        const isBlock =
+                                          !!match || hasDataLanguage || content.includes("\n");
 
-                                        return !inline ? (
+                                        return isBlock ? (
                                           <CodeTabsComponent
                                             language={(match && match[1]) || ""}
                                             code={String(content).replace(
