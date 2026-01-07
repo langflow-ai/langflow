@@ -4,6 +4,7 @@ import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
+import { selectGptModel } from "../../utils/select-gpt-model";
 
 withEventDeliveryModes(
   "Research Translation Loop.spec",
@@ -37,18 +38,8 @@ withEventDeliveryModes(
     // await page.getByTestId("dropdown_str_provider").click();
     // await page.getByTestId("Anthropic-1-option").click();
 
-    await page
-      .getByTestId("popover-anchor-input-api_key")
-      .last()
-      .fill(process.env.OPENAI_API_KEY ?? "");
+    await selectGptModel(page);
 
-    await page.waitForSelector('[data-testid="dropdown_str_model_name"]', {
-      timeout: 5000,
-    });
-
-    await page.getByTestId("dropdown_str_model_name").click();
-
-    await page.keyboard.press("Enter");
 
     await page.getByTestId("playground-btn-flow-io").click();
 
