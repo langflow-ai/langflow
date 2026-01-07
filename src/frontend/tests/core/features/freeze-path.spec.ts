@@ -6,6 +6,7 @@ import { addFlowToTestOnEmptyLangflow } from "../../utils/add-flow-to-test-on-em
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { selectGptModel } from "../../utils/select-gpt-model";
 
 test(
   "user must be able to freeze a path",
@@ -66,8 +67,7 @@ test(
     await page.getByText("Close").last().click();
 
     // Change model to force different output
-    await page.getByTestId("model_model").click();
-    await page.getByTestId("gpt-4o-option").click();
+    await selectGptModel(page);
 
     await page.waitForSelector('[data-testid="button_run_chat output"]', {
       timeout: 3000,
