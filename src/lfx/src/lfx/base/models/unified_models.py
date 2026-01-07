@@ -56,28 +56,32 @@ def get_embedding_classes():
     }
 
 
-@lru_cache(maxsize=1)
 def get_model_provider_metadata():
     return {
         "OpenAI": {
             "icon": "OpenAI",
             "variable_name": "OPENAI_API_KEY",
+            "api_docs_url": "https://platform.openai.com/api-keys",
         },
         "Anthropic": {
             "icon": "Anthropic",
             "variable_name": "ANTHROPIC_API_KEY",
+            "api_docs_url": "https://console.anthropic.com/settings/keys",
         },
         "Google Generative AI": {
             "icon": "GoogleGenerativeAI",
             "variable_name": "GOOGLE_API_KEY",
+            "api_docs_url": "https://aistudio.google.com/app/apikey",
         },
         "Ollama": {
             "icon": "Ollama",
-            "variable_name": "OLLAMA_BASE_URL",  # Ollama is local but can have custom URL
+            "variable_name": "OLLAMA_BASE_URL",
+            "api_docs_url": "https://ollama.com/",
         },
         "IBM WatsonX": {
-            "icon": "WatsonxAI",
+            "icon": "IBM",
             "variable_name": "WATSONX_APIKEY",
+            "api_docs_url": "https://dataplatform.cloud.ibm.com/docs/content/wsj/analyze-data/fm-api-keys.html",
         },
     }
 

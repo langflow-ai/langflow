@@ -282,7 +282,18 @@ const ModelProvidersContent = ({
             {requiresApiKey ? (
               <>
                 Add your{" "}
-                <span className="underline cursor-pointer hover:text-primary">
+                <span
+                  className="underline cursor-pointer hover:text-primary"
+                  onClick={() => {
+                    if (selectedProvider?.api_docs_url) {
+                      window.open(
+                        selectedProvider.api_docs_url,
+                        "_blank",
+                        "noopener,noreferrer",
+                      );
+                    }
+                  }}
+                >
                   {selectedProvider?.provider} API key
                 </span>{" "}
                 to enable these models
