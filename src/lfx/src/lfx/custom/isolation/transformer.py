@@ -28,6 +28,15 @@ class DunderAccessTransformer(ast.NodeTransformer):
     calls to getattr() which we can intercept and block.
     """
 
+    def visit_Module(self, node: ast.Module) -> ast.Module:
+        """Explicitly handle Module nodes to ensure body is transformed.
+        
+        This ensures that module-level assignments, imports, and other statements
+        are properly transformed. While generic_visit would handle this, being
+        explicit makes it clear that Module nodes are supported.
+        """
+        return self.generic_visit(node)  # type: ignore[return-value]
+
     def visit_Attribute(self, node: ast.Attribute) -> ast.AST:
         # Check if this is accessing a dangerous dunder attribute
         if isinstance(node.attr, str) and node.attr in DANGEROUS_DUNDER_ATTRS:

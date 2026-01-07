@@ -304,10 +304,10 @@ class TestHashCacheOptimization:
     """Test that hash cache optimization works correctly."""
 
     def test_cache_is_built_on_first_call(self):
-        """Test that hash cache is built on first call to _is_core_component."""
+        """Test that hash cache is built on first call to _is_core_component_by_code."""
         from lfx.custom.validate import (
             _clear_component_hash_cache,
-            _is_core_component,
+            _is_core_component_by_code,
         )
 
         # Clear cache
@@ -329,7 +329,7 @@ class TestHashCacheOptimization:
 
         with mock_component_index(index_data):
             # First call should build cache
-            result1 = _is_core_component(code, "TestComponent")
+            result1 = _is_core_component_by_code(code, "TestComponent")
 
             # Cache should now be populated
             assert validate_module._component_hash_cache is not None
@@ -342,7 +342,7 @@ class TestHashCacheOptimization:
         """Test that cache is reused on subsequent calls (no re-reading index)."""
         from unittest.mock import patch
 
-        from lfx.custom.validate import _is_core_component
+        from lfx.custom.validate import _is_core_component_by_code
 
         code = dedent("""
         from langflow.custom import Component
@@ -359,18 +359,18 @@ class TestHashCacheOptimization:
 
         with mock_component_index(index_data):
             # First call builds cache
-            _is_core_component(code, "TestComponent")
+            _is_core_component_by_code(code, "TestComponent")
 
             # Second call should use cache (not call _read_component_index again)
             with patch("lfx.interface.components._read_component_index") as mock_read:
-                result = _is_core_component(code, "TestComponent")
+                result = _is_core_component_by_code(code, "TestComponent")
                 # Should not call _read_component_index again
                 mock_read.assert_not_called()
                 assert result is True
 
     def test_lru_cache_works(self):
-        """Test that lru_cache caches function results."""
-        from lfx.custom.validate import _is_core_component
+        """Test that lru_cache caches function results by hash."""
+        from lfx.custom.validate import _is_core_component, _is_core_component_by_code
 
         code = dedent("""
         from langflow.custom import Component
@@ -389,19 +389,19 @@ class TestHashCacheOptimization:
             # Check cache info before
             cache_info_before = _is_core_component.cache_info()
 
-            # Call multiple times with same arguments
+            # Call multiple times with same code (should generate same hash)
             for _ in range(5):
-                result = _is_core_component(code, "TestComponent")
+                result = _is_core_component_by_code(code, "TestComponent")
                 assert result is True
 
-            # Check cache info after - should have hits
+            # Check cache info after - should have hits (cached by hash, not code)
             cache_info_after = _is_core_component.cache_info()
             assert cache_info_after.hits >= 4  # At least 4 hits (5 calls - 1 miss)
             assert cache_info_after.misses == 1  # Only 1 miss (first call)
 
     def test_hash_only_lookup_uses_cache(self):
         """Test that hash-only lookups (no component_name) use the cache efficiently."""
-        from lfx.custom.validate import _is_core_component
+        from lfx.custom.validate import _is_core_component_by_code
 
         code = dedent("""
         def test_func():
@@ -415,7 +415,7 @@ class TestHashCacheOptimization:
 
         with mock_component_index(index_data):
             # Hash-only lookup (component_name=None)
-            result = _is_core_component(code, None)
+            result = _is_core_component_by_code(code, None)
             assert result is True
 
             # Should use hash_to_names cache (O(1) lookup)

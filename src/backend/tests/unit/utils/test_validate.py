@@ -7,26 +7,23 @@ from unittest.mock import Mock, patch
 import pytest
 from lfx.custom.validate import (
     _create_langflow_execution_context,
-    add_type_ignores,
+    ensure_type_ignore,
     build_class_constructor,
     compile_class_code,
     create_class,
     create_function,
-    create_type_ignore_class,
-    eval_function,
     execute_function,
     extract_class_code,
     extract_class_name,
     extract_function_name,
     find_names_in_code,
-    get_default_imports,
     prepare_global_scope,
     validate_code,
 )
 
 
-class TestAddTypeIgnores:
-    """Test cases for add_type_ignores function."""
+class TestEnsureTypeIgnore:
+    """Test cases for ensure_type_ignore function."""
 
     def test_adds_type_ignore_when_missing(self):
         """Test that TypeIgnore is added when not present."""
@@ -34,7 +31,7 @@ class TestAddTypeIgnores:
         if hasattr(ast, "TypeIgnore"):
             delattr(ast, "TypeIgnore")
 
-        add_type_ignores()
+        ensure_type_ignore()
 
         assert hasattr(ast, "TypeIgnore")
         assert issubclass(ast.TypeIgnore, ast.AST)
@@ -43,10 +40,10 @@ class TestAddTypeIgnores:
     def test_does_nothing_when_already_exists(self):
         """Test that function doesn't modify existing TypeIgnore."""
         # Ensure TypeIgnore exists first
-        add_type_ignores()
+        ensure_type_ignore()
         original_type_ignore = ast.TypeIgnore
 
-        add_type_ignores()
+        ensure_type_ignore()
 
         assert ast.TypeIgnore is original_type_ignore
 
@@ -197,52 +194,6 @@ class TestCreateLangflowExecutionContext:
         """Test that pandas is not included in the langflow execution context."""
         context = _create_langflow_execution_context()
         assert "pd" not in context
-
-
-class TestEvalFunction:
-    """Test cases for eval_function function."""
-
-    def test_evaluates_simple_function(self):
-        """Test evaluation of a simple function."""
-        function_string = """
-def add_numbers(a, b):
-    return a + b
-"""
-        func = eval_function(function_string)
-        assert callable(func)
-        assert func(2, 3) == 5
-
-    def test_evaluates_function_with_default_args(self):
-        """Test evaluation of function with default arguments."""
-        function_string = """
-def greet(name="World"):
-    return f"Hello, {name}!"
-"""
-        func = eval_function(function_string)
-        assert func() == "Hello, World!"
-        assert func("Alice") == "Hello, Alice!"
-
-    def test_raises_error_for_no_function(self):
-        """Test that error is raised when no function is found."""
-        code_string = """
-x = 42
-y = "hello"
-"""
-        with pytest.raises(ValueError, match="Function string does not contain a function"):
-            eval_function(code_string)
-
-    def test_finds_correct_function_among_multiple(self):
-        """Test that the correct function is found when multiple exist."""
-        function_string = """
-def helper():
-    return "helper"
-
-def main_function():
-    return "main"
-"""
-        func = eval_function(function_string)
-        # Should return one of the functions (implementation detail)
-        assert callable(func)
 
 
 class TestExecuteFunction:
@@ -434,12 +385,6 @@ class TestClass:
 class TestHelperFunctions:
     """Test cases for helper functions."""
 
-    def test_create_type_ignore_class(self):
-        """Test creation of TypeIgnore class."""
-        type_ignore_class = create_type_ignore_class()
-        assert issubclass(type_ignore_class, ast.AST)
-        assert type_ignore_class._fields == ()
-
     def test_extract_function_name(self):
         """Test extraction of function name from code."""
         code = """
@@ -620,36 +565,3 @@ class SimpleClass:
 
         constructor = build_class_constructor(compiled, {}, "SimpleClass")
         assert constructor is not None
-
-
-class TestGetDefaultImports:
-    """Test cases for get_default_imports function."""
-
-    @patch("lfx.field_typing.constants.CUSTOM_COMPONENT_SUPPORTED_TYPES", {"TestType": Mock()})
-    def test_returns_default_imports(self):
-        """Test that default imports are returned."""
-        code = "TestType and Optional"
-
-        with patch("importlib.import_module") as mock_import:
-            mock_module = Mock()
-            mock_module.TestType = Mock()
-            mock_import.return_value = mock_module
-
-            imports = get_default_imports(code)
-            assert "Optional" in imports
-            assert "List" in imports
-            assert "Dict" in imports
-            assert "Union" in imports
-
-    def test_includes_langflow_imports(self):
-        """Test that langflow imports are included when found in code."""
-        # Use an actual type from CUSTOM_COMPONENT_SUPPORTED_TYPES
-        code = "Chain is used here"
-
-        with patch("lfx.custom.validate.importlib") as mock_importlib:
-            mock_module = Mock()
-            mock_module.Chain = Mock()
-            mock_importlib.import_module.return_value = mock_module
-
-            imports = get_default_imports(code)
-            assert "Chain" in imports

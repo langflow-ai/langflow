@@ -11,6 +11,7 @@ Tests that validate_code() properly blocks dangerous imports at:
 from textwrap import dedent
 
 from lfx.custom.validate import validate_code
+from lfx.tests.unit.custom.conftest import mock_isolation_settings
 
 
 class TestModuleLevelImports:
@@ -228,6 +229,188 @@ class TestMethodBodyImports:
             errors = validate_code(code)
             assert len(errors["function"]["errors"]) > 0
             assert any("subprocess" in str(e).lower() for e in errors["function"]["errors"])
+
+
+class TestNestedImportsInControlFlow:
+    """Test that imports inside control flow structures are detected."""
+
+    def test_import_in_if_block(self):
+        """Test that imports inside if blocks are detected."""
+        code = dedent("""
+        def build(self):
+            if True:
+                import subprocess
+                return subprocess.run(['echo', 'test'])
+        """)
+
+        with mock_isolation_settings("moderate"):
+            errors = validate_code(code)
+            assert len(errors["function"]["errors"]) > 0
+            assert any("subprocess" in str(e).lower() for e in errors["function"]["errors"])
+            assert any("build" in str(e).lower() for e in errors["function"]["errors"])
+
+    def test_import_in_else_block(self):
+        """Test that imports inside else blocks are detected."""
+        code = dedent("""
+        def build(self):
+            if False:
+                pass
+            else:
+                import os
+                return os.getcwd()
+        """)
+
+        with mock_isolation_settings("moderate"):
+            errors = validate_code(code)
+            assert len(errors["function"]["errors"]) > 0
+            assert any("os" in str(e).lower() for e in errors["function"]["errors"])
+
+    def test_import_in_for_loop(self):
+        """Test that imports inside for loops are detected."""
+        code = dedent("""
+        def build(self):
+            for i in range(5):
+                import subprocess
+                return subprocess.run(['echo', 'test'])
+        """)
+
+        with mock_isolation_settings("moderate"):
+            errors = validate_code(code)
+            assert len(errors["function"]["errors"]) > 0
+            assert any("subprocess" in str(e).lower() for e in errors["function"]["errors"])
+
+    def test_import_in_while_loop(self):
+        """Test that imports inside while loops are detected."""
+        code = dedent("""
+        def build(self):
+            while True:
+                import os
+                break
+        """)
+
+        with mock_isolation_settings("moderate"):
+            errors = validate_code(code)
+            assert len(errors["function"]["errors"]) > 0
+            assert any("os" in str(e).lower() for e in errors["function"]["errors"])
+
+    def test_import_in_try_block(self):
+        """Test that imports inside try blocks are detected."""
+        code = dedent("""
+        def build(self):
+            try:
+                import subprocess
+                return subprocess.run(['echo', 'test'])
+            except:
+                pass
+        """)
+
+        with mock_isolation_settings("moderate"):
+            errors = validate_code(code)
+            assert len(errors["function"]["errors"]) > 0
+            assert any("subprocess" in str(e).lower() for e in errors["function"]["errors"])
+
+    def test_import_in_except_block(self):
+        """Test that imports inside except blocks are detected."""
+        code = dedent("""
+        def build(self):
+            try:
+                pass
+            except:
+                import os
+                return os.getcwd()
+        """)
+
+        with mock_isolation_settings("moderate"):
+            errors = validate_code(code)
+            assert len(errors["function"]["errors"]) > 0
+            assert any("os" in str(e).lower() for e in errors["function"]["errors"])
+
+    def test_import_in_finally_block(self):
+        """Test that imports inside finally blocks are detected."""
+        code = dedent("""
+        def build(self):
+            try:
+                pass
+            finally:
+                import subprocess
+                return subprocess.run(['echo', 'test'])
+        """)
+
+        with mock_isolation_settings("moderate"):
+            errors = validate_code(code)
+            assert len(errors["function"]["errors"]) > 0
+            assert any("subprocess" in str(e).lower() for e in errors["function"]["errors"])
+
+    def test_import_in_with_statement(self):
+        """Test that imports inside with statements are detected."""
+        code = dedent("""
+        def build(self):
+            with open('test.txt', 'w') as f:
+                import os
+                return os.getcwd()
+        """)
+
+        with mock_isolation_settings("moderate"):
+            errors = validate_code(code)
+            assert len(errors["function"]["errors"]) > 0
+            assert any("os" in str(e).lower() for e in errors["function"]["errors"])
+
+    def test_import_in_nested_if_else(self):
+        """Test that imports in deeply nested if/else blocks are detected."""
+        code = dedent("""
+        def build(self):
+            if True:
+                if False:
+                    pass
+                else:
+                    if True:
+                        import subprocess
+                        return subprocess.run(['echo', 'test'])
+        """)
+
+        with mock_isolation_settings("moderate"):
+            errors = validate_code(code)
+            assert len(errors["function"]["errors"]) > 0
+            assert any("subprocess" in str(e).lower() for e in errors["function"]["errors"])
+
+    def test_import_in_for_loop_with_nested_if(self):
+        """Test that imports inside for loops with nested if are detected."""
+        code = dedent("""
+        def build(self):
+            items = []
+            for x in range(5):
+                if x > 2:
+                    import subprocess
+                    items.append(subprocess.run(['echo', str(x)]))
+            return items
+        """)
+
+        with mock_isolation_settings("moderate"):
+            errors = validate_code(code)
+            assert len(errors["function"]["errors"]) > 0
+            assert any("subprocess" in str(e).lower() for e in errors["function"]["errors"])
+
+    def test_multiple_nested_imports(self):
+        """Test that multiple nested imports are all detected."""
+        code = dedent("""
+        def build(self):
+            if True:
+                import os
+            for i in range(5):
+                import subprocess
+            try:
+                import sys
+            except:
+                pass
+        """)
+
+        with mock_isolation_settings("moderate"):
+            errors = validate_code(code)
+            assert len(errors["function"]["errors"]) >= 3
+            error_text = " ".join(str(e) for e in errors["function"]["errors"]).lower()
+            assert "os" in error_text
+            assert "subprocess" in error_text
+            assert "sys" in error_text
 
 
 class TestDecoratorImports:

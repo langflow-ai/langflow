@@ -2,9 +2,11 @@ import ast
 import contextlib
 import functools
 import importlib
+import inspect
+import threading
 import warnings
-from types import FunctionType
-from typing import Optional, Union
+from pathlib import Path
+from typing import Optional, TypedDict, Union
 
 from langchain_core._api.deprecation import LangChainDeprecationWarning
 from pydantic import ValidationError
@@ -19,29 +21,61 @@ from lfx.custom.isolation import (
 from lfx.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES, DEFAULT_IMPORT_STRING
 from lfx.log.logger import logger
 
+
+class ValidationErrors(TypedDict):
+    """Structure for validation error results."""
+
+    errors: list[str]
+
+
+class ValidationResult(TypedDict):
+    """Structure for validation results from validate_code."""
+
+    imports: ValidationErrors
+    function: ValidationErrors
+
 # Cache for component index hash lookup map
 _component_hash_cache: dict[str, set[str]] | None = None
 _component_name_to_hash_cache: dict[str, str] | None = None
+_cache_lock = threading.Lock()  # Protects cache initialization
+_index_file_mtime: float | None = None  # Track index file modification time for staleness detection
 
 
-def _build_component_hash_cache() -> tuple[dict[str, set[str]], dict[str, str]]:
+def _get_index_file_path() -> Path | None:
+    """Get the path to the built-in component index file, if it exists.
+    
+    Returns:
+        Path to index file, or None if not found or not using built-in index.
+    """
+    try:
+        import lfx
+        pkg_dir = Path(inspect.getfile(lfx)).parent
+        index_path = pkg_dir / "_assets" / "component_index.json"
+        if index_path.exists():
+            return index_path
+    except Exception:  # noqa: BLE001
+        pass
+    return None
+
+
+def _build_component_hash_cache() -> tuple[dict[str, set[str]], dict[str, str], float | None]:
     """Build hash lookup maps from component index for O(1) hash checking.
 
     Returns:
-        Tuple of (hash_to_names_map, name_to_hash_map)
+        Tuple of (hash_to_names_map, name_to_hash_map, index_file_mtime)
     """
     try:
         from lfx.interface.components import _read_component_index
 
         index = _read_component_index()
         if not index:
-            return {}, {}
+            return {}, {}, None
 
         hash_to_names: dict[str, set[str]] = {}
         name_to_hash: dict[str, str] = {}
 
         entries = index.get("entries", [])
-        for category_name, components_dict in entries:
+        for _category_name, components_dict in entries:
             if not isinstance(components_dict, dict):
                 continue
             for comp_name, comp_data in components_dict.items():
@@ -59,49 +93,76 @@ def _build_component_hash_cache() -> tuple[dict[str, set[str]], dict[str, str]]:
                     # Map component name -> hash (for name+hash lookups)
                     name_to_hash[comp_name] = code_hash
 
-        return hash_to_names, name_to_hash
+        # Get mtime of index file for staleness detection
+        index_path = _get_index_file_path()
+        mtime = index_path.stat().st_mtime if index_path and index_path.exists() else None
+
+        return hash_to_names, name_to_hash, mtime
     except Exception as e:  # noqa: BLE001
         logger.debug(f"Error building component hash cache: {e}")
-        return {}, {}
+        return {}, {}, None
 
 
 def _get_component_hash_cache() -> tuple[dict[str, set[str]], dict[str, str]]:
     """Get component hash cache, building it if necessary.
+    
+    Thread-safe: uses a lock to prevent race conditions during cache initialization.
+    Checks index file mtime to detect staleness and rebuilds if the file changed.
 
     Returns:
         Tuple of (hash_to_names_map, name_to_hash_map)
     """
-    global _component_hash_cache, _component_name_to_hash_cache
+    global _component_hash_cache, _component_name_to_hash_cache, _index_file_mtime
 
-    if _component_hash_cache is None or _component_name_to_hash_cache is None:
-        _component_hash_cache, _component_name_to_hash_cache = _build_component_hash_cache()
+    # Fast path: check if cache exists without lock (double-checked locking pattern)
+    if _component_hash_cache is not None and _component_name_to_hash_cache is not None:
+        # Check if index file has changed (only for built-in index)
+        index_path = _get_index_file_path()
+        if index_path and index_path.exists():
+            try:
+                current_mtime = index_path.stat().st_mtime
+                if _index_file_mtime is not None and current_mtime != _index_file_mtime:
+                    # File changed, need to rebuild
+                    # Using != instead of > handles:
+                    # - Filesystems with coarse timestamp resolution (same mtime after change)
+                    # - Clock skew (mtime decreased)
+                    # - File replacement scenarios
+                    with _cache_lock:
+                        # Double-check after acquiring lock
+                        if _index_file_mtime is not None and current_mtime != _index_file_mtime:
+                            _component_hash_cache = None
+                            _component_name_to_hash_cache = None
+                            _index_file_mtime = None
+            except OSError:
+                # File may have been deleted or is inaccessible, ignore
+                pass
+        
+        # Return existing cache if still valid
+        if _component_hash_cache is not None and _component_name_to_hash_cache is not None:
+            return _component_hash_cache, _component_name_to_hash_cache
+
+    # Slow path: acquire lock and build cache
+    with _cache_lock:
+        # Double-check after acquiring lock (another thread may have built it)
+        if _component_hash_cache is None or _component_name_to_hash_cache is None:
+            _component_hash_cache, _component_name_to_hash_cache, _index_file_mtime = _build_component_hash_cache()
 
     return _component_hash_cache, _component_name_to_hash_cache
 
 
-@functools.lru_cache(maxsize=512)
-def _is_core_component(code: str, component_name: str | None = None) -> bool:
-    """Check if a component is a core component by comparing its code_hash with the component index.
 
-    Core components have code_hash values that match entries in the component index.
-    Custom/edited components have different code_hash values or don't exist in the index.
 
-    This function uses cached hash lookup maps for O(1) performance instead of O(n) iteration.
-    Results are also cached to avoid repeated hash calculations for the same code.
-
+def _is_core_component_impl(code_hash: str, component_name: str | None = None) -> bool:
+    """Internal implementation of core component check.
+    
     Args:
-        code: The component source code
+        code_hash: The hash of the component code
         component_name: Optional component name to look up in the index
 
     Returns:
         True if the component is a core component (matches index), False otherwise
     """
     try:
-        from lfx.custom.utils import _generate_code_hash
-
-        # Generate hash for the provided code
-        code_hash = _generate_code_hash(code, component_name or "unknown")
-
         # Get cached hash lookup maps
         hash_to_names, name_to_hash = _get_component_hash_cache()
 
@@ -121,7 +182,59 @@ def _is_core_component(code: str, component_name: str | None = None) -> bool:
         return False
 
 
-def add_type_ignores() -> None:
+@functools.lru_cache(maxsize=512)
+def _is_core_component(code_hash: str, component_name: str | None = None) -> bool:
+    """Check if a component is a core component by comparing its code_hash with the component index.
+
+    Core components have code_hash values that match entries in the component index.
+    Custom/edited components have different code_hash values or don't exist in the index.
+
+    This function uses cached hash lookup maps for O(1) performance instead of O(n) iteration.
+    Results are cached by code_hash (not full code) to reduce memory pressure.
+    
+    Note: This function now expects code_hash instead of code. Use _is_core_component_by_code()
+    if you have the raw code string.
+
+    Args:
+        code_hash: The hash of the component code
+        component_name: Optional component name to look up in the index
+
+    Returns:
+        True if the component is a core component (matches index), False otherwise
+    """
+    return _is_core_component_impl(code_hash, component_name)
+
+
+def _is_core_component_by_code(code: str, component_name: str | None = None) -> bool:
+    """Check if a component is core by code string (convenience wrapper).
+    
+    This function generates the hash from code and calls _is_core_component.
+    Use this when you have the raw code string.
+
+    Args:
+        code: The component source code
+        component_name: Optional component name to look up in the index
+
+    Returns:
+        True if the component is a core component (matches index), False otherwise
+    """
+    try:
+        from lfx.custom.utils import _generate_code_hash
+
+        # Generate hash for the provided code
+        code_hash = _generate_code_hash(code, component_name or "unknown")
+        return _is_core_component(code_hash, component_name)
+    except Exception as e:  # noqa: BLE001
+        # If anything goes wrong, assume it's custom (safer to validate)
+        logger.debug(f"Error checking if component is core: {e}")
+        return False
+
+
+def ensure_type_ignore() -> None:
+    """Ensure TypeIgnore class exists on ast module for compatibility with older Python versions.
+    
+    This is needed when compiling AST modules with type_ignores=[] parameter.
+    """
     if not hasattr(ast, "TypeIgnore"):
 
         class TypeIgnore(ast.AST):
@@ -130,7 +243,7 @@ def add_type_ignores() -> None:
         ast.TypeIgnore = TypeIgnore  # type: ignore[assignment, misc]
 
 
-def validate_code(code: str, component_name: str | None = None, skip_isolation_for_core: bool = True):
+def validate_code(code: str, component_name: str | None = None, skip_isolation_for_core: bool = True) -> ValidationResult:
     """Validate user-provided code for security violations.
 
     This function performs three-phase validation:
@@ -158,7 +271,7 @@ def validate_code(code: str, component_name: str | None = None, skip_isolation_f
         skip_isolation_for_core: If True, skip isolation validation for core components (default: True)
 
     Returns:
-        dict: Dictionary with "imports" and "function" keys, each containing "errors" list
+        ValidationResult: Dictionary with "imports" and "function" keys, each containing "errors" list
         Example: {"imports": {"errors": []}, "function": {"errors": []}}
 
     Note:
@@ -168,7 +281,7 @@ def validate_code(code: str, component_name: str | None = None, skip_isolation_f
     """
     errors = {"imports": {"errors": []}, "function": {"errors": []}}
 
-    if skip_isolation_for_core and _is_core_component(code, component_name):
+    if skip_isolation_for_core and _is_core_component_by_code(code, component_name):
         logger.debug(f"Skipping isolation validation for core component: {component_name}")
         return errors
 
@@ -176,15 +289,12 @@ def validate_code(code: str, component_name: str | None = None, skip_isolation_f
     try:
         tree = ast.parse(code)
     except Exception as e:  # noqa: BLE001
-        if hasattr(logger, "opt"):
-            logger.debug("Error parsing code", exc_info=True)
-        else:
-            logger.debug("Error parsing code")
+        logger.debug("Error parsing code", exc_info=True)
         errors["function"]["errors"].append(str(e))
         return errors
 
-    # Add a dummy type_ignores field to the AST
-    add_type_ignores()
+    # Ensure TypeIgnore exists for type_ignores field
+    ensure_type_ignore()
     tree.type_ignores = []
 
     # Phase 1: Validate import statements (syntax check only, no code execution)
@@ -208,7 +318,20 @@ def validate_code(code: str, component_name: str | None = None, skip_isolation_f
                 except Exception as e:  # noqa: BLE001
                     errors["imports"]["errors"].append(str(e))
         elif isinstance(node, ast.ImportFrom):
-            if node.module:
+            # Handle relative imports (level > 0) and absolute imports
+            # For relative imports, node.module can be None (e.g., "from . import x")
+            if node.level > 0:
+                # Relative import - not allowed in custom components
+                if node.names:
+                    dots = "." * node.level
+                    import_name = f"{dots}{node.names[0].name}"
+                else:
+                    dots = "." * node.level
+                    import_name = f"{dots}{node.module or ''}".rstrip(".")
+                errors["imports"]["errors"].append(
+                    f"Relative import '{import_name}' (level {node.level}) is not allowed in custom components."
+                )
+            elif node.module:
                 try:
                     # Use isolated import - blocks dangerous modules
                     isolated_import(node.module, None, None, (), 0)
@@ -221,146 +344,307 @@ def validate_code(code: str, component_name: str | None = None, skip_isolation_f
                     errors["imports"]["errors"].append(str(e))
                 except Exception as e:  # noqa: BLE001
                     errors["imports"]["errors"].append(str(e))
+            # else: ImportFrom with no module and level 0 - shouldn't happen, skip silently
 
     # Phase 2: Check for imports inside function/method bodies (static analysis)
-    # Function/method bodies are not executed during definition, so we statically analyze them
-    # to catch dangerous imports that would execute at runtime. This blocks runtime imports
-    # during validation, preventing dangerous code from being created even though actual
-    # runtime execution is not yet isolated.
+    # Use efficient parent mapping to find containing functions in O(depth) instead of O(N²)
     isolated_import = create_isolated_import()
-
-    def check_imports_in_body(body_nodes, context_name, context_type="function"):
-        """Recursively check for blocked imports in a function/method body."""
-        for body_node in body_nodes:
-            if isinstance(body_node, ast.Import):
-                for alias in body_node.names:
-                    try:
-                        # Check if import is blocked - this will execute at runtime
-                        isolated_import(alias.name, None, None, (), 0)
-                    except SecurityViolationError as e:
-                        errors["function"]["errors"].append(
-                            f"{context_type.capitalize()} '{context_name}' contains blocked import '{alias.name}' in body: {e}"
-                        )
-                    except Exception:  # noqa: BLE001
-                        # Ignore other import errors (ModuleNotFoundError, etc.) - those are runtime issues
-                        pass
-            elif isinstance(body_node, ast.ImportFrom) and body_node.module:
-                try:
-                    # Check if import is blocked - this will execute at runtime
-                    isolated_import(body_node.module, None, None, (), 0)
-                except SecurityViolationError as e:
-                    errors["function"]["errors"].append(
-                        f"{context_type.capitalize()} '{context_name}' contains blocked import '{body_node.module}' in body: {e}"
-                    )
-                except Exception:  # noqa: BLE001
-                    # Ignore other import errors (ModuleNotFoundError, etc.) - those are runtime issues
-                    pass
-            elif isinstance(body_node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                # Recursively check nested functions
-                check_imports_in_body(body_node.body, f"{context_name}.{body_node.name}", "nested function")
-            elif isinstance(body_node, ast.ClassDef):
-                # Check methods inside nested classes
-                for method in body_node.body:
-                    if isinstance(method, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                        check_imports_in_body(method.body, f"{body_node.name}.{method.name}", "method")
-
-    for node in tree.body:
+    
+    # Build parent map: child -> parent in one pass
+    parents: dict[ast.AST, ast.AST] = {}
+    for node in ast.walk(tree):
+        for child in ast.iter_child_nodes(node):
+            parents[child] = node
+    
+    # Build function map: function node -> qualified name (e.g., "ClassName.method_name")
+    func_map: dict[ast.FunctionDef | ast.AsyncFunctionDef, str] = {}  # function node -> qualified name
+    
+    def get_qualname(func_node: ast.FunctionDef | ast.AsyncFunctionDef) -> str:
+        """Get qualified name for a function by walking up parent chain.
+        
+        Includes nested functions (e.g., "outer.inner") and class context (e.g., "Class.method.inner").
+        Stops at module level or class definition.
+        """
+        parts = [func_node.name]
+        current: ast.AST | None = func_node
+        while current is not None:
+            current = parents.get(current)
+            if isinstance(current, ast.ClassDef):
+                parts.append(current.name)
+                break
+            elif isinstance(current, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                # Include nested function names
+                parts.append(current.name)
+            elif isinstance(current, ast.Module):
+                # Stop at module level
+                break
+        return ".".join(reversed(parts))
+    
+    # Build function map in one pass
+    for node in ast.walk(tree):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            check_imports_in_body(node.body, node.name, "function")
-        elif isinstance(node, ast.ClassDef):
-            # Check methods inside classes
-            for method in node.body:
-                if isinstance(method, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                    check_imports_in_body(method.body, f"{node.name}.{method.name}", "method")
+            func_map[node] = get_qualname(node)
+    
+    # Track module-level imports already checked in Phase 1 (direct children of tree.body)
+    phase1_checked_imports = {n for n in tree.body if isinstance(n, (ast.Import, ast.ImportFrom))}
+    
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.Import, ast.ImportFrom)):
+            continue
+        
+        # Skip imports already checked in Phase 1
+        if node in phase1_checked_imports:
+            continue
+        
+        # Determine import context by walking up parent chain
+        # Walk up to find the containing context (function, class, or module)
+        current: ast.AST | None = node
+        context_type: str | None = None
+        owner_node: ast.AST | None = None
+        
+        while current is not None:
+            parent = parents.get(current)
+            if isinstance(parent, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                context_type = "function"
+                owner_node = parent
+                break
+            elif isinstance(parent, ast.ClassDef):
+                context_type = "class"
+                owner_node = parent
+                break
+            elif isinstance(parent, ast.Module):
+                context_type = "module"
+                owner_node = parent
+                break
+            current = parent
+        
+        # Handle function-level imports (Phase 2)
+        if context_type == "function" and owner_node and owner_node in func_map:
+            containing_func = func_map[owner_node]
+            
+            # Determine import name first (before calling isolated_import which might raise)
+            if isinstance(node, ast.Import):
+                import_name = node.names[0].name if node.names else "unknown"
+            elif isinstance(node, ast.ImportFrom):
+                if node.module:
+                    import_name = node.module
+                elif node.level > 0:
+                    # Relative import - handle separately
+                    if node.names:
+                        dots = "." * node.level
+                        import_name = f"{dots}{node.names[0].name}"
+                    else:
+                        dots = "." * node.level
+                        import_name = f"{dots}{node.module or ''}".rstrip(".")
+                    errors["function"]["errors"].append(
+                        f"Function/method '{containing_func}' contains relative import '{import_name}' "
+                        f"(level {node.level}). Relative imports are not allowed in custom components."
+                    )
+                    continue
+                else:
+                    # ImportFrom with no module and level 0 - shouldn't happen, but handle gracefully
+                    import_name = node.names[0].name if node.names else "unknown"
+            else:
+                import_name = "unknown"
+            
+            # Check if import is blocked
+            try:
+                if isinstance(node, ast.Import):
+                    for alias in node.names:
+                        isolated_import(alias.name, None, None, (), 0)
+                elif isinstance(node, ast.ImportFrom) and node.module:
+                    isolated_import(node.module, None, None, (), 0)
+            except SecurityViolationError as e:
+                errors["function"]["errors"].append(
+                    f"Function/method '{containing_func}' contains blocked import '{import_name}': {e}"
+                )
+            except Exception:  # noqa: BLE001
+                # Ignore other import errors (e.g., ModuleNotFoundError)
+                pass
+        
+        # Handle module-level and class-body imports (validate with Phase 1 rules)
+        # Class bodies execute at definition time, so treat them like module-level
+        elif context_type in ("module", "class"):
+            # Validate using Phase 1 rules (add to imports.errors)
+            try:
+                if isinstance(node, ast.Import):
+                    for alias in node.names:
+                        isolated_import(alias.name, None, None, (), 0)
+                elif isinstance(node, ast.ImportFrom):
+                    # Handle relative imports (level > 0) and absolute imports
+                    if node.level > 0:
+                        if node.names:
+                            dots = "." * node.level
+                            import_name = f"{dots}{node.names[0].name}"
+                        else:
+                            dots = "." * node.level
+                            import_name = f"{dots}{node.module or ''}".rstrip(".")
+                        errors["imports"]["errors"].append(
+                            f"Relative import '{import_name}' (level {node.level}) is not allowed in custom components."
+                        )
+                    elif node.module:
+                        isolated_import(node.module, None, None, (), 0)
+            except SecurityViolationError as e:
+                errors["imports"]["errors"].append(str(e))
+            except ModuleNotFoundError as e:
+                errors["imports"]["errors"].append(str(e))
+            except Exception as e:  # noqa: BLE001
+                errors["imports"]["errors"].append(str(e))
 
-    # Phase 3: Transform AST to block dangerous dunder access, then execute function definitions
+    # Phase 3: Transform AST to block dangerous dunder access, then execute function and class definitions
     # This actually runs the code (for decorators, default args, etc.) in an isolated environment.
     # Unlike Phase 1, this uses execute_in_isolated_env() which creates full isolation including
     # isolated builtins. This is where the real security isolation happens.
     #
     # CRITICAL: Transform AST to block dangerous dunder access before compilation
     # This prevents escapes like: ().__class__.__bases__[0].__subclasses__()[XX].__init__.__globals__['os']
+    # We execute both FunctionDef and ClassDef nodes to match runtime behavior where class definitions
+    # (including decorators and default arguments) are executed at definition time.
     transformer = DunderAccessTransformer()
 
+    # Collect imports and definitions separately
+    imports = []
+    import_froms = []
+    definitions = []
     for node in tree.body:
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            # Transform the function node's AST to block dangerous dunder access
-            # Visit the entire function node (which will recursively transform all attributes)
-            # This includes decorators, which are evaluated during function definition execution
-            transformed_func = transformer.visit(node)
-            # Fix missing location information
-            ast.fix_missing_locations(transformed_func)
+        if isinstance(node, ast.Import):
+            imports.append(node)
+        elif isinstance(node, ast.ImportFrom):
+            import_froms.append(node)
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            definitions.append(node)
 
-            # Create isolated execution environment
-            # We prepend DEFAULT_IMPORT_STRING to match runtime (where it's also prepended)
-            # This ensures decorators and default arguments have access to the same types
-            # that would be available at runtime
-            isolated_builtins_dict = create_isolated_builtins()
-            isolated_import_func = create_isolated_import()
-            exec_globals = {
-                "__builtins__": isolated_builtins_dict,
-                "__name__": "__main__",
-                "__doc__": None,
-                "__package__": None,
-                "__import__": isolated_import_func,
-            }
+    if definitions:
+        # Create isolated execution environment (shared across all definitions)
+        # We prepend DEFAULT_IMPORT_STRING to match runtime (where it's also prepended)
+        # This ensures decorators and default arguments have access to the same types
+        # that would be available at runtime
+        isolated_builtins_dict = create_isolated_builtins()
+        isolated_import_func = create_isolated_import()
+        exec_globals = {
+            "__builtins__": isolated_builtins_dict,
+            "__name__": "__main__",
+            "__doc__": None,
+            "__package__": None,
+            "__import__": isolated_import_func,
+        }
 
-            # Execute DEFAULT_IMPORT_STRING first (matches runtime behavior)
-            import_code = DEFAULT_IMPORT_STRING + "\n"
-            import_module = ast.parse(import_code)
-            import_code_obj = compile(import_module, "<string>", "exec")
-            execute_in_isolated_env(import_code_obj, exec_globals)
+        # Execute DEFAULT_IMPORT_STRING first (matches runtime behavior)
+        import_code = DEFAULT_IMPORT_STRING + "\n"
+        import_module = ast.parse(import_code)
+        import_code_obj = compile(import_module, "<string>", "exec")
+        execute_in_isolated_env(import_code_obj, exec_globals)
 
-            # Now execute the function definition with types available
-            code_obj = compile(ast.Module(body=[transformed_func], type_ignores=[]), "<string>", "exec")
-            try:
-                execute_in_isolated_env(code_obj, exec_globals)
-            except Exception as e:  # noqa: BLE001
-                logger.debug("Error executing function code", exc_info=True)
-                errors["function"]["errors"].append(str(e))
+        # Process imports from the code (needed for class definitions that inherit from Component, etc.)
+        # This matches what prepare_global_scope does, but in isolation
+        try:
+            for node in imports:
+                for alias in node.names:
+                    module_name = alias.name
+                    try:
+                        module_obj = isolated_import_func(module_name, None, None, (), 0)
+                    except SecurityViolationError:
+                        # Import is blocked - skip it (already validated in Phase 1)
+                        continue
+                    # Set the variable name
+                    if alias.asname:
+                        exec_globals[alias.asname] = module_obj
+                    else:
+                        variable_name = module_name.split(".")[0]
+                        exec_globals[variable_name] = isolated_import_func(variable_name, None, None, (), 0)
+
+            for node in import_froms:
+                if node.level > 0:
+                    # Relative imports already validated in Phase 1/2, skip
+                    continue
+                if not node.module:
+                    continue
+                # Try langflow -> lfx replacement (matches prepare_global_scope behavior)
+                module_names_to_try = [node.module]
+                if node.module.startswith("langflow."):
+                    lfx_module_name = node.module.replace("langflow.", "lfx.", 1)
+                    module_names_to_try.append(lfx_module_name)
+
+                success = False
+                for module_name in module_names_to_try:
+                    try:
+                        imported_module = isolated_import_func(module_name, None, None, (), 0)
+                        # Use _handle_module_attributes to properly handle attribute imports
+                        _handle_module_attributes(imported_module, node, module_name, exec_globals, use_isolation=True)
+                        success = True
+                        break
+                    except SecurityViolationError:
+                        # Import is blocked - skip it (already validated in Phase 1)
+                        continue
+                    except ModuleNotFoundError:
+                        continue
+                
+                if not success:
+                    # If import failed, log but continue - definitions might still execute
+                    logger.debug(f"Could not import {node.module} in Phase 3, continuing anyway")
+        except Exception as e:  # noqa: BLE001
+            # If imports fail, log but continue - definitions might still execute
+            logger.debug("Error processing imports in Phase 3", exc_info=True)
+
+        # Transform and execute all definitions together (matches prepare_global_scope behavior)
+        combined_module = ast.Module(body=definitions, type_ignores=[])
+        transformed_module = transformer.visit(combined_module)
+        ast.fix_missing_locations(transformed_module)
+        
+        try:
+            code_obj = compile(transformed_module, "<string>", "exec")
+            execute_in_isolated_env(code_obj, exec_globals)
+        except Exception as e:  # noqa: BLE001
+            logger.debug("Error executing function/class definitions", exc_info=True)
+            errors["function"]["errors"].append(str(e))
 
     # Return the errors dictionary
     return errors
 
 
-def eval_function(function_string: str):
-    # Create an empty dictionary to serve as a separate namespace
-    namespace: dict = {}
-
-    # Execute the code string in the new namespace
-    exec(function_string, namespace)
-    function_object = next(
-        (
-            obj
-            for name, obj in namespace.items()
-            if isinstance(obj, FunctionType) and obj.__code__.co_filename == "<string>"
-        ),
-        None,
-    )
-    if function_object is None:
-        msg = "Function string does not contain a function"
-        raise ValueError(msg)
-    return function_object
-
-
 def execute_function(code, function_name, *args, **kwargs):
-    add_type_ignores()
+    ensure_type_ignore()
 
     # Check if this is a core component - if so, skip isolation
     # Note: function_name might not match component name, so we check by hash only
-    is_core = _is_core_component(code, None)
+    is_core = _is_core_component_by_code(code, None)
 
-    module = ast.parse(code)
+    try:
+        module = ast.parse(code)
+    except SyntaxError as e:
+        raise ValueError(f"Syntax error in function code: {e}") from e
 
     # Use prepare_global_scope to handle imports consistently with create_class
-    exec_globals = prepare_global_scope(module, use_isolation=not is_core)
+    try:
+        exec_globals = prepare_global_scope(module, use_isolation=not is_core)
+    except Exception as e:  # noqa: BLE001
+        # Re-raise with context (could be SecurityViolationError, ModuleNotFoundError, etc.)
+        raise ValueError(f"Error preparing execution environment for function '{function_name}': {e}") from e
 
-    function_code = next(
-        node for node in module.body if isinstance(node, ast.FunctionDef) and node.name == function_name
-    )
+    # Find the function definition
+    try:
+        function_code = next(
+            node for node in module.body if isinstance(node, ast.FunctionDef) and node.name == function_name
+        )
+    except StopIteration:
+        msg = f"Function '{function_name}' not found in code"
+        raise ValueError(msg)
+
     function_code.parent = None
-    code_obj = compile(ast.Module(body=[function_code], type_ignores=[]), "<string>", "exec")
-    exec_locals = dict(locals())
+    
+    try:
+        if not is_core:
+            # CRITICAL: Transform AST to block dangerous dunder access before compilation
+            transformer = DunderAccessTransformer()
+            transformed_func = transformer.visit(function_code)
+            ast.fix_missing_locations(transformed_func)
+            code_obj = compile(ast.Module(body=[transformed_func], type_ignores=[]), "<string>", "exec")
+        else:
+            code_obj = compile(ast.Module(body=[function_code], type_ignores=[]), "<string>", "exec")
+    except SyntaxError as e:
+        raise ValueError(f"Syntax error compiling function '{function_name}': {e}") from e
+    
+    exec_locals = {}
     try:
         if is_core:
             exec(code_obj, exec_globals, exec_locals)
@@ -369,13 +653,18 @@ def execute_function(code, function_name, *args, **kwargs):
             execute_in_isolated_env(code_obj, exec_globals)
             # Extract the function from exec_globals after isolated execution
             if function_name not in exec_globals:
-                msg = "Function string does not contain a function"
+                msg = f"Function '{function_name}' was not created after execution (possible execution error)"
                 raise ValueError(msg)
             exec_locals[function_name] = exec_globals[function_name]
     except SecurityViolationError as e:
         raise SecurityViolationError(f"Function '{function_name}' contains security violation: {e}") from e
+    except ValueError:
+        # Re-raise ValueError (function not found) as-is
+        raise
     except Exception as exc:
-        msg = "Function string does not contain a function"
+        # Include original exception type and message for better debugging
+        exc_type = type(exc).__name__
+        msg = f"Error executing function '{function_name}': {exc_type}: {exc}"
         raise ValueError(msg) from exc
 
     # Add the function to the exec_globals dictionary
@@ -385,32 +674,52 @@ def execute_function(code, function_name, *args, **kwargs):
 
 
 def create_function(code, function_name):
-    if not hasattr(ast, "TypeIgnore"):
-
-        class TypeIgnore(ast.AST):
-            _fields = ()
-
-        ast.TypeIgnore = TypeIgnore
+    ensure_type_ignore()
 
     # Check if this is a core component - if so, skip isolation
     # Note: function_name might not match component name, so we check by hash only
-    is_core = _is_core_component(code, None)
+    is_core = _is_core_component_by_code(code, None)
 
-    module = ast.parse(code)
+    try:
+        module = ast.parse(code)
+    except SyntaxError as e:
+        raise ValueError(f"Syntax error in function code: {e}") from e
 
     # Use prepare_global_scope to handle imports consistently with create_class
-    exec_globals = prepare_global_scope(module, use_isolation=not is_core)
+    try:
+        exec_globals = prepare_global_scope(module, use_isolation=not is_core)
+    except Exception as e:  # noqa: BLE001
+        # Re-raise with context (could be SecurityViolationError, ModuleNotFoundError, etc.)
+        raise ValueError(f"Error preparing execution environment for function '{function_name}': {e}") from e
 
-    function_code = next(
-        node for node in module.body if isinstance(node, ast.FunctionDef) and node.name == function_name
-    )
+    # Find the function definition
+    try:
+        function_code = next(
+            node for node in module.body if isinstance(node, ast.FunctionDef) and node.name == function_name
+        )
+    except StopIteration:
+        msg = f"Function '{function_name}' not found in code"
+        raise ValueError(msg)
+
     function_code.parent = None
-    code_obj = compile(ast.Module(body=[function_code], type_ignores=[]), "<string>", "exec")
-    exec_locals = dict(locals())
+    
+    try:
+        if not is_core:
+            # CRITICAL: Transform AST to block dangerous dunder access before compilation
+            transformer = DunderAccessTransformer()
+            transformed_func = transformer.visit(function_code)
+            ast.fix_missing_locations(transformed_func)
+            code_obj = compile(ast.Module(body=[transformed_func], type_ignores=[]), "<string>", "exec")
+        else:
+            code_obj = compile(ast.Module(body=[function_code], type_ignores=[]), "<string>", "exec")
+    except SyntaxError as e:
+        raise ValueError(f"Syntax error compiling function '{function_name}': {e}") from e
+    
+    exec_locals = {}
+    execution_error: Exception | None = None
     try:
         if is_core:
-            with contextlib.suppress(Exception):
-                exec(code_obj, exec_globals, exec_locals)
+            exec(code_obj, exec_globals, exec_locals)
         else:
             # Execute in isolated environment
             execute_in_isolated_env(code_obj, exec_globals)
@@ -419,13 +728,20 @@ def create_function(code, function_name):
                 exec_locals[function_name] = exec_globals[function_name]
     except SecurityViolationError as e:
         raise SecurityViolationError(f"Function '{function_name}' contains security violation: {e}") from e
-    except Exception:  # noqa: BLE001
-        # Suppress other exceptions for backward compatibility
-        pass
+    except Exception as exc:  # noqa: BLE001
+        # Store execution error but don't raise yet - check if function was created anyway
+        execution_error = exc
 
     if function_name not in exec_locals and function_name not in exec_globals:
-        msg = f"Function '{function_name}' not found in code"
-        raise ValueError(msg)
+        if execution_error:
+            # Function wasn't created due to execution error
+            exc_type = type(execution_error).__name__
+            msg = f"Function '{function_name}' was not created due to execution error: {exc_type}: {execution_error}"
+            raise ValueError(msg) from execution_error
+        else:
+            # Function simply not found (shouldn't happen if StopIteration was caught, but handle gracefully)
+            msg = f"Function '{function_name}' not found in code after execution"
+            raise ValueError(msg)
 
     exec_globals[function_name] = exec_locals.get(function_name) or exec_globals.get(function_name)
 
@@ -453,11 +769,10 @@ def create_class(code, class_name):
     Raises:
         ValueError: If the code contains syntax errors or the class definition is invalid
     """
-    if not hasattr(ast, "TypeIgnore"):
-        ast.TypeIgnore = create_type_ignore_class()
+    ensure_type_ignore()
 
     # Check if this is a core component BEFORE modifying code (hash must match original)
-    is_core = _is_core_component(code, class_name)
+    is_core = _is_core_component_by_code(code, class_name)
 
     code = code.replace("from langflow import CustomComponent", "from langflow.custom import CustomComponent")
     code = code.replace(
@@ -472,7 +787,16 @@ def create_class(code, class_name):
         exec_globals = prepare_global_scope(module, use_isolation=not is_core)
 
         class_code = extract_class_code(module, class_name)
-        compiled_class = compile_class_code(class_code)
+        
+        if not is_core:
+            # CRITICAL: Transform AST to block dangerous dunder access before compilation
+            # This prevents escapes in class bodies, decorators, and default values
+            transformer = DunderAccessTransformer()
+            transformed_class = transformer.visit(class_code)
+            ast.fix_missing_locations(transformed_class)
+            compiled_class = compile(ast.Module(body=[transformed_class], type_ignores=[]), "<string>", "exec")
+        else:
+            compiled_class = compile_class_code(class_code)
 
         return build_class_constructor(compiled_class, exec_globals, class_name, use_isolation=not is_core)
 
@@ -491,20 +815,7 @@ def create_class(code, class_name):
         raise ValueError(msg) from e
 
 
-def create_type_ignore_class():
-    """Create a TypeIgnore class for AST module if it doesn't exist.
-
-    Returns:
-        TypeIgnore class
-    """
-
-    class TypeIgnore(ast.AST):
-        _fields = ()
-
-    return TypeIgnore
-
-
-def _import_module_with_warnings(module_name):
+def _import_module_with_warnings(module_name: str) -> object:
     """Import module with appropriate warning suppression."""
     if "langchain" in module_name:
         with warnings.catch_warnings():
@@ -536,7 +847,7 @@ def _handle_module_attributes(imported_module, node, module_name, exec_globals, 
                 exec_globals[alias.name] = importlib.import_module(full_module_path)
 
 
-def prepare_global_scope(module, use_isolation: bool = False):
+def prepare_global_scope(module, use_isolation: bool = False) -> dict[str, object]:
     """Prepares the global scope with necessary imports from the provided code module.
 
     Args:
@@ -550,6 +861,8 @@ def prepare_global_scope(module, use_isolation: bool = False):
         ModuleNotFoundError: If a module is not found in the code
         SecurityViolationError: If a blocked module is imported and use_isolation is True
     """
+    ensure_type_ignore()
+    
     if use_isolation:
         # Create isolated builtins and import function for runtime isolation
         isolated_builtins_dict = create_isolated_builtins()
@@ -578,7 +891,7 @@ def prepare_global_scope(module, use_isolation: bool = False):
             imports.append(node)
         elif isinstance(node, ast.ImportFrom) and node.module is not None:
             import_froms.append(node)
-        elif isinstance(node, ast.ClassDef | ast.FunctionDef | ast.Assign):
+        elif isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.Assign)):
             definitions.append(node)
 
     for node in imports:
@@ -651,17 +964,25 @@ def prepare_global_scope(module, use_isolation: bool = False):
 
     if definitions:
         combined_module = ast.Module(body=definitions, type_ignores=[])
-        compiled_code = compile(combined_module, "<string>", "exec")
+        
         if use_isolation:
+            # CRITICAL: Transform AST to block dangerous dunder access before compilation
+            # This prevents escapes like: ().__class__.__bases__[0].__subclasses__()[XX].__init__.__globals__['os']
+            # Applies to ClassDef bodies, module-level assignments, and class decorators
+            transformer = DunderAccessTransformer()
+            transformed_module = transformer.visit(combined_module)
+            ast.fix_missing_locations(transformed_module)
+            compiled_code = compile(transformed_module, "<string>", "exec")
             # Execute in isolated environment
             execute_in_isolated_env(compiled_code, exec_globals)
         else:
+            compiled_code = compile(combined_module, "<string>", "exec")
             exec(compiled_code, exec_globals)
 
     return exec_globals
 
 
-def extract_class_code(module, class_name):
+def extract_class_code(module, class_name) -> ast.ClassDef:
     """Extracts the AST node for the specified class from the module.
 
     Args:
@@ -686,6 +1007,7 @@ def compile_class_code(class_code):
     Returns:
         Compiled code object of the class
     """
+    ensure_type_ignore()
     return compile(ast.Module(body=[class_code], type_ignores=[]), "<string>", "exec")
 
 
@@ -701,7 +1023,7 @@ def build_class_constructor(compiled_class, exec_globals, class_name, use_isolat
     Returns:
          Constructor function for the class
     """
-    exec_locals = dict(locals())
+    exec_locals = {}
     if use_isolation:
         # Execute in isolated environment for custom components
         execute_in_isolated_env(compiled_class, exec_globals)
@@ -724,24 +1046,6 @@ def build_class_constructor(compiled_class, exec_globals, class_name, use_isolat
         return exec_globals[class_name]
 
     return build_custom_class()
-
-
-# TODO: Remove this function
-def get_default_imports(code_string):
-    """Returns a dictionary of default imports for the dynamic class constructor."""
-    default_imports = {
-        "Optional": Optional,
-        "List": list,
-        "Dict": dict,
-        "Union": Union,
-    }
-    langflow_imports = list(CUSTOM_COMPONENT_SUPPORTED_TYPES.keys())
-    necessary_imports = find_names_in_code(code_string, langflow_imports)
-    langflow_module = importlib.import_module("lfx.field_typing")
-    default_imports.update({name: getattr(langflow_module, name) for name in necessary_imports})
-
-    return default_imports
-
 
 def find_names_in_code(code, names):
     """Finds if any of the specified names are present in the given code string.
