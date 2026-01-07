@@ -23,7 +23,7 @@ from sqlmodel import and_, col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow, remove_api_keys, validate_is_component
-from langflow.api.v1.schemas import FlowListCreate
+from langflow.api.v1.schemas import FlowListCreate, PublishedFlowRead, PublishFlowCreate
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.database.models.flow.model import (
@@ -38,6 +38,7 @@ from langflow.services.database.models.flow.utils import get_webhook_component_i
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import get_service, get_settings_service, get_storage_service
+from langflow.services.publish.schema import PublishedFlowMetadata
 from langflow.services.publish.service import PublishService
 from langflow.services.publish.utils import MISSING_ITEM_MSG, require_all_ids, require_publish_key
 from langflow.services.schema import ServiceType
@@ -698,56 +699,77 @@ async def read_basic_examples(
 ########################################################
 # Publish Flow endpoints
 ########################################################
-@router.post("/{flow_id}/publish/", status_code=201)
+@router.post("/{flow_id}/publish/", response_model=PublishedFlowRead, status_code=201)
 async def publish_flow(
     *,
     session: DbSession,
     current_user: CurrentActiveUser,
     flow_id: UUID,
-    publish_tag: str | None = None,
-    ):
-    """Publish the flow to S3."""
+    body: PublishFlowCreate | None = None,
+):
+    """Publish the flow to a Langflow-supported storage service."""
     require_all_ids(current_user.id, flow_id, "flow")
+    publish_tag = body.publish_tag if body else None
+
     try:
         db_flow: Flow = await _read_flow_for_publish(session, flow_id, current_user.id)
         flow_blob: dict = _create_flow_blob_for_publish(db_flow)
 
         publish_service: PublishService = get_service(ServiceType.PUBLISH_SERVICE)
-        publish_key = await publish_service.put_flow(
+        publish_data: PublishedFlowMetadata = await publish_service.put_flow(
             user_id=current_user.id,
             flow_id=db_flow.id,
             flow_blob=flow_blob,
             publish_tag=publish_tag
-            )
+        )
     except HTTPException as httperr:
         raise httperr from httperr
     except Exception as e:
         msg = f"Failed to publish flow: {e!s}"
         raise HTTPException(status_code=500, detail=msg) from e
 
-    return {
-        "message": "Flow published successfully.",
-        "flow_id": flow_id,
-        "publish_key": publish_key
-        }
+    return publish_data
 
 
-@router.get("/{flow_id}/publish/", status_code=200)
-async def get_published_flow(
+@router.get("/{flow_id}/publish/", response_model=list[PublishedFlowRead], status_code=200)
+async def list_published_flows(
     *,
     flow_id: UUID,
     current_user: CurrentActiveUser,
-    publish_key: str | UUID | None,
     ):
-    """Retrieve the published flow from S3."""
+    """List all published versions of the flow."""
     require_all_ids(current_user.id, flow_id, "flow")
-    require_publish_key(publish_key)
     try:
+        publish_service: PublishService = get_service(ServiceType.PUBLISH_SERVICE)
+        flow_data_list = await publish_service.list_flow_versions(
+            user_id=current_user.id,
+            flow_id=flow_id,
+            )
+    except Exception as e:
+        err_msg = str(e)
+        raise HTTPException(status_code=500, detail=err_msg) from e
+
+    return flow_data_list
+
+
+@router.get("/{flow_id}/publish/{version_id}", response_model=dict, status_code=200)
+async def read_published_flow(
+    *,
+    flow_id: UUID,
+    current_user: CurrentActiveUser,
+    version_id: str,
+    timestamp: str,
+    flow_name: str,
+    ):
+    """Retrieve a specific published flow version."""
+    require_all_ids(current_user.id, flow_id, "flow")
+    try:
+        key = PublishedFlowMetadata(version_id=version_id, timestamp=timestamp, flow_name=flow_name)
         publish_service: PublishService = get_service(ServiceType.PUBLISH_SERVICE)
         flow_data = await publish_service.get_flow(
             user_id=current_user.id,
             flow_id=flow_id,
-            publish_key=publish_key,
+            key=key,
             )
     except Exception as e:
         err_msg = str(e)
@@ -758,11 +780,38 @@ async def get_published_flow(
     return orjson.loads(flow_data)
 
 
+@router.delete("/{flow_id}/publish/{version_id}", status_code=204)
+async def delete_published_flow(
+    *,
+    flow_id: UUID,
+    current_user: CurrentActiveUser,
+    version_id: str,
+    timestamp: str,
+    flow_name: str,
+    ):
+    """Delete a specific published flow version."""
+    require_all_ids(current_user.id, flow_id, "flow")
+
+    try:
+        key = PublishedFlowMetadata(version_id=version_id, timestamp=timestamp, flow_name=flow_name)
+        publish_service: PublishService = get_service(ServiceType.PUBLISH_SERVICE)
+        await publish_service.delete_flow(
+            user_id=current_user.id,
+            flow_id=flow_id,
+            key=key,
+            )
+    except Exception as e:
+        err_msg = str(e)
+        if "NoSuchKey" in err_msg:
+            raise HTTPException(status_code=404, detail="Published flow not found") from e
+        raise HTTPException(status_code=500, detail=err_msg) from e
+
+
 async def _read_flow_for_publish(
     session: AsyncSession,
     flow_id: UUID,
     user_id: UUID,
-) -> Flow | None:
+    ) -> Flow | None:
     """Read a flow from flow_id and user_id.
 
     Raises an HTTP exception if not found or Flow.data is None or empty.

@@ -25,6 +25,7 @@ from langflow.services.database.models.api_key.model import ApiKeyRead
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow.model import FlowCreate, FlowRead
 from langflow.services.database.models.user.model import UserRead
+from langflow.services.publish.schema import PublishedFlowMetadata
 from langflow.services.tracing.schema import Log
 
 
@@ -478,6 +479,15 @@ class ComposerUrlResponse(BaseModel):
     error_message: str | None = None
 
 
+class PublishedFlowRead(PublishedFlowMetadata):
+    """Schema for reading a published flow, includes the composite key fields."""
+    model_config = ConfigDict(extra="ignore")
+
+
 class MCPInstallRequest(BaseModel):
     client: str
     transport: Literal["sse", "streamablehttp"] | None = None
+
+
+class PublishFlowCreate(BaseModel):
+    publish_tag: str | None = Field(None, description="Optional tag for the published flow version.")
