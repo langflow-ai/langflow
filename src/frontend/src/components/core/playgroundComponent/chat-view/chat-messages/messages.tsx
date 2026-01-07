@@ -51,7 +51,12 @@ export const Messages = ({
   }, [chatHistory.length, isBuilding]);
 
   const messagesContent = (
-    <div className="flex flex-col flex-grow place-self-center w-full">
+    <div
+      className={cn(
+        "flex flex-col w-full",
+        playgroundPage ? "" : "flex-grow place-self-center",
+      )}
+    >
       {chatHistory &&
         (isBuilding || chatHistory.length > 0 ? (
           <>
