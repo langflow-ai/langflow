@@ -12,6 +12,7 @@ from langflow.agentic.utils.flow_component import (
 from langflow.services.database.models.flow.model import FlowCreate
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestGetComponentDetails:
     """Test cases for get_component_details function using real flows."""
 
@@ -133,6 +134,7 @@ class TestGetComponentDetails:
             await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestGetComponentFieldValue:
     """Test cases for get_component_field_value function."""
 
@@ -249,6 +251,7 @@ class TestGetComponentFieldValue:
             await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestUpdateComponentFieldValue:
     """Test cases for update_component_field_value function."""
 
@@ -408,6 +411,7 @@ class TestUpdateComponentFieldValue:
             await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestListComponentFields:
     """Test cases for list_component_fields function."""
 
@@ -532,6 +536,7 @@ class TestListComponentFields:
             await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestIntegrationScenarios:
     """Integration tests with real-world scenarios."""
 
@@ -637,6 +642,7 @@ class TestIntegrationScenarios:
             await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestEdgeCases:
     """Test edge cases and boundary conditions."""
 

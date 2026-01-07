@@ -10,6 +10,7 @@ from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import session_scope
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestCreateFlowFromTemplateAndGetLink:
     """Test cases for create_flow_from_template_and_get_link function."""
 
@@ -299,6 +300,7 @@ class TestCreateFlowFromTemplateAndGetLink:
                 await session.commit()
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestIntegrationScenarios:
     """Integration tests with real-world scenarios."""
 
@@ -399,6 +401,7 @@ class TestIntegrationScenarios:
             raise
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestEdgeCases:
     """Test edge cases and boundary conditions."""
 

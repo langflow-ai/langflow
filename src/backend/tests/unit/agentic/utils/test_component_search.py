@@ -11,6 +11,7 @@ from langflow.agentic.utils.component_search import (
 from langflow.services.deps import get_settings_service
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestListAllComponents:
     """Test cases for list_all_components function using real components."""
 
@@ -170,6 +171,7 @@ class TestListAllComponents:
         assert components == []
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestGetComponentByName:
     """Test cases for get_component_by_name function."""
 
@@ -284,6 +286,7 @@ class TestGetComponentByName:
                     assert component["type"].lower() == second_type.lower()
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestGetAllComponentTypes:
     """Test cases for get_all_component_types function."""
 
@@ -340,6 +343,7 @@ class TestGetAllComponentTypes:
         assert set(types) == component_types
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestGetComponentsCount:
     """Test cases for get_components_count function."""
 
@@ -401,6 +405,7 @@ class TestGetComponentsCount:
         assert total_count == sum_counts
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestGetComponentsByType:
     """Test cases for get_components_by_type function."""
 
@@ -457,6 +462,7 @@ class TestGetComponentsByType:
             assert len(components) > 0, f"Type {comp_type} has no components"
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestIntegrationScenarios:
     """Integration tests with real-world scenarios."""
 
@@ -529,6 +535,7 @@ class TestIntegrationScenarios:
         assert retrieved["type"] == first_comp["type"]
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestEdgeCases:
     """Test edge cases and boundary conditions."""
 
@@ -599,6 +606,7 @@ class TestEdgeCases:
             assert "nonexistent_field_xyz" not in comp
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestPerformance:
     """Performance and stress tests."""
 

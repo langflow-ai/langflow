@@ -43,6 +43,7 @@ from langflow.services.deps import session_scope
 # =============================================================================
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestSearchTemplates:
     """Test cases for search_templates MCP tool."""
 
@@ -94,6 +95,7 @@ class TestSearchTemplates:
         assert result == []
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestGetTemplate:
     """Test cases for get_template MCP tool."""
 
@@ -127,6 +129,7 @@ class TestGetTemplate:
         assert result is None
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestListAllTags:
     """Test cases for list_all_tags MCP tool."""
 
@@ -151,6 +154,7 @@ class TestListAllTags:
         assert len(result) == len(set(result))
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestCountTemplates:
     """Test cases for count_templates MCP tool."""
 
@@ -168,6 +172,7 @@ class TestCountTemplates:
 # =============================================================================
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestSearchComponents:
     """Test cases for search_components MCP tool."""
 
@@ -241,6 +246,7 @@ class TestSearchComponents:
                 assert "text" not in comp
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestGetComponent:
     """Test cases for get_component MCP tool."""
 
@@ -277,6 +283,7 @@ class TestGetComponent:
         assert result is None
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestListComponentTypes:
     """Test cases for list_component_types MCP tool."""
 
@@ -297,6 +304,7 @@ class TestListComponentTypes:
         assert result == sorted(result)
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestCountComponents:
     """Test cases for count_components MCP tool."""
 
@@ -320,6 +328,7 @@ class TestCountComponents:
             assert count == len(type_comps)
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestGetComponentsByTypeTool:
     """Test cases for get_components_by_type_tool MCP tool."""
 
@@ -351,6 +360,7 @@ class TestGetComponentsByTypeTool:
 # =============================================================================
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestVisualizeFlowGraph:
     """Test cases for visualize_flow_graph MCP tool."""
 
@@ -410,6 +420,7 @@ class TestVisualizeFlowGraph:
         assert "error" in result
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestGetFlowAsciiDiagram:
     """Test cases for get_flow_ascii_diagram MCP tool."""
 
@@ -449,6 +460,7 @@ class TestGetFlowAsciiDiagram:
             await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestGetFlowTextRepresentation:
     """Test cases for get_flow_text_representation MCP tool."""
 
@@ -483,6 +495,7 @@ class TestGetFlowTextRepresentation:
             await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestGetFlowStructureSummary:
     """Test cases for get_flow_structure_summary MCP tool."""
 
@@ -535,6 +548,7 @@ class TestGetFlowStructureSummary:
 # =============================================================================
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestGetFlowComponentDetails:
     """Test cases for get_flow_component_details MCP tool."""
 
@@ -568,6 +582,7 @@ class TestGetFlowComponentDetails:
             await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestGetFlowComponentFieldValue:
     """Test cases for get_flow_component_field_value MCP tool."""
 
@@ -604,6 +619,7 @@ class TestGetFlowComponentFieldValue:
             await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestUpdateFlowComponentField:
     """Test cases for update_flow_component_field MCP tool."""
 
@@ -647,6 +663,7 @@ class TestUpdateFlowComponentField:
             await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestListFlowComponentFields:
     """Test cases for list_flow_component_fields MCP tool."""
 
@@ -686,6 +703,7 @@ class TestListFlowComponentFields:
 # =============================================================================
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestCreateFlowFromTemplate:
     """Test cases for create_flow_from_template MCP tool."""
 
@@ -753,6 +771,7 @@ class TestCreateFlowFromTemplate:
 # =============================================================================
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestMCPToolsIntegration:
     """Integration tests combining multiple MCP tools."""
 

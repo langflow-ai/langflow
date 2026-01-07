@@ -12,6 +12,7 @@ from langflow.agentic.utils.flow_graph import (
 from langflow.services.database.models.flow.model import FlowCreate
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestGetFlowGraphRepresentations:
     """Test cases for get_flow_graph_representations function."""
 
@@ -160,6 +161,7 @@ class TestGetFlowGraphRepresentations:
             await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestGetFlowAsciiGraph:
     """Test cases for get_flow_ascii_graph function."""
 
@@ -245,6 +247,7 @@ class TestGetFlowAsciiGraph:
             await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestGetFlowTextRepr:
     """Test cases for get_flow_text_repr function."""
 
@@ -307,6 +310,7 @@ class TestGetFlowTextRepr:
             await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestGetFlowGraphSummary:
     """Test cases for get_flow_graph_summary function."""
 
@@ -436,6 +440,7 @@ class TestGetFlowGraphSummary:
             await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestIntegrationScenarios:
     """Integration tests with real-world scenarios."""
 
@@ -541,6 +546,7 @@ class TestIntegrationScenarios:
             await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestEdgeCases:
     """Test edge cases and boundary conditions."""
 

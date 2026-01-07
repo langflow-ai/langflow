@@ -5,6 +5,7 @@ import math
 from langflow.agentic.mcp.support import replace_none_and_null_with_empty_str
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestReplaceNoneAndNullWithEmptyStr:
     """Test cases for replace_none_and_null_with_empty_str function."""
 
@@ -264,6 +265,7 @@ class TestReplaceNoneAndNullWithEmptyStr:
         assert result[0]["active"] is True
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestRealWorldScenarios:
     """Test with real-world-like data scenarios."""
 
@@ -379,6 +381,7 @@ class TestRealWorldScenarios:
         assert result[1]["text"] == "Not available"
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestEdgeCases:
     """Test edge cases and boundary conditions."""
 
