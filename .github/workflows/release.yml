@@ -434,7 +434,7 @@ jobs:
 
   test-cross-platform:
     name: Test Cross-Platform Installation
-    needs: [build-base, build-main, build-lfx]
+    needs: [build-base, build-main]
     if: |
       always() &&
       !cancelled() &&
