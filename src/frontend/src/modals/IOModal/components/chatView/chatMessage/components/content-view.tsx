@@ -139,10 +139,14 @@ export const ErrorView = ({
                                           }
                                         }
 
-                                        if (isCodeBlock(className, props, content)) {
+                                        if (
+                                          isCodeBlock(className, props, content)
+                                        ) {
                                           return (
                                             <CodeTabsComponent
-                                              language={extractLanguage(className)}
+                                              language={extractLanguage(
+                                                className,
+                                              )}
                                               code={String(content).replace(
                                                 /\n$/,
                                                 "",
