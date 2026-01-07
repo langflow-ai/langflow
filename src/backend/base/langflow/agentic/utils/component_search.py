@@ -6,12 +6,18 @@ from lfx.interface.components import get_and_cache_all_types_dict
 from lfx.log.logger import logger
 from lfx.services.settings.service import SettingsService
 
+from langflow.utils.component_classification import get_bundle_component_names
+
 
 async def list_all_components(
     query: str | None = None,
     component_type: str | None = None,
     fields: list[str] | None = None,
     settings_service: SettingsService | None = None,
+    *,
+    is_core: bool | None = None,
+    is_beta: bool | None = None,
+    is_legacy: bool | None = None,
 ) -> list[dict[str, Any]]:
     """Search and retrieve component data with configurable field selection.
 
@@ -23,6 +29,13 @@ async def list_all_components(
                Common fields: name, display_name, description, type, template, documentation,
                icon, is_input, is_output, lazy_loaded, field_order
         settings_service: Settings service instance for loading components.
+        is_core: Optional flag to filter by core components (True) or bundles (False).
+                 Bundles are determined by checking if the component's type is in
+                 SIDEBAR_BUNDLES from the frontend (e.g., 'notion', 'openai').
+        is_beta: Optional flag to filter by beta status. True returns only beta components,
+                 False excludes beta components, None includes all.
+        is_legacy: Optional flag to filter by legacy status. True returns only legacy components,
+                   False excludes legacy components, None includes all.
 
     Returns:
         List of dictionaries containing the selected fields for each matching component.
@@ -72,6 +85,31 @@ async def list_all_components(
                     query_lower = query.lower()
 
                     if query_lower not in name and query_lower not in display_name and query_lower not in description:
+                        continue
+
+                # Filter by core/bundle if specified
+                if is_core is not None:
+                    bundle_names = get_bundle_component_names()
+                    is_bundle = comp_type in bundle_names
+                    if is_core and is_bundle:
+                        continue
+                    if not is_core and not is_bundle:
+                        continue
+
+                # Filter by beta status if specified
+                if is_beta is not None:
+                    comp_is_beta = component_data.get("beta", False)
+                    if is_beta and not comp_is_beta:
+                        continue
+                    if not is_beta and comp_is_beta:
+                        continue
+
+                # Filter by legacy status if specified
+                if is_legacy is not None:
+                    comp_is_legacy = component_data.get("legacy", False)
+                    if is_legacy and not comp_is_legacy:
+                        continue
+                    if not is_legacy and comp_is_legacy:
                         continue
 
                 # Build result dict with component metadata
@@ -270,3 +308,26 @@ async def get_components_by_type(
         ... )
     """
     return await list_all_components(component_type=component_type, fields=fields, settings_service=settings_service)
+
+
+async def main():
+    from langflow.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    components = await list_all_components(
+        settings_service=settings_service,
+        is_core=True,
+        is_beta=False,
+        is_legacy=False,
+        fields=["name", "display_name", "description", "outputs", "type", "icon"],
+    )
+    import json
+
+    with open("core_components.json", "w", encoding="utf-8") as f:
+        json.dump(components, f, indent=2, ensure_ascii=False)
+
+
+if __name__ == "__main__":
+    import asyncio
+
+    asyncio.run(main())

@@ -1,0 +1,1031 @@
+[
+  {
+    "name": "CustomComponent",
+    "type": "custom_component",
+    "display_name": "Custom Component",
+    "description": "Use as a template to create your own component.",
+    "outputs": [
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "Output",
+        "group_outputs": false,
+        "method": "build_output",
+        "name": "output",
+        "selected": "Data",
+        "tool_mode": true,
+        "types": [
+          "Data"
+        ],
+        "value": "__UNDEFINED__"
+      }
+    ],
+    "icon": "code"
+  },
+  {
+    "name": "APIRequest",
+    "type": "data_source",
+    "display_name": "API Request",
+    "description": "Make HTTP requests using URL or cURL commands.",
+    "outputs": [
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "API Response",
+        "group_outputs": false,
+        "method": "make_api_request",
+        "name": "data",
+        "selected": "Data",
+        "tool_mode": true,
+        "types": [
+          "Data"
+        ],
+        "value": "__UNDEFINED__"
+      }
+    ],
+    "icon": "Globe"
+  },
+  {
+    "name": "MockDataGenerator",
+    "type": "data_source",
+    "display_name": "Mock Data",
+    "description": "Generate mock data for testing and development.",
+    "outputs": [
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "Result",
+        "group_outputs": false,
+        "method": "generate_dataframe_output",
+        "name": "dataframe_output",
+        "selected": "DataFrame",
+        "tool_mode": true,
+        "types": [
+          "DataFrame"
+        ],
+        "value": "__UNDEFINED__"
+      },
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "Result",
+        "group_outputs": false,
+        "method": "generate_message_output",
+        "name": "message_output",
+        "selected": "Message",
+        "tool_mode": true,
+        "types": [
+          "Message"
+        ],
+        "value": "__UNDEFINED__"
+      },
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "Result",
+        "group_outputs": false,
+        "method": "generate_data_output",
+        "name": "data_output",
+        "selected": "Data",
+        "tool_mode": true,
+        "types": [
+          "Data"
+        ],
+        "value": "__UNDEFINED__"
+      }
+    ],
+    "icon": "database"
+  },
+  {
+    "name": "SQLComponent",
+    "type": "data_source",
+    "display_name": "SQL Database",
+    "description": "Executes SQL queries on SQLAlchemy-compatible databases.",
+    "outputs": [
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "Result Table",
+        "group_outputs": false,
+        "method": "run_sql_query",
+        "name": "run_sql_query",
+        "selected": "DataFrame",
+        "tool_mode": true,
+        "types": [
+          "DataFrame"
+        ],
+        "value": "__UNDEFINED__"
+      }
+    ],
+    "icon": "database"
+  },
+  {
+    "name": "URLComponent",
+    "type": "data_source",
+    "display_name": "URL",
+    "description": "Fetch content from one or more web pages, following links recursively.",
+    "outputs": [
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "Extracted Pages",
+        "group_outputs": false,
+        "method": "fetch_content",
+        "name": "page_results",
+        "selected": "DataFrame",
+        "tool_mode": true,
+        "types": [
+          "DataFrame"
+        ],
+        "value": "__UNDEFINED__"
+      },
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "Raw Content",
+        "group_outputs": false,
+        "method": "fetch_content_as_message",
+        "name": "raw_results",
+        "selected": "Message",
+        "tool_mode": false,
+        "types": [
+          "Message"
+        ],
+        "value": "__UNDEFINED__"
+      }
+    ],
+    "icon": "layout-template"
+  },
+  {
+    "name": "UnifiedWebSearch",
+    "type": "data_source",
+    "display_name": "Web Search",
+    "description": "Search the web, news, or RSS feeds.",
+    "outputs": [
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "Results",
+        "group_outputs": false,
+        "method": "perform_search",
+        "name": "results",
+        "selected": "DataFrame",
+        "tool_mode": true,
+        "types": [
+          "DataFrame"
+        ],
+        "value": "__UNDEFINED__"
+      }
+    ],
+    "icon": "search"
+  },
+  {
+    "name": "Directory",
+    "type": "files_and_knowledge",
+    "display_name": "Directory",
+    "description": "Recursively load files from a directory.",
+    "outputs": [
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "Loaded Files",
+        "group_outputs": false,
+        "method": "as_dataframe",
+        "name": "dataframe",
+        "selected": "DataFrame",
+        "tool_mode": true,
+        "types": [
+          "DataFrame"
+        ],
+        "value": "__UNDEFINED__"
+      }
+    ],
+    "icon": "folder"
+  },
+  {
+    "name": "File",
+    "type": "files_and_knowledge",
+    "display_name": "Read File",
+    "description": "Loads and returns the content from uploaded files.",
+    "outputs": [
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "Raw Content",
+        "group_outputs": false,
+        "method": "load_files_message",
+        "name": "message",
+        "selected": "Message",
+        "tool_mode": true,
+        "types": [
+          "Message"
+        ],
+        "value": "__UNDEFINED__"
+      }
+    ],
+    "icon": "file-text"
+  },
+  {
+    "name": "KnowledgeIngestion",
+    "type": "files_and_knowledge",
+    "display_name": "Knowledge Ingestion",
+    "description": "Create or update knowledge in Langflow.",
+    "outputs": [
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "Results",
+        "group_outputs": false,
+        "method": "build_kb_info",
+        "name": "dataframe_output",
+        "selected": "Data",
+        "tool_mode": true,
+        "types": [
+          "Data"
+        ],
+        "value": "__UNDEFINED__"
+      }
+    ],
+    "icon": "upload"
+  },
+  {
+    "name": "KnowledgeRetrieval",
+    "type": "files_and_knowledge",
+    "display_name": "Knowledge Retrieval",
+    "description": "Search and retrieve data from knowledge.",
+    "outputs": [
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "Results",
+        "group_outputs": false,
+        "method": "retrieve_data",
+        "name": "retrieve_data",
+        "selected": "DataFrame",
+        "tool_mode": true,
+        "types": [
+          "DataFrame"
+        ],
+        "value": "__UNDEFINED__"
+      }
+    ],
+    "icon": "download"
+  },
+  {
+    "name": "SaveToFile",
+    "type": "files_and_knowledge",
+    "display_name": "Write File",
+    "description": "Save data to local file, AWS S3, or Google Drive in the selected format.",
+    "outputs": [
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "File Path",
+        "group_outputs": false,
+        "method": "save_to_file",
+        "name": "message",
+        "selected": "Message",
+        "tool_mode": true,
+        "types": [
+          "Message"
+        ],
+        "value": "__UNDEFINED__"
+      }
+    ],
+    "icon": "file-text"
+  },
+  {
+    "name": "ConditionalRouter",
+    "type": "flow_controls",
+    "display_name": "If-Else",
+    "description": "Routes an input message to a corresponding output based on text comparison.",
+    "outputs": [
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "True",
+        "group_outputs": true,
+        "method": "true_response",
+        "name": "true_result",
+        "selected": "Message",
+        "tool_mode": true,
+        "types": [
+          "Message"
+        ],
+        "value": "__UNDEFINED__"
+      },
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "False",
+        "group_outputs": true,
+        "method": "false_response",
+        "name": "false_result",
+        "selected": "Message",
+        "tool_mode": true,
+        "types": [
+          "Message"
+        ],
+        "value": "__UNDEFINED__"
+      }
+    ],
+    "icon": "split"
+  },
+  {
+    "name": "LoopComponent",
+    "type": "flow_controls",
+    "display_name": "Loop",
+    "description": "Iterates over a list of Data or Message objects, outputting one item at a time and aggregating results from loop inputs. Message objects are automatically converted to Data objects for consistent processing.",
+    "outputs": [
+      {
+        "allows_loop": true,
+        "cache": true,
+        "display_name": "Item",
+        "group_outputs": true,
+        "loop_types": [
+          "Message"
+        ],
+        "method": "item_output",
+        "name": "item",
+        "selected": "Data",
+        "tool_mode": true,
+        "types": [
+          "Data"
+        ],
+        "value": "__UNDEFINED__"
+      },
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "Done",
+        "group_outputs": true,
+        "method": "done_output",
+        "name": "done",
+        "selected": "DataFrame",
+        "tool_mode": true,
+        "types": [
+          "DataFrame"
+        ],
+        "value": "__UNDEFINED__"
+      }
+    ],
+    "icon": "infinity"
+  },
+  {
+    "name": "ChatInput",
+    "type": "input_output",
+    "display_name": "Chat Input",
+    "description": "Get chat inputs from the Playground.",
+    "outputs": [
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "Chat Message",
+        "group_outputs": false,
+        "method": "message_response",
+        "name": "message",
+        "selected": "Message",
+        "tool_mode": true,
+        "types": [
+          "Message"
+        ],
+        "value": "__UNDEFINED__"
+      }
+    ],
+    "icon": "MessagesSquare"
+  },
+  {
+    "name": "ChatOutput",
+    "type": "input_output",
+    "display_name": "Chat Output",
+    "description": "Display a chat message in the Playground.",
+    "outputs": [
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "Output Message",
+        "group_outputs": false,
+        "method": "message_response",
+        "name": "message",
+        "selected": "Message",
+        "tool_mode": true,
+        "types": [
+          "Message"
+        ],
+        "value": "__UNDEFINED__"
+      }
+    ],
+    "icon": "MessagesSquare"
+  },
+  {
+    "name": "TextInput",
+    "type": "input_output",
+    "display_name": "Text Input",
+    "description": "Get user text inputs.",
+    "outputs": [
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "Output Text",
+        "group_outputs": false,
+        "method": "text_response",
+        "name": "text",
+        "selected": "Message",
+        "tool_mode": true,
+        "types": [
+          "Message"
+        ],
+        "value": "__UNDEFINED__"
+      }
+    ],
+    "icon": "type"
+  },
+  {
+    "name": "TextOutput",
+    "type": "input_output",
+    "display_name": "Text Output",
+    "description": "Sends text output via API.",
+    "outputs": [
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "Output Text",
+        "group_outputs": false,
+        "method": "text_response",
+        "name": "text",
+        "selected": "Message",
+        "tool_mode": true,
+        "types": [
+          "Message"
+        ],
+        "value": "__UNDEFINED__"
+      }
+    ],
+    "icon": "type"
+  },
+  {
+    "name": "Webhook",
+    "type": "input_output",
+    "display_name": "Webhook",
+    "outputs": [
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "Data",
+        "group_outputs": false,
+        "method": "build_data",
+        "name": "output_data",
+        "selected": "Data",
+        "tool_mode": true,
+        "types": [
+          "Data"
+        ],
+        "value": "__UNDEFINED__"
+      }
+    ],
+    "icon": "webhook"
+  },
+  {
+    "name": "BatchRunComponent",
+    "type": "llm_operations",
+    "display_name": "Batch Run",
+    "description": "Runs an LLM on each row of a DataFrame column. If no column is specified, all columns are used.",
+    "outputs": [
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "LLM Results",
+        "group_outputs": false,
+        "method": "run_batch",
+        "name": "batch_results",
+        "selected": "DataFrame",
+        "tool_mode": true,
+        "types": [
+          "DataFrame"
+        ],
+        "value": "__UNDEFINED__"
+      }
+    ],
+    "icon": "List"
+  },
+  {
+    "name": "LLMSelectorComponent",
+    "type": "llm_operations",
+    "display_name": "LLM Selector",
+    "description": "Routes the input to the most appropriate LLM based on OpenRouter model specifications",
+    "outputs": [
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "Output",
+        "group_outputs": false,
+        "method": "route_to_model",
+        "name": "output",
+        "selected": "Message",
+        "tool_mode": true,
+        "types": [
+          "Message"
+        ],
+        "value": "__UNDEFINED__"
+      },
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "Selected Model Info",
+        "group_outputs": false,
+        "method": "get_selected_model_info",
+        "name": "selected_model_info",
+        "selected": "Data",
+        "tool_mode": true,
+        "types": [
+          "Data"
+        ],
+        "value": "__UNDEFINED__"
+      },
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "Routing Decision",
+        "group_outputs": false,
+        "method": "get_routing_decision",
+        "name": "routing_decision",
+        "selected": "Message",
+        "tool_mode": true,
+        "types": [
+          "Message"
+        ],
+        "value": "__UNDEFINED__"
+      }
+    ],
+    "icon": "git-branch"
+  },
+  {
+    "name": "Smart Transform",
+    "type": "llm_operations",
+    "display_name": "Smart Transform",
+    "description": "Uses an LLM to generate a function for filtering or transforming structured data.",
+    "outputs": [
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "Output",
+        "group_outputs": false,
+        "method": "process_as_data",
+        "name": "data_output",
+        "selected": "Data",
+        "tool_mode": true,
+        "types": [
+          "Data"
+        ],
+        "value": "__UNDEFINED__"
+      },
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "Output",
+        "group_outputs": false,
+        "method": "process_as_dataframe",
+        "name": "dataframe_output",
+        "selected": "DataFrame",
+        "tool_mode": true,
+        "types": [
+          "DataFrame"
+        ],
+        "value": "__UNDEFINED__"
+      }
+    ],
+    "icon": "square-function"
+  },
+  {
+    "name": "SmartRouter",
+    "type": "llm_operations",
+    "display_name": "Smart Router",
+    "description": "Routes an input message using LLM-based categorization.",
+    "outputs": [],
+    "icon": "route"
+  },
+  {
+    "name": "StructuredOutput",
+    "type": "llm_operations",
+    "display_name": "Structured Output",
+    "description": "Uses an LLM to generate structured data. Ideal for extraction and consistency.",
+    "outputs": [
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "Structured Output",
+        "group_outputs": false,
+        "method": "build_structured_output",
+        "name": "structured_output",
+        "selected": "Data",
+        "tool_mode": true,
+        "types": [
+          "Data"
+        ],
+        "value": "__UNDEFINED__"
+      },
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "Structured Output",
+        "group_outputs": false,
+        "method": "build_structured_dataframe",
+        "name": "dataframe_output",
+        "selected": "DataFrame",
+        "tool_mode": true,
+        "types": [
+          "DataFrame"
+        ],
+        "value": "__UNDEFINED__"
+      }
+    ],
+    "icon": "braces"
+  },
+  {
+    "name": "Agent",
+    "type": "models_and_agents",
+    "display_name": "Agent",
+    "description": "Define the agent's instructions, then enter a task to complete using tools.",
+    "outputs": [
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "Response",
+        "group_outputs": false,
+        "method": "message_response",
+        "name": "response",
+        "selected": "Message",
+        "tool_mode": true,
+        "types": [
+          "Message"
+        ],
+        "value": "__UNDEFINED__"
+      }
+    ],
+    "icon": "bot"
+  },
+  {
+    "name": "EmbeddingModel",
+    "type": "models_and_agents",
+    "display_name": "Embedding Model",
+    "description": "Generate embeddings using a specified provider.",
+    "outputs": [
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "Embedding Model",
+        "group_outputs": false,
+        "method": "build_embeddings",
+        "name": "embeddings",
+        "selected": "Embeddings",
+        "tool_mode": true,
+        "types": [
+          "Embeddings"
+        ],
+        "value": "__UNDEFINED__"
+      }
+    ],
+    "icon": "binary"
+  },
+  {
+    "name": "LanguageModelComponent",
+    "type": "models_and_agents",
+    "display_name": "Language Model",
+    "description": "Runs a language model given a specified provider.",
+    "outputs": [
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "Model Response",
+        "group_outputs": false,
+        "method": "text_response",
+        "name": "text_output",
+        "selected": "Message",
+        "tool_mode": true,
+        "types": [
+          "Message"
+        ],
+        "value": "__UNDEFINED__"
+      },
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "Language Model",
+        "group_outputs": false,
+        "method": "build_model",
+        "name": "model_output",
+        "selected": "LanguageModel",
+        "tool_mode": true,
+        "types": [
+          "LanguageModel"
+        ],
+        "value": "__UNDEFINED__"
+      }
+    ],
+    "icon": "brain-circuit"
+  },
+  {
+    "name": "MCPTools",
+    "type": "models_and_agents",
+    "display_name": "MCP Tools",
+    "description": "Connect to an MCP server to use its tools.",
+    "outputs": [
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "Response",
+        "group_outputs": false,
+        "method": "build_output",
+        "name": "response",
+        "selected": "DataFrame",
+        "tool_mode": true,
+        "types": [
+          "DataFrame"
+        ],
+        "value": "__UNDEFINED__"
+      }
+    ],
+    "icon": "Mcp"
+  },
+  {
+    "name": "Memory",
+    "type": "models_and_agents",
+    "display_name": "Message History",
+    "description": "Stores or retrieves stored chat messages from Langflow tables or an external memory.",
+    "outputs": [
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "Message",
+        "group_outputs": false,
+        "method": "retrieve_messages_as_text",
+        "name": "messages_text",
+        "selected": "Message",
+        "tool_mode": true,
+        "types": [
+          "Message"
+        ],
+        "value": "__UNDEFINED__"
+      },
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "Dataframe",
+        "group_outputs": false,
+        "method": "retrieve_messages_dataframe",
+        "name": "dataframe",
+        "selected": "DataFrame",
+        "tool_mode": true,
+        "types": [
+          "DataFrame"
+        ],
+        "value": "__UNDEFINED__"
+      }
+    ],
+    "icon": "message-square-more"
+  },
+  {
+    "name": "Prompt Template",
+    "type": "models_and_agents",
+    "display_name": "Prompt Template",
+    "description": "Create a prompt template with dynamic variables.",
+    "outputs": [
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "Prompt",
+        "group_outputs": false,
+        "method": "build_prompt",
+        "name": "prompt",
+        "selected": "Message",
+        "tool_mode": true,
+        "types": [
+          "Message"
+        ],
+        "value": "__UNDEFINED__"
+      }
+    ],
+    "icon": "braces"
+  },
+  {
+    "name": "DataFrameOperations",
+    "type": "processing",
+    "display_name": "DataFrame Operations",
+    "description": "Perform various operations on a DataFrame.",
+    "outputs": [
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "DataFrame",
+        "group_outputs": false,
+        "method": "perform_operation",
+        "name": "output",
+        "selected": "DataFrame",
+        "tool_mode": true,
+        "types": [
+          "DataFrame"
+        ],
+        "value": "__UNDEFINED__"
+      }
+    ],
+    "icon": "table"
+  },
+  {
+    "name": "DataOperations",
+    "type": "processing",
+    "display_name": "Data Operations",
+    "description": "Perform various operations on a Data object.",
+    "outputs": [
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "Data",
+        "group_outputs": false,
+        "method": "as_data",
+        "name": "data_output",
+        "selected": "Data",
+        "tool_mode": true,
+        "types": [
+          "Data"
+        ],
+        "value": "__UNDEFINED__"
+      }
+    ],
+    "icon": "file-json"
+  },
+  {
+    "name": "DynamicCreateData",
+    "type": "processing",
+    "display_name": "Dynamic Create Data",
+    "description": "Dynamically create a Data with a specified number of fields.",
+    "outputs": [
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "Data",
+        "group_outputs": false,
+        "method": "process_form",
+        "name": "form_data",
+        "selected": "Data",
+        "tool_mode": true,
+        "types": [
+          "Data"
+        ],
+        "value": "__UNDEFINED__"
+      },
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "Message",
+        "group_outputs": false,
+        "method": "get_message",
+        "name": "message",
+        "selected": "Message",
+        "tool_mode": true,
+        "types": [
+          "Message"
+        ],
+        "value": "__UNDEFINED__"
+      }
+    ],
+    "icon": "ListFilter"
+  },
+  {
+    "name": "ParserComponent",
+    "type": "processing",
+    "display_name": "Parser",
+    "description": "Extracts text using a template.",
+    "outputs": [
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "Parsed Text",
+        "group_outputs": false,
+        "method": "parse_combined_text",
+        "name": "parsed_text",
+        "selected": "Message",
+        "tool_mode": true,
+        "types": [
+          "Message"
+        ],
+        "value": "__UNDEFINED__"
+      }
+    ],
+    "icon": "braces"
+  },
+  {
+    "name": "SplitText",
+    "type": "processing",
+    "display_name": "Split Text",
+    "description": "Split text into chunks based on specified criteria.",
+    "outputs": [
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "Chunks",
+        "group_outputs": false,
+        "method": "split_text",
+        "name": "dataframe",
+        "selected": "DataFrame",
+        "tool_mode": true,
+        "types": [
+          "DataFrame"
+        ],
+        "value": "__UNDEFINED__"
+      }
+    ],
+    "icon": "scissors-line-dashed"
+  },
+  {
+    "name": "TypeConverterComponent",
+    "type": "processing",
+    "display_name": "Type Convert",
+    "description": "Convert between different types (Message, Data, DataFrame)",
+    "outputs": [
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "Message Output",
+        "group_outputs": false,
+        "method": "convert_to_message",
+        "name": "message_output",
+        "selected": "Message",
+        "tool_mode": true,
+        "types": [
+          "Message"
+        ],
+        "value": "__UNDEFINED__"
+      }
+    ],
+    "icon": "repeat"
+  },
+  {
+    "name": "CalculatorComponent",
+    "type": "utilities",
+    "display_name": "Calculator",
+    "description": "Perform basic arithmetic operations on a given expression.",
+    "outputs": [
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "Data",
+        "group_outputs": false,
+        "method": "evaluate_expression",
+        "name": "result",
+        "selected": "Data",
+        "tool_mode": true,
+        "types": [
+          "Data"
+        ],
+        "value": "__UNDEFINED__"
+      }
+    ],
+    "icon": "calculator"
+  },
+  {
+    "name": "CurrentDate",
+    "type": "utilities",
+    "display_name": "Current Date",
+    "description": "Returns the current date and time in the selected timezone.",
+    "outputs": [
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "Current Date",
+        "group_outputs": false,
+        "method": "get_current_date",
+        "name": "current_date",
+        "selected": "Message",
+        "tool_mode": true,
+        "types": [
+          "Message"
+        ],
+        "value": "__UNDEFINED__"
+      }
+    ],
+    "icon": "clock"
+  },
+  {
+    "name": "PythonREPLComponent",
+    "type": "utilities",
+    "display_name": "Python Interpreter",
+    "description": "Run Python code with optional imports. Use print() to see the output.",
+    "outputs": [
+      {
+        "allows_loop": false,
+        "cache": true,
+        "display_name": "Results",
+        "group_outputs": false,
+        "method": "run_python_repl",
+        "name": "results",
+        "selected": "Data",
+        "tool_mode": true,
+        "types": [
+          "Data"
+        ],
+        "value": "__UNDEFINED__"
+      }
+    ],
+    "icon": "square-terminal"
+  }
+]
