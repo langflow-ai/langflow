@@ -166,7 +166,7 @@ export function FlowPageSlidingContainerContent({
               initial="instant"
             >
               <StickToBottom.Content className="flex flex-col min-h-full overflow-x-hidden p-6">
-                <div className="flex flex-col w-full">
+                <div className="flex flex-col place-self-center max-w-[768px] w-full">
                   <Messages
                     visibleSession={currentSessionId ?? currentFlowId ?? null}
                     playgroundPage={true}
