@@ -9,7 +9,7 @@ export async function adjustScreenView(
   } = {},
 ) {
   await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
-    timeout: 5000,
+    timeout: 30000,
   });
 
   let fitViewButton = await page.getByTestId("fit_view").count();

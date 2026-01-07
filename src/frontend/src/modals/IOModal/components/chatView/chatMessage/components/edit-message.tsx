@@ -3,6 +3,7 @@ import rehypeMathjax from "rehype-mathjax/browser";
 import rehypeRaw from "rehype-raw";
 import remarkGfm from "remark-gfm";
 import { EMPTY_OUTPUT_SEND_MESSAGE } from "@/constants/constants";
+import { extractLanguage, isCodeBlock } from "@/utils/codeBlockUtils";
 import { preprocessChatMessage } from "@/utils/markdownUtils";
 import { cn } from "@/utils/utils";
 import CodeTabsComponent from "../../../../../../components/core/codeTabsComponent";
@@ -67,7 +68,6 @@ export const MarkdownField = ({
             );
           },
           code: ({ node, className, children, ...props }) => {
-            const inline = !(props as any).hasOwnProperty("data-language");
             let content = children as string;
             if (
               Array.isArray(children) &&
@@ -88,14 +88,16 @@ export const MarkdownField = ({
                 }
               }
 
-              const match = /language-(\w+)/.exec(className || "");
+              if (isCodeBlock(className, props, content)) {
+                return (
+                  <CodeTabsComponent
+                    language={extractLanguage(className)}
+                    code={String(content).replace(/\n$/, "")}
+                  />
+                );
+              }
 
-              return !inline ? (
-                <CodeTabsComponent
-                  language={(match && match[1]) || ""}
-                  code={String(content).replace(/\n$/, "")}
-                />
-              ) : (
+              return (
                 <code className={className} {...props}>
                   {content}
                 </code>

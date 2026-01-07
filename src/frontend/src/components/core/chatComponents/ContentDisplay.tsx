@@ -3,6 +3,7 @@ import Markdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax/browser";
 import remarkGfm from "remark-gfm";
 import type { ContentType } from "@/types/chat";
+import { extractLanguage, isCodeBlock } from "@/utils/codeBlockUtils";
 import ForwardedIconComponent from "../../common/genericIconComponent";
 import SimplifiedCodeTabComponent from "../codeTabsComponent";
 import DurationDisplay from "./DurationDisplay";
@@ -74,7 +75,6 @@ export default function ContentDisplay({
                 return <>{props.children}</>;
               },
               code: ({ node, className, children, ...props }) => {
-                const inline = !(props as any).hasOwnProperty("data-language");
                 let content = children as string;
                 if (
                   Array.isArray(children) &&
@@ -90,14 +90,16 @@ export default function ContentDisplay({
                     }
                   }
 
-                  const match = /language-(\w+)/.exec(className || "");
+                  if (isCodeBlock(className, props, content)) {
+                    return (
+                      <SimplifiedCodeTabComponent
+                        language={extractLanguage(className)}
+                        code={String(content).replace(/\n$/, "")}
+                      />
+                    );
+                  }
 
-                  return !inline ? (
-                    <SimplifiedCodeTabComponent
-                      language={(match && match[1]) || ""}
-                      code={String(content).replace(/\n$/, "")}
-                    />
-                  ) : (
+                  return (
                     <code className={className} {...props}>
                       {content}
                     </code>
@@ -171,16 +173,16 @@ export default function ContentDisplay({
                   return <ul className="max-w-full">{props.children}</ul>;
                 },
                 code: ({ node, className, children, ...props }) => {
-                  const inline = !(props as any).hasOwnProperty(
-                    "data-language",
-                  );
-                  const match = /language-(\w+)/.exec(className || "");
-                  return !inline ? (
-                    <SimplifiedCodeTabComponent
-                      language={(match && match[1]) || ""}
-                      code={String(children).replace(/\n$/, "")}
-                    />
-                  ) : (
+                  const content = String(children);
+                  if (isCodeBlock(className, props, content)) {
+                    return (
+                      <SimplifiedCodeTabComponent
+                        language={extractLanguage(className)}
+                        code={content.replace(/\n$/, "")}
+                      />
+                    );
+                  }
+                  return (
                     <code className={className} {...props}>
                       {children}
                     </code>
