@@ -8,8 +8,7 @@ test(
   "user must be able to change mode of MCP tools without any issues",
   { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
-
-    await page.waitForTimeout(5000)
+    await page.waitForTimeout(5000);
 
     await awaitBootstrapTest(page);
 
@@ -111,7 +110,7 @@ test(
 
     await page.getByTestId("menu_settings_button").click({ timeout: 3000 });
 
-    await page.waitForTimeout(500)
+    await page.waitForTimeout(500);
 
     await page.waitForSelector('[data-testid="sidebar-nav-MCP Servers"]', {
       timeout: 30000,
@@ -136,8 +135,7 @@ test(
       .first()
       .click({ timeout: 3000 });
 
-    await page.waitForTimeout(500)
-
+    await page.waitForTimeout(500);
 
     await page.waitForSelector('[data-testid="add-mcp-server-button"]', {
       state: "visible",
@@ -160,8 +158,7 @@ test(
       "uvx mcp-server-fetch",
     );
 
-    await page.waitForTimeout(500)
-
+    await page.waitForTimeout(500);
 
     await page.getByTestId("add-mcp-server-button").click();
 
@@ -169,8 +166,7 @@ test(
       .getByTestId(`mcp-server-menu-button-${testName}`)
       .click({ timeout: 3000 });
 
-    await page.waitForTimeout(500)
-
+    await page.waitForTimeout(500);
 
     await page
       .getByText("Delete", { exact: true })
@@ -210,8 +206,7 @@ test(
     await page.getByTestId("blank-flow").click();
     await page.getByTestId("sidebar-nav-mcp").click();
 
-
-    await page.waitForTimeout(500)
+    await page.waitForTimeout(500);
 
     const sidebarButton = page.getByTestId("sidebar-add-mcp-server-button");
     const fallbackButton = page.getByTestId("add-mcp-server-button-sidebar");
@@ -245,11 +240,9 @@ test(
 
     await page.waitForTimeout(500);
 
-
     await page.getByTestId(`add-component-button-${testName}`).click();
 
     await page.waitForTimeout(500);
-
 
     await expect(page.getByTestId("dropdown_str_tool")).toBeVisible({
       timeout: 30000,
@@ -650,7 +643,7 @@ test(
   "mcp server tools should be refreshed when editing a server",
   { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
-    await page.waitForTimeout(10000)
+    await page.waitForTimeout(10000);
 
     await awaitBootstrapTest(page);
 
@@ -697,8 +690,7 @@ test(
 
     await page.getByTestId("add-mcp-server-button").click();
 
-    await page.waitForTimeout(500)
-
+    await page.waitForTimeout(500);
 
     await page.waitForSelector(
       '[data-testid="dropdown_str_tool"]:not([disabled])',
@@ -710,8 +702,7 @@ test(
 
     await page.getByTestId("dropdown_str_tool").click();
 
-    await page.waitForTimeout(500)
-
+    await page.waitForTimeout(500);
 
     const fetchOptionCount = await page.getByTestId("fetch-0-option").count();
 
@@ -1022,8 +1013,7 @@ test(
   "SSE MCP server with deepwiki should load tools correctly",
   { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
-
-    await page.waitForTimeout(5000)
+    await page.waitForTimeout(5000);
 
     // Start the MCP server with proper health checking
     const server = "https://mcp.deepwiki.com/sse";

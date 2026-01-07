@@ -95,7 +95,10 @@ test(
 
     // AG Grid data rows have class .ag-row (header rows don't)
     // Get the first data row's checkbox
-    const firstDataRowCheckbox = page.locator('.ag-row').first().locator('input[type="checkbox"]');
+    const firstDataRowCheckbox = page
+      .locator(".ag-row")
+      .first()
+      .locator('input[type="checkbox"]');
 
     // Click to select the row
     if (!(await firstDataRowCheckbox.isChecked())) {
@@ -104,11 +107,11 @@ test(
     await expect(firstDataRowCheckbox).toBeChecked({ timeout: 10000 });
 
     // Click on the first cell of the first data row to open the sidebar for editing
-    await page.locator('.ag-row').first().locator('.ag-cell').first().click();
+    await page.locator(".ag-row").first().locator(".ag-cell").first().click();
 
-    await expect(
-      page.locator('[data-testid="input_update_name"]'),
-    ).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('[data-testid="input_update_name"]')).toBeVisible(
+      { timeout: 10000 },
+    );
 
     await page.getByTestId("input_update_name").fill("mcp test name");
 
