@@ -37,11 +37,7 @@ describe("codeBlockUtils", () => {
       });
 
       it("should_return_true_when_content_has_newlines", () => {
-        const result = isCodeBlock(
-          undefined,
-          {},
-          "line1\nline2\nline3",
-        );
+        const result = isCodeBlock(undefined, {}, "line1\nline2\nline3");
         expect(result).toBe(true);
       });
 
