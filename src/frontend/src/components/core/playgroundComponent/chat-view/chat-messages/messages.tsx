@@ -1,7 +1,5 @@
 import { memo, useEffect, useRef } from "react";
 import { StickToBottom } from "use-stick-to-bottom";
-import LangflowLogo from "@/assets/LangflowLogo.svg?react";
-import { TextEffectPerChar } from "@/components/ui/textAnimation";
 import useFlowStore from "@/stores/flowStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { ChatMessageType } from "@/types/chat";
