@@ -6,6 +6,7 @@ slug: /agents
 import Icon from "@site/src/components/icon";
 import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 import PartialAgentsWork from '@site/docs/_partial-agents-work.mdx';
+import PartialGlobalModelProviders from '@site/docs/_partial-global-model-providers.mdx';
 
 Langflow's [**Agent** component](/components-agents) is critical for building agent flows.
 This component provides everything you need to create an agent, including multiple Large Language Model (LLM) providers, tool calling, and custom instructions.
@@ -20,17 +21,16 @@ For a prebuilt example, use the **Simple Agent** template or the [Langflow quick
 
 1. Click **New Flow**, and then click **Blank Flow**.
 
-2. Add an **Agent** component to your flow.
+2. <PartialGlobalModelProviders />
 
-3. Select the provider and model that you want to use.
-The default model for the **Agent** component is an OpenAI model.
-If you want to use a different provider, edit the **Model Provider** and **Model Name** fields accordingly.
-If your preferred model isn't listed, type the complete model name into the **Model Name** field, and then select it from the **Model Name** menu.
-Make sure that the model is enabled/verified in your model provider account.
+    If a provider doesn't have any language models available, they aren't listed in the **Agent** component.
+
+3. Add an **Agent** component to your flow.
+
+4. Select the model that you want to use from the **Language Model** dropdown.
+The model must be configured globally in the **Models** pane.
+If your preferred model isn't listed, make sure it's enabled in the **Models** configuration.
 For more information, see [Agent component parameters](#agent-component-parameters).
-
-4. Enter a valid credential for your selected model provider.
-Make sure that the credential has permission to call the selected model.
 
 5. Add [**Chat Input** and **Chat Output** components](/chat-input-and-output) to your flow, and then connect them to the **Agent** component.
 
@@ -89,27 +89,20 @@ You can configure the **Agent** component to use your preferred provider and mod
 
 ### Provider and model
 
-Use the **Model Provider** (`agent_llm`) and **Model Name** (`llm_model`) settings to select the model provider and LLM that you want the agent to use.
+Use the **Language Model** (`agent_llm`) setting to select the LLM that you want the agent to use.
 
-The **Agent** component includes many models from several popular model providers.
+<PartialGlobalModelProviders />
+
+To use a model with the **Agent** component, select the configured model from the **Agent** component's **Language Model** dropdown.
+
+The **Agent** component displays all language models that you've configured globally. If a provider doesn't have any language models available, they won't be listed.
+
 To access other providers or models, you can do either of the following:
 
 * Set **Model Provider** to **Connect other models**, and then connect any [language model component](/components-models).
-* Select your preferred provider, type the complete model name into the **Model Name** field, and then select your custom option from the **Model Name** menu.
-Make sure that the model is enabled/verified in your model provider account.
+* Configure additional providers in the **Models** pane, and then select the model from the **Language Model** dropdown.
 
 If you need to generate embeddings in your flow, use an [embedding model component](/components-embedding-models).
-
-### Model provider API key
-
-In the **API Key** field, enter a valid authentication key for your selected model provider, if you are using a built-in provider.
-For example, to use the default OpenAI model, you must provide a valid OpenAI API key for an OpenAI account that has credits and permission to call OpenAI LLMs.
-
-You can enter the key directly, but it is recommended that you follow industry best practices for storing and referencing API keys.
-For example, you can use a <Icon name="Globe" aria-hidden="true"/> [global variable](/configuration-global-variables) or [environment variables](/environment-variables).
-For more information, see [Add component API keys to Langflow](/api-keys-and-authentication#component-api-keys).
-
-If you select **Connect other models** as the model provider, authentication is handled in the incoming language model component.
 
 ### Agent instructions and input
 

@@ -6,6 +6,7 @@ slug: /get-started-quickstart
 import Icon from "@site/src/components/icon";
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import PartialGlobalModelProviders from '@site/docs/_partial-global-model-providers.mdx';
 
 Get started with Langflow by loading a template flow, running it, and then serving it at the `/run` API endpoint.
 
@@ -57,24 +58,25 @@ The **Simple Agent** template consists of an [**Agent** component](/agents) conn
 
 Many components can be tools for agents, including [Model Context Protocol (MCP) servers](/mcp-server). The agent decides which tools to call based on the context of a given query.
 
-2. In the **Agent** component, enter your OpenAI API key directly or use a <Icon name="Globe" aria-hidden="true"/> [global variable](/configuration-global-variables).
+2. <PartialGlobalModelProviders />
 
-    This example uses the **Agent** component's built-in OpenAI model.
-    If you want to use a different provider, edit the model provider, model name, and credentials accordingly.
+3. In the **Agent** component, select your configured model from the **Language Model** dropdown.
+
+    If you want to use a different provider, configure it in the **Models** pane, and then select it from the **Agent** component's dropdown.
     If your preferred provider or model isn't listed, set **Model Provider** to **Connect other models**, and then connect any [language model component](/components-models#additional-language-models).
 
-3. To run the flow, click <Icon name="Play" aria-hidden="true"/> **Playground**.
+4. To run the flow, click <Icon name="Play" aria-hidden="true"/> **Playground**.
 
-4. To test the **Calculator** tool, ask the agent a simple math question, such as `I want to add 4 and 4.`
+5. To test the **Calculator** tool, ask the agent a simple math question, such as `I want to add 4 and 4.`
 To help you test and evaluate your flows, the **Playground** shows the agent's reasoning process as it analyzes the prompt, selects a tool, and then uses the tool to generate a response.
 In this case, a math question causes the agent to select the **Calculator** tool and use an action like `evaluate_expression`.
 
 ![Playground with Agent tool](/img/quickstart-simple-agent-playground.png)
 
-5. To test the **URL** tool, ask the agent about current events.
+6. To test the **URL** tool, ask the agent about current events.
 For this request, the agent selects the **URL** tool's `fetch_content` action, and then returns a summary of current news headlines.
 
-6. When you are done testing the flow, click <Icon name="X" aria-hidden="true"/>**Close**.
+7. When you are done testing the flow, click <Icon name="X" aria-hidden="true"/>**Close**.
 
 :::tip Next steps
 Now that you've run your first flow, try these next steps:
@@ -531,7 +533,7 @@ To assist with formatting, you can define tweaks in Langflow's **Input Schema** 
 1. To open the **Input Schema** pane, from the **API access** pane, click **Input Schema**.
 2. In the **Input Schema** pane, select the parameter you want to modify in your next request.
 Enabling parameters in the **Input Schema** pane doesn't permanently change the listed parameters. It only adds them to the sample code snippets.
-3. For example, to change the LLM provider from OpenAI to Groq, and include your Groq API key with the request, select the values **Model Providers**, **Model**, and **Groq API Key**.
+3. For example, to change the LLM provider from OpenAI to Groq, configure Groq in the **Models** pane, and then select the values **Model Providers** and **Model** in the **Input Schema** pane.
 Langflow updates the `tweaks` object in the code snippets based on your input parameters, and includes default values to guide you.
 Use the updated code snippets in your script to run your flow with your overrides.
 
