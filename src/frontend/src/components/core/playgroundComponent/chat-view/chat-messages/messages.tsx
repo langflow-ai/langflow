@@ -52,61 +52,34 @@ export const Messages = ({
 
   const messagesContent = (
     <div className="flex flex-col flex-grow place-self-center w-full relative overflow-x-hidden">
-      {chatHistory &&
-        (isBuilding || chatHistory.length > 0 ? (
-          <>
-            {chatHistory.map((chat, index) => {
-              return (
-                <MemoizedChatMessage
-                  key={`${chat.id}-${index}`}
-                  chat={chat}
-                  lastMessage={chatHistory.length - 1 === index}
-                  updateChat={updateChat ?? (() => {})}
-                  closeChat={closeChat}
-                  playgroundPage={playgroundPage}
-                  isThinking={isBuilding && chat.category !== "error"}
-                  thinkingDuration={duration}
-                />
-              );
-            })}
+      {chatHistory && (isBuilding || chatHistory.length > 0) && (
+        <>
+          {chatHistory.map((chat, index) => {
+            return (
+              <MemoizedChatMessage
+                key={`${chat.id}-${index}`}
+                chat={chat}
+                lastMessage={chatHistory.length - 1 === index}
+                updateChat={updateChat ?? (() => {})}
+                closeChat={closeChat}
+                playgroundPage={playgroundPage}
+                isThinking={isBuilding && chat.category !== "error"}
+                thinkingDuration={duration}
+              />
+            );
+          })}
+          {playgroundPage && (
             <div
               ref={bottomRef}
               className="pointer-events-none absolute bottom-0 left-0 right-0 h-0 w-0 overflow-hidden"
               aria-hidden
             />
-          </>
-        ) : (
-          <div className="flex flex-grow w-full flex-col items-center justify-center">
-            <div className="flex flex-col items-center justify-center gap-4 p-8">
-              <LangflowLogo
-                title="Langflow logo"
-                className="h-10 w-10 scale-[1.5]"
-              />
-              <div className="flex flex-col items-center justify-center">
-                <h3 className="mt-2 pb-2 text-2xl font-semibold text-primary">
-                  New chat
-                </h3>
-                <p
-                  className="text-lg text-muted-foreground"
-                  data-testid="new-chat-text"
-                >
-                  <TextEffectPerChar>
-                    Test your flow with a chat prompt
-                  </TextEffectPerChar>
-                </p>
-              </div>
-            </div>
-          </div>
-        ))}
+          )}
+        </>
+      )}
     </div>
   );
 
-  // In playground mode, parent already has StickToBottom - just render content
-  if (playgroundPage) {
-    return messagesContent;
-  }
-
-  // In non-playground mode, wrap with StickToBottom
   return (
     <StickToBottom
       className={cn(
