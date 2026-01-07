@@ -72,14 +72,6 @@ export function FlowPageSlidingContainerContent({
     setIsDragging(false);
   };
 
-  // On initial mount ensure sidebar is closed unless explicitly fullscreen.
-  useEffect(() => {
-    if (!isFullscreen) {
-      setOpen(false);
-      setSidebarOpen(false);
-    }
-  }, [isFullscreen, setOpen]);
-
   useEffect(() => {
     setSidebarOpen(isFullscreen);
   }, [isFullscreen]);
