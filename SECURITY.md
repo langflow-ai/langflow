@@ -42,6 +42,33 @@ We appreciate your efforts in helping us maintain a secure platform and look for
 
 ## Known Vulnerabilities
 
+### Server-Side Request Forgery (SSRF) in API Request Component (Fixed in 1.7.1)
+
+Langflow's [API Request component](https://docs.langflow.org/api-request) allows arbitrary HTTP requests within a flow. In versions < 1.7.1, this component did not block private IP ranges (`127.0.0.1`, `10/172/192` ranges) or cloud metadata endpoints (`169.254.169.254`), enabling Server-Side Request Forgery (SSRF) attacks.
+
+**Potential security impact:**
+- Attackers with API key access can access internal administrative endpoints, metadata services, and internal databases/services
+- Foothold for attacking internal services by abusing inter-service trust
+- Non-blind SSRF: Response bodies are returned to the client, enabling immediate data exfiltration
+
+**CVE**: [CVE-2025-68477](https://nvd.nist.gov/vuln/detail/CVE-2025-68477)
+**GitHub Advisory**: [GHSA-5993-7p27-66g5](https://github.com/langflow-ai/langflow/security/advisories/GHSA-5993-7p27-66g5)
+**Fixed in**: Langflow >= 1.7.1
+
+### External Control of File Name or Path (Fixed in 1.7.1)
+
+When creating a flow through the [`/api/v1/flows/`](https://docs.langflow.org/api-flows) endpoint, if an arbitrary path is specified in the request body's `fs_path`, the server serializes the flow object into JSON and creates/overwrites a file at that path. In versions < 1.7.1, there is no path restriction, normalization, or allowed directory enforcement, so absolute paths (e.g., `/etc/poc.txt`) are interpreted as-is.
+
+**Potential security impact:**
+- Authenticated arbitrary file write (within server permission scope): Risk of corrupting configuration/log/task files, disrupting application behavior, and tampering with files read by other components
+- Both absolute and relative paths are allowed, enabling base directory traversal
+- Risk of overwriting system files increases in environments with root privileges or weak mount/permission settings
+- File content is limited to Flow JSON, but impact is severe if the target file is parsed by a JSON parser or subject to subsequent processing
+
+**CVE**: [CVE-2025-68478](https://nvd.nist.gov/vuln/detail/CVE-2025-68478)
+**GitHub Advisory**: [GHSA-f43r-cc68-gpx4](https://github.com/langflow-ai/langflow/security/advisories/GHSA-f43r-cc68-gpx4)
+**Fixed in**: Langflow >= 1.7.1
+
 ### Environment Variable Loading Bug (Fixed in 1.6.4)
 
 Langflow versions `1.6.0` through `1.6.3` have a critical bug where environment variables from `.env` files are not being read. This affects all deployments using environment variables for configuration, including security settings.

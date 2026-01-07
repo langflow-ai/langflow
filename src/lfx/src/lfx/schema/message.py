@@ -12,9 +12,10 @@ from uuid import UUID
 from fastapi.encoders import jsonable_encoder
 from langchain_core.load import load
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage
-from langchain_core.prompts.chat import BaseChatPromptTemplate, ChatPromptTemplate
-from langchain_core.prompts.prompt import PromptTemplate
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_serializer, field_validator
+
+if TYPE_CHECKING:
+    from langchain_core.prompts.chat import BaseChatPromptTemplate
 
 from lfx.base.prompts.utils import dict_values_to_string
 from lfx.log.logger import logger
@@ -228,7 +229,8 @@ class Message(Data):
 
         for file in files:
             if isinstance(file, Image):
-                content_dicts.append(file.to_content_dict())
+                # Pass the message's flow_id to the Image for proper path resolution
+                content_dicts.append(file.to_content_dict(flow_id=self.flow_id))
             else:
                 content_dicts.append(create_image_content_dict(file, None, model_name))
         return content_dicts
@@ -266,6 +268,8 @@ class Message(Data):
         return cls(prompt=prompt_json)
 
     def format_text(self):
+        from langchain_core.prompts.prompt import PromptTemplate
+
         prompt_template = PromptTemplate.from_template(self.template)
         variables_with_str_values = dict_values_to_string(self.variables)
         formatted_prompt = prompt_template.format(**variables_with_str_values)
@@ -281,6 +285,8 @@ class Message(Data):
     # Define a sync version for backwards compatibility with versions >1.0.15, <1.1
     @classmethod
     def from_template(cls, template: str, **variables):
+        from langchain_core.prompts.chat import ChatPromptTemplate
+
         instance = cls(template=template, variables=variables)
         text = instance.format_text()
         message = HumanMessage(content=text)
@@ -301,7 +307,7 @@ class Message(Data):
     @classmethod
     async def create(cls, **kwargs):
         """If files are present, create the message in a separate thread as is_image_file is blocking."""
-        if "files" in kwargs:
+        if kwargs.get("files"):
             return await asyncio.to_thread(cls, **kwargs)
         return cls(**kwargs)
 
