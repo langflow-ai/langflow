@@ -3,6 +3,7 @@ import Markdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax/browser";
 import remarkGfm from "remark-gfm";
 import type { ContentType } from "@/types/chat";
+import { extractLanguage, isCodeBlock } from "@/utils/codeBlockUtils";
 import ForwardedIconComponent from "../../common/genericIconComponent";
 import SimplifiedCodeTabComponent from "../codeTabsComponent";
 import DurationDisplay from "./DurationDisplay";
@@ -89,17 +90,16 @@ export default function ContentDisplay({
                     }
                   }
 
-                  const match = /language-(\w+)/.exec(className || "");
-                  const hasDataLanguage = (props as any).hasOwnProperty("data-language");
-                  // Code is a block if it has a language class, data-language attr, or contains newlines
-                  const isBlock = !!match || hasDataLanguage || content.includes("\n");
+                  if (isCodeBlock(className, props, content)) {
+                    return (
+                      <SimplifiedCodeTabComponent
+                        language={extractLanguage(className)}
+                        code={String(content).replace(/\n$/, "")}
+                      />
+                    );
+                  }
 
-                  return isBlock ? (
-                    <SimplifiedCodeTabComponent
-                      language={(match && match[1]) || ""}
-                      code={String(content).replace(/\n$/, "")}
-                    />
-                  ) : (
+                  return (
                     <code className={className} {...props}>
                       {content}
                     </code>
@@ -173,17 +173,16 @@ export default function ContentDisplay({
                   return <ul className="max-w-full">{props.children}</ul>;
                 },
                 code: ({ node, className, children, ...props }) => {
-                  const match = /language-(\w+)/.exec(className || "");
                   const content = String(children);
-                  const hasDataLanguage = (props as any).hasOwnProperty("data-language");
-                  // Code is a block if it has a language class, data-language attr, or contains newlines
-                  const isBlock = !!match || hasDataLanguage || content.includes("\n");
-                  return isBlock ? (
-                    <SimplifiedCodeTabComponent
-                      language={(match && match[1]) || ""}
-                      code={content.replace(/\n$/, "")}
-                    />
-                  ) : (
+                  if (isCodeBlock(className, props, content)) {
+                    return (
+                      <SimplifiedCodeTabComponent
+                        language={extractLanguage(className)}
+                        code={content.replace(/\n$/, "")}
+                      />
+                    );
+                  }
+                  return (
                     <code className={className} {...props}>
                       {children}
                     </code>

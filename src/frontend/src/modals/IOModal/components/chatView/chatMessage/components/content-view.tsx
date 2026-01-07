@@ -3,6 +3,7 @@ import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import { TextShimmer } from "@/components/ui/TextShimmer";
+import { extractLanguage, isCodeBlock } from "@/utils/codeBlockUtils";
 import { cn } from "@/utils/utils";
 import CodeTabsComponent from "../../../../../../components/core/codeTabsComponent";
 import LogoIcon from "./chat-logo-icon";
@@ -138,23 +139,19 @@ export const ErrorView = ({
                                           }
                                         }
 
-                                        const match = /language-(\w+)/.exec(
-                                          className || "",
-                                        );
-                                        const hasDataLanguage = (props as any).hasOwnProperty("data-language");
-                                        // Code is a block if it has a language class, data-language attr, or contains newlines
-                                        const isBlock =
-                                          !!match || hasDataLanguage || content.includes("\n");
+                                        if (isCodeBlock(className, props, content)) {
+                                          return (
+                                            <CodeTabsComponent
+                                              language={extractLanguage(className)}
+                                              code={String(content).replace(
+                                                /\n$/,
+                                                "",
+                                              )}
+                                            />
+                                          );
+                                        }
 
-                                        return isBlock ? (
-                                          <CodeTabsComponent
-                                            language={(match && match[1]) || ""}
-                                            code={String(content).replace(
-                                              /\n$/,
-                                              "",
-                                            )}
-                                          />
-                                        ) : (
+                                        return (
                                           <code
                                             className={className}
                                             {...props}
