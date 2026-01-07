@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(uv run python:*)",
+      "Bash(make format_backend:*)",
+      "Bash(npm audit:*)",
+      "WebFetch(domain:vite.dev)",
+      "Bash(npm run build:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh pr edit:*)",
+      "Bash(gh api:*)",
+      "Bash(gh pr close:*)",
+      "Bash(uv run pytest:*)",
+      "Bash(npx playwright test:*)",
+      "Bash(npx playwright:*)"
+    ]
+  }
+}

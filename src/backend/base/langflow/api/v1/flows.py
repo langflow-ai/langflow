@@ -660,6 +660,13 @@ async def patch_flow(
     if not db_flow:
         raise HTTPException(status_code=404, detail="Flow not found")
 
+    # Filter out patches to server-controlled fields (silently ignore them)
+    # The frontend sends full flow diffs which may include these fields,
+    # but the server maintains control over them
+    restricted_fields = {"id", "user_id", "created_at", "updated_at"}
+    filtered_operations = [op for op in patch.operations if op.path.lstrip("/").split("/")[0] not in restricted_fields]
+    patch.operations = filtered_operations
+
     try:
         # Apply the patch operations
         patched_flow = await apply_json_patch_to_flow(db_flow, patch)
@@ -675,7 +682,8 @@ async def patch_flow(
 
         # Apply API key removal if configured
         if settings_service.settings.remove_api_keys and db_flow.data:
-            db_flow.data = remove_api_keys(db_flow.data)
+            sanitized = remove_api_keys({"data": db_flow.data})
+            db_flow.data = sanitized.get("data", db_flow.data)
 
         # Check for webhook component
         if db_flow.data:

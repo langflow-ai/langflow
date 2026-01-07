@@ -515,3 +515,206 @@ async def test_json_patch_endpoint_is_separate(client: AsyncClient, flow, logged
         headers=logged_in_headers,
     )
     assert verify_response.json()["name"] == "JSON Patch Update"
+
+
+async def test_patch_flow_json_patch_add_operation(client: AsyncClient, flow, logged_in_headers):
+    """Test adding a new field using JSON Patch add operation."""
+    # First set tags to an empty list via replace, then add to it
+    setup_data = {"operations": [{"op": "replace", "path": "/tags", "value": ["existing-tag"]}]}
+    await client.patch(
+        f"api/v1/flows/{flow.id}/json-patch",
+        json=setup_data,
+        headers=logged_in_headers,
+    )
+
+    # Now add a new tag using the add operation
+    patch_data = {"operations": [{"op": "add", "path": "/tags/-", "value": "new-tag"}]}
+
+    response = await client.patch(
+        f"api/v1/flows/{flow.id}/json-patch",
+        json=patch_data,
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 200
+    response_data = response.json()
+    assert response_data["success"] is True
+    assert response_data["operations_applied"] == 1
+
+    # Verify the tag was added
+    verify_response = await client.get(
+        f"api/v1/flows/{flow.id}",
+        headers=logged_in_headers,
+    )
+    assert "new-tag" in verify_response.json()["tags"]
+    assert "existing-tag" in verify_response.json()["tags"]
+
+
+async def test_patch_flow_json_patch_remove_operation(client: AsyncClient, flow, logged_in_headers):
+    """Test removing a field using JSON Patch remove operation."""
+    # First ensure the flow has a description
+    setup_data = {"operations": [{"op": "replace", "path": "/description", "value": "Test description"}]}
+    await client.patch(
+        f"api/v1/flows/{flow.id}/json-patch",
+        json=setup_data,
+        headers=logged_in_headers,
+    )
+
+    # Now remove the description
+    patch_data = {"operations": [{"op": "remove", "path": "/description"}]}
+
+    response = await client.patch(
+        f"api/v1/flows/{flow.id}/json-patch",
+        json=patch_data,
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 200
+    response_data = response.json()
+    assert response_data["success"] is True
+    assert response_data["operations_applied"] == 1
+
+    # Verify the description was removed
+    verify_response = await client.get(
+        f"api/v1/flows/{flow.id}",
+        headers=logged_in_headers,
+    )
+    assert verify_response.json().get("description") is None
+
+
+async def test_patch_flow_json_patch_test_operation(client: AsyncClient, flow, logged_in_headers):
+    """Test the 'test' operation to verify a value before applying changes."""
+    # First set a known name
+    setup_data = {"operations": [{"op": "replace", "path": "/name", "value": "test_name"}]}
+    await client.patch(
+        f"api/v1/flows/{flow.id}/json-patch",
+        json=setup_data,
+        headers=logged_in_headers,
+    )
+
+    # Use test to verify the value, then replace it
+    patch_data = {
+        "operations": [
+            {"op": "test", "path": "/name", "value": "test_name"},
+            {"op": "replace", "path": "/name", "value": "new_name"},
+        ]
+    }
+
+    response = await client.patch(
+        f"api/v1/flows/{flow.id}/json-patch",
+        json=patch_data,
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 200
+    response_data = response.json()
+    assert response_data["success"] is True
+    assert response_data["operations_applied"] == 2
+
+    # Verify the name was updated
+    verify_response = await client.get(
+        f"api/v1/flows/{flow.id}",
+        headers=logged_in_headers,
+    )
+    assert verify_response.json()["name"] == "new_name"
+
+
+async def test_patch_flow_json_patch_test_operation_fails(client: AsyncClient, flow, logged_in_headers):
+    """Test that 'test' operation fails when value doesn't match."""
+    patch_data = {
+        "operations": [
+            {"op": "test", "path": "/name", "value": "wrong_name"},
+            {"op": "replace", "path": "/name", "value": "new_name"},
+        ]
+    }
+
+    response = await client.patch(
+        f"api/v1/flows/{flow.id}/json-patch",
+        json=patch_data,
+        headers=logged_in_headers,
+    )
+
+    # Should fail because test value doesn't match
+    assert response.status_code == 400
+
+
+async def test_patch_flow_json_patch_copy_operation(client: AsyncClient, flow, logged_in_headers):
+    """Test copying a value from one path to another using JSON Patch."""
+    # First set up a name and clear description
+    setup_data = {
+        "operations": [
+            {"op": "replace", "path": "/name", "value": "Original Name"},
+            {"op": "replace", "path": "/description", "value": None},
+        ]
+    }
+    await client.patch(
+        f"api/v1/flows/{flow.id}/json-patch",
+        json=setup_data,
+        headers=logged_in_headers,
+    )
+
+    # Copy name to description
+    patch_data = {"operations": [{"op": "copy", "from": "/name", "path": "/description"}]}
+
+    response = await client.patch(
+        f"api/v1/flows/{flow.id}/json-patch",
+        json=patch_data,
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 200
+    response_data = response.json()
+    assert response_data["success"] is True
+
+    # Verify both have the same value
+    verify_response = await client.get(
+        f"api/v1/flows/{flow.id}",
+        headers=logged_in_headers,
+    )
+    assert verify_response.json()["name"] == "Original Name"
+    assert verify_response.json()["description"] == "Original Name"
+
+
+async def test_patch_flow_json_patch_restricted_fields_ignored(client: AsyncClient, flow, logged_in_headers):
+    """Test that patching restricted fields is silently ignored (not applied, but no error)."""
+    # Get original flow to capture original restricted field values
+    original_response = await client.get(
+        f"api/v1/flows/{flow.id}",
+        headers=logged_in_headers,
+    )
+    original_flow = original_response.json()
+
+    # Also update a non-restricted field to verify the patch is processed
+    patch_data = {
+        "operations": [
+            {"op": "replace", "path": "/id", "value": "00000000-0000-0000-0000-000000000000"},
+            {"op": "replace", "path": "/user_id", "value": "00000000-0000-0000-0000-000000000000"},
+            {"op": "replace", "path": "/created_at", "value": "2000-01-01T00:00:00Z"},
+            {"op": "replace", "path": "/updated_at", "value": "2000-01-01T00:00:00Z"},
+            {"op": "replace", "path": "/description", "value": "Updated description"},
+        ]
+    }
+
+    response = await client.patch(
+        f"api/v1/flows/{flow.id}/json-patch",
+        json=patch_data,
+        headers=logged_in_headers,
+    )
+
+    # Patch should succeed
+    assert response.status_code == 200
+
+    # Verify the restricted fields were NOT changed
+    verify_response = await client.get(
+        f"api/v1/flows/{flow.id}",
+        headers=logged_in_headers,
+    )
+    updated_flow = verify_response.json()
+
+    assert updated_flow["id"] == original_flow["id"], "id should not be changed"
+    assert updated_flow["user_id"] == original_flow["user_id"], "user_id should not be changed"
+    # Note: created_at won't change anyway, updated_at will change due to the save
+    # But the point is the malicious values weren't applied
+
+    # Verify the non-restricted field WAS updated
+    assert updated_flow["description"] == "Updated description"

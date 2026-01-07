@@ -1,7 +1,7 @@
 import type { ReactFlowJsonObject } from "@xyflow/react";
+import type { Operation as JsonPatchOperation } from "fast-json-patch";
 import { applyPatch } from "fast-json-patch";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
-import type { PatchOperation } from "@/controllers/API/queries/flows/use-patch-json-patch-flow";
 import { usePatchJsonPatchFlow } from "@/controllers/API/queries/flows/use-patch-json-patch-flow";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
@@ -74,7 +74,7 @@ const useSaveFlow = () => {
             const operations = compareFlows(
               currentSavedFlow || {},
               flow,
-            ) as PatchOperation[];
+            ) as JsonPatchOperation[];
 
             mutate(
               {

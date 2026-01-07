@@ -513,11 +513,22 @@ class PatchOperation(BaseModel):
         """Validate that required fields are present for each operation type.
 
         Note: For replace operations, null is a valid value (used to clear fields).
-        We only validate that move/copy have 'from' field.
+        We validate that:
+        - move/copy have 'from' field
+        - add/replace/test have 'value' field (null is valid for replace)
         """
         # Validate 'from' field for move/copy operations
         if self.op in [PatchOperationType.MOVE, PatchOperationType.COPY] and not self.from_:
             msg = f"'from' field is required for {self.op} operations"
+            raise ValueError(msg)
+
+        # Validate 'value' field for add/replace/test operations
+        # Check if 'value' was explicitly provided in the input
+        if (
+            self.op in {PatchOperationType.ADD, PatchOperationType.REPLACE, PatchOperationType.TEST}
+            and "value" not in self.model_fields_set
+        ):
+            msg = f"'value' field is required for {self.op} operations"
             raise ValueError(msg)
 
         return self
