@@ -39,8 +39,7 @@ def execute_in_isolated_env(code_obj: Any, exec_globals: dict[str, Any]) -> None
 
     # Step 2: Create isolated import function
     # This replaces __import__ to block dangerous modules and prevent `import builtins` bypass
-    # Pass isolated_builtins so that if code does `import builtins`, it gets our fake module
-    isolated_import = create_isolated_import(isolated_builtins)
+    isolated_import = create_isolated_import()
 
     # Create completely isolated execution environment
     # Start with a fresh, empty namespace
@@ -57,14 +56,20 @@ def execute_in_isolated_env(code_obj: Any, exec_globals: dict[str, Any]) -> None
         "__cached__": None,
     }
 
-    # Step 3: Hook __import__ to use our isolated version
-    # When code does `import X`, Python calls __import__("X"), which will now call our
-    # isolated_import function instead of the real one. This is how we intercept imports.
-    isolated_builtins["__import__"] = isolated_import
-
-    # Merge with provided exec_globals (like Langflow types: Message, Data, DataFrame, Component)
+    # Step 3: Merge with provided exec_globals (like Langflow types: Message, Data, DataFrame, Component)
     # These are safe to include as they're just type definitions
+    # NOTE: This merge might overwrite isolated_globals["__builtins__"] if exec_globals has one
     isolated_globals.update(exec_globals)
+    
+    # Step 4: Hook __import__ and security wrappers AFTER merge
+    # IMPORTANT: After merging exec_globals, isolated_globals["__builtins__"] might be
+    # the dict from exec_globals (not isolated_builtins). We need to modify the ACTUAL
+    # __builtins__ dict that will be used during execution.
+    actual_builtins = isolated_globals["__builtins__"]
+    
+    # Ensure __import__ uses our isolated version
+    actual_builtins["__import__"] = isolated_import
+    isolated_globals["__import__"] = isolated_import  # Also directly accessible for runtime imports
 
     # Create empty locals - ensures no access to parent scope
     isolated_locals: dict[str, Any] = {}
@@ -86,8 +91,8 @@ def execute_in_isolated_env(code_obj: Any, exec_globals: dict[str, Any]) -> None
             raise SecurityViolationError(msg)
         return original_getattr(obj, name, default)
 
-    # Replace getattr in isolated builtins (catches getattr() calls)
-    isolated_builtins["getattr"] = safe_getattr
+    # Replace getattr in the ACTUAL builtins dict being used
+    actual_builtins["getattr"] = safe_getattr
 
     # Also wrap hasattr to prevent checking for dangerous attributes
     original_hasattr = builtins.hasattr
@@ -99,7 +104,8 @@ def execute_in_isolated_env(code_obj: Any, exec_globals: dict[str, Any]) -> None
             return False
         return original_hasattr(obj, name)
 
-    isolated_builtins["hasattr"] = safe_hasattr
+    # Replace hasattr in the ACTUAL builtins dict being used
+    actual_builtins["hasattr"] = safe_hasattr
 
     try:
         exec(code_obj, isolated_globals, isolated_locals)  # noqa: S102

@@ -296,7 +296,7 @@ def validate_code(code: str, component_name: str | None = None, skip_isolation_f
             # This ensures decorators and default arguments have access to the same types
             # that would be available at runtime
             isolated_builtins_dict = create_isolated_builtins()
-            isolated_import_func = create_isolated_import(isolated_builtins_dict)
+            isolated_import_func = create_isolated_import()
             exec_globals = {
                 "__builtins__": isolated_builtins_dict,
                 "__name__": "__main__",
@@ -553,7 +553,7 @@ def prepare_global_scope(module, use_isolation: bool = False):
     if use_isolation:
         # Create isolated builtins and import function for runtime isolation
         isolated_builtins_dict = create_isolated_builtins()
-        isolated_import_func = create_isolated_import(isolated_builtins_dict)
+        isolated_import_func = create_isolated_import()
         exec_globals = {
             "__builtins__": isolated_builtins_dict,
             "__name__": "__main__",
@@ -562,8 +562,13 @@ def prepare_global_scope(module, use_isolation: bool = False):
             "__import__": isolated_import_func,
         }
     else:
+        # For core components, use standard Python execution
+        # Ensure __import__ is available for runtime imports in function bodies
         exec_globals = globals().copy()
-
+        # Make __import__ explicitly available (normally comes from __builtins__)
+        if "__import__" not in exec_globals:
+            exec_globals["__import__"] = importlib.__import__
+    
     imports = []
     import_froms = []
     definitions = []
