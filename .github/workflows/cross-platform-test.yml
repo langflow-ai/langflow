@@ -89,10 +89,15 @@ jobs:
             arch: amd64
             runner: ubuntu-latest
             python-version: "3.12"
-          # macOS-13 Brown out
-          # TODO add macos-15-intel
-          # https://github.com/actions/runner-images/issues/13046
-          # https://github.com/godot-rust/gdext/pull/1402
+          # macOS AMD64
+          - os: macos
+            arch: amd64
+            runner: macos-latest-large
+            python-version: "3.10"
+          - os: macos
+            arch: amd64
+            runner: macos-latest-large
+            python-version: "3.12"
           # macOS ARM64 (Apple Silicon)
           - os: macos
             arch: arm64
@@ -189,7 +194,7 @@ jobs:
           find ./base-dist -name "*.whl" -type f
           WHEEL_FILE=$(find ./base-dist -name "*.whl" -type f | head -1)
           if [ -n "$WHEEL_FILE" ]; then
-            uv pip install --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
+            uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
           else
             echo "No wheel file found in ./base-dist/"
             exit 1
@@ -231,7 +236,7 @@ jobs:
           find ./base-dist -name "*.whl" -type f
           WHEEL_FILE=$(find ./base-dist -name "*.whl" -type f | head -1)
           if [ -n "$WHEEL_FILE" ]; then
-            uv pip install --python ./test-env/bin/python "$WHEEL_FILE"
+            uv pip install --prerelease=allow --python ./test-env/bin/python "$WHEEL_FILE"
           else
             echo "No wheel file found in ./base-dist/"
             exit 1
@@ -387,15 +392,17 @@ jobs:
             arch: amd64
             runner: ubuntu-latest
             python-version: "3.13"
-          # macOS-13 Brown out
-          # TODO add macos-15-intel
-          - os: macos
-            arch: arm64
-            runner: macos-latest
-            python-version: "3.13"
           - os: windows
             arch: amd64
             runner: windows-latest
+            python-version: "3.13"
+          - os: macos
+            arch: amd64
+            runner: macos-latest-large
+            python-version: "3.13"
+          - os: macos
+            arch: arm64
+            runner: macos-latest
             python-version: "3.13"
 
     steps:
@@ -475,7 +482,7 @@ jobs:
           find ./base-dist -name "*.whl" -type f
           WHEEL_FILE=$(find ./base-dist -name "*.whl" -type f | head -1)
           if [ -n "$WHEEL_FILE" ]; then
-            uv pip install --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
+            uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
           else
             echo "No wheel file found in ./base-dist/"
             exit 1
@@ -489,7 +496,7 @@ jobs:
           find ./main-dist -name "*.whl" -type f
           WHEEL_FILE=$(find ./main-dist -name "*.whl" -type f | head -1)
           if [ -n "$WHEEL_FILE" ]; then
-            uv pip install --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
+            uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
           else
             echo "No wheel file found in ./main-dist/"
             exit 1
@@ -517,7 +524,7 @@ jobs:
           find ./base-dist -name "*.whl" -type f
           WHEEL_FILE=$(find ./base-dist -name "*.whl" -type f | head -1)
           if [ -n "$WHEEL_FILE" ]; then
-            uv pip install --python ./test-env/bin/python "$WHEEL_FILE"
+            uv pip install --prerelease=allow --python ./test-env/bin/python "$WHEEL_FILE"
           else
             echo "No wheel file found in ./base-dist/"
             exit 1

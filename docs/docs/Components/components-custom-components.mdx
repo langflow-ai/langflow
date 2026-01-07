@@ -219,12 +219,12 @@ Inputs and outputs are **class-level configurations** that define how data flows
 
 Inputs are defined in a class-level `inputs` list. When Langflow loads the component, it uses this list to render component fields and [ports](/concepts-components#component-ports) in the visual editor. Users or other components provide values or connections to fill these inputs.
 
-An input is usually an instance of a class from `langflow.io` (such as `StrInput`, `DataInput`, or `MessageTextInput`).
+An input is usually an instance of a class from `lfx.io` (such as `StrInput`, `DataInput`, or `MessageTextInput`).
 
 For example, this component has three inputs: a text field (`StrInput`), a Boolean toggle (`BoolInput`), and a dropdown selection (`DropdownInput`).
 
 ```python
-from langflow.io import StrInput, BoolInput, DropdownInput
+from lfx.io import StrInput, BoolInput, DropdownInput
 
 inputs = [
     StrInput(name="title", display_name="Title"),
@@ -240,36 +240,25 @@ The `BoolInput` creates a boolean toggle that's enabled by default with `value=T
 The `DropdownInput` provides a selection menu with three predefined options: "Fast", "Safe", and "Experimental".
 The `value="Safe"` sets "Safe" as the default selection, and you access the user's choice with `self.mode`.
 
+For a list of all available parameters, see the [BaseInputMixin definition](https://github.com/langflow-ai/langflow/blob/main/src/lfx/src/lfx/inputs/input_mixin.py) in the Langflow codebase.
 
-**Additional parameters:**
-* **`name`** - Internal variable name (accessed with `self.<name>`)
-* **`display_name`** - Label shown in the visual editor
-* **`value`** - Default value
-* **`info`** - Tooltip or description
-* **`required`** - Force user to provide a value
-* **`advanced`** - Move field to "Advanced" section
-* **`is_list`** - Allow multiple values
+For a list of all available input types, see the [input type definitions](https://github.com/langflow-ai/langflow/blob/main/src/lfx/src/lfx/inputs/inputs.py) in the Langflow codebase.
 
-**Additional input types:**
-* **Text**: `MultilineInput` (multi-line text area)
-* **Numbers**: `IntInput`, `FloatInput`
-* **Secrets**: `SecretStrInput` (hidden in UI)
-* **Data**: `DataInput`, `MessageInput`, `MessageTextInput`
-* **Files**: `FileInput`
-* **Connections**: `HandleInput`
-
+```python
+from lfx.io import StrInput, DataInput, MultilineInput, IntInput, BoolInput, DropdownInput, FileInput, CodeInput, ModelInput, HandleInput, Output
+```
 
 ### Outputs
 
 Outputs are defined in a class-level `outputs` list. When Langflow renders a component, each output becomes a connector point in the visual editor. When you connect something to an output, Langflow automatically calls the corresponding method and passes the returned object to the next component.
 
-An output is usually an instance of `Output` from `langflow.io`.
+An output is usually an instance of `Output` from `lfx.io`.
 
 For example, this component has one `output` that returns a `DataFrame`:
 
 ```python
-from langflow.io import Output
-from langflow.schema import DataFrame
+from lfx.io import Output
+from lfx.schema import DataFrame
 
 outputs = [
     Output(
@@ -290,18 +279,15 @@ The `Output` creates a connector point in the visual editor labeled **DataFrame 
 
 The `build_df` method processes data and returns a `DataFrame`. The `-> DataFrame` type annotation helps Langflow validate connections and provides color-coding in the visual editor. You can also set `self.status` to show progress messages in the UI.
 
-**Additional parameters:**
-* **`name`** - Internal identifier for the output
-* **`display_name`** - Label shown in the visual editor
-* **`method`** - Name of the method called to produce the output
-* **`info`** - Help text shown on hover
+For a complete list of all available parameters, see the [Output class definition](https://github.com/langflow-ai/langflow/blob/main/src/lfx/src/lfx/template/field/base.py) in the Langflow codebase. Common parameters include:
 
 **Additional return types:**
-* **`Message`** - Structured chat messages
-* **`Data`** - Flexible object with `.data` and optional `.text`
-* **Primitive types** - `str`, `int`, `bool`, not recommended for type consistency
+* **`Message`**: Structured chat messages
+* **`Data`**: Flexible object with `.data` and optional `.text`
+* **`DataFrame`**: Tabular data (pandas DataFrame subclass)
+* **Primitive types**: `str`, `int`, `bool`, not recommended for type consistency
 
-#### Associated Methods
+#### Associated methods
 
 Each output is linked to a method where the output method name must match the method name. The method typically returns objects like `Message`, `Data`, or `DataFrame`, and can use inputs with `self.<input_name>`.
 
@@ -476,7 +462,8 @@ In this example, the operator field triggers updates with `real_time_refresh=Tru
 The `regex_pattern` field is initially hidden and controlled with `dynamic=True`.
 
 ```python
-from langflow.io import DropdownInput, StrInput
+from lfx.custom import Component
+from lfx.io import DropdownInput, StrInput
 
 class RegexRouter(Component):
     display_name = "Regex Router"

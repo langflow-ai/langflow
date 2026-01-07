@@ -15,9 +15,8 @@ from typing import TYPE_CHECKING, Any
 
 import typer
 
-from lfx.graph import Graph
-
 if TYPE_CHECKING:
+    from lfx.graph import Graph
     from lfx.schema.message import Message
 
 
@@ -36,21 +35,33 @@ def temporary_sys_path(path: str):
 
 def _load_module_from_script(script_path: Path) -> Any:
     """Load a Python module from a script file."""
-    spec = importlib.util.spec_from_file_location("script_module", script_path)
+    # Use the script name as the module name to allow inspect to find it
+    module_name = script_path.stem
+    spec = importlib.util.spec_from_file_location(module_name, script_path)
     if spec is None or spec.loader is None:
         msg = f"Could not create module spec for '{script_path}'"
         raise ImportError(msg)
 
     module = importlib.util.module_from_spec(spec)
 
-    with temporary_sys_path(str(script_path.parent)):
-        spec.loader.exec_module(module)
+    # Register in sys.modules so inspect.getmodule works
+    sys.modules[module_name] = module
+
+    try:
+        with temporary_sys_path(str(script_path.parent)):
+            spec.loader.exec_module(module)
+    except Exception:
+        if module_name in sys.modules:
+            del sys.modules[module_name]
+        raise
 
     return module
 
 
-def _validate_graph_instance(graph_obj: Any) -> Graph:
+def _validate_graph_instance(graph_obj: Any) -> "Graph":
     """Extract information from a graph object."""
+    from lfx.graph import Graph
+
     if not isinstance(graph_obj, Graph):
         msg = f"Graph object is not a LFX Graph instance: {type(graph_obj)}"
         raise TypeError(msg)
@@ -72,7 +83,7 @@ def _validate_graph_instance(graph_obj: Any) -> Graph:
     return graph_obj
 
 
-async def load_graph_from_script(script_path: Path) -> Graph:
+async def load_graph_from_script(script_path: Path) -> "Graph":
     """Load and execute a Python script to extract the 'graph' variable or call 'get_graph' function.
 
     Args:
