@@ -65,4 +65,5 @@ router = APIRouter(
     prefix="/api",
 )
 # Note: router_v1 is included in main.py to support conditional agentic_router inclusion
+router.include_router(router_v1)
 router.include_router(router_v2)
