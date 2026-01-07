@@ -3,6 +3,7 @@ import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import { TextShimmer } from "@/components/ui/TextShimmer";
+import { extractLanguage, isCodeBlock } from "@/utils/codeBlockUtils";
 import { cn } from "@/utils/utils";
 import CodeTabsComponent from "../../../../../../components/core/codeTabsComponent";
 import LogoIcon from "./chat-logo-icon";
@@ -121,9 +122,6 @@ export const ErrorView = ({
                                       children,
                                       ...props
                                     }) => {
-                                      const inline = !(
-                                        props as any
-                                      ).hasOwnProperty("data-language");
                                       let content = children as string;
                                       if (
                                         Array.isArray(children) &&
@@ -141,19 +139,23 @@ export const ErrorView = ({
                                           }
                                         }
 
-                                        const match = /language-(\w+)/.exec(
-                                          className || "",
-                                        );
+                                        if (
+                                          isCodeBlock(className, props, content)
+                                        ) {
+                                          return (
+                                            <CodeTabsComponent
+                                              language={extractLanguage(
+                                                className,
+                                              )}
+                                              code={String(content).replace(
+                                                /\n$/,
+                                                "",
+                                              )}
+                                            />
+                                          );
+                                        }
 
-                                        return !inline ? (
-                                          <CodeTabsComponent
-                                            language={(match && match[1]) || ""}
-                                            code={String(content).replace(
-                                              /\n$/,
-                                              "",
-                                            )}
-                                          />
-                                        ) : (
+                                        return (
                                           <code
                                             className={className}
                                             {...props}
