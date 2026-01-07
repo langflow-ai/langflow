@@ -38,7 +38,9 @@ withEventDeliveryModes(
 
     // Find the Tavily node and fill the API key with retry
     const tavilyNode = page.getByTestId(/rf__node-TavilySearchComponent-/);
-    const tavilyApiKeyInput = tavilyNode.getByTestId("popover-anchor-input-api_key");
+    const tavilyApiKeyInput = tavilyNode.getByTestId(
+      "popover-anchor-input-api_key",
+    );
 
     const maxRetries = 5;
     for (let attempt = 0; attempt < maxRetries; attempt++) {
