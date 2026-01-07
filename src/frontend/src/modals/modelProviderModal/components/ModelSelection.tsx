@@ -102,7 +102,7 @@ const ModelSelection = ({
     <div data-testid="model-provider-selection" className="flex flex-col gap-6">
       {modelType === "all" ? (
         <>
-          {renderModelSection("LLM Models", llmModels, "llm")}
+          {renderModelSection("Language Models", llmModels, "llm")}
           {renderModelSection(
             "Embedding Models",
             embeddingModels,
@@ -110,7 +110,7 @@ const ModelSelection = ({
           )}
         </>
       ) : modelType === "llm" ? (
-        renderModelSection("LLM Models", llmModels, "llm")
+        renderModelSection("Language Models", llmModels, "llm")
       ) : (
         renderModelSection("Embedding Models", embeddingModels, "embeddings")
       )}
