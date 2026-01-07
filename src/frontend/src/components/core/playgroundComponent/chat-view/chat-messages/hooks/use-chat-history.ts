@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
+import { useGetFlowId } from "@/components/core/playgroundComponent/hooks/use-get-flow-id";
 import { useGetMessagesQuery } from "@/controllers/API/queries/messages";
 import { useMessagesStore } from "@/stores/messagesStore";
 import type { ChatMessageType } from "@/types/chat";
-import { useGetFlowId } from "../../../hooks/use-get-flow-id";
 import sortSenderMessages from "../utils/sort-sender-messages";
 
 export const useChatHistory = (visibleSession: string | null) => {
@@ -12,11 +12,10 @@ export const useChatHistory = (visibleSession: string | null) => {
   ) as ChatMessageType[];
   const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
 
+  // Fetch messages using the query hook to populate the store
   const messageQueryParams: Parameters<typeof useGetMessagesQuery>[0] = {
     id: currentFlowId,
   };
-
-  // Fetch messages using the query hook to populate the store
   useGetMessagesQuery(messageQueryParams);
 
   useEffect(() => {

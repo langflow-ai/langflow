@@ -41,6 +41,9 @@ export default function ChatInput({
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const chatValue = useUtilityStore((state) => state.chatValueStore);
   const setChatValueStore = useUtilityStore((state) => state.setChatValueStore);
+  const setAwaitingBotResponse = useUtilityStore(
+    (state) => state.setAwaitingBotResponse,
+  );
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -180,14 +183,8 @@ export default function ChatInput({
   }, [currentFlowId, isBuilding]);
 
   const send = async () => {
-    // Debug instrumentation to verify send is triggered and payload is built
-    const debugPayload = {
-      chatValue,
-      filesCount: files.length,
-      filePaths: files.map((f) => f.path ?? ""),
-    };
-    console.debug("[chat-input] send called", debugPayload);
-
+    // Indicate we are awaiting a bot response so typing animation can start
+    setAwaitingBotResponse?.(true);
     const storedChatValue = chatValue;
     const filesToSend = files
       .map((file) => file.path ?? "")
@@ -200,9 +197,7 @@ export default function ChatInput({
         inputValue: storedChatValue,
         files: filesToSend,
       });
-      console.debug("[chat-input] sendMessage success");
-    } catch (error) {
-      console.error("[chat-input] sendMessage failed", error);
+    } catch (_error) {
       setChatValueStore(storedChatValue);
       setFiles(storedFiles);
     }

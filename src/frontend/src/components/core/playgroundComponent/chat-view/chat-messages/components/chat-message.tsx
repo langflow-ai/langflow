@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
-import { ErrorView } from "@/components/core/playgroundComponent/chat-view/chat-messages/components/error-message";
-import { UserMessage } from "@/components/core/playgroundComponent/chat-view/chat-messages/components/user-message";
 import useFlowStore from "@/stores/flowStore";
-import { ContentBlock, JSONObject } from "@/types/chat";
 import type { chatMessagePropsType } from "@/types/components";
 import { BotMessage } from "./bot-message";
+import { ErrorView } from "./error-message";
+import { UserMessage } from "./user-message";
 
 export default function ChatMessage({
   chat,
@@ -12,6 +11,8 @@ export default function ChatMessage({
   updateChat,
   closeChat,
   playgroundPage,
+  isThinking,
+  thinkingDuration,
 }: chatMessagePropsType): JSX.Element {
   const fitViewNode = useFlowStore((state) => state.fitViewNode);
   const [showError, setShowError] = useState(false);
@@ -28,9 +29,7 @@ export default function ChatMessage({
 
   // Error messages
   if (chat.category === "error") {
-    const blocks = (chat.content_blocks ?? []) as Array<
-      ContentBlock | Record<string, JSONObject>
-    >;
+    const blocks = chat.content_blocks ?? [];
     return (
       <ErrorView
         blocks={blocks}
@@ -46,9 +45,10 @@ export default function ChatMessage({
   // Check if message is empty (would show "No input message provided")
   const chatMessage = chat.message ? chat.message.toString() : "";
   const isEmpty = chatMessage.trim() === "";
+  const hasFiles = chat.files && chat.files.length > 0;
 
-  // User messages (but treat empty messages as bot messages)
-  if (chat.isSend && !isEmpty) {
+  // User messages (show if has text OR has files)
+  if (chat.isSend && (!isEmpty || hasFiles)) {
     return (
       <UserMessage
         chat={chat}
@@ -68,6 +68,8 @@ export default function ChatMessage({
       updateChat={updateChat}
       closeChat={closeChat}
       playgroundPage={playgroundPage}
+      isThinking={isThinking}
+      thinkingDuration={thinkingDuration}
     />
   );
 }

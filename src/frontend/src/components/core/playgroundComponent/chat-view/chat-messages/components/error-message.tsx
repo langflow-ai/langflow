@@ -1,11 +1,11 @@
 import { AnimatePresence, motion } from "framer-motion";
-import type { ComponentPropsWithoutRef } from "react";
+import { ComponentPropsWithoutRef } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import CodeTabsComponent from "@/components/core/codeTabsComponent";
 import { TextShimmer } from "@/components/ui/TextShimmer";
-import { ChatMessageType, ContentBlock, JSONObject } from "@/types/chat";
+import { ChatMessageType, ContentBlock } from "@/types/chat";
 import { cn } from "@/utils/utils";
 import LogoIcon from "./bot-message-logo";
 
@@ -17,27 +17,13 @@ export const ErrorView = ({
   lastMessage,
   blocks,
 }: {
-  blocks: Array<ContentBlock | JSONObject>;
+  blocks: ContentBlock[];
   showError: boolean;
   lastMessage: boolean;
   closeChat?: () => void;
   fitViewNode: (id: string) => void;
   chat: ChatMessageType;
 }) => {
-  const isContentBlock = (
-    block: ContentBlock | JSONObject,
-  ): block is ContentBlock =>
-    typeof (block as ContentBlock).title === "string" &&
-    Array.isArray((block as ContentBlock).contents);
-
-  const safeBlocks = blocks.filter(isContentBlock);
-  const sourceId =
-    typeof chat.properties?.source === "object" &&
-    chat.properties?.source !== null &&
-    "id" in chat.properties.source
-      ? ((chat.properties.source as { id?: string }).id ?? "")
-      : "";
-
   return (
     <>
       <div className="w-5/6 max-w-[768px] py-4 word-break-break-word">
@@ -65,12 +51,12 @@ export const ErrorView = ({
               className="flex w-full gap-4 rounded-md p-2"
             >
               <LogoIcon />
-              {safeBlocks.map((block, blockIndex) => (
+              {blocks.map((block, blockIndex) => (
                 <div
                   key={blockIndex}
                   className="w-full rounded-xl border border-error-red-border bg-error-red p-4 text-sm text-foreground"
                 >
-                  {block.contents?.map((content, contentIndex) => {
+                  {block.contents.map((content, contentIndex) => {
                     if (content.type === "error") {
                       return (
                         <div className="" key={contentIndex}>
@@ -85,10 +71,14 @@ export const ErrorView = ({
                                   An error occured in the{" "}
                                   <span
                                     className={cn(
-                                      closeChat && "cursor-pointer underline",
+                                      closeChat
+                                        ? "cursor-pointer underline"
+                                        : "",
                                     )}
                                     onClick={() => {
-                                      fitViewNode(sourceId);
+                                      fitViewNode(
+                                        chat.properties?.source?.id ?? "",
+                                      );
                                       closeChat?.();
                                     }}
                                   >
@@ -110,7 +100,7 @@ export const ErrorView = ({
                             {content.reason && (
                               <span className="">
                                 <Markdown
-                                  // linkTarget="_blank"
+                                  linkTarget="_blank"
                                   remarkPlugins={[remarkGfm]}
                                   components={{
                                     a: ({ node, ...props }) => (
@@ -131,14 +121,13 @@ export const ErrorView = ({
                                       );
                                     },
                                     code: ({
+                                      node,
                                       inline,
                                       className,
                                       children,
                                       ...props
-                                    }: {
+                                    }: ComponentPropsWithoutRef<"code"> & {
                                       inline?: boolean;
-                                      className?: string;
-                                      children?: ComponentPropsWithoutRef<"code">["children"];
                                     }) => {
                                       let content = children as string;
                                       if (
@@ -149,13 +138,12 @@ export const ErrorView = ({
                                         content = children[0] as string;
                                       }
                                       if (typeof content === "string") {
-                                        if (
-                                          content.length &&
-                                          content[0] === "▍"
-                                        ) {
-                                          return (
-                                            <span className="form-modal-markdown-span"></span>
-                                          );
+                                        if (content.length) {
+                                          if (content[0] === "▍") {
+                                            return (
+                                              <span className="form-modal-markdown-span"></span>
+                                            );
+                                          }
                                         }
 
                                         const match = /language-(\w+)/.exec(
@@ -179,7 +167,6 @@ export const ErrorView = ({
                                           </code>
                                         );
                                       }
-
                                       return null;
                                     },
                                   }}
