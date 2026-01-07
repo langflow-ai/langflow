@@ -1,5 +1,4 @@
-"""
-Comprehensive tests for starter project JSON files.
+"""Comprehensive tests for starter project JSON files.
 
 This module provides thorough validation of the starter project JSON files,
 including structure validation, color scheme validation, and integrity checks.
@@ -11,8 +10,9 @@ from typing import Any
 
 import pytest
 
-
-STARTER_PROJECTS_DIR = Path(__file__).parents[4] / "backend" / "base" / "langflow" / "initial_setup" / "starter_projects"
+STARTER_PROJECTS_DIR = (
+    Path(__file__).parents[4] / "backend" / "base" / "langflow" / "initial_setup" / "starter_projects"
+)
 
 STARTER_PROJECT_FILES = [
     "Invoice Summarizer.json",
@@ -52,7 +52,7 @@ class TestStarterProjectJSONStructure:
         file_path = STARTER_PROJECTS_DIR / project_file
         with open(file_path) as f:
             data = json.load(f)
-        
+
         # Based on Langflow's flow structure
         required_keys = ["data", "description", "name"]
         for key in required_keys:
@@ -64,7 +64,7 @@ class TestStarterProjectJSONStructure:
         file_path = STARTER_PROJECTS_DIR / project_file
         with open(file_path) as f:
             data = json.load(f)
-        
+
         expected_name = project_file.replace(".json", "")
         actual_name = data.get("name", "")
         assert actual_name == expected_name, (
@@ -77,11 +77,11 @@ class TestStarterProjectJSONStructure:
         file_path = STARTER_PROJECTS_DIR / project_file
         with open(file_path) as f:
             data = json.load(f)
-        
+
         assert "data" in data, f"{project_file} missing 'data' key"
         data_obj = data["data"]
         assert isinstance(data_obj, dict), f"{project_file}: 'data' should be a dict"
-        
+
         # Langflow data structure should have nodes and edges
         assert "nodes" in data_obj, f"{project_file}: 'data' missing 'nodes'"
         assert "edges" in data_obj, f"{project_file}: 'data' missing 'edges'"
@@ -113,18 +113,14 @@ class TestStarterProjectBackgroundColors:
         file_path = STARTER_PROJECTS_DIR / project_file
         with open(file_path) as f:
             data = json.load(f)
-        
+
         bg_colors = self._find_background_colors(data)
         assert len(bg_colors) > 0, f"{project_file} should contain at least one backgroundColor"
-        
-        invalid_colors = [
-            (path, color) for path, color in bg_colors 
-            if color not in VALID_BACKGROUND_COLORS
-        ]
-        
-        assert not invalid_colors, (
-            f"{project_file} contains invalid background colors:\n"
-            + "\n".join(f"  {path}: {color}" for path, color in invalid_colors)
+
+        invalid_colors = [(path, color) for path, color in bg_colors if color not in VALID_BACKGROUND_COLORS]
+
+        assert not invalid_colors, f"{project_file} contains invalid background colors:\n" + "\n".join(
+            f"  {path}: {color}" for path, color in invalid_colors
         )
 
     @pytest.mark.parametrize("project_file", STARTER_PROJECT_FILES)
@@ -133,9 +129,9 @@ class TestStarterProjectBackgroundColors:
         file_path = STARTER_PROJECTS_DIR / project_file
         with open(file_path) as f:
             data = json.load(f)
-        
+
         bg_colors = self._find_background_colors(data)
-        
+
         # Check that all background colors are 'neutral', not 'emerald'
         emerald_colors = [(path, color) for path, color in bg_colors if color == "emerald"]
         assert not emerald_colors, (
@@ -143,7 +139,7 @@ class TestStarterProjectBackgroundColors:
             + "\n".join(f"  {path}: {color}" for path, color in emerald_colors)
             + "\n  Expected: 'neutral'"
         )
-        
+
         # Verify at least one 'neutral' color exists
         neutral_colors = [(path, color) for path, color in bg_colors if color == "neutral"]
         assert len(neutral_colors) > 0, f"{project_file} should contain at least one 'neutral' backgroundColor"
@@ -153,10 +149,10 @@ class TestStarterProjectBackgroundColors:
         """Ensure 'emerald' color has been completely replaced in the file."""
         file_path = STARTER_PROJECTS_DIR / project_file
         content = file_path.read_text()
-        
+
         # Check that 'emerald' doesn't appear in backgroundColor contexts
         assert '"backgroundColor": "emerald"' not in content, (
-            f"{project_file} still contains '\"backgroundColor\": \"emerald\"'"
+            f'{project_file} still contains \'"backgroundColor": "emerald"\''
         )
 
 
@@ -169,16 +165,14 @@ class TestStarterProjectNodeIntegrity:
         file_path = STARTER_PROJECTS_DIR / project_file
         with open(file_path) as f:
             data = json.load(f)
-        
+
         nodes = data["data"]["nodes"]
         assert len(nodes) > 0, f"{project_file} should have at least one node"
-        
+
         required_node_fields = ["id", "type", "data"]
         for idx, node in enumerate(nodes):
             for field in required_node_fields:
-                assert field in node, (
-                    f"{project_file}: node[{idx}] missing required field '{field}'"
-                )
+                assert field in node, f"{project_file}: node[{idx}] missing required field '{field}'"
 
     @pytest.mark.parametrize("project_file", STARTER_PROJECT_FILES)
     def test_node_ids_are_unique(self, project_file: str):
@@ -186,16 +180,14 @@ class TestStarterProjectNodeIntegrity:
         file_path = STARTER_PROJECTS_DIR / project_file
         with open(file_path) as f:
             data = json.load(f)
-        
+
         nodes = data["data"]["nodes"]
         node_ids = [node["id"] for node in nodes]
-        
+
         duplicate_ids = [node_id for node_id in node_ids if node_ids.count(node_id) > 1]
         unique_duplicates = list(set(duplicate_ids))
-        
-        assert not unique_duplicates, (
-            f"{project_file} contains duplicate node IDs: {unique_duplicates}"
-        )
+
+        assert not unique_duplicates, f"{project_file} contains duplicate node IDs: {unique_duplicates}"
 
     @pytest.mark.parametrize("project_file", STARTER_PROJECT_FILES)
     def test_note_nodes_have_background_color(self, project_file: str):
@@ -203,17 +195,17 @@ class TestStarterProjectNodeIntegrity:
         file_path = STARTER_PROJECTS_DIR / project_file
         with open(file_path) as f:
             data = json.load(f)
-        
+
         nodes = data["data"]["nodes"]
         note_nodes = [node for node in nodes if node.get("type") == "note"]
-        
+
         if not note_nodes:
             pytest.skip(f"{project_file} has no note nodes")
-        
+
         for idx, note_node in enumerate(note_nodes):
             node_data = note_node.get("data", {})
             template = node_data.get("template", {})
-            
+
             assert "backgroundColor" in template, (
                 f"{project_file}: note node at index {idx} (id: {note_node.get('id')}) "
                 f"missing backgroundColor in template"
@@ -229,18 +221,16 @@ class TestStarterProjectEdgeIntegrity:
         file_path = STARTER_PROJECTS_DIR / project_file
         with open(file_path) as f:
             data = json.load(f)
-        
+
         edges = data["data"]["edges"]
-        
+
         if not edges:
             pytest.skip(f"{project_file} has no edges")
-        
+
         required_edge_fields = ["source", "target", "id"]
         for idx, edge in enumerate(edges):
             for field in required_edge_fields:
-                assert field in edge, (
-                    f"{project_file}: edge[{idx}] missing required field '{field}'"
-                )
+                assert field in edge, f"{project_file}: edge[{idx}] missing required field '{field}'"
 
     @pytest.mark.parametrize("project_file", STARTER_PROJECT_FILES)
     def test_edge_references_valid_nodes(self, project_file: str):
@@ -248,28 +238,27 @@ class TestStarterProjectEdgeIntegrity:
         file_path = STARTER_PROJECTS_DIR / project_file
         with open(file_path) as f:
             data = json.load(f)
-        
+
         nodes = data["data"]["nodes"]
         edges = data["data"]["edges"]
-        
+
         if not edges:
             pytest.skip(f"{project_file} has no edges")
-        
+
         valid_node_ids = {node["id"] for node in nodes}
-        
+
         invalid_edges = []
         for idx, edge in enumerate(edges):
             source = edge.get("source")
             target = edge.get("target")
-            
+
             if source not in valid_node_ids:
                 invalid_edges.append(f"edge[{idx}] source '{source}' not found in nodes")
             if target not in valid_node_ids:
                 invalid_edges.append(f"edge[{idx}] target '{target}' not found in nodes")
-        
-        assert not invalid_edges, (
-            f"{project_file} has edges with invalid node references:\n"
-            + "\n".join(f"  {err}" for err in invalid_edges)
+
+        assert not invalid_edges, f"{project_file} has edges with invalid node references:\n" + "\n".join(
+            f"  {err}" for err in invalid_edges
         )
 
     @pytest.mark.parametrize("project_file", STARTER_PROJECT_FILES)
@@ -278,19 +267,17 @@ class TestStarterProjectEdgeIntegrity:
         file_path = STARTER_PROJECTS_DIR / project_file
         with open(file_path) as f:
             data = json.load(f)
-        
+
         edges = data["data"]["edges"]
-        
+
         if not edges:
             pytest.skip(f"{project_file} has no edges")
-        
+
         edge_ids = [edge["id"] for edge in edges]
         duplicate_ids = [edge_id for edge_id in edge_ids if edge_ids.count(edge_id) > 1]
         unique_duplicates = list(set(duplicate_ids))
-        
-        assert not unique_duplicates, (
-            f"{project_file} contains duplicate edge IDs: {unique_duplicates}"
-        )
+
+        assert not unique_duplicates, f"{project_file} contains duplicate edge IDs: {unique_duplicates}"
 
 
 class TestStarterProjectJSONFormatting:
@@ -304,7 +291,7 @@ class TestStarterProjectJSONFormatting:
             original_content = f.read()
             f.seek(0)
             data = json.load(f)
-        
+
         # Re-serialize and ensure it's valid
         try:
             reserialized = json.dumps(data, indent=2)
@@ -317,18 +304,14 @@ class TestStarterProjectJSONFormatting:
         """Verify that JSON files are not unreasonably large."""
         file_path = STARTER_PROJECTS_DIR / project_file
         file_size = file_path.stat().st_size
-        
+
         # Reasonable upper limit: 10MB
         max_size = 10 * 1024 * 1024
-        assert file_size < max_size, (
-            f"{project_file} is too large: {file_size} bytes (max: {max_size} bytes)"
-        )
-        
+        assert file_size < max_size, f"{project_file} is too large: {file_size} bytes (max: {max_size} bytes)"
+
         # Reasonable lower limit: should have at least some content
         min_size = 100
-        assert file_size > min_size, (
-            f"{project_file} is too small: {file_size} bytes (min: {min_size} bytes)"
-        )
+        assert file_size > min_size, f"{project_file} is too small: {file_size} bytes (min: {min_size} bytes)"
 
 
 class TestStarterProjectDescription:
@@ -340,12 +323,10 @@ class TestStarterProjectDescription:
         file_path = STARTER_PROJECTS_DIR / project_file
         with open(file_path) as f:
             data = json.load(f)
-        
+
         description = data.get("description", "")
         assert description, f"{project_file} has an empty description"
-        assert len(description.strip()) > 10, (
-            f"{project_file} description is too short: '{description}'"
-        )
+        assert len(description.strip()) > 10, f"{project_file} description is too short: '{description}'"
 
     @pytest.mark.parametrize("project_file", STARTER_PROJECT_FILES)
     def test_description_is_string(self, project_file: str):
@@ -353,11 +334,9 @@ class TestStarterProjectDescription:
         file_path = STARTER_PROJECTS_DIR / project_file
         with open(file_path) as f:
             data = json.load(f)
-        
+
         description = data.get("description")
-        assert isinstance(description, str), (
-            f"{project_file} description should be a string, got {type(description)}"
-        )
+        assert isinstance(description, str), f"{project_file} description should be a string, got {type(description)}"
 
 
 class TestStarterProjectsConsistency:
@@ -372,12 +351,12 @@ class TestStarterProjectsConsistency:
     def test_projects_use_consistent_color_scheme(self):
         """Verify that all projects use the same color scheme (neutral)."""
         colors_by_project = {}
-        
+
         for project_file in STARTER_PROJECT_FILES:
             file_path = STARTER_PROJECTS_DIR / project_file
             with open(file_path) as f:
                 data = json.load(f)
-            
+
             def find_colors(obj):
                 colors = set()
                 if isinstance(obj, dict):
@@ -389,27 +368,23 @@ class TestStarterProjectsConsistency:
                     for item in obj:
                         colors.update(find_colors(item))
                 return colors
-            
+
             colors_by_project[project_file] = find_colors(data)
-        
+
         # All projects should use 'neutral', not 'emerald'
         for project_file, colors in colors_by_project.items():
-            assert "emerald" not in colors, (
-                f"{project_file} still uses 'emerald' color"
-            )
-            assert "neutral" in colors or not colors, (
-                f"{project_file} should use 'neutral' color"
-            )
+            assert "emerald" not in colors, f"{project_file} still uses 'emerald' color"
+            assert "neutral" in colors or not colors, f"{project_file} should use 'neutral' color"
 
     def test_all_projects_have_valid_structure(self):
         """Verify that all projects follow the same structural pattern."""
         structures = {}
-        
+
         for project_file in STARTER_PROJECT_FILES:
             file_path = STARTER_PROJECTS_DIR / project_file
             with open(file_path) as f:
                 data = json.load(f)
-            
+
             structure = {
                 "top_keys": sorted(data.keys()),
                 "data_keys": sorted(data.get("data", {}).keys()) if "data" in data else [],
@@ -417,7 +392,7 @@ class TestStarterProjectsConsistency:
                 "has_edges": "edges" in data.get("data", {}),
             }
             structures[project_file] = structure
-        
+
         # All structures should be consistent
         first_structure = structures[STARTER_PROJECT_FILES[0]]
         for project_file, structure in structures.items():
