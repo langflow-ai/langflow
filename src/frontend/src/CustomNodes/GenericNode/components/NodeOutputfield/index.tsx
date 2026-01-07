@@ -336,7 +336,7 @@ function NodeOutputField({
         setFilterEdge={setFilterEdge}
         showNode={showNode}
         testIdComplement={`${data?.type?.toLowerCase()}-${showNode ? "shownode" : "noshownode"}`}
-        colorName={colorName}
+        colorName={data.node?.outputs?.[index].allows_loop ? loopInputColorName : colorName}
       />
     ),
     [
@@ -350,6 +350,9 @@ function NodeOutputField({
       showNode,
       data?.type,
       colorName,
+	  data.node?.outputs?.[index].allows_loop,
+	  loopInputColorName,
+	  index
     ],
   );
 
