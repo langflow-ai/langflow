@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import re
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import pandas as pd
 from langchain_core.tools import BaseTool, ToolException
@@ -22,7 +22,6 @@ if TYPE_CHECKING:
     from lfx.events.event_manager import EventManager
     from lfx.inputs.inputs import InputTypes
     from lfx.io import Output
-    from lfx.schema.content_block import ContentBlock
     from lfx.schema.dotdict import dotdict
 
 TOOL_TYPES_SET = {"Tool", "BaseTool", "StructuredTool"}
@@ -42,15 +41,9 @@ def build_description(component: Component) -> str:
 
 async def send_message_noop(
     message: Message,
-    text: str | None = None,  # noqa: ARG001
-    background_color: str | None = None,  # noqa: ARG001
-    text_color: str | None = None,  # noqa: ARG001
-    icon: str | None = None,  # noqa: ARG001
-    content_blocks: list[ContentBlock] | None = None,  # noqa: ARG001
-    format_type: Literal["default", "error", "warning", "info"] = "default",  # noqa: ARG001
     id_: str | None = None,  # noqa: ARG001
     *,
-    allow_markdown: bool = True,  # noqa: ARG001
+    skip_db_update: bool = False,  # noqa: ARG001
 ) -> Message:
     """No-op implementation of send_message."""
     return message

@@ -5,11 +5,10 @@ from pathlib import Path
 
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage
-from platformdirs import user_cache_dir
-
 from lfx.log.logger import logger
 from lfx.schema.message import Message
 from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
+from platformdirs import user_cache_dir
 
 
 @pytest.fixture
@@ -93,9 +92,10 @@ def test_message_with_single_image(sample_image):
     assert len(lc_message.content) == 2  # text + image
     assert lc_message.content[0]["type"] == "text"
     assert lc_message.content[0]["text"] == text
-    assert lc_message.content[1]["type"] == "image"
-    assert lc_message.content[1]["source_type"] == "url"
-    assert lc_message.content[1]["url"].startswith("data:image/")
+    assert lc_message.content[1]["type"] == "image_url"
+    assert "image_url" in lc_message.content[1]
+    assert "url" in lc_message.content[1]["image_url"]
+    assert lc_message.content[1]["image_url"]["url"].startswith("data:image/")
 
     # Verify the message object has files
     assert message.files == [file_path]
@@ -128,8 +128,8 @@ def test_message_with_multiple_images(sample_image, langflow_cache_dir):
     assert len(lc_message.content) == 3  # text + 2 images
     assert lc_message.content[0]["type"] == "text"
     assert lc_message.content[0]["text"] == text
-    assert lc_message.content[1]["type"] == "image"
-    assert lc_message.content[2]["type"] == "image"
+    assert lc_message.content[1]["type"] == "image_url"
+    assert lc_message.content[2]["type"] == "image_url"
 
     # Verify the message object has the files
     assert len(message.files) == 2
@@ -197,6 +197,112 @@ def test_timestamp_serialization():
     msg_with_tz = Message(text="Test message", sender=MESSAGE_SENDER_USER, timestamp="2023-12-25 15:30:45 UTC")
     msg_without_tz = Message(text="Test message", sender=MESSAGE_SENDER_USER, timestamp="2023-12-25 15:30:45")
     assert msg_with_tz.model_dump()["timestamp"] == msg_without_tz.model_dump()["timestamp"]
+
+
+def test_message_with_image_object_direct():
+    """Test that Message properly handles Image objects after model_post_init.
+
+    This test verifies the fix for the bug where get_file_content_dicts() would fail
+    when self.files contained Image objects instead of string paths.
+    """
+    # Create a temporary image file
+    import tempfile
+
+    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+        image_content = base64.b64decode(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg=="
+        )
+        tmp.write(image_content)
+        tmp_path = tmp.name
+
+    try:
+        # Create message with absolute path
+        message = Message(text="Test with absolute path", sender=MESSAGE_SENDER_USER, files=[tmp_path])
+
+        # After model_post_init, files should contain Image objects
+        from lfx.schema.image import Image
+
+        assert len(message.files) == 1
+        assert isinstance(message.files[0], Image)
+        assert message.files[0].path == tmp_path
+
+        # Convert to LangChain message should work
+        lc_message = message.to_lc_message()
+        assert isinstance(lc_message, HumanMessage)
+        assert isinstance(lc_message.content, list)
+        assert len(lc_message.content) == 2  # text + image
+        assert lc_message.content[0]["type"] == "text"
+        assert lc_message.content[1]["type"] == "image_url"
+        assert "url" in lc_message.content[1]["image_url"]
+    finally:
+        # Clean up
+        Path(tmp_path).unlink(missing_ok=True)
+
+
+def test_get_file_content_dicts_with_image_objects():
+    """Test that get_file_content_dicts() properly handles Image objects.
+
+    This is a regression test for the bug where get_file_paths() would fail
+    when called with Image objects, causing no images to be included in messages.
+    """
+    import tempfile
+
+    from lfx.schema.image import Image
+
+    # Create a temporary image
+    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+        image_content = base64.b64decode(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg=="
+        )
+        tmp.write(image_content)
+        tmp_path = tmp.name
+
+    try:
+        # Create a message and manually set files to Image objects
+        # (simulating what happens after model_post_init)
+        message = Message(text="Test", sender=MESSAGE_SENDER_USER)
+        message.files = [Image(path=tmp_path)]
+
+        # get_file_content_dicts should handle Image objects
+        content_dicts = message.get_file_content_dicts()
+
+        assert len(content_dicts) == 1
+        assert content_dicts[0]["type"] == "image_url"
+        assert "image_url" in content_dicts[0]
+        assert "url" in content_dicts[0]["image_url"]
+        assert content_dicts[0]["image_url"]["url"].startswith("data:image/")
+    finally:
+        Path(tmp_path).unlink(missing_ok=True)
+
+
+def test_get_file_content_dicts_with_string_paths():
+    """Test that get_file_content_dicts() still works with string paths."""
+    import tempfile
+
+    # Create a temporary image
+    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+        image_content = base64.b64decode(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg=="
+        )
+        tmp.write(image_content)
+        tmp_path = tmp.name
+
+    try:
+        # Create a message and manually set files to string paths
+        # (simulating the case before model_post_init)
+        message = Message(text="Test", sender=MESSAGE_SENDER_USER)
+        message.files = [tmp_path]
+
+        # get_file_content_dicts should handle string paths
+        content_dicts = message.get_file_content_dicts()
+
+        assert len(content_dicts) == 1
+        assert content_dicts[0]["type"] == "image_url"
+        assert "image_url" in content_dicts[0]
+        assert "url" in content_dicts[0]["image_url"]
+        assert content_dicts[0]["image_url"]["url"].startswith("data:image/")
+    finally:
+        Path(tmp_path).unlink(missing_ok=True)
 
 
 # Clean up the cache directory after all tests

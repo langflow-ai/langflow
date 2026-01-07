@@ -1,4 +1,4 @@
-.PHONY: all init format_backend format lint build run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_frontend_build clean_all run_clic load_test_setup load_test_setup_basic load_test_list_flows load_test_run load_test_langflow_quick load_test_stress load_test_example load_test_clean load_test_remote_setup load_test_remote_run load_test_help
+.PHONY: all init format_backend format lint build run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_frontend_build clean_all run_clic load_test_setup load_test_setup_basic load_test_list_flows load_test_run load_test_langflow_quick load_test_stress load_test_example load_test_clean load_test_remote_setup load_test_remote_run load_test_help docs docs_build docs_install
 
 # Configurations
 VERSION=$(shell grep "^version" pyproject.toml | sed 's/.*\"\(.*\)\"$$/\1/')
@@ -41,13 +41,31 @@ check_tools:
 	@command -v npm >/dev/null 2>&1 || { echo >&2 "$(RED)NPM is not installed. Aborting.$(NC)"; exit 1; }
 	@echo "$(GREEN)All required tools are installed.$(NC)"
 
-help: ## show this help message
-	@echo '----'
-	@grep -hE '^\S+:.*##' $(MAKEFILE_LIST) | \
-	awk -F ':.*##' '{printf "\033[36mmake %s\033[0m: %s\n", $$1, $$2}' | \
-	column -c2 -t -s :
-	@echo '----'
-	@echo 'For frontend commands, run: make help_frontend'
+help: ## show basic help message with common commands
+	@echo ''
+	@echo "$(GREEN)═══════════════════════════════════════════════════════════════════$(NC)"
+	@echo "$(GREEN)                    LANGFLOW MAKEFILE COMMANDS                     $(NC)"
+	@echo "$(GREEN)═══════════════════════════════════════════════════════════════════$(NC)"
+	@echo ''
+	@echo "$(GREEN)Basic Commands:$(NC)"
+	@echo "  $(GREEN)make init$(NC)                - Initialize project (install all dependencies)"
+	@echo "  $(GREEN)make run_cli$(NC)             - Run Langflow CLI"
+	@echo "  $(GREEN)make run_clic$(NC)            - Run CLI with fresh frontend build"
+	@echo "  $(GREEN)make format$(NC)              - Format all code (backend + frontend)"
+	@echo "  $(GREEN)make tests$(NC)               - Run all tests"
+	@echo "  $(GREEN)make build$(NC)               - Build the project"
+	@echo "  $(GREEN)make docs$(NC)                - Start documentation server (http://localhost:3030)"
+	@echo "  $(GREEN)make clean_all$(NC)           - Clean all caches and build artifacts"
+	@echo ''
+	@echo "$(GREEN)Specialized Help Commands:$(NC)"
+	@echo "  $(GREEN)make help_backend$(NC)        - Show backend-specific commands"
+	@echo "  $(GREEN)make help_frontend$(NC)       - Show frontend-specific commands"
+	@echo "  $(GREEN)make help_test$(NC)           - Show testing commands"
+	@echo "  $(GREEN)make help_docker$(NC)         - Show Docker commands"
+	@echo "  $(GREEN)make help_advanced$(NC)       - Show advanced/miscellaneous commands"
+	@echo ''
+	@echo "$(GREEN)═══════════════════════════════════════════════════════════════════$(NC)"
+	@echo ''
 
 ######################
 # INSTALL PROJECT
@@ -154,7 +172,7 @@ lfx_tests: ## run lfx package unit tests
 	@echo 'Running LFX Package Tests...'
 	@cd src/lfx && \
 	uv sync && \
-	uv run pytest tests/unit -v $(args)
+	uv run pytest tests/unit -v --cov=src/lfx --cov-report=xml --cov-report=html --cov-report=term-missing $(args)
 
 integration_tests:
 	uv run pytest src/backend/tests/integration \
@@ -419,6 +437,12 @@ publish_testpypi: ## build the frontend static files and package the project and
 ######################
 # LFX PACKAGE
 ######################
+
+build_component_index: ## build the component index with dynamic loading
+	@echo 'Installing backend dependencies for building component index'
+	@make install_backend
+	@echo 'Building component index'
+	LFX_DEV=1 uv run python scripts/build_component_index.py
 
 lfx_build: ## build the LFX package
 	@echo 'Building LFX package'
@@ -784,6 +808,227 @@ load_test_help: ## Show detailed load testing help
 	@echo "  - *_results_*.csv      - Raw performance data"
 	@echo "  - *_detailed_errors_*.log - Comprehensive error logs"
 	@echo "  - *_error_summary_*.json  - Error analysis"
+
+######################
+# HELP COMMANDS
+######################
+
+help_backend: ## show backend-specific commands
+	@echo ''
+	@echo "$(GREEN)═══════════════════════════════════════════════════════════════════$(NC)"
+	@echo "$(GREEN)                    BACKEND COMMANDS                               $(NC)"
+	@echo "$(GREEN)═══════════════════════════════════════════════════════════════════$(NC)"
+	@echo ''
+	@echo "$(GREEN)Installation & Dependencies:$(NC)"
+	@echo "  $(GREEN)make install_backend$(NC)     - Install backend dependencies"
+	@echo "  $(GREEN)make reinstall_backend$(NC)   - Force reinstall backend dependencies"
+	@echo "  $(GREEN)make setup_uv$(NC)            - Install uv using pipx"
+	@echo "  $(GREEN)make add$(NC)                 - Add dependencies (use: make add main=\"pkg\" or base=\"pkg\")"
+	@echo ''
+	@echo "$(GREEN)Development:$(NC)"
+	@echo "  $(GREEN)make backend$(NC)             - Run backend in development mode"
+	@echo "  $(GREEN)make run_cli$(NC)             - Run Langflow CLI"
+	@echo "  $(GREEN)make run_clic$(NC)            - Run CLI with fresh frontend build"
+	@echo "  $(GREEN)make run_cli_debug$(NC)       - Run CLI in debug mode"
+	@echo "  $(GREEN)make setup_devcontainer$(NC)  - Set up development container"
+	@echo "  $(GREEN)make setup_env$(NC)           - Set up environment variables"
+	@echo ''
+	@echo "$(GREEN)Code Quality:$(NC)"
+	@echo "  $(GREEN)make format_backend$(NC)      - Format backend code (ruff)"
+	@echo "  $(GREEN)make format_frontend_check$(NC) - Check frontend formatting (biome)"
+	@echo "  $(GREEN)make lint$(NC)                - Run backend linters (mypy)"
+	@echo "  $(GREEN)make codespell$(NC)           - Check spelling errors"
+	@echo "  $(GREEN)make fix_codespell$(NC)       - Fix spelling errors automatically"
+	@echo "  $(GREEN)make unsafe_fix$(NC)          - Run ruff with unsafe fixes"
+	@echo ''
+	@echo "$(GREEN)Database (Alembic):$(NC)"
+	@echo "  $(GREEN)make alembic-revision message=\"text\"$(NC) - Generate new migration"
+	@echo "  $(GREEN)make alembic-upgrade$(NC)     - Upgrade database to latest version"
+	@echo "  $(GREEN)make alembic-downgrade$(NC)   - Downgrade database by one version"
+	@echo "  $(GREEN)make alembic-current$(NC)     - Show current database revision"
+	@echo "  $(GREEN)make alembic-history$(NC)     - Show migration history"
+	@echo "  $(GREEN)make alembic-check$(NC)       - Check migration status"
+	@echo "  $(GREEN)make alembic-stamp$(NC)       - Stamp database with specific revision"
+	@echo ''
+	@echo "$(GREEN)Build & Distribution:$(NC)"
+	@echo "  $(GREEN)make build$(NC)               - Build the project"
+	@echo "  $(GREEN)make build_and_run$(NC)       - Build and run the project"
+	@echo "  $(GREEN)make build_and_install$(NC)   - Build and install the project"
+	@echo "  $(GREEN)make build_langflow_base$(NC) - Build langflow-base package"
+	@echo "  $(GREEN)make build_langflow$(NC)      - Build langflow package"
+	@echo "  $(GREEN)make lock$(NC)                - Lock dependencies"
+	@echo "  $(GREEN)make update$(NC)              - Update dependencies"
+	@echo "  $(GREEN)make publish$(NC)             - Publish to PyPI"
+	@echo ''
+	@echo "$(GREEN)LFX Package Commands:$(NC)"
+	@echo "  $(GREEN)make lfx_build$(NC)           - Build LFX package"
+	@echo "  $(GREEN)make lfx_tests$(NC)           - Run LFX tests"
+	@echo "  $(GREEN)make lfx_format$(NC)          - Format LFX code"
+	@echo "  $(GREEN)make lfx_lint$(NC)            - Lint LFX code"
+	@echo "  $(GREEN)make lfx_clean$(NC)           - Clean LFX build artifacts"
+	@echo "  $(GREEN)make lfx_publish$(NC)         - Publish LFX to PyPI"
+	@echo "  $(GREEN)make lfx_docker_build$(NC)    - Build LFX Docker image"
+	@echo "  $(GREEN)make lfx_docker_dev$(NC)      - Start LFX development environment"
+	@echo "  $(GREEN)make lfx_docker_test$(NC)     - Run LFX tests in Docker"
+	@echo ''
+	@echo "$(GREEN)═══════════════════════════════════════════════════════════════════$(NC)"
+	@echo ''
+
+help_test: ## show testing commands
+	@echo ''
+	@echo "$(GREEN)═══════════════════════════════════════════════════════════════════$(NC)"
+	@echo "$(GREEN)                    TESTING COMMANDS                               $(NC)"
+	@echo "$(GREEN)═══════════════════════════════════════════════════════════════════$(NC)"
+	@echo ''
+	@echo "$(GREEN)Backend Unit Tests:$(NC)"
+	@echo "  $(GREEN)make unit_tests$(NC)          - Run backend unit tests"
+	@echo "  $(GREEN)make unit_tests_looponfail$(NC) - Run unit tests with loop on fail"
+	@echo "  $(GREEN)make lfx_tests$(NC)           - Run LFX package tests"
+	@echo ''
+	@echo "$(GREEN)Backend Integration Tests:$(NC)"
+	@echo "  $(GREEN)make integration_tests$(NC)   - Run all integration tests"
+	@echo "  $(GREEN)make integration_tests_no_api_keys$(NC) - Run integration tests without API keys"
+	@echo "  $(GREEN)make integration_tests_api_keys$(NC) - Run integration tests requiring API keys"
+	@echo ''
+	@echo "$(GREEN)Template Tests:$(NC)"
+	@echo "  $(GREEN)make template_tests$(NC)      - Run starter project template tests"
+	@echo ''
+	@echo "$(GREEN)Combined Tests:$(NC)"
+	@echo "  $(GREEN)make tests$(NC)               - Run all tests (unit + integration + coverage)"
+	@echo "  $(GREEN)make coverage$(NC)            - Run tests and generate coverage report"
+	@echo ''
+	@echo "$(GREEN)Frontend Tests:$(NC)"
+	@echo "  $(GREEN)make tests_frontend$(NC)      - Run Playwright e2e tests"
+	@echo "  $(GREEN)make test_frontend$(NC)       - Run Jest unit tests"
+	@echo "  $(GREEN)make test_frontend_watch$(NC) - Run Jest tests in watch mode"
+	@echo "  $(GREEN)make test_frontend_coverage$(NC) - Run Jest with coverage"
+	@echo "  $(GREEN)make test_frontend_coverage_open$(NC) - Run coverage and open report"
+	@echo "  $(GREEN)make test_frontend_verbose$(NC) - Run Jest with verbose output"
+	@echo "  $(GREEN)make test_frontend_ci$(NC)    - Run Jest in CI mode"
+	@echo "  $(GREEN)make test_frontend_clean$(NC) - Clean cache and run Jest"
+	@echo "  $(GREEN)make test_frontend_bail$(NC)  - Run Jest with bail (stop on first failure)"
+	@echo "  $(GREEN)make test_frontend_silent$(NC) - Run Jest silently"
+	@echo "  $(GREEN)make test_frontend_file path$(NC) - Run tests for specific file"
+	@echo "  $(GREEN)make test_frontend_pattern pattern$(NC) - Run tests matching pattern"
+	@echo "  $(GREEN)make test_frontend_snapshots$(NC) - Update Jest snapshots"
+	@echo "  $(GREEN)make test_frontend_config$(NC) - Show Jest configuration"
+	@echo ''
+	@echo "$(GREEN)Load Testing:$(NC)"
+	@echo "  $(GREEN)make locust$(NC)              - Run locust load tests"
+	@echo "    Options: locust_users=10 locust_spawn_rate=1 locust_host=http://localhost:7860"
+	@echo "             locust_headless=true locust_time=300s locust_api_key=key"
+	@echo "             locust_flow_id=id locust_file=path"
+	@echo ''
+	@echo "$(GREEN)═══════════════════════════════════════════════════════════════════$(NC)"
+	@echo ''
+
+help_docker: ## show docker commands
+	@echo ''
+	@echo "$(GREEN)═══════════════════════════════════════════════════════════════════$(NC)"
+	@echo "$(GREEN)                    DOCKER COMMANDS                                $(NC)"
+	@echo "$(GREEN)═══════════════════════════════════════════════════════════════════$(NC)"
+	@echo ''
+	@echo "$(GREEN)Docker Build:$(NC)"
+	@echo "  $(GREEN)make docker_build$(NC)        - Build main Docker image"
+	@echo "  $(GREEN)make docker_build_backend$(NC) - Build backend Docker image"
+	@echo "  $(GREEN)make docker_build_frontend$(NC) - Build frontend Docker image"
+	@echo ''
+	@echo "$(GREEN)Docker Compose:$(NC)"
+	@echo "  $(GREEN)make docker_compose_up$(NC)   - Build and start docker compose"
+	@echo "  $(GREEN)make docker_compose_down$(NC) - Stop docker compose"
+	@echo "  $(GREEN)make dcdev_up$(NC)            - Start development docker compose"
+	@echo ''
+	@echo "$(GREEN)LFX Docker:$(NC)"
+	@echo "  $(GREEN)make lfx_docker_build$(NC)    - Build LFX production Docker image"
+	@echo "  $(GREEN)make lfx_docker_dev$(NC)      - Start LFX development environment"
+	@echo "  $(GREEN)make lfx_docker_test$(NC)     - Run LFX tests in Docker"
+	@echo ''
+	@echo "$(GREEN)Note:$(NC) By default, these commands use $(GREEN)podman$(NC)."
+	@echo "      To use Docker instead: $(GREEN)make docker_build DOCKER=docker$(NC)"
+	@echo ''
+	@echo "$(GREEN)═══════════════════════════════════════════════════════════════════$(NC)"
+	@echo ''
+
+help_advanced: ## show advanced and miscellaneous commands
+	@echo ''
+	@echo "$(GREEN)═══════════════════════════════════════════════════════════════════$(NC)"
+	@echo "$(GREEN)                    ADVANCED COMMANDS                              $(NC)"
+	@echo "$(GREEN)═══════════════════════════════════════════════════════════════════$(NC)"
+	@echo ''
+	@echo "$(GREEN)Cleanup:$(NC)"
+	@echo "  $(GREEN)make clean_all$(NC)           - Clean all caches and temporary directories"
+	@echo "  $(GREEN)make clean_python_cache$(NC)  - Clean Python cache files"
+	@echo "  $(GREEN)make clean_npm_cache$(NC)     - Clean npm cache and node_modules"
+	@echo "  $(GREEN)make clean_frontend_build$(NC) - Clean frontend build artifacts"
+	@echo ''
+	@echo "$(GREEN)Version Management:$(NC)"
+	@echo "  $(GREEN)make patch v=X.Y.Z$(NC)       - Update version across all projects"
+	@echo "    Example: make patch v=1.5.0"
+	@echo "    This updates: pyproject.toml, langflow-base, frontend package.json"
+	@echo ''
+	@echo "$(GREEN)Publishing:$(NC)"
+	@echo "  $(GREEN)make publish$(NC)             - Publish to PyPI (use: make publish base=1 or main=1)"
+	@echo "  $(GREEN)make publish_testpypi$(NC)    - Publish to test PyPI"
+	@echo "  $(GREEN)make publish_base$(NC)        - Publish langflow-base to PyPI"
+	@echo "  $(GREEN)make publish_langflow$(NC)    - Publish langflow to PyPI"
+	@echo "  $(GREEN)make lfx_publish$(NC)         - Publish LFX package to PyPI"
+	@echo "  $(GREEN)make lfx_publish_testpypi$(NC) - Publish LFX to test PyPI"
+	@echo ''
+	@echo "$(GREEN)Lock Files:$(NC)"
+	@echo "  $(GREEN)make lock$(NC)                - Lock all dependencies"
+	@echo "  $(GREEN)make lock_base$(NC)           - Lock langflow-base dependencies"
+	@echo "  $(GREEN)make lock_langflow$(NC)       - Lock langflow dependencies"
+	@echo ''
+	@echo "$(GREEN)Utilities:$(NC)"
+	@echo "  $(GREEN)make check_tools$(NC)         - Verify required tools are installed"
+	@echo "  $(GREEN)make clear_dockerimage$(NC)   - Clear dangling Docker images"
+	@echo ''
+	@echo "$(GREEN)Backend Configuration:$(NC)"
+	@echo "  Backend commands support these variables:"
+	@echo "    log_level=debug host=0.0.0.0 port=7860 env=.env"
+	@echo "    workers=1 open_browser=true async=true"
+	@echo "  Example: $(GREEN)make backend port=8080 workers=4$(NC)"
+	@echo ''
+	@echo "$(GREEN)Unit Tests Configuration:$(NC)"
+	@echo "  Unit test commands support these variables:"
+	@echo "    async=true lf=true ff=true"
+	@echo "  Example: $(GREEN)make unit_tests async=false$(NC)"
+	@echo ''
+	@echo "$(GREEN)═══════════════════════════════════════════════════════════════════$(NC)"
+	@echo ''
+
+######################
+# DOCUMENTATION
+######################
+
+docs_port ?= 3030
+
+check_yarn:
+	@command -v yarn >/dev/null 2>&1 || { \
+		echo "$(RED)Error: yarn is not installed.$(NC)"; \
+		echo "$(YELLOW)The docs project requires yarn. Please install it:$(NC)"; \
+		echo "  brew install yarn"; \
+		echo "  # or"; \
+		echo "  npm install -g yarn"; \
+		exit 1; \
+	}
+
+docs_install: check_yarn ## install documentation dependencies
+	@echo "$(GREEN)Installing documentation dependencies...$(NC)"
+	@cd docs && yarn install
+
+docs: docs_install ## start documentation development server (default port 3030)
+	@echo "$(GREEN)Starting documentation server at http://localhost:$(docs_port)$(NC)"
+	@cd docs && yarn start --port $(docs_port)
+
+docs_build: docs_install ## build documentation for production
+	@echo "$(GREEN)Building documentation...$(NC)"
+	@cd docs && yarn build
+	@echo "$(GREEN)Documentation built successfully in docs/build/$(NC)"
+
+docs_serve: docs_build ## build and serve documentation locally
+	@echo "$(GREEN)Serving built documentation...$(NC)"
+	@cd docs && yarn serve --port $(docs_port)
 
 ######################
 # INCLUDE FRONTEND MAKEFILE

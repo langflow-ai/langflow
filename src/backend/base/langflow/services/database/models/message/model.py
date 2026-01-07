@@ -22,6 +22,7 @@ class MessageBase(SQLModel):
     sender: str
     sender_name: str
     session_id: str
+    context_id: str | None = Field(default=None)
     text: str = Field(sa_column=Column(Text))
     files: list[str] = Field(default_factory=list)
     error: bool = Field(default=False)
@@ -50,6 +51,13 @@ class MessageBase(SQLModel):
             value = []
         return value
 
+    @field_validator("session_id", mode="before")
+    @classmethod
+    def validate_session_id(cls, value):
+        if isinstance(value, UUID):
+            value = str(value)
+        return value
+
     @classmethod
     def from_message(cls, message: "Message", flow_id: str | UUID | None = None):
         # first check if the record has all the required fields
@@ -61,8 +69,12 @@ class MessageBase(SQLModel):
             for file in message.files:
                 if hasattr(file, "path") and hasattr(file, "url") and file.path:
                     session_id = message.session_id
-                    if session_id:
-                        image_paths.append(f"{session_id}{file.path.split(str(session_id))[1]}")
+                    if session_id and str(session_id) in file.path:
+                        parts = file.path.split(str(session_id))
+                        if len(parts) > 1:
+                            image_paths.append(f"{session_id}{parts[1]}")
+                        else:
+                            image_paths.append(file.path)
                     else:
                         image_paths.append(file.path)
             if image_paths:
@@ -105,6 +117,7 @@ class MessageBase(SQLModel):
             sender_name=message.sender_name,
             text=message_text,
             session_id=message.session_id,
+            context_id=message.context_id,
             files=message.files or [],
             timestamp=timestamp,
             flow_id=flow_id,
@@ -176,6 +189,7 @@ class MessageUpdate(SQLModel):
     sender: str | None = None
     sender_name: str | None = None
     session_id: str | None = None
+    context_id: str | None = None
     files: list[str] | None = None
     edit: bool | None = None
     error: bool | None = None

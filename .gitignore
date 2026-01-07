@@ -281,5 +281,12 @@ src/frontend/temp
 
 news-aggregated.json
 CLAUDE.md
+.claude
 
 member_servers.json
+# Component index cache (user-specific)
+**/.cache/lfx/
+
+# data files used for desktop registration
+data/user
+

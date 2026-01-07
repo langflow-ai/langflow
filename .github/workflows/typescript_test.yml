@@ -69,7 +69,7 @@ env:
   # Define the directory where Playwright browsers will be installed.
   # This path is used for caching across workflows
   PLAYWRIGHT_BROWSERS_PATH: "ms-playwright"
-  PLAYWRIGHT_VERSION: "1.49.1" # Add explicit version for cache key
+  PLAYWRIGHT_VERSION: "1.56.0"
 
 jobs:
   determine-test-suite:
@@ -80,7 +80,7 @@ jobs:
       test_grep: ${{ steps.set-matrix.outputs.test_grep }}
       suites: ${{ steps.set-matrix.outputs.suites }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref || github.ref }}
           fetch-depth: 0
@@ -239,12 +239,12 @@ jobs:
 
           echo "Total tests to run: $TEST_COUNT"
 
-          # Calculate optimal shard count - 1 shard per 5 tests, min 1, max 40
+          # Calculate optimal shard count - 1 shard per 5 tests, min 1, max 50
           SHARD_COUNT=$(( (TEST_COUNT + 4) / 5 ))
           if [ $SHARD_COUNT -lt 1 ]; then
             SHARD_COUNT=1
-          elif [ $SHARD_COUNT -gt 40 ]; then
-            SHARD_COUNT=40
+          elif [ $SHARD_COUNT -gt 50 ]; then
+            SHARD_COUNT=50
           fi
 
           # Create the matrix combinations string
@@ -279,7 +279,7 @@ jobs:
       failed: ${{ steps.check-failure.outputs.failed }}
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref || github.ref }}
 
@@ -378,7 +378,7 @@ jobs:
           fi
       - name: Checkout code
         if: ${{ steps.should_merge_reports.outputs.should_merge_reports == 'true' }}
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref || github.ref }}
 

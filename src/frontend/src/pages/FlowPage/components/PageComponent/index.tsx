@@ -24,6 +24,7 @@ import NoteNode from "@/CustomNodes/NoteNode";
 import FlowToolbar from "@/components/core/flowToolbarComponent";
 import {
   COLOR_OPTIONS,
+  DEFAULT_NOTE_SIZE,
   NOTE_NODE_MIN_HEIGHT,
   NOTE_NODE_MIN_WIDTH,
 } from "@/constants/constants";
@@ -132,6 +133,9 @@ export default function Page({
     (state) => state.setLastCopiedSelection,
   );
   const onConnect = useFlowStore((state) => state.onConnect);
+  const setRightClickedNodeId = useFlowStore(
+    (state) => state.setRightClickedNodeId,
+  );
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const updateCurrentFlow = useFlowStore((state) => state.updateCurrentFlow);
   const [selectionMenuVisible, setSelectionMenuVisible] = useState(false);
@@ -158,8 +162,8 @@ export default function Page({
   const addComponent = useAddComponent();
 
   const zoomLevel = reactFlowInstance?.getZoom();
-  const shadowBoxWidth = NOTE_NODE_MIN_WIDTH * (zoomLevel || 1);
-  const shadowBoxHeight = NOTE_NODE_MIN_HEIGHT * (zoomLevel || 1);
+  const shadowBoxWidth = DEFAULT_NOTE_SIZE * (zoomLevel || 1);
+  const shadowBoxHeight = DEFAULT_NOTE_SIZE * (zoomLevel || 1);
   const shadowBoxBackgroundColor = COLOR_OPTIONS[Object.keys(COLOR_OPTIONS)[0]];
 
   const handleGroupNode = useCallback(() => {
@@ -329,6 +333,12 @@ export default function Page({
     }
   }
 
+  function handleEscape(e: KeyboardEvent) {
+    if (e.key === "Escape") {
+      setRightClickedNodeId(null);
+    }
+  }
+
   function handleDownload(e: KeyboardEvent) {
     if (!isWrappedWithClass(e, "noflow")) {
       e.preventDefault();
@@ -369,6 +379,8 @@ export default function Page({
   useHotkeys(downloadAction, handleDownload);
   //@ts-ignore
   useHotkeys("delete", handleDelete);
+  //@ts-ignore
+  useHotkeys("escape", handleEscape);
 
   const onConnectMod = useCallback(
     (params: Connection) => {
@@ -589,14 +601,38 @@ export default function Page({
   const onSelectionChange = useCallback(
     (flow: OnSelectionChangeParams): void => {
       setLastSelection(flow);
+      if (flow.nodes && (flow.nodes.length === 0 || flow.nodes.length > 1)) {
+        setRightClickedNodeId(null);
+      }
     },
-    [],
+    [setRightClickedNodeId],
+  );
+
+  const onNodeContextMenu = useCallback(
+    (event: React.MouseEvent, node: AllNodeType) => {
+      event.preventDefault();
+      if (isLocked) return;
+
+      // Set the right-clicked node ID to show its dropdown menu
+      setRightClickedNodeId(node.id);
+
+      // Focus/select the right-clicked node (same as left-click behavior)
+      setNodes((currentNodes) => {
+        return currentNodes.map((n) => ({
+          ...n,
+          selected: n.id === node.id,
+        }));
+      });
+    },
+    [isLocked, setRightClickedNodeId, setNodes],
   );
 
   const onPaneClick = useCallback(
     (event: React.MouseEvent) => {
       setFilterEdge([]);
       setFilterComponent("");
+      // Hide right-click dropdown when clicking on the pane
+      setRightClickedNodeId(null);
       if (isAddingNote) {
         const shadowBox = document.getElementById("shadow-box");
         if (shadowBox) {
@@ -621,6 +657,8 @@ export default function Page({
           id: newId,
           type: "noteNode",
           position: position || { x: 0, y: 0 },
+          width: DEFAULT_NOTE_SIZE,
+          height: DEFAULT_NOTE_SIZE,
           data: {
             ...data,
             id: newId,
@@ -771,6 +809,7 @@ export default function Page({
               onPaneClick={onPaneClick}
               onEdgeClick={handleEdgeClick}
               onKeyDown={handleKeyDown}
+              onNodeContextMenu={onNodeContextMenu}
             >
               <FlowBuildingComponent />
               <UpdateAllComponents />

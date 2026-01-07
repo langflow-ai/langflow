@@ -87,7 +87,7 @@ export type InputFieldType = {
   refresh_button_text?: string;
   combobox?: boolean;
   info?: string;
-  options?: string[];
+  options?: any[];
   active_tab?: number;
   [key: string]: any;
   icon?: string;
@@ -112,6 +112,7 @@ export type OutputFieldType = {
   hidden?: boolean;
   proxy?: OutputFieldProxyType;
   allows_loop?: boolean;
+  loop_types?: Array<string>;
   options?: { [key: string]: any };
 };
 export type errorsTypeAPI = {
@@ -349,4 +350,14 @@ export type TableOptionsTypeAPI = {
   >;
   field_parsers?: Array<FieldParserType | { [key: string]: FieldParserType }>;
   description?: string;
+};
+
+export type TransactionLogsRow = {
+  id: string;
+  timestamp: string;
+  vertex_id: string;
+  target_id: string | null;
+  inputs: Record<string, unknown> | null;
+  outputs: Record<string, unknown> | null;
+  status: string;
 };

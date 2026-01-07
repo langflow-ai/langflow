@@ -352,9 +352,9 @@ To make environment variables available to GUI apps on macOS, you need to use `l
          <string>/bin/sh</string>
          <string>-c</string>
           <string>
-            launchctl setenv LANGFLOW_CONFIG_DIR /Users/your_user/custom/config &&
-            launchctl setenv LANGFLOW_PORT 7860 &&
-            launchctl setenv LANGFLOW_HOST localhost &&
+            launchctl setenv LANGFLOW_CONFIG_DIR /Users/your_user/custom/config ;
+            launchctl setenv LANGFLOW_PORT 7860 ;
+            launchctl setenv LANGFLOW_HOST localhost ;
             launchctl setenv ARIZE_API_KEY ak-...
           </string>
        </array>
@@ -366,7 +366,7 @@ To make environment variables available to GUI apps on macOS, you need to use `l
 4. Load the file with `launchctl`:
 
     ```bash
-    launchctl load ~/Library/LaunchAgents/dev.langflow.env.plist
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/dev.langflow.env.plist
     ```
 
 </TabItem>
@@ -452,16 +452,19 @@ The following environment variables set base Langflow server configuration, such
 | `LANGFLOW_HEALTH_CHECK_MAX_RETRIES` | Integer | `5` | Set the maximum number of retries for Langflow's server status health checks. |
 | `LANGFLOW_WORKERS` | Integer | `1` | Number of worker processes. |
 | `LANGFLOW_WORKER_TIMEOUT` | Integer | `300` | Worker timeout in seconds. |
-| `LANGFLOW_SSL_CERT_FILE` | String | Not set | Path to the SSL certificate file on the local system for SSL-encrypted connections. |
-| `LANGFLOW_SSL_KEY_FILE` | String | Not set | Path to the SSL key file on the local system for SSL-encrypted connections. |
+| `LANGFLOW_SSL_CERT_FILE` | String | Not set | Path to the SSL certificate file for enabling HTTPS on the Langflow web server. This is separate from [database SSL connections](/configuration-custom-database#connect-langflow-to-a-local-postgresql-database). |
+| `LANGFLOW_SSL_KEY_FILE` | String | Not set | Path to the SSL key file for enabling HTTPS on the Langflow web server. This is separate from [database SSL connections](/configuration-custom-database#connect-langflow-to-a-local-postgresql-database). |
 | `LANGFLOW_DEACTIVATE_TRACING` | Boolean | `False` | Deactivate tracing functionality. |
 | `LANGFLOW_CELERY_ENABLED` | Boolean | `False` | Enable Celery for distributed task processing. |
+| `LANGFLOW_ALEMBIC_LOG_TO_STDOUT` | Boolean | `False` | Whether to log Alembic database migration output to stdout instead of a log file. If `true`, Alembic logs to `stdout` and the default log file is ignored. |
 
 For more information about deploying Langflow servers, see [Langflow deployment overview](/deployment-overview).
 
 ### Storage
 
-See [Memory management options](/memory) and [Manage files](/concepts-file-management).
+For file storage environment variables, see [File storage environment variables](/concepts-file-management#file-storage-environment-variables).
+
+For database environment variables, including PostgreSQL configuration, see [Memory management options](/memory#configure-external-memory).
 
 ### Telemetry
 

@@ -3,6 +3,7 @@ import json
 import os
 import platform
 from asyncio.subprocess import create_subprocess_exec
+from collections.abc import Awaitable, Callable, Sequence
 from contextvars import ContextVar
 from datetime import datetime, timezone
 from ipaddress import ip_address
@@ -11,9 +12,11 @@ from subprocess import CalledProcessError
 from typing import Annotated, Any, cast
 from uuid import UUID
 
+import anyio
 from anyio import BrokenResourceError
+from anyio.abc import TaskGroup, TaskStatus
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
 from lfx.base.mcp.util import sanitize_mcp_name
 from lfx.log import logger
@@ -23,13 +26,25 @@ from lfx.services.schema import ServiceType
 from mcp import types
 from mcp.server import NotificationOptions, Server
 from mcp.server.sse import SseServerTransport
+from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.api.utils import CurrentActiveMCPUser, extract_global_variables_from_headers
-from langflow.api.utils.mcp import auto_configure_starter_projects_mcp, get_project_sse_url, get_url_by_os
+from langflow.api.utils import (
+    CurrentActiveMCPUser,
+    extract_global_variables_from_headers,
+    raise_error_if_astra_cloud_env,
+)
+from langflow.api.utils.mcp import (
+    auto_configure_starter_projects_mcp,
+    get_composer_streamable_http_url,
+    get_project_sse_url,
+    get_project_streamable_http_url,
+    get_url_by_os,
+)
 from langflow.api.v1.auth_helpers import handle_auth_settings_update
+from langflow.api.v1.mcp import ResponseNoOp
 from langflow.api.v1.mcp_utils import (
     current_request_variables_ctx,
     current_user_ctx,
@@ -41,6 +56,7 @@ from langflow.api.v1.mcp_utils import (
 )
 from langflow.api.v1.schemas import (
     AuthSettings,
+    ComposerUrlResponse,
     MCPInstallRequest,
     MCPProjectResponse,
     MCPProjectUpdateRequest,
@@ -180,8 +196,8 @@ async def verify_project_auth_conditional(
 # Create project-specific context variable
 current_project_ctx: ContextVar[UUID | None] = ContextVar("current_project_ctx", default=None)
 
-# Create a mapping of project-specific SSE transports
-project_sse_transports = {}
+# Mapping of project-specific SSE transports
+project_sse_transports: dict[str, SseServerTransport] = {}
 
 
 def get_project_sse(project_id: UUID | None) -> SseServerTransport:
@@ -195,14 +211,13 @@ def get_project_sse(project_id: UUID | None) -> SseServerTransport:
     return project_sse_transports[project_id_str]
 
 
-@router.get("/{project_id}")
-async def list_project_tools(
+async def _build_project_tools_response(
     project_id: UUID,
     current_user: CurrentActiveMCPUser,
     *,
-    mcp_enabled: bool = True,
-) -> MCPProjectResponse | None:
-    """List all tools in a project that are enabled for MCP."""
+    mcp_enabled: bool,
+) -> MCPProjectResponse:
+    """Return tool metadata for a project."""
     tools: list[MCPSettings] = []
     try:
         async with session_scope() as session:
@@ -277,20 +292,44 @@ async def list_project_tools(
     return MCPProjectResponse(tools=tools, auth_settings=auth_settings)
 
 
-@router.head("/{project_id}/sse", response_class=HTMLResponse, include_in_schema=False)
+@router.get("/{project_id}")
+async def list_project_tools(
+    project_id: UUID,
+    current_user: CurrentActiveMCPUser,
+    *,
+    mcp_enabled: bool = True,
+) -> Response:
+    """List project MCP tools."""
+    metadata = await _build_project_tools_response(project_id, current_user, mcp_enabled=mcp_enabled)
+    return JSONResponse(content=metadata.model_dump(mode="json"))
+
+
+########################################################
+# legacy SSE transport routes
+########################################################
+
+
+@router.head(
+    "/{project_id}/sse",
+    response_class=HTMLResponse,
+    include_in_schema=False,
+    dependencies=[Depends(raise_error_if_astra_cloud_env)],
+)
 async def im_alive(project_id: str):  # noqa: ARG001
     return Response()
 
 
-@router.get("/{project_id}/sse", response_class=HTMLResponse)
+@router.get(
+    "/{project_id}/sse",
+    response_class=HTMLResponse,
+    dependencies=[Depends(raise_error_if_astra_cloud_env)],
+)
 async def handle_project_sse(
     project_id: UUID,
     request: Request,
     current_user: Annotated[User, Depends(verify_project_auth_conditional)],
 ):
     """Handle SSE connections for a specific project."""
-    # Verify project exists and user has access
-
     async with session_scope() as session:
         project = (
             await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))
@@ -299,20 +338,17 @@ async def handle_project_sse(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    # Get project-specific SSE transport and MCP server
     sse = get_project_sse(project_id)
     project_server = get_project_mcp_server(project_id)
     await logger.adebug("Project MCP server name: %s", project_server.server.name)
 
-    # Set context variables
     user_token = current_user_ctx.set(current_user)
     project_token = current_project_ctx.set(project_id)
-    # Extract request-level variables from headers with prefix X-LANGFLOW-GLOBAL-VAR-*
     variables = extract_global_variables_from_headers(request.headers)
     req_vars_token = current_request_variables_ctx.set(variables or None)
 
     try:
-        async with sse.connect_sse(request.scope, request.receive, request._send) as streams:
+        async with sse.connect_sse(request.scope, request.receive, request._send) as streams:  # noqa: SLF001
             try:
                 await logger.adebug("Starting SSE connection for project %s", project_id)
 
@@ -338,26 +374,23 @@ async def handle_project_sse(
         current_project_ctx.reset(project_token)
         current_request_variables_ctx.reset(req_vars_token)
 
-    return Response(status_code=200)
+    return ResponseNoOp(status_code=200)
 
 
-@router.post("/{project_id}")
-async def handle_project_messages(
+async def _handle_project_sse_messages(
     project_id: UUID,
     request: Request,
-    current_user: Annotated[User, Depends(verify_project_auth_conditional)],
+    current_user: User,
 ):
-    """Handle POST messages for a project-specific MCP server."""
-    # Set context variables
+    """Handle POST messages for a project-specific MCP server using SSE transport."""
     user_token = current_user_ctx.set(current_user)
     project_token = current_project_ctx.set(project_id)
-    # Extract request-level variables from headers with prefix X-LANGFLOW-GLOBAL-VAR-*
     variables = extract_global_variables_from_headers(request.headers)
     req_vars_token = current_request_variables_ctx.set(variables or None)
 
     try:
         sse = get_project_sse(project_id)
-        await sse.handle_post_message(request.scope, request.receive, request._send)
+        await sse.handle_post_message(request.scope, request.receive, request._send)  # noqa: SLF001
     except BrokenResourceError as e:
         await logger.ainfo("Project MCP Server disconnected for project %s", project_id)
         raise HTTPException(status_code=404, detail=f"Project MCP Server disconnected, error: {e}") from e
@@ -367,15 +400,73 @@ async def handle_project_messages(
         current_request_variables_ctx.reset(req_vars_token)
 
 
-@router.post("/{project_id}/")
-async def handle_project_messages_with_slash(
+@router.post("/{project_id}", dependencies=[Depends(raise_error_if_astra_cloud_env)])
+@router.post("/{project_id}/", dependencies=[Depends(raise_error_if_astra_cloud_env)])
+async def handle_project_messages(
     project_id: UUID,
     request: Request,
     current_user: Annotated[User, Depends(verify_project_auth_conditional)],
 ):
-    """Handle POST messages for a project-specific MCP server with trailing slash."""
-    # Call the original handler
-    return await handle_project_messages(project_id, request, current_user)
+    """Handle POST messages for a project-specific MCP server."""
+    return await _handle_project_sse_messages(project_id, request, current_user)
+
+
+########################################################
+# Streamable HTTP transport routes
+########################################################
+
+
+@router.head("/{project_id}/streamable", include_in_schema=False)
+async def streamable_health(project_id: UUID):  # noqa: ARG001
+    return Response()
+
+
+async def _dispatch_project_streamable_http(
+    project_id: UUID,
+    request: Request,
+    current_user: User,
+) -> Response:
+    """Common handler for project-specific Streamable HTTP requests."""
+    # Lazily initialize the project's Streamable HTTP manager
+    # to pick up new projects as they are created.
+    project_server = get_project_mcp_server(project_id)
+    await project_server.ensure_session_manager_running()
+
+    user_token = current_user_ctx.set(current_user)
+    project_token = current_project_ctx.set(project_id)
+    variables = extract_global_variables_from_headers(request.headers)
+    request_vars_token = current_request_variables_ctx.set(variables or None)
+
+    try:
+        await project_server.session_manager.handle_request(request.scope, request.receive, request._send)  # noqa: SLF001
+    except HTTPException:
+        raise
+    except Exception as exc:
+        await logger.aexception(f"Error handling Streamable HTTP request for project {project_id}: {exc!s}")
+        raise HTTPException(status_code=500, detail="Internal server error in project MCP transport") from exc
+    finally:
+        current_request_variables_ctx.reset(request_vars_token)
+        current_project_ctx.reset(project_token)
+        current_user_ctx.reset(user_token)
+
+    return ResponseNoOp(status_code=200)
+
+
+streamable_http_route_config = {
+    "methods": ["GET", "POST", "DELETE"],
+    "response_class": ResponseNoOp,
+}
+
+
+@router.api_route("/{project_id}/streamable", **streamable_http_route_config)
+@router.api_route("/{project_id}/streamable/", **streamable_http_route_config)
+async def handle_project_streamable_http(
+    project_id: UUID,
+    request: Request,
+    current_user: Annotated[User, Depends(verify_project_auth_conditional)],
+):
+    """Handle Streamable HTTP connections for a specific project."""
+    return await _dispatch_project_streamable_http(project_id, request, current_user)
 
 
 @router.patch("/{project_id}", status_code=200)
@@ -408,6 +499,9 @@ async def update_project_mcp_settings(
             should_start_composer = False
             should_stop_composer = False
 
+            # Store original auth settings in case we need to rollback
+            original_auth_settings = project.auth_settings
+
             # Update project-level auth settings with encryption
             if "auth_settings" in request.model_fields_set and request.auth_settings is not None:
                 auth_result = handle_auth_settings_update(
@@ -418,8 +512,6 @@ async def update_project_mcp_settings(
                 should_handle_mcp_composer = auth_result["should_handle_composer"]
                 should_start_composer = auth_result["should_start_composer"]
                 should_stop_composer = auth_result["should_stop_composer"]
-
-            session.add(project)
 
             # Query flows in the project
             flows = (await session.exec(select(Flow).where(Flow.folder_id == project_id))).all()
@@ -439,13 +531,19 @@ async def update_project_mcp_settings(
                     session.add(flow)
                     updated_flows.append(flow)
 
-            await session.commit()
+            await session.flush()
 
             response: dict[str, Any] = {
                 "message": f"Updated MCP settings for {len(updated_flows)} flows and project auth settings"
             }
 
+            # Handle MCP Composer start/stop before committing auth settings
             if should_handle_mcp_composer:
+                # Get MCP Composer service once for all branches
+                mcp_composer_service: MCPComposerService = cast(
+                    MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE)
+                )
+
                 if should_start_composer:
                     await logger.adebug(
                         f"Auth settings changed to OAuth for project {project.name} ({project_id}), "
@@ -456,24 +554,38 @@ async def update_project_mcp_settings(
                         try:
                             auth_config = await _get_mcp_composer_auth_config(project)
                             await get_or_start_mcp_composer(auth_config, project.name, project_id)
+                            composer_streamable_http_url = await get_composer_streamable_http_url(project)
                             composer_sse_url = await get_composer_sse_url(project)
+                            # Clear any previous error on success
+                            mcp_composer_service.clear_last_error(str(project_id))
                             response["result"] = {
                                 "project_id": str(project_id),
+                                "streamable_http_url": composer_streamable_http_url,
+                                "legacy_sse_url": composer_sse_url,
                                 "sse_url": composer_sse_url,
                                 "uses_composer": True,
                             }
                         except MCPComposerError as e:
+                            # Don't rollback auth settings - persist them so UI can show the error
+                            await logger.awarning(f"MCP Composer failed to start for project {project_id}: {e.message}")
+                            # Store the error message so it can be retrieved via composer-url endpoint
+                            mcp_composer_service.set_last_error(str(project_id), e.message)
                             response["result"] = {
                                 "project_id": str(project_id),
                                 "uses_composer": True,
                                 "error_message": e.message,
                             }
                         except Exception as e:
-                            # Unexpected errors
-                            await logger.aerror(f"Failed to get mcp composer URL for project {project_id}: {e}")
+                            # Rollback auth settings on unexpected errors
+                            await logger.aerror(
+                                f"Unexpected error starting MCP Composer for project {project_id}, "
+                                f"rolling back auth settings: {e}"
+                            )
+                            project.auth_settings = original_auth_settings
                             raise HTTPException(status_code=500, detail=str(e)) from e
                     else:
-                        # This shouldn't happen - we determined we should start composer but now we can't use it
+                        # OAuth is set but MCP Composer is disabled - save settings but return error
+                        # Don't rollback - keep the auth settings so they can be used when composer is enabled
                         await logger.aerror(
                             f"PATCH: OAuth set but MCP Composer is disabled in settings for project {project_id}"
                         )
@@ -487,21 +599,27 @@ async def update_project_mcp_settings(
                         f"Auth settings changed from OAuth for project {project.name} ({project_id}), "
                         "stopping MCP Composer"
                     )
-                    mcp_composer_service: MCPComposerService = cast(
-                        "MCPComposerService", get_service(ServiceType.MCP_COMPOSER_SERVICE)
-                    )
                     await mcp_composer_service.stop_project_composer(str(project_id))
+                    # Clear any error when user explicitly disables OAuth
+                    mcp_composer_service.clear_last_error(str(project_id))
 
-                    # Provide the direct SSE URL since we're no longer using composer
-                    sse_url = await get_project_sse_url(project_id)
-                    if not sse_url:
-                        raise HTTPException(status_code=500, detail="Failed to get direct SSE URL")
+                    # Provide direct connection URLs since we're no longer using composer
+                    streamable_http_url = await get_project_streamable_http_url(project_id)
+                    legacy_sse_url = await get_project_sse_url(project_id)
+                    if not streamable_http_url:
+                        raise HTTPException(status_code=500, detail="Failed to get direct Streamable HTTP URL")
 
                     response["result"] = {
                         "project_id": str(project_id),
-                        "sse_url": sse_url,
+                        "streamable_http_url": streamable_http_url,
+                        "legacy_sse_url": legacy_sse_url,
+                        "sse_url": legacy_sse_url,
                         "uses_composer": False,
                     }
+
+            # Only commit if composer started successfully (or wasn't needed)
+            session.add(project)
+            await session.commit()
 
             return response
 
@@ -601,6 +719,9 @@ async def install_mcp_config(
 
         # Get settings service to build the SSE URL
         settings_service = get_settings_service()
+        if settings_service.auth_settings.AUTO_LOGIN and not settings_service.auth_settings.SUPERUSER:
+            # Without a superuser fallback, require API key auth for MCP installs.
+            should_generate_api_key = True
         settings = settings_service.settings
         host = settings.host or None
         port = settings.port or None
@@ -611,12 +732,18 @@ async def install_mcp_config(
         os_type = platform.system()
 
         use_mcp_composer = should_use_mcp_composer(project)
+        connection_urls: list[str]
+        transport_mode = (body.transport or "sse").lower()
+        if transport_mode not in {"sse", "streamablehttp"}:
+            raise HTTPException(status_code=400, detail="Invalid transport. Use 'sse' or 'streamablehttp'.")
 
         if use_mcp_composer:
             try:
                 auth_config = await _get_mcp_composer_auth_config(project)
                 await get_or_start_mcp_composer(auth_config, project.name, project_id)
+                composer_streamable_http_url = await get_composer_streamable_http_url(project)
                 sse_url = await get_composer_sse_url(project)
+                connection_urls = [composer_streamable_http_url, sse_url]
             except MCPComposerError as e:
                 await logger.aerror(
                     f"Failed to start MCP Composer for project '{project.name}' ({project_id}): {e.message}"
@@ -634,16 +761,19 @@ async def install_mcp_config(
             args = [
                 f"mcp-composer{settings.mcp_composer_version}",
                 "--mode",
-                "stdio",
+                "http",
+                "--endpoint",
+                composer_streamable_http_url,
                 "--sse-url",
                 sse_url,
-                "--disable-composer-tools",
                 "--client_auth_type",
                 "oauth",
+                "--disable-composer-tools",
             ]
         else:
             # For non-OAuth (API key or no auth), use mcp-proxy
-            sse_url = await get_project_sse_url(project_id)
+            streamable_http_url = await get_project_streamable_http_url(project_id)
+            legacy_sse_url = await get_project_sse_url(project_id)
             command = "uvx"
             args = ["mcp-proxy"]
             # Check if we need to add Langflow API key headers
@@ -659,8 +789,12 @@ async def install_mcp_config(
                     langflow_api_key = api_key_response.api_key
                     args.extend(["--headers", "x-api-key", langflow_api_key])
 
-            # Add the SSE URL for mcp-proxy
-            args.append(sse_url)
+            # Add the target URL for mcp-proxy based on requested transport
+            proxy_target_url = streamable_http_url if transport_mode == "streamablehttp" else legacy_sse_url
+            if transport_mode == "streamablehttp":
+                args.extend(["--transport", "streamablehttp"])
+            args.append(proxy_target_url)
+            connection_urls = [streamable_http_url, legacy_sse_url]
 
         if os_type == "Windows" and not use_mcp_composer:
             # Only wrap in cmd for Windows when using mcp-proxy
@@ -712,7 +846,8 @@ async def install_mcp_config(
         if "mcpServers" not in existing_config:
             existing_config["mcpServers"] = {}
 
-        existing_config, removed_servers = remove_server_by_sse_url(existing_config, sse_url)
+        # Remove stale entries that point to the same Langflow URLs (e.g. after the project is renamed)
+        existing_config, removed_servers = remove_server_by_urls(existing_config, connection_urls)
 
         if removed_servers:
             await logger.adebug("Removed existing MCP servers with same SSE URL for reinstall: %s", removed_servers)
@@ -746,7 +881,7 @@ async def install_mcp_config(
 async def get_project_composer_url(
     project_id: UUID,
     current_user: CurrentActiveMCPUser,
-):
+) -> ComposerUrlResponse:
     """Get the MCP Composer URL for a specific project.
 
     On failure, this endpoint should return with a 200 status code and an error message in
@@ -754,39 +889,71 @@ async def get_project_composer_url(
     """
     try:
         project = await verify_project_access(project_id, current_user)
+        mcp_composer_service: MCPComposerService = cast(
+            MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE)
+        )
+
         if not should_use_mcp_composer(project):
-            return {
+            streamable_http_url = await get_project_streamable_http_url(project_id)
+            legacy_sse_url = await get_project_sse_url(project_id)
+            # Check if there's a recent error from a failed OAuth attempt
+            last_error = mcp_composer_service.get_last_error(str(project_id))
+
+            # Always return the regular MCP URLs so the UI can fall back to manual installation instructions.
+            response_payload: dict[str, Any] = {
                 "project_id": str(project_id),
                 "uses_composer": False,
-                "error_message": (
-                    "MCP Composer is only available for projects with MCP Composer enabled and OAuth authentication"
-                ),
+                "streamable_http_url": streamable_http_url,
+                "legacy_sse_url": legacy_sse_url,
             }
+            # If there's a recent error, return it even though OAuth is not currently active
+            # This happens when OAuth was attempted but rolled back due to an error
+            if last_error:
+                response_payload["error_message"] = last_error
+            return ComposerUrlResponse(**response_payload)
 
         auth_config = await _get_mcp_composer_auth_config(project)
 
         try:
             await get_or_start_mcp_composer(auth_config, project.name, project_id)
+            composer_streamable_http_url = await get_composer_streamable_http_url(project)
             composer_sse_url = await get_composer_sse_url(project)
-            return {"project_id": str(project_id), "sse_url": composer_sse_url, "uses_composer": True}
+            # Clear any previous error on success
+            mcp_composer_service.clear_last_error(str(project_id))
+            return ComposerUrlResponse(
+                project_id=str(project_id),
+                uses_composer=True,
+                streamable_http_url=composer_streamable_http_url,
+                legacy_sse_url=composer_sse_url,
+            )
         except MCPComposerError as e:
-            return {"project_id": str(project_id), "uses_composer": True, "error_message": e.message}
+            await logger.aerror(
+                "Failed to obtain MCP Composer URL for project %s (%s): %s",
+                project.name,
+                project_id,
+                e.message,
+            )
+            return ComposerUrlResponse(
+                project_id=str(project_id),
+                uses_composer=True,
+                error_message=e.message,
+            )
         except Exception as e:  # noqa: BLE001
             await logger.aerror(f"Unexpected error getting composer URL: {e}")
-            return {
-                "project_id": str(project_id),
-                "uses_composer": True,
-                "error_message": "Failed to start MCP Composer. See logs for details.",
-            }
+            return ComposerUrlResponse(
+                project_id=str(project_id),
+                uses_composer=True,
+                error_message="Failed to start MCP Composer. See logs for details.",
+            )
 
     except Exception as e:  # noqa: BLE001
         msg = f"Error getting composer URL for project {project_id}: {e!s}"
         await logger.aerror(msg)
-        return {
-            "project_id": str(project_id),
-            "uses_composer": True,
-            "error_message": "Failed to get MCP Composer URL. See logs for details.",
-        }
+        return ComposerUrlResponse(
+            project_id=str(project_id),
+            uses_composer=True,
+            error_message="Failed to get MCP Composer URL. See logs for details.",
+        )
 
 
 @router.get("/{project_id}/installed")
@@ -807,8 +974,10 @@ async def check_installed_mcp_servers(
 
         project = await verify_project_access(project_id, current_user)
         if should_use_mcp_composer(project):
+            project_streamable_url = await get_composer_streamable_http_url(project)
             project_sse_url = await get_composer_sse_url(project)
         else:
+            project_streamable_url = await get_project_streamable_http_url(project_id)
             project_sse_url = await get_project_sse_url(project_id)
 
         await logger.adebug(
@@ -833,18 +1002,18 @@ async def check_installed_mcp_servers(
                     try:
                         with config_path.open("r") as f:
                             config_data = json.load(f)
-                            if config_contains_sse_url(config_data, project_sse_url):
-                                await logger.adebug(
-                                    "Found %s config with matching SSE URL: %s", client_name, project_sse_url
-                                )
-                                installed = True
-                            else:
-                                await logger.adebug(
-                                    "%s config exists but no server with SSE URL: %s (available servers: %s)",
-                                    client_name,
-                                    project_sse_url,
-                                    list(config_data.get("mcpServers", {}).keys()),
-                                )
+                        if config_contains_server_url(config_data, [project_streamable_url, project_sse_url]):
+                            await logger.adebug(
+                                "Found %s config with matching URL for project %s", client_name, project.name
+                            )
+                            installed = True
+                        else:
+                            await logger.adebug(
+                                "%s config exists but no server with URL: %s (available servers: %s)",
+                                client_name,
+                                project_sse_url,
+                                list(config_data.get("mcpServers", {}).keys()),
+                            )
                     except json.JSONDecodeError:
                         await logger.awarning("Failed to parse %s config JSON at: %s", client_name, config_path)
                         # available is True but installed remains False due to parse error
@@ -867,14 +1036,34 @@ async def check_installed_mcp_servers(
     return results
 
 
-def config_contains_sse_url(config_data: dict, sse_url: str) -> bool:
-    """Check if any MCP server in the config uses the specified SSE URL."""
+def _normalize_url_list(urls: Sequence[str] | str) -> list[str]:
+    """Ensure URL inputs are always handled as a list of strings."""
+    if isinstance(urls, str):
+        return [urls]
+    try:
+        return [str(url) for url in urls]
+    except TypeError as exc:
+        error_msg = "urls must be a sequence of strings or a single string"
+        raise TypeError(error_msg) from exc
+
+
+def _args_reference_urls(args: Sequence[Any] | None, urls: list[str]) -> bool:
+    """Check whether the given args list references any of the provided URLs."""
+    if not args or not urls:
+        return False
+    return bool({arg for arg in args if isinstance(arg, str)}.intersection(urls))
+
+
+def config_contains_server_url(config_data: dict, urls: Sequence[str] | str) -> bool:
+    """Check if any MCP server in the config uses one of the specified URLs."""
+    normalized_urls = _normalize_url_list(urls)
+    if not normalized_urls:
+        return False
+
     mcp_servers = config_data.get("mcpServers", {})
     for server_name, server_config in mcp_servers.items():
-        args = server_config.get("args", [])
-        # The SSE URL is typically the last argument in mcp-proxy configurations
-        if args and sse_url in args:
-            logger.debug("Found matching SSE URL in server: %s", server_name)
+        if _args_reference_urls(server_config.get("args", []), normalized_urls):
+            logger.debug("Found matching server URL in server: %s", server_name)
             return True
     return False
 
@@ -956,12 +1145,16 @@ async def get_config_path(client: str) -> Path:
     raise ValueError(msg)
 
 
-def remove_server_by_sse_url(config_data: dict, sse_url: str) -> tuple[dict, list[str]]:
-    """Remove any MCP servers that use the specified SSE URL from config data.
+def remove_server_by_urls(config_data: dict, urls: Sequence[str] | str) -> tuple[dict, list[str]]:
+    """Remove any MCP servers that use one of the specified URLs from config data.
 
     Returns:
         tuple: (updated_config, list_of_removed_server_names)
     """
+    normalized_urls = _normalize_url_list(urls)
+    if not normalized_urls:
+        return config_data, []
+
     if "mcpServers" not in config_data:
         return config_data, []
 
@@ -970,8 +1163,7 @@ def remove_server_by_sse_url(config_data: dict, sse_url: str) -> tuple[dict, lis
 
     # Find servers to remove
     for server_name, server_config in config_data["mcpServers"].items():
-        args = server_config.get("args", [])
-        if args and args[-1] == sse_url:
+        if _args_reference_urls(server_config.get("args", []), normalized_urls):
             servers_to_remove.append(server_name)
 
     # Remove the servers
@@ -1013,6 +1205,13 @@ class ProjectMCPServer:
     def __init__(self, project_id: UUID):
         self.project_id = project_id
         self.server = Server(f"langflow-mcp-project-{project_id}")
+        # TODO: implement an environment variable to enable/disable stateless mode
+        self.session_manager = StreamableHTTPSessionManager(self.server, stateless=True)
+        # since we lazily initialize the session manager's lifecycle
+        # via .run(), which can only be called once, otherwise an error is raised,
+        # we use the lock to prevent race conditions on concurrent requests to prevent such an error
+        self._manager_lock = anyio.Lock()
+        self._manager_started = False  # whether or not the session manager is running
 
         # Register handlers that filter by project
         @self.server.list_tools()
@@ -1047,9 +1246,129 @@ class ProjectMCPServer:
                 is_action=True,
             )
 
+    async def ensure_session_manager_running(self) -> None:
+        """Start the project's Streamable HTTP manager if needed."""
+        if self._manager_started:
+            return
+        async with self._manager_lock:
+            if self._manager_started:
+                return
+            try:
+                task_group = get_project_task_group()
+                await task_group.start_task(self._run_session_manager)
+                await logger.adebug("Streamable HTTP manager started for project %s", self.project_id)
+            except Exception as e:
+                await logger.aexception(f"Failed to start session manager for project {self.project_id}: {e}")
+                raise
+
+    async def _run_session_manager(self, *, task_status: TaskStatus[None] = anyio.TASK_STATUS_IGNORED):
+        """Own the lifecycle of the project's Streamable HTTP session manager."""
+        try:
+            async with self.session_manager.run():
+                self._manager_started = True  # set flag before unblocking task (ensures waiting requests proceed)
+                task_status.started()  # unblock
+                await anyio.sleep_forever()
+        except anyio.get_cancelled_exc_class():
+            await logger.adebug(f"Streamable HTTP manager cancelled for project {self.project_id}")
+        except Exception as e:
+            await logger.aexception(f"Error in session manager for project {self.project_id}: {e}")
+            raise
+        finally:
+            self._manager_started = False
+            await logger.adebug(f"Streamable HTTP manager stopped for project {self.project_id}")
+
 
 # Cache of project MCP servers
-project_mcp_servers = {}
+project_mcp_servers: dict[str, ProjectMCPServer] = {}
+
+
+# Due to the lazy initialization of the project MCP servers'
+# streamable-http session managers, we implement a global
+# task group (AnyIO) manager for the session managers.
+# This ensures that each session manager's .run() context manager is
+# entered and exited from the same coroutine, otherwise Asyncio will raise a RuntimeError.
+class ProjectTaskGroup:
+    """Manage the dynamically created MCP project servers' streamable-http session managers.
+
+    Utilizes an AnyIO TaskGroup to manage
+    the lifecycle of the streamable-http session managers.
+    This ensures that each session manager's .run()
+    context manager is entered and exited from the same coroutine,
+    otherwise Asyncio will raise a RuntimeError.
+    """
+
+    def __init__(self):
+        self._started = False
+        self._start_stop_lock = anyio.Lock()
+        self._task_group: TaskGroup | None = None
+        self._tg_task: asyncio.Task | None = None
+        self._tg_ready = anyio.Event()
+
+    async def _start_tg(self) -> None:
+        """Background task that owns the task group lifecycle.
+
+        This ensures __aenter__ and __aexit__ happen in the same task.
+        """
+        async with anyio.create_task_group() as tg:
+            self._task_group = tg
+            self._tg_ready.set()
+            await anyio.sleep_forever()
+
+    async def start(self) -> None:
+        """Create the project task group."""
+        async with self._start_stop_lock:
+            if self._started:
+                return
+            self._tg_ready = anyio.Event()
+            self._tg_task = asyncio.create_task(self._start_tg())
+            await self._tg_ready.wait()
+            self._started = True
+
+    async def stop(self) -> None:
+        """Close the shared project task group and signal all servers to shut down."""
+        async with self._start_stop_lock:
+            if not self._started:
+                return
+            try:  # https://anyio.readthedocs.io/en/stable/cancellation.html, https://docs.python.org/3/library/asyncio-task.html#asyncio.Task.cancel
+                self._task_group.cancel_scope.cancel()  # type: ignore[union-attr]
+                await self._tg_task  # type: ignore[misc]
+            except Exception as e:  # noqa: BLE001
+                await logger.aexception(f"Failed to stop project task group: {e}")
+            finally:
+                self._cleanup()
+                await logger.adebug("Project MCP task group stopped")
+
+    async def start_task(self, func: Callable[..., Awaitable[Any]], *args) -> Any:
+        if not self._started or self._task_group is None:
+            msg = "MCP project task group not initialized. Call start_project_task_group() first."
+            raise RuntimeError(msg)
+        return await self._task_group.start(func, *args)
+
+    def _cleanup(self) -> None:
+        """Cleanup the project task group."""
+        self._task_group = None
+        self._tg_task = None
+        self._tg_ready = None
+        self._started = False
+        project_mcp_servers.clear()
+
+
+_project_task_group = ProjectTaskGroup()
+
+
+async def start_project_task_group() -> None:
+    """Initialize the shared project task group."""
+    await _project_task_group.start()
+
+
+def get_project_task_group() -> ProjectTaskGroup:
+    """Get the project task group manager."""
+    return _project_task_group
+
+
+async def stop_project_task_group() -> None:
+    """Close the shared project task group."""
+    await _project_task_group.stop()
 
 
 def get_project_mcp_server(project_id: UUID | None) -> ProjectMCPServer:
@@ -1062,6 +1381,11 @@ def get_project_mcp_server(project_id: UUID | None) -> ProjectMCPServer:
     if project_id_str not in project_mcp_servers:
         project_mcp_servers[project_id_str] = ProjectMCPServer(project_id)
     return project_mcp_servers[project_id_str]
+
+
+# Note: Shutdown is handled by stop_project_task_group() in main.py lifespan
+# This handler was removed because ProjectMCPServer doesn't have stop_session_manager()
+# Session managers are managed centrally by ProjectTaskGroup
 
 
 async def register_project_with_composer(project: Folder):
@@ -1080,13 +1404,15 @@ async def register_project_with_composer(project: Folder):
             error_msg = "Project must have an ID to register with MCP Composer"
             raise ValueError(error_msg)
 
-        sse_url = await get_project_sse_url(project.id)
+        streamable_http_url = await get_project_streamable_http_url(project.id)
+        legacy_sse_url = await get_project_sse_url(project.id)
         auth_config = await _get_mcp_composer_auth_config(project)
 
         error_message = await mcp_composer_service.start_project_composer(
             project_id=str(project.id),
-            sse_url=sse_url,
+            streamable_http_url=streamable_http_url,
             auth_config=auth_config,
+            legacy_sse_url=legacy_sse_url,
         )
         if error_message is not None:
             raise RuntimeError(error_message)
@@ -1165,8 +1491,6 @@ async def init_mcp_servers():
 
             # Auto-configure starter projects with MCP server settings if enabled
             await auto_configure_starter_projects_mcp(session)
-            # Commit any auth settings updates
-            await session.commit()
 
     except Exception as e:  # noqa: BLE001
         msg = f"Failed to initialize MCP servers: {e}"
@@ -1211,9 +1535,15 @@ async def get_or_start_mcp_composer(auth_config: dict, project_name: str, projec
         error_msg = "Langflow host and port must be set in settings to register project with MCP Composer"
         raise ValueError(error_msg)
 
-    sse_url = await get_project_sse_url(project_id)
+    streamable_http_url = await get_project_streamable_http_url(project_id)
+    legacy_sse_url = await get_project_sse_url(project_id)
     if not auth_config:
         error_msg = f"Auth config is required to start MCP Composer for project {project_name}"
         raise MCPComposerConfigError(error_msg, str(project_id))
 
-    await mcp_composer_service.start_project_composer(str(project_id), sse_url, auth_config)
+    await mcp_composer_service.start_project_composer(
+        str(project_id),
+        streamable_http_url,
+        auth_config,
+        legacy_sse_url=legacy_sse_url,
+    )

@@ -18,7 +18,7 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -85,7 +85,7 @@ jobs:
         env:
           BASE_URL: /langflow-drafts/${{ steps.extract_branch.outputs.draft_directory }}
           FORCE_COLOR: 0 # Disable color output
-          SEGMENT_PUBLIC_WRITE_KEY: ${{ vars.DOCS_DRAFT_SEGMENT_PUBLIC_WRITE_KEY }}
+          SEGMENT_PUBLIC_WRITE_KEY: ${{ vars.DOCS_DRAFT_IBM_SEGMENT_PUBLIC_WRITE_KEY }}
 
       - name: Check Build Result
         id: buildLogFail

@@ -6,6 +6,9 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { generateRandomFilename } from "../../utils/generate-filename";
 
+// Run tests in this file serially to avoid database conflicts with shared file state
+test.describe.configure({ mode: "serial" });
+
 test(
   "should be able to upload a file",
   {
@@ -35,12 +38,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("file");
 
-    await page.waitForSelector('[data-testid="dataRead File"]', {
+    await page.waitForSelector('[data-testid="files_and_knowledgeRead File"]', {
       timeout: 10000,
     });
 
     await page
-      .getByTestId("dataRead File")
+      .getByTestId("files_and_knowledgeRead File")
       .first()
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
@@ -191,32 +194,39 @@ test(
 
       await page.getByTestId(`context-menu-button-${jsonFileName}`).click();
       await page.getByTestId("btn-rename-file").click();
+      await page.waitForTimeout(1000);
+
       await page
         .getByTestId(`rename-input-${jsonFileName}`)
         .fill(renamedJsonFile);
-      await page.getByTestId(`rename-input-${jsonFileName}`).blur();
+      await page.waitForTimeout(1000);
+      await page.getByTestId(`rename-input-${jsonFileName}`).press("Enter");
       await expect(
         page.getByText(`${renamedJsonFile}.json`).first(),
       ).toBeVisible({
-        timeout: 1000,
+        timeout: 5000,
       });
       await expect(page.getByText(`${jsonFileName}.json`).first()).toBeHidden({
-        timeout: 1000,
+        timeout: 5000,
       });
 
       await page.getByTestId(`context-menu-button-${sourceFileName}`).click();
       await page.getByTestId("btn-rename-file").click();
+      await page.waitForTimeout(1000);
+
       await page
         .getByTestId(`rename-input-${sourceFileName}`)
         .fill(renamedTxtFile);
-      await page.getByTestId(`rename-input-${sourceFileName}`).blur();
+      await page.waitForTimeout(1000);
+
+      await page.getByTestId(`rename-input-${sourceFileName}`).press("Enter");
       await expect(page.getByText(`${renamedTxtFile}.txt`).first()).toBeVisible(
         {
-          timeout: 1000,
+          timeout: 5000,
         },
       );
       await expect(page.getByText(`${sourceFileName}.txt`).first()).toBeHidden({
-        timeout: 1000,
+        timeout: 5000,
       });
 
       await page.getByTestId(`checkbox-${renamedTxtFile}`).last().click();
@@ -406,12 +416,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("file");
 
-    await page.waitForSelector('[data-testid="dataRead File"]', {
+    await page.waitForSelector('[data-testid="files_and_knowledgeRead File"]', {
       timeout: 10000,
     });
 
     await page
-      .getByTestId("dataRead File")
+      .getByTestId("files_and_knowledgeRead File")
       .first()
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
@@ -717,12 +727,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("file");
 
-    await page.waitForSelector('[data-testid="dataRead File"]', {
+    await page.waitForSelector('[data-testid="files_and_knowledgeRead File"]', {
       timeout: 10000,
     });
 
     await page
-      .getByTestId("dataRead File")
+      .getByTestId("files_and_knowledgeRead File")
       .first()
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();

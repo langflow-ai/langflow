@@ -23,10 +23,6 @@ test(
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
-    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
-      timeout: 2000,
-    });
-
     await adjustScreenView(page);
 
     await page.getByTestId("sidebar-search-input").click();
@@ -65,7 +61,7 @@ test(
     await page.mouse.up();
 
     await page
-      .getByTestId("helpersMessage History")
+      .getByTestId("models_and_agentsMessage History")
       .first()
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 200, y: 600 },
