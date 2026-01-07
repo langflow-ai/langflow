@@ -3,6 +3,7 @@ import { StickToBottom } from "use-stick-to-bottom";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import { TextEffectPerChar } from "@/components/ui/textAnimation";
 import useFlowStore from "@/stores/flowStore";
+import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { ChatMessageType } from "@/types/chat";
 import { cn } from "@/utils/utils";
 import ChatMessage from "./components/chat-message";
@@ -39,6 +40,7 @@ export const Messages = ({
   const chatHistory = useChatHistory(visibleSession);
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const duration = useThinkingDurationStore((state) => state.duration);
+  const isPlaygroundOpen = usePlaygroundStore((state) => state.isOpen);
 
   // Track thinking duration at this level so it persists even when ThinkingMessage unmounts
   useTrackThinkingDuration(isBuilding);
@@ -68,7 +70,7 @@ export const Messages = ({
               />
             );
           })}
-          {playgroundPage && (
+          {isPlaygroundOpen && (
             <div
               ref={bottomRef}
               className="pointer-events-none absolute bottom-0 left-0 right-0 h-0 w-0 overflow-hidden"
