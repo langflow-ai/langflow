@@ -177,4 +177,3 @@ def compute_dict_hash(graph_data: dict | None):
     graph_data = normalized_flow_data(graph_data)
     cleaned_graph_json = orjson_dumps(graph_data, sort_keys=True)
     return hashlib.sha256(cleaned_graph_json.encode("utf-8")).hexdigest()
-
