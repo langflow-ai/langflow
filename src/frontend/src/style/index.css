@@ -274,6 +274,7 @@
     --jse-panel-color-readonly: #737373;
     --jse-panel-border: 1px solid #3c3c3c;
     --jse-panel-button-color-highlight: #e5e5e5;
+
     --jse-panel-button-background-highlight: #464646;
     --jse-navigation-bar-background: #656565;
     --jse-navigation-bar-background-highlight: #7e7e7e;
@@ -460,5 +461,18 @@
     --accent-amber-foreground: 45.9 96.7% 64.5%;
     --red-foreground: 0 72.2% 50.6%;
     --indigo-foreground: 234.5 89.5% 73.9%;
+  }
+}
+
+@layer components {
+  /* Chat avatar visibility: hidden below 45rem, flex above */
+  .chat-avatar {
+    @apply hidden;
+  }
+
+  @media (min-width: 45rem) {
+    .chat-avatar {
+      display: flex;
+    }
   }
 }

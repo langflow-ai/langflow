@@ -205,7 +205,7 @@ export const BotMessage = memo(
                   chatMessage !== "" ||
                   isTyping) && (
                   <div
-                    className="relative hidden h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded bg-white text-2xl md:flex"
+                    className="chat-avatar relative h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded bg-white text-2xl"
                     style={
                       chat.properties?.background_color
                         ? { backgroundColor: chat.properties.background_color }
