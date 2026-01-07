@@ -141,11 +141,14 @@ const DisclosureTrigger = memo(function DisclosureTrigger({
       {React.Children.map(children, (child) => {
         if (!React.isValidElement(child)) return child;
 
-        return React.cloneElement(child, {
+        const childElement = child as React.ReactElement<{
+          className?: string;
+        }>;
+        return React.cloneElement(childElement, {
           ...childProps,
-          className: cn(className, child.props.className),
-          ...child.props,
-        });
+          className: cn(className, childElement.props.className),
+          ...childElement.props,
+        } as React.Attributes);
       })}
     </>
   );

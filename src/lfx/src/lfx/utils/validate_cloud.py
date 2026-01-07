@@ -16,7 +16,8 @@ def is_astra_cloud_environment() -> bool:
     Returns:
         bool: True if running in an Astra cloud environment, False otherwise.
     """
-    return os.getenv("ASTRA_CLOUD_DISABLE_COMPONENT", "false").lower().strip() == "true"
+    disable_component = os.getenv("ASTRA_CLOUD_DISABLE_COMPONENT", "false")
+    return disable_component.lower().strip() == "true"
 
 
 def raise_error_if_astra_cloud_disable_component(msg: str):

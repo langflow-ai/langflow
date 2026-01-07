@@ -98,11 +98,15 @@ class LanguageModelComponent(LCModelComponent):
             api_key=self.api_key,
             temperature=self.temperature,
             stream=self.stream,
+            watsonx_url=getattr(self, "base_url_ibm_watsonx", None),
+            watsonx_project_id=getattr(self, "project_id", None),
+            ollama_base_url=getattr(self, "ollama_base_url", None),
         )
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         """Dynamically update build config with user-filtered model options."""
-        return update_model_options_in_build_config(
+        # Update model options
+        build_config = update_model_options_in_build_config(
             component=self,
             build_config=build_config,
             cache_key_prefix="language_model_options",
@@ -110,3 +114,21 @@ class LanguageModelComponent(LCModelComponent):
             field_name=field_name,
             field_value=field_value,
         )
+
+        # Show/hide provider-specific fields based on selected model
+        if field_name == "model" and isinstance(field_value, list) and len(field_value) > 0:
+            selected_model = field_value[0]
+            provider = selected_model.get("provider", "")
+
+            # Show/hide watsonx fields
+            is_watsonx = provider == "IBM WatsonX"
+            build_config["base_url_ibm_watsonx"]["show"] = is_watsonx
+            build_config["project_id"]["show"] = is_watsonx
+            build_config["base_url_ibm_watsonx"]["required"] = is_watsonx
+            build_config["project_id"]["required"] = is_watsonx
+
+            # Show/hide Ollama fields
+            is_ollama = provider == "Ollama"
+            build_config["ollama_base_url"]["show"] = is_ollama
+
+        return build_config
