@@ -31,7 +31,6 @@ withEventDeliveryModes(
 
     await initialGPTsetup(page, {
       skipAdjustScreenView: true,
-      skipAddNewApiKeys: true,
       skipSelectGptModel: true,
     });
     // TODO: Uncomment this when we have a way to test Anthropic
