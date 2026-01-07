@@ -23,12 +23,9 @@ For a prebuilt example, use the **Simple Agent** template or the [Langflow quick
 
 2. <PartialGlobalModelProviders />
 
-    If a provider doesn't have any language models available, they aren't listed in the **Agent** component.
-
 3. Add an **Agent** component to your flow.
 
 4. Select the model that you want to use from the **Language Model** dropdown.
-The model must be configured globally in the **Models** pane.
 If your preferred model isn't listed, make sure it's enabled in the **Models** configuration.
 For more information, see [Agent component parameters](#agent-component-parameters).
 
@@ -99,7 +96,7 @@ The **Agent** component displays all language models that you've configured glob
 
 To access other providers or models, you can do either of the following:
 
-* Set **Model Provider** to **Connect other models**, and then connect any [language model component](/components-models).
+* Set **Model Provider** to **Connect other models** in the **Language Model** dropdown, and then connect any [language model component](/components-models). This option allows you to connect a custom language model component to use models that aren't available in the global model providers list.
 * Configure additional providers in the **Models** pane, and then select the model from the **Language Model** dropdown.
 
 If you need to generate embeddings in your flow, use an [embedding model component](/components-embedding-models).

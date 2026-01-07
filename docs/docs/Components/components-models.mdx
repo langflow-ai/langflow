@@ -27,7 +27,6 @@ The following example uses a language model component in a chatbot flow similar 
 
 1. <PartialGlobalModelProviders />
 
-    If a provider doesn't have any language models available, they won't be listed in the **Language Model** component.
 
     :::tip My preferred provider or model isn't listed
     If you want to use a provider or model that isn't built-in to the **Language Model** core component, you can replace this component with any [additional language model](#additional-language-models).
@@ -36,6 +35,12 @@ The following example uses a language model component in a chatbot flow similar 
     :::
 
 2. Add the **Language Model** core component to your flow, and then select your configured model from the **Language Model** dropdown.
+
+    The **Language Model** dropdown includes the following options at the bottom:
+
+    * **Connect other models**: Connect a custom language model component to use models that aren't available in the global model providers list.
+    * **Manage Model Providers** <Icon name="Settings" aria-hidden="true" />: Opens the **Model providers** pane where you can configure API keys and enable or disable models.
+    * **Refresh List**: Refreshes the current list of available models.
 
 3. In the [component's header menu](/concepts-components#component-menus), click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**, enable the **System Message** parameter, and then click **Close**.
 
@@ -125,10 +130,9 @@ The output port changes to a `LanguageModel` port.
 This is required to connect the language model component to the **Agent** component.
 For more information, see [Language Model output types](#language-model-output-types).
 
-4. Add an **Agent** component to the flow, and then set **Model Provider** to **Connect other models**.
+4. Add an **Agent** component to the flow, and then set **Model Provider** to **Connect other models** in the **Language Model** dropdown.
 
     The **Model Provider** field changes to a **Language Model** (`LanguageModel`) input.
-
 5. Connect the language model component's output to the **Agent** component's **Language Model** input.
 The **Agent** component now inherits the language model settings from the connected language model component instead of using any of the built-in models.
 
