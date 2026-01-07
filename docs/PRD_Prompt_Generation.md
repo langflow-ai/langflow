@@ -178,38 +178,6 @@ POST /agentic/prompt
   - `field_type`: Type of the field
 - **Usage**: Passed as `FIELD_VALUE` global variable
 
-### Prompt Engineering System Prompt
-
-The Language Model component uses this system prompt (from existing implementation):
-
-```
-You are an expert Prompt Generation Assistant for AI workflow automation.
-
-CORE CAPABILITIES:
-• Analyze workflow structure to understand context and intent
-• Generate field-appropriate content (prompts, messages, parameters)
-• Apply prompt engineering best practices automatically
-
-CONTEXT ALIGNMENT:
-• The flow name indicates the workflow's primary purpose—align generated content accordingly
-• The flow description provides additional context about expected behavior and use case
-• Generated content must directly support the flow's stated objective
-• Use terminology and tone consistent with the flow's domain
-
-GENERATION RULES:
-• Output ONLY the generated content—no explanations or wrappers
-• Match content format to field type (system prompt, user input, template, etc.)
-• Ensure coherence with the flow's name, description, and connected components
-• Be specific and actionable, never generic
-• Reference the flow's purpose when crafting prompts for ambiguous fields
-
-PRIORITIES:
-1. User's custom instructions (highest)
-2. Flow name and description alignment
-3. Field context and type requirements
-4. Component relationship coherence
-5. Best practices defaults (lowest)
-```
 
 ### Global Variables Pattern
 
@@ -254,7 +222,7 @@ global_vars = {
 6. User reviews diff (show changes)
 7. User accepts or rejects
 
-#### Scenario 3: Keyboard Shortcut Power User
+#### Scenario 3: Keyboard Shortcut Power User (Do we need this in phase 1)
 
 1. User focused in text field
 2. Presses `Cmd/Ctrl + Shift + G` (Generate)
@@ -272,45 +240,10 @@ global_vars = {
 - **Hover State**: Tooltip "Generate with AI (⌘⇧G)"
 - **Disabled State**: When API key not configured
 
-#### Dialog Layout
-```
-┌─────────────────────────────────────────────────────┐
-│  Generate Prompt with AI                      [✕]  │
-├─────────────────────────────────────────────────────┤
-│                                                     │
-│  Custom Instructions (optional)                     │
-│  ┌─────────────────────────────────────────────┐  │
-│  │ E.g., "Make it concise" or "Add examples"  │  │
-│  └─────────────────────────────────────────────┘  │
-│                                                     │
-│  Context: Flow "Customer Support Bot"               │
-│  Field: System Message                              │
-│                                                     │
-│            [Cancel]  [Generate →]                   │
-└─────────────────────────────────────────────────────┘
-```
-
-#### Result Preview
-```
-┌─────────────────────────────────────────────────────┐
-│  Generated Prompt                             [✕]  │
-├─────────────────────────────────────────────────────┤
-│  ┌─────────────────────────────────────────────┐  │
-│  │ You are a helpful customer support         │  │
-│  │ assistant for [Company Name]. Your role    │  │
-│  │ is to:                                      │  │
-│  │ - Answer questions clearly and politely    │  │
-│  │ - Escalate complex issues to human agents  │  │
-│  │ - Maintain a professional tone              │  │
-│  └─────────────────────────────────────────────┘  │
-│                                                     │
-│  [← Back]  [Refine]  [Copy]  [Accept]             │
-└─────────────────────────────────────────────────────┘
-```
 
 ## Implementation Plan
 
-### Phase 1: Backend Enhancement (Current → Week 1)
+### Phase 1: Backend Enhancement
 
 #### Tasks
 - [x] API endpoint `/agentic/prompt` (DONE)
@@ -321,7 +254,7 @@ global_vars = {
 - [ ] Rate limiting implementation
 - [ ] Telemetry integration
 
-### Phase 2: Frontend Integration (Week 2-3)
+### Phase 2: Frontend Integration 
 
 #### Tasks
 - [ ] Generate button component
@@ -332,7 +265,7 @@ global_vars = {
 - [ ] Toast notifications
 - [ ] User preferences storage
 
-### Phase 3: Enhancement (Week 4)
+### Phase 3: Enhancement 
 
 #### Tasks
 - [ ] Iterative refinement flow
@@ -342,7 +275,7 @@ global_vars = {
 - [ ] A/B testing different system prompts
 - [ ] User feedback collection
 
-### Phase 4: Optimization (Ongoing)
+### Maintenance Phase: Optimization 
 
 #### Tasks
 - [ ] Token optimization
@@ -351,51 +284,6 @@ global_vars = {
 - [ ] Alternative LLM provider support
 - [ ] Quality metrics dashboard
 
-## Testing Strategy
-
-### Unit Tests
-
-```python
-# Test context gathering
-def test_gather_flow_context():
-    context = await get_flow_context(flow_id, user_id)
-    assert "flow_name" in context
-    assert "flow_description" in context
-
-# Test API endpoint
-def test_prompt_generation_api():
-    response = await client.post("/agentic/prompt", json={
-        "flow_id": "test-flow",
-        "input_value": "Make it friendly"
-    })
-    assert response.status_code == 200
-    assert "text_output" in response.json()
-```
-
-### Integration Tests
-
-```python
-# Test end-to-end flow execution
-async def test_prompt_generation_flow():
-    result = await run_prompt_flow(
-        flow_id="test-flow",
-        component_id="ChatInput-123",
-        field_name="input_value",
-        input_value="Custom instructions"
-    )
-    assert result["text_output"]["message"]["text"]
-    assert len(result["text_output"]["message"]["text"]) > 10
-```
-
-### User Acceptance Tests
-
-| Test Case | Expected Result |
-|-----------|----------------|
-| Generate for empty System Message field | Produces role-appropriate system prompt |
-| Generate with custom instructions | Incorporates instructions in output |
-| Generate for flow named "Data Analyzer" | Prompt references data analysis context |
-| Enhance existing prompt | Preserves core intent, improves clarity |
-| Generate without API key | Shows clear error with setup instructions |
 
 ## Success Metrics
 
@@ -419,24 +307,6 @@ async def test_prompt_generation_flow():
 - **Measure**: In-app thumbs up/down on results
 - **Timeline**: Monthly aggregation
 
-## Cost Analysis
-
-### Per-Request Cost Breakdown
-
-**Assumptions**:
-- Model: GPT-4o-mini
-- Input tokens: ~500 (context + instructions)
-- Output tokens: ~200 (generated prompt)
-- Pricing: $0.15/1M input, $0.60/1M output
-
-**Cost per generation**: $0.00019
-
-**Monthly cost (1000 users, 10 gens/user)**: ~$2
-
-### Optimization Opportunities
-1. Cache flow context for 5 minutes (reduces input tokens)
-2. Use GPT-3.5-turbo for simple cases (50% cost reduction)
-3. Implement client-side templates for common patterns (zero cost)
 
 ## Risk Assessment
 
@@ -468,15 +338,14 @@ async def test_prompt_generation_flow():
 ## Dependencies
 
 ### Internal
-- ✅ LFX run_flow engine
-- ✅ Global variables service
-- ✅ User authentication system
-- ✅ MCP server tools (visualize_flow_graph, get_component_field_value)
+- LFX run_flow engine
+- Global variables service
+- User authentication system
+- MCP server tools (visualize_flow_graph, get_component_field_value)
 
 ### External
-- ✅ OpenAI API
-- 🚧 FastMCP framework
-- 🚧 Frontend UI framework (React)
+- OpenAI API
+- FastMCP framework
 
 ### Optional
 - Future: Alternative LLM providers (Anthropic, Groq, local models)
@@ -487,32 +356,53 @@ async def test_prompt_generation_flow():
 
 The Prompt Generation feature is complete when:
 
-1. ✅ API endpoint `/agentic/prompt` reliably generates prompts
-2. ✅ Flow context (name, description, structure) is incorporated
-3. ✅ Custom user instructions are honored
-4. ✅ Existing field values can be enhanced
-5. 🚧 UI integration allows one-click generation from any text field
-6. 🚧 Error handling covers all edge cases gracefully
-7. 🚧 Response time is <5 seconds for 95% of requests
-8. 🚧 Documentation for users and developers is complete
-9. 🚧 70%+ acceptance rate achieved in user testing
-10. 🚧 Analytics tracking is in place
+1. API endpoint `/agentic/prompt` reliably generates prompts
+2. Flow context (name, description, structure) is incorporated
+3. Custom user instructions are honored
+4. Existing field values can be enhanced
+5. UI integration allows one-click generation from any text field
+6. Error handling covers all edge cases gracefully
+7. Response time is <5 seconds for 95% of requests
+8. Documentation for users and developers is complete
+9. 70%+ acceptance rate achieved in user testing
+10. Analytics tracking is in place
 
-## References
 
-### Code
-- [API Router](../src/backend/base/langflow/agentic/api/router.py)
-- [PromptGeneration Flow](../src/backend/base/langflow/agentic/flows/PromptGeneration.json)
-- [MCP Server Tools](../src/backend/base/langflow/agentic/mcp/server.py)
+## Monetization Strategy
 
-### Related PRDs
-- [Langflow Assistant Overview](./PRD_Langflow_Assistant.md)
-- [Next Component Suggestion](./PRD_Next_Component_Suggestion.md)
+Langflow Prompt Generation will adopt a monetization model inspired by leading developer tools (e.g., Cursor, Gemini, ChatGPT), balancing free access with paid options that unlock premium capabilities.
 
----
+### Model Gateway Architecture
 
-**Document Version**: 1.0  
-**Last Updated**: January 2026  
-**Status**: In Implementation  
-**Owner**: Langflow Engineering Team
+Prompt Generation will be powered by a "Model Gateway" abstraction, allowing users to access a variety of LLMs (OpenAI GPT-4/3.5, Gemini, Claude, open-source, etc.) via unified APIs. Model routing and authentication is managed centrally, enabling dynamic access policies by user tier.
 
+### Free Tier
+
+- **Available Models**: Access to a limited selection of high-quality open-source models (e.g., Llama, Mistral) and/or a finite number of OpenAI or Anthropic calls via community/shared API keys (subject to rate limits).
+- **Features**:
+    - Prompt Generation from any text field
+    - Limited usage: e.g., X prompts per day or month
+    - Basic support and documentation
+- **Upgrade Prompt**: Users encounter UI cues to upgrade when limits are reached or when requesting advanced models.
+
+### Paid Tiers (Pro/Team/Enterprise)
+
+- **Available Models**: Full access to commercial models (OpenAI GPT-4 Turbo, Anthropic Claude 3, Gemini Ultra, etc.) and the latest open-source models at higher rate limits.
+- **Features**:
+    - Higher and/or unlimited usage quotas
+    - API key bring-your-own (BYO) for custom throughput
+    - Priority in job queuing and faster inference
+    - Custom prompt templates and advanced analytics
+    - Early access to new prompt-related features and models
+- **Management Portal**: Subscription management for individuals or teams, including usage dashboards, billing, and model selection.
+
+### Example Usage Flow
+
+1. **Free User**: Selects "Generate Prompt" - uses default LLM (open source or pooled API key), limited requests/day. Exceeds free quota → prompted to upgrade.
+2. **Paid User**: Assigns their own API key(s) or accesses premium models via Model Gateway with higher monthly caps and priority processing.
+
+### Precedent
+
+- Follows proven SaaS developer tool models (like Cursor, Gemini, and ChatGPT Plus) to make core features accessible to all, while offering professionals and power users expanded capabilities and reliability for a subscription fee.
+
+This strategy ensures accessibility and sustainability, incentivizing broader adoption while funding ongoing model access, improvements, and enterprise-level support.
