@@ -9,11 +9,15 @@ export const selectGptModel = async (page: Page) => {
 
     const gptOMiniOption = await page.getByTestId("gpt-4o-mini-option").count();
 
+    await page.waitForTimeout(500);
+
     if (gptOMiniOption === 0) {
       await page.getByTestId("manage-model-providers").click();
       await page.waitForSelector("text=Model providers", { timeout: 30000 });
 
       await page.getByTestId("provider-item-OpenAI").click();
+    await page.waitForTimeout(500);
+
 
       const checkExistingKey = await page.getByTestId("input-end-icon").count();
       if (checkExistingKey === 0) {
@@ -26,6 +30,8 @@ export const selectGptModel = async (page: Page) => {
         await page.getByTestId("llm-toggle-gpt-4o-mini").click();
         await page.getByText("Close").last().click();
       } else {
+    await page.waitForTimeout(500);
+
         const isChecked = await page
           .getByTestId("llm-toggle-gpt-4o-mini")
           .isChecked();
@@ -36,7 +42,7 @@ export const selectGptModel = async (page: Page) => {
         await page.getByTestId("model_model").nth(i).click();
       }
     }
-
-    await page.getByTestId("gpt-4o-mini-option").click();
+    await page.waitForTimeout(500);
+    await page.getByTestId("gpt-4o-mini-option").click(); 
   }
 };
