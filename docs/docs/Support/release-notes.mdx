@@ -47,6 +47,21 @@ To avoid the impact of potential breaking changes and test new versions, the Lan
 
     If you made changes to your flows in the isolated installation, you might want to export and import those flows back to your upgraded primary installation so you don't have to repeat the component upgrade process.
 
+## 1.8.x
+
+Highlights of this release include the following changes.
+For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases).
+
+### New features and enhancements
+
+- Global model provider configuration
+
+    Model providers for language models, embedding models, and agents are now configured globally in the **Model providers** pane, instead of within individual components.
+    Enable models once and then use them in any component across your flows.
+    For more information, see [Language Model component](/components-models).
+
+    If you need to use per-component API keys for different model providers in the same flow, use [bundle components](/components-bundle-components).
+
 ## 1.7.x
 
 :::warning Version yanked
