@@ -19,15 +19,19 @@ jobs:
       CODEFLASH_API_KEY: ${{ secrets.CODEFLASH_API_KEY }}
       CODEFLASH_PR_NUMBER: ${{ github.event.number }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: "Setup Environment"
-        uses: ./.github/actions/setup-uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: ${{ matrix.python-version }}
+          prune-cache: false
       - run: uv sync
       - name: Run Codeflash Optimizer
         working-directory: ./src/backend/base
         continue-on-error: true
         run: uv run codeflash
-      - name: Minimize uv cache
-        run: uv cache prune --ci
+

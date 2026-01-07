@@ -1,5 +1,4 @@
-# noqa: A005
-from langflow.inputs import (
+from lfx.io import (
     BoolInput,
     CodeInput,
     DataFrameInput,
@@ -12,6 +11,7 @@ from langflow.inputs import (
     HandleInput,
     IntInput,
     LinkInput,
+    McpInput,
     MessageInput,
     MessageTextInput,
     MultilineInput,
@@ -19,13 +19,15 @@ from langflow.inputs import (
     MultiselectInput,
     NestedDictInput,
     PromptInput,
+    QueryInput,
     SecretStrInput,
     SliderInput,
     StrInput,
     TabInput,
     TableInput,
+    ToolsInput,
 )
-from langflow.template import Output
+from lfx.template import Output
 
 __all__ = [
     "BoolInput",
@@ -42,6 +44,7 @@ __all__ = [
     "IntInput",
     "LinkInput",
     "LinkInput",
+    "McpInput",
     "MessageInput",
     "MessageTextInput",
     "MultilineInput",
@@ -50,9 +53,11 @@ __all__ = [
     "NestedDictInput",
     "Output",
     "PromptInput",
+    "QueryInput",
     "SecretStrInput",
     "SliderInput",
     "StrInput",
     "TabInput",
     "TableInput",
+    "ToolsInput",
 ]

@@ -1,0 +1,414 @@
+name: Docker Nightly Build and Push
+run-name: Docker Nightly Build @${{ inputs.release_type }} by @${{ github.actor }}
+
+on:
+  workflow_call:
+    inputs:
+      release_type:
+        required: true
+        type: string
+        description: "Nightly release type. One of 'nightly-main', 'nightly-base', 'nightly-main-all'."
+      ref:
+        required: true
+        type: string
+        description: "Ref to check out (branch, tag, or commit). This is required -- it specifies where the source code for the release is located."
+      push_to_registry:
+        required: false
+        type: boolean
+        default: true
+        description: "Whether to push images to registries. Set to false for testing builds without publishing."
+
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: "Nightly release type. One of 'nightly-main', 'nightly-base', 'nightly-main-all'."
+        required: true
+        type: choice
+        options:
+          - nightly-main
+          - nightly-base
+          - nightly-main-all
+      ref:
+        required: true
+        type: string
+        description: "Ref to check out (branch, tag, or commit). This is required -- it specifies where the source code for the release is located. Note that if running via Github Actions, this tag (formatted as, e.g., v1.5.1.dev36) must be manually created and pushed to a branch prior to running the workflow."
+      push_to_registry:
+        description: "Whether to push images to registries. Set to false for testing builds without publishing."
+        required: false
+        type: boolean
+        default: false
+
+env:
+  PYTHON_VERSION: "3.13"
+
+jobs:
+  build-nightly-base:
+    name: Build Nightly Base Package
+    if: ${{ inputs.release_type == 'nightly-base' }}
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: [Langflow-runner]
+          - arch: arm64
+            runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
+    runs-on: ${{ matrix.runner }}
+    steps:
+
+      - name: Check out the code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Setup Environment
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.13"
+          prune-cache: false
+
+      - name: Get version for tagging
+        id: version
+        run: |
+          echo "Extracting base version from pyproject.toml"
+          version=$(uv tree 2>/dev/null | grep '^langflow-base' | cut -d' ' -f2 | sed 's/^v//')
+
+
+          # Verify nightly tag format
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.dev[0-9]+$ ]]; then
+            echo "Base version format is incorrect. Must be in the format (e.g.) v1.5.1.dev36"
+            exit 1
+          fi
+
+          echo "Using version: $version"
+          echo version=$version >> $GITHUB_OUTPUT
+
+      - name: Set nightly tags
+        id: tags
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          echo "docker_tags=langflowai/langflow-nightly:base-${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
+          echo "ghcr_tags=ghcr.io/langflow-ai/langflow-nightly:base-${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
+
+      - name: Docker cleanup
+        run: |
+          docker system prune -af --volumes || true
+          docker buildx prune -af || true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.TEMP_GHCR_TOKEN}}
+
+      - name: Build and push to Docker Hub
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: ${{ inputs.push_to_registry }}
+          file: ./docker/build_and_push_base.Dockerfile
+          tags: ${{ steps.tags.outputs.docker_tags }}
+          platforms: linux/${{ matrix.arch }}
+          provenance: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push to GitHub Container Registry
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: ${{ inputs.push_to_registry }}
+          file: ./docker/build_and_push_base.Dockerfile
+          tags: ${{ steps.tags.outputs.ghcr_tags }}
+          platforms: linux/${{ matrix.arch }}
+          provenance: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-nightly-main:
+    name: Build Nightly Main Package
+    if: ${{ inputs.release_type == 'nightly-main' }}
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: [Langflow-runner]
+          - arch: arm64
+            runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
+    runs-on: ${{ matrix.runner }}
+    steps:
+
+      - name: Check out the code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Setup Environment
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.13"
+          prune-cache: false
+
+      - name: Get version for tagging
+        id: version
+        run: |
+          echo "Extracting main version from pyproject.toml"
+          version=$(uv tree 2>/dev/null | grep '^langflow' | grep -v '^langflow-base' | cut -d' ' -f2 | sed 's/^v//')
+
+          # Verify nightly tag format
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.dev[0-9]+$ ]]; then
+            echo "Main version format is incorrect. Must be in the format (e.g.) v1.5.1.dev36"
+            exit 1
+          fi
+
+          echo "Using version: $version"
+          echo version=$version >> $GITHUB_OUTPUT
+
+      - name: Set nightly tags
+        id: tags
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          echo "docker_tags=langflowai/langflow-nightly:${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
+          echo "ghcr_tags=ghcr.io/langflow-ai/langflow-nightly:${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
+
+      - name: Docker cleanup
+        run: |
+          docker system prune -af --volumes || true
+          docker buildx prune -af || true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.TEMP_GHCR_TOKEN}}
+
+      - name: Build and push to Docker Hub
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: ${{ inputs.push_to_registry }}
+          file: ./docker/build_and_push.Dockerfile
+          tags: ${{ steps.tags.outputs.docker_tags }}
+          platforms: linux/${{ matrix.arch }}
+          provenance: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push to GitHub Container Registry
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: ${{ inputs.push_to_registry }}
+          file: ./docker/build_and_push.Dockerfile
+          tags: ${{ steps.tags.outputs.ghcr_tags }}
+          platforms: linux/${{ matrix.arch }}
+          provenance: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-nightly-main-all:
+    name: Build Nightly Main All Package
+    if: ${{ inputs.release_type == 'nightly-main-all' }}
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: [Langflow-runner]
+          - arch: arm64
+            runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
+    runs-on: ${{ matrix.runner }}
+    steps:
+
+      - name: Check out the code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Setup Environment
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.13"
+          prune-cache: false
+
+      - name: Get version for tagging
+        id: version
+        run: |
+          echo "Extracting main version from pyproject.toml"
+          version=$(uv tree 2>/dev/null | grep '^langflow' | grep -v '^langflow-base' | cut -d' ' -f2 | sed 's/^v//')
+
+          # Verify nightly tag format
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.dev[0-9]+$ ]]; then
+            echo "Main version format is incorrect. Must be in the format (e.g.) v1.5.1.dev36"
+            exit 1
+          fi
+
+          echo "Using version: $version"
+          echo version=$version >> $GITHUB_OUTPUT
+
+      - name: Set nightly tags
+        id: tags
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          echo "docker_tags=langflowai/langflow-nightly-all:${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
+          echo "ghcr_tags=ghcr.io/langflow-ai/langflow-nightly-all:${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
+
+      - name: Docker cleanup
+        run: |
+          docker system prune -af --volumes || true
+          docker buildx prune -af || true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.TEMP_GHCR_TOKEN}}
+
+      - name: Build and push to Docker Hub
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: ${{ inputs.push_to_registry }}
+          file: ./docker/build_and_push_with_extras.Dockerfile
+          tags: ${{ steps.tags.outputs.docker_tags }}
+          platforms: linux/${{ matrix.arch }}
+          provenance: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push to GitHub Container Registry
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: ${{ inputs.push_to_registry }}
+          file: ./docker/build_and_push_with_extras.Dockerfile
+          tags: ${{ steps.tags.outputs.ghcr_tags }}
+          platforms: linux/${{ matrix.arch }}
+          provenance: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  create-nightly-manifest:
+    name: Create Multi-Arch Nightly Manifest
+    needs: [build-nightly-base, build-nightly-main, build-nightly-main-all]
+    runs-on: ubuntu-latest
+    if: ${{ always() && inputs.push_to_registry && (needs.build-nightly-base.result == 'success' || needs.build-nightly-main.result == 'success' || needs.build-nightly-main-all.result == 'success') }}
+    steps:
+      - name: Setup Environment
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.13"
+          prune-cache: false
+
+      - name: Check out the code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Get version
+        id: version
+        run: |
+          if [[ "${{ inputs.release_type }}" == "nightly-base" ]]; then
+            version=$(uv tree 2>/dev/null | grep '^langflow-base' | cut -d' ' -f2 | sed 's/^v//')
+          else
+            version=$(uv tree 2>/dev/null | grep '^langflow' | grep -v '^langflow-base' | cut -d' ' -f2 | sed 's/^v//')
+          fi
+          echo "Using version: $version"
+          echo version=$version >> $GITHUB_OUTPUT
+
+      - name: Set nightly tags
+        id: tags
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          case "${{ inputs.release_type }}" in
+            "nightly-base")
+              echo "final_tags=langflowai/langflow-nightly:base-${version},langflowai/langflow-nightly:base-latest,ghcr.io/langflow-ai/langflow-nightly:base-${version},ghcr.io/langflow-ai/langflow-nightly:base-latest" >> $GITHUB_OUTPUT
+              echo "arch_base=langflowai/langflow-nightly:base-${version}" >> $GITHUB_OUTPUT
+              echo "ghcr_arch_base=ghcr.io/langflow-ai/langflow-nightly:base-${version}" >> $GITHUB_OUTPUT
+              ;;
+            "nightly-main")
+              echo "final_tags=langflowai/langflow-nightly:${version},langflowai/langflow-nightly:latest,ghcr.io/langflow-ai/langflow-nightly:${version},ghcr.io/langflow-ai/langflow-nightly:latest" >> $GITHUB_OUTPUT
+              echo "arch_base=langflowai/langflow-nightly:${version}" >> $GITHUB_OUTPUT
+              echo "ghcr_arch_base=ghcr.io/langflow-ai/langflow-nightly:${version}" >> $GITHUB_OUTPUT
+              ;;
+            "nightly-main-all")
+              echo "final_tags=langflowai/langflow-nightly-all:${version},langflowai/langflow-nightly-all:latest,ghcr.io/langflow-ai/langflow-nightly-all:${version},ghcr.io/langflow-ai/langflow-nightly-all:latest" >> $GITHUB_OUTPUT
+              echo "arch_base=langflowai/langflow-nightly-all:${version}" >> $GITHUB_OUTPUT
+              echo "ghcr_arch_base=ghcr.io/langflow-ai/langflow-nightly-all:${version}" >> $GITHUB_OUTPUT
+              ;;
+            *)
+              echo "Error: Invalid release_type: ${{ inputs.release_type }}" >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.TEMP_GHCR_TOKEN}}
+
+      - name: Create and push multi-arch nightly manifests
+        run: |
+          # Split tags and create manifests for each
+          IFS=',' read -ra TAGS <<< "${{ steps.tags.outputs.final_tags }}"
+          for tag in "${TAGS[@]}"; do
+            echo "Creating manifest for $tag"
+
+            # Determine architecture-specific tags
+            if [[ "$tag" == *"langflowai"* ]]; then
+              amd64_tag="${{ steps.tags.outputs.arch_base }}-amd64"
+              arm64_tag="${{ steps.tags.outputs.arch_base }}-arm64"
+            else
+              amd64_tag="${{ steps.tags.outputs.ghcr_arch_base }}-amd64"
+              arm64_tag="${{ steps.tags.outputs.ghcr_arch_base }}-arm64"
+            fi
+
+            docker buildx imagetools create \
+              --tag "$tag" \
+              "$amd64_tag" \
+              "$arm64_tag"
+          done

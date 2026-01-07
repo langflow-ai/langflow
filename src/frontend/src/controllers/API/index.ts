@@ -1,15 +1,21 @@
-import { Edge, Node, ReactFlowJsonObject } from "@xyflow/react";
-import { AxiosRequestConfig, AxiosResponse } from "axios";
-import { BASE_URL_API } from "../../constants/constants";
-import { api } from "../../controllers/API/api";
+import type { Edge, Node, ReactFlowJsonObject } from "@xyflow/react";
+import type { AxiosRequestConfig, AxiosResponse } from "axios";
 import {
+  customGetAppVersions,
+  customGetLatestVersion,
+} from "@/customization/utils/custom-get-app-latest-version";
+import { getBaseUrl } from "@/customization/utils/urls";
+import { api } from "../../controllers/API/api";
+import type {
   VertexBuildTypeAPI,
   VerticesOrderTypeAPI,
 } from "../../types/api/index";
-import { FlowStyleType, FlowType } from "../../types/flow";
-import { StoreComponentResponse } from "../../types/store";
+import type { FlowStyleType, FlowType } from "../../types/flow";
+import type { StoreComponentResponse } from "../../types/store";
 
 const GITHUB_API_URL = "https://api.github.com";
+const DISCORD_API_URL =
+  "https://discord.com/api/v9/invites/EqksyE2EX9?with_counts=true";
 
 export async function getRepoStars(owner: string, repo: string) {
   try {
@@ -21,9 +27,22 @@ export async function getRepoStars(owner: string, repo: string) {
   }
 }
 
+export async function getDiscordCount() {
+  try {
+    const response = await api.get(DISCORD_API_URL);
+    return response?.data.approximate_member_count;
+  } catch (error) {
+    console.error("Error fetching repository data:", error);
+    return null;
+  }
+}
+
+export const getAppVersions = customGetAppVersions;
+export const getLatestVersion = customGetLatestVersion;
+
 export async function createApiKey(name: string) {
   try {
-    const res = await api.post(`${BASE_URL_API}api_key/`, { name });
+    const res = await api.post(`${getBaseUrl()}api_key/`, { name });
     if (res.status === 200) {
       return res.data;
     }
@@ -53,7 +72,7 @@ export async function saveFlowStore(
   publicFlow = false,
 ): Promise<FlowType> {
   try {
-    const response = await api.post(`${BASE_URL_API}store/components/`, {
+    const response = await api.post(`${getBaseUrl()}store/components/`, {
       name: newFlow.name,
       data: newFlow.data,
       description: newFlow.description,
@@ -101,7 +120,7 @@ export async function getStoreComponents({
   fields?: Array<string> | null;
 }): Promise<StoreComponentResponse | undefined> {
   try {
-    let url = `${BASE_URL_API}store/components/`;
+    let url = `${getBaseUrl()}store/components/`;
     const queryParams: any = [];
     if (component_id !== undefined && component_id !== null) {
       queryParams.push(`component_id=${component_id}`);
@@ -159,7 +178,7 @@ export async function getStoreComponents({
 export async function getComponent(component_id: string) {
   try {
     const res = await api.get(
-      `${BASE_URL_API}store/components/${component_id}`,
+      `${getBaseUrl()}store/components/${component_id}`,
     );
     if (res.status === 200) {
       return res.data;
@@ -171,7 +190,7 @@ export async function getComponent(component_id: string) {
 
 export async function checkHasApiKey() {
   try {
-    const res = await api.get(`${BASE_URL_API}store/check/api_key`);
+    const res = await api.get(`${getBaseUrl()}store/check/api_key`);
     if (res?.status === 200) {
       return res.data;
     }
@@ -182,7 +201,7 @@ export async function checkHasApiKey() {
 
 export async function checkHasStore() {
   try {
-    const res = await api.get(`${BASE_URL_API}store/check/`);
+    const res = await api.get(`${getBaseUrl()}store/check/`);
     if (res?.status === 200) {
       return res.data;
     }
@@ -213,7 +232,7 @@ export async function updateFlowStore(
   id: string,
 ): Promise<FlowType> {
   try {
-    const response = await api.patch(`${BASE_URL_API}store/components/${id}`, {
+    const response = await api.patch(`${getBaseUrl()}store/components/${id}`, {
       name: newFlow.name,
       data: newFlow.data,
       description: newFlow.description,
@@ -257,7 +276,7 @@ export async function getVerticesOrder(
     data["data"]["edges"] = Edges;
   }
   return await api.post(
-    `${BASE_URL_API}build/${flowId}/vertices`,
+    `${getBaseUrl()}build/${flowId}/vertices`,
     data,
     config,
   );
@@ -270,15 +289,18 @@ export async function postBuildVertex(
   files?: string[],
 ): Promise<AxiosResponse<VertexBuildTypeAPI>> {
   // input_value is optional and is a query parameter
-  let data = {};
+  const data = {};
   if (typeof input_value !== "undefined") {
-    data["inputs"] = { input_value: input_value };
+    data["inputs"] = {
+      input_value: input_value,
+      client_request_time: Date.now(), // Add client timestamp in milliseconds
+    };
   }
   if (data && files) {
     data["files"] = files;
   }
   return await api.post(
-    `${BASE_URL_API}build/${flowId}/vertices/${vertexId}`,
+    `${getBaseUrl()}build/${flowId}/vertices/${vertexId}`,
     data,
   );
 }

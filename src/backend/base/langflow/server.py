@@ -4,13 +4,13 @@ import signal
 
 from gunicorn import glogging
 from gunicorn.app.base import BaseApplication
+from lfx.log.logger import InterceptHandler
 from uvicorn.workers import UvicornWorker
-
-from langflow.logging.logger import InterceptHandler
 
 
 class LangflowUvicornWorker(UvicornWorker):
     CONFIG_KWARGS = {"loop": "asyncio"}
+    _has_exited = False
 
     def _install_sigint_handler(self) -> None:
         """Install a SIGQUIT handler on workers.
@@ -20,6 +20,13 @@ class LangflowUvicornWorker(UvicornWorker):
         """
         loop = asyncio.get_running_loop()
         loop.add_signal_handler(signal.SIGINT, self.handle_exit, signal.SIGINT, None)
+        loop.add_signal_handler(signal.SIGTERM, self.handle_exit, signal.SIGTERM, None)
+
+    def handle_exit(self, sig, frame):
+        if not self._has_exited:
+            self._has_exited = True
+
+        super().handle_exit(sig, frame)
 
     async def _serve(self) -> None:
         # We do this to not log the "Worker (pid:XXXXX) was sent SIGINT"
@@ -37,8 +44,21 @@ class Logger(glogging.Logger):
 
     def __init__(self, cfg) -> None:
         super().__init__(cfg)
+        logging.getLogger("gunicorn.error").setLevel(logging.WARNING)
+        logging.getLogger("gunicorn.access").setLevel(logging.WARNING)
+
         logging.getLogger("gunicorn.error").handlers = [InterceptHandler()]
         logging.getLogger("gunicorn.access").handlers = [InterceptHandler()]
+
+    def error(self, msg, *args, **kwargs):
+        """Override error method to filter out SIGSEGV messages."""
+        # Filter out "Worker was sent SIGSEGV" messages which are common on macOS
+        # with multiprocessing issues - these are typically handled by worker restart
+        if "SIGSEGV" in str(msg):
+            # Log at debug level instead of error
+            self.log.debug(msg, *args, **kwargs)
+        else:
+            super().error(msg, *args, **kwargs)
 
 
 class LangflowApplication(BaseApplication):

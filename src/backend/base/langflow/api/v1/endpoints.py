@@ -5,56 +5,82 @@ import time
 from collections.abc import AsyncGenerator
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Annotated
-from uuid import UUID
+from uuid import UUID, uuid4
 
+import orjson
 import sqlalchemy as sa
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, UploadFile, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
-from loguru import logger
+from lfx.custom.custom_component.component import Component
+from lfx.custom.utils import (
+    add_code_field_to_build_config,
+    build_custom_component_template,
+    get_instance_name,
+    update_component_build_config,
+)
+from lfx.graph.graph.base import Graph
+from lfx.graph.schema import RunOutputs
+from lfx.log.logger import logger
+from lfx.schema.schema import InputValueRequest
+from lfx.services.settings.service import SettingsService
 from sqlmodel import select
 
-from langflow.api.utils import CurrentActiveUser, DbSession, parse_value
+from langflow.api.utils import CurrentActiveUser, DbSession, extract_global_variables_from_headers, parse_value
 from langflow.api.v1.schemas import (
     ConfigResponse,
     CustomComponentRequest,
     CustomComponentResponse,
-    InputValueRequest,
     RunResponse,
     SimplifiedAPIRequest,
     TaskStatusResponse,
     UpdateCustomComponentRequest,
     UploadFileResponse,
 )
-from langflow.custom.custom_component.component import Component
-from langflow.custom.utils import build_custom_component_template, get_instance_name, update_component_build_config
 from langflow.events.event_manager import create_stream_tokens_event_manager
 from langflow.exceptions.api import APIException, InvalidChatInputError
 from langflow.exceptions.serialization import SerializationError
-from langflow.graph.graph.base import Graph
-from langflow.graph.schema import RunOutputs
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
-from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.interface.initialize.loading import update_params_with_load_from_db_fields
 from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.schema.graph import Tweaks
-from langflow.services.auth.utils import api_key_security, get_current_active_user
+from langflow.services.auth.utils import api_key_security, get_current_active_user, get_webhook_user
 from langflow.services.cache.utils import save_uploaded_file
-from langflow.services.database.models.flow import Flow
-from langflow.services.database.models.flow.model import FlowRead
+from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import get_session_service, get_settings_service, get_telemetry_service
-from langflow.services.settings.feature_flags import FEATURE_FLAGS
 from langflow.services.telemetry.schema import RunPayload
 from langflow.utils.compression import compress_response
 from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
-    from langflow.services.event_manager import EventManager
-    from langflow.services.settings.service import SettingsService
+    from langflow.events.event_manager import EventManager
 
 router = APIRouter(tags=["Base"])
+
+
+async def parse_input_request_from_body(http_request: Request) -> SimplifiedAPIRequest:
+    """Parse SimplifiedAPIRequest from HTTP request body.
+
+    This function handles the case where FastAPI can't automatically parse the request body
+    due to the presence of a Request parameter in the endpoint signature.
+
+    Args:
+        http_request: The FastAPI Request object
+
+    Returns:
+        SimplifiedAPIRequest: Parsed request or default instance if parsing fails
+    """
+    try:
+        body = await http_request.body()
+        if body:
+            body_data = orjson.loads(body)
+            return SimplifiedAPIRequest(**body_data)
+        return SimplifiedAPIRequest()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(f"Failed to parse request body: {exc}")
+        return SimplifiedAPIRequest()
 
 
 @router.get("/all", dependencies=[Depends(get_current_active_user)])
@@ -113,6 +139,8 @@ async def simple_run_flow(
     stream: bool = False,
     api_key_user: User | None = None,
     event_manager: EventManager | None = None,
+    context: dict | None = None,
+    run_id: str | None = None,
 ):
     validate_input_and_tweaks(input_request)
     try:
@@ -124,7 +152,12 @@ async def simple_run_flow(
             raise ValueError(msg)
         graph_data = flow.data.copy()
         graph_data = process_tweaks(graph_data, input_request.tweaks or {}, stream=stream)
-        graph = Graph.from_payload(graph_data, flow_id=flow_id_str, user_id=str(user_id), flow_name=flow.name)
+        graph = Graph.from_payload(
+            graph_data, flow_id=flow_id_str, user_id=str(user_id), flow_name=flow.name, context=context
+        )
+        if run_id is None:
+            run_id = str(uuid4())
+        graph.set_run_id(run_id)
         inputs = None
         if input_request.input_value is not None:
             inputs = [
@@ -169,19 +202,45 @@ async def simple_run_flow_task(
     stream: bool = False,
     api_key_user: User | None = None,
     event_manager: EventManager | None = None,
+    telemetry_service=None,
+    start_time: float | None = None,
+    run_id: str | None = None,
 ):
     """Run a flow task as a BackgroundTask, therefore it should not throw exceptions."""
     try:
-        return await simple_run_flow(
+        result = await simple_run_flow(
             flow=flow,
             input_request=input_request,
             stream=stream,
             api_key_user=api_key_user,
             event_manager=event_manager,
+            run_id=run_id,
         )
+        if telemetry_service and start_time is not None:
+            await telemetry_service.log_package_run(
+                RunPayload(
+                    run_is_webhook=True,
+                    run_seconds=int(time.perf_counter() - start_time),
+                    run_success=True,
+                    run_error_message="",
+                    run_id=run_id,
+                )
+            )
+        return result  # noqa: TRY300
 
-    except Exception:  # noqa: BLE001
-        logger.exception(f"Error running flow {flow.id} task")
+    except Exception as exc:  # noqa: BLE001
+        await logger.aexception(f"Error running flow {flow.id} task")
+        if telemetry_service and start_time is not None:
+            await telemetry_service.log_package_run(
+                RunPayload(
+                    run_is_webhook=True,
+                    run_seconds=int(time.perf_counter() - start_time),
+                    run_success=False,
+                    run_error_message=str(exc),
+                    run_id=run_id,
+                )
+            )
+        return None
 
 
 async def consume_and_yield(queue: asyncio.Queue, client_consumed_queue: asyncio.Queue) -> AsyncGenerator:
@@ -212,7 +271,7 @@ async def consume_and_yield(queue: asyncio.Queue, client_consumed_queue: asyncio
         yield value
         get_time_yield = time.time()
         client_consumed_queue.put_nowait(event_id)
-        logger.debug(
+        await logger.adebug(
             f"consumed event {event_id} "
             f"(time in queue, {get_time - put_time:.4f}, "
             f"client {get_time_yield - get_time:.4f})"
@@ -225,6 +284,7 @@ async def run_flow_generator(
     api_key_user: User | None,
     event_manager: EventManager,
     client_consumed_queue: asyncio.Queue,
+    context: dict | None = None,
 ) -> None:
     """Executes a flow asynchronously and manages event streaming to the client.
 
@@ -237,6 +297,7 @@ async def run_flow_generator(
         api_key_user (User | None): Optional authenticated user running the flow
         event_manager (EventManager): Manages the streaming of events to the client
         client_consumed_queue (asyncio.Queue): Tracks client consumption of events
+        context (dict | None): Optional context to pass to the flow
 
     Events Generated:
         - "add_message": Sent when new messages are added during flow execution
@@ -257,37 +318,56 @@ async def run_flow_generator(
             stream=True,
             api_key_user=api_key_user,
             event_manager=event_manager,
+            context=context,
         )
         event_manager.on_end(data={"result": result.model_dump()})
         await client_consumed_queue.get()
     except (ValueError, InvalidChatInputError, SerializationError) as e:
-        logger.error(f"Error running flow: {e}")
+        await logger.aerror(f"Error running flow: {e}")
         event_manager.on_error(data={"error": str(e)})
     finally:
         await event_manager.queue.put((None, None, time.time))
 
 
-@router.post("/run/{flow_id_or_name}", response_model_exclude_none=True)  # noqa: RUF100, FAST003
-async def simplified_run_flow(
+async def check_flow_user_permission(
+    flow: FlowRead | None,
+    api_key_user: UserRead,
+) -> None:
+    """Check if the user associated with the API key has permission to run the flow.
+
+    Args:
+        flow (FlowRead | None): The flow to check permissions for
+        api_key_user (UserRead): The user associated with the API key
+
+    Raises:
+        HTTPException: If the user does not have permission to run the flow
+    """
+    if flow and flow.user_id != api_key_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to run this flow")
+
+
+async def _run_flow_internal(
     *,
     background_tasks: BackgroundTasks,
-    flow: Annotated[FlowRead | None, Depends(get_flow_by_id_or_endpoint_name)],
-    input_request: SimplifiedAPIRequest | None = None,
-    stream: bool = False,
-    api_key_user: Annotated[UserRead, Depends(api_key_security)],
-):
-    """Executes a specified flow by ID with support for streaming and telemetry.
+    flow: FlowRead | None,
+    input_request: SimplifiedAPIRequest | None,
+    stream: bool,
+    api_key_user: User | UserRead,
+    context: dict | None,
+    http_request: Request,
+) -> StreamingResponse | RunResponse:
+    """Internal function containing the core business logic for running a flow.
 
-    This endpoint executes a flow identified by ID or name, with options for streaming the response
-    and tracking execution metrics. It handles both streaming and non-streaming execution modes.
+    This function is shared between session-based and API key-based authentication endpoints.
 
     Args:
         background_tasks (BackgroundTasks): FastAPI background task manager
         flow (FlowRead | None): The flow to execute, loaded via dependency
         input_request (SimplifiedAPIRequest | None): Input parameters for the flow
         stream (bool): Whether to stream the response
-        api_key_user (UserRead): Authenticated user from API key
-        request (Request): The incoming HTTP request
+        api_key_user (User | UserRead): Authenticated user (either from session or API key)
+        context (dict | None): Optional context to pass to the flow
+        http_request (Request): The incoming HTTP request for extracting global variables
 
     Returns:
         Union[StreamingResponse, RunResponse]: Either a streaming response for real-time results
@@ -296,21 +376,30 @@ async def simplified_run_flow(
     Raises:
         HTTPException: For flow not found (404) or invalid input (400)
         APIException: For internal execution errors (500)
-
-    Notes:
-        - Supports both streaming and non-streaming execution modes
-        - Tracks execution time and success/failure via telemetry
-        - Handles graceful client disconnection in streaming mode
-        - Provides detailed error handling with appropriate HTTP status codes
-        - In streaming mode, uses EventManager to handle events:
-            - "add_message": New messages during execution
-            - "token": Individual tokens during streaming
-            - "end": Final execution result
     """
+    await check_flow_user_permission(flow=flow, api_key_user=api_key_user)
+
     telemetry_service = get_telemetry_service()
-    input_request = input_request if input_request is not None else SimplifiedAPIRequest()
+
+    # If input_request is None, manually parse the request body
+    # This happens when FastAPI can't automatically parse it due to the Request parameter
+    if input_request is None:
+        input_request = await parse_input_request_from_body(http_request)
+
     if flow is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
+
+    # Extract request-level variables from headers with prefix X-LANGFLOW-GLOBAL-VAR-*
+    request_variables = extract_global_variables_from_headers(http_request.headers)
+
+    # Merge request variables with existing context
+    if request_variables:
+        if context is None:
+            context = {"request_variables": request_variables}
+        else:
+            context = context.copy()  # Don't modify the original context
+            context["request_variables"] = request_variables
+
     start_time = time.perf_counter()
 
     if stream:
@@ -324,11 +413,12 @@ async def simplified_run_flow(
                 api_key_user=api_key_user,
                 event_manager=event_manager,
                 client_consumed_queue=asyncio_queue_client_consumed,
+                context=context,
             )
         )
 
         async def on_disconnect() -> None:
-            logger.debug("Client disconnected, closing tasks")
+            await logger.adebug("Client disconnected, closing tasks")
             main_task.cancel()
 
         return StreamingResponse(
@@ -337,12 +427,15 @@ async def simplified_run_flow(
             media_type="text/event-stream",
         )
 
+    run_id = str(uuid4())
     try:
         result = await simple_run_flow(
             flow=flow,
             input_request=input_request,
             stream=stream,
             api_key_user=api_key_user,
+            context=context,
+            run_id=run_id,
         )
         end_time = time.perf_counter()
         background_tasks.add_task(
@@ -352,6 +445,7 @@ async def simplified_run_flow(
                 run_seconds=int(end_time - start_time),
                 run_success=True,
                 run_error_message="",
+                run_id=run_id,
             ),
         )
 
@@ -363,6 +457,7 @@ async def simplified_run_flow(
                 run_seconds=int(time.perf_counter() - start_time),
                 run_success=False,
                 run_error_message=str(exc),
+                run_id=run_id,
             ),
         )
         if "badly formed hexadecimal UUID string" in str(exc):
@@ -381,6 +476,7 @@ async def simplified_run_flow(
                 run_seconds=int(time.perf_counter() - start_time),
                 run_success=False,
                 run_error_message=str(exc),
+                run_id=run_id,
             ),
         )
         raise APIException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=exc, flow=flow) from exc
@@ -388,18 +484,142 @@ async def simplified_run_flow(
     return result
 
 
+@router.post("/run/{flow_id_or_name}", response_model=None, response_model_exclude_none=True)
+async def simplified_run_flow(
+    *,
+    background_tasks: BackgroundTasks,
+    flow: Annotated[FlowRead | None, Depends(get_flow_by_id_or_endpoint_name)],
+    input_request: SimplifiedAPIRequest | None = None,
+    stream: bool = False,
+    api_key_user: Annotated[UserRead, Depends(api_key_security)],
+    context: dict | None = None,
+    http_request: Request,
+):
+    """Executes a specified flow by ID with support for streaming and telemetry (API key auth).
+
+    This endpoint executes a flow identified by ID or name, with options for streaming the response
+    and tracking execution metrics. It handles both streaming and non-streaming execution modes.
+    This endpoint uses API key authentication (Bearer token).
+
+    Args:
+        background_tasks (BackgroundTasks): FastAPI background task manager
+        flow (FlowRead | None): The flow to execute, loaded via dependency
+        input_request (SimplifiedAPIRequest | None): Input parameters for the flow
+        stream (bool): Whether to stream the response
+        api_key_user (UserRead): Authenticated user from API key
+        context (dict | None): Optional context to pass to the flow
+        http_request (Request): The incoming HTTP request for extracting global variables
+
+    Returns:
+        Union[StreamingResponse, RunResponse]: Either a streaming response for real-time results
+        or a RunResponse with the complete execution results
+
+    Raises:
+        HTTPException: For flow not found (404) or invalid input (400)
+        APIException: For internal execution errors (500)
+
+    Notes:
+        - Supports both streaming and non-streaming execution modes
+        - Tracks execution time and success/failure via telemetry
+        - Handles graceful client disconnection in streaming mode
+        - Provides detailed error handling with appropriate HTTP status codes
+        - Extracts global variables from HTTP headers with prefix X-LANGFLOW-GLOBAL-VAR-*
+        - Merges extracted variables with the context parameter as "request_variables"
+        - In streaming mode, uses EventManager to handle events:
+            - "add_message": New messages during execution
+            - "token": Individual tokens during streaming
+            - "end": Final execution result
+        - Authentication: Requires API key (Bearer token)
+    """
+    return await _run_flow_internal(
+        background_tasks=background_tasks,
+        flow=flow,
+        input_request=input_request,
+        stream=stream,
+        api_key_user=api_key_user,
+        context=context,
+        http_request=http_request,
+    )
+
+
+@router.post("/run/session/{flow_id_or_name}", response_model=None, response_model_exclude_none=True)
+async def simplified_run_flow_session(
+    *,
+    background_tasks: BackgroundTasks,
+    flow: Annotated[FlowRead | None, Depends(get_flow_by_id_or_endpoint_name)],
+    input_request: SimplifiedAPIRequest | None = None,
+    stream: bool = False,
+    api_key_user: CurrentActiveUser,
+    context: dict | None = None,
+    http_request: Request,
+):
+    """Executes a specified flow by ID with support for streaming and telemetry (session auth).
+
+    This endpoint executes a flow identified by ID or name, with options for streaming the response
+    and tracking execution metrics. It handles both streaming and non-streaming execution modes.
+    This endpoint uses session-based authentication (cookies).
+
+    Args:
+        background_tasks (BackgroundTasks): FastAPI background task manager
+        flow (FlowRead | None): The flow to execute, loaded via dependency
+        input_request (SimplifiedAPIRequest | None): Input parameters for the flow
+        stream (bool): Whether to stream the response
+        api_key_user (User): Authenticated user from session
+        context (dict | None): Optional context to pass to the flow
+        http_request (Request): The incoming HTTP request for extracting global variables
+
+    Returns:
+        Union[StreamingResponse, RunResponse]: Either a streaming response for real-time results
+        or a RunResponse with the complete execution results
+
+    Raises:
+        HTTPException: For flow not found (404) or invalid input (400)
+        APIException: For internal execution errors (500)
+
+    Notes:
+        - Supports both streaming and non-streaming execution modes
+        - Tracks execution time and success/failure via telemetry
+        - Handles graceful client disconnection in streaming mode
+        - Provides detailed error handling with appropriate HTTP status codes
+        - Extracts global variables from HTTP headers with prefix X-LANGFLOW-GLOBAL-VAR-*
+        - Merges extracted variables with the context parameter as "request_variables"
+        - In streaming mode, uses EventManager to handle events:
+            - "add_message": New messages during execution
+            - "token": Individual tokens during streaming
+            - "end": Final execution result
+        - Authentication: Requires active session (cookies)
+        - Feature Flag: Only available when agentic_experience is enabled
+    """
+    # Feature flag: Only allow access if agentic_experience is enabled
+    if not get_settings_service().settings.agentic_experience:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="This endpoint is not available",
+        )
+
+    return await _run_flow_internal(
+        background_tasks=background_tasks,
+        flow=flow,
+        input_request=input_request,
+        stream=stream,
+        api_key_user=api_key_user,
+        context=context,
+        http_request=http_request,
+    )
+
+
 @router.post("/webhook/{flow_id_or_name}", response_model=dict, status_code=HTTPStatus.ACCEPTED)  # noqa: RUF100, FAST003
 async def webhook_run_flow(
+    flow_id_or_name: str,
     flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
-    user: Annotated[User, Depends(get_user_by_flow_id_or_endpoint_name)],
     request: Request,
     background_tasks: BackgroundTasks,
 ):
     """Run a flow using a webhook request.
 
     Args:
-        flow (Flow, optional): The flow to be executed. Defaults to Depends(get_flow_by_id).
-        user (User): The flow user.
+        flow_id_or_name (str): The flow ID or endpoint name.
+        flow (Flow): The flow to be executed.
         request (Request): The incoming HTTP request.
         background_tasks (BackgroundTasks): The background tasks manager.
 
@@ -411,67 +631,64 @@ async def webhook_run_flow(
     """
     telemetry_service = get_telemetry_service()
     start_time = time.perf_counter()
-    logger.debug("Received webhook request")
+    await logger.adebug("Received webhook request")
     error_msg = ""
+
+    # Get the appropriate user for webhook execution based on auth settings
+    webhook_user = await get_webhook_user(flow_id_or_name, request)
+
     try:
-        try:
-            data = await request.body()
-        except Exception as exc:
-            error_msg = str(exc)
-            raise HTTPException(status_code=500, detail=error_msg) from exc
+        data = await request.body()
+    except Exception as exc:
+        error_msg = str(exc)
+        raise HTTPException(status_code=500, detail=error_msg) from exc
 
-        if not data:
-            error_msg = "Request body is empty. You should provide a JSON payload containing the flow ID."
-            raise HTTPException(status_code=400, detail=error_msg)
+    if not data:
+        error_msg = "Request body is empty. You should provide a JSON payload containing the flow ID."
+        raise HTTPException(status_code=400, detail=error_msg)
 
-        try:
-            # get all webhook components in the flow
-            webhook_components = get_all_webhook_components_in_flow(flow.data)
-            tweaks = {}
+    try:
+        # get all webhook components in the flow
+        webhook_components = get_all_webhook_components_in_flow(flow.data)
+        tweaks = {}
 
-            for component in webhook_components:
-                tweaks[component["id"]] = {"data": data.decode() if isinstance(data, bytes) else data}
-            input_request = SimplifiedAPIRequest(
-                input_value="",
-                input_type="chat",
-                output_type="chat",
-                tweaks=tweaks,
-                session_id=None,
-            )
-
-            logger.debug("Starting background task")
-            background_tasks.add_task(
-                simple_run_flow_task,
-                flow=flow,
-                input_request=input_request,
-                api_key_user=user,
-            )
-        except Exception as exc:
-            error_msg = str(exc)
-            raise HTTPException(status_code=500, detail=error_msg) from exc
-    finally:
-        background_tasks.add_task(
-            telemetry_service.log_package_run,
-            RunPayload(
-                run_is_webhook=True,
-                run_seconds=int(time.perf_counter() - start_time),
-                run_success=not error_msg,
-                run_error_message=error_msg,
-            ),
+        for component in webhook_components:
+            tweaks[component["id"]] = {"data": data.decode() if isinstance(data, bytes) else data}
+        input_request = SimplifiedAPIRequest(
+            input_value="",
+            input_type="chat",
+            output_type="chat",
+            tweaks=tweaks,
+            session_id=None,
         )
+
+        await logger.adebug("Starting background task")
+        run_id = str(uuid4())
+        background_tasks.add_task(
+            simple_run_flow_task,
+            flow=flow,
+            input_request=input_request,
+            api_key_user=webhook_user,
+            telemetry_service=telemetry_service,
+            start_time=start_time,
+            run_id=run_id,
+        )
+    except Exception as exc:
+        error_msg = str(exc)
+        raise HTTPException(status_code=500, detail=error_msg) from exc
 
     return {"message": "Task started in the background", "status": "in progress"}
 
 
 @router.post(
-    "/run/advanced/{flow_id}",
+    "/run/advanced/{flow_id_or_name}",
     response_model=RunResponse,
     response_model_exclude_none=True,
 )
 async def experimental_run_flow(
     *,
     session: DbSession,
-    flow_id: UUID,
+    flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
     inputs: list[InputValueRequest] | None = None,
     outputs: list[str] | None = None,
     tweaks: Annotated[Tweaks | None, Body(embed=True)] = None,
@@ -484,7 +701,7 @@ async def experimental_run_flow(
     This endpoint supports running flows with caching to enhance performance and efficiency.
 
     ### Parameters:
-    - `flow_id` (str): The unique identifier of the flow to be executed.
+    - `flow` (Flow): The flow object to be executed, resolved via dependency injection.
     - `inputs` (List[InputValueRequest], optional): A list of inputs specifying the input values and components
       for the flow. Each input can target specific components and provide custom values.
     - `outputs` (List[str], optional): A list of output names to retrieve from the executed flow.
@@ -508,7 +725,7 @@ async def experimental_run_flow(
 
     ### Example usage:
     ```json
-    POST /run/{flow_id}
+    POST /run/flow_id
     x-api-key: YOUR_API_KEY
     Payload:
     {
@@ -525,8 +742,11 @@ async def experimental_run_flow(
     This endpoint facilitates complex flow executions with customized inputs, outputs, and configurations,
     catering to diverse application requirements.
     """  # noqa: E501
+    # Get the flow from the id or name
+    await check_flow_user_permission(flow=flow, api_key_user=api_key_user)
+
     session_service = get_session_service()
-    flow_id_str = str(flow_id)
+    flow_id_str = str(flow.id)
     if outputs is None:
         outputs = []
     if inputs is None:
@@ -545,12 +765,12 @@ async def experimental_run_flow(
         try:
             # Get the flow that matches the flow_id and belongs to the user
             # flow = session.query(Flow).filter(Flow.id == flow_id).filter(Flow.user_id == api_key_user.id).first()
-            stmt = select(Flow).where(Flow.id == flow_id_str).where(Flow.user_id == api_key_user.id)
+            stmt = select(Flow).where(Flow.id == flow.id).where(Flow.user_id == api_key_user.id)
             flow = (await session.exec(stmt)).first()
         except sa.exc.StatementError as exc:
             # StatementError('(builtins.ValueError) badly formed hexadecimal UUID string')
             if "badly formed hexadecimal UUID string" in str(exc):
-                logger.error(f"Flow ID {flow_id_str} is not a valid UUID")
+                await logger.aerror(f"Flow ID {flow_id_str} is not a valid UUID")
                 # This means the Flow ID is not a valid UUID which means it can't find the flow
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
@@ -597,7 +817,7 @@ async def experimental_run_flow(
 async def process(_flow_id) -> None:
     """Endpoint to process an input with a given flow_id."""
     # Raise a depreciation warning
-    logger.warning(
+    await logger.awarning(
         "The /process endpoint is deprecated and will be removed in a future version. Please use /run instead."
     )
     raise HTTPException(
@@ -640,7 +860,7 @@ async def create_upload_file(
             file_path=file_path,
         )
     except Exception as exc:
-        logger.exception("Error saving file")
+        await logger.aexception("Error saving file")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
@@ -677,22 +897,15 @@ async def custom_component_update(
     code_request: UpdateCustomComponentRequest,
     user: CurrentActiveUser,
 ):
-    """Update a custom component with the provided code request.
+    """Update an existing custom component with new code and configuration.
 
-    This endpoint generates the CustomComponentFrontendNode normally but then runs the `update_build_config` method
-    on the latest version of the template.
-    This ensures that every time it runs, it has the latest version of the template.
-
-    Args:
-        code_request (CustomComponentRequest): The code request containing the updated code for the custom component.
-        user (User, optional): The user making the request. Defaults to the current active user.
-
-    Returns:
-        dict: The updated custom component node.
+    Processes the provided code and template updates, applies parameter changes (including those loaded from the
+    database), updates the component's build configuration, and validates outputs. Returns the updated component node as
+    a JSON-serializable dictionary.
 
     Raises:
-        HTTPException: If there's an error building or updating the component
-        SerializationError: If there's an error serializing the component to JSON
+        HTTPException: If an error occurs during component building or updating.
+        SerializationError: If serialization of the updated component node fails.
     """
     try:
         component = Component(_code=code_request.code)
@@ -718,8 +931,9 @@ async def custom_component_update(
                 for field_name, field_dict in template.items()
                 if isinstance(field_dict, dict) and field_dict.get("load_from_db") and field_dict.get("value")
             ]
-            params = await update_params_with_load_from_db_fields(cc_instance, params, load_from_db_fields)
-            cc_instance.set_attributes(params)
+            if isinstance(cc_instance, Component):
+                params = await update_params_with_load_from_db_fields(cc_instance, params, load_from_db_fields)
+                cc_instance.set_attributes(params)
         updated_build_config = code_request.get_template()
         await update_component_build_config(
             cc_instance,
@@ -727,6 +941,8 @@ async def custom_component_update(
             field_value=code_request.field_value,
             field_name=code_request.field,
         )
+        if "code" not in updated_build_config or not updated_build_config.get("code", {}).get("value"):
+            updated_build_config = add_code_field_to_build_config(updated_build_config, code_request.code)
         component_node["template"] = updated_build_config
 
         if isinstance(cc_instance, Component):
@@ -745,14 +961,21 @@ async def custom_component_update(
         raise SerializationError.from_exception(exc, data=component_node) from exc
 
 
-@router.get("/config", response_model=ConfigResponse)
-async def get_config():
+@router.get("/config", dependencies=[Depends(get_current_active_user)])
+async def get_config() -> ConfigResponse:
+    """Retrieve the current application configuration settings.
+
+    Requires authentication to prevent exposure of sensitive configuration details.
+
+    Returns:
+        ConfigResponse: The configuration settings of the application.
+
+    Raises:
+        HTTPException: If an error occurs while retrieving the configuration.
+    """
     try:
         settings_service: SettingsService = get_settings_service()
+        return ConfigResponse.from_settings(settings_service.settings, settings_service.auth_settings)
 
-        return {
-            "feature_flags": FEATURE_FLAGS,
-            **settings_service.settings.model_dump(),
-        }
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc

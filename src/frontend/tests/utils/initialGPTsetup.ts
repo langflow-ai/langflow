@@ -1,7 +1,5 @@
-import { Page } from "@playwright/test";
-import { addNewApiKeys } from "./add-new-api-keys";
+import type { Page } from "@playwright/test";
 import { adjustScreenView } from "./adjust-screen-view";
-import { removeOldApiKeys } from "./remove-old-api-keys";
 import { selectGptModel } from "./select-gpt-model";
 import { updateOldComponents } from "./update-old-components";
 
@@ -10,8 +8,6 @@ export async function initialGPTsetup(
   options?: {
     skipAdjustScreenView?: boolean;
     skipUpdateOldComponents?: boolean;
-    skipRemoveOldApiKeys?: boolean;
-    skipAddNewApiKeys?: boolean;
     skipSelectGptModel?: boolean;
   },
 ) {
@@ -20,12 +16,6 @@ export async function initialGPTsetup(
   }
   if (!options?.skipUpdateOldComponents) {
     await updateOldComponents(page);
-  }
-  if (!options?.skipRemoveOldApiKeys) {
-    await removeOldApiKeys(page);
-  }
-  if (!options?.skipAddNewApiKeys) {
-    await addNewApiKeys(page);
   }
   if (!options?.skipSelectGptModel) {
     await selectGptModel(page);

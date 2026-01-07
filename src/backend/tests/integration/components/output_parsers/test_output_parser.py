@@ -1,9 +1,7 @@
-import os
-
 import pytest
-from langflow.components.helpers import OutputParserComponent
-from langflow.components.models import OpenAIModelComponent
-from langflow.components.prompts import PromptComponent
+from lfx.components.models_and_agents import PromptComponent
+from lfx.components.openai.openai_chat_model import OpenAIModelComponent
+from lfx.components.processing import OutputParserComponent
 
 from tests.integration.utils import ComponentInputHandle, run_single_component
 
@@ -29,10 +27,12 @@ async def test_csv_output_parser_openai():
         output_name="prompt",
     )
 
+    from tests.api_keys import get_openai_api_key
+
     outputs = await run_single_component(
         OpenAIModelComponent,
         inputs={
-            "api_key": os.environ["OPENAI_API_KEY"],
+            "api_key": get_openai_api_key(),
             "output_parser": output_parser_handle,
             "input_value": prompt_handler,
         },

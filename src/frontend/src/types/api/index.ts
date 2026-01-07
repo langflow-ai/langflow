@@ -1,11 +1,11 @@
-import {
+import type {
   UseMutationOptions,
   UseMutationResult,
   UseQueryOptions,
   UseQueryResult,
 } from "@tanstack/react-query";
-import { ChatInputType, ChatOutputType } from "../chat";
-import { FlowType } from "../flow";
+import type { ChatInputType, ChatOutputType } from "../chat";
+import type { FlowType } from "../flow";
 //kind and class are just representative names to represent the actual structure of the object received by the API
 export type APIDataType = { [key: string]: APIKindType };
 export type APIObjectType = { [key: string]: APIKindType };
@@ -43,6 +43,7 @@ export type APIClassType = {
   custom_fields?: CustomFieldsType;
   beta?: boolean;
   legacy?: boolean;
+  replacement?: string[];
   documentation: string;
   error?: string;
   official?: boolean;
@@ -53,6 +54,7 @@ export type APIClassType = {
   field_order?: string[];
   tool_mode?: boolean;
   type?: string;
+  last_updated?: string;
   [key: string]:
     | Array<string>
     | string
@@ -85,12 +87,13 @@ export type InputFieldType = {
   refresh_button_text?: string;
   combobox?: boolean;
   info?: string;
-  options?: string[];
+  options?: any[];
   active_tab?: number;
   [key: string]: any;
   icon?: string;
   text?: string;
   temp_file?: boolean;
+  separator?: string;
 };
 
 export type OutputFieldProxyType = {
@@ -103,10 +106,13 @@ export type OutputFieldType = {
   types: Array<string>;
   selected?: string;
   name: string;
+  group_outputs?: boolean;
+  method?: string;
   display_name: string;
   hidden?: boolean;
   proxy?: OutputFieldProxyType;
   allows_loop?: boolean;
+  loop_types?: Array<string>;
   options?: { [key: string]: any };
 };
 export type errorsTypeAPI = {
@@ -156,6 +162,12 @@ export type changeUser = {
   is_superuser?: boolean;
   password?: string;
   profile_image?: string;
+  optins?: {
+    github_starred?: boolean;
+    discord_clicked?: boolean;
+    dialog_dismissed?: boolean;
+    mcp_dialog_dismissed?: boolean;
+  };
 };
 
 export type resetPasswordType = {
@@ -171,6 +183,12 @@ export type Users = {
   profile_image: string;
   create_at: Date;
   updated_at: Date;
+  optins?: {
+    github_starred?: boolean;
+    discord_clicked?: boolean;
+    dialog_dismissed?: boolean;
+    mcp_dialog_dismissed?: boolean;
+  };
 };
 
 export type Component = {
@@ -305,6 +323,7 @@ export type FieldValidatorType =
   | "password";
 
 export type FieldParserType =
+  | "mcp_name_case"
   | "snake_case"
   | "camel_case"
   | "pascal_case"
@@ -313,7 +332,9 @@ export type FieldParserType =
   | "uppercase"
   | "no_blank"
   | "valid_csv"
-  | "commands";
+  | "space_case"
+  | "commands"
+  | "sanitize_mcp_name";
 
 export type TableOptionsTypeAPI = {
   block_add?: boolean;
@@ -329,4 +350,14 @@ export type TableOptionsTypeAPI = {
   >;
   field_parsers?: Array<FieldParserType | { [key: string]: FieldParserType }>;
   description?: string;
+};
+
+export type TransactionLogsRow = {
+  id: string;
+  timestamp: string;
+  vertex_id: string;
+  target_id: string | null;
+  inputs: Record<string, unknown> | null;
+  outputs: Record<string, unknown> | null;
+  status: string;
 };

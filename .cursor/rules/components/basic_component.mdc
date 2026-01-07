@@ -1,0 +1,82 @@
+---
+description: "Guide for creating a basic Langflow component, including requirements gathering, component structure, and implementation best practices."
+globs:
+  - "src/backend/**/components/**/*.py"
+  - "src/backend/base/langflow/components/**/*.py"
+alwaysApply: false
+---
+
+
+# Rule: How to Create a Basic Langflow Component
+
+## Purpose
+Guide for Creating a Langflow Component
+
+---
+
+### 1. Gather Requirements
+
+Ask the user for:
+- **Component Name:** What should the component be called?
+- **Description:** What does the component do?
+- **Inputs:** What are the required inputs? (e.g., text, dropdown, boolean, etc.)
+- **Outputs:** What should the component output? (e.g., a message, a value, etc.)
+- **Category:** Which component category should this component be stored under in `langflow/src/backend/base/langflow/components`
+
+### 2. Define the Component
+
+- Inherit from `Component`.
+- Set `display_name`, `description`, `icon`.
+- Define the `inputs` and `outputs` as lists of input/output field objects (e.g., `DropdownInput`, `MessageTextInput`, `Output`).
+- Implement the main logic as a method (e.g., `get_current_date`, `true_response`, etc.).
+
+### 3. Example: Conditional If-Else Component
+
+```python
+class ConditionalRouterComponent(Component):
+    display_name = "If-Else"
+    description = "Routes an input message to a corresponding output based on text comparison."
+    icon = "split"
+    name = "ConditionalRouter"
+    inputs = [
+        # Define your inputs here
+    ]
+    outputs = [
+        # Define your outputs here
+    ]
+    # Implement your logic methods here
+```
+
+### 4. Example: Current Date Component
+
+```python
+class CurrentDateComponent(Component):
+    display_name = "Current Date"
+    description = "Returns the current date and time in the selected timezone."
+    icon = "clock"
+    name = "CurrentDate"
+    inputs = [
+        # Define your inputs here
+    ]
+    outputs = [
+        # Define your outputs here
+    ]
+    # Implement your logic methods here
+```
+
+### 5. Best Practices
+
+- Use clear and descriptive names for inputs and outputs.
+- Provide helpful `info` for each input to guide users.
+- Handle errors gracefully and provide meaningful error messages.
+- Use appropriate icons to visually represent the component's function.
+- Use a Lucide icon or if you want a custom icon follow the icon rules (`./cursor/rules/icons.mdc`)
+
+---
+
+## Checklist for Creating a Component
+- [ ] Ask the user for component name, description, inputs, and outputs.
+- [ ] Define the component class with the required fields.
+- [ ] Implement the main logic.
+- [ ] Add helpful info and error handling.
+- [ ] Test the component.

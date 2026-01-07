@@ -9,13 +9,14 @@ permissions:
   contents: read
 
 env:
-  NODE_VERSION: "21"
+  NODE_VERSION: "22"
 jobs:
   autofix:
+    if: ${{ github.actor != 'github-actions[bot]' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -37,9 +38,9 @@ jobs:
           cd src/frontend
           npm ci
         if: ${{ steps.setup-node.outputs.cache-hit != 'true' }}
-      - name: Run Prettier
+      - name: Run Biome
         run: |
           cd src/frontend
           npm run format
 
-      - uses: autofix-ci/action@551dded8c6cc8a1054039c8bc0b8b48c51dfc6ef
+      - uses: autofix-ci/action@635ffb0c9798bd160680f18fd73371e355b85f27

@@ -1,9 +1,13 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+
+import { renameFlow } from "../../utils/rename-flow";
+import { zoomOut } from "../../utils/zoom-out";
 
 test(
   "when auto_login is false, admin can CRUD user's and should see just your own flows",
-  { tag: ["@release", "@api", "@database"] },
+  { tag: ["@release", "@api", "@database", "@mainpage"] },
   async ({ page }) => {
     await page.route("**/api/v1/auto_login", (route) => {
       route.fulfill({
@@ -139,26 +143,16 @@ test(
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
-    await page.waitForSelector('[data-testid="fit_view"]', {
-      timeout: 100000,
-    });
+    await adjustScreenView(page, { numberOfZoomOut: 1 });
 
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("zoom_out").click();
+    await renameFlow(page, { flowName: randomFlowName });
 
-    await page.getByTestId("flow_menu_trigger").click();
-    await page.getByText("Edit Details", { exact: true }).last().click();
-
-    await page.getByPlaceholder("Flow Name").fill(randomFlowName);
-
-    await page.getByText("Save", { exact: true }).click();
-
-    await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+    await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 100000,
       state: "visible",
     });
 
-    await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+    await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 1500,
     });
 
@@ -206,12 +200,9 @@ test(
 
     expect(
       (
-        await page.waitForSelector(
-          "text=Begin with a template, or start from scratch.",
-          {
-            timeout: 30000,
-          },
-        )
+        await page.waitForSelector("text=Welcome to LangFlow", {
+          timeout: 30000,
+        })
       ).isVisible(),
     );
 
@@ -222,21 +213,11 @@ test(
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
-    await page.waitForSelector('[data-testid="fit_view"]', {
-      timeout: 100000,
-    });
+    await adjustScreenView(page, { numberOfZoomOut: 2 });
 
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("zoom_out").click();
+    await renameFlow(page, { flowName: secondRandomFlowName });
 
-    await page.getByTestId("flow_menu_trigger").click();
-    await page.getByText("Edit Details", { exact: true }).last().click();
-
-    await page.getByPlaceholder("Flow Name").fill(secondRandomFlowName);
-
-    await page.getByText("Save", { exact: true }).click();
-
-    await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+    await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 100000,
     });
 

@@ -1,3 +1,6 @@
+import { useState } from "react";
+import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
+import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import { ParameterRenderComponent } from "@/components/core/parameterRenderComponent";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,11 +14,9 @@ import {
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { getCustomParameterTitle } from "@/customization/components/custom-parameter";
 import { track } from "@/customization/utils/analytics";
-import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
-import { APIClassType, InputFieldType } from "@/types/api";
-import { useState } from "react";
+import type { APIClassType, InputFieldType } from "@/types/api";
 
 interface NodeDialogProps {
   open: boolean;
@@ -24,10 +25,6 @@ interface NodeDialogProps {
   nodeId: string;
   name: string;
   nodeClass: APIClassType;
-}
-
-interface ValueObject {
-  value: string;
 }
 
 export const NodeDialog: React.FC<NodeDialogProps> = ({
@@ -44,6 +41,7 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
   const nodes = useFlowStore((state) => state.nodes);
   const setNode = useFlowStore((state) => state.setNode);
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
   const postTemplateValue = usePostTemplateValue({
     parameterId: name,
@@ -71,20 +69,48 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
     setIsLoading(false);
   };
 
-  const updateFieldValue = (value: string | ValueObject, fieldKey: string) => {
-    const newValue = typeof value === "object" ? value.value : value;
+  const updateFieldValue = (
+    changes: Parameters<handleOnNewValueType>[0],
+    fieldKey: string,
+  ) => {
+    // Handle both legacy string format and new object format
+    const newValue =
+      typeof changes === "object" && changes !== null ? changes.value : changes;
+
     const targetNode = nodes.find((node) => node.id === nodeId);
     if (!targetNode || !name) return;
 
+    // Update the main field value
     targetNode.data.node.template[name].dialog_inputs.fields.data.node.template[
       fieldKey
     ].value = newValue;
+
+    // Handle additional properties like load_from_db for InputGlobalComponent
+    if (typeof changes === "object" && changes !== null) {
+      const fieldTemplate =
+        targetNode.data.node.template[name].dialog_inputs.fields.data.node
+          .template[fieldKey];
+
+      // Update load_from_db if present (for InputGlobalComponent)
+      if ("load_from_db" in changes) {
+        fieldTemplate.load_from_db = changes.load_from_db;
+      }
+
+      // Handle any other properties that might be needed
+      Object.keys(changes).forEach((key) => {
+        if (key !== "value" && key in fieldTemplate) {
+          fieldTemplate[key] = changes[key];
+        }
+      });
+    }
+
     setNode(nodeId, targetNode);
     setFieldValues((prev) => ({ ...prev, [fieldKey]: newValue }));
 
     if (dialogTemplate[fieldKey].real_time_refresh) {
       mutateTemplate(
         { [fieldKey]: newValue },
+        nodeId,
         nodeClass,
         setNodeClass,
         postTemplateValue,
@@ -107,6 +133,48 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
     }
     setIsLoading(false);
     onClose();
+  };
+
+  const handleSuccessCallback = () => {
+    // Check if this is a knowledge base creation
+    const isKnowledgeBaseCreation =
+      dialogNodeData?.display_name === "Create Knowledge" ||
+      dialogNodeData?.name === "create_knowledge_base" ||
+      (dialogNodeData?.description &&
+        dialogNodeData.description.toLowerCase().includes("knowledge"));
+
+    if (isKnowledgeBaseCreation) {
+      // Get the knowledge base name from field values
+      const knowledgeBaseName =
+        fieldValues["01_new_kb_name"] ||
+        fieldValues["new_kb_name"] ||
+        "Knowledge Base";
+
+      setSuccessData({
+        title: `Knowledge Base "${knowledgeBaseName}" created successfully!`,
+      });
+    }
+
+    // Only close dialog after success and delay for Astra database tracking
+    if (nodeId.toLowerCase().includes("astra") && name === "database_name") {
+      const {
+        cloud_provider: cloudProvider,
+        new_database_name: databaseName,
+        ...otherFields
+      } = fieldValues;
+      track("Database Created", {
+        nodeId,
+        cloudProvider,
+        databaseName,
+        ...otherFields,
+      });
+
+      setTimeout(() => {
+        handleCloseDialog();
+      }, 5000);
+    } else {
+      handleCloseDialog();
+    }
   };
 
   const handleSubmitDialog = async () => {
@@ -136,32 +204,15 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
 
     await mutateTemplate(
       fieldValues,
+      nodeId,
       nodeClass,
       setNodeClass,
       postTemplateValue,
       handleErrorData,
       name,
-      handleCloseDialog,
+      handleSuccessCallback,
       nodeClass.tool_mode,
     );
-
-    if (nodeId.toLowerCase().includes("astra") && name === "database_name") {
-      const {
-        cloud_provider: cloudProvider,
-        new_database_name: databaseName,
-        ...otherFields
-      } = fieldValues;
-      track("Database Created", {
-        nodeId,
-        cloudProvider,
-        databaseName,
-        ...otherFields,
-      });
-    }
-
-    setTimeout(() => {
-      handleCloseDialog();
-    }, 5000);
   };
 
   // Render
@@ -196,8 +247,8 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
                 })}
               </div>
               <ParameterRenderComponent
-                handleOnNewValue={(value: string) =>
-                  updateFieldValue(value, fieldKey)
+                handleOnNewValue={(changes) =>
+                  updateFieldValue(changes, fieldKey)
                 }
                 name={fieldKey}
                 nodeId={nodeId}

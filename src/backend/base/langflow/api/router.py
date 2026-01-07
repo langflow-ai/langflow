@@ -8,21 +8,25 @@ from langflow.api.v1 import (
     files_router,
     flows_router,
     folders_router,
+    knowledge_bases_router,
     login_router,
+    mcp_projects_router,
     mcp_router,
+    model_options_router,
+    models_router,
     monitor_router,
+    openai_responses_router,
+    projects_router,
     starter_projects_router,
     store_router,
     users_router,
     validate_router,
     variables_router,
-    voice_mode_router,
 )
+from langflow.api.v1.voice_mode import router as voice_mode_router
 from langflow.api.v2 import files_router as files_router_v2
-
-router = APIRouter(
-    prefix="/api",
-)
+from langflow.api.v2 import mcp_router as mcp_router_v2
+from langflow.api.v2 import registration_router as registration_router_v2
 
 router_v1 = APIRouter(
     prefix="/v1",
@@ -44,11 +48,22 @@ router_v1.include_router(variables_router)
 router_v1.include_router(files_router)
 router_v1.include_router(monitor_router)
 router_v1.include_router(folders_router)
+router_v1.include_router(projects_router)
 router_v1.include_router(starter_projects_router)
-router_v1.include_router(voice_mode_router)
+router_v1.include_router(knowledge_bases_router)
 router_v1.include_router(mcp_router)
+router_v1.include_router(voice_mode_router)
+router_v1.include_router(mcp_projects_router)
+router_v1.include_router(openai_responses_router)
+router_v1.include_router(models_router)
+router_v1.include_router(model_options_router)
 
 router_v2.include_router(files_router_v2)
+router_v2.include_router(mcp_router_v2)
+router_v2.include_router(registration_router_v2)
 
+router = APIRouter(
+    prefix="/api",
+)
 router.include_router(router_v1)
 router.include_router(router_v2)

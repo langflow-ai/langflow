@@ -1,6 +1,8 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Cross2Icon } from "@radix-ui/react-icons";
 import * as React from "react";
+import DialogContentWithouFixed from "@/customization/components/custom-dialog-content-without-fixed";
+import { dialogClass } from "@/customization/utils/dialog-class";
 import { cn } from "../../utils/utils";
 import ShadTooltip from "../common/shadTooltipComponent";
 
@@ -26,10 +28,7 @@ const DialogOverlay = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Overlay
     ref={ref}
-    className={cn(
-      "nopan nodelete nodrag noflow fixed inset-0 bottom-0 left-0 right-0 top-0 z-40 overflow-auto bg-black/50 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-      className,
-    )}
+    className={cn(dialogClass.dialogContent, className)}
     {...props}
   />
 ));
@@ -66,6 +65,10 @@ const DialogContent = React.forwardRef<
     const hasDialogTitle = React.Children.toArray(children).some(
       (child) => React.isValidElement(child) && child.type === DialogTitle,
     );
+    const hasDialogDescription = React.Children.toArray(children).some(
+      (child) =>
+        React.isValidElement(child) && child.type === DialogDescription,
+    );
 
     return (
       <DialogPortal>
@@ -81,6 +84,11 @@ const DialogContent = React.forwardRef<
           {!hasDialogTitle && (
             <VisuallyHidden>
               <DialogTitle>Dialog</DialogTitle>
+            </VisuallyHidden>
+          )}
+          {!hasDialogDescription && (
+            <VisuallyHidden>
+              <DialogDescription />
             </VisuallyHidden>
           )}
           {children}
@@ -105,7 +113,6 @@ const DialogContent = React.forwardRef<
     );
   },
 );
-DialogContent.displayName = DialogPrimitive.Content.displayName;
 
 const DialogHeader = ({
   className,
@@ -162,6 +169,7 @@ DialogDescription.displayName = DialogPrimitive.Description.displayName;
 export {
   Dialog,
   DialogContent,
+  DialogContentWithouFixed,
   DialogDescription,
   DialogFooter,
   DialogHeader,

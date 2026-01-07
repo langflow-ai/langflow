@@ -1,4 +1,5 @@
-import React, { forwardRef } from "react";
+import type React from "react";
+import { forwardRef } from "react";
 import SvgSambaNovaLogo from "./SambaNovaLogo";
 
 export const SambaNovaIcon = forwardRef<

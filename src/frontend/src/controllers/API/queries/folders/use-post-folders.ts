@@ -1,5 +1,5 @@
-import { AddFolderType } from "@/pages/MainPage/entities";
-import { useMutationFunctionType } from "@/types/api";
+import type { AddFolderType } from "@/pages/MainPage/entities";
+import type { useMutationFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -22,7 +22,7 @@ export const usePostFolders: useMutationFunctionType<
       components_list: newFolder.data.components ?? [],
     };
 
-    const res = await api.post(`${getURL("FOLDERS")}/`, payload);
+    const res = await api.post(`${getURL("PROJECTS")}/`, payload);
     return res.data;
   };
 

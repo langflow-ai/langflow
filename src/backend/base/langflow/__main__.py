@@ -8,36 +8,120 @@ import sys
 import time
 import warnings
 from contextlib import suppress
+from ipaddress import ip_address
 from pathlib import Path
 
 import click
 import httpx
 import typer
 from dotenv import load_dotenv
+from fastapi import HTTPException
 from httpx import HTTPError
+from jose import JWTError
+from lfx.log.logger import configure, logger
+from lfx.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
 from multiprocess import cpu_count
 from multiprocess.context import Process
 from packaging import version as pkg_version
 from rich import box
-from rich import print as rprint
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from sqlmodel import select
 
+from langflow.cli.progress import create_langflow_progress
 from langflow.initial_setup.setup import get_or_create_default_folder
-from langflow.logging.logger import configure, logger
 from langflow.main import setup_app
-from langflow.services.database.utils import session_getter
-from langflow.services.deps import get_db_service, get_settings_service, session_scope
-from langflow.services.settings.constants import DEFAULT_SUPERUSER
+from langflow.services.auth.utils import check_key, get_current_user_by_jwt
+from langflow.services.deps import get_db_service, get_settings_service, is_settings_service_initialized, session_scope
 from langflow.services.utils import initialize_services
 from langflow.utils.version import fetch_latest_version, get_version_info
 from langflow.utils.version import is_pre_release as langflow_is_pre_release
 
-console = Console()
-
 app = typer.Typer(no_args_is_help=True)
+console = Console()
+if platform.system() == "Windows":
+    console = Console(legacy_windows=True, emoji=False)  # Initialize console with Windows-safe settings
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())  # type: ignore[attr-defined]
+
+# Add LFX commands as a sub-app
+try:
+    from lfx.cli.commands import serve_command
+    from lfx.cli.run import run as lfx_run
+
+    lfx_app = typer.Typer(name="lfx", help="Langflow Executor commands")
+    lfx_app.command(name="serve", help="Serve a flow as an API", no_args_is_help=True)(serve_command)
+    lfx_app.command(name="run", help="Run a flow directly", no_args_is_help=True)(lfx_run)
+
+    app.add_typer(lfx_app, name="lfx")
+except ImportError:
+    # LFX not available, skip adding the sub-app
+    pass
+
+
+class ProcessManager:
+    """Manages the lifecycle of the backend process."""
+
+    def __init__(self):
+        self.webapp_process = None
+        self.shutdown_in_progress = False
+        if platform.system() == "Windows":
+            self._farewell_emoji = ":)"  # ASCII smiley
+        else:
+            self._farewell_emoji = "👋"  # Unicode wave
+
+    # params are required for signal handlers, even if they are not used
+    def handle_sigterm(self, _signum: int, _frame) -> None:
+        """Handle SIGTERM signal gracefully."""
+        if self.shutdown_in_progress:
+            return  # Already shutting down, ignore
+        self.shutdown_in_progress = True
+        self.shutdown()
+
+    # params are required for signal handlers, even if they are not used
+    def handle_sigint(self, _signum: int, _frame) -> None:
+        """Handle SIGINT signal gracefully."""
+        if self.shutdown_in_progress:
+            return  # Already shutting down, ignore
+        self.shutdown_in_progress = True
+        self.shutdown()
+
+    def shutdown(self):
+        """Gracefully shutdown the webapp process."""
+        if self.webapp_process and self.webapp_process.is_alive():
+            # Just terminate the process - the actual shutdown progress is handled
+            # by the FastAPI lifespan context in main.py
+            self.webapp_process.terminate()
+            # The long wait allows the process to finish setup, preventing it from
+            # getting in a state where background tasks continue to do work after termination
+            # is sent.
+            self.webapp_process.join(timeout=30)
+            if self.webapp_process.is_alive():
+                logger.warning("Process didn't terminate gracefully, killing it.")
+                self.webapp_process.kill()
+                self.webapp_process.join()
+            self.print_farewell_message()
+
+        sys.exit(0)
+
+    def print_farewell_message(self) -> None:
+        """Print a nice farewell message after shutdown is complete."""
+        # Clear any progress indicator output that might be on the current line
+        sys.stdout.write("\r")  # Move cursor to beginning of line
+        sys.stdout.write(" " * 80)  # Clear the line with spaces
+        sys.stdout.write("\r")  # Move cursor back to beginning
+
+        click.echo()
+        farewell = click.style(f"{self._farewell_emoji} See you next time!", fg="bright_blue", bold=True)
+        click.echo(farewell)
+
+
+# Create a single instance of ProcessManager
+process_manager = ProcessManager()
+
+# Update signal handlers to use the instance methods
+signal.signal(signal.SIGTERM, process_manager.handle_sigterm)
+signal.signal(signal.SIGINT, process_manager.handle_sigint)
 
 
 def get_number_of_workers(workers=None):
@@ -75,14 +159,25 @@ def set_var_for_macos_issue() -> None:
         os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
         # https://stackoverflow.com/questions/75747888/uwsgi-segmentation-fault-with-flask-python-app-behind-nginx-after-running-for-2 # noqa: E501
         os.environ["no_proxy"] = "*"  # to avoid error with gunicorn
-        logger.debug("Set OBJC_DISABLE_INITIALIZE_FORK_SAFETY to YES to avoid error")
 
 
-def handle_sigterm(signum, frame):  # noqa: ARG001
-    """Handle SIGTERM signal gracefully."""
-    logger.info("Received SIGTERM signal. Performing graceful shutdown...")
-    # Raise SystemExit to trigger graceful shutdown
-    sys.exit(0)
+def wait_for_server_ready(host, port, protocol) -> None:
+    """Wait for the server to become ready by polling the health endpoint."""
+    # Use localhost for health check when host is 0.0.0.0 (bind to all interfaces)
+    health_check_host = "localhost" if host == "0.0.0.0" else host  # noqa: S104
+
+    status_code = 0
+    while status_code != httpx.codes.OK:
+        try:
+            status_code = httpx.get(
+                f"{protocol}://{health_check_host}:{port}/health",
+                verify=health_check_host not in ("127.0.0.1", "localhost"),
+            ).status_code
+        except HTTPError:
+            time.sleep(1)
+        except Exception:  # noqa: BLE001
+            logger.debug("Error while waiting for the server to become ready.", exc_info=True)
+            time.sleep(1)
 
 
 @app.command()
@@ -103,8 +198,13 @@ def run(
         help="Path to the .env file containing environment variables.",
         show_default=False,
     ),
-    log_level: str | None = typer.Option(None, help="Logging level.", show_default=False),
+    log_level: str | None = typer.Option(
+        None,
+        help="Logging level. One of: [debug, info, warning, error, critical]. Defaults to info.",
+        show_default=False,
+    ),
     log_file: Path | None = typer.Option(None, help="Path to the log file.", show_default=False),
+    log_rotation: str | None = typer.Option(None, help="Log rotation(Time/Size).", show_default=False),
     cache: str | None = typer.Option(  # noqa: ARG001
         None,
         help="Type of cache to use. (InMemoryCache, SQLiteCache)",
@@ -161,121 +261,159 @@ def run(
         help="Defines the polling interval for the webhook.",
         show_default=False,
     ),
+    ssl_cert_file_path: str | None = typer.Option(
+        None, help="Defines the SSL certificate file path.", show_default=False
+    ),
+    ssl_key_file_path: str | None = typer.Option(None, help="Defines the SSL key file path.", show_default=False),
 ) -> None:
     """Run Langflow."""
-    # Register SIGTERM handler
-    signal.signal(signal.SIGTERM, handle_sigterm)
-
     if env_file:
+        if is_settings_service_initialized():
+            err = (
+                "Settings service is already initialized. This indicates potential race conditions "
+                "with settings initialization. Ensure the settings service is not created during "
+                "module loading."
+            )
+            # i.e. ensures the env file is loaded before the settings service is initialized
+            raise ValueError(err)
         load_dotenv(env_file, override=True)
 
-    configure(log_level=log_level, log_file=log_file)
-    logger.debug(f"Loading config from file: '{env_file}'" if env_file else "No env_file provided.")
-    set_var_for_macos_issue()
-    settings_service = get_settings_service()
+    # Set and normalize log level, with precedence: cli > env > default
+    log_level = (log_level or os.environ.get("LANGFLOW_LOG_LEVEL") or "info").lower()
+    os.environ["LANGFLOW_LOG_LEVEL"] = log_level
 
-    for key, value in os.environ.items():
-        new_key = key.replace("LANGFLOW_", "")
-        if hasattr(settings_service.auth_settings, new_key):
-            setattr(settings_service.auth_settings, new_key, value)
+    configure(log_level=log_level, log_file=log_file, log_rotation=log_rotation)
 
-    frame = inspect.currentframe()
-    valid_args: list = []
-    values: dict = {}
-    if frame is not None:
-        arguments, _, _, values = inspect.getargvalues(frame)
-        valid_args = [arg for arg in arguments if values[arg] is not None]
+    # Create progress indicator (show verbose timing if log level is DEBUG)
+    verbose = log_level == "debug"
+    progress = create_langflow_progress(verbose=verbose)
 
-    for arg in valid_args:
-        if arg == "components_path":
-            settings_service.settings.update_settings(components_path=components_path)
-        elif hasattr(settings_service.settings, arg):
-            settings_service.set(arg, values[arg])
-        elif hasattr(settings_service.auth_settings, arg):
-            settings_service.auth_settings.set(arg, values[arg])
-        logger.debug(f"Loading config from cli parameter '{arg}': '{values[arg]}'")
+    # Step 0: Initializing Langflow
+    with progress.step(0):
+        logger.debug(f"Loading config from file: '{env_file}'" if env_file else "No env_file provided.")
+        set_var_for_macos_issue()
+        settings_service = get_settings_service()
 
-    host = settings_service.settings.host
-    port = settings_service.settings.port
-    workers = settings_service.settings.workers
-    worker_timeout = settings_service.settings.worker_timeout
-    log_level = settings_service.settings.log_level
-    frontend_path = settings_service.settings.frontend_path
-    backend_only = settings_service.settings.backend_only
+    # Step 1: Checking Environment
+    with progress.step(1):
+        for key, value in os.environ.items():
+            new_key = key.replace("LANGFLOW_", "")
+            if hasattr(settings_service.auth_settings, new_key):
+                setattr(settings_service.auth_settings, new_key, value)
 
-    # create path object if frontend_path is provided
-    static_files_dir: Path | None = Path(frontend_path) if frontend_path else None
+        frame = inspect.currentframe()
+        valid_args: list = []
+        values: dict = {}
+        if frame is not None:
+            arguments, _, _, values = inspect.getargvalues(frame)
+            valid_args = [arg for arg in arguments if values[arg] is not None]
 
-    app = setup_app(static_files_dir=static_files_dir, backend_only=backend_only)
-    # check if port is being used
-    if is_port_in_use(port, host):
-        port = get_free_port(port)
+        for arg in valid_args:
+            if arg == "components_path":
+                settings_service.settings.update_settings(components_path=components_path)
+            elif hasattr(settings_service.settings, arg):
+                settings_service.set(arg, values[arg])
+            elif hasattr(settings_service.auth_settings, arg):
+                settings_service.auth_settings.set(arg, values[arg])
+            logger.debug(f"Loading config from cli parameter '{arg}': '{values[arg]}'")
 
-    options = {
-        "bind": f"{host}:{port}",
-        "workers": get_number_of_workers(workers),
-        "timeout": worker_timeout,
-    }
+        # Get final values from settings
+        host = settings_service.settings.host
+        port = settings_service.settings.port
+        workers = settings_service.settings.workers
+        worker_timeout = settings_service.settings.worker_timeout
+        log_level = settings_service.settings.log_level
+        frontend_path = settings_service.settings.frontend_path
+        backend_only = settings_service.settings.backend_only
+        ssl_cert_file_path = (
+            settings_service.settings.ssl_cert_file if ssl_cert_file_path is None else ssl_cert_file_path
+        )
+        ssl_key_file_path = settings_service.settings.ssl_key_file if ssl_key_file_path is None else ssl_key_file_path
 
-    # Define an env variable to know if we are just testing the server
-    if "pytest" in sys.modules:
-        return
-    process: Process | None = None
-    try:
-        if platform.system() == "Windows":
-            # Run using uvicorn on MacOS and Windows
-            # Windows doesn't support gunicorn
-            # MacOS requires an env variable to be set to use gunicorn
-            run_on_windows(host, port, log_level, options, app)
-        else:
-            # Run using gunicorn on Linux
-            process = run_on_mac_or_linux(host, port, log_level, options, app)
+        # create path object if frontend_path is provided
+        static_files_dir: Path | None = Path(frontend_path) if frontend_path else None
+
+    # Step 2: Starting Core Services
+    with progress.step(2):
+        app = setup_app(static_files_dir=static_files_dir, backend_only=bool(backend_only))
+
+    # Step 3: Connecting Database (this happens inside setup_app via dependencies)
+    with progress.step(3):
+        # check if port is being used
+        if is_port_in_use(port, host):
+            port = get_free_port(port)
+
+        # Store the runtime-detected port in settings (temporary until strict port enforcement)
+        get_settings_service().settings.runtime_port = port
+
+        protocol = "https" if ssl_cert_file_path and ssl_key_file_path else "http"
+
+    # Step 4: Loading Components (placeholder for components loading)
+    with progress.step(4):
+        pass  # Components are loaded during app startup
+
+    # Step 5: Adding Starter Projects (placeholder for starter projects)
+    if get_settings_service().settings.create_starter_projects:
+        with progress.step(5):
+            pass  # Starter projects are added during app startup
+
+    # Step 6: Launching Langflow
+    if platform.system() == "Windows":
+        with progress.step(6):
+            import uvicorn
+
+            # Print summary and banner before starting the server, since uvicorn is a blocking call.
+            # We _may_ be able to subprocess, but with window's spawn behavior, we'd have to move all
+            # non-picklable code to the subprocess.
+            progress.print_summary()
+            print_banner(str(host), int(port or 7860), protocol)
+
+        # Blocking call, so must be outside of the progress step
+        uvicorn.run(
+            app,
+            host=host,
+            port=port,
+            log_level=log_level,
+            reload=False,
+            workers=get_number_of_workers(workers),
+            loop="asyncio",
+        )
+    else:
+        with progress.step(6):
+            # Use Gunicorn with LangflowUvicornWorker for non-Windows systems
+            from langflow.server import LangflowApplication
+
+            options = {
+                "bind": f"{host}:{port}",
+                "workers": get_number_of_workers(workers),
+                "timeout": worker_timeout,
+                "certfile": ssl_cert_file_path,
+                "keyfile": ssl_key_file_path,
+                "log_level": log_level.lower() if log_level is not None else "info",
+            }
+            server = LangflowApplication(app, options)
+
+            # Start the webapp process
+            process_manager.webapp_process = Process(target=server.run)
+            process_manager.webapp_process.start()
+
+            wait_for_server_ready(host, port, protocol)
+
+        # Print summary and banner after server is ready
+        progress.print_summary()
+        print_banner(str(host), int(port or 7860), protocol)
+
+        # Handle browser opening
         if open_browser and not backend_only:
-            click.launch(f"http://{host}:{port}")
-        if process:
-            process.join()
-    except (KeyboardInterrupt, SystemExit) as e:
-        logger.info("Shutting down server...")
-        if process is not None:
-            process.terminate()
-            process.join(timeout=15)  # Wait up to 15 seconds for process to terminate
-            if process.is_alive():
-                logger.warning("Process did not terminate gracefully, forcing...")
-                process.kill()
-        raise typer.Exit(0) from e
-    except Exception as e:
-        logger.exception(e)
-        if process is not None:
-            process.terminate()
-        raise typer.Exit(1) from e
+            click.launch(f"{protocol}://{host}:{port}")
 
-
-def wait_for_server_ready(host, port) -> None:
-    """Wait for the server to become ready by polling the health endpoint."""
-    status_code = 0
-    while status_code != httpx.codes.OK:
         try:
-            status_code = httpx.get(f"http://{host}:{port}/health").status_code
-        except HTTPError:
-            time.sleep(1)
-        except Exception:  # noqa: BLE001
-            logger.opt(exception=True).debug("Error while waiting for the server to become ready.")
-            time.sleep(1)
-
-
-def run_on_mac_or_linux(host, port, log_level, options, app):
-    webapp_process = Process(target=run_langflow, args=(host, port, log_level, options, app))
-    webapp_process.start()
-    wait_for_server_ready(host, port)
-
-    print_banner(host, port)
-    return webapp_process
-
-
-def run_on_windows(host, port, log_level, options, app) -> None:
-    """Run the Langflow server on Windows."""
-    print_banner(host, port)
-    run_langflow(host, port, log_level, options, app)
+            process_manager.webapp_process.join()
+        except KeyboardInterrupt:
+            # SIGINT should be handled by the signal handler, but leaving here for safety
+            logger.warning("KeyboardInterrupt caught in main thread")
+        finally:
+            process_manager.shutdown()
 
 
 def is_port_in_use(port, host="localhost"):
@@ -304,6 +442,70 @@ def get_free_port(port):
     while is_port_in_use(port):
         port += 1
     return port
+
+
+def is_loopback_address(host: str) -> bool:
+    """Check if a host is a loopback address (localhost, 127.0.0.1, ::1, etc.).
+
+    Args:
+        host: The host address to check
+
+    Returns:
+        bool: True if the host is a loopback address, False otherwise
+    """
+    # Check if it's exactly "localhost"
+    if host == "localhost":
+        return True
+
+    # Check if it's exactly "0.0.0.0" (which binds to all interfaces)
+    if host == "0.0.0.0":  # noqa: S104
+        return True
+
+    try:
+        # Convert string to IP address object
+        ip = ip_address(host)
+        # Check if it's a loopback address (127.0.0.0/8 for IPv4, ::1 for IPv6)
+        return bool(ip.is_loopback)
+    except ValueError:
+        # If the IP address is invalid, default to False
+        return False
+
+
+def can_connect(host: str, port: int, timeout: float = 1.0) -> bool:
+    try:
+        for res in socket.getaddrinfo(host, port, 0, socket.SOCK_STREAM):
+            family, socktype, proto, _, sa = res
+            with socket.socket(family, socktype, proto) as s:
+                s.settimeout(timeout)
+                if s.connect_ex(sa) == 0:
+                    return True
+    except Exception as e:  # noqa: BLE001
+        logger.exception("Failed to connect to %s:%s", host, port, exc_info=e)
+    return False
+
+
+def get_best_access_host(host: str, port: int) -> str:
+    """Get the best host to use for accessing the server.
+
+    For loopback addresses, we prefer 'localhost' over IP addresses like '127.0.0.1'
+    because 'localhost' is more universally supported across different operating systems
+    and network configurations.
+
+    Args:
+        host: The original host address
+        port: The port number
+
+    Returns:
+        str: The best host address to use for access
+    """
+    if not is_loopback_address(host):
+        return host
+
+    if host != "localhost" and can_connect("localhost", port):
+        return "localhost"
+    if can_connect(host, port):
+        return host
+    return "localhost"
 
 
 def get_letter_from_version(version: str) -> str | None:
@@ -358,7 +560,7 @@ def stylize_text(text: str, to_style: str, *, is_prerelease: bool) -> str:
     return text.replace(to_style, styled_text)
 
 
-def print_banner(host: str, port: int) -> None:
+def print_banner(host: str, port: int, protocol: str) -> None:
     notices = []
     package_names = []  # Track package names for pip install instructions
     is_pre_release = False  # Track if any package is a pre-release
@@ -384,103 +586,205 @@ def print_banner(host: str, port: int) -> None:
     if notices:
         notices.append(f"Run '{pip_command}' to update.")
 
-    styled_notices = [f"[bold]{notice}[/bold]" for notice in notices if notice]
+    [f"[bold]{notice}[/bold]" for notice in notices if notice]
     styled_package_name = stylize_text(
         package_name, package_name, is_prerelease=any("pre-release" in notice for notice in notices)
     )
 
-    title = f"[bold]Welcome to :chains: {styled_package_name}[/bold]\n"
+    title = f"[bold]Welcome to {styled_package_name}[/bold]\n"
+
+    # Use Windows-safe characters to prevent encoding issues
+    import platform
+
+    if platform.system() == "Windows":
+        github_icon = "*"
+        discord_icon = "#"
+        arrow = "->"
+        status_icon = "[OK]"
+    else:
+        github_icon = ":star2:"
+        discord_icon = ":speech_balloon:"
+        arrow = "→"
+        status_icon = "🟢"
+
     info_text = (
-        "Collaborate, and contribute at our "
-        "[bold][link=https://github.com/langflow-ai/langflow]GitHub Repo[/link][/bold] :star2:"
+        f"{github_icon} GitHub: Star for updates {arrow} https://github.com/langflow-ai/langflow\n"
+        f"{discord_icon} Discord: Join for support {arrow} https://discord.com/invite/EqksyE2EX9"
     )
     telemetry_text = (
-        "We collect anonymous usage data to improve Langflow.\n"
-        "You can opt-out by setting [bold]DO_NOT_TRACK=true[/bold] in your environment."
-    )
-    access_link = f"Access [link=http://{host}:{port}]http://{host}:{port}[/link]"
-
-    panel_content = "\n\n".join([title, *styled_notices, info_text, telemetry_text, access_link])
-    panel = Panel(panel_content, box=box.ROUNDED, border_style="blue", expand=False)
-    rprint(panel)
-
-
-def run_langflow(host, port, log_level, options, app) -> None:
-    """Run Langflow server on localhost."""
-    if platform.system() == "Windows":
-        import uvicorn
-
-        uvicorn.run(
-            app,
-            host=host,
-            port=port,
-            log_level=log_level.lower(),
-            loop="asyncio",
+        (
+            "We collect anonymous usage data to improve Langflow.\n"
+            "To opt out, set: [bold]DO_NOT_TRACK=true[/bold] in your environment."
         )
-    else:
-        from langflow.server import LangflowApplication
+        if os.getenv("DO_NOT_TRACK", os.getenv("LANGFLOW_DO_NOT_TRACK", "False")).lower() != "true"
+        else (
+            "We are [bold]not[/bold] collecting anonymous usage data to improve Langflow.\n"
+            "To contribute, set: [bold]DO_NOT_TRACK=false[/bold] in your environment."
+        )
+    )
+    access_host = get_best_access_host(host, port)
+    access_link = f"[bold]{status_icon} Open Langflow {arrow}[/bold] [link={protocol}://{access_host}:{port}]{protocol}://{access_host}:{port}[/link]"
 
-        server = LangflowApplication(app, options)
+    message = f"{title}\n{info_text}\n\n{telemetry_text}\n\n{access_link}"
 
-        def graceful_shutdown(signum, frame):  # noqa: ARG001
-            """Gracefully shutdown the server when receiving SIGTERM."""
-            # Suppress click exceptions during shutdown
-            import click
-
-            click.echo = lambda *args, **kwargs: None  # noqa: ARG005
-
-            logger.info("Gracefully shutting down server...")
-            # For Gunicorn workers, we raise SystemExit to trigger graceful shutdown
-            raise SystemExit(0)
-
-        # Register signal handlers
-        signal.signal(signal.SIGTERM, graceful_shutdown)
-        signal.signal(signal.SIGINT, graceful_shutdown)
-
+    # Handle Unicode encoding errors on Windows
+    try:
+        console.print()  # Add line break before banner
+        console.print(Panel.fit(message, border_style="#7528FC", padding=(1, 2)))
+    except UnicodeEncodeError:
+        # Fallback to a simpler banner without emojis for Windows systems with encoding issues
+        fallback_message = (
+            f"Welcome to {package_name}\n\n"
+            "* GitHub: https://github.com/langflow-ai/langflow\n"
+            "# Discord: https://discord.com/invite/EqksyE2EX9\n\n"
+            f"{telemetry_text}\n\n"
+            f"[OK] Open Langflow -> {protocol}://{access_host}:{port}"
+        )
         try:
-            server.run()
-        except (KeyboardInterrupt, SystemExit):
-            # Suppress the exception output
-            sys.exit(0)
+            console.print()  # Add line break before fallback banner
+            console.print(Panel.fit(fallback_message, border_style="#7528FC", padding=(1, 2)))
+        except UnicodeEncodeError:
+            # Last resort: use logger instead of print
+            logger.info(f"Welcome to {package_name}")
+            logger.info("GitHub: https://github.com/langflow-ai/langflow")
+            logger.info("Discord: https://discord.com/invite/EqksyE2EX9")
+            logger.info(f"Open Langflow: {protocol}://{access_host}:{port}")
 
 
 @app.command()
 def superuser(
-    username: str = typer.Option(..., prompt=True, help="Username for the superuser."),
-    password: str = typer.Option(..., prompt=True, hide_input=True, help="Password for the superuser."),
+    username: str = typer.Option(
+        None, help="Username for the superuser. Defaults to 'langflow' when AUTO_LOGIN is enabled."
+    ),
+    password: str = typer.Option(
+        None, help="Password for the superuser. Defaults to 'langflow' when AUTO_LOGIN is enabled."
+    ),
     log_level: str = typer.Option("error", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
+    auth_token: str = typer.Option(
+        None, help="Authentication token of existing superuser.", envvar="LANGFLOW_SUPERUSER_TOKEN"
+    ),
 ) -> None:
-    """Create a superuser."""
+    """Create a superuser.
+
+    When AUTO_LOGIN is enabled, uses default credentials.
+    In production mode, requires authentication.
+    """
     configure(log_level=log_level)
-    db_service = get_db_service()
 
-    async def _create_superuser():
-        await initialize_services()
-        async with session_getter(db_service) as session:
-            from langflow.services.auth.utils import create_super_user
+    asyncio.run(_create_superuser(username, password, auth_token))
 
-            if await create_super_user(db=session, username=username, password=password):
-                # Verify that the superuser was created
-                from langflow.services.database.models.user.model import User
 
-                stmt = select(User).where(User.username == username)
-                user: User = (await session.exec(stmt)).first()
-                if user is None or not user.is_superuser:
-                    typer.echo("Superuser creation failed.")
-                    return
-                # Now create the first folder for the user
-                result = await get_or_create_default_folder(session, user.id)
-                if result:
-                    typer.echo("Default folder created successfully.")
-                else:
-                    msg = "Could not create default folder."
-                    raise RuntimeError(msg)
-                typer.echo("Superuser created successfully.")
+async def _create_superuser(username: str, password: str, auth_token: str | None):
+    """Create a superuser."""
+    await initialize_services()
 
-            else:
+    settings_service = get_settings_service()
+    # Check if superuser creation via CLI is enabled
+    if not settings_service.auth_settings.ENABLE_SUPERUSER_CLI:
+        typer.echo("Error: Superuser creation via CLI is disabled.")
+        typer.echo("Set LANGFLOW_ENABLE_SUPERUSER_CLI=true to enable this feature.")
+        raise typer.Exit(1)
+
+    if settings_service.auth_settings.AUTO_LOGIN:
+        # Force default credentials for AUTO_LOGIN mode
+        username = DEFAULT_SUPERUSER
+        password = DEFAULT_SUPERUSER_PASSWORD.get_secret_value()
+    else:
+        # Production mode - prompt for credentials if not provided
+        if not username:
+            username = typer.prompt("Username")
+        if not password:
+            password = typer.prompt("Password", hide_input=True)
+
+    from langflow.services.database.models.user.crud import get_all_superusers
+
+    existing_superusers = []
+    async with session_scope() as session:
+        # Note that the default superuser is created by the initialize_services() function,
+        # but leaving this check here in case we change that behavior
+        existing_superusers = await get_all_superusers(session)
+    is_first_setup = len(existing_superusers) == 0
+
+    # If AUTO_LOGIN is true, only allow default superuser creation
+    if settings_service.auth_settings.AUTO_LOGIN:
+        if not is_first_setup:
+            typer.echo("Error: Cannot create additional superusers when AUTO_LOGIN is enabled.")
+            typer.echo("AUTO_LOGIN mode is for development with only the default superuser.")
+            typer.echo("To create additional superusers:")
+            typer.echo("1. Set LANGFLOW_AUTO_LOGIN=false")
+            typer.echo("2. Run this command again with --auth-token")
+            raise typer.Exit(1)
+
+        typer.echo(f"AUTO_LOGIN enabled. Creating default superuser '{username}'...")
+        # Do not echo the default password to avoid exposing it in logs.
+    # AUTO_LOGIN is false - production mode
+    elif is_first_setup:
+        typer.echo("No superusers found. Creating first superuser...")
+    else:
+        # Authentication is required in production mode
+        if not auth_token:
+            typer.echo("Error: Creating a superuser requires authentication.")
+            typer.echo("Please provide --auth-token with a valid superuser API key or JWT token.")
+            typer.echo("To get a token, use: `uv run langflow api_key`")
+            raise typer.Exit(1)
+
+        # Validate the auth token
+        try:
+            auth_user = None
+            async with session_scope() as session:
+                # Try JWT first
+                user = None
+                try:
+                    user = await get_current_user_by_jwt(auth_token, session)
+                except (JWTError, HTTPException):
+                    # Try API key
+                    api_key_result = await check_key(session, auth_token)
+                    if api_key_result and hasattr(api_key_result, "is_superuser"):
+                        user = api_key_result
+                auth_user = user
+
+            if not auth_user or not auth_user.is_superuser:
+                typer.echo(
+                    "Error: Invalid token or insufficient privileges. Only superusers can create other superusers."
+                )
+                raise typer.Exit(1)
+        except typer.Exit:
+            raise  # Re-raise typer.Exit without wrapping
+        except Exception as e:  # noqa: BLE001
+            typer.echo(f"Error: Authentication failed - {e!s}")
+            raise typer.Exit(1) from None
+
+    # Auth complete, create the superuser
+    async with session_scope() as session:
+        from langflow.services.auth.utils import create_super_user
+
+        if await create_super_user(db=session, username=username, password=password):
+            # Verify that the superuser was created
+            from langflow.services.database.models.user.model import User
+
+            stmt = select(User).where(User.username == username)
+            created_user: User = (await session.exec(stmt)).first()
+            if created_user is None or not created_user.is_superuser:
                 typer.echo("Superuser creation failed.")
+                return
+            # Now create the first folder for the user
+            result = await get_or_create_default_folder(session, created_user.id)
+            if result:
+                typer.echo("Default folder created successfully.")
+            else:
+                msg = "Could not create default folder."
+                raise RuntimeError(msg)
 
-    asyncio.run(_create_superuser())
+            # Log the superuser creation for audit purposes
+            logger.warning(
+                f"SECURITY AUDIT: New superuser '{username}' created via CLI command"
+                + (" by authenticated user" if auth_token else " (first-time setup)")
+            )
+            typer.echo("Superuser created successfully.")
+
+        else:
+            logger.error(f"SECURITY AUDIT: Failed attempt to create superuser '{username}' via CLI")
+            typer.echo("Superuser creation failed.")
 
 
 # command to copy the langflow database from the cache to the current directory
@@ -563,6 +867,7 @@ def api_key(
         settings_service = get_settings_service()
         auth_settings = settings_service.auth_settings
         if not auth_settings.AUTO_LOGIN:
+            # TODO: Allow non-auto-login users to create API keys via CLI
             typer.echo("Auto login is disabled. API keys cannot be created through the CLI.")
             return None
 
@@ -576,18 +881,16 @@ def api_key(
                     "Default superuser not found. This command requires a superuser and AUTO_LOGIN to be enabled."
                 )
                 return None
-            from langflow.services.database.models.api_key import ApiKey, ApiKeyCreate
             from langflow.services.database.models.api_key.crud import create_api_key, delete_api_key
+            from langflow.services.database.models.api_key.model import ApiKey, ApiKeyCreate
 
             stmt = select(ApiKey).where(ApiKey.user_id == superuser.id)
             api_key = (await session.exec(stmt)).first()
             if api_key:
-                await delete_api_key(session, api_key.id)
+                await delete_api_key(session, api_key.id, superuser.id)
 
             api_key_create = ApiKeyCreate(name="CLI")
-            unmasked_api_key = await create_api_key(session, api_key_create, user_id=superuser.id)
-            await session.commit()
-            return unmasked_api_key
+            return await create_api_key(session, api_key_create, user_id=superuser.id)
 
     unmasked_api_key = asyncio.run(aapi_key())
     # Create a banner to display the API key and tell the user it won't be shown again
@@ -634,8 +937,19 @@ def api_key_banner(unmasked_api_key) -> None:
         border_style="blue",
         expand=False,
     )
-    console = Console()
-    console.print(panel)
+    # Use Windows-safe console initialization
+    banner_console = Console(legacy_windows=True, emoji=False) if platform.system() == "Windows" else Console()
+
+    try:
+        banner_console.print(panel)
+    except UnicodeEncodeError:
+        # Fallback for Windows encoding issues
+        logger.info("API Key Created Successfully:")
+        logger.info(unmasked_api_key.api_key)
+        logger.info("This is the only time the API key will be displayed.")
+        logger.info("Make sure to store it in a secure location.")
+        ctrl_cmd = "Ctrl" if not is_mac else "Cmd"
+        logger.info(f"The API key has been copied to your clipboard. {ctrl_cmd} + V to paste it.")
 
 
 def main() -> None:

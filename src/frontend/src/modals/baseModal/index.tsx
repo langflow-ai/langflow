@@ -1,24 +1,21 @@
-import { ReactNode, useEffect } from "react";
-
-import React from "react";
+import { DialogClose } from "@radix-ui/react-dialog";
+import * as Form from "@radix-ui/react-form";
+import React, { type ReactNode, useEffect } from "react";
+import { Button } from "../../components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogContentWithouFixed,
   DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "../../components/ui/dialog";
-
 import {
   Dialog as Modal,
   DialogContent as ModalContent,
 } from "../../components/ui/dialog-with-no-close";
-
-import { DialogClose } from "@radix-ui/react-dialog";
-import * as Form from "@radix-ui/react-form";
-import { Button } from "../../components/ui/button";
-import { modalHeaderType } from "../../types/components";
+import type { modalHeaderType } from "../../types/components";
 import { cn } from "../../utils/utils";
 import { switchCaseModalSize } from "./helpers/switch-case-size";
 
@@ -59,14 +56,36 @@ const Trigger: React.FC<TriggerProps> = ({
   disable,
   className,
 }) => {
+  const childCount = React.Children.count(children);
+  const isEmptyFragment =
+    React.isValidElement(children) &&
+    children.type === React.Fragment &&
+    React.Children.count(
+      // children.props is unknown by default; narrow with a type guard
+      (children.props as { children?: React.ReactNode }).children,
+    ) === 0;
+
+  // Only show the trigger as “visible” when there is usable child content
+  const hasUsableChild = childCount > 0 && !isEmptyFragment;
+
+  // Ensure a valid element for Radix asChild (fragments can't receive props)
+  const triggerChild =
+    hasUsableChild &&
+    React.isValidElement(children) &&
+    children.type !== React.Fragment ? (
+      children
+    ) : (
+      <span />
+    );
+
   return (
     <DialogTrigger
       className={asChild ? "" : cn("w-full", className)}
-      hidden={children ? false : true}
+      hidden={!hasUsableChild}
       disabled={disable}
       asChild={asChild}
     >
-      {children}
+      {triggerChild}
     </DialogTrigger>
   );
 };
@@ -108,14 +127,16 @@ const Footer: React.FC<{
   };
   close?: boolean;
   centered?: boolean;
-}> = ({ children, submit, close, centered }) => {
+  className?: string;
+}> = ({ children, submit, close, centered, className }) => {
   return (
     <div
-      className={
+      className={cn(
         centered
           ? "flex flex-shrink-0 justify-center"
-          : "flex flex-shrink-0 flex-row-reverse"
-      }
+          : "flex flex-shrink-0 flex-row-reverse",
+        className,
+      )}
     >
       {submit ? (
         <div className="flex w-full items-center justify-between">
@@ -167,10 +188,13 @@ interface BaseModalProps {
   open?: boolean;
   setOpen?: (open: boolean) => void;
   size?:
+    | "notice"
     | "x-small"
     | "retangular"
     | "smaller"
     | "small"
+    | "small-update"
+    | "small-query"
     | "medium"
     | "medium-tall"
     | "large"
@@ -185,7 +209,8 @@ interface BaseModalProps {
     | "sm-thin"
     | "smaller-h-full"
     | "medium-log"
-    | "x-large";
+    | "x-large"
+    | "auth";
   className?: string;
   disable?: boolean;
   onChangeOpenModal?: (open?: boolean) => void;
@@ -193,6 +218,7 @@ interface BaseModalProps {
   onSubmit?: () => void;
   onEscapeKeyDown?: (e: KeyboardEvent) => void;
   closeButtonClassName?: string;
+  dialogContentWithouFixed?: boolean;
 }
 function BaseModal({
   className,
@@ -205,6 +231,7 @@ function BaseModal({
   onSubmit,
   onEscapeKeyDown,
   closeButtonClassName,
+  dialogContentWithouFixed = false,
 }: BaseModalProps) {
   const headerChild = React.Children.toArray(children).find(
     (child) => (child as React.ReactElement).type === Header,
@@ -219,7 +246,7 @@ function BaseModal({
     (child) => (child as React.ReactElement).type === Footer,
   );
 
-  let { minWidth, height } = switchCaseModalSize(size);
+  const { minWidth, height } = switchCaseModalSize(size);
 
   useEffect(() => {
     if (onChangeOpenModal) {
@@ -259,27 +286,49 @@ function BaseModal({
       ) : (
         <Dialog open={open} onOpenChange={setOpen}>
           {triggerChild}
-          <DialogContent
-            onClick={(e) => e.stopPropagation()}
-            onOpenAutoFocus={(event) => event.preventDefault()}
-            onEscapeKeyDown={onEscapeKeyDown}
-            className={contentClasses}
-            closeButtonClassName={closeButtonClassName}
-          >
-            {onSubmit ? (
-              <Form.Root
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  onSubmit();
-                }}
-                className={formClasses}
-              >
-                {modalContent}
-              </Form.Root>
-            ) : (
-              modalContent
-            )}
-          </DialogContent>
+          {dialogContentWithouFixed ? (
+            <DialogContentWithouFixed
+              onClick={(e) => e.stopPropagation()}
+              onEscapeKeyDown={onEscapeKeyDown}
+              className={contentClasses}
+              closeButtonClassName={closeButtonClassName}
+            >
+              {onSubmit ? (
+                <Form.Root
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    onSubmit();
+                  }}
+                  className={formClasses}
+                >
+                  {modalContent}
+                </Form.Root>
+              ) : (
+                modalContent
+              )}
+            </DialogContentWithouFixed>
+          ) : (
+            <DialogContent
+              onClick={(e) => e.stopPropagation()}
+              onEscapeKeyDown={onEscapeKeyDown}
+              className={contentClasses}
+              closeButtonClassName={closeButtonClassName}
+            >
+              {onSubmit ? (
+                <Form.Root
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    onSubmit();
+                  }}
+                  className={formClasses}
+                >
+                  {modalContent}
+                </Form.Root>
+              ) : (
+                modalContent
+              )}
+            </DialogContent>
+          )}
         </Dialog>
       )}
     </>

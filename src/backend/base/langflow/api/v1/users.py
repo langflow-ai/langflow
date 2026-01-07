@@ -15,8 +15,8 @@ from langflow.services.auth.utils import (
     get_password_hash,
     verify_password,
 )
-from langflow.services.database.models.user import User, UserCreate, UserRead, UserUpdate
 from langflow.services.database.models.user.crud import get_user_by_id, update_user
+from langflow.services.database.models.user.model import User, UserCreate, UserRead, UserUpdate
 from langflow.services.deps import get_settings_service
 
 router = APIRouter(tags=["Users"], prefix="/users")
@@ -26,20 +26,23 @@ router = APIRouter(tags=["Users"], prefix="/users")
 async def add_user(
     user: UserCreate,
     session: DbSession,
+    current_user: Annotated[User, Depends(get_current_active_superuser)],  # noqa: ARG001
 ) -> User:
-    """Add a new user to the database."""
+    """Add a new user to the database.
+
+    Requires superuser authentication to prevent unauthorized account creation.
+    """
     new_user = User.model_validate(user, from_attributes=True)
     try:
         new_user.password = get_password_hash(user.password)
         new_user.is_active = get_settings_service().auth_settings.NEW_USER_IS_ACTIVE
         session.add(new_user)
-        await session.commit()
+        await session.flush()
         await session.refresh(new_user)
         folder = await get_or_create_default_folder(session, new_user.id)
         if not folder:
-            raise HTTPException(status_code=500, detail="Error creating default folder")
+            raise HTTPException(status_code=500, detail="Error creating default project")
     except IntegrityError as e:
-        await session.rollback()
         raise HTTPException(status_code=400, detail="This username is unavailable.") from e
 
     return new_user
@@ -113,11 +116,14 @@ async def reset_password(
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+
     if verify_password(user_update.password, user.password):
         raise HTTPException(status_code=400, detail="You can't use your current password")
+
     new_password = get_password_hash(user_update.password)
     user.password = new_password
-    await session.commit()
+
+    await session.flush()
     await session.refresh(user)
 
     return user
@@ -141,6 +147,4 @@ async def delete_user(
         raise HTTPException(status_code=404, detail="User not found")
 
     await session.delete(user_db)
-    await session.commit()
-
     return {"detail": "User deleted"}

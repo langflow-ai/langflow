@@ -1,13 +1,20 @@
 # noqa: INP001
 import asyncio
+import hashlib
+import os
 from logging.config import fileConfig
+from typing import Any
+
 
 from alembic import context
 from sqlalchemy import pool, text
 from sqlalchemy.event import listen
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
+from lfx.log.logger import logger
+
 from langflow.services.database.service import SQLModel
+
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -18,12 +25,19 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
+NAMING_CONVENTION = {
+    "ix": "ix_%(column_0_label)s",
+    "uq": "uq_%(table_name)s_%(column_0_name)s",
+    "ck": "ck_%(table_name)s_%(constraint_name)s",
+    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+    "pk": "pk_%(table_name)s",
+}
 # add your model's MetaData object here
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
 target_metadata = SQLModel.metadata
-
+target_metadata.naming_convention = NAMING_CONVENTION
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
@@ -43,14 +57,19 @@ def run_migrations_offline() -> None:
 
     """
     url = config.get_main_option("sqlalchemy.url")
-    context.configure(
-        url=url,
-        target_metadata=target_metadata,
-        literal_binds=True,
-        dialect_opts={"paramstyle": "named"},
-        render_as_batch=True,
-        prepare_threshold=None,
-    )
+    configure_kwargs = {
+        "url": url,
+        "target_metadata": target_metadata,
+        "literal_binds": True,
+        "dialect_opts": {"paramstyle": "named"},
+        "render_as_batch": True,
+    }
+
+    # Only add prepare_threshold for PostgreSQL
+    if url and "postgresql" in url:
+        configure_kwargs["prepare_threshold"] = None
+
+    context.configure(**configure_kwargs)
 
     with context.begin_transaction():
         context.run_migrations()
@@ -72,22 +91,47 @@ def _sqlite_do_begin(conn):
 
 
 def _do_run_migrations(connection):
-    context.configure(
-        connection=connection, target_metadata=target_metadata, render_as_batch=True, prepare_threshold=None
-    )
+    configure_kwargs = {
+        "connection": connection,
+        "target_metadata": target_metadata,
+        "render_as_batch": True,
+    }
 
+    # Only add prepare_threshold for PostgreSQL
+    if connection.dialect.name == "postgresql":
+        configure_kwargs["prepare_threshold"] = None
+
+    context.configure(**configure_kwargs)
     with context.begin_transaction():
         if connection.dialect.name == "postgresql":
-            connection.execute(text("SET LOCAL lock_timeout = '60s';"))
-            connection.execute(text("SELECT pg_advisory_xact_lock(112233);"))
+            # Use namespace from environment variable if provided, otherwise use default static key
+            namespace = os.getenv("LANGFLOW_MIGRATION_LOCK_NAMESPACE")
+            if namespace:
+                lock_key = int(hashlib.sha256(namespace.encode()).hexdigest()[:16], 16) % (2**63 - 1)
+                logger.info(f"Using migration lock namespace: {namespace}, lock_key: {lock_key}")
+            else:
+                lock_key = 11223344
+                logger.info(f"Using default migration lock_key: {lock_key}")
+
+            connection.execute(text("SET LOCAL lock_timeout = '180s';"))
+            connection.execute(text(f"SELECT pg_advisory_xact_lock({lock_key});"))
         context.run_migrations()
 
-
 async def _run_async_migrations() -> None:
+    # Disable prepared statements for PostgreSQL (required for PgBouncer compatibility)
+    # SQLite doesn't support this parameter, so only add it for PostgreSQL
+    config_section = config.get_section(config.config_ini_section, {})
+    db_url = config_section.get("sqlalchemy.url", "")
+
+    connect_args: dict[str, Any] = {}
+    if db_url and "postgresql" in db_url:
+        connect_args["prepare_threshold"] = None
+
     connectable = async_engine_from_config(
-        config.get_section(config.config_ini_section, {}),
+        config_section,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
+        connect_args=connect_args,
     )
 
     if connectable.dialect.name == "sqlite":

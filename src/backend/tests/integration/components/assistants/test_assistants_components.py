@@ -1,5 +1,5 @@
 import pytest
-from langflow.components.astra_assistants import (
+from lfx.components.datastax import (
     AssistantsCreateAssistant,
     AssistantsCreateThread,
     AssistantsGetAssistantName,

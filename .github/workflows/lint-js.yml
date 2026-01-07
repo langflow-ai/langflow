@@ -11,18 +11,18 @@ on:
 
 
 env:
-  NODE_VERSION: "21"
+  NODE_VERSION: "22"
 
 jobs:
   run-linters:
-    name: Run Prettier
+    name: Run Biome
     runs-on: ubuntu-latest
     permissions:
       contents: write
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.branch || github.ref }}
 
@@ -47,7 +47,7 @@ jobs:
           npm install
         if: ${{ steps.setup-node.outputs.cache-hit != 'true' }}
 
-      - name: Run Prettier
+      - name: Run Biome
         run: |
           cd src/frontend
-          npm run check-format
+          npx @biomejs/biome check --changed

@@ -1,6 +1,6 @@
+import type { ChangeEvent, KeyboardEvent } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Input } from "@/components/ui/input";
-import { ChangeEvent, KeyboardEvent } from "react";
 
 type InputSearchComponentProps = {
   loading: boolean;
@@ -38,7 +38,7 @@ const InputSearchComponent = ({
           data-testid="search-store-input"
           disabled={loading}
           placeholder={getSearchPlaceholder()}
-          className="absolute h-12 pl-5 pr-12"
+          className="h-12 pl-5 pr-12"
           onChange={onChange}
           onKeyDown={onKeyDown}
           value={value}

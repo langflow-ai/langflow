@@ -1,10 +1,11 @@
-import { useDarkStore } from "@/stores/darkStore";
 import { useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import {
   oneDark,
   oneLight,
 } from "react-syntax-highlighter/dist/cjs/styles/prism";
+import { CustomAPIGenerator } from "@/customization/components/custom-api-generator";
+import { useDarkStore } from "@/stores/darkStore";
 import IconComponent from "../../components/common/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import getWidgetCode from "../apiModal/utils/get-widget-code";
@@ -57,42 +58,45 @@ export default function EmbedModal({
   return (
     <BaseModal open={open} setOpen={setOpen} size="retangular">
       <BaseModal.Header>
-        <div className="flex items-center gap-2 text-[16px] font-semibold">
+        <div className="flex items-center gap-2 text-base font-semibold">
           <IconComponent name="Columns2" className="icon-size" />
           Embed into site
         </div>
       </BaseModal.Header>
       <BaseModal.Content className="">
-        <div className="relative flex h-full w-full">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={copyToClipboard}
-            data-testid="btn-copy-code"
-            className="!hover:bg-foreground group absolute right-2 top-2"
-          >
-            {isCopied ? (
-              <IconComponent
-                name="Check"
-                className="h-5 w-5 text-muted-foreground"
-              />
-            ) : (
-              <IconComponent
-                name="Copy"
-                className="!h-5 !w-5 text-muted-foreground"
-              />
-            )}
-          </Button>
-          <SyntaxHighlighter
-            showLineNumbers={true}
-            wrapLongLines={true}
-            language="html"
-            style={isDark ? oneDark : oneLight}
-            className="!mt-0 h-full w-full overflow-scroll !rounded-b-md border border-border text-left !custom-scroll"
-          >
-            {embedCode}
-          </SyntaxHighlighter>
-        </div>
+        <>
+          <CustomAPIGenerator isOpen={open} isEmbedded={true} />
+          <div className="relative flex h-full w-full">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={copyToClipboard}
+              data-testid="btn-copy-code"
+              className="!hover:bg-foreground group absolute right-2 top-2"
+            >
+              {isCopied ? (
+                <IconComponent
+                  name="Check"
+                  className="h-5 w-5 text-muted-foreground"
+                />
+              ) : (
+                <IconComponent
+                  name="Copy"
+                  className="!h-5 !w-5 text-muted-foreground"
+                />
+              )}
+            </Button>
+            <SyntaxHighlighter
+              showLineNumbers={true}
+              wrapLongLines={true}
+              language="html"
+              style={isDark ? oneDark : oneLight}
+              className="!mt-0 h-full w-full overflow-scroll !rounded-b-md border border-border text-left !custom-scroll"
+            >
+              {embedCode}
+            </SyntaxHighlighter>
+          </div>
+        </>
       </BaseModal.Content>
     </BaseModal>
   );

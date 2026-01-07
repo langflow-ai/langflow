@@ -2,14 +2,30 @@ import asyncio
 import json
 from uuid import UUID, uuid4
 
+import orjson
 import pytest
 from fastapi import status
 from httpx import AsyncClient
-from langflow.custom.directory_reader.directory_reader import DirectoryReader
-from langflow.services.deps import get_settings_service
+from langflow.services.database.models.flow.model import FlowCreate
+from lfx.custom.directory_reader.directory_reader import DirectoryReader
+from lfx.services.settings.base import BASE_COMPONENTS_PATH
 
 
 async def run_post(client, flow_id, headers, post_data):
+    """Sends a POST request to process a flow and returns the JSON response.
+
+    Args:
+        client: The HTTP client to use for making requests.
+        flow_id: The identifier of the flow to process.
+        headers: The HTTP headers to include in the request.
+        post_data: The JSON payload to send in the request.
+
+    Returns:
+        The JSON response from the API if the request is successful.
+
+    Raises:
+        AssertionError: If the response status code is not 200.
+    """
     response = await client.post(
         f"api/v1/process/{flow_id}",
         headers=headers,
@@ -111,10 +127,15 @@ PROMPT_REQUEST = {
 
 @pytest.mark.benchmark
 async def test_get_all(client: AsyncClient, logged_in_headers):
+    """Tests the retrieval of all available components from the API.
+
+    Sends a GET request to the `api/v1/all` endpoint and verifies that the returned component names
+    correspond to files in the components directory. Also checks for the presence of specific components
+    such as "ChatInput", "Prompt", and "ChatOutput" in the response.
+    """
     response = await client.get("api/v1/all", headers=logged_in_headers)
     assert response.status_code == 200
-    settings = get_settings_service().settings
-    dir_reader = DirectoryReader(settings.components_path[0])
+    dir_reader = DirectoryReader(BASE_COMPONENTS_PATH)
     files = dir_reader.get_files()
     # json_response is a dict of dicts
     all_names = [component_name for _, components in response.json().items() for component_name in components]
@@ -123,9 +144,9 @@ async def test_get_all(client: AsyncClient, logged_in_headers):
     assert len(all_names) <= len(
         files
     )  # Less or equal because we might have some files that don't have the dependencies installed
-    assert "ChatInput" in json_response["inputs"]
-    assert "Prompt" in json_response["prompts"]
-    assert "ChatOutput" in json_response["outputs"]
+    assert "ChatInput" in json_response["input_output"]
+    assert "Prompt Template" in json_response["models_and_agents"]
+    assert "ChatOutput" in json_response["input_output"]
 
 
 @pytest.mark.usefixtures("active_user")
@@ -210,18 +231,19 @@ What is a good name for a company that makes {product}?
 INVALID_PROMPT = "This is an invalid prompt without any input variable."
 
 
-async def test_valid_prompt(client: AsyncClient):
+async def test_valid_prompt(client: AsyncClient, logged_in_headers):
     PROMPT_REQUEST["template"] = VALID_PROMPT
-    response = await client.post("api/v1/validate/prompt", json=PROMPT_REQUEST)
+    response = await client.post("api/v1/validate/prompt", json=PROMPT_REQUEST, headers=logged_in_headers)
     assert response.status_code == 200
     assert response.json()["input_variables"] == ["product"]
 
 
-async def test_invalid_prompt(client: AsyncClient):
+async def test_invalid_prompt(client: AsyncClient, logged_in_headers):
     PROMPT_REQUEST["template"] = INVALID_PROMPT
     response = await client.post(
         "api/v1/validate/prompt",
         json=PROMPT_REQUEST,
+        headers=logged_in_headers,
     )
     assert response.status_code == 200
     assert response.json()["input_variables"] == []
@@ -236,9 +258,9 @@ async def test_invalid_prompt(client: AsyncClient):
         ("{a}, {b}, and {c} are variables.", ["a", "b", "c"]),
     ],
 )
-async def test_various_prompts(client, prompt, expected_input_variables):
+async def test_various_prompts(client, logged_in_headers, prompt, expected_input_variables):
     PROMPT_REQUEST["template"] = prompt
-    response = await client.post("api/v1/validate/prompt", json=PROMPT_REQUEST)
+    response = await client.post("api/v1/validate/prompt", json=PROMPT_REQUEST, headers=logged_in_headers)
     assert response.status_code == 200
     assert response.json()["input_variables"] == expected_input_variables
 
@@ -407,7 +429,13 @@ async def test_successful_run_with_input_type_text(client, simple_api_test, crea
     assert len(outputs_dict) == 2
     assert "inputs" in outputs_dict
     assert "outputs" in outputs_dict
-    assert outputs_dict.get("inputs") == {"input_value": "value1"}
+    actual_inputs = outputs_dict.get("inputs")
+    expected_inputs = {"input_value": "value1"}
+    assert actual_inputs == expected_inputs, (
+        f"Expected inputs to be {expected_inputs}, but got {actual_inputs}. "
+        f"Full outputs_dict keys: {list(outputs_dict.keys())}, "
+        f"Full response: {json_response}"
+    )
     assert isinstance(outputs_dict.get("outputs"), list)
     assert len(outputs_dict.get("outputs")) == 3
     # Now we get all components that contain TextInput in the component_id
@@ -442,7 +470,13 @@ async def test_successful_run_with_input_type_chat(client: AsyncClient, simple_a
     assert len(outputs_dict) == 2
     assert "inputs" in outputs_dict
     assert "outputs" in outputs_dict
-    assert outputs_dict.get("inputs") == {"input_value": "value1"}
+    actual_inputs = outputs_dict.get("inputs")
+    expected_inputs = {"input_value": "value1"}
+    assert actual_inputs == expected_inputs, (
+        f"Expected inputs to be {expected_inputs}, but got {actual_inputs}. "
+        f"Full outputs_dict keys: {list(outputs_dict.keys())}, "
+        f"Full response: {json_response}"
+    )
     assert isinstance(outputs_dict.get("outputs"), list)
     assert len(outputs_dict.get("outputs")) == 3
     # Now we get all components that contain TextInput in the component_id
@@ -490,7 +524,13 @@ async def test_successful_run_with_input_type_any(client, simple_api_test, creat
     assert len(outputs_dict) == 2
     assert "inputs" in outputs_dict
     assert "outputs" in outputs_dict
-    assert outputs_dict.get("inputs") == {"input_value": "value1"}
+    actual_inputs = outputs_dict.get("inputs")
+    expected_inputs = {"input_value": "value1"}
+    assert actual_inputs == expected_inputs, (
+        f"Expected inputs to be {expected_inputs}, but got {actual_inputs}. "
+        f"Full outputs_dict keys: {list(outputs_dict.keys())}, "
+        f"Full response: {json_response}"
+    )
     assert isinstance(outputs_dict.get("outputs"), list)
     assert len(outputs_dict.get("outputs")) == 3
     # Now we get all components that contain TextInput or ChatInput in the component_id
@@ -636,3 +676,197 @@ async def test_concurrent_stream_run_with_input_type_chat(client: AsyncClient, s
 
     # Run all streaming tests concurrently
     await asyncio.gather(*tasks)
+
+
+# ============================================================================
+# Security Tests: User Permission Checks for Flow Access
+# ============================================================================
+
+
+@pytest.mark.benchmark
+async def test_user_can_run_own_flow(client: AsyncClient, simple_api_test, created_api_key):
+    """Test that a user can successfully run their own flow using their API key."""
+    headers = {"x-api-key": created_api_key.api_key}
+    flow_id = simple_api_test["id"]
+
+    response = await client.post(f"/api/v1/run/{flow_id}", headers=headers)
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    json_response = response.json()
+    assert "session_id" in json_response
+    assert "outputs" in json_response
+
+
+@pytest.mark.benchmark
+async def test_user_cannot_run_other_users_flow(client: AsyncClient, simple_api_test, user_two_api_key):
+    """Test that a user cannot run another user's flow - should return 403 Forbidden."""
+    # simple_api_test belongs to active_user, but we're using user_two's API key
+    headers = {"x-api-key": user_two_api_key}
+    flow_id = simple_api_test["id"]
+
+    response = await client.post(f"/api/v1/run/{flow_id}", headers=headers)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN, response.text
+    assert "You do not have permission to run this flow" in response.text
+
+
+@pytest.mark.benchmark
+async def test_user_cannot_run_other_users_flow_with_payload(client: AsyncClient, simple_api_test, user_two_api_key):
+    """Test that a user cannot run another user's flow even with valid payload."""
+    headers = {"x-api-key": user_two_api_key}
+    flow_id = simple_api_test["id"]
+    payload = {
+        "input_type": "chat",
+        "output_type": "debug",
+        "input_value": "test message",
+    }
+
+    response = await client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN, response.text
+    assert "You do not have permission to run this flow" in response.text
+
+
+@pytest.mark.benchmark
+async def test_user_can_run_own_flow_with_streaming(client: AsyncClient, simple_api_test, created_api_key):
+    """Test that a user can run their own flow with streaming enabled."""
+    headers = {"x-api-key": created_api_key.api_key}
+    flow_id = simple_api_test["id"]
+    payload = {
+        "input_type": "chat",
+        "output_type": "debug",
+        "input_value": "test",
+    }
+
+    async with client.stream("POST", f"/api/v1/run/{flow_id}?stream=true", headers=headers, json=payload) as response:
+        assert response.status_code == status.HTTP_200_OK, response.text
+        assert response.headers["content-type"].startswith("text/event-stream")
+
+
+@pytest.mark.benchmark
+async def test_user_cannot_run_other_users_flow_with_streaming(client: AsyncClient, simple_api_test, user_two_api_key):
+    """Test that a user cannot run another user's flow with streaming."""
+    headers = {"x-api-key": user_two_api_key}
+    flow_id = simple_api_test["id"]
+    payload = {
+        "input_type": "chat",
+        "output_type": "debug",
+        "input_value": "test",
+    }
+
+    response = await client.post(f"/api/v1/run/{flow_id}?stream=true", headers=headers, json=payload)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN, response.text
+    assert "You do not have permission to run this flow" in response.text
+
+
+@pytest.mark.benchmark
+async def test_user_can_run_own_flow_advanced_endpoint(client: AsyncClient, simple_api_test, created_api_key):
+    """Test that a user can run their own flow using the advanced endpoint."""
+    headers = {"x-api-key": created_api_key.api_key}
+    flow_id = simple_api_test["id"]
+    payload = {
+        "inputs": [{"components": [], "input_value": "test"}],
+        "outputs": [],
+        "tweaks": {},
+        "stream": False,
+    }
+
+    response = await client.post(f"/api/v1/run/advanced/{flow_id}", headers=headers, json=payload)
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    json_response = response.json()
+    assert "session_id" in json_response
+    assert "outputs" in json_response
+
+
+@pytest.mark.benchmark
+async def test_user_cannot_run_other_users_flow_advanced_endpoint(
+    client: AsyncClient, simple_api_test, user_two_api_key
+):
+    """Test that a user cannot run another user's flow using the advanced endpoint."""
+    headers = {"x-api-key": user_two_api_key}
+    flow_id = simple_api_test["id"]
+    payload = {
+        "inputs": [{"components": [], "input_value": "test"}],
+        "outputs": [],
+        "tweaks": {},
+        "stream": False,
+    }
+
+    response = await client.post(f"/api/v1/run/advanced/{flow_id}", headers=headers, json=payload)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN, response.text
+    assert "You do not have permission to run this flow" in response.text
+
+
+@pytest.mark.benchmark
+async def test_permission_check_with_nonexistent_flow(client: AsyncClient, created_api_key):
+    """Test permission check with a non-existent flow ID."""
+    headers = {"x-api-key": created_api_key.api_key}
+    nonexistent_flow_id = uuid4()
+
+    response = await client.post(f"/api/v1/run/{nonexistent_flow_id}", headers=headers)
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND, response.text
+
+
+@pytest.mark.benchmark
+async def test_permission_check_with_invalid_flow_id(client: AsyncClient, created_api_key):
+    """Test permission check with an invalid flow ID format."""
+    headers = {"x-api-key": created_api_key.api_key}
+    invalid_flow_id = "not-a-valid-uuid"
+
+    response = await client.post(f"/api/v1/run/{invalid_flow_id}", headers=headers)
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND, response.text
+
+
+@pytest.mark.benchmark
+async def test_permission_check_blocks_before_execution(client: AsyncClient, simple_api_test, user_two_api_key):
+    """Test that permission check happens before flow execution to prevent resource usage."""
+    headers = {"x-api-key": user_two_api_key}
+    flow_id = simple_api_test["id"]
+    payload = {
+        "input_type": "chat",
+        "output_type": "debug",
+        "input_value": "complex computation",
+        "tweaks": {},
+    }
+
+    # This should fail immediately at permission check, not during execution
+    response = await client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN, response.text
+    assert "You do not have permission to run this flow" in response.text
+
+
+@pytest.mark.benchmark
+async def test_user_can_access_multiple_own_flows(
+    client: AsyncClient, logged_in_headers, json_simple_api_test, created_api_key
+):
+    """Test that a user can access multiple flows they own."""
+    # Create two flows for the same user
+    flow1_data = orjson.loads(json_simple_api_test)
+    flow1 = FlowCreate(name="Flow 1", data=flow1_data["data"], description="First flow")
+    response1 = await client.post("api/v1/flows/", json=flow1.model_dump(), headers=logged_in_headers)
+    assert response1.status_code == 201
+    flow1_id = response1.json()["id"]
+
+    flow2 = FlowCreate(name="Flow 2", data=flow1_data["data"], description="Second flow")
+    response2 = await client.post("api/v1/flows/", json=flow2.model_dump(), headers=logged_in_headers)
+    assert response2.status_code == 201
+    flow2_id = response2.json()["id"]
+
+    headers = {"x-api-key": created_api_key.api_key}
+
+    # User should be able to run both flows
+    response_flow1 = await client.post(f"/api/v1/run/{flow1_id}", headers=headers)
+    assert response_flow1.status_code == status.HTTP_200_OK, response_flow1.text
+
+    response_flow2 = await client.post(f"/api/v1/run/{flow2_id}", headers=headers)
+    assert response_flow2.status_code == status.HTTP_200_OK, response_flow2.text
+
+    # Cleanup
+    await client.delete(f"api/v1/flows/{flow1_id}", headers=logged_in_headers)
+    await client.delete(f"api/v1/flows/{flow2_id}", headers=logged_in_headers)

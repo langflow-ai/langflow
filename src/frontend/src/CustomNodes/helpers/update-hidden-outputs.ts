@@ -1,4 +1,4 @@
-import { OutputFieldType } from "@/types/api";
+import type { OutputFieldType } from "@/types/api";
 
 export const updateHiddenOutputs = (
   outputs: OutputFieldType[],

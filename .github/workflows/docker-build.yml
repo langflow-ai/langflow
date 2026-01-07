@@ -14,7 +14,7 @@ on:
       release_type:
         required: true
         type: string
-        description: "Release type. One of 'main', 'main-ep', 'base', 'nightly-main', 'nightly-base'."
+        description: "Release type. One of 'main', 'main-ep', 'base', 'nightly-main', 'nightly-base', 'main-all', 'nightly-main-all'."
       pre_release:
         required: false
         type: boolean
@@ -23,6 +23,11 @@ on:
         required: false
         type: string
         description: "Ref to check out. If not specified, will default to the main version or current branch."
+      warning_check:
+        required: true
+        type: boolean
+        description: "Warning - use docker-build-v2 unless you have a very valid reason for using this deprecated workflow. By setting to True, you acknowledge all risks of using a possibly breaking workflow."
+        default: false
 
   workflow_dispatch:
     inputs:
@@ -35,10 +40,11 @@ on:
         required: false
         type: string
       release_type:
-        description: "Type of release. One of 'main', 'main-ep', 'base', 'nightly-main', 'nightly-base'."
+        description: "Type of release. One of 'main', 'main-ep', 'base', 'nightly-main', 'nightly-base', 'main-all', 'nightly-main-all'."
         required: true
         type: string
       pre_release:
+        description: "Whether this is a pre-release."
         required: false
         type: boolean
         default: false
@@ -46,10 +52,15 @@ on:
         required: false
         type: string
         description: "Ref to check out. If not specified, will default to the main version or current branch."
+      warning_check:
+        description: "Warning - use docker-build-v2 unless you have a very valid reason for using this deprecated workflow. By setting to True, you acknowledge all risks of using a possibly breaking workflow."
+        required: true
+        type: boolean
+        default: false
 
 
 env:
-  POETRY_VERSION: "1.8.2"
+  PYTHON_VERSION: "3.13"
   TEST_TAG: "langflowai/langflow:test"
 
 jobs:
@@ -59,6 +70,15 @@ jobs:
     outputs:
       version: ${{ steps.get-version-input.outputs.version || steps.get-version-base.outputs.version || steps.get-version-main.outputs.version }}
     steps:
+      - name: Verify warning check
+        run: |
+          if [[ "${{ inputs.warning_check }}" == "false" ]]; then
+            echo "Warning - use docker-build-v2 unless you have a very valid reason for using this deprecated workflow. By setting to True, you acknowledge all risks of using a possibly breaking workflow."
+            exit 1
+          else
+            echo "User has acknowledged the risks of using this deprecated workflow. Proceeding with build."
+          fi
+
       - name: Verify a main version exists
         if: ${{ inputs.main_version == '' }}
         run: |
@@ -67,7 +87,7 @@ jobs:
           exit 1
 
       - name: Check out the code at a specific ref
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref || inputs.main_version || github.ref }}
           persist-credentials: true
@@ -88,7 +108,7 @@ jobs:
             exit 1
           fi
 
-          if [[ "${{ inputs.release_type }}" == "main" && "${{ inputs.main_version }}" == '' ]]; then
+          if [[ ("${{ inputs.release_type }}" == "main" || "${{ inputs.release_type }}" == "main-all") && "${{ inputs.main_version }}" == '' ]]; then
             echo "Must specify a main version for main release type."
             exit 1
           fi
@@ -98,7 +118,7 @@ jobs:
             exit 1
           fi
 
-          if [[ "${{ inputs.release_type }}" == "nightly-main" && "${{ inputs.main_version }}" == '' ]]; then
+          if [[ ("${{ inputs.release_type }}" == "nightly-main" || "${{ inputs.release_type }}" == "nightly-main-all") && "${{ inputs.main_version }}" == '' ]]; then
             echo "Must specify a main version for nightly-main release type."
             exit 1
           fi
@@ -108,7 +128,7 @@ jobs:
             echo "base version=${{ inputs.base_version }}"
             echo version=$version
             echo version=$version >> $GITHUB_OUTPUT
-          elif [[ "${{ inputs.release_type }}" == "main" || "${{ inputs.release_type }}" == "main-ep"  || "${{ inputs.release_type }}" == "nightly-main" ]]; then
+          elif [[ "${{ inputs.release_type }}" == "main" || "${{ inputs.release_type }}" == "main-ep"  || "${{ inputs.release_type }}" == "nightly-main" || "${{ inputs.release_type }}" == "nightly-main-all" ]]; then
             version=${{ inputs.main_version }}
             echo version=$version
             echo version=$version >> $GITHUB_OUTPUT
@@ -128,7 +148,7 @@ jobs:
           echo version=$version
           echo version=$version >> $GITHUB_OUTPUT
       - name: Get Version Main
-        if: ${{ inputs.main_version == '' && (inputs.release_type == 'main' || inputs.release_type == 'main-ep' || inputs.release_type == 'nightly-main') }}
+        if: ${{ inputs.main_version == '' && (inputs.release_type == 'main' || inputs.release_type == 'main-ep' || inputs.release_type == 'nightly-main' || inputs.release_type == 'main-all' || inputs.release_type == 'nightly-main-all') }}
         id: get-version-main
         run: |
           version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//')
@@ -146,7 +166,7 @@ jobs:
         id: set-vars
         run: |
           nightly_suffix=''
-          if [[ "${{ inputs.release_type }}" == "nightly-base" || "${{ inputs.release_type }}" == "nightly-main" ]]; then
+          if [[ "${{ inputs.release_type }}" == "nightly-base" || "${{ inputs.release_type }}" == "nightly-main" || "${{ inputs.release_type }}" == "nightly-main-all" ]]; then
             nightly_suffix="-nightly"
           fi
 
@@ -171,22 +191,32 @@ jobs:
               echo "docker_tags=langflowai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }},langflowai/langflow${nightly_suffix}:latest" >> $GITHUB_OUTPUT
               echo "ghcr_tags=ghcr.io/langflow-ai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }},ghcr.io/langflow-ai/langflow${nightly_suffix}:latest" >> $GITHUB_OUTPUT
               echo "file=./docker/build_and_push.Dockerfile" >> $GITHUB_OUTPUT
+            elif [[ "${{ inputs.release_type }}" == "main-all" || "${{ inputs.release_type }}" == "nightly-main-all" ]]; then
+              # LANGFLOW-MAIN (ALL OPTIONAL DEPS) RELEASE
+              echo "docker_tags=langflowai/langflow-all${nightly_suffix}:${{ needs.get-version.outputs.version }},langflowai/langflow-all${nightly_suffix}:latest" >> $GITHUB_OUTPUT
+              echo "ghcr_tags=ghcr.io/langflow-ai/langflow-all${nightly_suffix}:${{ needs.get-version.outputs.version }},ghcr.io/langflow-ai/langflow-all${nightly_suffix}:latest" >> $GITHUB_OUTPUT
+              echo "file=./docker/build_and_push_with_extras.Dockerfile" >> $GITHUB_OUTPUT
             else
               echo "Invalid release type. Exiting the workflow."
               exit 1
             fi
           fi
   build:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
     needs: [get-version, setup]
     steps:
       - name: Check out the code at a specific ref
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref || inputs.main_version || github.ref }}
           persist-credentials: true
       - name: "Setup Environment"
-        uses: ./.github/actions/setup-uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: ${{ env.PYTHON_VERSION }}
+          prune-cache: false
       - name: Install the project
         run: |
           if [[ "${{ inputs.release_type }}" == "base" || "${{ inputs.release_type }}" == "nightly-base" ]]; then
@@ -195,8 +225,28 @@ jobs:
             uv sync --no-dev --no-sources
           fi
 
+      - name: Docker System Info and Cleanup
+        run: |
+          echo "=== Docker System Usage Before Cleanup ==="
+          docker system df || true
+          docker buildx du || true
+
+          echo "=== Cleaning up Docker System ==="
+          docker system prune -af --volumes || true
+          docker buildx prune -af || true
+
+          echo "=== Docker System Usage After Cleanup ==="
+          docker system df || true
+          docker buildx du || true
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          version: latest
+          driver: docker-container
+          driver-opts: |
+            image=moby/buildkit:v0.22.0
+            network=host
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -239,7 +289,7 @@ jobs:
 
   build_components:
     if: ${{ inputs.release_type == 'main' }}
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
     permissions:
       packages: write
     needs: [build, get-version]
@@ -265,12 +315,33 @@ jobs:
             langflow_image: ghcr.io/langflow-ai/langflow:${{ needs.get-version.outputs.version }}
     steps:
       - name: Check out the code at a specific ref
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref || inputs.main_version || github.ref }}
 
+      - name: Docker System Info and Cleanup
+        run: |
+          echo "=== Docker System Usage Before Cleanup ==="
+          docker system df || true
+          docker buildx du || true
+
+          echo "=== Cleaning up Docker System ==="
+          docker system prune -af --volumes || true
+          docker buildx prune -af || true
+
+          echo "=== Docker System Usage After Cleanup ==="
+          docker system df || true
+          docker buildx du || true
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          version: latest
+          driver: docker-container
+          driver-opts: |
+            image=moby/buildkit:v0.22.0
+            network=host
+
 
       - name: Login to Docker Hub
         if: ${{ matrix.component == 'docker-backend' }} || ${{ matrix.component == 'docker-frontend' }}
@@ -315,13 +386,16 @@ jobs:
           - "3.13"
     steps:
       - name: Check out the code at a specific ref
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref || inputs.main_version || github.ref }}
       - name: "Setup Environment"
-        uses: ./.github/actions/setup-uv
+        uses: astral-sh/setup-uv@v6
         with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
+          prune-cache: false
 
       - name: Restart HuggingFace Spaces Build
         run: |

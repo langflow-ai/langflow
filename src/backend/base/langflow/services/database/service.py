@@ -3,8 +3,9 @@ from __future__ import annotations
 import asyncio
 import re
 import sqlite3
+import sys
 import time
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, nullcontext
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -13,26 +14,28 @@ import anyio
 import sqlalchemy as sa
 from alembic import command, util
 from alembic.config import Config
-from loguru import logger
-from sqlalchemy import event, exc, inspect
+from lfx.log.logger import logger
+from lfx.services.deps import session_scope
+from sqlalchemy import event, inspect
 from sqlalchemy.dialects import sqlite as dialect_sqlite
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import OperationalError
-from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 from sqlmodel import SQLModel, select, text
-from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
 from tenacity import retry, stop_after_attempt, wait_fixed
 
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.base import Service
 from langflow.services.database import models
 from langflow.services.database.models.user.crud import get_user_by_username
+from langflow.services.database.session import NoopSession
 from langflow.services.database.utils import Result, TableResults
 from langflow.services.deps import get_settings_service
 from langflow.services.utils import teardown_superuser
 
 if TYPE_CHECKING:
-    from langflow.services.settings.service import SettingsService
+    from lfx.services.settings.service import SettingsService
 
 
 class DatabaseService(Service):
@@ -61,14 +64,29 @@ class DatabaseService(Service):
         else:
             self.engine = self._create_engine()
 
+        # Create async session maker for efficient session creation
+        # This is the recommended SQLAlchemy 2.0+ pattern
+        # IMPORTANT: Must use SQLModel's AsyncSession (not SQLAlchemy's) for exec() method
+        self.async_session_maker = async_sessionmaker(
+            self.engine,
+            class_=SQLModelAsyncSession,  # SQLModel's AsyncSession with exec() support
+            expire_on_commit=False,
+        )
+
+        # Check if Alembic should log to stdout or a file.
+        # If file, check if the provided path is absolute, cross-platform.
         alembic_log_file = self.settings_service.settings.alembic_log_file
-        # Check if the provided path is absolute, cross-platform.
-        if Path(alembic_log_file).is_absolute():
+        self.alembic_log_to_stdout = self.settings_service.settings.alembic_log_to_stdout
+        if self.alembic_log_to_stdout:
+            self.alembic_log_path = None
+        elif Path(alembic_log_file).is_absolute():
             self.alembic_log_path = Path(alembic_log_file)
         else:
             self.alembic_log_path = Path(langflow_dir) / alembic_log_file
 
     async def initialize_alembic_log_file(self):
+        if self.alembic_log_to_stdout:
+            return
         # Ensure the directory and file for the alembic log file exists
         await anyio.Path(self.alembic_log_path.parent).mkdir(parents=True, exist_ok=True)
         await anyio.Path(self.alembic_log_path).touch(exist_ok=True)
@@ -79,6 +97,12 @@ class DatabaseService(Service):
             self.engine = self._create_engine_with_retry()
         else:
             self.engine = self._create_engine()
+
+        self.async_session_maker = async_sessionmaker(
+            self.engine,
+            class_=SQLModelAsyncSession,
+            expire_on_commit=False,
+        )
 
     def _sanitize_database_url(self):
         """Create the engine for the database."""
@@ -126,12 +150,13 @@ class DatabaseService(Service):
 
         poolclass_key = kwargs.get("poolclass")
         if poolclass_key is not None:
-            pool_class = getattr(sa, poolclass_key, None)
-            if pool_class and isinstance(pool_class(), sa.pool.Pool):
+            pool_class = getattr(sa.pool, poolclass_key, None)
+            if pool_class and issubclass(pool_class, sa.pool.Pool):
                 logger.debug(f"Using poolclass: {poolclass_key}.")
                 kwargs["poolclass"] = pool_class
             else:
                 logger.error(f"Invalid poolclass '{poolclass_key}' specified. Using default pool class.")
+                kwargs.pop("poolclass", None)
 
         return create_async_engine(
             self.database_url,
@@ -155,7 +180,9 @@ class DatabaseService(Service):
                 "check_same_thread": False,
                 "timeout": settings.db_connect_timeout,
             }
-
+        # For PostgreSQL, set the timezone to UTC
+        if settings.database_url and settings.database_url.startswith(("postgresql", "postgres")):
+            return {"options": "-c timezone=utc"}
         return {}
 
     def on_connection(self, dbapi_connection, _connection_record) -> None:
@@ -181,15 +208,19 @@ class DatabaseService(Service):
                     cursor.close()
 
     @asynccontextmanager
-    async def with_session(self):
-        async with AsyncSession(self.engine, expire_on_commit=False) as session:
-            # Start of Selection
-            try:
+    async def _with_session(self):
+        """Internal method to create a session. DO NOT USE DIRECTLY.
+
+        Use session_scope() for write operations or session_scope_readonly() for read operations.
+        This method does not handle commits - it only provides a raw session.
+        """
+        if self.settings_service.settings.use_noop_database:
+            yield NoopSession()
+        else:
+            # Use async_session_maker - the recommended SQLAlchemy 2.0+ pattern
+            # Provides efficient session creation and proper connection pooling
+            async with self.async_session_maker() as session:
                 yield session
-            except exc.SQLAlchemyError as db_exc:
-                logger.error(f"Database error during session scope: {db_exc}")
-                await session.rollback()
-                raise
 
     async def assign_orphaned_flows_to_superuser(self) -> None:
         """Assign orphaned flows to the default superuser when auto login is enabled."""
@@ -198,7 +229,7 @@ class DatabaseService(Service):
         if not settings_service.auth_settings.AUTO_LOGIN:
             return
 
-        async with self.with_session() as session:
+        async with session_scope() as session:
             # Fetch orphaned flows
             stmt = (
                 select(models.Flow)
@@ -213,7 +244,7 @@ class DatabaseService(Service):
             if not orphaned_flows:
                 return
 
-            logger.debug("Assigning orphaned flows to the default superuser")
+            await logger.adebug("Assigning orphaned flows to the default superuser")
 
             # Retrieve superuser
             superuser_username = settings_service.auth_settings.SUPERUSER
@@ -221,7 +252,7 @@ class DatabaseService(Service):
 
             if not superuser:
                 error_message = "Default superuser not found"
-                logger.error(error_message)
+                await logger.aerror(error_message)
                 raise RuntimeError(error_message)
 
             # Get existing flow names for the superuser
@@ -238,7 +269,7 @@ class DatabaseService(Service):
 
             # Commit changes
             await session.commit()
-            logger.debug("Successfully assigned orphaned flows to the default superuser")
+            await logger.adebug("Successfully assigned orphaned flows to the default superuser")
 
     @staticmethod
     def _generate_unique_flow_name(original_name: str, existing_names: set[str]) -> str:
@@ -301,7 +332,7 @@ class DatabaseService(Service):
         return True
 
     async def check_schema_health(self) -> None:
-        async with self.with_session() as session, session.bind.connect() as conn:
+        async with self.engine.begin() as conn:
             await conn.run_sync(self._check_schema_health)
 
     @staticmethod
@@ -310,7 +341,6 @@ class DatabaseService(Service):
         command.ensure_version(alembic_cfg)
         # alembic_cfg.attributes["connection"].commit()
         command.upgrade(alembic_cfg, "head")
-        logger.info("Alembic initialized")
 
     def _run_migrations(self, should_initialize_alembic, fix) -> None:
         # First we need to check if alembic has been initialized
@@ -322,7 +352,10 @@ class DatabaseService(Service):
         # which is a buffer
         # I don't want to output anything
         # subprocess.DEVNULL is an int
-        with self.alembic_log_path.open("w", encoding="utf-8") as buffer:
+        buffer_context = (
+            nullcontext(sys.stdout) if self.alembic_log_to_stdout else self.alembic_log_path.open("w", encoding="utf-8")  # type: ignore[union-attr]
+        )
+        with buffer_context as buffer:
             alembic_cfg = Config(stdout=buffer)
             # alembic_cfg.attributes["connection"] = session
             alembic_cfg.set_main_option("script_location", str(self.script_location))
@@ -336,9 +369,7 @@ class DatabaseService(Service):
                     logger.exception(msg)
                     raise RuntimeError(msg) from exc
             else:
-                logger.info("Alembic already initialized")
-
-            logger.info(f"Running DB migrations in {self.script_location}")
+                logger.debug("Alembic initialized")
 
             try:
                 buffer.write(f"{datetime.now(tz=timezone.utc).astimezone().isoformat()}: Checking migrations\n")
@@ -363,13 +394,13 @@ class DatabaseService(Service):
 
     async def run_migrations(self, *, fix=False) -> None:
         should_initialize_alembic = False
-        async with self.with_session() as session:
+        async with session_scope() as session:
             # If the table does not exist it throws an error
             # so we need to catch it
             try:
                 await session.exec(text("SELECT * FROM alembic_version"))
             except Exception:  # noqa: BLE001
-                logger.debug("Alembic not initialized")
+                await logger.adebug("Alembic not initialized")
                 should_initialize_alembic = True
         await asyncio.to_thread(self._run_migrations, should_initialize_alembic, fix)
 
@@ -397,7 +428,8 @@ class DatabaseService(Service):
         sql_models = [
             model for model in models.__dict__.values() if isinstance(model, type) and issubclass(model, SQLModel)
         ]
-        async with self.with_session() as session, session.bind.connect() as conn:
+        # Use engine.begin() for proper async connection management with NullPool
+        async with self.engine.begin() as conn:
             return [
                 TableResults(sql_model.__tablename__, await conn.run_sync(self.check_table, sql_model))
                 for sql_model in sql_models
@@ -466,17 +498,17 @@ class DatabaseService(Service):
         await self.create_db_and_tables()
 
     async def create_db_and_tables(self) -> None:
-        async with self.with_session() as session, session.bind.connect() as conn:
+        async with self.engine.begin() as conn:
             await conn.run_sync(self._create_db_and_tables)
 
     async def teardown(self) -> None:
-        logger.debug("Tearing down database")
+        await logger.adebug("Tearing down database")
         try:
             settings_service = get_settings_service()
             # remove the default superuser if auto_login is enabled
             # using the SUPERUSER to get the user
-            async with self.with_session() as session:
+            async with session_scope() as session:
                 await teardown_superuser(settings_service, session)
         except Exception:  # noqa: BLE001
-            logger.exception("Error tearing down database")
+            await logger.aexception("Error tearing down database")
         await self.engine.dispose()

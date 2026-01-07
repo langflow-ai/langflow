@@ -1,8 +1,9 @@
-import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { zoomOut } from "../../utils/zoom-out";
 
 test(
   "fresh start playground",
@@ -22,40 +23,39 @@ test(
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("chat output");
-    await page.waitForSelector('[data-testid="outputsChat Output"]', {
+    await page.waitForSelector('[data-testid="input_outputChat Output"]', {
       timeout: 100000,
     });
 
     await page
-      .getByTestId("outputsChat Output")
+      .getByTestId("input_outputChat Output")
       .hover()
       .then(async () => {
         await page.getByTestId("add-component-button-chat-output").click();
       });
 
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
+    await zoomOut(page, 2);
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("chat input");
-    await page.waitForSelector('[data-testid="inputsChat Input"]', {
+    await page.waitForSelector('[data-testid="input_outputChat Input"]', {
       timeout: 100000,
     });
 
     await page
-      .getByTestId("inputsChat Input")
+      .getByTestId("input_outputChat Input")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 100, y: 100 },
       });
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("text output");
-    await page.waitForSelector('[data-testid="outputsText Output"]', {
+    await page.waitForSelector('[data-testid="input_outputText Output"]', {
       timeout: 100000,
     });
 
     await page
-      .getByTestId("outputsText Output")
+      .getByTestId("input_outputText Output")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 300, y: 300 },
       });
@@ -63,15 +63,19 @@ test(
     await adjustScreenView(page);
 
     await page
-      .getByTestId("handle-chatinput-noshownode-message-source")
+      .getByTestId("handle-chatinput-noshownode-chat message-source")
       .click();
 
-    await page.getByTestId("handle-textoutput-shownode-text-left").click();
+    await page.getByTestId("handle-textoutput-shownode-inputs-left").click();
 
-    await page.getByTestId("handle-textoutput-shownode-message-right").click();
-    await page.getByTestId("handle-chatoutput-noshownode-text-target").click();
+    await page
+      .getByTestId("handle-textoutput-shownode-output text-right")
+      .click();
+    await page
+      .getByTestId("handle-chatoutput-noshownode-inputs-target")
+      .click();
 
-    await page.getByText("Playground", { exact: true }).last().click();
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
       timeout: 100000,
     });
@@ -132,29 +136,81 @@ test(
     await page.getByLabel("Message logs").click();
     await page.getByText("Page 1 of 1", { exact: true }).click();
     // check rename session
-    await page.getByRole("combobox").click();
-    await page.getByLabel("Rename").getByText("Rename").click();
-    await page.getByRole("textbox").fill("new name");
+    await page.mouse.move(0, 0);
+    await page.getByTestId("session-selector").first().hover();
+    await page
+      .getByTestId("session-selector")
+      .first()
+      .getByTestId("icon-MoreHorizontal")
+      .click();
+    await page.getByLabel("Rename").click();
+    await page
+      .getByTestId("session-selector")
+      .first()
+      .getByRole("textbox")
+      .fill("new name");
     await page.getByTestId("icon-Check").click();
     await page.waitForTimeout(500);
 
-    await page.getByTestId("session-selector").getByText("new name").click();
+    await page
+      .getByTestId("session-selector")
+      .getByText("new name")
+      .first()
+      .click();
     // check cancel rename
-    await page.getByRole("combobox").click();
-    await page.getByLabel("Rename").getByText("Rename").click();
-    await page.getByRole("textbox").fill("cancel name");
-    await page.getByTestId("session-selector").getByTestId("icon-X").click();
-    await page.getByTestId("session-selector").getByText("new name").click();
+    await page.mouse.move(0, 0);
+    await page.getByTestId("session-selector").first().hover();
+    await page
+      .getByTestId("session-selector")
+      .first()
+      .getByTestId("icon-MoreHorizontal")
+      .click();
+    await page.getByLabel("Rename").click();
+    await page
+      .getByTestId("session-selector")
+      .first()
+      .getByRole("textbox")
+      .fill("cancel name");
+    await page
+      .getByTestId("session-selector")
+      .first()
+      .getByTestId("icon-X")
+      .click();
+    await page
+      .getByTestId("session-selector")
+      .getByText("new name")
+      .first()
+      .click();
     // check cancel rename blur
-    await page.getByRole("combobox").click();
-    await page.getByLabel("Rename").getByText("Rename").click();
-    await page.getByRole("textbox").fill("cancel_blur");
+    await page.mouse.move(0, 0);
+    await page.getByTestId("session-selector").first().hover();
+    await page
+      .getByTestId("session-selector")
+      .first()
+      .getByTestId("icon-MoreHorizontal")
+      .click();
+    await page.getByLabel("Rename").click();
+    await page
+      .getByTestId("session-selector")
+      .first()
+      .getByRole("textbox")
+      .fill("cancel_blur");
     await page.getByText("PlaygroundChat").click();
-    await page.getByTestId("session-selector").getByText("new name").click();
+    await page
+      .getByTestId("session-selector")
+      .getByText("new name")
+      .first()
+      .click();
     // check delete session
-    await page.getByRole("combobox").click();
+    await page.mouse.move(0, 0);
+    await page.getByTestId("session-selector").first().hover();
+    await page
+      .getByTestId("session-selector")
+      .first()
+      .getByTestId("icon-MoreHorizontal")
+      .click();
     await page.getByLabel("Delete").click();
-    await page.getByRole("heading", { name: "New chat" }).click();
+    await page.getByTestId("new-chat").click();
     // check new session
     await page.getByTestId("input-chat-playground").click();
     await page
@@ -162,7 +218,7 @@ test(
       .fill("session_after_delete");
     await page.keyboard.press("Enter");
     await page.getByTestId("chat-message-User-session_after_delete").click();
-    await expect(page.getByTestId("session-selector")).toBeVisible();
+    await expect(page.getByTestId("session-selector").first()).toBeVisible();
 
     await page.waitForTimeout(500);
 

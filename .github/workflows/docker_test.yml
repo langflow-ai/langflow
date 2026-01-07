@@ -1,22 +1,12 @@
 name: Test Docker images
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "docker/**"
-      - "uv.lock"
-      - "pyproject.toml"
-      - "src/backend/**"
-      - ".github/workflows/docker_test.yml"
-  pull_request:
-    branches: [dev]
-    paths:
-      - "docker/**"
-      - "uv.lock"
-      - "pyproject.toml"
-      - "src/**"
-      - ".github/workflows/docker_test.yml"
+  workflow_call:
+    secrets:
+      DOCKERHUB_USERNAME:
+        required: true
+      DOCKERHUB_TOKEN:
+        required: true
   workflow_dispatch:
 
 env:
@@ -24,19 +14,56 @@ env:
 
 jobs:
   test-docker:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
     name: Test docker images
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+      - name: Set container runtime
+        run: |
+          if command -v docker &> /dev/null; then
+            echo "CONTAINER_RUNTIME=docker" >> $GITHUB_ENV
+          elif command -v podman &> /dev/null; then
+            echo "CONTAINER_RUNTIME=podman" >> $GITHUB_ENV
+          else
+            echo "Error: Neither docker nor podman found"
+            exit 1
+          fi
+          echo "Using container runtime: ${{ env.CONTAINER_RUNTIME }}"
+      - name: Docker System Info and Cleanup
+        run: |
+          echo "=== Docker System Usage Before Cleanup ==="
+          ${{ env.CONTAINER_RUNTIME }} system df || true
+          if command -v docker &> /dev/null; then
+            docker buildx du || true
+          fi
+
+          echo "=== Cleaning up Docker System ==="
+          ${{ env.CONTAINER_RUNTIME }} system prune -af --volumes || true
+          if command -v docker &> /dev/null; then
+            docker buildx prune -af || true
+          fi
+
+          echo "=== Docker System Usage After Cleanup ==="
+          ${{ env.CONTAINER_RUNTIME }} system df || true
+          if command -v docker &> /dev/null; then
+            docker buildx du || true
+          fi
+      - name: Login to Docker Hub
+        if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Build image
         run: |
-          docker build -t langflowai/langflow:latest-dev \
+          ${{ env.CONTAINER_RUNTIME }} build -t langflowai/langflow:latest-dev \
             -f docker/build_and_push.Dockerfile \
             .
       - name: Test image
         run: |
           expected_version=$(cat pyproject.toml | grep version | head -n 1 | cut -d '"' -f 2)
-          version=$(docker run --rm --entrypoint bash langflowai/langflow:latest-dev -c "python -c 'from langflow.utils.version import get_version_info; print(get_version_info()[\"version\"])'")
+          version=$(${{ env.CONTAINER_RUNTIME }} run --rm --entrypoint bash langflowai/langflow:latest-dev -c "python -c 'from langflow.utils.version import get_version_info; print(get_version_info()[\"version\"])'")
           if [ "$expected_version" != "$version" ]; then
               echo "Expected version: $expected_version"
               echo "Actual version: $version"
@@ -45,14 +72,14 @@ jobs:
 
       - name: Build backend image
         run: |
-          docker build -t langflowai/langflow-backend:latest-dev \
+          ${{ env.CONTAINER_RUNTIME }} build -t langflowai/langflow-backend:latest-dev \
             --build-arg LANGFLOW_IMAGE=langflowai/langflow:latest-dev \
             -f docker/build_and_push_backend.Dockerfile \
             .
       - name: Test backend image
         run: |
           expected_version=$(cat pyproject.toml | grep version | head -n 1 | cut -d '"' -f 2)
-          version=$(docker run --rm --entrypoint bash langflowai/langflow-backend:latest-dev -c "python -c 'from langflow.utils.version import get_version_info; print(get_version_info()[\"version\"])'")
+          version=$(${{ env.CONTAINER_RUNTIME }} run --rm --entrypoint bash langflowai/langflow-backend:latest-dev -c "python -c 'from langflow.utils.version import get_version_info; print(get_version_info()[\"version\"])'")
           if [ "$expected_version" != "$version" ]; then
               echo "Expected version: $expected_version"
               echo "Actual version: $version"
@@ -60,6 +87,6 @@ jobs:
           fi
       - name: Build frontend image
         run: |
-          docker build -t langflowai/langflow-frontend:latest-dev \
+          ${{ env.CONTAINER_RUNTIME }} build -t langflowai/langflow-frontend:latest-dev \
             -f docker/frontend/build_and_push_frontend.Dockerfile \
             .

@@ -1,6 +1,6 @@
-import { test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { test } from "../../fixtures";
 
 test(
   "should delete a flow (requires store API key)",
@@ -48,7 +48,7 @@ test(
     await waitForSuccessMessage(page);
 
     // Wait for navigation button
-    await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+    await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       state: "visible",
       timeout: 30000,
     });
@@ -88,7 +88,7 @@ async function waitForInstallButton(page) {
     await button.waitForElementState("stable");
     return button;
   } catch (error) {
-    console.log("Install button not found, retrying...");
+    console.error("Install button not found, retrying...");
     // Optional: Add custom retry logic here
     throw error;
   }
@@ -105,7 +105,7 @@ async function waitForSuccessMessage(page) {
     // Click the message when it's ready
     await page.getByText("Flow Installed Successfully.").first().click();
   } catch (error) {
-    console.log("Success message not found");
+    console.error("Success message not found");
     throw error;
   }
 }

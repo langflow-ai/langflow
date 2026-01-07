@@ -17,10 +17,9 @@ const TextOutputView = ({
     <>
       {" "}
       <Textarea
-        className={`w-full custom-scroll ${left ? "min-h-32" : "h-full"}`}
+        className={`w-full resize-none custom-scroll ${left ? "min-h-32" : "h-full"}`}
         placeholder={"Empty"}
         readOnly
-        // update to real value on flowPool
         value={value}
       />
       {isTruncated && (

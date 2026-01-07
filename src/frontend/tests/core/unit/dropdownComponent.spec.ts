@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
@@ -14,15 +14,19 @@ test(
 
     await page.getByTestId("blank-flow").click();
 
+    // Allow for legacy components
+    await page.getByTestId("sidebar-options-trigger").click();
+    await page.getByTestId("sidebar-legacy-switch").click();
+
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("amazon");
 
-    await page.waitForSelector('[data-testid="modelsAmazon Bedrock"]', {
+    await page.waitForSelector('[data-testid="amazonAmazon Bedrock"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("modelsAmazon Bedrock")
+      .getByTestId("amazonAmazon Bedrock")
       .first()
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();

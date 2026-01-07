@@ -1,3 +1,6 @@
+import { PopoverAnchor } from "@radix-ui/react-popover";
+import { X } from "lucide-react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Badge } from "@/components/ui/badge";
@@ -14,9 +17,6 @@ import {
   PopoverContentWithoutPortal,
 } from "@/components/ui/popover";
 import { cn } from "@/utils/utils";
-import { PopoverAnchor } from "@radix-ui/react-popover";
-import { X } from "lucide-react";
-import { ReactNode, useMemo, useState } from "react";
 
 const OptionBadge = ({
   option,
@@ -137,7 +137,7 @@ const getInputClassName = (
       "disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground",
     password && "text-clip pr-14",
     blockAddNewGlobalVariable && "text-clip pr-8",
-    selectedOptions?.length >= 0 && "cursor-default",
+    selectedOptions?.length > 0 && "cursor-default",
   );
 };
 
@@ -188,11 +188,19 @@ const CustomInputPopover = ({
   hasRefreshButton,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
+  const [cursor, setCursor] = useState<number | null>(null);
   const memoizedOptions = useMemo(() => new Set<string>(options), [options]);
 
   const PopoverContentInput = editNode
     ? PopoverContent
     : PopoverContentWithoutPortal;
+
+  // Restore cursor position after value changes
+  useEffect(() => {
+    if (cursor !== null && refInput.current) {
+      refInput.current.setSelectionRange(cursor, cursor);
+    }
+  }, [cursor, value]);
 
   const handleRemoveOption = (
     optionToRemove: string,
@@ -229,6 +237,19 @@ const CustomInputPopover = ({
           data-testid={`anchor-${id}`}
           className={getAnchorClassName(editNode, disabled, isFocused)}
           onClick={() => !nodeStyle && !disabled && setShowOptions(true)}
+          role="button"
+          tabIndex={disabled ? -1 : 0}
+          aria-disabled={disabled}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              if (!nodeStyle && !disabled) {
+                if (e.key === " ") {
+                  e.preventDefault();
+                }
+                setShowOptions(true);
+              }
+            }
+          }}
         >
           {!disabled && selectedOptions?.length > 0 ? (
             <div className="mr-5 flex flex-wrap gap-2">
@@ -291,7 +312,10 @@ const CustomInputPopover = ({
                   ? ""
                   : placeholder
               }
-              onChange={(e) => onChange?.(e.target.value)}
+              onChange={(e) => {
+                setCursor(e.target.selectionStart);
+                onChange?.(e.target.value);
+              }}
               onKeyDown={(e) => {
                 handleKeyDown?.(e);
                 if (blurOnEnter && e.key === "Enter") refInput.current?.blur();

@@ -1,7 +1,12 @@
-import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
-import { APIClassType, InputFieldType, TableOptionsTypeAPI } from "@/types/api";
-import { RangeSpecType } from "@/types/components";
-import { ColumnField } from "@/types/utils/functions";
+import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
+import type {
+  APIClassType,
+  APITemplateType,
+  InputFieldType,
+  TableOptionsTypeAPI,
+} from "@/types/api";
+import type { RangeSpecType } from "@/types/components";
+import type { ColumnField } from "@/types/utils/functions";
 
 // Base type for RefreshParameterComponent children
 export type BaseInputProps<valueType = any> = {
@@ -21,13 +26,18 @@ export type BaseInputProps<valueType = any> = {
   nodeId?: string;
   nodeInformationMetadata?: NodeInfoType;
   hasRefreshButton?: boolean;
+  helperMetadata?: any;
+  options?: any[];
+  searchCategory?: string[];
+  buttonMetadata?: { variant?: string; icon?: string };
+  connectionLink?: string;
 };
 
 // Generic type for composing input props
 export type InputProps<
   valueType = any,
   T = {},
-  U extends object = object,
+  _U extends object = object,
 > = BaseInputProps<valueType> & T & { placeholder?: string };
 
 export type TableComponentType = {
@@ -38,6 +48,15 @@ export type TableComponentType = {
   trigger_text?: string;
   trigger_icon?: string;
   table_icon?: string;
+};
+
+export type ToolsComponentType = {
+  description: string;
+  title: string;
+  icon?: string;
+  button_description?: string;
+  isAction?: boolean;
+  template?: APITemplateType;
 };
 
 export type FloatComponentType = {
@@ -93,15 +112,25 @@ export type DropDownComponentType = {
   options: string[];
   name: string;
   dialogInputs?: any;
+  externalOptions?: any;
   optionsMetaData?: any[];
   nodeId: string;
   nodeClass: APIClassType;
   handleNodeClass: (value: any, code?: string, type?: string) => void;
+  toggle?: boolean;
+  toggleValue?: boolean;
+  toggleDisable?: boolean;
 };
 
 export type TextAreaComponentType = {
   password?: boolean;
   updateVisibility?: () => void;
+};
+
+export type QueryComponentType = {
+  display_name: string;
+  info: string;
+  separator?: string;
 };
 
 export type InputGlobalComponentType = {

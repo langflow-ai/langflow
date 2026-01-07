@@ -1,5 +1,4 @@
 import ForwardedIconComponent from "../../components/common/genericIconComponent";
-import Xmark from "../../components/ui/xmark";
 import { BuildStatus } from "../../constants/enums";
 
 const useIconStatus = (buildStatus: BuildStatus | undefined) => {
@@ -8,23 +7,16 @@ const useIconStatus = (buildStatus: BuildStatus | undefined) => {
 
   const renderIconStatus = () => {
     if (buildStatus === BuildStatus.BUILDING) {
-      return (
-        // <Loading
-        //   data-testid="loading_icon"
-        //   className="mr-1 text-medium-indigo"
-        //   size={20}
-        // />
-        <></>
-      );
+      return <></>;
     }
 
     const iconConditions = [
       {
         condition: conditionError,
         icon: (
-          <Xmark
-            isVisible={true}
-            className="h-4 w-4 fill-current stroke-2 text-destructive"
+          <ForwardedIconComponent
+            name="CircleAlert"
+            className="h-4 w-4 text-destructive"
           />
         ),
       },

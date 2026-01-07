@@ -2,7 +2,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from loguru import logger
+from lfx.log.logger import logger
 
 from langflow.api.utils import CurrentActiveUser, check_langflow_version
 from langflow.services.auth import utils as auth_utils

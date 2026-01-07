@@ -4,29 +4,28 @@ from pathlib import Path
 from typing import Any, Literal
 from uuid import UUID
 
+from lfx.graph.schema import RunOutputs
+from lfx.services.settings.base import Settings
+from lfx.services.settings.feature_flags import FEATURE_FLAGS, FeatureFlags
 from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    SecretStr,
     field_serializer,
     field_validator,
     model_serializer,
 )
 
-from langflow.graph.schema import RunOutputs
-from langflow.schema import dotdict
+from langflow.schema.dotdict import dotdict
 from langflow.schema.graph import Tweaks
 from langflow.schema.schema import InputType, OutputType, OutputValue
-from langflow.serialization import constants as serialization_constants
-from langflow.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
-from langflow.serialization.serialization import serialize
+from langflow.serialization.serialization import get_max_items_length, get_max_text_length, serialize
 from langflow.services.database.models.api_key.model import ApiKeyRead
 from langflow.services.database.models.base import orjson_dumps
-from langflow.services.database.models.flow import FlowCreate, FlowRead
-from langflow.services.database.models.user import UserRead
-from langflow.services.settings.feature_flags import FeatureFlags
+from langflow.services.database.models.flow.model import FlowCreate, FlowRead
+from langflow.services.database.models.user.model import UserRead
 from langflow.services.tracing.schema import Log
-from langflow.utils.util_strings import truncate_long_strings
 
 
 class BuildStatus(Enum):
@@ -277,18 +276,28 @@ class ResultDataResponse(BaseModel):
     @field_serializer("results")
     @classmethod
     def serialize_results(cls, v):
-        """Serialize results with custom handling for special types and truncation."""
-        return serialize(v, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH)
+        """Serializes the results value with custom handling for special types and applies truncation limits.
+
+        Returns:
+            The serialized representation of the input value, truncated according to configured
+            maximum text length and item count.
+        """
+        return serialize(v, max_length=get_max_text_length(), max_items=get_max_items_length())
 
     @model_serializer(mode="plain")
     def serialize_model(self) -> dict:
-        """Custom serializer for the entire model."""
+        """Serialize the entire model into a dictionary with truncation applied to large fields.
+
+        Returns:
+            dict: A dictionary representation of the model with serialized and truncated
+            results, outputs, logs, message, and artifacts.
+        """
         return {
             "results": self.serialize_results(self.results),
-            "outputs": serialize(self.outputs, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH),
-            "logs": serialize(self.logs, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH),
-            "message": serialize(self.message, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH),
-            "artifacts": serialize(self.artifacts, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH),
+            "outputs": serialize(self.outputs, max_length=get_max_text_length(), max_items=get_max_items_length()),
+            "logs": serialize(self.logs, max_length=get_max_text_length(), max_items=get_max_items_length()),
+            "message": serialize(self.message, max_length=get_max_text_length(), max_items=get_max_items_length()),
+            "artifacts": serialize(self.artifacts, max_length=get_max_text_length(), max_items=get_max_items_length()),
             "timedelta": self.timedelta,
             "duration": self.duration,
             "used_frozen_result": self.used_frozen_result,
@@ -310,47 +319,20 @@ class VertexBuildResponse(BaseModel):
 
     @field_serializer("data")
     def serialize_data(self, data: ResultDataResponse) -> dict:
-        data_dict = data.model_dump() if isinstance(data, BaseModel) else data
-        return truncate_long_strings(data_dict)
+        """Serialize a ResultDataResponse object into a dictionary with enforced maximum text and item lengths.
+
+        Parameters:
+            data (ResultDataResponse): The data object to serialize.
+
+        Returns:
+            dict: The serialized representation of the data with truncation applied.
+        """
+        # return serialize(data, max_length=get_max_text_length())  TODO: Safe?
+        return serialize(data, max_length=get_max_text_length(), max_items=get_max_items_length())
 
 
 class VerticesBuiltResponse(BaseModel):
     vertices: list[VertexBuildResponse]
-
-
-class InputValueRequest(BaseModel):
-    components: list[str] | None = []
-    input_value: str | None = None
-    session: str | None = None
-    type: InputType | None = Field(
-        "any",
-        description="Defines on which components the input value should be applied. "
-        "'any' applies to all input components.",
-    )
-
-    # add an example
-    model_config = ConfigDict(
-        json_schema_extra={
-            "examples": [
-                {
-                    "components": ["components_id", "Component Name"],
-                    "input_value": "input_value",
-                    "session": "session_id",
-                },
-                {"components": ["Component Name"], "input_value": "input_value"},
-                {"input_value": "input_value"},
-                {
-                    "components": ["Component Name"],
-                    "input_value": "input_value",
-                    "session": "session_id",
-                },
-                {"input_value": "input_value", "session": "session_id"},
-                {"type": "chat", "input_value": "input_value"},
-                {"type": "json", "input_value": '{"key": "value"}'},
-            ]
-        },
-        extra="forbid",
-    )
 
 
 class SimplifiedAPIRequest(BaseModel):
@@ -379,8 +361,8 @@ class FlowDataRequest(BaseModel):
 
 class ConfigResponse(BaseModel):
     feature_flags: FeatureFlags
-    serialization_max_items_lenght: int = serialization_constants.MAX_ITEMS_LENGTH
-    serialization_max_text_length: int = serialization_constants.MAX_TEXT_LENGTH
+    serialization_max_items_length: int
+    serialization_max_text_length: int
     frontend_timeout: int
     auto_saving: bool
     auto_saving_interval: int
@@ -390,6 +372,44 @@ class ConfigResponse(BaseModel):
     public_flow_cleanup_interval: int
     public_flow_expiration: int
     event_delivery: Literal["polling", "streaming", "direct"]
+    webhook_auth_enable: bool
+    voice_mode_available: bool
+    default_folder_name: str
+    hide_getting_started_progress: bool
+
+    @classmethod
+    def from_settings(cls, settings: Settings, auth_settings) -> "ConfigResponse":
+        """Create a ConfigResponse instance using values from a Settings object and AuthSettings.
+
+        Parameters:
+            settings (Settings): The Settings object containing configuration values.
+            auth_settings: The AuthSettings object containing authentication configuration values.
+
+        Returns:
+            ConfigResponse: An instance populated with configuration and feature flag values.
+        """
+        import os
+
+        from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
+
+        return cls(
+            feature_flags=FEATURE_FLAGS,
+            serialization_max_items_length=settings.max_items_length,
+            serialization_max_text_length=settings.max_text_length,
+            frontend_timeout=settings.frontend_timeout,
+            auto_saving=settings.auto_saving,
+            auto_saving_interval=settings.auto_saving_interval,
+            health_check_max_retries=settings.health_check_max_retries,
+            max_file_size_upload=settings.max_file_size_upload,
+            webhook_polling_interval=settings.webhook_polling_interval,
+            public_flow_cleanup_interval=settings.public_flow_cleanup_interval,
+            public_flow_expiration=settings.public_flow_expiration,
+            event_delivery=settings.event_delivery,
+            voice_mode_available=settings.voice_mode_available,
+            webhook_auth_enable=auth_settings.WEBHOOK_AUTH_ENABLE,
+            default_folder_name=DEFAULT_FOLDER_NAME,
+            hide_getting_started_progress=os.getenv("HIDE_GETTING_STARTED_PROGRESS", "").lower() == "true",
+        )
 
 
 class CancelFlowResponse(BaseModel):
@@ -397,3 +417,67 @@ class CancelFlowResponse(BaseModel):
 
     success: bool
     message: str
+
+
+class AuthSettings(BaseModel):
+    """Model representing authentication settings for MCP."""
+
+    auth_type: Literal["none", "apikey", "oauth"] = "none"
+    oauth_host: str | None = None
+    oauth_port: str | None = None
+    oauth_server_url: str | None = None
+    oauth_callback_path: str | None = None  # Deprecated: use oauth_callback_url instead
+    oauth_callback_url: str | None = None
+    oauth_client_id: str | None = None
+    oauth_client_secret: SecretStr | None = None
+    oauth_auth_url: str | None = None
+    oauth_token_url: str | None = None
+    oauth_mcp_scope: str | None = None
+    oauth_provider_scope: str | None = None
+
+    def model_post_init(self, __context, /) -> None:
+        """Normalize oauth_callback_path to oauth_callback_url for backwards compatibility."""
+        # If oauth_callback_url is not set but oauth_callback_path is, use the path value
+        if self.oauth_callback_url is None and self.oauth_callback_path is not None:
+            self.oauth_callback_url = self.oauth_callback_path
+        # If both are set, oauth_callback_url takes precedence (already set correctly)
+
+
+class MCPSettings(BaseModel):
+    """Model representing MCP settings for a flow."""
+
+    id: UUID
+    mcp_enabled: bool | None = None
+    action_name: str | None = None
+    action_description: str | None = None
+    name: str | None = None
+    description: str | None = None
+
+
+class MCPProjectUpdateRequest(BaseModel):
+    """Request model for updating MCP project settings including auth."""
+
+    settings: list[MCPSettings]
+    auth_settings: AuthSettings | None = None
+
+
+class MCPProjectResponse(BaseModel):
+    """Response model for MCP project tools with auth settings."""
+
+    tools: list[MCPSettings]
+    auth_settings: AuthSettings | None = None
+
+
+class ComposerUrlResponse(BaseModel):
+    """Response model for MCP Composer connection details."""
+
+    project_id: str
+    uses_composer: bool
+    streamable_http_url: str | None = None
+    legacy_sse_url: str | None = None
+    error_message: str | None = None
+
+
+class MCPInstallRequest(BaseModel):
+    client: str
+    transport: Literal["sse", "streamablehttp"] | None = None

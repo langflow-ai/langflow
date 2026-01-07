@@ -1,4 +1,3 @@
-import { cn } from "@/utils/utils";
 import {
   NumberDecrementStepper,
   NumberIncrementStepper,
@@ -8,8 +7,9 @@ import {
 } from "@chakra-ui/number-input";
 import { MinusIcon, PlusIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { cn } from "@/utils/utils";
 import { handleKeyDown } from "../../../../../utils/reactflowUtils";
-import { FloatComponentType, InputProps } from "../../types";
+import type { FloatComponentType, InputProps } from "../../types";
 
 export default function FloatComponent({
   value,
@@ -20,8 +20,8 @@ export default function FloatComponent({
   id = "",
 }: InputProps<number, FloatComponentType>): JSX.Element {
   const step = rangeSpec?.step ?? 0.1;
-  const min = rangeSpec?.min ?? -2;
-  const max = rangeSpec?.max ?? 2;
+  const min = rangeSpec?.min;
+  const max = rangeSpec?.max;
 
   // Local state for input value
   const [localValue, setLocalValue] = useState<string>(value.toString());

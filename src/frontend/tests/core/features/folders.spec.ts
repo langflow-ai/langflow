@@ -1,5 +1,5 @@
-import { expect, test } from "@playwright/test";
 import { readFileSync } from "fs";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
@@ -12,53 +12,59 @@ test(
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
-    await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+    await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 100000,
     });
 
     await page.getByTestId("icon-ChevronLeft").first().click();
     await page.getByPlaceholder("Search flows").first().isVisible();
     await page.getByText("Flows").first().isVisible();
-    await page.getByText("Components").first().isVisible();
+    if (await page.getByText("Components").first().isVisible()) {
+      await page.getByText("Components").first().isVisible();
+    } else {
+      await page.getByText("MCP Server").first().isVisible();
+    }
     await page.getByText("All").first().isVisible();
     await page.getByText("Select All").first().isVisible();
 
-    await page.getByTestId("add-folder-button").click();
+    await page.getByTestId("add-project-button").click();
     await page
-      .locator("[data-testid='folder-sidebar']")
-      .getByText("New Folder")
+      .locator("[data-testid='project-sidebar']")
+      .getByText("New Project")
       .last()
       .isVisible();
 
     await page
-      .locator("[data-testid='folder-sidebar']")
-      .getByText("New Folder")
+      .locator("[data-testid='project-sidebar']")
+      .getByText("New Project")
       .last()
       .dblclick();
 
-    const element = await page.getByTestId("input-folder");
-    await element.fill("new folder test name");
+    const element = await page.getByTestId("input-project");
+    await element.fill("new project test name");
 
-    await page.getByText("My Projects").last().click({
+    await page.getByText("Starter Project").last().click({
       force: true,
     });
 
-    await page.getByText("new folder test name").last().waitFor({
+    await page.getByText("new project test name").last().waitFor({
       state: "visible",
       timeout: 30000,
     });
 
     await page
-      .getByText("new folder test name")
+      .getByTestId("sidebar-nav-new project test name")
       .last()
       .hover()
       .then(async () => {
-        await page.getByTestId("more-options-button").last().click();
+        await page
+          .getByTestId("more-options-button_new-project-test-name")
+          .click();
       });
 
-    await page.getByTestId("btn-delete-folder").click();
+    await page.getByTestId("btn-delete-project").click();
     await page.getByText("Delete").last().click();
-    await expect(page.getByText("Folder deleted successfully")).toBeVisible({
+    await expect(page.getByText("Project deleted successfully")).toBeVisible({
       timeout: 3000,
     });
   },
@@ -75,7 +81,7 @@ test("add a flow into a folder by drag and drop", async ({ page }) => {
 
   // Wait for the target element to be available before evaluation
 
-  await page.waitForSelector('[data-testid="sidebar-nav-My Projects"]', {
+  await page.waitForSelector('[data-testid="sidebar-nav-Starter Project"]', {
     timeout: 100000,
   });
   // Create the DataTransfer and File
@@ -90,7 +96,7 @@ test("add a flow into a folder by drag and drop", async ({ page }) => {
   }, jsonContent);
 
   // Now dispatch
-  await page.getByTestId("sidebar-nav-My Projects").dispatchEvent("drop", {
+  await page.getByTestId("sidebar-nav-Starter Project").dispatchEvent("drop", {
     dataTransfer,
   });
   // wait for the file to be uploaded failed with waitforselector
@@ -103,7 +109,7 @@ test("add a flow into a folder by drag and drop", async ({ page }) => {
     expect(true).toBeTruthy();
   }
 
-  await page.getByTestId("sidebar-nav-My Projects").click();
+  await page.getByTestId("sidebar-nav-Starter Project").click();
 
   await page.waitForSelector("text=Getting Started:", {
     timeout: 100000,
@@ -129,7 +135,7 @@ test("change flow folder", async ({ page }) => {
   await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
-  await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+  await page.waitForSelector('[data-testid="sidebar-search-input"]', {
     timeout: 100000,
   });
 
@@ -137,26 +143,28 @@ test("change flow folder", async ({ page }) => {
 
   await page.getByPlaceholder("Search flows").isVisible();
   await page.getByText("Flows").first().isVisible();
-  await page.getByText("Components").first().isVisible();
-  await page.getByText("All").first().isVisible();
-  await page.getByText("Select All").first().isVisible();
+  if (await page.getByText("Components").first().isVisible()) {
+    await page.getByText("Components").first().isVisible();
+  } else {
+    await page.getByText("MCP Server").first().isVisible();
+  }
 
-  await page.getByTestId("add-folder-button").click();
+  await page.getByTestId("add-project-button").click();
   await page
-    .locator("[data-testid='folder-sidebar']")
-    .getByText("New Folder")
+    .locator("[data-testid='project-sidebar']")
+    .getByText("New Project")
     .last()
     .isVisible();
   await page
-    .locator("[data-testid='folder-sidebar']")
-    .getByText("New Folder")
+    .locator("[data-testid='project-sidebar']")
+    .getByText("New Project")
     .last()
     .dblclick();
-  await page.getByTestId("input-folder").fill("new folder test name");
+  await page.getByTestId("input-project").fill("new project test name");
   await page.keyboard.press("Enter");
-  await page.getByText("new folder test name").last().isVisible();
+  await page.getByText("new project test name").last().isVisible();
 
-  await page.getByText("My Projects").last().click();
+  await page.getByText("Starter Project").last().click();
   await page.getByText("Basic Prompting").first().hover();
   await page.mouse.down();
   await page.getByText("test").first().hover();

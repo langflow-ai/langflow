@@ -1,10 +1,10 @@
-import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
-import { TextShimmer } from "@/components/ui/TextShimmer";
-import { cn } from "@/utils/utils";
 import { AnimatePresence, motion } from "framer-motion";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import CodeTabsComponent from "../../../../../../components/core/codeTabsComponent/ChatCodeTabComponent";
+import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
+import { TextShimmer } from "@/components/ui/TextShimmer";
+import { cn } from "@/utils/utils";
+import CodeTabsComponent from "../../../../../../components/core/codeTabsComponent";
 import LogoIcon from "./chat-logo-icon";
 
 export const ErrorView = ({
@@ -52,7 +52,7 @@ export const ErrorView = ({
               {blocks.map((block, blockIndex) => (
                 <div
                   key={blockIndex}
-                  className="w-full rounded-xl border border-error-red-border bg-error-red p-4 text-[14px] text-foreground"
+                  className="w-full rounded-xl border border-error-red-border bg-error-red p-4 text-sm text-foreground"
                 >
                   {block.contents.map((content, contentIndex) => {
                     if (content.type === "error") {
@@ -96,12 +96,11 @@ export const ErrorView = ({
                             {content.reason && (
                               <span className="">
                                 <Markdown
-                                  linkTarget="_blank"
                                   remarkPlugins={[remarkGfm]}
                                   components={{
                                     a: ({ node, ...props }) => (
                                       <a
-                                        href={props.href}
+                                        {...props}
                                         target="_blank"
                                         className="underline"
                                         rel="noopener noreferrer"
@@ -118,11 +117,13 @@ export const ErrorView = ({
                                     },
                                     code: ({
                                       node,
-                                      inline,
                                       className,
                                       children,
                                       ...props
                                     }) => {
+                                      const inline = !(
+                                        props as any
+                                      ).hasOwnProperty("data-language");
                                       let content = children as string;
                                       if (
                                         Array.isArray(children) &&

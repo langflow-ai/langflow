@@ -1,4 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { zoomOut } from "../../utils/zoom-out";
 
@@ -12,17 +13,15 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("openai");
 
-  await page.waitForSelector('[data-testid="modelsOpenAI"]', {
+  await page.waitForSelector('[data-testid="openaiOpenAI"]', {
     timeout: 3000,
   });
 
   await page
-    .getByTestId("modelsOpenAI")
+    .getByTestId("openaiOpenAI")
     .first()
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
-
-  await page.getByTestId("fit_view").click();
-  await zoomOut(page, 2);
+  await adjustScreenView(page, { numberOfZoomOut: 2 });
 
   await page.getByTestId("div-generic-node").click();
 
@@ -50,14 +49,7 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
 
   await page.getByTestId("title-OpenAI").click();
 
-  await page.waitForSelector('[data-testid="fit_view"]', {
-    timeout: 100000,
-  });
-
-  await page.getByTestId("fit_view").click();
-  await page.getByTestId("zoom_out").click();
-  await page.getByTestId("zoom_out").click();
-  await page.getByTestId("zoom_out").click();
+  await adjustScreenView(page, { numberOfZoomOut: 3 });
 
   await page.getByTestId("edit-button-modal").last().click();
 
@@ -88,7 +80,7 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
   await page.locator('//*[@id="showtemperature"]').click();
   expect(
     await page.locator('//*[@id="showtemperature"]').isChecked(),
-  ).toBeTruthy();
+  ).toBeFalsy();
 
   await page.locator('//*[@id="showmodel_kwargs"]').click();
   expect(
@@ -108,7 +100,7 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
   await page.locator('//*[@id="showtemperature"]').click();
   expect(
     await page.locator('//*[@id="showtemperature"]').isChecked(),
-  ).toBeFalsy();
+  ).toBeTruthy();
 
   await page.locator('//*[@id="showmodel_kwargs"]').click();
   expect(
@@ -128,7 +120,7 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
   await page.locator('//*[@id="showtemperature"]').click();
   expect(
     await page.locator('//*[@id="showtemperature"]').isChecked(),
-  ).toBeTruthy();
+  ).toBeFalsy();
 
   await page.getByText("Close").last().click();
 

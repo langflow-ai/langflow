@@ -1,4 +1,4 @@
-import { useMutationFunctionType } from "@/types/api";
+import type { useMutationFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -17,7 +17,7 @@ export const usePostUploadFolders: useMutationFunctionType<
     payload: IPostAddUploadFolders,
   ): Promise<void> => {
     const res = await api.post(
-      `${getURL("FOLDERS")}/upload/`,
+      `${getURL("PROJECTS")}/upload/`,
       payload.formData,
     );
     return res.data;

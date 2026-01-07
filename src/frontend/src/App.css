@@ -1,3 +1,4 @@
+@import "./style/custom-ace-overrides.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -19,7 +20,6 @@ body {
 }
 
 .react-flow__node {
-  width: fit-content !important;
   height: auto;
   border-radius: auto;
   min-width: inherit;
@@ -113,12 +113,7 @@ body {
 }
 
 .custom-hover:hover {
-  background-color: rgba(
-    99,
-    102,
-    241,
-    0.1
-  ); /* Medium indigo color with 20% opacity */
+  background-color: rgba(99, 102, 241, 0.1); /* Medium indigo color with 20% opacity */
 }
 
 /* This CSS is to not apply the border for the column having 'no-border' class */
@@ -222,4 +217,16 @@ code {
 
 .cm-gutters {
   display: none !important;
+}
+
+.user-select-none {
+  user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+}
+
+/* Sidebar segmented layout utility */
+.sidebar-segmented {
+  max-width: calc(var(--sidebar-width) - (var(--sidebar-width-icon) + 0.1rem));
+  width: var(--sidebar-width);
 }

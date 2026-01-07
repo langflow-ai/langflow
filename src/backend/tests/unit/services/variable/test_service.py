@@ -5,9 +5,9 @@ from uuid import uuid4
 import pytest
 from langflow.services.database.models.variable.model import VariableUpdate
 from langflow.services.deps import get_settings_service
-from langflow.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
 from langflow.services.variable.constants import CREDENTIAL_TYPE
 from langflow.services.variable.service import DatabaseVariableService
+from lfx.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -239,4 +239,4 @@ async def test_create_variable(service, session: AsyncSession):
     assert result.default_fields == []
     assert result.type == CREDENTIAL_TYPE
     assert isinstance(result.created_at, datetime)
-    assert isinstance(result.updated_at, datetime)
+    assert result.updated_at is None  # Should be None on creation

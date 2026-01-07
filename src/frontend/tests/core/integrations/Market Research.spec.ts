@@ -1,6 +1,6 @@
-import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { getAllResponseMessage } from "../../utils/get-all-response-message";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
@@ -30,7 +30,7 @@ withEventDeliveryModes(
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Market Research" }).click();
 
-    await page.waitForSelector('[data-testid="fit_view"]', {
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
     });
 
@@ -41,16 +41,18 @@ withEventDeliveryModes(
       .nth(0)
       .fill(process.env.TAVILY_API_KEY ?? "");
 
+    await page
+      .getByTestId("handle-parsercomponent-shownode-data or dataframe-left")
+      .click();
+
+    await page.getByTestId("tab_1_stringify").click();
+
     await page.getByTestId("button_run_chat output").click();
     await page.waitForSelector("text=built successfully", {
       timeout: 60000 * 3,
     });
 
-    await page.getByText("built successfully").last().click({
-      timeout: 15000,
-    });
-
-    await page.getByText("Playground", { exact: true }).last().click();
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
     await page
       .getByText("No input message provided.", { exact: true })
       .last()

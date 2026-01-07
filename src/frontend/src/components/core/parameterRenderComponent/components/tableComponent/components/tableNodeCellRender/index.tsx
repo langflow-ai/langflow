@@ -1,27 +1,27 @@
+import type { CustomCellRendererProps } from "ag-grid-react";
+import { useMemo } from "react";
 import useHandleOnNewValue from "@/CustomNodes/hooks/use-handle-new-value";
 import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
 import { ParameterRenderComponent } from "@/components/core/parameterRenderComponent";
-import { NodeInfoType } from "@/components/core/parameterRenderComponent/types";
+import type { NodeInfoType } from "@/components/core/parameterRenderComponent/types";
+import { IS_AUTO_LOGIN } from "@/constants/constants";
+import { useIsAutoLogin } from "@/hooks/use-is-auto-login";
 import useAuthStore from "@/stores/authStore";
 import useFlowStore from "@/stores/flowStore";
-import { useTweaksStore } from "@/stores/tweaksStore";
-import { APIClassType } from "@/types/api";
+import type { APIClassType } from "@/types/api";
 import { isTargetHandleConnected } from "@/utils/reactflowUtils";
-import { CustomCellRendererProps } from "ag-grid-react";
-import { useMemo } from "react";
+import { cn } from "@/utils/utils";
 
 export default function TableNodeCellRender({
   value: { nodeId, parameterId, isTweaks },
 }: CustomCellRendererProps) {
   const edges = useFlowStore((state) => state.edges);
-  const node = isTweaks
-    ? useTweaksStore((state) => state.getNode(nodeId))
-    : useFlowStore((state) => state.getNode(nodeId));
+  const node = useFlowStore((state) => state.getNode(nodeId));
   const parameter = node?.data?.node?.template?.[parameterId];
   const currentFlow = useFlowStore((state) => state.currentFlow);
-  const isAuth = useAuthStore((state) => state.isAuthenticated);
-
-  const setNode = useTweaksStore((state) => state.setNode);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const isAutoLogin = useIsAutoLogin();
+  const shouldDisplayApiKey = isAuthenticated && !isAutoLogin;
 
   const disabled = isTargetHandleConnected(
     edges,
@@ -34,12 +34,12 @@ export default function TableNodeCellRender({
     node: node?.data.node as APIClassType,
     nodeId,
     name: parameterId,
-    setNode: isTweaks ? setNode : undefined,
+    setNode: isTweaks ? () => {} : undefined,
   });
 
   const { handleNodeClass } = useHandleNodeClass(
     nodeId,
-    isTweaks ? setNode : undefined,
+    isTweaks ? () => {} : undefined,
   );
 
   const nodeInformationMetadata: NodeInfoType = useMemo(() => {
@@ -47,17 +47,23 @@ export default function TableNodeCellRender({
       flowId: currentFlow?.id ?? "",
       nodeType: node?.data?.type?.toLowerCase() ?? "",
       flowName: currentFlow?.name ?? "",
-      isAuth,
+      isAuth: shouldDisplayApiKey!,
       variableName: parameterId,
     };
-  }, [nodeId, isAuth, parameterId]);
+  }, [nodeId, shouldDisplayApiKey, parameterId]);
 
   return (
     parameter && (
-      <div className="group mx-auto flex h-full max-h-48 w-[300px] items-center justify-center overflow-auto px-1 py-2.5 custom-scroll">
+      <div
+        className={cn(
+          "group mx-auto flex h-full max-h-48 w-[300px] items-center justify-center overflow-auto px-1 py-2.5 custom-scroll",
+          isTweaks && "pointer-events-none opacity-30",
+        )}
+      >
         <ParameterRenderComponent
           nodeId={nodeId}
           handleOnNewValue={handleOnNewValue}
+          placeholder={parameter.placeholder}
           templateData={parameter}
           name={parameterId}
           templateValue={parameter.value}

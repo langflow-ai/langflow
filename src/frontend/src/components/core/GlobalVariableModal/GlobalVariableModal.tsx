@@ -1,22 +1,22 @@
-import {
-  useGetGlobalVariables,
-  usePatchGlobalVariables,
-  usePostGlobalVariables,
-} from "@/controllers/API/queries/variables";
-import getUnavailableFields from "@/stores/globalVariablesStore/utils/get-unavailable-fields";
-import { GlobalVariable } from "@/types/global_variables";
 import { useEffect, useState } from "react";
-
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs-button";
 import { useGetTypes } from "@/controllers/API/queries/flows/use-get-types";
+import {
+  useGetGlobalVariables,
+  usePatchGlobalVariables,
+  usePostGlobalVariables,
+} from "@/controllers/API/queries/variables";
 import BaseModal from "@/modals/baseModal";
 import useAlertStore from "@/stores/alertStore";
+import getUnavailableFields from "@/stores/globalVariablesStore/utils/get-unavailable-fields";
 import { useTypesStore } from "@/stores/typesStore";
-import { ResponseErrorDetailAPI } from "@/types/api";
+import type { ResponseErrorDetailAPI } from "@/types/api";
+import type { GlobalVariable, TAB_TYPES } from "@/types/global_variables";
 import InputComponent from "../parameterRenderComponent/components/inputComponent";
+import { assignTab } from "./utils/assign-tab";
 import sortByName from "./utils/sort-by-name";
 
 //TODO IMPLEMENT FORM LOGIC
@@ -40,7 +40,9 @@ export default function GlobalVariableModal({
 }): JSX.Element {
   const [key, setKey] = useState(initialData?.name ?? "");
   const [value, setValue] = useState(initialData?.value ?? "");
-  const [type, setType] = useState(initialData?.type ?? "Credential");
+  const [type, setType] = useState<TAB_TYPES>(
+    initialData?.type ?? "Credential",
+  );
   const [fields, setFields] = useState<string[]>(
     initialData?.default_fields ?? [],
   );
@@ -60,7 +62,7 @@ export default function GlobalVariableModal({
     if (globalVariables && componentFields.size > 0) {
       const unavailableFields = getUnavailableFields(globalVariables);
       const fields = Array.from(componentFields).filter(
-        (field) => !unavailableFields.hasOwnProperty(field.trim()),
+        (field) => !Object.hasOwn(unavailableFields, field.trim()),
       );
       setAvailableFields(
         sortByName(fields.concat(initialData?.default_fields ?? [])),
@@ -75,11 +77,15 @@ export default function GlobalVariableModal({
 
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
+  const handleOnValueCHange = (value: string) => {
+    setType(assignTab(value));
+  };
+
   function handleSaveVariable() {
-    let data: {
+    const data: {
       name: string;
       value: string;
-      type?: string;
+      type?: TAB_TYPES;
       default_fields?: string[];
     } = {
       name: key,
@@ -93,21 +99,25 @@ export default function GlobalVariableModal({
         const { name } = res;
         setKey("");
         setValue("");
-        setType("");
+        setType("Credential");
         setFields([]);
         setOpen(false);
 
         setSuccessData({
-          title: `Variable ${name} ${initialData ? "updated" : "created"} successfully`,
+          title: `Variable ${name} ${
+            initialData ? "updated" : "created"
+          } successfully`,
         });
       },
       onError: (error) => {
-        let responseError = error as ResponseErrorDetailAPI;
+        const responseError = error as ResponseErrorDetailAPI;
         setErrorData({
           title: `Error ${initialData ? "updating" : "creating"} variable`,
           list: [
             responseError?.response?.data?.detail ??
-              `An unexpected error occurred while ${initialData ? "updating a new" : "creating"} variable. Please try again.`,
+              `An unexpected error occurred while ${
+                initialData ? "updating a new" : "creating"
+              } variable. Please try again.`,
           ],
         });
       },
@@ -153,7 +163,7 @@ export default function GlobalVariableModal({
             <Label>Type*</Label>
             <Tabs
               defaultValue={type}
-              onValueChange={setType}
+              onValueChange={handleOnValueCHange}
               className="w-full"
             >
               <TabsList className="grid w-full grid-cols-2">
@@ -225,6 +235,7 @@ export default function GlobalVariableModal({
         submit={{
           label: `${initialData ? "Update" : "Save"} Variable`,
           dataTestId: "save-variable-btn",
+          disabled: !key || !value,
         }}
       />
     </BaseModal>

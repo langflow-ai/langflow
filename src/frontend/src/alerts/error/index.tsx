@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import IconComponent from "../../components/common/genericIconComponent";
-import { ErrorAlertType } from "../../types/alerts";
+import type { ErrorAlertType } from "../../types/alerts";
 
 export default function ErrorAlert({
   title,
@@ -61,13 +61,12 @@ export default function ErrorAlert({
                     <li key={index} className="word-break-break-word">
                       <span className="">
                         <Markdown
-                          linkTarget="_blank"
                           remarkPlugins={[remarkGfm]}
                           className="align-text-top"
                           components={{
                             a: ({ node, ...props }) => (
                               <a
-                                href={props.href}
+                                {...props}
                                 target="_blank"
                                 className="underline"
                                 rel="noopener noreferrer"
@@ -77,7 +76,7 @@ export default function ErrorAlert({
                             ),
                             p({ node, ...props }) {
                               return (
-                                <span className="inline-block w-fit max-w-full align-text-top">
+                                <span className="inline-block w-fit max-w-full align-text-top truncate-multiline">
                                   {props.children}
                                 </span>
                               );

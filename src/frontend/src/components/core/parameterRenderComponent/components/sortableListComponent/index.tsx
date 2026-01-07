@@ -1,10 +1,10 @@
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import { Button } from "@/components/ui/button";
-import ListSelectionComponent from "@/CustomNodes/GenericNode/components/ListSelectionComponent";
-import { cn } from "@/utils/utils";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { ReactSortable } from "react-sortablejs";
-import { InputProps } from "../../types";
+import ListSelectionComponent from "@/CustomNodes/GenericNode/components/ListSelectionComponent";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/utils/utils";
+import type { InputProps } from "../../types";
 import HelperTextComponent from "../helperTextComponent";
 
 type SortableListComponentProps = {
@@ -32,28 +32,28 @@ const SortableListItem = memo(
   }) => (
     <li
       className={cn(
-        "inline-flex h-12 w-full items-center gap-2 text-sm font-medium text-gray-800",
-        limit === 1 ? "h-10 rounded-md bg-muted" : "group cursor-grab",
+        "inline-flex h-12 w-full items-center gap-2 text-sm font-medium",
+        limit === 1 ? "h-6 rounded-md bg-muted" : "group cursor-grab",
       )}
     >
       {limit !== 1 && (
         <ForwardedIconComponent
-          name="grid-horizontal"
-          className="h-5 w-5 fill-gray-300 text-gray-300"
+          name="GridHorizontal"
+          className="h-5 w-5 text-muted-foreground"
         />
       )}
 
       <div className="flex w-full items-center gap-x-2">
         {limit !== 1 && (
-          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gray-400 text-center text-white">
+          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-border text-center text-mmd text-primary">
             {index + 1}
           </div>
         )}
 
         <span
           className={cn(
-            "truncate text-primary",
-            limit === 1 ? "max-w-56 pl-3" : "max-w-48",
+            "truncate text-xxs font-medium text-muted-foreground",
+            limit === 1 ? "max-w-56 pl-2" : "max-w-48",
           )}
         >
           {data.name}
@@ -61,22 +61,16 @@ const SortableListItem = memo(
       </div>
       <Button
         size="icon"
-        variant={limit !== 1 ? "outline" : "ghost"}
+        variant={"ghost"}
         className={cn(
-          "ml-auto h-7 w-7 opacity-0 transition-opacity duration-200",
+          "ml-auto h-6 w-6 text-muted-foreground opacity-0 transition-opacity duration-200",
           limit === 1
-            ? "group pr-3 opacity-100"
-            : "hover:border hover:border-destructive hover:bg-transparent hover:opacity-100",
+            ? "group pr-1 opacity-100 hover:text-foreground"
+            : "hover:text-destructive group-hover:opacity-100",
         )}
         onClick={onRemove}
       >
-        <ForwardedIconComponent
-          name="x"
-          className={cn(
-            "h-6 w-6 text-red-500",
-            limit === 1 && "text-gray-500 group-hover:text-input",
-          )}
-        />
+        <ForwardedIconComponent name="x" className={cn("h-6 w-6")} />
       </Button>
     </li>
   ),
@@ -85,11 +79,13 @@ const SortableListItem = memo(
 const SortableListComponent = ({
   tooltip = "",
   name,
+  editNode = false,
   helperText = "",
   helperMetadata = { icon: undefined, variant: "muted-foreground" },
   options = [],
   searchCategory = [],
   limit,
+  id,
   ...baseInputProps
 }: InputProps<any, SortableListComponentProps>) => {
   const { placeholder, handleOnNewValue, value } = baseInputProps;
@@ -145,10 +141,22 @@ const SortableListComponent = ({
             size="xs"
             role="combobox"
             onClick={handleOpenListSelectionDialog}
-            className="dropdown-component-outline input-edit-node w-full py-2"
-            data-testid="button_open_list_selection"
+            className={cn(
+              "dropdown-component-outline input-edit-node w-full",
+              editNode ? "py-1" : "py-2",
+            )}
+            data-testid={
+              id
+                ? `button_open_list_selection_${id}`
+                : "button_open_list_selection"
+            }
           >
-            <div className={cn("flex items-center text-sm font-semibold")}>
+            <div
+              className={cn(
+                "flex items-center",
+                editNode ? "text-xs" : "text-sm",
+              )}
+            >
               {placeholder}
             </div>
           </Button>
@@ -188,10 +196,12 @@ const SortableListComponent = ({
         open={open}
         onClose={handleCloseListSelectionDialog}
         searchCategories={searchCategory}
+        editNode={editNode}
         setSelectedList={setListDataHandler}
         selectedList={listData}
         options={options}
         limit={limit}
+        {...baseInputProps}
       />
     </div>
   );

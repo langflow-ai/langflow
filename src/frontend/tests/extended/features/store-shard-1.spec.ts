@@ -1,6 +1,6 @@
-import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test.skip(
@@ -14,7 +14,7 @@ test.skip(
     if (!process.env.CI) {
       dotenv.config({ path: path.resolve(__dirname, "../../.env") });
     }
-    await awaitBootstrapTest(page);
+    await awaitBootstrapTest(page, { skipModal: true });
 
     await page.getByText("Close", { exact: true }).click();
     await page.waitForTimeout(1000);
@@ -70,7 +70,7 @@ test.skip(
     await page.getByTestId("install-Basic RAG").click();
     await page.waitForTimeout(1000);
     await page.getByText("Component Installed Successfully").isVisible();
-    await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+    await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 100000,
     });
     await page.getByTestId("icon-ChevronLeft").first().click();
@@ -96,7 +96,8 @@ test.skip(
       dotenv.config({ path: path.resolve(__dirname, "../../.env") });
     }
 
-    await page.goto("/");
+    await awaitBootstrapTest(page, { skipModal: true });
+
     await page.waitForTimeout(1000);
 
     await page.getByTestId("button-store").click();

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import {
   DropdownMenu,
@@ -6,7 +7,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
 
 interface SearchBarComponentProps {
   searchCategories?: string[];
@@ -35,7 +35,7 @@ const SearchBarComponent = ({
   };
 
   return (
-    <div className="mr-10 flex w-full items-center rounded-md border">
+    <div className="flex w-full items-center rounded-md border">
       {searchCategories && searchCategories.length > 0 && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

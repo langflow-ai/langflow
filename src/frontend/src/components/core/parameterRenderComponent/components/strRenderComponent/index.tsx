@@ -1,4 +1,4 @@
-import { InputProps, StrRenderComponentType } from "../../types";
+import type { InputProps, StrRenderComponentType } from "../../types";
 import CopyFieldAreaComponent from "../copyFieldAreaComponent";
 import DropdownComponent from "../dropdownComponent";
 import InputGlobalComponent from "../inputGlobalComponent";
@@ -69,13 +69,19 @@ export function StrRenderComponent({
       <DropdownComponent
         {...baseInputProps}
         dialogInputs={templateData.dialog_inputs}
+        externalOptions={templateData.external_options}
         options={templateData.options ?? []}
         nodeId={nodeId}
         nodeClass={nodeClass}
+        placeholder={placeholder}
         handleNodeClass={handleNodeClass}
         optionsMetaData={templateData.options_metadata}
         combobox={templateData.combobox}
         name={templateData?.name!}
+        toggle={templateData.toggle}
+        toggleValue={templateData.toggle_value}
+        toggleDisable={templateData.toggle_disable}
+        hasRefreshButton={templateData.refresh_button}
       />
     );
   }

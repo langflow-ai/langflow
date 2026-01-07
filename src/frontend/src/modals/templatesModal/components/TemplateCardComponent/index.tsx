@@ -4,7 +4,7 @@ import { cn, getNumberFromString } from "@/utils/utils";
 import IconComponent, {
   ForwardedIconComponent,
 } from "../../../../components/common/genericIconComponent";
-import { TemplateCardComponentProps } from "../../../../types/templates/types";
+import type { TemplateCardComponentProps } from "../../../../types/templates/types";
 
 export default function TemplateCardComponent({
   example,

@@ -1,4 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
@@ -12,7 +13,7 @@ test(
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
     await page.getByTestId("publish-button").click();
     await page.getByTestId("api-access-item").click();
-    await page.getByRole("tab", { name: "cURL" }).click();
+    await page.getByTestId("api_tab_curl").click();
     await page.getByTestId("icon-Copy").click();
     const handle = await page.evaluateHandle(() =>
       navigator.clipboard.readText(),
@@ -22,26 +23,20 @@ test(
     expect(clipboardContent.length).toBeGreaterThan(0);
     await page.getByTestId("tweaks-button").click();
     await page
-      .getByRole("heading", { name: "OpenAi" })
+      .getByRole("heading", { name: "Language Model" })
       .locator("div")
       .first()
       .click();
 
-    await page.waitForSelector(
-      '[data-testid="popover-anchor-input-openai_api_base-edit"]',
-      {
-        timeout: 1000,
-      },
-    );
+    await page.waitForSelector('[data-testid="showstream"]', {
+      timeout: 1000,
+    });
 
-    await page
-      .getByTestId("popover-anchor-input-openai_api_base-edit")
-      .first()
-      .fill("teste");
+    await page.getByTestId("showstream").first().click();
 
     await page.getByText("Close").last().click();
 
-    await page.getByRole("tab", { name: "cURL" }).click();
+    await page.getByTestId("api_tab_curl").click();
     await page.getByTestId("icon-Copy").click();
     const handle2 = await page.evaluateHandle(() =>
       navigator.clipboard.readText(),
@@ -50,6 +45,13 @@ test(
     const newValue = clipboardContent2;
     expect(oldValue).not.toBe(newValue);
     expect(clipboardContent2.length).toBeGreaterThan(clipboardContent.length);
+    await awaitBootstrapTest(page, { skipModal: true });
+    await page.getByText("Basic Prompting").first().click();
+    await page.getByTestId("publish-button").click();
+    await page.getByTestId("api-access-item").click();
+    expect(
+      await page.getByText("Input Schema (1)", { exact: true }).isVisible(),
+    );
   },
 );
 
@@ -75,15 +77,8 @@ test("check if tweaks are updating when someothing on the flow changes", async (
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
+  await adjustScreenView(page, { numberOfZoomOut: 3 });
 
-  await page.waitForSelector('[data-testid="fit_view"]', {
-    timeout: 100000,
-  });
-
-  await page.getByTestId("fit_view").click();
-  await page.getByTestId("zoom_out").click();
-  await page.getByTestId("zoom_out").click();
-  await page.getByTestId("zoom_out").click();
   await page.getByTestId("popover-anchor-input-collection_name").click();
   await page
     .getByTestId("popover-anchor-input-collection_name")
@@ -94,7 +89,7 @@ test("check if tweaks are updating when someothing on the flow changes", async (
     .getByTestId("popover-anchor-input-persist_directory")
     .fill("persist_directory_123123123!@#$&*(&%$@");
 
-  const focusElementsOnBoard = async ({ page }) => {
+  const focusElementsOnBoard = async ({ page }: any) => {
     const focusElements = await page.getByTestId("publish-button").first();
     await focusElements.click();
   };
@@ -131,5 +126,5 @@ test("check if tweaks are updating when someothing on the flow changes", async (
   await page.getByText("collection_name_test_123123123!@#$&*(&%$@").isVisible();
   await page.getByText("persist_directory_123123123!@#$&*(&%$@").isVisible();
 
-  expect(await page.getByText("Tweaks (2)", { exact: true }).isVisible());
+  expect(await page.getByText("Input Schema (2)", { exact: true }).isVisible());
 });
