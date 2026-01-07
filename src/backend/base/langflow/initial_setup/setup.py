@@ -77,7 +77,7 @@ def update_projects_components_with_latest_component_versions(project_data, all_
 
         # Try to find the component, checking legacy names if needed
         lookup_key = legacy_name_mapping.get(node_type, node_type)
-        
+
         if lookup_key in all_types_dict_flat:
             latest_node = all_types_dict_flat.get(lookup_key)
             latest_template = latest_node.get("template")

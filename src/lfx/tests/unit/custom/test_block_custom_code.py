@@ -3,7 +3,6 @@
 from unittest.mock import Mock, patch
 
 import pytest
-
 from lfx.custom.hash_validator import _generate_short_hash
 from lfx.custom.validate import create_class, create_function
 
@@ -130,4 +129,3 @@ class TestComponent(Component):
             mock_check.return_value = True
             result = create_class(code, "TestComponent")
             assert result is not None
-

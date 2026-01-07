@@ -1,12 +1,9 @@
 """Tests for hash validator module."""
 
 import hashlib
-from pathlib import Path
 from unittest.mock import Mock, patch
 
 import orjson
-import pytest
-
 from lfx.custom.hash_validator import (
     _extract_hashes_from_index,
     _generate_full_hash,
@@ -194,7 +191,7 @@ class TestIsCodeHashAllowed:
         """Test that hash generation errors allow code (fail open)."""
         mock_settings = Mock()
         mock_settings.settings.allow_custom_components = False
-        
+
         # Mock hash generation to raise an error
         with patch("lfx.custom.hash_validator._generate_short_hash", side_effect=Exception("Hash error")):
             code = "class TestComponent:\n    pass"
@@ -205,7 +202,7 @@ class TestIsCodeHashAllowed:
         """Test that index loading errors allow code (fail open)."""
         mock_settings = Mock()
         mock_settings.settings.allow_custom_components = False
-        
+
         # Mock index loading to raise an error
         with patch("lfx.custom.hash_validator._get_cached_hashes", side_effect=Exception("Index error")):
             code = "class TestComponent:\n    pass"
@@ -216,7 +213,7 @@ class TestIsCodeHashAllowed:
         """Test that malformed index is handled gracefully."""
         mock_settings = Mock()
         mock_settings.settings.allow_custom_components = False
-        
+
         # Mock index with malformed data
         with patch("lfx.custom.hash_validator._get_cached_hashes", return_value=set()):
             code = "class TestComponent:\n    pass"
@@ -236,11 +233,11 @@ class TestIsCodeHashAllowed:
         # to track how many times _load_component_index_hashes is called
         with patch("lfx.custom.hash_validator._load_component_index_hashes") as mock_load:
             mock_load.return_value = {code_hash}
-            
+
             # First call should load
             assert is_code_hash_allowed(code, mock_settings) is True
             first_call_count = mock_load.call_count
-            
+
             # Second call with same settings should use cache (no additional load)
             assert is_code_hash_allowed(code, mock_settings) is True
             # Verify load was only called once (cache was used)
@@ -264,15 +261,15 @@ class TestIsCodeHashAllowed:
         # Mock _load_component_index_hashes to track calls
         with patch("lfx.custom.hash_validator._load_component_index_hashes") as mock_load:
             mock_load.return_value = {code_hash}
-            
+
             # Call with first settings - should load
             assert is_code_hash_allowed(code, mock_settings1) is True
             assert mock_load.call_count == 1
-            
+
             # Call again with same settings - should use cache (no additional load)
             assert is_code_hash_allowed(code, mock_settings1) is True
             assert mock_load.call_count == 1  # Still 1, cache was used
-            
+
             # Call with different settings - should invalidate cache and reload
             assert is_code_hash_allowed(code, mock_settings2) is True
             assert mock_load.call_count == 2  # Reloaded due to different settings
@@ -314,4 +311,3 @@ class TestIntegrationWithComponentIndex:
         assert "abc123def456" in hashes
         assert "def456ghi789" in hashes
         assert len(hashes) == 2
-

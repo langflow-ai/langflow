@@ -87,7 +87,7 @@ def _load_component_index_hashes(settings_service: "SettingsService") -> set[str
 
     # Try to load from custom path first, then built-in
     custom_index_path = settings_service.settings.components_index_path
-    
+
     index = _read_component_index(custom_index_path)
 
     if not index:
@@ -96,13 +96,12 @@ def _load_component_index_hashes(settings_service: "SettingsService") -> set[str
 
     if not index:
         logger.warning(
-            "Component index not available for hash validation. "
-            "Custom code blocking may not work correctly."
+            "Component index not available for hash validation. Custom code blocking may not work correctly."
         )
         return set()
 
     hashes = _extract_hashes_from_index(index)
-    
+
     return hashes
 
 
