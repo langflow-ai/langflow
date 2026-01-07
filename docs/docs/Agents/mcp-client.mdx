@@ -110,6 +110,50 @@ To add a new MCP server, click **Add MCP Server**, and then follow the steps in 
 
 Click <Icon name="Ellipsis" aria-hidden="true"/> **More** to edit or delete an MCP server connection.
 
+## Modify MCP server environment variables with the API {#mcp-api-tweaks}
+
+You can modify MCP server environment variables at runtime when running flows through the [Langflow API](/api-reference-api-examples) by tweaking the **MCP Tools** component.
+
+You can include tweaks with any Langflow API request that supports the `tweaks` parameter, such as POST requests to the `/run` or `/webhook` endpoints.
+For more information, see [Input schema (tweaks)](/concepts-publish#input-schema).
+
+To modify the **MCP Tools** component's environment variables with tweaks, do the following:
+
+1. Open the flow that contains your **MCP Tools** component.
+2. To find the **MCP Tools** component's unique ID, in your **MCP Tools** component, click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**.
+The component's ID is displayed in the **Controls** pane, such as `MCPTools-Bzahc`.
+3. Send a POST request to the Langflow server's `/run` endpoint, and include tweaks to the **MCP Tools** component.
+
+    The following curl command demonstrates a request structure, with the `env` object nested under `mcp_server` in the `tweaks` payload:
+
+    ```bash
+    curl --request POST \
+      --url "http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID?stream=false" \
+      --header "Content-Type: application/json" \
+      --header "x-api-key: LANGFLOW_API_KEY" \
+      --data '{
+        "output_type": "chat",
+        "input_type": "chat",
+        "input_value": "What sales data is available to me?",
+        "tweaks": {
+          "MCP_TOOLS_COMPONENT_ID": {
+            "mcp_server": {
+              "env": {
+                "API_URL": "https://api.example.com",
+                "API_KEY": "your-mcp-server-api-key",
+                "ENVIRONMENT": "production"
+              }
+            }
+          }
+        }
+      }'
+    ```
+
+    Replace `MCP_TOOLS_COMPONENT_ID`, `LANGFLOW_API_KEY`, `LANGFLOW_SERVER_ADDRESS`, and `FLOW_ID` with the actual values from your Langflow deployment.
+
+    Langflow doesn't automatically discover or expose which environment variables your MCP server accepts from the **MCP Tools** component.
+    To determine which environment variables your MCP server accepts, see the MCP server's documentation. For example, the [Astra DB MCP server](https://github.com/datastax/astra-db-mcp) requires `ASTRA_DB_APPLICATION_TOKEN` and `ASTRA_DB_API_ENDPOINT`, with an optional variable for `ASTRA_DB_KEYSPACE`, as documented in its repository.
+
 ## See also
 
 - [Use Langflow as an MCP server](/mcp-server)
