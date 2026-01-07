@@ -464,15 +464,4 @@
   }
 }
 
-@layer components {
-  /* Chat avatar visibility: hidden below 45rem, flex above */
-  .chat-avatar {
-    @apply hidden;
-  }
 
-  @media (min-width: 45rem) {
-    .chat-avatar {
-      display: flex;
-    }
-  }
-}

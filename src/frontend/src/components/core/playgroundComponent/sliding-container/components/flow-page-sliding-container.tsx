@@ -114,7 +114,7 @@ export function FlowPageSlidingContainerContent({
 
   return (
     <div
-      className="h-full w-full bg-background shadow-lg flex flex-col relative z-[50]"
+      className="h-full w-full bg-background shadow-lg flex flex-col relative z-[50] @container/chat-panel"
       onDragOver={dragOver}
       onDragEnter={dragEnter}
       onDragLeave={dragLeave}
@@ -157,7 +157,7 @@ export function FlowPageSlidingContainerContent({
               resize="smooth"
               initial="instant"
             >
-              <StickToBottom.Content className="@container/chat-panel flex flex-col min-h-full overflow-x-hidden p-6">
+              <StickToBottom.Content className="flex flex-col min-h-full overflow-x-hidden p-6">
                 <div className="flex flex-col w-full">
                   <Messages
                     visibleSession={currentSessionId ?? currentFlowId ?? null}

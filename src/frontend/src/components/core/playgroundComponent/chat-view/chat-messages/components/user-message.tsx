@@ -89,7 +89,9 @@ export const UserMessage = memo(
     };
 
     const editedFlag = chat.edit ? (
-      <div className="text-sm text-muted-foreground">(Edited)</div>
+      <div className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded border border-border text-2xl hover-border-input">
+        (Edited)
+      </div>
     ) : null;
 
     const isEmoji = chat.properties?.icon?.match(
@@ -107,7 +109,7 @@ export const UserMessage = memo(
           >
             {/* Avatar */}
             <div
-              className="chat-avatar relative hidden h-8 w-8 items-center justify-center overflow-hidden rounded border border-border text-2xl hover:border-input @md/chat-panel:flex"
+              className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded border border-border text-2xl hover-border-input"
               style={
                 chat.properties?.background_color
                   ? { backgroundColor: chat.properties.background_color }

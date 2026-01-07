@@ -1,4 +1,6 @@
 /** @type {import('tailwindcss').Config} */
+
+import tailwindcssContainerQueries from "@tailwindcss/container-queries";
 import tailwindcssForms from "@tailwindcss/forms";
 import tailwindcssTypography from "@tailwindcss/typography";
 import { fontFamily } from "tailwindcss/defaultTheme";
@@ -367,6 +369,7 @@ const config = {
   },
 
   plugins: [
+    tailwindcssContainerQueries,
     tailwindcssAnimate,
     tailwindcssForms({
       strategy: "class", // only generate classes

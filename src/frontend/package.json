@@ -137,6 +137,7 @@
     "@storybook/react-vite": "^10.1.0",
     "@swc/cli": "^0.5.2",
     "@swc/core": "^1.6.1",
+    "@tailwindcss/container-queries": "^0.1.1",
     "@tailwindcss/typography": "^0.5.13",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
