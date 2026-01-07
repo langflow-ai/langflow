@@ -513,16 +513,16 @@ def create_app():
 
         router.include_router(mcp_router)
 
-    # # Import router_v1 and conditionally add agentic_router before including in main router
-    # from langflow.api import router_v1
+    # Import router_v1 and conditionally add agentic_router before including in main router
+    from langflow.api import router_v1
 
     # if settings.agentic_experience:
     #     from langflow.agentic.api.router import router as agentic_router
 
     #     router_v1.include_router(agentic_router)
 
-    # # Include router_v1 in router after all conditional routes are added
-    # router.include_router(router_v1)
+    # Include router_v1 in router after all conditional routes are added
+    router.include_router(router_v1)
 
     app.include_router(router)
     app.include_router(health_check_router)
