@@ -53,9 +53,17 @@
   },
   "overrides": {
     "lodash": "4.17.21",
-    "openapi-to-postmanv2/lodash": "4.17.21",
-    "postman-collection/lodash": "4.17.21",
-    "json-schema-resolve-allof/lodash": "4.17.21",
-    "json-refs/lodash": "4.17.21"
+    "openapi-to-postmanv2": {
+      "lodash": "4.17.21"
+    },
+    "postman-collection": {
+      "lodash": "4.17.21"
+    },
+    "json-schema-resolve-allof": {
+      "lodash": "4.17.21"
+    },
+    "json-refs": {
+      "lodash": "4.17.21"
+    }
   }
 }
