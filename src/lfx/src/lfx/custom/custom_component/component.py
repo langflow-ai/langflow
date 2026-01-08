@@ -1565,7 +1565,18 @@ class Component(CustomComponent):
         return has_chat_input(self.graph.get_vertex_neighbors(self._vertex))
 
     def _should_skip_message(self, message: Message) -> bool:
-        """Check if the message should be skipped based on vertex configuration and message type."""
+        """Check if the message should be skipped based on vertex configuration and message type.
+
+        Messages should NOT be skipped (i.e., should be sent) when:
+        - The vertex is an output or input vertex
+        - The component is connected to ChatOutput
+        - The component has _stream_to_playground=True (set by parent for inner graphs)
+        - The message is an ErrorMessage
+        """
+        # If parent explicitly enabled streaming for this inner graph component
+        if getattr(self, "_stream_to_playground", False):
+            return False
+
         return (
             self._vertex is not None
             and not (self._vertex.is_output or self._vertex.is_input)
@@ -1672,9 +1683,13 @@ class Component(CustomComponent):
 
     async def _send_message_event(self, message: Message, id_: str | None = None, category: str | None = None) -> None:
         if hasattr(self, "_event_manager") and self._event_manager:
-            data_dict = message.model_dump()["data"] if hasattr(message, "data") else message.model_dump()
-            if id_ and not data_dict.get("id"):
-                data_dict["id"] = id_
+            # Use full model_dump() to include all Message fields (content_blocks, properties, etc.)
+            data_dict = message.model_dump()
+            # The message ID is stored in message.data["id"], which ends up in data_dict["data"]["id"]
+            # But the frontend expects it at data_dict["id"], so we need to copy it to the top level
+            message_id = id_ or data_dict.get("data", {}).get("id") or getattr(message, "id", None)
+            if message_id and not data_dict.get("id"):
+                data_dict["id"] = message_id
             category = category or data_dict.get("category", None)
 
             def _send_event():
