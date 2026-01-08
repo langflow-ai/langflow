@@ -331,8 +331,8 @@
               "hash_history": [
                 {
                   "hash": "7a26c54d89ed",
-                  "version_first": "1.7.1",
-                  "version_last": "1.7.1"
+                  "version_first": "1.8.0",
+                  "version_last": "1.8.0"
                 }
               ],
               "module": "lfx.components.input_output.chat.ChatInput"
@@ -832,8 +832,8 @@
               "hash_history": [
                 {
                   "hash": "b9d63ae59e8a",
-                  "version_first": "1.7.1",
-                  "version_last": "1.7.1"
+                  "version_first": "1.8.0",
+                  "version_last": "1.8.0"
                 }
               ],
               "module": "lfx.components.processing.split_text.SplitTextComponent"
@@ -1143,8 +1143,8 @@
               "hash_history": [
                 {
                   "hash": "8c87e536cca4",
-                  "version_first": "1.7.1",
-                  "version_last": "1.7.1"
+                  "version_first": "1.8.0",
+                  "version_last": "1.8.0"
                 }
               ],
               "module": "lfx.components.input_output.chat_output.ChatOutput"
@@ -1435,8 +1435,8 @@
               "hash_history": [
                 {
                   "hash": "8a658ed6d4c9",
-                  "version_first": "1.7.1",
-                  "version_last": "1.7.1"
+                  "version_first": "1.8.0",
+                  "version_last": "1.8.0"
                 }
               ],
               "module": "lfx.components.openai.openai.OpenAIEmbeddingsComponent"
@@ -1989,8 +1989,8 @@
               "hash_history": [
                 {
                   "hash": "8a658ed6d4c9",
-                  "version_first": "1.7.1",
-                  "version_last": "1.7.1"
+                  "version_first": "1.8.0",
+                  "version_last": "1.8.0"
                 }
               ],
               "module": "lfx.components.openai.openai.OpenAIEmbeddingsComponent"
@@ -2774,8 +2774,8 @@
               "hash_history": [
                 {
                   "hash": "5008cc086d7f",
-                  "version_first": "1.7.1",
-                  "version_last": "1.7.1"
+                  "version_first": "1.8.0",
+                  "version_last": "1.8.0"
                 }
               ],
               "module": "lfx.components.files_and_knowledge.file.FileComponent"
@@ -3844,8 +3844,8 @@
               "hash_history": [
                 {
                   "hash": "d52094e54e96",
-                  "version_first": "1.7.1",
-                  "version_last": "1.7.1"
+                  "version_first": "1.8.0",
+                  "version_last": "1.8.0"
                 }
               ],
               "module": "lfx.components.datastax.astradb_vectorstore.AstraDBVectorStoreComponent"
@@ -4664,8 +4664,8 @@
               "hash_history": [
                 {
                   "hash": "d52094e54e96",
-                  "version_first": "1.7.1",
-                  "version_last": "1.7.1"
+                  "version_first": "1.8.0",
+                  "version_last": "1.8.0"
                 }
               ],
               "module": "lfx.components.datastax.astradb_vectorstore.AstraDBVectorStoreComponent"

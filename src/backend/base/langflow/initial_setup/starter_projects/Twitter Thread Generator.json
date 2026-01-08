@@ -296,8 +296,8 @@
               "hash_history": [
                 {
                   "hash": "7a26c54d89ed",
-                  "version_first": "1.7.1",
-                  "version_last": "1.7.1"
+                  "version_first": "1.8.0",
+                  "version_last": "1.8.0"
                 }
               ],
               "module": "lfx.components.input_output.chat.ChatInput"
@@ -576,8 +576,8 @@
               "hash_history": [
                 {
                   "hash": "3d80f125b734",
-                  "version_first": "1.7.1",
-                  "version_last": "1.7.1"
+                  "version_first": "1.8.0",
+                  "version_last": "1.8.0"
                 }
               ],
               "module": "lfx.components.input_output.text.TextInputComponent"
@@ -716,8 +716,8 @@
               "hash_history": [
                 {
                   "hash": "8c87e536cca4",
-                  "version_first": "1.7.1",
-                  "version_last": "1.7.1"
+                  "version_first": "1.8.0",
+                  "version_last": "1.8.0"
                 }
               ],
               "module": "lfx.components.input_output.chat_output.ChatOutput"
@@ -993,8 +993,8 @@
               "hash_history": [
                 {
                   "hash": "3d80f125b734",
-                  "version_first": "1.7.1",
-                  "version_last": "1.7.1"
+                  "version_first": "1.8.0",
+                  "version_last": "1.8.0"
                 }
               ],
               "module": "lfx.components.input_output.text.TextInputComponent"
@@ -1115,8 +1115,8 @@
               "hash_history": [
                 {
                   "hash": "3d80f125b734",
-                  "version_first": "1.7.1",
-                  "version_last": "1.7.1"
+                  "version_first": "1.8.0",
+                  "version_last": "1.8.0"
                 }
               ],
               "module": "lfx.components.input_output.text.TextInputComponent"
@@ -1237,8 +1237,8 @@
               "hash_history": [
                 {
                   "hash": "3d80f125b734",
-                  "version_first": "1.7.1",
-                  "version_last": "1.7.1"
+                  "version_first": "1.8.0",
+                  "version_last": "1.8.0"
                 }
               ],
               "module": "lfx.components.input_output.text.TextInputComponent"
@@ -1359,8 +1359,8 @@
               "hash_history": [
                 {
                   "hash": "3d80f125b734",
-                  "version_first": "1.7.1",
-                  "version_last": "1.7.1"
+                  "version_first": "1.8.0",
+                  "version_last": "1.8.0"
                 }
               ],
               "module": "lfx.components.input_output.text.TextInputComponent"
@@ -1481,8 +1481,8 @@
               "hash_history": [
                 {
                   "hash": "3d80f125b734",
-                  "version_first": "1.7.1",
-                  "version_last": "1.7.1"
+                  "version_first": "1.8.0",
+                  "version_last": "1.8.0"
                 }
               ],
               "module": "lfx.components.input_output.text.TextInputComponent"
