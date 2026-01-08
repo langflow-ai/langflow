@@ -71,6 +71,7 @@ DIRECT_TYPES = [
     "float",
     "Any",
     "prompt",
+    "mustache",
     "code",
     "NestedDict",
     "table",
@@ -82,6 +83,7 @@ DIRECT_TYPES = [
     "query",
     "tools",
     "mcp",
+    "model",
 ]
 
 

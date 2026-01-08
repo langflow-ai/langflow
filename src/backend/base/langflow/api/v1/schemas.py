@@ -426,13 +426,21 @@ class AuthSettings(BaseModel):
     oauth_host: str | None = None
     oauth_port: str | None = None
     oauth_server_url: str | None = None
-    oauth_callback_path: str | None = None
+    oauth_callback_path: str | None = None  # Deprecated: use oauth_callback_url instead
+    oauth_callback_url: str | None = None
     oauth_client_id: str | None = None
     oauth_client_secret: SecretStr | None = None
     oauth_auth_url: str | None = None
     oauth_token_url: str | None = None
     oauth_mcp_scope: str | None = None
     oauth_provider_scope: str | None = None
+
+    def model_post_init(self, __context, /) -> None:
+        """Normalize oauth_callback_path to oauth_callback_url for backwards compatibility."""
+        # If oauth_callback_url is not set but oauth_callback_path is, use the path value
+        if self.oauth_callback_url is None and self.oauth_callback_path is not None:
+            self.oauth_callback_url = self.oauth_callback_path
+        # If both are set, oauth_callback_url takes precedence (already set correctly)
 
 
 class MCPSettings(BaseModel):

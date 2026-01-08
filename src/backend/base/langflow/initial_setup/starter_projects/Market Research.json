@@ -120,34 +120,6 @@
         "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "LanguageModelComponent",
-            "id": "LanguageModelComponent-Enuj5",
-            "name": "model_output",
-            "output_types": [
-              "LanguageModel"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "llm",
-            "id": "StructuredOutput-zfjb9",
-            "inputTypes": [
-              "LanguageModel"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "xy-edge__LanguageModelComponent-Enuj5{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-Enuj5œ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutput-zfjb9{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-zfjb9œ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "LanguageModelComponent-Enuj5",
-        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-Enuj5œ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
-        "target": "StructuredOutput-zfjb9",
-        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutput-zfjb9œ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
             "dataType": "StructuredOutput",
             "id": "StructuredOutput-zfjb9",
             "name": "dataframe_output",
@@ -426,7 +398,6 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "height": 234,
         "id": "ChatInput-OSw5o",
         "measured": {
           "height": 234,
@@ -441,8 +412,7 @@
           "y": 889.8398446936101
         },
         "selected": false,
-        "type": "genericNode",
-        "width": 320
+        "type": "genericNode"
       },
       {
         "data": {
@@ -707,7 +677,6 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "height": 234,
         "id": "ChatOutput-tjFWM",
         "measured": {
           "height": 234,
@@ -722,8 +691,7 @@
           "y": 855.3686932779933
         },
         "selected": false,
-        "type": "genericNode",
-        "width": 320
+        "type": "genericNode"
       },
       {
         "data": {
@@ -733,7 +701,7 @@
             "display_name": "",
             "documentation": "",
             "template": {
-              "backgroundColor": "emerald"
+              "backgroundColor": "neutral"
             }
           },
           "type": "note"
@@ -1178,360 +1146,26 @@
       },
       {
         "data": {
-          "id": "LanguageModelComponent-Enuj5",
-          "node": {
-            "base_classes": [
-              "LanguageModel",
-              "Message"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Runs a language model given a specified provider.",
-            "display_name": "Language Model",
-            "documentation": "",
-            "edited": false,
-            "field_order": [
-              "provider",
-              "model_name",
-              "api_key",
-              "input_value",
-              "system_message",
-              "stream",
-              "temperature"
-            ],
-            "frozen": false,
-            "icon": "brain-circuit",
-            "last_updated": "2025-09-29T15:47:37.204Z",
-            "legacy": false,
-            "lf_version": "1.6.0",
-            "metadata": {
-              "code_hash": "bb5f8714781b",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "langchain_anthropic",
-                    "version": "0.3.14"
-                  },
-                  {
-                    "name": "langchain_google_genai",
-                    "version": "2.0.6"
-                  },
-                  {
-                    "name": "langchain_openai",
-                    "version": "0.3.23"
-                  },
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 4
-              },
-              "keywords": [
-                "model",
-                "llm",
-                "language model",
-                "large language model"
-              ],
-              "module": "lfx.components.models.language_model.LanguageModelComponent"
-            },
-            "minimized": false,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Model Response",
-                "group_outputs": false,
-                "method": "text_response",
-                "name": "text_output",
-                "options": null,
-                "required_inputs": null,
-                "selected": "Message",
-                "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
-                "value": "__UNDEFINED__"
-              },
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Language Model",
-                "group_outputs": false,
-                "method": "build_model",
-                "name": "model_output",
-                "options": null,
-                "required_inputs": null,
-                "selected": "LanguageModel",
-                "tool_mode": true,
-                "types": [
-                  "LanguageModel"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "priority": 0,
-            "template": {
-              "_type": "Component",
-              "api_key": {
-                "_input_type": "SecretStrInput",
-                "advanced": false,
-                "display_name": "OpenAI API Key",
-                "dynamic": false,
-                "info": "Model Provider API key",
-                "input_types": [],
-                "load_from_db": true,
-                "name": "api_key",
-                "password": true,
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": "OPENAI_API_KEY"
-              },
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from typing import Any\n\nimport requests\nfrom langchain_anthropic import ChatAnthropic\nfrom langchain_ibm import ChatWatsonx\nfrom langchain_ollama import ChatOllama\nfrom langchain_openai import ChatOpenAI\nfrom pydantic.v1 import SecretStr\n\nfrom lfx.base.models.anthropic_constants import ANTHROPIC_MODELS\nfrom lfx.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS\nfrom lfx.base.models.google_generative_ai_model import ChatGoogleGenerativeAIFixed\nfrom lfx.base.models.model import LCModelComponent\nfrom lfx.base.models.model_utils import get_ollama_models, is_valid_ollama_url\nfrom lfx.base.models.openai_constants import OPENAI_CHAT_MODEL_NAMES, OPENAI_REASONING_MODEL_NAMES\nfrom lfx.field_typing import LanguageModel\nfrom lfx.field_typing.range_spec import RangeSpec\nfrom lfx.inputs.inputs import BoolInput, MessageTextInput, StrInput\nfrom lfx.io import DropdownInput, MessageInput, MultilineInput, SecretStrInput, SliderInput\nfrom lfx.log.logger import logger\nfrom lfx.schema.dotdict import dotdict\nfrom lfx.utils.util import transform_localhost_url\n\n# IBM watsonx.ai constants\nIBM_WATSONX_DEFAULT_MODELS = [\"ibm/granite-3-2b-instruct\", \"ibm/granite-3-8b-instruct\", \"ibm/granite-13b-instruct-v2\"]\nIBM_WATSONX_URLS = [\n    \"https://us-south.ml.cloud.ibm.com\",\n    \"https://eu-de.ml.cloud.ibm.com\",\n    \"https://eu-gb.ml.cloud.ibm.com\",\n    \"https://au-syd.ml.cloud.ibm.com\",\n    \"https://jp-tok.ml.cloud.ibm.com\",\n    \"https://ca-tor.ml.cloud.ibm.com\",\n]\n\n# Ollama API constants\nHTTP_STATUS_OK = 200\nJSON_MODELS_KEY = \"models\"\nJSON_NAME_KEY = \"name\"\nJSON_CAPABILITIES_KEY = \"capabilities\"\nDESIRED_CAPABILITY = \"completion\"\nDEFAULT_OLLAMA_URL = \"http://localhost:11434\"\n\n\nclass LanguageModelComponent(LCModelComponent):\n    display_name = \"Language Model\"\n    description = \"Runs a language model given a specified provider.\"\n    documentation: str = \"https://docs.langflow.org/components-models\"\n    icon = \"brain-circuit\"\n    category = \"models\"\n    priority = 0  # Set priority to 0 to make it appear first\n\n    @staticmethod\n    def fetch_ibm_models(base_url: str) -> list[str]:\n        \"\"\"Fetch available models from the watsonx.ai API.\"\"\"\n        try:\n            endpoint = f\"{base_url}/ml/v1/foundation_model_specs\"\n            params = {\"version\": \"2024-09-16\", \"filters\": \"function_text_chat,!lifecycle_withdrawn\"}\n            response = requests.get(endpoint, params=params, timeout=10)\n            response.raise_for_status()\n            data = response.json()\n            models = [model[\"model_id\"] for model in data.get(\"resources\", [])]\n            return sorted(models)\n        except Exception:  # noqa: BLE001\n            logger.exception(\"Error fetching IBM watsonx models. Using default models.\")\n            return IBM_WATSONX_DEFAULT_MODELS\n\n    inputs = [\n        DropdownInput(\n            name=\"provider\",\n            display_name=\"Model Provider\",\n            options=[\"OpenAI\", \"Anthropic\", \"Google\", \"IBM watsonx.ai\", \"Ollama\"],\n            value=\"OpenAI\",\n            info=\"Select the model provider\",\n            real_time_refresh=True,\n            options_metadata=[\n                {\"icon\": \"OpenAI\"},\n                {\"icon\": \"Anthropic\"},\n                {\"icon\": \"GoogleGenerativeAI\"},\n                {\"icon\": \"WatsonxAI\"},\n                {\"icon\": \"Ollama\"},\n            ],\n        ),\n        DropdownInput(\n            name=\"model_name\",\n            display_name=\"Model Name\",\n            options=OPENAI_CHAT_MODEL_NAMES + OPENAI_REASONING_MODEL_NAMES,\n            value=OPENAI_CHAT_MODEL_NAMES[0],\n            info=\"Select the model to use\",\n            real_time_refresh=True,\n            refresh_button=True,\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"OpenAI API Key\",\n            info=\"Model Provider API key\",\n            required=False,\n            show=True,\n            real_time_refresh=True,\n        ),\n        DropdownInput(\n            name=\"base_url_ibm_watsonx\",\n            display_name=\"watsonx API Endpoint\",\n            info=\"The base URL of the API (IBM watsonx.ai only)\",\n            options=IBM_WATSONX_URLS,\n            value=IBM_WATSONX_URLS[0],\n            show=False,\n            real_time_refresh=True,\n        ),\n        StrInput(\n            name=\"project_id\",\n            display_name=\"watsonx Project ID\",\n            info=\"The project ID associated with the foundation model (IBM watsonx.ai only)\",\n            show=False,\n            required=False,\n        ),\n        MessageTextInput(\n            name=\"ollama_base_url\",\n            display_name=\"Ollama API URL\",\n            info=f\"Endpoint of the Ollama API (Ollama only). Defaults to {DEFAULT_OLLAMA_URL}\",\n            value=DEFAULT_OLLAMA_URL,\n            show=False,\n            real_time_refresh=True,\n            load_from_db=True,\n        ),\n        MessageInput(\n            name=\"input_value\",\n            display_name=\"Input\",\n            info=\"The input text to send to the model\",\n        ),\n        MultilineInput(\n            name=\"system_message\",\n            display_name=\"System Message\",\n            info=\"A system message that helps set the behavior of the assistant\",\n            advanced=False,\n        ),\n        BoolInput(\n            name=\"stream\",\n            display_name=\"Stream\",\n            info=\"Whether to stream the response\",\n            value=False,\n            advanced=True,\n        ),\n        SliderInput(\n            name=\"temperature\",\n            display_name=\"Temperature\",\n            value=0.1,\n            info=\"Controls randomness in responses\",\n            range_spec=RangeSpec(min=0, max=1, step=0.01),\n            advanced=True,\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:\n        provider = self.provider\n        model_name = self.model_name\n        temperature = self.temperature\n        stream = self.stream\n\n        if provider == \"OpenAI\":\n            if not self.api_key:\n                msg = \"OpenAI API key is required when using OpenAI provider\"\n                raise ValueError(msg)\n\n            if model_name in OPENAI_REASONING_MODEL_NAMES:\n                # reasoning models do not support temperature (yet)\n                temperature = None\n\n            return ChatOpenAI(\n                model_name=model_name,\n                temperature=temperature,\n                streaming=stream,\n                openai_api_key=self.api_key,\n            )\n        if provider == \"Anthropic\":\n            if not self.api_key:\n                msg = \"Anthropic API key is required when using Anthropic provider\"\n                raise ValueError(msg)\n            return ChatAnthropic(\n                model=model_name,\n                temperature=temperature,\n                streaming=stream,\n                anthropic_api_key=self.api_key,\n            )\n        if provider == \"Google\":\n            if not self.api_key:\n                msg = \"Google API key is required when using Google provider\"\n                raise ValueError(msg)\n            return ChatGoogleGenerativeAIFixed(\n                model=model_name,\n                temperature=temperature,\n                streaming=stream,\n                google_api_key=self.api_key,\n            )\n        if provider == \"IBM watsonx.ai\":\n            if not self.api_key:\n                msg = \"IBM API key is required when using IBM watsonx.ai provider\"\n                raise ValueError(msg)\n            if not self.base_url_ibm_watsonx:\n                msg = \"IBM watsonx API Endpoint is required when using IBM watsonx.ai provider\"\n                raise ValueError(msg)\n            if not self.project_id:\n                msg = \"IBM watsonx Project ID is required when using IBM watsonx.ai provider\"\n                raise ValueError(msg)\n            return ChatWatsonx(\n                apikey=SecretStr(self.api_key).get_secret_value(),\n                url=self.base_url_ibm_watsonx,\n                project_id=self.project_id,\n                model_id=model_name,\n                params={\n                    \"temperature\": temperature,\n                },\n                streaming=stream,\n            )\n        if provider == \"Ollama\":\n            if not self.ollama_base_url:\n                msg = \"Ollama API URL is required when using Ollama provider\"\n                raise ValueError(msg)\n            if not model_name:\n                msg = \"Model name is required when using Ollama provider\"\n                raise ValueError(msg)\n\n            transformed_base_url = transform_localhost_url(self.ollama_base_url)\n\n            # Check if URL contains /v1 suffix (OpenAI-compatible mode)\n            if transformed_base_url and transformed_base_url.rstrip(\"/\").endswith(\"/v1\"):\n                # Strip /v1 suffix and log warning\n                transformed_base_url = transformed_base_url.rstrip(\"/\").removesuffix(\"/v1\")\n                logger.warning(\n                    \"Detected '/v1' suffix in base URL. The Ollama component uses the native Ollama API, \"\n                    \"not the OpenAI-compatible API. The '/v1' suffix has been automatically removed. \"\n                    \"If you want to use the OpenAI-compatible API, please use the OpenAI component instead. \"\n                    \"Learn more at https://docs.ollama.com/openai#openai-compatibility\"\n                )\n\n            return ChatOllama(\n                base_url=transformed_base_url,\n                model=model_name,\n                temperature=temperature,\n            )\n        msg = f\"Unknown provider: {provider}\"\n        raise ValueError(msg)\n\n    async def update_build_config(\n        self, build_config: dotdict, field_value: Any, field_name: str | None = None\n    ) -> dotdict:\n        if field_name == \"provider\":\n            if field_value == \"OpenAI\":\n                build_config[\"model_name\"][\"options\"] = OPENAI_CHAT_MODEL_NAMES + OPENAI_REASONING_MODEL_NAMES\n                build_config[\"model_name\"][\"value\"] = OPENAI_CHAT_MODEL_NAMES[0]\n                build_config[\"api_key\"][\"display_name\"] = \"OpenAI API Key\"\n                build_config[\"api_key\"][\"show\"] = True\n                build_config[\"base_url_ibm_watsonx\"][\"show\"] = False\n                build_config[\"project_id\"][\"show\"] = False\n                build_config[\"ollama_base_url\"][\"show\"] = False\n            elif field_value == \"Anthropic\":\n                build_config[\"model_name\"][\"options\"] = ANTHROPIC_MODELS\n                build_config[\"model_name\"][\"value\"] = ANTHROPIC_MODELS[0]\n                build_config[\"api_key\"][\"display_name\"] = \"Anthropic API Key\"\n                build_config[\"api_key\"][\"show\"] = True\n                build_config[\"base_url_ibm_watsonx\"][\"show\"] = False\n                build_config[\"project_id\"][\"show\"] = False\n                build_config[\"ollama_base_url\"][\"show\"] = False\n            elif field_value == \"Google\":\n                build_config[\"model_name\"][\"options\"] = GOOGLE_GENERATIVE_AI_MODELS\n                build_config[\"model_name\"][\"value\"] = GOOGLE_GENERATIVE_AI_MODELS[0]\n                build_config[\"api_key\"][\"display_name\"] = \"Google API Key\"\n                build_config[\"api_key\"][\"show\"] = True\n                build_config[\"base_url_ibm_watsonx\"][\"show\"] = False\n                build_config[\"project_id\"][\"show\"] = False\n                build_config[\"ollama_base_url\"][\"show\"] = False\n            elif field_value == \"IBM watsonx.ai\":\n                build_config[\"model_name\"][\"options\"] = IBM_WATSONX_DEFAULT_MODELS\n                build_config[\"model_name\"][\"value\"] = IBM_WATSONX_DEFAULT_MODELS[0]\n                build_config[\"api_key\"][\"display_name\"] = \"IBM API Key\"\n                build_config[\"api_key\"][\"show\"] = True\n                build_config[\"base_url_ibm_watsonx\"][\"show\"] = True\n                build_config[\"project_id\"][\"show\"] = True\n                build_config[\"ollama_base_url\"][\"show\"] = False\n            elif field_value == \"Ollama\":\n                # Fetch Ollama models from the API\n                build_config[\"api_key\"][\"show\"] = False\n                build_config[\"base_url_ibm_watsonx\"][\"show\"] = False\n                build_config[\"project_id\"][\"show\"] = False\n                build_config[\"ollama_base_url\"][\"show\"] = True\n\n                # Try multiple sources to get the URL (in order of preference):\n                # 1. Instance attribute (already resolved from global/db)\n                # 2. Build config value (may be a global variable reference)\n                # 3. Default value\n                ollama_url = getattr(self, \"ollama_base_url\", None)\n                if not ollama_url:\n                    config_value = build_config[\"ollama_base_url\"].get(\"value\", DEFAULT_OLLAMA_URL)\n                    # If config_value looks like a variable name (all caps with underscores), use default\n                    is_variable_ref = (\n                        config_value\n                        and isinstance(config_value, str)\n                        and config_value.isupper()\n                        and \"_\" in config_value\n                    )\n                    if is_variable_ref:\n                        await logger.adebug(\n                            f\"Config value appears to be a variable reference: {config_value}, using default\"\n                        )\n                        ollama_url = DEFAULT_OLLAMA_URL\n                    else:\n                        ollama_url = config_value\n\n                await logger.adebug(f\"Fetching Ollama models for provider switch. URL: {ollama_url}\")\n                if await is_valid_ollama_url(url=ollama_url):\n                    try:\n                        models = await get_ollama_models(\n                            base_url_value=ollama_url,\n                            desired_capability=DESIRED_CAPABILITY,\n                            json_models_key=JSON_MODELS_KEY,\n                            json_name_key=JSON_NAME_KEY,\n                            json_capabilities_key=JSON_CAPABILITIES_KEY,\n                        )\n                        build_config[\"model_name\"][\"options\"] = models\n                        build_config[\"model_name\"][\"value\"] = models[0] if models else \"\"\n                    except ValueError:\n                        await logger.awarning(\"Failed to fetch Ollama models. Setting empty options.\")\n                        build_config[\"model_name\"][\"options\"] = []\n                        build_config[\"model_name\"][\"value\"] = \"\"\n                else:\n                    await logger.awarning(f\"Invalid Ollama URL: {ollama_url}\")\n                    build_config[\"model_name\"][\"options\"] = []\n                    build_config[\"model_name\"][\"value\"] = \"\"\n        elif (\n            field_name == \"base_url_ibm_watsonx\"\n            and field_value\n            and hasattr(self, \"provider\")\n            and self.provider == \"IBM watsonx.ai\"\n        ):\n            # Fetch IBM models when base_url changes\n            try:\n                models = self.fetch_ibm_models(base_url=field_value)\n                build_config[\"model_name\"][\"options\"] = models\n                build_config[\"model_name\"][\"value\"] = models[0] if models else IBM_WATSONX_DEFAULT_MODELS[0]\n                info_message = f\"Updated model options: {len(models)} models found in {field_value}\"\n                logger.info(info_message)\n            except Exception:  # noqa: BLE001\n                logger.exception(\"Error updating IBM model options.\")\n        elif field_name == \"ollama_base_url\":\n            # Fetch Ollama models when ollama_base_url changes\n            # Use the field_value directly since this is triggered when the field changes\n            logger.debug(\n                f\"Fetching Ollama models from updated URL: {build_config['ollama_base_url']} \\\n                and value {self.ollama_base_url}\",\n            )\n            await logger.adebug(f\"Fetching Ollama models from updated URL: {self.ollama_base_url}\")\n            if await is_valid_ollama_url(url=self.ollama_base_url):\n                try:\n                    models = await get_ollama_models(\n                        base_url_value=self.ollama_base_url,\n                        desired_capability=DESIRED_CAPABILITY,\n                        json_models_key=JSON_MODELS_KEY,\n                        json_name_key=JSON_NAME_KEY,\n                        json_capabilities_key=JSON_CAPABILITIES_KEY,\n                    )\n                    build_config[\"model_name\"][\"options\"] = models\n                    build_config[\"model_name\"][\"value\"] = models[0] if models else \"\"\n                    info_message = f\"Updated model options: {len(models)} models found in {self.ollama_base_url}\"\n                    await logger.ainfo(info_message)\n                except ValueError:\n                    await logger.awarning(\"Error updating Ollama model options.\")\n                    build_config[\"model_name\"][\"options\"] = []\n                    build_config[\"model_name\"][\"value\"] = \"\"\n            else:\n                await logger.awarning(f\"Invalid Ollama URL: {self.ollama_base_url}\")\n                build_config[\"model_name\"][\"options\"] = []\n                build_config[\"model_name\"][\"value\"] = \"\"\n        elif field_name == \"model_name\":\n            # Refresh Ollama models when model_name field is accessed\n            if hasattr(self, \"provider\") and self.provider == \"Ollama\":\n                ollama_url = getattr(self, \"ollama_base_url\", DEFAULT_OLLAMA_URL)\n                if await is_valid_ollama_url(url=ollama_url):\n                    try:\n                        models = await get_ollama_models(\n                            base_url_value=ollama_url,\n                            desired_capability=DESIRED_CAPABILITY,\n                            json_models_key=JSON_MODELS_KEY,\n                            json_name_key=JSON_NAME_KEY,\n                            json_capabilities_key=JSON_CAPABILITIES_KEY,\n                        )\n                        build_config[\"model_name\"][\"options\"] = models\n                    except ValueError:\n                        await logger.awarning(\"Failed to refresh Ollama models.\")\n                        build_config[\"model_name\"][\"options\"] = []\n                else:\n                    build_config[\"model_name\"][\"options\"] = []\n\n            # Hide system_message for o1 models - currently unsupported\n            if field_value and field_value.startswith(\"o1\") and hasattr(self, \"provider\") and self.provider == \"OpenAI\":\n                if \"system_message\" in build_config:\n                    build_config[\"system_message\"][\"show\"] = False\n            elif \"system_message\" in build_config:\n                build_config[\"system_message\"][\"show\"] = True\n        return build_config\n"
-              },
-              "input_value": {
-                "_input_type": "MessageInput",
-                "advanced": false,
-                "display_name": "Input",
-                "dynamic": false,
-                "info": "The input text to send to the model",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "input_value",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "model_name": {
-                "_input_type": "DropdownInput",
-                "advanced": false,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Model Name",
-                "dynamic": false,
-                "info": "Select the model to use",
-                "name": "model_name",
-                "options": [
-                  "gpt-4o-mini",
-                  "gpt-4o",
-                  "gpt-4.1",
-                  "gpt-4.1-mini",
-                  "gpt-4.1-nano",
-                  "gpt-4-turbo",
-                  "gpt-4-turbo-preview",
-                  "gpt-4",
-                  "gpt-3.5-turbo",
-                  "gpt-5",
-                  "gpt-5-mini",
-                  "gpt-5-nano",
-                  "gpt-5-chat-latest",
-                  "o1",
-                  "o3-mini",
-                  "o3",
-                  "o3-pro",
-                  "o4-mini",
-                  "o4-mini-high"
-                ],
-                "options_metadata": [],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "toggle": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "gpt-4o-mini"
-              },
-              "provider": {
-                "_input_type": "DropdownInput",
-                "advanced": false,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Model Provider",
-                "dynamic": false,
-                "info": "Select the model provider",
-                "name": "provider",
-                "options": [
-                  "OpenAI",
-                  "Anthropic",
-                  "Google"
-                ],
-                "options_metadata": [
-                  {
-                    "icon": "OpenAI"
-                  },
-                  {
-                    "icon": "Anthropic"
-                  },
-                  {
-                    "icon": "GoogleGenerativeAI"
-                  }
-                ],
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "toggle": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "OpenAI"
-              },
-              "stream": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Stream",
-                "dynamic": false,
-                "info": "Whether to stream the response",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "stream",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": false
-              },
-              "system_message": {
-                "_input_type": "MultilineInput",
-                "advanced": true,
-                "copy_field": false,
-                "display_name": "System Message",
-                "dynamic": false,
-                "info": "A system message that helps set the behavior of the assistant",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "multiline": true,
-                "name": "system_message",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "temperature": {
-                "_input_type": "SliderInput",
-                "advanced": true,
-                "display_name": "Temperature",
-                "dynamic": false,
-                "info": "Controls randomness in responses",
-                "max_label": "",
-                "max_label_icon": "",
-                "min_label": "",
-                "min_label_icon": "",
-                "name": "temperature",
-                "placeholder": "",
-                "range_spec": {
-                  "max": 1,
-                  "min": 0,
-                  "step": 0.01,
-                  "step_type": "float"
-                },
-                "required": false,
-                "show": true,
-                "slider_buttons": false,
-                "slider_buttons_options": [],
-                "slider_input": false,
-                "title_case": false,
-                "tool_mode": false,
-                "type": "slider",
-                "value": 0.1
-              }
-            },
-            "tool_mode": false
-          },
-          "selected_output": "model_output",
-          "showNode": true,
-          "type": "LanguageModelComponent"
-        },
-        "dragging": false,
-        "id": "LanguageModelComponent-Enuj5",
-        "measured": {
-          "height": 451,
-          "width": 320
-        },
-        "position": {
-          "x": 1238.9336326592597,
-          "y": 1187.129728383852
-        },
-        "selected": false,
-        "type": "genericNode"
-      },
-      {
-        "data": {
           "id": "Agent-Hz2it",
           "node": {
             "base_classes": [
               "Message"
             ],
             "beta": false,
-            "category": "agents",
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Define the agent's instructions, then enter a task to complete using tools.",
             "display_name": "Agent",
-            "documentation": "",
+            "documentation": "https://docs.langflow.org/agents",
             "edited": false,
             "field_order": [
-              "agent_llm",
-              "max_tokens",
-              "model_kwargs",
-              "json_mode",
-              "model_name",
-              "openai_api_base",
+              "model",
               "api_key",
-              "temperature",
-              "seed",
-              "max_retries",
-              "timeout",
               "system_prompt",
+              "context_id",
               "n_messages",
+              "format_instructions",
+              "output_schema",
               "tools",
               "input_value",
               "handle_parsing_errors",
@@ -1542,18 +1176,12 @@
             ],
             "frozen": false,
             "icon": "bot",
-            "key": "Agent",
-            "last_updated": "2025-09-29T15:47:37.204Z",
+            "last_updated": "2025-12-11T21:41:48.407Z",
             "legacy": false,
-            "lf_version": "1.6.0",
             "metadata": {
-              "code_hash": "d64b11c24a1c",
+              "code_hash": "bdc309bc2d2a",
               "dependencies": {
                 "dependencies": [
-                  {
-                    "name": "langchain_core",
-                    "version": "0.3.80"
-                  },
                   {
                     "name": "pydantic",
                     "version": "2.11.10"
@@ -1561,6 +1189,10 @@
                   {
                     "name": "lfx",
                     "version": null
+                  },
+                  {
+                    "name": "langchain_core",
+                    "version": "0.3.80"
                   }
                 ],
                 "total_dependencies": 3
@@ -1577,8 +1209,6 @@
                 "group_outputs": false,
                 "method": "message_response",
                 "name": "response",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1588,7 +1218,6 @@
               }
             ],
             "pinned": false,
-            "score": 1.1732828199964098e-19,
             "template": {
               "_type": "Component",
               "add_current_date_tool": {
@@ -1597,21 +1226,25 @@
                 "display_name": "Current Date",
                 "dynamic": false,
                 "info": "If true, will add a tool to the agent that returns the current date.",
+                "input_types": [],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "add_current_date_tool",
+                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
+                "track_in_telemetry": true,
                 "type": "bool",
                 "value": true
               },
               "agent_description": {
                 "_input_type": "MultilineInput",
                 "advanced": true,
+                "ai_enabled": false,
                 "copy_field": false,
                 "display_name": "Agent Description [Deprecated]",
                 "dynamic": false,
@@ -1624,6 +1257,7 @@
                 "load_from_db": false,
                 "multiline": true,
                 "name": "agent_description",
+                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -1631,103 +1265,26 @@
                 "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
+                "track_in_telemetry": false,
                 "type": "str",
                 "value": "A helpful assistant with access to the following tools:"
               },
-              "agent_llm": {
-                "_input_type": "DropdownInput",
-                "advanced": false,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Model Provider",
-                "dynamic": false,
-                "external_options": {
-                  "fields": {
-                    "data": {
-                      "node": {
-                        "display_name": "Connect other models",
-                        "icon": "CornerDownLeft",
-                        "name": "connect_other_models"
-                      }
-                    }
-                  }
-                },
-                "info": "The provider of the language model that the agent will use to generate responses.",
-                "input_types": [],
-                "name": "agent_llm",
-                "options": [
-                  "Anthropic",
-                  "Google Generative AI",
-                  "OpenAI",
-                  "IBM watsonx.ai",
-                  "Ollama"
-                ],
-                "options_metadata": [
-                  {
-                    "icon": "Anthropic"
-                  },
-                  {
-                    "icon": "GoogleGenerativeAI"
-                  },
-                  {
-                    "icon": "OpenAI"
-                  },
-                  {
-                    "icon": "WatsonxAI"
-                  },
-                  {
-                    "icon": "Ollama"
-                  }
-                ],
-                "override_skip": false,
-                "placeholder": "",
-                "real_time_refresh": true,
-                "refresh_button": false,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "toggle": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "str",
-                "value": "OpenAI"
-              },
               "api_key": {
                 "_input_type": "SecretStrInput",
-                "advanced": false,
-                "display_name": "OpenAI API Key",
+                "advanced": true,
+                "display_name": "API Key",
                 "dynamic": false,
-                "info": "The OpenAI API Key to use for the OpenAI model.",
+                "info": "Model Provider API key",
                 "input_types": [],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "api_key",
+                "override_skip": false,
                 "password": true,
                 "placeholder": "",
                 "real_time_refresh": true,
                 "required": false,
                 "show": true,
                 "title_case": false,
-                "type": "str",
-                "value": "OPENAI_API_KEY"
-              },
-              "base_url": {
-                "_input_type": "StrInput",
-                "advanced": false,
-                "display_name": "Base URL",
-                "dynamic": false,
-                "info": "The base URL of the API.",
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "base_url",
-                "override_skip": false,
-                "placeholder": "",
-                "required": true,
-                "show": false,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
                 "track_in_telemetry": false,
                 "type": "str",
                 "value": ""
@@ -1748,7 +1305,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "import json\nimport re\n\nfrom langchain_core.tools import StructuredTool, Tool\nfrom pydantic import ValidationError\n\nfrom lfx.base.agents.agent import LCToolsAgentComponent\nfrom lfx.base.agents.events import ExceptionWithMessageError\nfrom lfx.base.models.model_input_constants import (\n    ALL_PROVIDER_FIELDS,\n    MODEL_DYNAMIC_UPDATE_FIELDS,\n    MODEL_PROVIDERS_DICT,\n    MODEL_PROVIDERS_LIST,\n    MODELS_METADATA,\n)\nfrom lfx.base.models.model_utils import get_model_name\nfrom lfx.components.helpers import CurrentDateComponent\nfrom lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComponent\nfrom lfx.components.models_and_agents.memory import MemoryComponent\nfrom lfx.custom.custom_component.component import get_component_toolkit\nfrom lfx.custom.utils import update_component_build_config\nfrom lfx.helpers.base_model import build_model_from_schema\nfrom lfx.inputs.inputs import BoolInput, SecretStrInput, StrInput\nfrom lfx.io import DropdownInput, IntInput, MessageTextInput, MultilineInput, Output, TableInput\nfrom lfx.log.logger import logger\nfrom lfx.schema.data import Data\nfrom lfx.schema.dotdict import dotdict\nfrom lfx.schema.message import Message\nfrom lfx.schema.table import EditMode\n\n\ndef set_advanced_true(component_input):\n    component_input.advanced = True\n    return component_input\n\n\nclass AgentComponent(ToolCallingAgentComponent):\n    display_name: str = \"Agent\"\n    description: str = \"Define the agent's instructions, then enter a task to complete using tools.\"\n    documentation: str = \"https://docs.langflow.org/agents\"\n    icon = \"bot\"\n    beta = False\n    name = \"Agent\"\n\n    memory_inputs = [set_advanced_true(component_input) for component_input in MemoryComponent().inputs]\n\n    # Filter out json_mode from OpenAI inputs since we handle structured output differently\n    if \"OpenAI\" in MODEL_PROVIDERS_DICT:\n        openai_inputs_filtered = [\n            input_field\n            for input_field in MODEL_PROVIDERS_DICT[\"OpenAI\"][\"inputs\"]\n            if not (hasattr(input_field, \"name\") and input_field.name == \"json_mode\")\n        ]\n    else:\n        openai_inputs_filtered = []\n\n    inputs = [\n        DropdownInput(\n            name=\"agent_llm\",\n            display_name=\"Model Provider\",\n            info=\"The provider of the language model that the agent will use to generate responses.\",\n            options=[*MODEL_PROVIDERS_LIST],\n            value=\"OpenAI\",\n            real_time_refresh=True,\n            refresh_button=False,\n            input_types=[],\n            options_metadata=[MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST if key in MODELS_METADATA],\n            external_options={\n                \"fields\": {\n                    \"data\": {\n                        \"node\": {\n                            \"name\": \"connect_other_models\",\n                            \"display_name\": \"Connect other models\",\n                            \"icon\": \"CornerDownLeft\",\n                        }\n                    }\n                },\n            },\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"API Key\",\n            info=\"The API key to use for the model.\",\n            required=True,\n        ),\n        StrInput(\n            name=\"base_url\",\n            display_name=\"Base URL\",\n            info=\"The base URL of the API.\",\n            required=True,\n            show=False,\n        ),\n        StrInput(\n            name=\"project_id\",\n            display_name=\"Project ID\",\n            info=\"The project ID of the model.\",\n            required=True,\n            show=False,\n        ),\n        IntInput(\n            name=\"max_output_tokens\",\n            display_name=\"Max Output Tokens\",\n            info=\"The maximum number of tokens to generate.\",\n            show=False,\n        ),\n        *openai_inputs_filtered,\n        MultilineInput(\n            name=\"system_prompt\",\n            display_name=\"Agent Instructions\",\n            info=\"System Prompt: Initial instructions and context provided to guide the agent's behavior.\",\n            value=\"You are a helpful assistant that can use tools to answer questions and perform tasks.\",\n            advanced=False,\n        ),\n        MessageTextInput(\n            name=\"context_id\",\n            display_name=\"Context ID\",\n            info=\"The context ID of the chat. Adds an extra layer to the local memory.\",\n            value=\"\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"n_messages\",\n            display_name=\"Number of Chat History Messages\",\n            value=100,\n            info=\"Number of chat history messages to retrieve.\",\n            advanced=True,\n            show=True,\n        ),\n        MultilineInput(\n            name=\"format_instructions\",\n            display_name=\"Output Format Instructions\",\n            info=\"Generic Template for structured output formatting. Valid only with Structured response.\",\n            value=(\n                \"You are an AI that extracts structured JSON objects from unstructured text. \"\n                \"Use a predefined schema with expected types (str, int, float, bool, dict). \"\n                \"Extract ALL relevant instances that match the schema - if multiple patterns exist, capture them all. \"\n                \"Fill missing or ambiguous values with defaults: null for missing values. \"\n                \"Remove exact duplicates but keep variations that have different field values. \"\n                \"Always return valid JSON in the expected format, never throw errors. \"\n                \"If multiple objects can be extracted, return them all in the structured format.\"\n            ),\n            advanced=True,\n        ),\n        TableInput(\n            name=\"output_schema\",\n            display_name=\"Output Schema\",\n            info=(\n                \"Schema Validation: Define the structure and data types for structured output. \"\n                \"No validation if no output schema.\"\n            ),\n            advanced=True,\n            required=False,\n            value=[],\n            table_schema=[\n                {\n                    \"name\": \"name\",\n                    \"display_name\": \"Name\",\n                    \"type\": \"str\",\n                    \"description\": \"Specify the name of the output field.\",\n                    \"default\": \"field\",\n                    \"edit_mode\": EditMode.INLINE,\n                },\n                {\n                    \"name\": \"description\",\n                    \"display_name\": \"Description\",\n                    \"type\": \"str\",\n                    \"description\": \"Describe the purpose of the output field.\",\n                    \"default\": \"description of field\",\n                    \"edit_mode\": EditMode.POPOVER,\n                },\n                {\n                    \"name\": \"type\",\n                    \"display_name\": \"Type\",\n                    \"type\": \"str\",\n                    \"edit_mode\": EditMode.INLINE,\n                    \"description\": (\"Indicate the data type of the output field (e.g., str, int, float, bool, dict).\"),\n                    \"options\": [\"str\", \"int\", \"float\", \"bool\", \"dict\"],\n                    \"default\": \"str\",\n                },\n                {\n                    \"name\": \"multiple\",\n                    \"display_name\": \"As List\",\n                    \"type\": \"boolean\",\n                    \"description\": \"Set to True if this output field should be a list of the specified type.\",\n                    \"default\": \"False\",\n                    \"edit_mode\": EditMode.INLINE,\n                },\n            ],\n        ),\n        *LCToolsAgentComponent.get_base_inputs(),\n        # removed memory inputs from agent component\n        # *memory_inputs,\n        BoolInput(\n            name=\"add_current_date_tool\",\n            display_name=\"Current Date\",\n            advanced=True,\n            info=\"If true, will add a tool to the agent that returns the current date.\",\n            value=True,\n        ),\n    ]\n    outputs = [\n        Output(name=\"response\", display_name=\"Response\", method=\"message_response\"),\n    ]\n\n    async def get_agent_requirements(self):\n        \"\"\"Get the agent requirements for the agent.\"\"\"\n        llm_model, display_name = await self.get_llm()\n        if llm_model is None:\n            msg = \"No language model selected. Please choose a model to proceed.\"\n            raise ValueError(msg)\n        self.model_name = get_model_name(llm_model, display_name=display_name)\n\n        # Get memory data\n        self.chat_history = await self.get_memory_data()\n        await logger.adebug(f\"Retrieved {len(self.chat_history)} chat history messages\")\n        if isinstance(self.chat_history, Message):\n            self.chat_history = [self.chat_history]\n\n        # Add current date tool if enabled\n        if self.add_current_date_tool:\n            if not isinstance(self.tools, list):  # type: ignore[has-type]\n                self.tools = []\n            current_date_tool = (await CurrentDateComponent(**self.get_base_args()).to_toolkit()).pop(0)\n\n            if not isinstance(current_date_tool, StructuredTool):\n                msg = \"CurrentDateComponent must be converted to a StructuredTool\"\n                raise TypeError(msg)\n            self.tools.append(current_date_tool)\n\n        # Set shared callbacks for tracing the tools used by the agent\n        self.set_tools_callbacks(self.tools, self._get_shared_callbacks())\n\n        return llm_model, self.chat_history, self.tools\n\n    async def message_response(self) -> Message:\n        try:\n            llm_model, self.chat_history, self.tools = await self.get_agent_requirements()\n            # Set up and run agent\n            self.set(\n                llm=llm_model,\n                tools=self.tools or [],\n                chat_history=self.chat_history,\n                input_value=self.input_value,\n                system_prompt=self.system_prompt,\n            )\n            agent = self.create_agent_runnable()\n            result = await self.run_agent(agent)\n\n            # Store result for potential JSON output\n            self._agent_result = result\n\n        except (ValueError, TypeError, KeyError) as e:\n            await logger.aerror(f\"{type(e).__name__}: {e!s}\")\n            raise\n        except ExceptionWithMessageError as e:\n            await logger.aerror(f\"ExceptionWithMessageError occurred: {e}\")\n            raise\n        # Avoid catching blind Exception; let truly unexpected exceptions propagate\n        except Exception as e:\n            await logger.aerror(f\"Unexpected error: {e!s}\")\n            raise\n        else:\n            return result\n\n    def _preprocess_schema(self, schema):\n        \"\"\"Preprocess schema to ensure correct data types for build_model_from_schema.\"\"\"\n        processed_schema = []\n        for field in schema:\n            processed_field = {\n                \"name\": str(field.get(\"name\", \"field\")),\n                \"type\": str(field.get(\"type\", \"str\")),\n                \"description\": str(field.get(\"description\", \"\")),\n                \"multiple\": field.get(\"multiple\", False),\n            }\n            # Ensure multiple is handled correctly\n            if isinstance(processed_field[\"multiple\"], str):\n                processed_field[\"multiple\"] = processed_field[\"multiple\"].lower() in [\n                    \"true\",\n                    \"1\",\n                    \"t\",\n                    \"y\",\n                    \"yes\",\n                ]\n            processed_schema.append(processed_field)\n        return processed_schema\n\n    async def build_structured_output_base(self, content: str):\n        \"\"\"Build structured output with optional BaseModel validation.\"\"\"\n        json_pattern = r\"\\{.*\\}\"\n        schema_error_msg = \"Try setting an output schema\"\n\n        # Try to parse content as JSON first\n        json_data = None\n        try:\n            json_data = json.loads(content)\n        except json.JSONDecodeError:\n            json_match = re.search(json_pattern, content, re.DOTALL)\n            if json_match:\n                try:\n                    json_data = json.loads(json_match.group())\n                except json.JSONDecodeError:\n                    return {\"content\": content, \"error\": schema_error_msg}\n            else:\n                return {\"content\": content, \"error\": schema_error_msg}\n\n        # If no output schema provided, return parsed JSON without validation\n        if not hasattr(self, \"output_schema\") or not self.output_schema or len(self.output_schema) == 0:\n            return json_data\n\n        # Use BaseModel validation with schema\n        try:\n            processed_schema = self._preprocess_schema(self.output_schema)\n            output_model = build_model_from_schema(processed_schema)\n\n            # Validate against the schema\n            if isinstance(json_data, list):\n                # Multiple objects\n                validated_objects = []\n                for item in json_data:\n                    try:\n                        validated_obj = output_model.model_validate(item)\n                        validated_objects.append(validated_obj.model_dump())\n                    except ValidationError as e:\n                        await logger.aerror(f\"Validation error for item: {e}\")\n                        # Include invalid items with error info\n                        validated_objects.append({\"data\": item, \"validation_error\": str(e)})\n                return validated_objects\n\n            # Single object\n            try:\n                validated_obj = output_model.model_validate(json_data)\n                return [validated_obj.model_dump()]  # Return as list for consistency\n            except ValidationError as e:\n                await logger.aerror(f\"Validation error: {e}\")\n                return [{\"data\": json_data, \"validation_error\": str(e)}]\n\n        except (TypeError, ValueError) as e:\n            await logger.aerror(f\"Error building structured output: {e}\")\n            # Fallback to parsed JSON without validation\n            return json_data\n\n    async def json_response(self) -> Data:\n        \"\"\"Convert agent response to structured JSON Data output with schema validation.\"\"\"\n        # Always use structured chat agent for JSON response mode for better JSON formatting\n        try:\n            system_components = []\n\n            # 1. Agent Instructions (system_prompt)\n            agent_instructions = getattr(self, \"system_prompt\", \"\") or \"\"\n            if agent_instructions:\n                system_components.append(f\"{agent_instructions}\")\n\n            # 2. Format Instructions\n            format_instructions = getattr(self, \"format_instructions\", \"\") or \"\"\n            if format_instructions:\n                system_components.append(f\"Format instructions: {format_instructions}\")\n\n            # 3. Schema Information from BaseModel\n            if hasattr(self, \"output_schema\") and self.output_schema and len(self.output_schema) > 0:\n                try:\n                    processed_schema = self._preprocess_schema(self.output_schema)\n                    output_model = build_model_from_schema(processed_schema)\n                    schema_dict = output_model.model_json_schema()\n                    schema_info = (\n                        \"You are given some text that may include format instructions, \"\n                        \"explanations, or other content alongside a JSON schema.\\n\\n\"\n                        \"Your task:\\n\"\n                        \"- Extract only the JSON schema.\\n\"\n                        \"- Return it as valid JSON.\\n\"\n                        \"- Do not include format instructions, explanations, or extra text.\\n\\n\"\n                        \"Input:\\n\"\n                        f\"{json.dumps(schema_dict, indent=2)}\\n\\n\"\n                        \"Output (only JSON schema):\"\n                    )\n                    system_components.append(schema_info)\n                except (ValidationError, ValueError, TypeError, KeyError) as e:\n                    await logger.aerror(f\"Could not build schema for prompt: {e}\", exc_info=True)\n\n            # Combine all components\n            combined_instructions = \"\\n\\n\".join(system_components) if system_components else \"\"\n            llm_model, self.chat_history, self.tools = await self.get_agent_requirements()\n            self.set(\n                llm=llm_model,\n                tools=self.tools or [],\n                chat_history=self.chat_history,\n                input_value=self.input_value,\n                system_prompt=combined_instructions,\n            )\n\n            # Create and run structured chat agent\n            try:\n                structured_agent = self.create_agent_runnable()\n            except (NotImplementedError, ValueError, TypeError) as e:\n                await logger.aerror(f\"Error with structured chat agent: {e}\")\n                raise\n            try:\n                result = await self.run_agent(structured_agent)\n            except (\n                ExceptionWithMessageError,\n                ValueError,\n                TypeError,\n                RuntimeError,\n            ) as e:\n                await logger.aerror(f\"Error with structured agent result: {e}\")\n                raise\n            # Extract content from structured agent result\n            if hasattr(result, \"content\"):\n                content = result.content\n            elif hasattr(result, \"text\"):\n                content = result.text\n            else:\n                content = str(result)\n\n        except (\n            ExceptionWithMessageError,\n            ValueError,\n            TypeError,\n            NotImplementedError,\n            AttributeError,\n        ) as e:\n            await logger.aerror(f\"Error with structured chat agent: {e}\")\n            # Fallback to regular agent\n            content_str = \"No content returned from agent\"\n            return Data(data={\"content\": content_str, \"error\": str(e)})\n\n        # Process with structured output validation\n        try:\n            structured_output = await self.build_structured_output_base(content)\n\n            # Handle different output formats\n            if isinstance(structured_output, list) and structured_output:\n                if len(structured_output) == 1:\n                    return Data(data=structured_output[0])\n                return Data(data={\"results\": structured_output})\n            if isinstance(structured_output, dict):\n                return Data(data=structured_output)\n            return Data(data={\"content\": content})\n\n        except (ValueError, TypeError) as e:\n            await logger.aerror(f\"Error in structured output processing: {e}\")\n            return Data(data={\"content\": content, \"error\": str(e)})\n\n    async def get_memory_data(self):\n        # TODO: This is a temporary fix to avoid message duplication. We should develop a function for this.\n        messages = (\n            await MemoryComponent(**self.get_base_args())\n            .set(\n                session_id=self.graph.session_id,\n                context_id=self.context_id,\n                order=\"Ascending\",\n                n_messages=self.n_messages,\n            )\n            .retrieve_messages()\n        )\n        return [\n            message for message in messages if getattr(message, \"id\", None) != getattr(self.input_value, \"id\", None)\n        ]\n\n    async def get_llm(self):\n        if not isinstance(self.agent_llm, str):\n            return self.agent_llm, None\n\n        try:\n            provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)\n            if not provider_info:\n                msg = f\"Invalid model provider: {self.agent_llm}\"\n                raise ValueError(msg)\n\n            component_class = provider_info.get(\"component_class\")\n            display_name = component_class.display_name\n            inputs = provider_info.get(\"inputs\")\n            prefix = provider_info.get(\"prefix\", \"\")\n\n            return self._build_llm_model(component_class, inputs, prefix), display_name\n\n        except (AttributeError, ValueError, TypeError, RuntimeError) as e:\n            await logger.aerror(f\"Error building {self.agent_llm} language model: {e!s}\")\n            msg = f\"Failed to initialize language model: {e!s}\"\n            raise ValueError(msg) from e\n\n    def _build_llm_model(self, component, inputs, prefix=\"\"):\n        model_kwargs = {}\n        for input_ in inputs:\n            if hasattr(self, f\"{prefix}{input_.name}\"):\n                model_kwargs[input_.name] = getattr(self, f\"{prefix}{input_.name}\")\n        return component.set(**model_kwargs).build_model()\n\n    def set_component_params(self, component):\n        provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)\n        if provider_info:\n            inputs = provider_info.get(\"inputs\")\n            prefix = provider_info.get(\"prefix\")\n            # Filter out json_mode and only use attributes that exist on this component\n            model_kwargs = {}\n            for input_ in inputs:\n                if hasattr(self, f\"{prefix}{input_.name}\"):\n                    model_kwargs[input_.name] = getattr(self, f\"{prefix}{input_.name}\")\n\n            return component.set(**model_kwargs)\n        return component\n\n    def delete_fields(self, build_config: dotdict, fields: dict | list[str]) -> None:\n        \"\"\"Delete specified fields from build_config.\"\"\"\n        for field in fields:\n            if build_config is not None and field in build_config:\n                build_config.pop(field, None)\n\n    def update_input_types(self, build_config: dotdict) -> dotdict:\n        \"\"\"Update input types for all fields in build_config.\"\"\"\n        for key, value in build_config.items():\n            if isinstance(value, dict):\n                if value.get(\"input_types\") is None:\n                    build_config[key][\"input_types\"] = []\n            elif hasattr(value, \"input_types\") and value.input_types is None:\n                value.input_types = []\n        return build_config\n\n    async def update_build_config(\n        self, build_config: dotdict, field_value: str, field_name: str | None = None\n    ) -> dotdict:\n        # Iterate over all providers in the MODEL_PROVIDERS_DICT\n        # Existing logic for updating build_config\n        if field_name in (\"agent_llm\",):\n            build_config[\"agent_llm\"][\"value\"] = field_value\n            provider_info = MODEL_PROVIDERS_DICT.get(field_value)\n            if provider_info:\n                component_class = provider_info.get(\"component_class\")\n                if component_class and hasattr(component_class, \"update_build_config\"):\n                    # Call the component class's update_build_config method\n                    build_config = await update_component_build_config(\n                        component_class, build_config, field_value, \"model_name\"\n                    )\n\n            provider_configs: dict[str, tuple[dict, list[dict]]] = {\n                provider: (\n                    MODEL_PROVIDERS_DICT[provider][\"fields\"],\n                    [\n                        MODEL_PROVIDERS_DICT[other_provider][\"fields\"]\n                        for other_provider in MODEL_PROVIDERS_DICT\n                        if other_provider != provider\n                    ],\n                )\n                for provider in MODEL_PROVIDERS_DICT\n            }\n            if field_value in provider_configs:\n                fields_to_add, fields_to_delete = provider_configs[field_value]\n\n                # Delete fields from other providers\n                for fields in fields_to_delete:\n                    self.delete_fields(build_config, fields)\n\n                # Add provider-specific fields\n                if field_value == \"OpenAI\" and not any(field in build_config for field in fields_to_add):\n                    build_config.update(fields_to_add)\n                else:\n                    build_config.update(fields_to_add)\n                # Reset input types for agent_llm\n                build_config[\"agent_llm\"][\"input_types\"] = []\n                build_config[\"agent_llm\"][\"display_name\"] = \"Model Provider\"\n            elif field_value == \"connect_other_models\":\n                # Delete all provider fields\n                self.delete_fields(build_config, ALL_PROVIDER_FIELDS)\n                # # Update with custom component\n                custom_component = DropdownInput(\n                    name=\"agent_llm\",\n                    display_name=\"Language Model\",\n                    info=\"The provider of the language model that the agent will use to generate responses.\",\n                    options=[*MODEL_PROVIDERS_LIST],\n                    real_time_refresh=True,\n                    refresh_button=False,\n                    input_types=[\"LanguageModel\"],\n                    placeholder=\"Awaiting model input.\",\n                    options_metadata=[MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST if key in MODELS_METADATA],\n                    external_options={\n                        \"fields\": {\n                            \"data\": {\n                                \"node\": {\n                                    \"name\": \"connect_other_models\",\n                                    \"display_name\": \"Connect other models\",\n                                    \"icon\": \"CornerDownLeft\",\n                                },\n                            }\n                        },\n                    },\n                )\n                build_config.update({\"agent_llm\": custom_component.to_dict()})\n            # Update input types for all fields\n            build_config = self.update_input_types(build_config)\n\n            # Validate required keys\n            default_keys = [\n                \"code\",\n                \"_type\",\n                \"agent_llm\",\n                \"tools\",\n                \"input_value\",\n                \"add_current_date_tool\",\n                \"system_prompt\",\n                \"agent_description\",\n                \"max_iterations\",\n                \"handle_parsing_errors\",\n                \"verbose\",\n            ]\n            missing_keys = [key for key in default_keys if key not in build_config]\n            if missing_keys:\n                msg = f\"Missing required keys in build_config: {missing_keys}\"\n                raise ValueError(msg)\n        if (\n            isinstance(self.agent_llm, str)\n            and self.agent_llm in MODEL_PROVIDERS_DICT\n            and field_name in MODEL_DYNAMIC_UPDATE_FIELDS\n        ):\n            provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)\n            if provider_info:\n                component_class = provider_info.get(\"component_class\")\n                component_class = self.set_component_params(component_class)\n                prefix = provider_info.get(\"prefix\")\n                if component_class and hasattr(component_class, \"update_build_config\"):\n                    # Call each component class's update_build_config method\n                    # remove the prefix from the field_name\n                    if isinstance(field_name, str) and isinstance(prefix, str):\n                        field_name = field_name.replace(prefix, \"\")\n                    build_config = await update_component_build_config(\n                        component_class, build_config, field_value, \"model_name\"\n                    )\n        return dotdict({k: v.to_dict() if hasattr(v, \"to_dict\") else v for k, v in build_config.items()})\n\n    async def _get_tools(self) -> list[Tool]:\n        component_toolkit = get_component_toolkit()\n        tools_names = self._build_tools_names()\n        agent_description = self.get_tool_description()\n        # TODO: Agent Description Depreciated Feature to be removed\n        description = f\"{agent_description}{tools_names}\"\n\n        tools = component_toolkit(component=self).get_tools(\n            tool_name=\"Call_Agent\",\n            tool_description=description,\n            # here we do not use the shared callbacks as we are exposing the agent as a tool\n            callbacks=self.get_langchain_callbacks(),\n        )\n        if hasattr(self, \"tools_metadata\"):\n            tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)\n\n        return tools\n"
+                "value": "from __future__ import annotations\n\nimport json\nimport re\nfrom typing import TYPE_CHECKING\n\nfrom pydantic import ValidationError\n\nfrom lfx.components.models_and_agents.memory import MemoryComponent\n\nif TYPE_CHECKING:\n    from langchain_core.tools import Tool\n\nfrom lfx.base.agents.agent import LCToolsAgentComponent\nfrom lfx.base.agents.events import ExceptionWithMessageError\nfrom lfx.base.models.unified_models import (\n    get_language_model_options,\n    get_llm,\n    update_model_options_in_build_config,\n)\nfrom lfx.components.helpers import CurrentDateComponent\nfrom lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComponent\nfrom lfx.custom.custom_component.component import get_component_toolkit\nfrom lfx.helpers.base_model import build_model_from_schema\nfrom lfx.inputs.inputs import BoolInput, ModelInput\nfrom lfx.io import IntInput, MessageTextInput, MultilineInput, Output, SecretStrInput, TableInput\nfrom lfx.log.logger import logger\nfrom lfx.schema.data import Data\nfrom lfx.schema.dotdict import dotdict\nfrom lfx.schema.message import Message\nfrom lfx.schema.table import EditMode\n\n\ndef set_advanced_true(component_input):\n    component_input.advanced = True\n    return component_input\n\n\nclass AgentComponent(ToolCallingAgentComponent):\n    display_name: str = \"Agent\"\n    description: str = \"Define the agent's instructions, then enter a task to complete using tools.\"\n    documentation: str = \"https://docs.langflow.org/agents\"\n    icon = \"bot\"\n    beta = False\n    name = \"Agent\"\n\n    memory_inputs = [set_advanced_true(component_input) for component_input in MemoryComponent().inputs]\n\n    inputs = [\n        ModelInput(\n            name=\"model\",\n            display_name=\"Language Model\",\n            info=\"Select your model provider\",\n            real_time_refresh=True,\n            required=True,\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"API Key\",\n            info=\"Model Provider API key\",\n            real_time_refresh=True,\n            advanced=True,\n        ),\n        MultilineInput(\n            name=\"system_prompt\",\n            display_name=\"Agent Instructions\",\n            info=\"System Prompt: Initial instructions and context provided to guide the agent's behavior.\",\n            value=\"You are a helpful assistant that can use tools to answer questions and perform tasks.\",\n            advanced=False,\n        ),\n        MessageTextInput(\n            name=\"context_id\",\n            display_name=\"Context ID\",\n            info=\"The context ID of the chat. Adds an extra layer to the local memory.\",\n            value=\"\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"n_messages\",\n            display_name=\"Number of Chat History Messages\",\n            value=100,\n            info=\"Number of chat history messages to retrieve.\",\n            advanced=True,\n            show=True,\n        ),\n        MultilineInput(\n            name=\"format_instructions\",\n            display_name=\"Output Format Instructions\",\n            info=\"Generic Template for structured output formatting. Valid only with Structured response.\",\n            value=(\n                \"You are an AI that extracts structured JSON objects from unstructured text. \"\n                \"Use a predefined schema with expected types (str, int, float, bool, dict). \"\n                \"Extract ALL relevant instances that match the schema - if multiple patterns exist, capture them all. \"\n                \"Fill missing or ambiguous values with defaults: null for missing values. \"\n                \"Remove exact duplicates but keep variations that have different field values. \"\n                \"Always return valid JSON in the expected format, never throw errors. \"\n                \"If multiple objects can be extracted, return them all in the structured format.\"\n            ),\n            advanced=True,\n        ),\n        TableInput(\n            name=\"output_schema\",\n            display_name=\"Output Schema\",\n            info=(\n                \"Schema Validation: Define the structure and data types for structured output. \"\n                \"No validation if no output schema.\"\n            ),\n            advanced=True,\n            required=False,\n            value=[],\n            table_schema=[\n                {\n                    \"name\": \"name\",\n                    \"display_name\": \"Name\",\n                    \"type\": \"str\",\n                    \"description\": \"Specify the name of the output field.\",\n                    \"default\": \"field\",\n                    \"edit_mode\": EditMode.INLINE,\n                },\n                {\n                    \"name\": \"description\",\n                    \"display_name\": \"Description\",\n                    \"type\": \"str\",\n                    \"description\": \"Describe the purpose of the output field.\",\n                    \"default\": \"description of field\",\n                    \"edit_mode\": EditMode.POPOVER,\n                },\n                {\n                    \"name\": \"type\",\n                    \"display_name\": \"Type\",\n                    \"type\": \"str\",\n                    \"edit_mode\": EditMode.INLINE,\n                    \"description\": (\"Indicate the data type of the output field (e.g., str, int, float, bool, dict).\"),\n                    \"options\": [\"str\", \"int\", \"float\", \"bool\", \"dict\"],\n                    \"default\": \"str\",\n                },\n                {\n                    \"name\": \"multiple\",\n                    \"display_name\": \"As List\",\n                    \"type\": \"boolean\",\n                    \"description\": \"Set to True if this output field should be a list of the specified type.\",\n                    \"default\": \"False\",\n                    \"edit_mode\": EditMode.INLINE,\n                },\n            ],\n        ),\n        *LCToolsAgentComponent.get_base_inputs(),\n        # removed memory inputs from agent component\n        # *memory_inputs,\n        BoolInput(\n            name=\"add_current_date_tool\",\n            display_name=\"Current Date\",\n            advanced=True,\n            info=\"If true, will add a tool to the agent that returns the current date.\",\n            value=True,\n        ),\n    ]\n    outputs = [\n        Output(name=\"response\", display_name=\"Response\", method=\"message_response\"),\n    ]\n\n    async def get_agent_requirements(self):\n        \"\"\"Get the agent requirements for the agent.\"\"\"\n        from langchain_core.tools import StructuredTool\n\n        llm_model = get_llm(\n            model=self.model,\n            user_id=self.user_id,\n            api_key=self.api_key,\n        )\n        if llm_model is None:\n            msg = \"No language model selected. Please choose a model to proceed.\"\n            raise ValueError(msg)\n\n        # Get memory data\n        self.chat_history = await self.get_memory_data()\n        await logger.adebug(f\"Retrieved {len(self.chat_history)} chat history messages\")\n        if isinstance(self.chat_history, Message):\n            self.chat_history = [self.chat_history]\n\n        # Add current date tool if enabled\n        if self.add_current_date_tool:\n            if not isinstance(self.tools, list):  # type: ignore[has-type]\n                self.tools = []\n            current_date_tool = (await CurrentDateComponent(**self.get_base_args()).to_toolkit()).pop(0)\n\n            if not isinstance(current_date_tool, StructuredTool):\n                msg = \"CurrentDateComponent must be converted to a StructuredTool\"\n                raise TypeError(msg)\n            self.tools.append(current_date_tool)\n\n        # Set shared callbacks for tracing the tools used by the agent\n        self.set_tools_callbacks(self.tools, self._get_shared_callbacks())\n\n        return llm_model, self.chat_history, self.tools\n\n    async def message_response(self) -> Message:\n        try:\n            llm_model, self.chat_history, self.tools = await self.get_agent_requirements()\n            # Set up and run agent\n            self.set(\n                llm=llm_model,\n                tools=self.tools or [],\n                chat_history=self.chat_history,\n                input_value=self.input_value,\n                system_prompt=self.system_prompt,\n            )\n            agent = self.create_agent_runnable()\n            result = await self.run_agent(agent)\n\n            # Store result for potential JSON output\n            self._agent_result = result\n\n        except (ValueError, TypeError, KeyError) as e:\n            await logger.aerror(f\"{type(e).__name__}: {e!s}\")\n            raise\n        except ExceptionWithMessageError as e:\n            await logger.aerror(f\"ExceptionWithMessageError occurred: {e}\")\n            raise\n        # Avoid catching blind Exception; let truly unexpected exceptions propagate\n        except Exception as e:\n            await logger.aerror(f\"Unexpected error: {e!s}\")\n            raise\n        else:\n            return result\n\n    def _preprocess_schema(self, schema):\n        \"\"\"Preprocess schema to ensure correct data types for build_model_from_schema.\"\"\"\n        processed_schema = []\n        for field in schema:\n            processed_field = {\n                \"name\": str(field.get(\"name\", \"field\")),\n                \"type\": str(field.get(\"type\", \"str\")),\n                \"description\": str(field.get(\"description\", \"\")),\n                \"multiple\": field.get(\"multiple\", False),\n            }\n            # Ensure multiple is handled correctly\n            if isinstance(processed_field[\"multiple\"], str):\n                processed_field[\"multiple\"] = processed_field[\"multiple\"].lower() in [\n                    \"true\",\n                    \"1\",\n                    \"t\",\n                    \"y\",\n                    \"yes\",\n                ]\n            processed_schema.append(processed_field)\n        return processed_schema\n\n    async def build_structured_output_base(self, content: str):\n        \"\"\"Build structured output with optional BaseModel validation.\"\"\"\n        json_pattern = r\"\\{.*\\}\"\n        schema_error_msg = \"Try setting an output schema\"\n\n        # Try to parse content as JSON first\n        json_data = None\n        try:\n            json_data = json.loads(content)\n        except json.JSONDecodeError:\n            json_match = re.search(json_pattern, content, re.DOTALL)\n            if json_match:\n                try:\n                    json_data = json.loads(json_match.group())\n                except json.JSONDecodeError:\n                    return {\"content\": content, \"error\": schema_error_msg}\n            else:\n                return {\"content\": content, \"error\": schema_error_msg}\n\n        # If no output schema provided, return parsed JSON without validation\n        if not hasattr(self, \"output_schema\") or not self.output_schema or len(self.output_schema) == 0:\n            return json_data\n\n        # Use BaseModel validation with schema\n        try:\n            processed_schema = self._preprocess_schema(self.output_schema)\n            output_model = build_model_from_schema(processed_schema)\n\n            # Validate against the schema\n            if isinstance(json_data, list):\n                # Multiple objects\n                validated_objects = []\n                for item in json_data:\n                    try:\n                        validated_obj = output_model.model_validate(item)\n                        validated_objects.append(validated_obj.model_dump())\n                    except ValidationError as e:\n                        await logger.aerror(f\"Validation error for item: {e}\")\n                        # Include invalid items with error info\n                        validated_objects.append({\"data\": item, \"validation_error\": str(e)})\n                return validated_objects\n\n            # Single object\n            try:\n                validated_obj = output_model.model_validate(json_data)\n                return [validated_obj.model_dump()]  # Return as list for consistency\n            except ValidationError as e:\n                await logger.aerror(f\"Validation error: {e}\")\n                return [{\"data\": json_data, \"validation_error\": str(e)}]\n\n        except (TypeError, ValueError) as e:\n            await logger.aerror(f\"Error building structured output: {e}\")\n            # Fallback to parsed JSON without validation\n            return json_data\n\n    async def json_response(self) -> Data:\n        \"\"\"Convert agent response to structured JSON Data output with schema validation.\"\"\"\n        # Always use structured chat agent for JSON response mode for better JSON formatting\n        try:\n            system_components = []\n\n            # 1. Agent Instructions (system_prompt)\n            agent_instructions = getattr(self, \"system_prompt\", \"\") or \"\"\n            if agent_instructions:\n                system_components.append(f\"{agent_instructions}\")\n\n            # 2. Format Instructions\n            format_instructions = getattr(self, \"format_instructions\", \"\") or \"\"\n            if format_instructions:\n                system_components.append(f\"Format instructions: {format_instructions}\")\n\n            # 3. Schema Information from BaseModel\n            if hasattr(self, \"output_schema\") and self.output_schema and len(self.output_schema) > 0:\n                try:\n                    processed_schema = self._preprocess_schema(self.output_schema)\n                    output_model = build_model_from_schema(processed_schema)\n                    schema_dict = output_model.model_json_schema()\n                    schema_info = (\n                        \"You are given some text that may include format instructions, \"\n                        \"explanations, or other content alongside a JSON schema.\\n\\n\"\n                        \"Your task:\\n\"\n                        \"- Extract only the JSON schema.\\n\"\n                        \"- Return it as valid JSON.\\n\"\n                        \"- Do not include format instructions, explanations, or extra text.\\n\\n\"\n                        \"Input:\\n\"\n                        f\"{json.dumps(schema_dict, indent=2)}\\n\\n\"\n                        \"Output (only JSON schema):\"\n                    )\n                    system_components.append(schema_info)\n                except (ValidationError, ValueError, TypeError, KeyError) as e:\n                    await logger.aerror(f\"Could not build schema for prompt: {e}\", exc_info=True)\n\n            # Combine all components\n            combined_instructions = \"\\n\\n\".join(system_components) if system_components else \"\"\n            llm_model, self.chat_history, self.tools = await self.get_agent_requirements()\n            self.set(\n                llm=llm_model,\n                tools=self.tools or [],\n                chat_history=self.chat_history,\n                input_value=self.input_value,\n                system_prompt=combined_instructions,\n            )\n\n            # Create and run structured chat agent\n            try:\n                structured_agent = self.create_agent_runnable()\n            except (NotImplementedError, ValueError, TypeError) as e:\n                await logger.aerror(f\"Error with structured chat agent: {e}\")\n                raise\n            try:\n                result = await self.run_agent(structured_agent)\n            except (\n                ExceptionWithMessageError,\n                ValueError,\n                TypeError,\n                RuntimeError,\n            ) as e:\n                await logger.aerror(f\"Error with structured agent result: {e}\")\n                raise\n            # Extract content from structured agent result\n            if hasattr(result, \"content\"):\n                content = result.content\n            elif hasattr(result, \"text\"):\n                content = result.text\n            else:\n                content = str(result)\n\n        except (\n            ExceptionWithMessageError,\n            ValueError,\n            TypeError,\n            NotImplementedError,\n            AttributeError,\n        ) as e:\n            await logger.aerror(f\"Error with structured chat agent: {e}\")\n            # Fallback to regular agent\n            content_str = \"No content returned from agent\"\n            return Data(data={\"content\": content_str, \"error\": str(e)})\n\n        # Process with structured output validation\n        try:\n            structured_output = await self.build_structured_output_base(content)\n\n            # Handle different output formats\n            if isinstance(structured_output, list) and structured_output:\n                if len(structured_output) == 1:\n                    return Data(data=structured_output[0])\n                return Data(data={\"results\": structured_output})\n            if isinstance(structured_output, dict):\n                return Data(data=structured_output)\n            return Data(data={\"content\": content})\n\n        except (ValueError, TypeError) as e:\n            await logger.aerror(f\"Error in structured output processing: {e}\")\n            return Data(data={\"content\": content, \"error\": str(e)})\n\n    async def get_memory_data(self):\n        # TODO: This is a temporary fix to avoid message duplication. We should develop a function for this.\n        messages = (\n            await MemoryComponent(**self.get_base_args())\n            .set(\n                session_id=self.graph.session_id,\n                context_id=self.context_id,\n                order=\"Ascending\",\n                n_messages=self.n_messages,\n            )\n            .retrieve_messages()\n        )\n        return [\n            message for message in messages if getattr(message, \"id\", None) != getattr(self.input_value, \"id\", None)\n        ]\n\n    def update_input_types(self, build_config: dotdict) -> dotdict:\n        \"\"\"Update input types for all fields in build_config.\"\"\"\n        for key, value in build_config.items():\n            if isinstance(value, dict):\n                if value.get(\"input_types\") is None:\n                    build_config[key][\"input_types\"] = []\n            elif hasattr(value, \"input_types\") and value.input_types is None:\n                value.input_types = []\n        return build_config\n\n    async def update_build_config(\n        self,\n        build_config: dotdict,\n        field_value: list[dict],\n        field_name: str | None = None,\n    ) -> dotdict:\n        # Update model options with caching (for all field changes)\n        # Agents require tool calling, so filter for only tool-calling capable models\n        def get_tool_calling_model_options(user_id=None):\n            return get_language_model_options(user_id=user_id, tool_calling=True)\n\n        build_config = update_model_options_in_build_config(\n            component=self,\n            build_config=dict(build_config),\n            cache_key_prefix=\"language_model_options_tool_calling\",\n            get_options_func=get_tool_calling_model_options,\n            field_name=field_name,\n            field_value=field_value,\n        )\n        build_config = dotdict(build_config)\n\n        # Iterate over all providers in the MODEL_PROVIDERS_DICT\n        if field_name == \"model\":\n            self.log(str(field_value))\n            # Update input types for all fields\n            build_config = self.update_input_types(build_config)\n\n            # Validate required keys\n            default_keys = [\n                \"code\",\n                \"_type\",\n                \"model\",\n                \"tools\",\n                \"input_value\",\n                \"add_current_date_tool\",\n                \"system_prompt\",\n                \"agent_description\",\n                \"max_iterations\",\n                \"handle_parsing_errors\",\n                \"verbose\",\n            ]\n            missing_keys = [key for key in default_keys if key not in build_config]\n            if missing_keys:\n                msg = f\"Missing required keys in build_config: {missing_keys}\"\n                raise ValueError(msg)\n        return dotdict({k: v.to_dict() if hasattr(v, \"to_dict\") else v for k, v in build_config.items()})\n\n    async def _get_tools(self) -> list[Tool]:\n        component_toolkit = get_component_toolkit()\n        tools_names = self._build_tools_names()\n        agent_description = self.get_tool_description()\n        # TODO: Agent Description Depreciated Feature to be removed\n        description = f\"{agent_description}{tools_names}\"\n\n        tools = component_toolkit(component=self).get_tools(\n            tool_name=\"Call_Agent\",\n            tool_description=description,\n            # here we do not use the shared callbacks as we are exposing the agent as a tool\n            callbacks=self.get_langchain_callbacks(),\n        )\n        if hasattr(self, \"tools_metadata\"):\n            tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)\n\n        return tools\n"
               },
               "context_id": {
                 "_input_type": "MessageTextInput",
@@ -1763,6 +1320,7 @@
                 "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "context_id",
+                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -1770,12 +1328,14 @@
                 "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
+                "track_in_telemetry": false,
                 "type": "str",
                 "value": ""
               },
               "format_instructions": {
                 "_input_type": "MultilineInput",
                 "advanced": true,
+                "ai_enabled": false,
                 "copy_field": false,
                 "display_name": "Output Format Instructions",
                 "dynamic": false,
@@ -1788,6 +1348,7 @@
                 "load_from_db": false,
                 "multiline": true,
                 "name": "format_instructions",
+                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -1795,6 +1356,7 @@
                 "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
+                "track_in_telemetry": false,
                 "type": "str",
                 "value": "You are an AI that extracts structured JSON objects from unstructured text. Use a predefined schema with expected types (str, int, float, bool, dict). Extract ALL relevant instances that match the schema - if multiple patterns exist, capture them all. Fill missing or ambiguous values with defaults: null for missing values. Remove exact duplicates but keep variations that have different field values. Always return valid JSON in the expected format, never throw errors. If multiple objects can be extracted, return them all in the structured format."
               },
@@ -1804,20 +1366,23 @@
                 "display_name": "Handle Parse Errors",
                 "dynamic": false,
                 "info": "Should the Agent fix errors when reading user input for better processing?",
+                "input_types": [],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "handle_parsing_errors",
+                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
+                "track_in_telemetry": true,
                 "type": "bool",
                 "value": true
               },
               "input_value": {
-                "_input_type": "MessageTextInput",
+                "_input_type": "MessageInput",
                 "advanced": false,
                 "display_name": "Input",
                 "dynamic": false,
@@ -1829,6 +1394,7 @@
                 "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "input_value",
+                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -1836,6 +1402,7 @@
                 "tool_mode": true,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
+                "track_in_telemetry": false,
                 "type": "str",
                 "value": ""
               },
@@ -1845,149 +1412,56 @@
                 "display_name": "Max Iterations",
                 "dynamic": false,
                 "info": "The maximum number of attempts the agent can make to complete its task before it stops.",
+                "input_types": [],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "max_iterations",
+                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
+                "track_in_telemetry": true,
                 "type": "int",
                 "value": 15
               },
-              "max_output_tokens": {
-                "_input_type": "IntInput",
+              "model": {
+                "_input_type": "ModelInput",
                 "advanced": false,
-                "display_name": "Max Output Tokens",
+                "display_name": "Language Model",
                 "dynamic": false,
-                "info": "The maximum number of tokens to generate.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "max_output_tokens",
-                "override_skip": false,
-                "placeholder": "",
-                "required": false,
-                "show": false,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "int",
-                "value": ""
-              },
-              "max_retries": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Max Retries",
-                "dynamic": false,
-                "info": "The maximum number of retries to make when generating.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "max_retries",
-                "override_skip": false,
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "int",
-                "value": 5
-              },
-              "max_tokens": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Max Tokens",
-                "dynamic": false,
-                "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "max_tokens",
-                "override_skip": false,
-                "placeholder": "",
-                "range_spec": {
-                  "max": 128000.0,
-                  "min": 0.0,
-                  "step": 0.1,
-                  "step_type": "float"
+                "external_options": {
+                  "fields": {
+                    "data": {
+                      "node": {
+                        "display_name": "Connect other models",
+                        "icon": "CornerDownLeft",
+                        "name": "connect_other_models"
+                      }
+                    }
+                  }
                 },
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "int",
-                "value": ""
-              },
-              "model_kwargs": {
-                "_input_type": "DictInput",
-                "advanced": true,
-                "display_name": "Model Kwargs",
-                "dynamic": false,
-                "info": "Additional keyword arguments to pass to the model.",
+                "info": "Select your model provider",
+                "input_types": [],
                 "list": false,
                 "list_add_label": "Add More",
-                "name": "model_kwargs",
+                "model_type": "language",
+                "name": "model",
+                "options": [],
                 "override_skip": false,
-                "placeholder": "",
-                "required": false,
+                "placeholder": "Setup Provider",
+                "real_time_refresh": true,
+                "refresh_button": true,
+                "required": true,
                 "show": true,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_input": true,
                 "track_in_telemetry": false,
-                "type": "dict",
-                "value": {}
-              },
-              "model_name": {
-                "_input_type": "DropdownInput",
-                "advanced": false,
-                "combobox": true,
-                "dialog_inputs": {},
-                "display_name": "Model Name",
-                "dynamic": false,
-                "external_options": {},
-                "info": "To see the model names, first choose a provider. Then, enter your API key and click the refresh button next to the model name.",
-                "name": "model_name",
-                "options": [
-                  "gpt-4o-mini",
-                  "gpt-4o",
-                  "gpt-4.1",
-                  "gpt-4.1-mini",
-                  "gpt-4.1-nano",
-                  "gpt-4-turbo",
-                  "gpt-4-turbo-preview",
-                  "gpt-4",
-                  "gpt-3.5-turbo",
-                  "gpt-5.1",
-                  "gpt-5",
-                  "gpt-5-mini",
-                  "gpt-5-nano",
-                  "gpt-5-chat-latest",
-                  "o1",
-                  "o3-mini",
-                  "o3",
-                  "o3-pro",
-                  "o4-mini",
-                  "o4-mini-high"
-                ],
-                "options_metadata": [],
-                "override_skip": false,
-                "placeholder": "",
-                "real_time_refresh": false,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "toggle": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "str",
-                "value": "gpt-4o-mini"
+                "type": "model",
+                "value": []
               },
               "n_messages": {
                 "_input_type": "IntInput",
@@ -1995,28 +1469,10 @@
                 "display_name": "Number of Chat History Messages",
                 "dynamic": false,
                 "info": "Number of chat history messages to retrieve.",
+                "input_types": [],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "n_messages",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": 100
-              },
-              "openai_api_base": {
-                "_input_type": "StrInput",
-                "advanced": true,
-                "display_name": "OpenAI API Base",
-                "dynamic": false,
-                "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.",
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "openai_api_base",
                 "override_skip": false,
                 "placeholder": "",
                 "required": false,
@@ -2024,9 +1480,9 @@
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "track_in_telemetry": false,
-                "type": "str",
-                "value": ""
+                "track_in_telemetry": true,
+                "type": "int",
+                "value": 100
               },
               "output_schema": {
                 "_input_type": "TableInput",
@@ -2034,9 +1490,11 @@
                 "display_name": "Output Schema",
                 "dynamic": false,
                 "info": "Schema Validation: Define the structure and data types for structured output. No validation if no output schema.",
+                "input_types": [],
                 "is_list": true,
                 "list_add_label": "Add More",
                 "name": "output_schema",
+                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -2085,75 +1543,16 @@
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
+                "track_in_telemetry": false,
                 "trigger_icon": "Table",
                 "trigger_text": "Open table",
                 "type": "table",
                 "value": []
               },
-              "project_id": {
-                "_input_type": "StrInput",
-                "advanced": false,
-                "display_name": "Project ID",
-                "dynamic": false,
-                "info": "The project ID of the model.",
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "project_id",
-                "override_skip": false,
-                "placeholder": "",
-                "required": true,
-                "show": false,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": false,
-                "type": "str",
-                "value": ""
-              },
-              "seed": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Seed",
-                "dynamic": false,
-                "info": "The seed controls the reproducibility of the job.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "seed",
-                "override_skip": false,
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "int",
-                "value": 1
-              },
-              "stream_tool_updates": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Stream Tool Updates",
-                "dynamic": false,
-                "info": "Show tool invocations in real-time as they happen. Enabling increases database writes but provides immediate visibility.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "stream_tool_updates",
-                "override_skip": false,
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "bool",
-                "value": false
-              },
               "system_prompt": {
                 "_input_type": "MultilineInput",
                 "advanced": false,
+                "ai_enabled": false,
                 "copy_field": false,
                 "display_name": "Agent Instructions",
                 "dynamic": false,
@@ -2166,6 +1565,7 @@
                 "load_from_db": false,
                 "multiline": true,
                 "name": "system_prompt",
+                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -2173,58 +1573,9 @@
                 "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
+                "track_in_telemetry": false,
                 "type": "str",
                 "value": "You are a helpful assistant that can use tools to answer questions and perform tasks."
-              },
-              "temperature": {
-                "_input_type": "SliderInput",
-                "advanced": true,
-                "display_name": "Temperature",
-                "dynamic": false,
-                "info": "",
-                "max_label": "",
-                "max_label_icon": "",
-                "min_label": "",
-                "min_label_icon": "",
-                "name": "temperature",
-                "override_skip": false,
-                "placeholder": "",
-                "range_spec": {
-                  "max": 1.0,
-                  "min": 0.0,
-                  "step": 0.01,
-                  "step_type": "float"
-                },
-                "required": false,
-                "show": true,
-                "slider_buttons": false,
-                "slider_buttons_options": [],
-                "slider_input": false,
-                "title_case": false,
-                "tool_mode": false,
-                "track_in_telemetry": false,
-                "type": "slider",
-                "value": 0.1
-              },
-              "timeout": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Timeout",
-                "dynamic": false,
-                "info": "The timeout for requests to OpenAI completion API.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "timeout",
-                "override_skip": false,
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "int",
-                "value": 700
               },
               "tools": {
                 "_input_type": "HandleInput",
@@ -2238,11 +1589,13 @@
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "tools",
+                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
                 "trace_as_metadata": true,
+                "track_in_telemetry": false,
                 "type": "other",
                 "value": ""
               },
@@ -2252,15 +1605,18 @@
                 "display_name": "Verbose",
                 "dynamic": false,
                 "info": "",
+                "input_types": [],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "verbose",
+                "override_skip": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
+                "track_in_telemetry": true,
                 "type": "bool",
                 "value": true
               }
@@ -2495,7 +1851,7 @@
             "legacy": false,
             "lf_version": "1.6.0",
             "metadata": {
-              "code_hash": "ce82f9d7948c",
+              "code_hash": "058ca1f51e9f",
               "dependencies": {
                 "dependencies": [
                   {
@@ -2550,6 +1906,26 @@
             "pinned": false,
             "template": {
               "_type": "Component",
+              "api_key": {
+                "_input_type": "SecretStrInput",
+                "advanced": true,
+                "display_name": "API Key",
+                "dynamic": false,
+                "info": "Model Provider API key",
+                "input_types": [],
+                "load_from_db": true,
+                "name": "api_key",
+                "override_skip": false,
+                "password": true,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
               "code": {
                 "advanced": true,
                 "dynamic": true,
@@ -2566,7 +1942,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from pydantic import BaseModel, Field, create_model\nfrom trustcall import create_extractor\n\nfrom lfx.base.models.chat_result import get_chat_result\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.helpers.base_model import build_model_from_schema\nfrom lfx.io import (\n    HandleInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n    TableInput,\n)\nfrom lfx.log.logger import logger\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.schema.table import EditMode\n\n\nclass StructuredOutputComponent(Component):\n    display_name = \"Structured Output\"\n    description = \"Uses an LLM to generate structured data. Ideal for extraction and consistency.\"\n    documentation: str = \"https://docs.langflow.org/structured-output\"\n    name = \"StructuredOutput\"\n    icon = \"braces\"\n\n    inputs = [\n        HandleInput(\n            name=\"llm\",\n            display_name=\"Language Model\",\n            info=\"The language model to use to generate the structured output.\",\n            input_types=[\"LanguageModel\"],\n            required=True,\n        ),\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Input Message\",\n            info=\"The input message to the language model.\",\n            tool_mode=True,\n            required=True,\n        ),\n        MultilineInput(\n            name=\"system_prompt\",\n            display_name=\"Format Instructions\",\n            info=\"The instructions to the language model for formatting the output.\",\n            value=(\n                \"You are an AI that extracts structured JSON objects from unstructured text. \"\n                \"Use a predefined schema with expected types (str, int, float, bool, dict). \"\n                \"Extract ALL relevant instances that match the schema - if multiple patterns exist, capture them all. \"\n                \"Fill missing or ambiguous values with defaults: null for missing values. \"\n                \"Remove exact duplicates but keep variations that have different field values. \"\n                \"Always return valid JSON in the expected format, never throw errors. \"\n                \"If multiple objects can be extracted, return them all in the structured format.\"\n            ),\n            required=True,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"schema_name\",\n            display_name=\"Schema Name\",\n            info=\"Provide a name for the output data schema.\",\n            advanced=True,\n        ),\n        TableInput(\n            name=\"output_schema\",\n            display_name=\"Output Schema\",\n            info=\"Define the structure and data types for the model's output.\",\n            required=True,\n            # TODO: remove deault value\n            table_schema=[\n                {\n                    \"name\": \"name\",\n                    \"display_name\": \"Name\",\n                    \"type\": \"str\",\n                    \"description\": \"Specify the name of the output field.\",\n                    \"default\": \"field\",\n                    \"edit_mode\": EditMode.INLINE,\n                },\n                {\n                    \"name\": \"description\",\n                    \"display_name\": \"Description\",\n                    \"type\": \"str\",\n                    \"description\": \"Describe the purpose of the output field.\",\n                    \"default\": \"description of field\",\n                    \"edit_mode\": EditMode.POPOVER,\n                },\n                {\n                    \"name\": \"type\",\n                    \"display_name\": \"Type\",\n                    \"type\": \"str\",\n                    \"edit_mode\": EditMode.INLINE,\n                    \"description\": (\"Indicate the data type of the output field (e.g., str, int, float, bool, dict).\"),\n                    \"options\": [\"str\", \"int\", \"float\", \"bool\", \"dict\"],\n                    \"default\": \"str\",\n                },\n                {\n                    \"name\": \"multiple\",\n                    \"display_name\": \"As List\",\n                    \"type\": \"boolean\",\n                    \"description\": \"Set to True if this output field should be a list of the specified type.\",\n                    \"default\": \"False\",\n                    \"edit_mode\": EditMode.INLINE,\n                },\n            ],\n            value=[\n                {\n                    \"name\": \"field\",\n                    \"description\": \"description of field\",\n                    \"type\": \"str\",\n                    \"multiple\": \"False\",\n                }\n            ],\n        ),\n    ]\n\n    outputs = [\n        Output(\n            name=\"structured_output\",\n            display_name=\"Structured Output\",\n            method=\"build_structured_output\",\n        ),\n        Output(\n            name=\"dataframe_output\",\n            display_name=\"Structured Output\",\n            method=\"build_structured_dataframe\",\n        ),\n    ]\n\n    def build_structured_output_base(self):\n        schema_name = self.schema_name or \"OutputModel\"\n\n        if not hasattr(self.llm, \"with_structured_output\"):\n            msg = \"Language model does not support structured output.\"\n            raise TypeError(msg)\n        if not self.output_schema:\n            msg = \"Output schema cannot be empty\"\n            raise ValueError(msg)\n\n        output_model_ = build_model_from_schema(self.output_schema)\n        output_model = create_model(\n            schema_name,\n            __doc__=f\"A list of {schema_name}.\",\n            objects=(\n                list[output_model_],\n                Field(\n                    description=f\"A list of {schema_name}.\",  # type: ignore[valid-type]\n                    min_length=1,  # help ensure non-empty output\n                ),\n            ),\n        )\n        # Tracing config\n        config_dict = {\n            \"run_name\": self.display_name,\n            \"project_name\": self.get_project_name(),\n            \"callbacks\": self.get_langchain_callbacks(),\n        }\n        # Generate structured output using Trustcall first, then fallback to Langchain if it fails\n        result = self._extract_output_with_trustcall(output_model, config_dict)\n        if result is None:\n            result = self._extract_output_with_langchain(output_model, config_dict)\n\n        # OPTIMIZATION NOTE: Simplified processing based on trustcall response structure\n        # Handle non-dict responses (shouldn't happen with trustcall, but defensive)\n        if not isinstance(result, dict):\n            return result\n\n        # Extract first response and convert BaseModel to dict\n        responses = result.get(\"responses\", [])\n        if not responses:\n            return result\n\n        # Convert BaseModel to dict (creates the \"objects\" key)\n        first_response = responses[0]\n        structured_data = first_response\n        if isinstance(first_response, BaseModel):\n            structured_data = first_response.model_dump()\n        # Extract the objects array (guaranteed to exist due to our Pydantic model structure)\n        return structured_data.get(\"objects\", structured_data)\n\n    def build_structured_output(self) -> Data:\n        output = self.build_structured_output_base()\n        if not isinstance(output, list) or not output:\n            # handle empty or unexpected type case\n            msg = \"No structured output returned\"\n            raise ValueError(msg)\n        if len(output) == 1:\n            return Data(data=output[0])\n        if len(output) > 1:\n            # Multiple outputs - wrap them in a results container\n            return Data(data={\"results\": output})\n        return Data()\n\n    def build_structured_dataframe(self) -> DataFrame:\n        output = self.build_structured_output_base()\n        if not isinstance(output, list) or not output:\n            # handle empty or unexpected type case\n            msg = \"No structured output returned\"\n            raise ValueError(msg)\n        if len(output) == 1:\n            # For single dictionary, wrap in a list to create DataFrame with one row\n            return DataFrame([output[0]])\n        if len(output) > 1:\n            # Multiple outputs - convert to DataFrame directly\n            return DataFrame(output)\n        return DataFrame()\n\n    def _extract_output_with_trustcall(self, schema: BaseModel, config_dict: dict) -> list[BaseModel] | None:\n        try:\n            llm_with_structured_output = create_extractor(self.llm, tools=[schema], tool_choice=schema.__name__)\n            result = get_chat_result(\n                runnable=llm_with_structured_output,\n                system_message=self.system_prompt,\n                input_value=self.input_value,\n                config=config_dict,\n            )\n        except Exception as e:  # noqa: BLE001\n            logger.warning(\n                f\"Trustcall extraction failed, falling back to Langchain: {e} \"\n                \"(Note: This may not be an error—some models or configurations do not support tool calling. \"\n                \"Falling back is normal in such cases.)\"\n            )\n            return None\n        return result or None  # langchain fallback is used if error occurs or the result is empty\n\n    def _extract_output_with_langchain(self, schema: BaseModel, config_dict: dict) -> list[BaseModel] | None:\n        try:\n            llm_with_structured_output = self.llm.with_structured_output(schema)\n            result = get_chat_result(\n                runnable=llm_with_structured_output,\n                system_message=self.system_prompt,\n                input_value=self.input_value,\n                config=config_dict,\n            )\n            if isinstance(result, BaseModel):\n                result = result.model_dump()\n                result = result.get(\"objects\", result)\n        except Exception as fallback_error:\n            msg = (\n                f\"Model does not support tool calling (trustcall failed) \"\n                f\"and fallback with_structured_output also failed: {fallback_error}\"\n            )\n            raise ValueError(msg) from fallback_error\n\n        return result or None\n"
+                "value": "from pydantic import BaseModel, Field, create_model\nfrom trustcall import create_extractor\n\nfrom lfx.base.models.chat_result import get_chat_result\nfrom lfx.base.models.unified_models import (\n    get_language_model_options,\n    get_llm,\n    update_model_options_in_build_config,\n)\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.helpers.base_model import build_model_from_schema\nfrom lfx.io import (\n    MessageTextInput,\n    ModelInput,\n    MultilineInput,\n    Output,\n    SecretStrInput,\n    TableInput,\n)\nfrom lfx.log.logger import logger\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.schema.table import EditMode\n\n\nclass StructuredOutputComponent(Component):\n    display_name = \"Structured Output\"\n    description = \"Uses an LLM to generate structured data. Ideal for extraction and consistency.\"\n    documentation: str = \"https://docs.langflow.org/structured-output\"\n    name = \"StructuredOutput\"\n    icon = \"braces\"\n\n    inputs = [\n        ModelInput(\n            name=\"model\",\n            display_name=\"Language Model\",\n            info=\"Select your model provider\",\n            real_time_refresh=True,\n            required=True,\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"API Key\",\n            info=\"Model Provider API key\",\n            real_time_refresh=True,\n            advanced=True,\n        ),\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Input Message\",\n            info=\"The input message to the language model.\",\n            tool_mode=True,\n            required=True,\n        ),\n        MultilineInput(\n            name=\"system_prompt\",\n            display_name=\"Format Instructions\",\n            info=\"The instructions to the language model for formatting the output.\",\n            value=(\n                \"You are an AI that extracts structured JSON objects from unstructured text. \"\n                \"Use a predefined schema with expected types (str, int, float, bool, dict). \"\n                \"Extract ALL relevant instances that match the schema - if multiple patterns exist, capture them all. \"\n                \"Fill missing or ambiguous values with defaults: null for missing values. \"\n                \"Remove exact duplicates but keep variations that have different field values. \"\n                \"Always return valid JSON in the expected format, never throw errors. \"\n                \"If multiple objects can be extracted, return them all in the structured format.\"\n            ),\n            required=True,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"schema_name\",\n            display_name=\"Schema Name\",\n            info=\"Provide a name for the output data schema.\",\n            advanced=True,\n        ),\n        TableInput(\n            name=\"output_schema\",\n            display_name=\"Output Schema\",\n            info=\"Define the structure and data types for the model's output.\",\n            required=True,\n            # TODO: remove deault value\n            table_schema=[\n                {\n                    \"name\": \"name\",\n                    \"display_name\": \"Name\",\n                    \"type\": \"str\",\n                    \"description\": \"Specify the name of the output field.\",\n                    \"default\": \"field\",\n                    \"edit_mode\": EditMode.INLINE,\n                },\n                {\n                    \"name\": \"description\",\n                    \"display_name\": \"Description\",\n                    \"type\": \"str\",\n                    \"description\": \"Describe the purpose of the output field.\",\n                    \"default\": \"description of field\",\n                    \"edit_mode\": EditMode.POPOVER,\n                },\n                {\n                    \"name\": \"type\",\n                    \"display_name\": \"Type\",\n                    \"type\": \"str\",\n                    \"edit_mode\": EditMode.INLINE,\n                    \"description\": (\"Indicate the data type of the output field (e.g., str, int, float, bool, dict).\"),\n                    \"options\": [\"str\", \"int\", \"float\", \"bool\", \"dict\"],\n                    \"default\": \"str\",\n                },\n                {\n                    \"name\": \"multiple\",\n                    \"display_name\": \"As List\",\n                    \"type\": \"boolean\",\n                    \"description\": \"Set to True if this output field should be a list of the specified type.\",\n                    \"default\": \"False\",\n                    \"edit_mode\": EditMode.INLINE,\n                },\n            ],\n            value=[\n                {\n                    \"name\": \"field\",\n                    \"description\": \"description of field\",\n                    \"type\": \"str\",\n                    \"multiple\": \"False\",\n                }\n            ],\n        ),\n    ]\n\n    outputs = [\n        Output(\n            name=\"structured_output\",\n            display_name=\"Structured Output\",\n            method=\"build_structured_output\",\n        ),\n        Output(\n            name=\"dataframe_output\",\n            display_name=\"Structured Output\",\n            method=\"build_structured_dataframe\",\n        ),\n    ]\n\n    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):\n        \"\"\"Dynamically update build config with user-filtered model options.\"\"\"\n        return update_model_options_in_build_config(\n            component=self,\n            build_config=build_config,\n            cache_key_prefix=\"language_model_options\",\n            get_options_func=get_language_model_options,\n            field_name=field_name,\n            field_value=field_value,\n        )\n\n    def build_structured_output_base(self):\n        schema_name = self.schema_name or \"OutputModel\"\n\n        llm = get_llm(model=self.model, user_id=self.user_id, api_key=self.api_key)\n\n        if not hasattr(llm, \"with_structured_output\"):\n            msg = \"Language model does not support structured output.\"\n            raise TypeError(msg)\n        if not self.output_schema:\n            msg = \"Output schema cannot be empty\"\n            raise ValueError(msg)\n\n        output_model_ = build_model_from_schema(self.output_schema)\n        output_model = create_model(\n            schema_name,\n            __doc__=f\"A list of {schema_name}.\",\n            objects=(\n                list[output_model_],\n                Field(\n                    description=f\"A list of {schema_name}.\",  # type: ignore[valid-type]\n                    min_length=1,  # help ensure non-empty output\n                ),\n            ),\n        )\n        # Tracing config\n        config_dict = {\n            \"run_name\": self.display_name,\n            \"project_name\": self.get_project_name(),\n            \"callbacks\": self.get_langchain_callbacks(),\n        }\n        # Generate structured output using Trustcall first, then fallback to Langchain if it fails\n        result = self._extract_output_with_trustcall(llm, output_model, config_dict)\n        if result is None:\n            result = self._extract_output_with_langchain(llm, output_model, config_dict)\n\n        # OPTIMIZATION NOTE: Simplified processing based on trustcall response structure\n        # Handle non-dict responses (shouldn't happen with trustcall, but defensive)\n        if not isinstance(result, dict):\n            return result\n\n        # Extract first response and convert BaseModel to dict\n        responses = result.get(\"responses\", [])\n        if not responses:\n            return result\n\n        # Convert BaseModel to dict (creates the \"objects\" key)\n        first_response = responses[0]\n        structured_data = first_response\n        if isinstance(first_response, BaseModel):\n            structured_data = first_response.model_dump()\n        # Extract the objects array (guaranteed to exist due to our Pydantic model structure)\n        return structured_data.get(\"objects\", structured_data)\n\n    def build_structured_output(self) -> Data:\n        output = self.build_structured_output_base()\n        if not isinstance(output, list) or not output:\n            # handle empty or unexpected type case\n            msg = \"No structured output returned\"\n            raise ValueError(msg)\n        if len(output) == 1:\n            return Data(data=output[0])\n        if len(output) > 1:\n            # Multiple outputs - wrap them in a results container\n            return Data(data={\"results\": output})\n        return Data()\n\n    def build_structured_dataframe(self) -> DataFrame:\n        output = self.build_structured_output_base()\n        if not isinstance(output, list) or not output:\n            # handle empty or unexpected type case\n            msg = \"No structured output returned\"\n            raise ValueError(msg)\n        if len(output) == 1:\n            # For single dictionary, wrap in a list to create DataFrame with one row\n            return DataFrame([output[0]])\n        if len(output) > 1:\n            # Multiple outputs - convert to DataFrame directly\n            return DataFrame(output)\n        return DataFrame()\n\n    def _extract_output_with_trustcall(self, llm, schema: BaseModel, config_dict: dict) -> list[BaseModel] | None:\n        try:\n            llm_with_structured_output = create_extractor(llm, tools=[schema], tool_choice=schema.__name__)\n            result = get_chat_result(\n                runnable=llm_with_structured_output,\n                system_message=self.system_prompt,\n                input_value=self.input_value,\n                config=config_dict,\n            )\n        except Exception as e:  # noqa: BLE001\n            logger.warning(\n                f\"Trustcall extraction failed, falling back to Langchain: {e} \"\n                \"(Note: This may not be an error—some models or configurations do not support tool calling. \"\n                \"Falling back is normal in such cases.)\"\n            )\n            return None\n        return result or None  # langchain fallback is used if error occurs or the result is empty\n\n    def _extract_output_with_langchain(self, llm, schema: BaseModel, config_dict: dict) -> list[BaseModel] | None:\n        try:\n            llm_with_structured_output = llm.with_structured_output(schema)\n            result = get_chat_result(\n                runnable=llm_with_structured_output,\n                system_message=self.system_prompt,\n                input_value=self.input_value,\n                config=config_dict,\n            )\n            if isinstance(result, BaseModel):\n                result = result.model_dump()\n                result = result.get(\"objects\", result)\n        except Exception as fallback_error:\n            msg = (\n                f\"Model does not support tool calling (trustcall failed) \"\n                f\"and fallback with_structured_output also failed: {fallback_error}\"\n            )\n            raise ValueError(msg) from fallback_error\n\n        return result or None\n"
               },
               "input_value": {
                 "_input_type": "MultilineInput",
@@ -2593,26 +1969,39 @@
                 "type": "str",
                 "value": ""
               },
-              "llm": {
-                "_input_type": "HandleInput",
+              "model": {
+                "_input_type": "ModelInput",
                 "advanced": false,
                 "display_name": "Language Model",
                 "dynamic": false,
-                "info": "The language model to use to generate the structured output.",
-                "input_types": [
-                  "LanguageModel"
-                ],
+                "external_options": {
+                  "fields": {
+                    "data": {
+                      "node": {
+                        "display_name": "Connect other models",
+                        "icon": "CornerDownLeft",
+                        "name": "connect_other_models"
+                      }
+                    }
+                  }
+                },
+                "info": "Select your model provider",
+                "input_types": [],
                 "list": false,
                 "list_add_label": "Add More",
-                "name": "llm",
+                "model_type": "language",
+                "name": "model",
                 "override_skip": false,
-                "placeholder": "",
+                "placeholder": "Setup Provider",
+                "real_time_refresh": true,
+                "refresh_button": true,
                 "required": true,
                 "show": true,
                 "title_case": false,
-                "trace_as_metadata": true,
+                "tool_mode": false,
+                "trace_as_input": true,
                 "track_in_telemetry": false,
-                "type": "other",
+                "type": "model",
                 "value": ""
               },
               "output_schema": {

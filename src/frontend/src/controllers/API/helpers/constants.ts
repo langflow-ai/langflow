@@ -31,6 +31,8 @@ export const URLs = {
   MCP: `mcp/project`,
   MCP_SERVERS: `mcp/servers`,
   KNOWLEDGE_BASES: `knowledge_bases`,
+  MODELS: `models`,
+  MODEL_PROVIDERS: `models/providers`,
   RUN: `run`,
   RUN_SESSION: `run/session`,
   REGISTRATION: `registration`,

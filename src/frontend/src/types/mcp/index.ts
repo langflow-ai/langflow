@@ -3,7 +3,8 @@ export type AuthSettingsType = {
   oauth_host?: string;
   oauth_port?: string;
   oauth_server_url?: string;
-  oauth_callback_path?: string;
+  oauth_callback_path?: string; // Deprecated: use oauth_callback_url instead
+  oauth_callback_url?: string;
   oauth_client_id?: string;
   oauth_client_secret?: string;
   oauth_auth_url?: string;

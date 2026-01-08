@@ -15,7 +15,7 @@ from lfx.base.mcp.util import (
 )
 from lfx.custom.custom_component.component_with_cache import ComponentWithCache
 from lfx.inputs.inputs import InputTypes  # noqa: TC001
-from lfx.io import BoolInput, DropdownInput, McpInput, MessageTextInput, Output
+from lfx.io import BoolInput, DictInput, DropdownInput, McpInput, MessageTextInput, Output
 from lfx.io.schema import flatten_schema, schema_to_langflow_inputs
 from lfx.log.logger import logger
 from lfx.schema.dataframe import DataFrame
@@ -87,6 +87,7 @@ class MCPToolsComponent(ComponentWithCache):
         "tool",
         "use_cache",
         "verify_ssl",
+        "headers",
     ]
 
     display_name = "MCP Tools"
@@ -121,6 +122,17 @@ class MCPToolsComponent(ComponentWithCache):
             ),
             value=True,
             advanced=True,
+        ),
+        DictInput(
+            name="headers",
+            display_name="Headers",
+            info=(
+                "HTTP headers to include with MCP server requests. "
+                "Useful for authentication (e.g., Authorization header). "
+                "These headers override any headers configured in the MCP server settings."
+            ),
+            advanced=True,
+            is_list=True,
         ),
         DropdownInput(
             name="tool",
@@ -257,6 +269,31 @@ class MCPToolsComponent(ComponentWithCache):
             if "verify_ssl" not in server_config:
                 verify_ssl = getattr(self, "verify_ssl", True)
                 server_config["verify_ssl"] = verify_ssl
+
+            # Merge headers from component input with server config headers
+            # Component headers take precedence over server config headers
+            component_headers = getattr(self, "headers", None) or []
+            if component_headers:
+                # Convert list of {"key": k, "value": v} to dict
+                component_headers_dict = {}
+                if isinstance(component_headers, list):
+                    for item in component_headers:
+                        if isinstance(item, dict) and "key" in item and "value" in item:
+                            component_headers_dict[item["key"]] = item["value"]
+                elif isinstance(component_headers, dict):
+                    component_headers_dict = component_headers
+
+                if component_headers_dict:
+                    existing_headers = server_config.get("headers", {}) or {}
+                    # Ensure existing_headers is a dict (convert from list if needed)
+                    if isinstance(existing_headers, list):
+                        existing_dict = {}
+                        for item in existing_headers:
+                            if isinstance(item, dict) and "key" in item and "value" in item:
+                                existing_dict[item["key"]] = item["value"]
+                        existing_headers = existing_dict
+                    merged_headers = {**existing_headers, **component_headers_dict}
+                    server_config["headers"] = merged_headers
 
             _, tool_list, tool_cache = await update_tools(
                 server_name=server_name,
@@ -609,7 +646,12 @@ class MCPToolsComponent(ComponentWithCache):
         if item_dict.get("type") == "text":
             text = item_dict.get("text")
             try:
-                return json.loads(text)
+                parsed = json.loads(text)
+                # Ensure we always return a dictionary for DataFrame compatibility
+                if isinstance(parsed, dict):
+                    return parsed
+                # Wrap non-dict parsed values in a dictionary
+                return {"text": text, "parsed_value": parsed, "type": "text"}  # noqa: TRY300
             except json.JSONDecodeError:
                 return item_dict
         return item_dict
