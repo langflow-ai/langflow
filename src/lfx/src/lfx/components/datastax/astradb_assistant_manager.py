@@ -299,8 +299,10 @@ class AstraAssistantManager(ComponentWithCache):
                 )
                 self.status = processed_result
         except ExceptionWithMessageError as e:
-            msg_id = e.agent_message.id
-            await delete_message(id_=msg_id)
+            # Only delete message from database if it has an ID (was stored)
+            msg_id = e.agent_message.get_id()
+            if msg_id:
+                await delete_message(id_=msg_id)
             await self._send_message_event(e.agent_message, category="remove_message")
             raise
         except Exception:
