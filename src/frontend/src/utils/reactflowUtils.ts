@@ -236,7 +236,7 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
 
     newEdges = filterHiddenFieldsEdges(edge, newEdges, targetNode);
   });
-  
+
   return { edges: newEdges, brokenEdges };
 }
 
