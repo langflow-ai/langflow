@@ -13,10 +13,17 @@ import type { TemplateContentProps } from "../../../../types/templates/types";
 import { updateIds } from "../../../../utils/reactflowUtils";
 import { TemplateCategoryComponent } from "../TemplateCategoryComponent";
 
+interface TemplateContentComponentProps extends TemplateContentProps {
+  loading: boolean;
+  onFlowCreating: (loading: boolean) => void;
+}
+
 export default function TemplateContentComponent({
   currentTab,
   categories,
-}: TemplateContentProps) {
+  loading,
+  onFlowCreating,
+}: TemplateContentComponentProps) {
   const allExamples = useFlowsManagerStore((state) => state.examples);
 
   const examples = useMemo(() => {
@@ -68,10 +75,16 @@ export default function TemplateContentComponent({
   }, [searchQuery, currentTab, examples, fuse]);
 
   const handleCardClick = (example) => {
+    if (loading) return;
+    onFlowCreating(true);
     updateIds(example.data);
-    addFlow({ flow: example }).then((id) => {
-      navigate(`/flow/${id}/folder/${folderIdUrl}`);
-    });
+    addFlow({ flow: example })
+      .then((id) => {
+        navigate(`/flow/${id}/folder/${folderIdUrl}`);
+      })
+      .finally(() => {
+        onFlowCreating(false);
+      });
     track("New Flow Created", { template: `${example.name} Template` });
   };
 
@@ -112,6 +125,7 @@ export default function TemplateContentComponent({
           <TemplateCategoryComponent
             examples={filteredExamples}
             onCardClick={handleCardClick}
+            loading={loading}
           />
         ) : (
           <div className="flex flex-col items-center justify-center px-4 py-12 text-center">
