@@ -48,12 +48,10 @@
       "last 1 safari version"
     ]
   },
-  "packageManager": "yarn@1.22.19",
   "volta": {
-    "node": "18.18.0",
-    "yarn": "1.22.19"
+    "node": "18.18.0"
   },
-  "resolutions": {
+  "overrides": {
     "lodash": "4.17.21",
     "openapi-to-postmanv2/lodash": "4.17.21",
     "postman-collection/lodash": "4.17.21",
