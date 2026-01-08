@@ -8,6 +8,7 @@ need to import all component modules during startup.
 
 import hashlib
 import logging
+from math import log
 import sys
 from pathlib import Path
 
@@ -70,18 +71,22 @@ def _strip_dynamic_fields(obj):
     return obj
 
 
-def _load_index_from_file(index_path: Path) -> dict | None:
+def _load_index_from_file(index_path: Path) -> dict:
     """Load a component index from a JSON file.
 
     Args:
         index_path: Path to the component index JSON file
 
     Returns:
-        Index dict or None if file not found or invalid.
-        Note: Validates that loaded JSON is a dict object.
+        Index dict
+
+    Raises:
+        ValueError: If file not found
+        RuntimeError: If file cannot be loaded or is invalid
     """
     if not index_path.exists():
-        return None
+        msg = "Index file not found. Index file must exist to preserve hash history."
+        raise ValueError(msg)
 
     try:
         # orjson.loads() accepts bytes directly - faster and handles any encoding
@@ -89,13 +94,13 @@ def _load_index_from_file(index_path: Path) -> dict | None:
 
         # Validate that we got a dict (not a list or other JSON type)
         if not isinstance(data, dict):
-            logger.warning("Index file %s does not contain a JSON object", index_path)
-            return None
-    except Exception as e:  # noqa: BLE001
-        logger.warning("Could not load index from %s: %s", index_path, e)
-        return None
-    else:
+            msg = "Index file does not contain a valid JSON object."
+            raise ValueError(msg)
+
         return data
+    except Exception as e:
+        msg = f"Failed to load component index from {index_path}. Must exist to preserve hash history. Error: {e}"
+        raise RuntimeError(msg) from e
 
 
 def _find_component_in_index(index: dict, category: str, component_name: str) -> dict | None:
@@ -314,17 +319,17 @@ def _merge_hash_history(current_component: dict, existing_component: dict | None
 COMPONENT_INDEX_PATH = Path(__file__).parent.parent / "src" / "lfx" / "src" / "lfx" / "_assets" / "component_index.json"
 
 
-def _load_existing_index() -> dict | None:
+def _load_existing_index() -> dict:
     """Load existing index from disk for history merging.
 
     Returns:
-        Existing index dict or None if not found
+        Existing index dict
+
+    Raises:
+        RuntimeError: If index file cannot be loaded
     """
     existing_index = _load_index_from_file(COMPONENT_INDEX_PATH)
-
-    if existing_index:
-        print(f"Loaded existing index (version {existing_index.get('version', 'unknown')})")
-
+    print(f"Loaded existing index (version {existing_index.get('version', 'unknown')})")
     return existing_index
 
 
@@ -354,24 +359,22 @@ def _import_components() -> tuple[dict, int]:
         return modules_dict, components_count
 
 
-def build_component_index():
+def build_component_index() -> dict:
     """Build the component index by scanning all modules in lfx.components.
 
     Merges hash history from the existing index to track component evolution.
 
     Returns:
         A dictionary containing version, entries, and sha256 hash
+
+    Raises:
+        RuntimeError: If index cannot be built
+        ValueError: If existing index is invalid
     """
     print("Building component index...")
 
     existing_index = _load_existing_index()
-
-    try:
-        modules_dict, components_count = _import_components()
-    except RuntimeError as e:
-        print(str(e), file=sys.stderr)
-        return None
-
+    modules_dict, components_count = _import_components()
     current_version = _get_langflow_version()
 
     # Convert modules_dict to entries format and sort for determinism
@@ -434,11 +437,11 @@ def build_component_index():
 
 def main():
     """Main entry point for building the component index."""
-    # Build the index
-    index = build_component_index()
-
-    if not index:
-        print("Failed to build component index", file=sys.stderr)
+    try:
+        # Build the index - will raise on any error
+        index = build_component_index()
+    except Exception as e:
+        print(f"Failed to build component index: {e}", file=sys.stderr)
         sys.exit(1)
 
     # Use the standard component index path (defined at module level)
