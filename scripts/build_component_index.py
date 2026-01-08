@@ -131,45 +131,6 @@ def _find_component_in_index(index: dict, category: str, component_name: str) ->
 
     return None
 
-
-def _compare_versions(version1: str, version2: str) -> int:
-    """Compare two version strings using PEP 440 semantics.
-
-    Requires the 'packaging' library for correct version comparison.
-    Lexicographic string comparison is NOT semver-aware and will produce
-    incorrect results (e.g., "1.10.0" < "1.9.0" lexicographically).
-
-    Supports formats like:
-    - 1.7.1
-    - 1.7.1.dev14 (nightly builds)
-
-    Args:
-        version1: First version string
-        version2: Second version string
-
-    Returns:
-        -1 if version1 < version2
-         0 if version1 == version2
-         1 if version1 > version2
-
-    Raises:
-        ImportError: If packaging library is not available
-    """
-    try:
-        from packaging.version import Version
-    except ImportError as e:
-        raise ImportError("The 'packaging' library is required for version comparison. ") from e
-
-    v1 = Version(version1)
-    v2 = Version(version2)
-
-    if v1 < v2:
-        return -1
-    if v1 > v2:
-        return 1
-    return 0
-
-
 def _create_history_entry(hash_value: str, version: str) -> dict:
     """Create a new hash history entry with version range.
 
