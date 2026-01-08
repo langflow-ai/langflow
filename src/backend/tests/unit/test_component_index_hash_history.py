@@ -17,13 +17,11 @@ from build_component_index import (
     _strip_dynamic_fields,
 )
 
-
 # Tests for _merge_hash_history (simplified - no previous hash history yet)
 
 
 def test_merge_hash_history_new_component():
     """Test creating hash history for a new component."""
-
     current_component = {"metadata": {"code_hash": "abc123def456"}}
     previous_component = None
     current_version = "1.7.1"
@@ -38,8 +36,6 @@ def test_merge_hash_history_new_component():
 
 def test_merge_hash_history_unchanged_hash():
     """Test that unchanged hash creates a single entry (no history in previous index yet)."""
-    
-
     current_component = {"metadata": {"code_hash": "abc123def456"}}
     previous_component = {
         "metadata": {
@@ -58,8 +54,6 @@ def test_merge_hash_history_unchanged_hash():
 
 def test_merge_hash_history_changed_hash():
     """Test that changed hash creates a single entry for the new hash."""
-    
-
     current_component = {"metadata": {"code_hash": "new_hash_xyz"}}
     previous_component = {
         "metadata": {
@@ -78,8 +72,6 @@ def test_merge_hash_history_changed_hash():
 
 def test_merge_hash_history_no_previous_hash():
     """Test handling when previous component has no hash."""
-    
-
     current_component = {"metadata": {"code_hash": "abc123"}}
     previous_component = {
         "metadata": {}  # No code_hash
@@ -96,8 +88,6 @@ def test_merge_hash_history_no_previous_hash():
 
 def test_merge_hash_history_empty_hash():
     """Test that empty hash returns empty history."""
-    
-
     current_component = {"metadata": {"code_hash": ""}}
     previous_component = None
     current_version = "1.7.1"
@@ -109,8 +99,6 @@ def test_merge_hash_history_empty_hash():
 
 def test_merge_hash_history_missing_hash():
     """Test that missing hash returns empty history."""
-    
-
     current_component = {"metadata": {}}
     previous_component = None
     current_version = "1.7.1"
@@ -127,8 +115,6 @@ def test_load_index_from_file_nonexistent():
     """Test loading a non-existent index returns None."""
     from pathlib import Path
 
-    
-
     result = _load_index_from_file(Path("/nonexistent/path/index.json"))
 
     assert result is None
@@ -136,8 +122,6 @@ def test_load_index_from_file_nonexistent():
 
 def test_find_component_in_index():
     """Test finding a component in the index."""
-    
-
     index = {
         "entries": [
             ["agents", {"MyAgent": {"metadata": {"code_hash": "abc123"}}}],
@@ -161,8 +145,6 @@ def test_find_component_in_index():
 
 def test_find_component_in_index_malformed():
     """Test that malformed index entries are handled gracefully."""
-    
-
     # Malformed entries should be skipped
     index = {
         "entries": [
@@ -181,8 +163,6 @@ def test_find_component_in_index_malformed():
 
 def test_create_history_entry():
     """Test creating a hash history entry."""
-    
-
     entry = _create_history_entry("abc123", "1.7.1")
 
     assert entry["hash"] == "abc123"
@@ -195,8 +175,6 @@ def test_create_history_entry():
 
 def test_compare_versions_basic():
     """Test basic version comparison."""
-    
-
     assert _compare_versions("1.7.0", "1.7.1") == -1
     assert _compare_versions("1.7.1", "1.7.0") == 1
     assert _compare_versions("1.7.1", "1.7.1") == 0
@@ -204,8 +182,6 @@ def test_compare_versions_basic():
 
 def test_compare_versions_nightly_numeric():
     """Test nightly version comparison with numeric suffixes."""
-    
-
     assert _compare_versions("1.7.1.dev1", "1.7.1.dev2") == -1
     assert _compare_versions("1.7.1.dev9", "1.7.1.dev10") == -1  # Numeric, not lexical
     assert _compare_versions("1.7.1.dev10", "1.7.1.dev11") == -1
@@ -214,8 +190,6 @@ def test_compare_versions_nightly_numeric():
 
 def test_compare_versions_nightly_date():
     """Test nightly version comparison with date-based suffixes."""
-    
-
     assert _compare_versions("1.7.1.dev20260107", "1.7.1.dev20260108") == -1
     assert _compare_versions("1.7.1.dev20260108", "1.7.1.dev20260107") == 1
     assert _compare_versions("1.7.1.dev20260107", "1.7.1.dev20260107") == 0
@@ -223,8 +197,6 @@ def test_compare_versions_nightly_date():
 
 def test_compare_versions_dev_vs_release():
     """Test that dev versions come before release versions."""
-    
-
     assert _compare_versions("1.7.1.dev10", "1.7.1") == -1  # Dev < release
     assert _compare_versions("1.7.1", "1.7.1.dev10") == 1  # Release > dev
     assert _compare_versions("1.7.0", "1.7.1.dev1") == -1  # Previous release < next dev
@@ -232,8 +204,6 @@ def test_compare_versions_dev_vs_release():
 
 def test_compare_versions_mixed_formats():
     """Test comparison of mixed nightly formats."""
-    
-
     assert _compare_versions("1.7.1.dev10", "1.7.1.dev20260107") == -1
     assert _compare_versions("1.7.1.dev20260107", "1.7.1.dev10") == 1
 
@@ -243,8 +213,6 @@ def test_compare_versions_mixed_formats():
 
 def test_normalize_for_determinism_dict():
     """Test that dicts are sorted by key."""
-    
-
     obj = {"z": 1, "a": 2, "m": 3}
     result = _normalize_for_determinism(obj)
 
@@ -254,12 +222,7 @@ def test_normalize_for_determinism_dict():
 
 def test_normalize_for_determinism_nested():
     """Test that nested structures are normalized."""
-    
-
-    obj = {
-        "z": {"nested_z": 1, "nested_a": 2},
-        "a": [{"list_z": 1, "list_a": 2}]
-    }
+    obj = {"z": {"nested_z": 1, "nested_a": 2}, "a": [{"list_z": 1, "list_a": 2}]}
     result = _normalize_for_determinism(obj)
 
     # Top level sorted
@@ -272,8 +235,6 @@ def test_normalize_for_determinism_nested():
 
 def test_normalize_for_determinism_preserves_list_order():
     """Test that list order is preserved (semantically ordered)."""
-    
-
     obj = {"items": [3, 1, 2]}
     result = _normalize_for_determinism(obj)
 
@@ -283,8 +244,6 @@ def test_normalize_for_determinism_preserves_list_order():
 
 def test_strip_dynamic_fields():
     """Test that dynamic fields are removed."""
-    
-
     obj = {
         "hash": "abc123",
         "version": "1.7.1",
@@ -292,8 +251,8 @@ def test_strip_dynamic_fields():
         "deprecated_at": "2024-06-01",  # Should be removed
         "nested": {
             "data": "keep",
-            "timestamp": "remove"  # Should be removed
-        }
+            "timestamp": "remove",  # Should be removed
+        },
     }
 
     result = _strip_dynamic_fields(obj)

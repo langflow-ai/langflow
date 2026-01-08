@@ -16,9 +16,7 @@ import orjson
 try:
     from packaging.version import InvalidVersion, Version
 except ImportError as e:
-    raise ImportError(
-        "The 'packaging' library is required for version comparison"
-    ) from e
+    raise ImportError("The 'packaging' library is required for version comparison") from e
 
 # Configure logging for build script
 logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s", stream=sys.stderr)
@@ -160,9 +158,7 @@ def _compare_versions(version1: str, version2: str) -> int:
     try:
         from packaging.version import Version
     except ImportError as e:
-        raise ImportError(
-            "The 'packaging' library is required for version comparison. "
-        ) from e
+        raise ImportError("The 'packaging' library is required for version comparison. ") from e
 
     v1 = Version(version1)
     v2 = Version(version2)
@@ -172,6 +168,7 @@ def _compare_versions(version1: str, version2: str) -> int:
     if v1 > v2:
         return 1
     return 0
+
 
 def _create_history_entry(hash_value: str, version: str) -> dict:
     """Create a new hash history entry with version range.
@@ -186,12 +183,7 @@ def _create_history_entry(hash_value: str, version: str) -> dict:
     return {"hash": hash_value, "version_first": version, "version_last": version}
 
 
-
-def _merge_hash_history(
-    current_component: dict,
-    previous_component: dict | None,
-    current_version: str
-) -> list[dict]:
+def _merge_hash_history(current_component: dict, previous_component: dict | None, current_version: str) -> list[dict]:
     """Merge hash history from previous index with current component using version ranges.
 
     This approach stores version ranges (version_first to version_last) for each hash,
@@ -218,23 +210,23 @@ def _merge_hash_history(
     current_hash = current_component.get("metadata", {}).get("code_hash")
     if not current_hash:
         return []
-    
+
     # If no previous component, create first entry
     if not previous_component:
         return [_create_history_entry(current_hash, current_version)]
-    
+
     # Get previous component's hash (not history, since it doesn't exist yet)
     previous_hash = previous_component.get("metadata", {}).get("code_hash")
-    
+
     # If no previous hash, start fresh
     if not previous_hash:
         return [_create_history_entry(current_hash, current_version)]
-    
+
     # If hash unchanged, this is the first time we're tracking it
     # Create a single entry for this hash
     if previous_hash == current_hash:
         return [_create_history_entry(current_hash, current_version)]
-    
+
     # Hash changed - create entry for the new hash
     # (We don't have history of the old hash, so we just start tracking the new one)
     return [_create_history_entry(current_hash, current_version)]
