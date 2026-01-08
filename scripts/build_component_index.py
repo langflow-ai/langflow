@@ -94,9 +94,9 @@ def _load_index_from_file(index_path: Path) -> dict:
         # Validate that we got a dict (not a list or other JSON type)
         if not isinstance(data, dict):
             msg = "Index file does not contain a valid JSON object."
-            raise ValueError(msg)
+            raise TypeError(msg)
 
-        return data
+        return data  # noqa: TRY300
     except Exception as e:
         msg = f"Failed to load component index from {index_path}. Must exist to preserve hash history. Error: {e}"
         raise RuntimeError(msg) from e
@@ -351,10 +351,11 @@ def _import_components() -> tuple[dict, int]:
         modules_dict = components_result.get("components", {})
         components_count = sum(len(v) for v in modules_dict.values())
         print(f"Discovered {components_count} components across {len(modules_dict)} categories")
-        return modules_dict, components_count
     except Exception as e:
         msg = f"Failed to import components: {e}"
         raise RuntimeError(msg) from e
+    else:
+        return modules_dict, components_count
 
 
 def build_component_index() -> dict:
@@ -438,7 +439,7 @@ def main():
     try:
         # Build the index - will raise on any error
         index = build_component_index()
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         print(f"Failed to build component index: {e}", file=sys.stderr)
         sys.exit(1)
 

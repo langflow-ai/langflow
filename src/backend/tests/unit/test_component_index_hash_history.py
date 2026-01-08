@@ -1,14 +1,15 @@
 """Unit tests for component index hash history functionality."""
 
 import sys
-import pytest
 from pathlib import Path
+
+import pytest
 
 # Add scripts directory to path so we can import the build script
 scripts_dir = Path(__file__).parent.parent.parent.parent.parent / "scripts"
 sys.path.insert(0, str(scripts_dir))
 
-from build_component_index import (
+from build_component_index import (  # noqa: E402
     _create_history_entry,
     _find_component_in_index,
     _load_index_from_file,
