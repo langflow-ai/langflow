@@ -2,6 +2,9 @@
   "name": "langflow",
   "version": "1.7.1",
   "private": true,
+  "engines": {
+    "node": ">=20.19.0"
+  },
   "dependencies": {
     "@chakra-ui/number-input": "^2.1.2",
     "@chakra-ui/system": "^2.6.2",
@@ -71,9 +74,9 @@
     "react-pdf": "^9.0.0",
     "react-router-dom": "^6.23.1",
     "react-sortablejs": "^6.1.4",
-    "react-syntax-highlighter": "^15.6.1",
+    "react-syntax-highlighter": "^16.1.0",
     "reactflow": "^11.11.3",
-    "rehype-mathjax": "^6.0.0",
+    "rehype-mathjax": "^7.1.0",
     "rehype-raw": "^7.0.0",
     "remark-gfm": "^4.0.1",
     "remark-math": "^6.0.0",
@@ -86,7 +89,7 @@
     "uuid": "^10.0.0",
     "vanilla-jsoneditor": "^2.3.3",
     "vite-plugin-svgr": "^4.2.0",
-    "vite-tsconfig-paths": "^4.3.2",
+    "vite-tsconfig-paths": "^6.0.3",
     "web-vitals": "^4.1.1",
     "whatwg-fetch": "^3.6.20",
     "zod": "^3.23.8",
@@ -129,7 +132,7 @@
   "devDependencies": {
     "@biomejs/biome": "2.1.1",
     "@jest/types": "^30.0.1",
-    "@modelcontextprotocol/server-everything": "^0.6.2",
+    "@modelcontextprotocol/server-everything": "^2025.12.18",
     "@playwright/test": "^1.56.0",
     "@storybook/addon-docs": "^10.1.0",
     "@storybook/addon-links": "^10.1.0",
@@ -149,7 +152,7 @@
     "@types/react-dom": "^19.2.3",
     "@types/sortablejs": "^1.15.8",
     "@types/uuid": "^9.0.8",
-    "@vitejs/plugin-react-swc": "^3.7.0",
+    "@vitejs/plugin-react-swc": "^4.2.2",
     "autoprefixer": "^10.4.19",
     "jest": "^30.0.3",
     "jest-environment-jsdom": "^30.0.2",
@@ -161,6 +164,6 @@
     "ts-jest": "^29.4.0",
     "typescript": "^5.4.5",
     "ua-parser-js": "^1.0.38",
-    "vite": "^5.4.21"
+    "vite": "^7.3.0"
   }
 }
