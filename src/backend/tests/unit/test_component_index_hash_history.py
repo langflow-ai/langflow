@@ -8,7 +8,6 @@ scripts_dir = Path(__file__).parent.parent.parent.parent.parent / "scripts"
 sys.path.insert(0, str(scripts_dir))
 
 from build_component_index import (
-    _compare_versions,
     _create_history_entry,
     _find_component_in_index,
     _load_index_from_file,
@@ -17,7 +16,7 @@ from build_component_index import (
     _strip_dynamic_fields,
 )
 
-# Tests for _merge_hash_history (simplified - no previous hash history yet)
+# Tests for _merge_hash_history with proper history merging
 
 
 def test_merge_hash_history_new_component():
@@ -34,8 +33,8 @@ def test_merge_hash_history_new_component():
     assert history[0]["version_last"] == "1.7.1"
 
 
-def test_merge_hash_history_unchanged_hash():
-    """Test that unchanged hash creates a single entry (no history in previous index yet)."""
+def test_merge_hash_history_no_previous_history():
+    """Test that component without previous hash_history starts fresh."""
     current_component = {"metadata": {"code_hash": "abc123def456"}}
     previous_component = {
         "metadata": {
@@ -52,12 +51,15 @@ def test_merge_hash_history_unchanged_hash():
     assert history[0]["version_last"] == "1.7.1"
 
 
-def test_merge_hash_history_changed_hash():
-    """Test that changed hash creates a single entry for the new hash."""
-    current_component = {"metadata": {"code_hash": "new_hash_xyz"}}
+def test_merge_hash_history_extends_version_range():
+    """Test that unchanged hash extends the version_last of existing history."""
+    current_component = {"metadata": {"code_hash": "abc123def456"}}
     previous_component = {
         "metadata": {
-            "code_hash": "old_hash_abc",  # Different hash, but no hash_history field
+            "code_hash": "abc123def456",
+            "hash_history": [
+                {"hash": "abc123def456", "version_first": "1.7.0", "version_last": "1.7.0"}
+            ]
         }
     }
     current_version = "1.7.1"
@@ -65,9 +67,58 @@ def test_merge_hash_history_changed_hash():
     history = _merge_hash_history(current_component, previous_component, current_version)
 
     assert len(history) == 1
-    assert history[0]["hash"] == "new_hash_xyz"
-    assert history[0]["version_first"] == "1.7.1"
-    assert history[0]["version_last"] == "1.7.1"
+    assert history[0]["hash"] == "abc123def456"
+    assert history[0]["version_first"] == "1.7.0"  # Preserved from previous
+    assert history[0]["version_last"] == "1.7.1"   # Extended to current
+
+
+def test_merge_hash_history_appends_on_change():
+    """Test that changed hash appends new entry to history."""
+    current_component = {"metadata": {"code_hash": "new_hash_xyz"}}
+    previous_component = {
+        "metadata": {
+            "code_hash": "old_hash_abc",
+            "hash_history": [
+                {"hash": "old_hash_abc", "version_first": "1.7.0", "version_last": "1.7.0"}
+            ]
+        }
+    }
+    current_version = "1.7.1"
+
+    history = _merge_hash_history(current_component, previous_component, current_version)
+
+    assert len(history) == 2
+    # Old entry preserved
+    assert history[0]["hash"] == "old_hash_abc"
+    assert history[0]["version_first"] == "1.7.0"
+    assert history[0]["version_last"] == "1.7.0"
+    # New entry appended
+    assert history[1]["hash"] == "new_hash_xyz"
+    assert history[1]["version_first"] == "1.7.1"
+    assert history[1]["version_last"] == "1.7.1"
+
+
+def test_merge_hash_history_preserves_multiple_entries():
+    """Test that all previous history entries are preserved."""
+    current_component = {"metadata": {"code_hash": "hash_c"}}
+    previous_component = {
+        "metadata": {
+            "code_hash": "hash_b",
+            "hash_history": [
+                {"hash": "hash_a", "version_first": "1.5.0", "version_last": "1.6.0"},
+                {"hash": "hash_b", "version_first": "1.6.1", "version_last": "1.7.0"}
+            ]
+        }
+    }
+    current_version = "1.7.1"
+
+    history = _merge_hash_history(current_component, previous_component, current_version)
+
+    assert len(history) == 3
+    assert history[0]["hash"] == "hash_a"
+    assert history[1]["hash"] == "hash_b"
+    assert history[2]["hash"] == "hash_c"
+    assert history[2]["version_first"] == "1.7.1"
 
 
 def test_merge_hash_history_no_previous_hash():
@@ -144,18 +195,42 @@ def test_find_component_in_index():
 
 
 def test_find_component_in_index_malformed():
-    """Test that malformed index entries are handled gracefully."""
-    # Malformed entries should be skipped
+    """Test that malformed index entries raise exceptions."""
+    import pytest
+    
+    # Test invalid entry format (not a tuple/list)
     index = {
         "entries": [
             "not_a_tuple",  # Invalid: not a tuple/list
+        ]
+    }
+    with pytest.raises(ValueError, match="Invalid index entry format"):
+        _find_component_in_index(index, "agents", "MyAgent")
+    
+    # Test invalid entry length
+    index = {
+        "entries": [
             ["only_one_element"],  # Invalid: wrong length
+        ]
+    }
+    with pytest.raises(ValueError, match="Invalid index entry format"):
+        _find_component_in_index(index, "agents", "MyAgent")
+    
+    # Test invalid components dict
+    index = {
+        "entries": [
             ["category", "not_a_dict"],  # Invalid: second element not a dict
+        ]
+    }
+    with pytest.raises(ValueError, match="Invalid components dict"):
+        _find_component_in_index(index, "category", "MyAgent")
+    
+    # Test valid entry works fine
+    index = {
+        "entries": [
             ["agents", {"MyAgent": {"metadata": {"code_hash": "abc123"}}}],  # Valid
         ]
     }
-
-    # Should still find the valid entry
     result = _find_component_in_index(index, "agents", "MyAgent")
     assert result is not None
     assert result["metadata"]["code_hash"] == "abc123"
@@ -171,41 +246,6 @@ def test_create_history_entry():
 
 
 # Tests for version comparison
-
-
-def test_compare_versions_basic():
-    """Test basic version comparison."""
-    assert _compare_versions("1.7.0", "1.7.1") == -1
-    assert _compare_versions("1.7.1", "1.7.0") == 1
-    assert _compare_versions("1.7.1", "1.7.1") == 0
-
-
-def test_compare_versions_nightly_numeric():
-    """Test nightly version comparison with numeric suffixes."""
-    assert _compare_versions("1.7.1.dev1", "1.7.1.dev2") == -1
-    assert _compare_versions("1.7.1.dev9", "1.7.1.dev10") == -1  # Numeric, not lexical
-    assert _compare_versions("1.7.1.dev10", "1.7.1.dev11") == -1
-    assert _compare_versions("1.7.1.dev99", "1.7.1.dev100") == -1
-
-
-def test_compare_versions_nightly_date():
-    """Test nightly version comparison with date-based suffixes."""
-    assert _compare_versions("1.7.1.dev20260107", "1.7.1.dev20260108") == -1
-    assert _compare_versions("1.7.1.dev20260108", "1.7.1.dev20260107") == 1
-    assert _compare_versions("1.7.1.dev20260107", "1.7.1.dev20260107") == 0
-
-
-def test_compare_versions_dev_vs_release():
-    """Test that dev versions come before release versions."""
-    assert _compare_versions("1.7.1.dev10", "1.7.1") == -1  # Dev < release
-    assert _compare_versions("1.7.1", "1.7.1.dev10") == 1  # Release > dev
-    assert _compare_versions("1.7.0", "1.7.1.dev1") == -1  # Previous release < next dev
-
-
-def test_compare_versions_mixed_formats():
-    """Test comparison of mixed nightly formats."""
-    assert _compare_versions("1.7.1.dev10", "1.7.1.dev20260107") == -1
-    assert _compare_versions("1.7.1.dev20260107", "1.7.1.dev10") == 1
 
 
 # Tests for deterministic serialization

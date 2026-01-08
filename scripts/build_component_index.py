@@ -8,6 +8,7 @@ need to import all component modules during startup.
 
 import hashlib
 import logging
+from multiprocessing import Value
 import sys
 from pathlib import Path
 
@@ -118,18 +119,89 @@ def _find_component_in_index(index: dict, category: str, component_name: str) ->
     for item in index.get("entries", []):
         # Validate entry structure: must be list/tuple with exactly 2 elements
         if not (isinstance(item, (list, tuple)) and len(item) == 2):
-            continue
+            raise ValueError(f"Invalid index entry format: {item}. Expected 2-element list/tuple.")
 
         cat_name, components_dict = item
 
         # Validate components_dict is actually a dict
         if not isinstance(components_dict, dict):
-            continue
+            raise ValueError(f"Invalid components dict for category {cat_name}")
 
         if cat_name == category and component_name in components_dict:
             return components_dict[component_name]
 
     return None
+
+# Constants for component metadata keys
+METADATA_KEY = "metadata"
+CODE_HASH_KEY = "code_hash"
+HASH_KEY = "hash"  # Key used in hash_history entries
+VERSION_FIRST_KEY = "version_first"
+VERSION_LAST_KEY = "version_last"
+
+
+def _get_component_hash(component: dict | None) -> str | None:
+    """Extract code hash from a component.
+
+    Args:
+        component: Component dict with metadata
+
+    Returns:
+        Code hash string or None if not found
+    """
+    if not component:
+        return None
+    return component.get(METADATA_KEY, {}).get(CODE_HASH_KEY)
+
+
+def _parse_version(version_str: str) -> Version:
+    """Parse a version string, handling nightly/dev builds.
+    
+    Args:
+        version_str: Version string (e.g., "1.7.1" or "1.7.1.dev14")
+    
+    Returns:
+        Parsed Version object
+        
+    Raises:
+        InvalidVersion: If version string is malformed
+    """
+    try:
+        return Version(version_str)
+    except InvalidVersion as e:
+        raise InvalidVersion(f"Invalid version string '{version_str}': {e}") from e
+
+
+def _validate_history_entry(entry: dict, entry_index: int) -> None:
+    """Validate a hash history entry has required fields and valid version range.
+    
+    Args:
+        entry: Hash history entry dict
+        entry_index: Index in history list (for error messages)
+        
+    Raises:
+        ValueError: If entry is malformed or has invalid version range
+    """
+    # Check required fields exist
+    if HASH_KEY not in entry:
+        raise ValueError(f"History entry {entry_index} missing required field '{HASH_KEY}'")
+    if VERSION_FIRST_KEY not in entry:
+        raise ValueError(f"History entry {entry_index} missing required field '{VERSION_FIRST_KEY}'")
+    if VERSION_LAST_KEY not in entry:
+        raise ValueError(f"History entry {entry_index} missing required field '{VERSION_LAST_KEY}'")
+    
+    # Validate version range (first <= last)
+    try:
+        version_first = _parse_version(entry[VERSION_FIRST_KEY])
+        version_last = _parse_version(entry[VERSION_LAST_KEY])
+        
+        if version_first > version_last:
+            raise ValueError(
+                f"History entry {entry_index} has invalid version range: "
+                f"{entry[VERSION_FIRST_KEY]} > {entry[VERSION_LAST_KEY]}"
+            )
+    except InvalidVersion as e:
+        raise ValueError(f"History entry {entry_index} has invalid version: {e}") from e
 
 
 def _create_history_entry(hash_value: str, version: str) -> dict:
@@ -141,8 +213,13 @@ def _create_history_entry(hash_value: str, version: str) -> dict:
 
     Returns:
         Hash history entry dict
+        
+    Raises:
+        InvalidVersion: If version string is malformed
     """
-    return {"hash": hash_value, "version_first": version, "version_last": version}
+    # Validate version can be parsed
+    _parse_version(version)
+    return {HASH_KEY: hash_value, VERSION_FIRST_KEY: version, VERSION_LAST_KEY: version}
 
 
 def _merge_hash_history(current_component: dict, previous_component: dict | None, current_version: str) -> list[dict]:
@@ -159,39 +236,66 @@ def _merge_hash_history(current_component: dict, previous_component: dict | None
     - Validates version ranges (first <= last)
     - Prevents version regression (current >= last)
     - Handles nightly build format (1.7.1.dev14)
-    - Normalizes old format entries to range format
+    - Validates all history entries have required fields
 
     Args:
         current_component: Current component data with code_hash
-        previous_component: Previous component data (has code_hash but no hash_history)
+        previous_component: Previous component data (has code_hash and possibly hash_history)
         current_version: Current Langflow version
 
     Returns:
         List of hash history entries with version ranges
+        
+    Raises:
+        ValueError: If history entries are malformed or version regression detected
+        InvalidVersion: If version strings cannot be parsed
     """
-    current_hash = current_component.get("metadata", {}).get("code_hash")
+    current_hash = _get_component_hash(current_component)
     if not current_hash:
         return []
 
-    # If no previous component, create first entry
-    if not previous_component:
+    # Parse and validate current version (will raise InvalidVersion if malformed)
+    current_ver = _parse_version(current_version)
+
+    # Get previous hash history if it exists
+    previous_history = []
+    if previous_component:
+        previous_history = previous_component.get(METADATA_KEY, {}).get("hash_history", [])
+    
+    # If no previous history exists, start fresh
+    if not previous_history:
         return [_create_history_entry(current_hash, current_version)]
-
-    # Get previous component's hash (not history, since it doesn't exist yet)
-    previous_hash = previous_component.get("metadata", {}).get("code_hash")
-
-    # If no previous hash, start fresh
-    if not previous_hash:
-        return [_create_history_entry(current_hash, current_version)]
-
-    # If hash unchanged, this is the first time we're tracking it
-    # Create a single entry for this hash
-    if previous_hash == current_hash:
-        return [_create_history_entry(current_hash, current_version)]
-
-    # Hash changed - create entry for the new hash
-    # (We don't have history of the old hash, so we just start tracking the new one)
-    return [_create_history_entry(current_hash, current_version)]
+    
+    # Validate all previous history entries (will raise on invalid entries)
+    for i, entry in enumerate(previous_history):
+        _validate_history_entry(entry, i)
+    
+    # Get the most recent history entry
+    last_entry = previous_history[-1]
+    last_hash = last_entry.get(HASH_KEY)
+    last_version_str = last_entry[VERSION_LAST_KEY]
+    
+    # Prevent version regression - current must be >= last
+    last_ver = _parse_version(last_version_str)
+    if current_ver < last_ver:
+        raise ValueError(
+            f"Version regression detected: current version {current_version} < "
+            f"last version {last_version_str}. Cannot build index with older version."
+        )
+    
+    # If hash hasn't changed, extend the version_last of the most recent entry
+    if current_hash == last_hash:
+        merged_history = previous_history[:-1] + [
+            {
+                HASH_KEY: last_hash,
+                VERSION_FIRST_KEY: last_entry[VERSION_FIRST_KEY],
+                VERSION_LAST_KEY: current_version,
+            }
+        ]
+        return merged_history
+    
+    # Hash changed - append new entry to history
+    return previous_history + [_create_history_entry(current_hash, current_version)]
 
 
 # Standard location for component index
