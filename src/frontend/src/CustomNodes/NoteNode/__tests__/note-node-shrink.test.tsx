@@ -145,7 +145,10 @@ describe("NoteNode Shrink Behavior", () => {
       const customHeight = 300;
 
       mockCurrentFlow.data.nodes = [
-        { id: "note-1", measured: { width: customWidth, height: customHeight } },
+        {
+          id: "note-1",
+          measured: { width: customWidth, height: customHeight },
+        },
       ];
 
       render(<NoteNode data={data} selected={false} />);
