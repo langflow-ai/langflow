@@ -79,7 +79,7 @@ export function FlowPageSlidingContainerContent({
   const handleExitFullscreen = () => {
     setIsFullscreen(false);
     setOpen(true);
-    setWidth(300);
+    setWidth(218);
   };
 
   const handleClose = () => {
@@ -121,8 +121,8 @@ export function FlowPageSlidingContainerContent({
       onDrop={onDrop}
     >
       <div className="flex-1 flex overflow-hidden">
-        <AnimatedConditional isOpen={sidebarOpen}>
-          <div className="h-full overflow-y-auto border-r border-border">
+        <AnimatedConditional isOpen={sidebarOpen} width="218px">
+          <div className="h-full overflow-y-auto border-r border-border w-218">
             <div className="p-4">
               <ChatSidebar
                 sessions={sessions}

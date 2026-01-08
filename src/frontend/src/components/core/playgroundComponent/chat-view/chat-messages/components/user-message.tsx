@@ -160,7 +160,7 @@ export const UserMessage = memo(
                     </>
                   )}
                   {chat.files && (
-                    <div className="my-2 flex w-full items-center gap-2 overflow-auto">
+                    <div className="my-2 flex w-full items-center gap-2 overflow-auto !m-0">
                       {chat.files?.map((file, index) => (
                         <FilePreviewDisplay
                           key={index}
