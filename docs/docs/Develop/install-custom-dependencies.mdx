@@ -40,7 +40,7 @@ The `langflow` package (main) provides optional dependency groups that extend it
 
 By default, installing `langflow` without any extras includes all dependencies listed in the `[project.dependencies]` section. Optional dependency groups are not installed by default and must be explicitly requested.
 
-These optional dependencies are listed in the [pyproject.toml](https://github.com/langflow-ai/langflow/blob/main/pyproject.toml) file under `[project.optional-dependencies]`.
+These optional dependencies are listed in the [langflow `pyproject.toml`](https://github.com/langflow-ai/langflow/blob/main/pyproject.toml) file under `[project.optional-dependencies]`.
 
 Install dependency groups using pip's `[extras]` syntax. For example, to install `langflow` with the `postgresql` dependency group, enter the following command:
 
@@ -51,7 +51,7 @@ uv pip install "langflow[postgresql]"
 To install multiple extras, use commas to separate each dependency group:
 
 ```bash
-uv pip install "langflow[local,postgresql]"
+uv pip install "langflow[postgresql,openai]"
 ```
 
 ### Install optional dependency groups for langflow-base
@@ -60,12 +60,9 @@ The `langflow-base` package (base) provides its own optional dependency groups t
 
 The `langflow` package (main) depends on `langflow-base`, so when you install `langflow`, it automatically includes `langflow-base` as a dependency.
 However, the optional dependency groups for `langflow` and `langflow-base` are different and managed separately.
+
 By default, installing `langflow-base` without any extras includes all dependencies listed in the `[project.dependencies]` section. Optional dependency groups are not installed by default and must be explicitly requested.
-
-By default, installing `langflow-base` without any extras includes all dependencies listed in the `[project.dependencies]` section.
-Optional dependency groups are not installed by default and must be explicitly requested.
-
-These optional dependency groups are listed in the in the [base `pyproject.toml`](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/pyproject.toml) file under `[project.optional-dependencies]`.
+These optional dependency groups are listed in the in the [langflow-base `pyproject.toml`](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/pyproject.toml) file under `[project.optional-dependencies]`.
 
 Install `langflow-base` with optional dependency groups using pip's `[extras]` syntax. For example, to install `langflow-base` with the `postgresql` dependency group:
 
@@ -89,7 +86,7 @@ uv pip install "langflow-base[all]"
 
 When testing locally, use a virtual environment to isolate your dependencies and prevent conflicts with other Python projects.
 
-For example, if you want to experiment with `matplotlib` with Langflow:
+For example, if you want to experiment with a custom dependency like `matplotlib` with Langflow:
 
 ```bash
 # Create and activate a virtual environment
@@ -100,13 +97,20 @@ source YOUR_LANGFLOW_VENV/bin/activate
 uv pip install langflow matplotlib
 ```
 
+You can also install `langflow-base` with specific optional dependency groups in your virtual environment:
+
+```bash
+# Install langflow-base with only the dependencies you need
+uv pip install "langflow-base[openai,chroma]" matplotlib
+```
+
 If you're working within a cloned Langflow repository, add dependencies with `uv add` to reference the existing `pyproject.toml` files:
 
 ```bash
 uv add matplotlib
 ```
 
-The `uv add` commands automatically update the `uv.lock` file in the appropriate location.
+The `uv add` command automatically updates the `uv.lock` file in the appropriate location.
 
 ## Add dependencies to the Langflow codebase
 
