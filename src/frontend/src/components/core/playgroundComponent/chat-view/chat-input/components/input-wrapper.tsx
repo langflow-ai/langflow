@@ -1,10 +1,10 @@
 import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
 import { ENABLE_VOICE_ASSISTANT } from "@/customization/feature-flags";
 import type { FilePreviewType } from "@/types/components";
+import FilePreviewDisplay from "../../utils/file-preview-display";
 import type { AudioRecordingState } from "../hooks/use-audio-recording";
 import AudioButton from "./audio-button";
 import ButtonSendWrapper from "./button-send-wrapper";
-import FilePreview from "./file-preview";
 import TextAreaWrapper from "./text-area-wrapper";
 import UploadFileButton from "./upload-file-button";
 
@@ -96,14 +96,16 @@ const InputWrapper = ({
         {files.length > 0 && (
           <div className={classNameFilePreview}>
             {files.map((file) => (
-              <FilePreview
-                error={file.error}
+              <FilePreviewDisplay
                 file={file.file}
                 loading={file.loading}
-                key={file.id}
+                error={file.error}
+                showDelete={true}
                 onDelete={() => {
                   handleDeleteFile(file);
                 }}
+                variant="compact"
+                key={file.id}
               />
             ))}
           </div>

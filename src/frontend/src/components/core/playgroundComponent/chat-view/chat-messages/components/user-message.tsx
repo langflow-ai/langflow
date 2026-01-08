@@ -7,9 +7,9 @@ import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { chatMessagePropsType } from "@/types/components";
 import { cn } from "@/utils/utils";
+import FilePreviewDisplay from "../../utils/file-preview-display";
 import { convertFiles } from "../utils/convert-files";
 import EditMessageField from "./edit-message-field";
-import FileCardWrapper from "./file-card-wrapper";
 import { EditMessageButton } from "./message-options";
 
 export const UserMessage = memo(
@@ -109,7 +109,7 @@ export const UserMessage = memo(
           >
             {/* Avatar */}
             <div
-              className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded border border-border text-2xl hover-border-input"
+              className="relative hidden h-8 w-8 items-center justify-center overflow-hidden rounded border border-border text-2xl hover-border-input @[45rem]/chat-panel:!flex"
               style={
                 chat.properties?.background_color
                   ? { backgroundColor: chat.properties.background_color }
@@ -160,12 +160,13 @@ export const UserMessage = memo(
                     </>
                   )}
                   {chat.files && (
-                    <div className="my-2 flex flex-col gap-5">
+                    <div className="my-2 flex w-full items-center gap-2 overflow-auto">
                       {chat.files?.map((file, index) => (
-                        <FileCardWrapper
+                        <FilePreviewDisplay
                           key={index}
-                          index={index}
-                          path={file}
+                          file={file}
+                          variant="compact"
+                          showDelete={false}
                         />
                       ))}
                     </div>

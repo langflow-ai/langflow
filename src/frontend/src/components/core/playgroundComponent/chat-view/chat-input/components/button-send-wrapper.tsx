@@ -38,11 +38,6 @@ const ButtonSendWrapper = ({
     }
   };
 
-  // Don't render if noInput is true
-  if (noInput) {
-    return null;
-  }
-
   return (
     <Button
       className={cn(
