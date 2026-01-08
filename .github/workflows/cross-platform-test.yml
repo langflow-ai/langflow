@@ -438,9 +438,14 @@ jobs:
           enable-cache: false
           ignore-empty-workdir: true
 
-      - name: Install Protocol Buffers (macOS)
-        if: matrix.os == 'macos'
-        run: brew install protobuf
+      - name: Install Protocol Buffers (macOS AMD64)
+        if: matrix.os == 'macos' && matrix.arch == 'amd64'
+        run: |
+          if ! command -v protoc &> /dev/null; then
+            brew install protobuf
+          else
+            echo "protoc already installed, skipping"
+          fi
         shell: bash
 
       # Download artifacts for wheel installation
