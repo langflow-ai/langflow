@@ -488,7 +488,6 @@ async def test_copy_profile_pictures_handles_missing_config_dir():
             await copy_profile_pictures()
 
 
-
 # ==================== Hash History Tests ====================
 
 
@@ -671,4 +670,3 @@ def test_update_projects_handles_components_without_hash_history():
     # Should not raise an error
     updated_project = update_projects_components_with_latest_component_versions(project_data, all_types_dict)
     assert updated_project["nodes"][0]["data"]["node"]["template"]["code"]["value"] == "test code"
-

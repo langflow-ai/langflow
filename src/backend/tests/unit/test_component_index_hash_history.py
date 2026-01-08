@@ -298,4 +298,3 @@ def test_strip_dynamic_fields():
     assert "deprecated_at" not in result
     assert "data" in result["nested"]
     assert "timestamp" not in result["nested"]
-
