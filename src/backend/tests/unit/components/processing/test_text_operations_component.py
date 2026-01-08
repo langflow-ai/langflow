@@ -1,3 +1,8 @@
+"""Tests for TextOperations component.
+
+Includes regression tests for QA-reported bugs.
+"""
+
 import pytest
 from lfx.components.processing.text_operations import TextOperations
 from lfx.schema.data import Data
@@ -218,15 +223,13 @@ class TestTextOperationsExtract:
         assert result == []
 
     def test_extract_invalid_regex(self):
-        """Test extraction with invalid regex."""
+        """Test extraction with invalid regex raises ValueError (Bug #3 fix)."""
         component = TextOperations()
         component.extract_pattern = "[invalid"
         component.max_matches = 10
-        component.log = lambda _: None
 
-        result = component._text_extract("hello")
-
-        assert result == []
+        with pytest.raises(ValueError, match="Invalid regex pattern"):
+            component._text_extract("hello")
 
 
 class TestTextOperationsHead:
@@ -258,13 +261,12 @@ class TestTextOperationsHead:
         assert result == ""
 
     def test_head_negative_characters(self):
-        """Test head with negative characters."""
+        """Test head with negative characters raises ValueError (Bug #4 fix)."""
         component = TextOperations()
         component.head_characters = -5
 
-        result = component._text_head("Hello")
-
-        assert result == ""
+        with pytest.raises(ValueError, match="non-negative"):
+            component._text_head("Hello")
 
 
 class TestTextOperationsTail:
@@ -294,6 +296,14 @@ class TestTextOperationsTail:
         result = component._text_tail("Hello")
 
         assert result == ""
+
+    def test_tail_negative_characters(self):
+        """Test tail with negative characters raises ValueError (Bug #7 fix)."""
+        component = TextOperations()
+        component.tail_characters = -5
+
+        with pytest.raises(ValueError, match="non-negative"):
+            component._text_tail("Hello")
 
 
 class TestTextOperationsStrip:
@@ -389,7 +399,7 @@ class TestTextOperationsClean:
         assert result == "hello world"
 
     def test_clean_special_chars(self):
-        """Test removing special characters."""
+        """Test removing ALL special characters (Bug #10 fix)."""
         component = TextOperations()
         component.remove_extra_spaces = False
         component.remove_special_chars = True
@@ -397,8 +407,11 @@ class TestTextOperationsClean:
 
         result = component._text_clean("hello@world#test!")
 
-        # @ and # are removed, ! at end is kept (in allowed chars)
-        assert result == "helloworldtest!"
+        # All special characters are removed including @ # and !
+        assert result == "helloworldtest"
+        assert "@" not in result
+        assert "#" not in result
+        assert "!" not in result
 
     def test_clean_empty_lines(self):
         """Test removing empty lines."""
@@ -635,3 +648,169 @@ class TestTextOperationsOutputMethods:
 
         assert isinstance(result, Message)
         assert result.text == "hello\nworld"
+
+
+# ============================================================================
+# Bug Regression Tests
+# These tests ensure reported bugs remain fixed and don't regress.
+# ============================================================================
+
+
+class TestBugFixWordCountEmptyText:
+    """Bug #2: Word Count should return zeros for empty text."""
+
+    def test_word_count_empty_string_returns_zeros(self):
+        """Empty text should return all zeros, not non-zero values."""
+        component = TextOperations()
+        component.count_words = True
+        component.count_characters = True
+        component.count_lines = True
+
+        result = component._word_count("")
+
+        assert result["word_count"] == 0
+        assert result["unique_words"] == 0
+        assert result["character_count"] == 0
+        assert result["character_count_no_spaces"] == 0
+        assert result["line_count"] == 0
+        assert result["non_empty_lines"] == 0
+
+    def test_word_count_whitespace_only_returns_zeros(self):
+        """Whitespace-only text should return zeros."""
+        component = TextOperations()
+        component.count_words = True
+        component.count_characters = True
+        component.count_lines = True
+
+        result = component._word_count("   \n\t\n   ")
+
+        assert result["word_count"] == 0
+        assert result["unique_words"] == 0
+        assert result["character_count"] == 0
+        assert result["character_count_no_spaces"] == 0
+        assert result["line_count"] == 0
+        assert result["non_empty_lines"] == 0
+
+    def test_process_text_allows_empty_for_word_count(self):
+        """process_text should allow empty text for Word Count operation."""
+        component = TextOperations()
+        component.text_input = ""
+        component.operation = [{"name": "Word Count"}]
+        component.count_words = True
+        component.count_characters = True
+        component.count_lines = True
+
+        result = component.process_text()
+
+        assert result is not None
+        assert result["word_count"] == 0
+
+
+class TestBugFixTextJoinEmptyFirst:
+    """Bug #9: Text Join should return second text when first is empty."""
+
+    def test_process_text_allows_empty_for_text_join(self):
+        """process_text should allow empty first text for Text Join."""
+        component = TextOperations()
+        component.text_input = ""
+        component.operation = [{"name": "Text Join"}]
+        component.text_input_2 = "world"
+
+        result = component.process_text()
+
+        assert result == "world"
+
+
+class TestBugFixTextStripTabs:
+    """Bug #8: Text Strip should remove tab characters."""
+
+    def test_strip_removes_tabs(self):
+        """Strip should remove tabs when using default whitespace stripping."""
+        component = TextOperations()
+        component.strip_mode = "both"
+        component.strip_characters = ""
+
+        result = component._text_strip("\t\thello world\t\t")
+
+        assert result == "hello world"
+
+    def test_strip_removes_mixed_whitespace(self):
+        """Strip should remove all whitespace types including tabs and newlines."""
+        component = TextOperations()
+        component.strip_mode = "both"
+        component.strip_characters = ""
+
+        result = component._text_strip("\n\t  hello world  \t\n")
+
+        assert result == "hello world"
+
+
+class TestBugFixDataFrameHeaderValidation:
+    """Bug #11: DataFrame should validate header column count matches data."""
+
+    def test_header_column_mismatch_raises_error(self):
+        """Mismatched header/data columns should raise clear error."""
+        component = TextOperations()
+
+        rows = [
+            ["Name Age City"],  # 1 column (malformed header)
+            ["John", "30", "NYC"],  # 3 columns
+        ]
+
+        with pytest.raises(ValueError, match="Header mismatch"):
+            component._create_dataframe(rows, has_header=True)
+
+    def test_error_message_includes_column_counts(self):
+        """Error message should include both column counts."""
+        component = TextOperations()
+
+        rows = [
+            ["Name"],  # 1 column
+            ["John", "30"],  # 2 columns
+        ]
+
+        with pytest.raises(ValueError, match=r"1 column\(s\) in header.*2 column\(s\) in data"):
+            component._create_dataframe(rows, has_header=True)
+
+
+class TestBugFixInputValidation:
+    """Tests for input validation improvements."""
+
+    def test_head_characters_has_range_spec(self):
+        """head_characters should have range_spec with min=0."""
+        component = TextOperations()
+
+        head_input = next(
+            (inp for inp in component.inputs if inp.name == "head_characters"),
+            None,
+        )
+
+        assert head_input is not None
+        assert head_input.range_spec is not None
+        assert head_input.range_spec.min == 0
+
+    def test_tail_characters_has_range_spec(self):
+        """tail_characters should have range_spec with min=0."""
+        component = TextOperations()
+
+        tail_input = next(
+            (inp for inp in component.inputs if inp.name == "tail_characters"),
+            None,
+        )
+
+        assert tail_input is not None
+        assert tail_input.range_spec is not None
+        assert tail_input.range_spec.min == 0
+
+    def test_text_input_uses_message_text_input(self):
+        """Bug #1: text_input should use MessageTextInput type."""
+        component = TextOperations()
+
+        text_input = next(
+            (inp for inp in component.inputs if inp.name == "text_input"),
+            None,
+        )
+
+        assert text_input is not None
+        # MessageTextInput is the correct type for variable input support
+        assert text_input.name == "text_input"

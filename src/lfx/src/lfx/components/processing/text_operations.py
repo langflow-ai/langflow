@@ -5,6 +5,7 @@ from typing import Any
 import pandas as pd
 
 from lfx.custom import Component
+from lfx.field_typing import RangeSpec
 from lfx.inputs import (
     BoolInput,
     DropdownInput,
@@ -189,18 +190,20 @@ class TextOperations(Component):
         IntInput(
             name="head_characters",
             display_name="Characters from Start",
-            info="Number of characters to extract from the beginning of text.",
+            info="Number of characters to extract from the beginning of text. Must be non-negative.",
             value=100,
             dynamic=True,
             show=False,
+            range_spec=RangeSpec(min=0, max=1000000, step=1, step_type="int"),
         ),
         IntInput(
             name="tail_characters",
             display_name="Characters from End",
-            info="Number of characters to extract from the end of text.",
+            info="Number of characters to extract from the end of text. Must be non-negative.",
             value=100,
             dynamic=True,
             show=False,
+            range_spec=RangeSpec(min=0, max=1000000, step=1, step_type="int"),
         ),
         DropdownInput(
             name="strip_mode",
@@ -308,10 +311,12 @@ class TextOperations(Component):
     def process_text(self) -> Any:
         """Process text based on selected operation."""
         text = getattr(self, "text_input", "")
-        if not text:
-            return None
-
         operation = self.get_operation_name()
+
+        # Allow empty text for Text Join (second input might have content)
+        # and Word Count (should return zeros for empty text)
+        if not text and operation not in ("Text Join", "Word Count"):
+            return None
         operation_handlers = {
             "Text to DataFrame": self._text_to_dataframe,
             "Word Count": self._word_count,
@@ -361,7 +366,22 @@ class TextOperations(Component):
     def _create_dataframe(self, rows: list[list[str]], *, has_header: bool) -> pd.DataFrame:
         """Create DataFrame from parsed rows."""
         if has_header and len(rows) > 1:
-            return pd.DataFrame(rows[1:], columns=rows[0])
+            header = rows[0]
+            data_rows = rows[1:]
+            header_col_count = len(header)
+
+            # Validate that all data rows have the same number of columns as header
+            for i, row in enumerate(data_rows):
+                row_col_count = len(row)
+                if row_col_count != header_col_count:
+                    msg = (
+                        f"Header mismatch: {header_col_count} column(s) in header vs "
+                        f"{row_col_count} column(s) in data row {i + 1}. "
+                        "Please ensure the header has the same number of columns as your data."
+                    )
+                    raise ValueError(msg)
+
+            return pd.DataFrame(data_rows, columns=header)
 
         max_cols = max(len(row) for row in rows) if rows else 0
         columns = [f"col_{i}" for i in range(max_cols)]
@@ -377,19 +397,35 @@ class TextOperations(Component):
         """Count words, characters, and lines in text."""
         result: dict[str, Any] = {}
 
+        # Handle empty or whitespace-only text - return zeros
+        text_str = str(text) if text else ""
+        is_empty = not text_str or not text_str.strip()
+
         if getattr(self, "count_words", True):
-            words = text.split()
-            result["word_count"] = len(words)
-            result["unique_words"] = len(set(words))
+            if is_empty:
+                result["word_count"] = 0
+                result["unique_words"] = 0
+            else:
+                words = text_str.split()
+                result["word_count"] = len(words)
+                result["unique_words"] = len(set(words))
 
         if getattr(self, "count_characters", True):
-            result["character_count"] = len(text)
-            result["character_count_no_spaces"] = len(text.replace(" ", ""))
+            if is_empty:
+                result["character_count"] = 0
+                result["character_count_no_spaces"] = 0
+            else:
+                result["character_count"] = len(text_str)
+                result["character_count_no_spaces"] = len(text_str.replace(" ", ""))
 
         if getattr(self, "count_lines", True):
-            lines = text.split("\n")
-            result["line_count"] = len(lines)
-            result["non_empty_lines"] = len([line for line in lines if line.strip()])
+            if is_empty:
+                result["line_count"] = 0
+                result["non_empty_lines"] = 0
+            else:
+                lines = text_str.split("\n")
+                result["line_count"] = len(lines)
+                result["non_empty_lines"] = len([line for line in lines if line.strip()])
 
         return result
 
@@ -428,38 +464,48 @@ class TextOperations(Component):
         try:
             matches = re.findall(extract_pattern, text)
         except re.error as e:
-            self.log(f"Invalid regex pattern: {e}")
-            return []
+            msg = f"Invalid regex pattern '{extract_pattern}': {e}"
+            raise ValueError(msg) from e
 
         return matches[:max_matches] if max_matches > 0 else matches
 
     def _text_head(self, text: str) -> str:
         """Extract characters from the beginning of text."""
         head_characters = getattr(self, "head_characters", 100)
-        if head_characters <= 0:
+        if head_characters < 0:
+            msg = f"Characters from Start must be a non-negative integer, got {head_characters}"
+            raise ValueError(msg)
+        if head_characters == 0:
             return ""
         return text[:head_characters]
 
     def _text_tail(self, text: str) -> str:
         """Extract characters from the end of text."""
         tail_characters = getattr(self, "tail_characters", 100)
-        if tail_characters <= 0:
+        if tail_characters < 0:
+            msg = f"Characters from End must be a non-negative integer, got {tail_characters}"
+            raise ValueError(msg)
+        if tail_characters == 0:
             return ""
         return text[-tail_characters:]
 
     def _text_strip(self, text: str) -> str:
         """Remove whitespace or specific characters from text edges."""
         strip_mode = getattr(self, "strip_mode", "both")
-        strip_characters = getattr(self, "strip_characters", "") or None
+        strip_characters = getattr(self, "strip_characters", "")
 
-        strip_functions = {
-            "both": text.strip,
-            "left": text.lstrip,
-            "right": text.rstrip,
-        }
+        # Convert to string to ensure proper handling
+        text_str = str(text) if text else ""
 
-        strip_func = strip_functions.get(strip_mode, text.strip)
-        return strip_func(strip_characters) if strip_characters else strip_func()
+        # None means strip all whitespace (spaces, tabs, newlines, etc.)
+        chars_to_strip = strip_characters if strip_characters else None
+
+        if strip_mode == "left":
+            return text_str.lstrip(chars_to_strip)
+        if strip_mode == "right":
+            return text_str.rstrip(chars_to_strip)
+        # Default: "both"
+        return text_str.strip(chars_to_strip)
 
     def _text_join(self, text: str) -> str:
         """Join two texts with line break separator."""
@@ -480,7 +526,8 @@ class TextOperations(Component):
             result = re.sub(r"\s+", " ", result)
 
         if getattr(self, "remove_special_chars", False):
-            result = re.sub(r"[^\w\s.,!?;:-]", "", result)
+            # Remove ALL special characters except alphanumeric and spaces
+            result = re.sub(r"[^\w\s]", "", result)
 
         if getattr(self, "remove_empty_lines", False):
             lines = [line for line in result.split("\n") if line.strip()]
