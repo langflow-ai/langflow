@@ -16,7 +16,8 @@ import orjson
 try:
     from packaging.version import InvalidVersion, Version
 except ImportError as e:
-    raise ImportError("The 'packaging' library is required for version comparison") from e
+    msg = "The 'packaging' library is required for version comparison"
+    raise ImportError(msg) from e
 
 logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s", stream=sys.stderr)
 logger = logging.getLogger(__name__)
@@ -90,11 +91,11 @@ def _load_index_from_file(index_path: Path) -> dict | None:
         if not isinstance(data, dict):
             logger.warning("Index file %s does not contain a JSON object", index_path)
             return None
-
-        return data
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.warning("Could not load index from %s: %s", index_path, e)
         return None
+    else:
+        return data
 
 
 def _find_component_in_index(index: dict, category: str, component_name: str) -> dict | None:
@@ -114,16 +115,21 @@ def _find_component_in_index(index: dict, category: str, component_name: str) ->
     if not index or "entries" not in index:
         return None
 
+    # Index entries are [category_name, components_dict] tuples
+    entry_tuple_size = 2
+
     for item in index.get("entries", []):
         # Validate entry structure: must be list/tuple with exactly 2 elements
-        if not (isinstance(item, (list, tuple)) and len(item) == 2):
-            raise ValueError(f"Invalid index entry format: {item}. Expected 2-element list/tuple.")
+        if not (isinstance(item, (list, tuple)) and len(item) == entry_tuple_size):
+            msg = f"Invalid index entry format: {item}. Expected {entry_tuple_size}-element list/tuple."
+            raise ValueError(msg)
 
         cat_name, components_dict = item
 
         # Validate components_dict is actually a dict
         if not isinstance(components_dict, dict):
-            raise ValueError(f"Invalid components dict for category {cat_name}")
+            msg = f"Invalid components dict for category {cat_name}"
+            raise TypeError(msg)
 
         if cat_name == category and component_name in components_dict:
             return components_dict[component_name]
@@ -168,7 +174,8 @@ def _parse_version(version_str: str) -> Version:
     try:
         return Version(version_str)
     except InvalidVersion as e:
-        raise InvalidVersion(f"Invalid version string '{version_str}': {e}") from e
+        msg = f"Invalid version string '{version_str}': {e}"
+        raise InvalidVersion(msg) from e
 
 
 def _validate_history_entry(entry: dict, entry_index: int) -> None:
@@ -183,11 +190,14 @@ def _validate_history_entry(entry: dict, entry_index: int) -> None:
     """
     # Check required fields exist
     if HASH_KEY not in entry:
-        raise ValueError(f"History entry {entry_index} missing required field '{HASH_KEY}'")
+        msg = f"History entry {entry_index} missing required field '{HASH_KEY}'"
+        raise ValueError(msg)
     if VERSION_FIRST_KEY not in entry:
-        raise ValueError(f"History entry {entry_index} missing required field '{VERSION_FIRST_KEY}'")
+        msg = f"History entry {entry_index} missing required field '{VERSION_FIRST_KEY}'"
+        raise ValueError(msg)
     if VERSION_LAST_KEY not in entry:
-        raise ValueError(f"History entry {entry_index} missing required field '{VERSION_LAST_KEY}'")
+        msg = f"History entry {entry_index} missing required field '{VERSION_LAST_KEY}'"
+        raise ValueError(msg)
 
     # Validate version range (first <= last)
     try:
@@ -195,12 +205,16 @@ def _validate_history_entry(entry: dict, entry_index: int) -> None:
         version_last = _parse_version(entry[VERSION_LAST_KEY])
 
         if version_first > version_last:
-            raise ValueError(
+            msg = (
                 f"History entry {entry_index} has invalid version range: "
                 f"{entry[VERSION_FIRST_KEY]} > {entry[VERSION_LAST_KEY]}"
             )
+            raise ValueError(
+                msg
+            )
     except InvalidVersion as e:
-        raise ValueError(f"History entry {entry_index} has invalid version: {e}") from e
+        msg = f"History entry {entry_index} has invalid version: {e}"
+        raise ValueError(msg) from e
 
 
 def _create_history_entry(hash_value: str, version: str) -> dict:
@@ -277,24 +291,27 @@ def _merge_hash_history(current_component: dict, existing_component: dict | None
     # Prevent version regression - current must be >= last
     last_ver = _parse_version(last_version_str)
     if current_ver < last_ver:
-        raise ValueError(
+        msg = (
             f"Version regression detected: current version {current_version} < "
             f"last version {last_version_str}. Cannot build index with older version."
+        )
+        raise ValueError(
+            msg
         )
 
     # If hash hasn't changed, extend the version_last of the most recent entry
     if current_hash == last_hash:
-        merged_history = existing_history[:-1] + [
+        return [
+            *existing_history[:-1],
             {
                 HASH_KEY: last_hash,
                 VERSION_FIRST_KEY: last_entry[VERSION_FIRST_KEY],
                 VERSION_LAST_KEY: current_version,
-            }
+            },
         ]
-        return merged_history
 
     # Hash changed - append new entry to history
-    return existing_history + [_create_history_entry(current_hash, current_version)]
+    return [*existing_history, _create_history_entry(current_hash, current_version)]
 
 
 # Standard location for component index
@@ -334,9 +351,11 @@ def _import_components() -> tuple[dict, int]:
         modules_dict = components_result.get("components", {})
         components_count = sum(len(v) for v in modules_dict.values())
         print(f"Discovered {components_count} components across {len(modules_dict)} categories")
-        return modules_dict, components_count
     except Exception as e:
-        raise RuntimeError(f"Failed to import components: {e}") from e
+        msg = f"Failed to import components: {e}"
+        raise RuntimeError(msg) from e
+    else:
+        return modules_dict, components_count
 
 
 def build_component_index():
