@@ -360,6 +360,13 @@
                 ],
                 "total_dependencies": 1
               },
+              "hash_history": [
+                {
+                  "hash": "3d80f125b734",
+                  "version_first": "1.7.1",
+                  "version_last": "1.7.1"
+                }
+              ],
               "module": "lfx.components.input_output.text.TextInputComponent"
             },
             "output_types": [],
@@ -491,6 +498,13 @@
                 ],
                 "total_dependencies": 3
               },
+              "hash_history": [
+                {
+                  "hash": "8c87e536cca4",
+                  "version_first": "1.7.1",
+                  "version_last": "1.7.1"
+                }
+              ],
               "module": "lfx.components.input_output.chat_output.ChatOutput"
             },
             "output_types": [],
@@ -781,6 +795,13 @@
                 ],
                 "total_dependencies": 1
               },
+              "hash_history": [
+                {
+                  "hash": "3cda25c3f7b5",
+                  "version_first": "1.7.1",
+                  "version_last": "1.7.1"
+                }
+              ],
               "module": "lfx.components.processing.parser.ParserComponent"
             },
             "minimized": false,
@@ -989,6 +1010,13 @@
                 ],
                 "total_dependencies": 4
               },
+              "hash_history": [
+                {
+                  "hash": "47d3ccb92d71",
+                  "version_first": "1.7.1",
+                  "version_last": "1.7.1"
+                }
+              ],
               "module": "lfx.components.data_source.url.URLComponent"
             },
             "minimized": false,

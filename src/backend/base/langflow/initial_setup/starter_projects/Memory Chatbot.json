@@ -158,6 +158,13 @@
                 ],
                 "total_dependencies": 1
               },
+              "hash_history": [
+                {
+                  "hash": "7a26c54d89ed",
+                  "version_first": "1.7.1",
+                  "version_last": "1.7.1"
+                }
+              ],
               "module": "lfx.components.input_output.chat.ChatInput"
             },
             "output_types": [],
@@ -439,6 +446,13 @@
                 ],
                 "total_dependencies": 3
               },
+              "hash_history": [
+                {
+                  "hash": "8c87e536cca4",
+                  "version_first": "1.7.1",
+                  "version_last": "1.7.1"
+                }
+              ],
               "module": "lfx.components.input_output.chat_output.ChatOutput"
             },
             "output_types": [],
@@ -903,6 +917,13 @@
                 ],
                 "total_dependencies": 1
               },
+              "hash_history": [
+                {
+                  "hash": "efd064ef48ff",
+                  "version_first": "1.7.1",
+                  "version_last": "1.7.1"
+                }
+              ],
               "module": "lfx.components.models_and_agents.memory.MemoryComponent"
             },
             "minimized": false,
