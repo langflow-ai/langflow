@@ -222,15 +222,15 @@ def _create_history_entry(hash_value: str, version: str) -> dict:
     return {HASH_KEY: hash_value, VERSION_FIRST_KEY: version, VERSION_LAST_KEY: version}
 
 
-def _merge_hash_history(current_component: dict, previous_component: dict | None, current_version: str) -> list[dict]:
-    """Merge hash history from previous index with current component using version ranges.
+def _merge_hash_history(current_component: dict, existing_component: dict | None, current_version: str) -> list[dict]:
+    """Merge hash history from existing index with current component using version ranges.
 
     This approach stores version ranges (version_first to version_last) for each hash,
     which dramatically reduces storage when components don't change between versions.
 
     During development of a version:
     - If hash unchanged: Extend version_last of current range
-    - If hash changed: Close previous range, start new range
+    - If hash changed: Close existing range, start new range
 
     Includes safeguards:
     - Validates version ranges (first <= last)
@@ -240,7 +240,7 @@ def _merge_hash_history(current_component: dict, previous_component: dict | None
 
     Args:
         current_component: Current component data with code_hash
-        previous_component: Previous component data (has code_hash and possibly hash_history)
+        existing_component: Existing component from disk 
         current_version: Current Langflow version
 
     Returns:
@@ -257,21 +257,21 @@ def _merge_hash_history(current_component: dict, previous_component: dict | None
     # Parse and validate current version (will raise InvalidVersion if malformed)
     current_ver = _parse_version(current_version)
 
-    # Get previous hash history if it exists
-    previous_history = []
-    if previous_component:
-        previous_history = previous_component.get(METADATA_KEY, {}).get("hash_history", [])
-
-    # If no previous history exists, start fresh
-    if not previous_history:
+    # Get existing hash history if it exists
+    existing_history = []
+    if existing_component:
+        existing_history = existing_component.get(METADATA_KEY, {}).get("hash_history", [])
+    
+    # If no existing history, start fresh
+    if not existing_history:
         return [_create_history_entry(current_hash, current_version)]
-
-    # Validate all previous history entries (will raise on invalid entries)
-    for i, entry in enumerate(previous_history):
+    
+    # Validate all existing history entries (will raise on invalid entries)
+    for i, entry in enumerate(existing_history):
         _validate_history_entry(entry, i)
 
     # Get the most recent history entry
-    last_entry = previous_history[-1]
+    last_entry = existing_history[-1]
     last_hash = last_entry.get(HASH_KEY)
     last_version_str = last_entry[VERSION_LAST_KEY]
 
@@ -285,7 +285,7 @@ def _merge_hash_history(current_component: dict, previous_component: dict | None
 
     # If hash hasn't changed, extend the version_last of the most recent entry
     if current_hash == last_hash:
-        merged_history = previous_history[:-1] + [
+        merged_history = existing_history[:-1] + [
             {
                 HASH_KEY: last_hash,
                 VERSION_FIRST_KEY: last_entry[VERSION_FIRST_KEY],
@@ -295,34 +295,25 @@ def _merge_hash_history(current_component: dict, previous_component: dict | None
         return merged_history
 
     # Hash changed - append new entry to history
-    return previous_history + [_create_history_entry(current_hash, current_version)]
+    return existing_history + [_create_history_entry(current_hash, current_version)]
 
 
 # Standard location for component index
 COMPONENT_INDEX_PATH = Path(__file__).parent.parent / "src" / "lfx" / "src" / "lfx" / "_assets" / "component_index.json"
 
 
-def _load_previous_index_for_history(preserve_history: bool, previous_index_path: Path | None) -> dict | None:
-    """Load previous index if history preservation is enabled.
-
-    Args:
-        preserve_history: Whether to load previous index
-        previous_index_path: Optional custom path to previous index
+def _load_existing_index() -> dict | None:
+    """Load existing index from disk for history merging.
 
     Returns:
-        Previous index dict or None
+        Existing index dict or None if not found
     """
-    if not preserve_history:
-        return None
+    existing_index = _load_index_from_file(COMPONENT_INDEX_PATH)
 
-    # Use provided path or default to standard location
-    index_path = previous_index_path if previous_index_path is not None else COMPONENT_INDEX_PATH
-    previous_index = _load_index_from_file(index_path)
+    if existing_index:
+        print(f"Loaded existing index (version {existing_index.get('version', 'unknown')})")
 
-    if previous_index:
-        print(f"Loaded previous index (version {previous_index.get('version', 'unknown')})")
-
-    return previous_index
+    return existing_index
 
 
 def _import_components() -> tuple[dict, int]:
@@ -349,19 +340,17 @@ def _import_components() -> tuple[dict, int]:
         raise RuntimeError(f"Failed to import components: {e}") from e
 
 
-def build_component_index(preserve_history: bool = True, previous_index_path: Path | None = None):
+def build_component_index():
     """Build the component index by scanning all modules in lfx.components.
-
-    Args:
-        preserve_history: If True, merge hash history from previous index
-        previous_index_path: Path to previous index (defaults to standard location)
+    
+    Merges hash history from the existing index to track component evolution.
 
     Returns:
         A dictionary containing version, entries, and sha256 hash
     """
     print("Building component index...")
 
-    previous_index = _load_previous_index_for_history(preserve_history, previous_index_path)
+    existing_index = _load_existing_index()
 
     try:
         modules_dict, components_count = _import_components()
@@ -384,10 +373,10 @@ def build_component_index(preserve_history: bool = True, previous_index_path: Pa
             component = dict(components_dict[comp_name])
             component["metadata"] = dict(component.get("metadata", {}))
 
-            if preserve_history and previous_index:
-                previous_component = _find_component_in_index(previous_index, category_name, comp_name)
-                hash_history = _merge_hash_history(component, previous_component, current_version)
-                component["metadata"]["hash_history"] = hash_history
+            # Always merge hash history from existing index
+            existing_component = _find_component_in_index(existing_index, category_name, comp_name) if existing_index else None
+            hash_history = _merge_hash_history(component, existing_component, current_version)
+            component["metadata"]["hash_history"] = hash_history
 
             sorted_components[comp_name] = component
 
