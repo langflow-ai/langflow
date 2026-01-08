@@ -299,5 +299,3 @@ def test_strip_dynamic_fields():
     assert "data" in result["nested"]
     assert "timestamp" not in result["nested"]
 
-
-# Made with Bob
