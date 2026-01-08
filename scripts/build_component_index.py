@@ -18,7 +18,6 @@ try:
 except ImportError as e:
     raise ImportError("The 'packaging' library is required for version comparison") from e
 
-# Configure logging for build script
 logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s", stream=sys.stderr)
 logger = logging.getLogger(__name__)
 
@@ -240,7 +239,7 @@ def _merge_hash_history(current_component: dict, existing_component: dict | None
 
     Args:
         current_component: Current component data with code_hash
-        existing_component: Existing component from disk 
+        existing_component: Existing component from disk
         current_version: Current Langflow version
 
     Returns:
@@ -261,11 +260,11 @@ def _merge_hash_history(current_component: dict, existing_component: dict | None
     existing_history = []
     if existing_component:
         existing_history = existing_component.get(METADATA_KEY, {}).get("hash_history", [])
-    
+
     # If no existing history, start fresh
     if not existing_history:
         return [_create_history_entry(current_hash, current_version)]
-    
+
     # Validate all existing history entries (will raise on invalid entries)
     for i, entry in enumerate(existing_history):
         _validate_history_entry(entry, i)
@@ -342,7 +341,7 @@ def _import_components() -> tuple[dict, int]:
 
 def build_component_index():
     """Build the component index by scanning all modules in lfx.components.
-    
+
     Merges hash history from the existing index to track component evolution.
 
     Returns:
@@ -373,8 +372,9 @@ def build_component_index():
             component = dict(components_dict[comp_name])
             component["metadata"] = dict(component.get("metadata", {}))
 
-            # Always merge hash history from existing index
-            existing_component = _find_component_in_index(existing_index, category_name, comp_name) if existing_index else None
+            existing_component = (
+                _find_component_in_index(existing_index, category_name, comp_name) if existing_index else None
+            )
             hash_history = _merge_hash_history(component, existing_component, current_version)
             component["metadata"]["hash_history"] = hash_history
 
@@ -398,7 +398,6 @@ def build_component_index():
     index = _strip_dynamic_fields(index)
 
     # Normalize the entire structure for deterministic output
-    # This recursively sorts all dict keys, ensuring consistent ordering
     index = _normalize_for_determinism(index)
 
     # Calculate SHA256 hash for integrity verification
