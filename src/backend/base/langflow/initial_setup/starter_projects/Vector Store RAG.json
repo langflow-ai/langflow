@@ -328,6 +328,13 @@
                 ],
                 "total_dependencies": 1
               },
+              "hash_history": [
+                {
+                  "hash": "7a26c54d89ed",
+                  "version_first": "1.7.1",
+                  "version_last": "1.7.1"
+                }
+              ],
               "module": "lfx.components.input_output.chat.ChatInput"
             },
             "output_types": [],
@@ -771,6 +778,13 @@
                 ],
                 "total_dependencies": 2
               },
+              "hash_history": [
+                {
+                  "hash": "b9d63ae59e8a",
+                  "version_first": "1.7.1",
+                  "version_last": "1.7.1"
+                }
+              ],
               "module": "lfx.components.processing.split_text.SplitTextComponent"
             },
             "output_types": [],
@@ -1075,6 +1089,13 @@
                 ],
                 "total_dependencies": 3
               },
+              "hash_history": [
+                {
+                  "hash": "8c87e536cca4",
+                  "version_first": "1.7.1",
+                  "version_last": "1.7.1"
+                }
+              ],
               "module": "lfx.components.input_output.chat_output.ChatOutput"
             },
             "output_types": [],
@@ -1360,6 +1381,13 @@
                 ],
                 "total_dependencies": 2
               },
+              "hash_history": [
+                {
+                  "hash": "8a658ed6d4c9",
+                  "version_first": "1.7.1",
+                  "version_last": "1.7.1"
+                }
+              ],
               "module": "lfx.components.openai.openai.OpenAIEmbeddingsComponent"
             },
             "output_types": [],
@@ -1907,6 +1935,13 @@
                 ],
                 "total_dependencies": 2
               },
+              "hash_history": [
+                {
+                  "hash": "8a658ed6d4c9",
+                  "version_first": "1.7.1",
+                  "version_last": "1.7.1"
+                }
+              ],
               "module": "lfx.components.openai.openai.OpenAIEmbeddingsComponent"
             },
             "output_types": [],
@@ -2685,6 +2720,13 @@
                 ],
                 "total_dependencies": 4
               },
+              "hash_history": [
+                {
+                  "hash": "5008cc086d7f",
+                  "version_first": "1.7.1",
+                  "version_last": "1.7.1"
+                }
+              ],
               "module": "lfx.components.files_and_knowledge.file.FileComponent"
             },
             "minimized": false,
@@ -3748,6 +3790,13 @@
                 ],
                 "total_dependencies": 4
               },
+              "hash_history": [
+                {
+                  "hash": "d52094e54e96",
+                  "version_first": "1.7.1",
+                  "version_last": "1.7.1"
+                }
+              ],
               "module": "lfx.components.datastax.astradb_vectorstore.AstraDBVectorStoreComponent"
             },
             "minimized": false,
@@ -4561,6 +4610,13 @@
                 ],
                 "total_dependencies": 4
               },
+              "hash_history": [
+                {
+                  "hash": "d52094e54e96",
+                  "version_first": "1.7.1",
+                  "version_last": "1.7.1"
+                }
+              ],
               "module": "lfx.components.datastax.astradb_vectorstore.AstraDBVectorStoreComponent"
             },
             "minimized": false,
