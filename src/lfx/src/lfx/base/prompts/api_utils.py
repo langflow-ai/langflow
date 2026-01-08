@@ -3,6 +3,7 @@ from typing import Any
 
 from fastapi import HTTPException
 from langchain_core.prompts import PromptTemplate
+from langchain_core.prompts.string import mustache_template_vars
 
 from lfx.inputs.inputs import DefaultPromptField
 from lfx.interface.utils import extract_input_variables_from_prompt
@@ -90,7 +91,7 @@ def _check_variable(var, invalid_chars, wrong_variables, empty_variables):
 def _check_for_errors(input_variables, fixed_variables, wrong_variables, empty_variables) -> None:
     if any(var for var in input_variables if var not in fixed_variables):
         error_message = (
-            f"Error: Input variables contain invalid characters or formats. \n"
+            f"Input variables contain invalid characters or formats. \n"
             f"Invalid variables: {', '.join(wrong_variables)}.\n"
             f"Empty variables: {', '.join(empty_variables)}. \n"
             f"Fixed variables: {', '.join(fixed_variables)}."
@@ -122,8 +123,37 @@ def _check_input_variables(input_variables):
     return fixed_variables
 
 
-def validate_prompt(prompt_template: str, *, silent_errors: bool = False) -> list[str]:
-    input_variables = extract_input_variables_from_prompt(prompt_template)
+def validate_prompt(prompt_template: str, *, silent_errors: bool = False, is_mustache: bool = False) -> list[str]:
+    if is_mustache:
+        # Extract only mustache variables
+        try:
+            input_variables = mustache_template_vars(prompt_template)
+        except Exception as exc:
+            # Mustache parser errors are often cryptic (e.g., "unclosed tag at line 1")
+            # Provide a more helpful error message
+            error_str = str(exc).lower()
+            if "unclosed" in error_str or "tag" in error_str:
+                msg = "Invalid template syntax. Check that all {{variables}} have matching opening and closing braces."
+            else:
+                msg = f"Invalid mustache template: {exc}"
+            raise ValueError(msg) from exc
+
+        # Also get f-string variables to filter them out
+        fstring_vars = extract_input_variables_from_prompt(prompt_template)
+
+        # Only keep variables that are actually in mustache syntax (not in f-string syntax)
+        # This handles cases where template has both {var} and {{var}}
+        input_variables = [v for v in input_variables if v not in fstring_vars or f"{{{{{v}}}}}" in prompt_template]
+    else:
+        # Extract f-string variables
+        input_variables = extract_input_variables_from_prompt(prompt_template)
+
+        # Also get mustache variables to filter them out
+        mustache_vars = mustache_template_vars(prompt_template)
+
+        # Only keep variables that are NOT in mustache syntax
+        # This handles cases where template has both {var} and {{var}}
+        input_variables = [v for v in input_variables if v not in mustache_vars]
 
     # Check if there are invalid characters in the input_variables
     input_variables = _check_input_variables(input_variables)
@@ -199,11 +229,16 @@ def update_input_variables_field(input_variables, template) -> None:
 
 
 def process_prompt_template(
-    template: str, name: str, custom_fields: dict[str, list[str]] | None, frontend_node_template: dict[str, Any]
+    template: str,
+    name: str,
+    custom_fields: dict[str, list[str]] | None,
+    frontend_node_template: dict[str, Any],
+    *,
+    is_mustache: bool = False,
 ):
     """Process and validate prompt template, update template and custom fields."""
     # Validate the prompt template and extract input variables
-    input_variables = validate_prompt(template)
+    input_variables = validate_prompt(template, is_mustache=is_mustache)
 
     # Initialize custom_fields if None
     if custom_fields is None:
