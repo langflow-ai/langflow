@@ -8,7 +8,6 @@ need to import all component modules during startup.
 
 import hashlib
 import logging
-from math import log
 import sys
 from pathlib import Path
 
