@@ -14,6 +14,7 @@ import orjson
 from lfx.constants import BASE_COMPONENTS_PATH
 from lfx.custom.utils import abuild_custom_components, create_component_template
 from lfx.log.logger import logger
+from lfx.utils.validate_cloud import is_astra_cloud_environment
 
 if TYPE_CHECKING:
     from lfx.services.settings.service import SettingsService
@@ -335,6 +336,21 @@ async def _load_components_dynamically(
         if "deactivated" in modname:
             continue
 
+        # Skip disabled docling components when ASTRA_CLOUD_DISABLE_COMPONENT is true
+        if is_astra_cloud_environment():
+            parts = modname.split(".")
+            if len(parts) > MIN_MODULE_PARTS and parts[2] == "docling":
+                # Components that are disabled when ASTRA_CLOUD_DISABLE_COMPONENT is true
+                # Only DoclingRemoteComponent (docling_remote) should be available
+                disabled_docling_modules = {
+                    "chunk_docling_document",
+                    "docling_inline",
+                    "export_docling_document",
+                }
+                # Extract the module filename (e.g., "chunk_docling_document" from "lfx.components.docling.chunk_docling_document")
+                if len(parts) > 3 and parts[3] in disabled_docling_modules:
+                    continue
+
         # If specific modules requested, filter by top-level module name
         if target_modules:
             # Extract top-level: "lfx.components.mistral.xyz" -> "mistral"
@@ -549,7 +565,7 @@ def _process_single_module(modname: str) -> tuple[str, dict] | None:
     return (top_level, module_components)
 
 
-async def _determine_loading_strategy(settings_service: "SettingsService") -> dict:
+async def _determine_loading_strategy(settings_service: "SettingsService") -> dict[str, Any]:
     """Determines and executes the appropriate component loading strategy.
 
     Args:
@@ -577,7 +593,7 @@ async def _determine_loading_strategy(settings_service: "SettingsService") -> di
             f"Built {component_count} custom components from {settings_service.settings.components_path}"
         )
 
-    return component_cache.all_types_dict
+    return component_cache.all_types_dict or {}
 
 
 async def get_and_cache_all_types_dict(
