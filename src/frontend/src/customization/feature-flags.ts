@@ -21,3 +21,4 @@ export const ENABLE_KNOWLEDGE_BASES = false;
 export const ENABLE_MCP_COMPOSER =
   import.meta.env.LANGFLOW_MCP_COMPOSER_ENABLED === "true";
 export const ENABLE_NEW_SIDEBAR = true;
+export const ENABLE_FETCH_CREDENTIALS = false;
