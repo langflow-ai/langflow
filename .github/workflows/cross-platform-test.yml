@@ -92,11 +92,11 @@ jobs:
           # macOS AMD64
           - os: macos
             arch: amd64
-            runner: macos-15-intel
+            runner: macos-latest-large
             python-version: "3.10"
           - os: macos
             arch: amd64
-            runner: macos-15-intel
+            runner: macos-latest-large
             python-version: "3.12"
           # macOS ARM64 (Apple Silicon)
           - os: macos
@@ -144,6 +144,11 @@ jobs:
         with:
           enable-cache: false
           ignore-empty-workdir: true
+
+      - name: Install Protocol Buffers (macOS)
+        if: matrix.os == 'macos'
+        run: brew install protobuf
+        shell: bash
 
       # Download artifacts for wheel installation
       - name: Download LFX package artifact
@@ -398,7 +403,7 @@ jobs:
             python-version: "3.13"
           - os: macos
             arch: amd64
-            runner: macos-15-intel
+            runner: macos-latest-large
             python-version: "3.13"
           - os: macos
             arch: arm64
@@ -432,6 +437,11 @@ jobs:
         with:
           enable-cache: false
           ignore-empty-workdir: true
+
+      - name: Install Protocol Buffers (macOS)
+        if: matrix.os == 'macos'
+        run: brew install protobuf
+        shell: bash
 
       # Download artifacts for wheel installation
       - name: Download LFX package artifact
