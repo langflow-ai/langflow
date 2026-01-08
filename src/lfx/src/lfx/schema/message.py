@@ -27,6 +27,7 @@ from lfx.schema.properties import Properties, Source
 from lfx.schema.validators import timestamp_to_str, timestamp_to_str_validator
 from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI, MESSAGE_SENDER_NAME_USER, MESSAGE_SENDER_USER
 from lfx.utils.image import create_image_content_dict
+from lfx.utils.mustache_security import safe_mustache_render
 
 if TYPE_CHECKING:
     from lfx.schema.dataframe import DataFrame
@@ -287,28 +288,35 @@ class Message(Data):
         prompt_json = prompt.to_json()
         return cls(prompt=prompt_json)
 
-    def format_text(self):
+    def format_text(self, template_format="f-string"):
+        if template_format == "mustache":
+            # Use our secure mustache renderer
+            variables_with_str_values = dict_values_to_string(self.variables)
+            formatted_prompt = safe_mustache_render(self.template, variables_with_str_values)
+            self.text = formatted_prompt
+            return formatted_prompt
+        # Use langchain's template for other formats
         from langchain_core.prompts.prompt import PromptTemplate
 
-        prompt_template = PromptTemplate.from_template(self.template)
+        prompt_template = PromptTemplate.from_template(self.template, template_format=template_format)
         variables_with_str_values = dict_values_to_string(self.variables)
         formatted_prompt = prompt_template.format(**variables_with_str_values)
         self.text = formatted_prompt
         return formatted_prompt
 
     @classmethod
-    async def from_template_and_variables(cls, template: str, **variables):
+    async def from_template_and_variables(cls, template: str, template_format: str = "f-string", **variables):
         # This method has to be async for backwards compatibility with versions
         # >1.0.15, <1.1
-        return cls.from_template(template, **variables)
+        return cls.from_template(template, template_format=template_format, **variables)
 
     # Define a sync version for backwards compatibility with versions >1.0.15, <1.1
     @classmethod
-    def from_template(cls, template: str, **variables):
+    def from_template(cls, template: str, template_format: str = "f-string", **variables):
         from langchain_core.prompts.chat import ChatPromptTemplate
 
         instance = cls(template=template, variables=variables)
-        text = instance.format_text()
+        text = instance.format_text(template_format=template_format)
         message = HumanMessage(content=text)
         contents = []
         for value in variables.values():
