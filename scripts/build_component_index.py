@@ -131,6 +131,7 @@ def _find_component_in_index(index: dict, category: str, component_name: str) ->
 
     return None
 
+
 def _create_history_entry(hash_value: str, version: str) -> dict:
     """Create a new hash history entry with version range.
 
