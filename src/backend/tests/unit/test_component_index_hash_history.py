@@ -25,9 +25,7 @@ def test_merge_hash_history_unchanged_hash_extends_range():
     previous_component = {
         "metadata": {
             "code_hash": "abc123def456",
-            "hash_history": [
-                {"hash": "abc123def456", "version_first": "1.7.0", "version_last": "1.7.0"}
-            ],
+            "hash_history": [{"hash": "abc123def456", "version_first": "1.7.0", "version_last": "1.7.0"}],
         }
     }
     current_version = "1.7.1"
@@ -48,9 +46,7 @@ def test_merge_hash_history_changed_hash_creates_new_entry():
     previous_component = {
         "metadata": {
             "code_hash": "old_hash_abc",
-            "hash_history": [
-                {"hash": "old_hash_abc", "version_first": "1.7.0", "version_last": "1.7.0"}
-            ],
+            "hash_history": [{"hash": "old_hash_abc", "version_first": "1.7.0", "version_last": "1.7.0"}],
         }
     }
     current_version = "1.7.1"
@@ -274,8 +270,6 @@ def test_strip_dynamic_fields_removes_timestamps():
 
 def test_hash_history_format_in_metadata():
     """Test that the index includes hash_history_format metadata."""
-    from scripts.build_component_index import build_component_index
-
     # This test requires the full environment, so we'll just verify the structure
     # In a real scenario, you'd mock the import_langflow_components function
     # For now, we'll test the metadata structure expectation
@@ -474,9 +468,7 @@ def test_merge_hash_history_dev_to_release():
     previous_component = {
         "metadata": {
             "code_hash": "abc123",
-            "hash_history": [
-                {"hash": "abc123", "version_first": "1.7.1.dev10", "version_last": "1.7.1.dev15"}
-            ],
+            "hash_history": [{"hash": "abc123", "version_first": "1.7.1.dev10", "version_last": "1.7.1.dev15"}],
         }
     }
 
@@ -534,6 +526,7 @@ def test_safeguard_prevents_invalid_range_extension():
     history = _merge_hash_history(current_component, previous_component, "1.7.2")
     # Should create new entry rather than extend invalid range
     assert len(history) >= 1
+
 
 # Normalization and Validation Tests
 
@@ -699,10 +692,10 @@ def test_normalize_history_preserves_entry_data():
 
     # Should preserve extra fields
     assert normalized[0]["extra"] == "data"
-    
+
     # Should be a copy, not the same object
     assert normalized[0] is not history[0]
-    
+
     # Modifying normalized shouldn't affect original
     normalized[0]["hash"] = "modified"
     assert history[0]["hash"] == "abc123"
