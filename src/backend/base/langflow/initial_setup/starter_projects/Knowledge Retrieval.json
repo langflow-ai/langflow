@@ -116,13 +116,6 @@
                 ],
                 "total_dependencies": 1
               },
-              "hash_history": [
-                {
-                  "hash": "3d80f125b734",
-                  "version_first": "1.8.0",
-                  "version_last": "1.8.0"
-                }
-              ],
               "module": "lfx.components.input_output.text.TextInputComponent"
             },
             "minimized": false,
@@ -257,13 +250,6 @@
                 ],
                 "total_dependencies": 3
               },
-              "hash_history": [
-                {
-                  "hash": "8c87e536cca4",
-                  "version_first": "1.8.0",
-                  "version_last": "1.8.0"
-                }
-              ],
               "module": "lfx.components.input_output.chat_output.ChatOutput"
             },
             "minimized": true,
@@ -563,13 +549,6 @@
                 ],
                 "total_dependencies": 8
               },
-              "hash_history": [
-                {
-                  "hash": "af0a162c3f80",
-                  "version_first": "1.8.0",
-                  "version_last": "1.8.0"
-                }
-              ],
               "module": "lfx.components.files_and_knowledge.retrieval.KnowledgeRetrievalComponent"
             },
             "minimized": false,
