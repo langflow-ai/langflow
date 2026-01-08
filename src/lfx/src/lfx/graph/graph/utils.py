@@ -688,14 +688,25 @@ def _sort_single_layer_by_dependency(
     index_map = {vertex: index for index, vertex in enumerate(layer)}
     dependency_cache: dict[str, int] = {}
 
+    # Track vertices currently being processed to detect cycles
+    processing: set[str] = set()
+
     def max_dependency_index(vertex: str) -> int:
         if vertex in dependency_cache:
             return dependency_cache[vertex]
+
+        # Cycle detection: if we're already processing this vertex, we have a cycle
+        if vertex in processing:
+            # Return current index to break the cycle
+            return index_map[vertex]
+
+        processing.add(vertex)
         max_index = index_map[vertex]
         for successor in get_vertex_successors(vertex):
             if successor in index_map:
                 max_index = max(max_index, max_dependency_index(successor))
 
+        processing.remove(vertex)
         dependency_cache[vertex] = max_index
         return max_index
 
