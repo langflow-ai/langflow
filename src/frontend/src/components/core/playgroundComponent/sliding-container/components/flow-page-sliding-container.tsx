@@ -27,17 +27,23 @@ export function FlowPageSlidingContainerContent({
   const { setOpen, setWidth } = useSimpleSidebar();
   const inputs = useFlowStore((state) => state.inputs);
 
-  const { sessions: fetchedSessions, addNewSession } = useGetAddSessions({
-    flowId: currentFlowId,
-  });
-  const { handleDelete } = useEditSessionInfo({ flowId: currentFlowId });
-
   const [currentSessionId, setCurrentSessionId] = useState<string | undefined>(
     currentFlowId,
   );
   const [openLogsModal, setOpenLogsModal] = useState(false);
 
-  const sessions = useMemo(() => {
+  const { sessions, addNewSession, removeLocalSession, fetchedSessions } =
+    useGetAddSessions({
+      flowId: currentFlowId,
+      currentSessionId,
+    });
+  const { handleDelete } = useEditSessionInfo({
+    flowId: currentFlowId,
+    dbSessions: fetchedSessions,
+  });
+
+  // Ensure currentFlowId is always first in sessions list
+  const orderedSessions = useMemo(() => {
     const ordered: string[] = [];
     const seen = new Set<string>();
     const push = (id?: string | null) => {
@@ -48,10 +54,10 @@ export function FlowPageSlidingContainerContent({
     };
     // Always keep the current flow id first to avoid duplicate "Default Session"
     push(currentFlowId);
-    if (fetchedSessions?.length) fetchedSessions.forEach(push);
-    push(currentSessionId);
+    // Add all other sessions
+    sessions.forEach(push);
     return ordered;
-  }, [fetchedSessions, currentFlowId, currentSessionId]);
+  }, [sessions, currentFlowId]);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [files, setFiles] = useState<FilePreviewType[]>([]);
@@ -96,12 +102,15 @@ export function FlowPageSlidingContainerContent({
   };
 
   const handleNewChat = () => {
-    const newId = addNewSession?.() ?? `Session ${sessions.length}`;
+    // Pass all sessions (including currentSessionId) to ensure unique IDs
+    const newId = addNewSession(orderedSessions);
     setCurrentSessionId(newId);
   };
 
   const handleDeleteSession = (sessionId: string) => {
     handleDelete(sessionId);
+    // Also remove from local sessions if it's a local session
+    removeLocalSession(sessionId);
     if (sessionId === currentSessionId) {
       setCurrentSessionId(currentFlowId);
     }
@@ -125,7 +134,7 @@ export function FlowPageSlidingContainerContent({
           <div className="h-full overflow-y-auto border-r border-border w-218">
             <div className="p-4">
               <ChatSidebar
-                sessions={sessions}
+                sessions={orderedSessions}
                 onNewChat={handleNewChat}
                 onSessionSelect={handleSessionSelect}
                 currentSessionId={currentSessionId}
@@ -137,7 +146,7 @@ export function FlowPageSlidingContainerContent({
         </AnimatedConditional>
         <div className="flex-1 flex flex-col overflow-hidden pt-2">
           <ChatHeader
-            sessions={sessions}
+            sessions={orderedSessions}
             onNewChat={handleNewChat}
             onSessionSelect={handleSessionSelect}
             currentSessionId={currentSessionId}
