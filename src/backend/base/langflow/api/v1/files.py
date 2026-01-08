@@ -12,7 +12,7 @@ from fastapi.responses import StreamingResponse
 from lfx.services.settings.service import SettingsService
 from lfx.utils.helpers import build_content_type_from_extension
 
-from langflow.api.utils import CurrentActiveUser, DbSession
+from langflow.api.utils import CurrentActiveUser, DbSession, ValidatedFileName
 from langflow.api.v1.schemas import UploadFileResponse
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_settings_service, get_storage_service
@@ -105,7 +105,7 @@ async def upload_file(
 
 @router.get("/download/{flow_id}/{file_name}")
 async def download_file(
-    file_name: str,
+    file_name: ValidatedFileName,
     flow: Annotated[Flow, Depends(get_flow)],
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
@@ -137,13 +137,13 @@ async def download_file(
 
 @router.get("/images/{flow_id}/{file_name}")
 async def download_image(
-    file_name: str,
-    flow: Annotated[Flow, Depends(get_flow)],
+    file_name: ValidatedFileName,
+    flow_id: UUID,
 ):
-    # Authorization handled by get_flow dependency
+    """Download image from storage for browser rendering."""
     storage_service = get_storage_service()
     extension = file_name.split(".")[-1]
-    flow_id_str = str(flow.id)
+    flow_id_str = str(flow_id)
 
     if not extension:
         raise HTTPException(status_code=500, detail=f"Extension not found for file {file_name}")
@@ -289,7 +289,7 @@ async def list_files(
 
 @router.delete("/delete/{flow_id}/{file_name}")
 async def delete_file(
-    file_name: str,
+    file_name: ValidatedFileName,
     flow: Annotated[Flow, Depends(get_flow)],
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
