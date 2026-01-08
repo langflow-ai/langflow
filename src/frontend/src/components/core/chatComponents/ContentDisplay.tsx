@@ -7,6 +7,7 @@ import { extractLanguage, isCodeBlock } from "@/utils/codeBlockUtils";
 import ForwardedIconComponent from "../../common/genericIconComponent";
 import SimplifiedCodeTabComponent from "../codeTabsComponent";
 import DurationDisplay from "./DurationDisplay";
+import { SharedContextEventsDisplay } from "./SharedContextEventsDisplay";
 
 export default function ContentDisplay({
   content,
@@ -266,6 +267,10 @@ export default function ContentDisplay({
           {content.caption && <div>{content.caption}</div>}
         </div>
       );
+      break;
+
+    case "shared_context":
+      contentData = <SharedContextEventsDisplay events={content.events} />;
       break;
   }
 

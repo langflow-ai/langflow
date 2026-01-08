@@ -1,8 +1,12 @@
+# ruff: noqa: FBT001
 import pytest
 from lfx.components.input_output import ChatInput, ChatOutput
+from lfx.custom.custom_component.component import Component
 from lfx.graph import Graph
 from lfx.graph.graph.constants import Finish
 from lfx.graph.state.model import create_state_model
+from lfx.io import HandleInput, Output
+from lfx.schema.message import Message
 from lfx.template.field.base import UNDEFINED
 from pydantic import Field
 
@@ -129,3 +133,103 @@ class TestCreateStateModel:
         assert chat_state_model.__class__.__name__ == "ChatState"
         assert hasattr(chat_state_model.message, "get_text")
         assert chat_state_model.message.get_text() == "test"
+
+    @pytest.mark.asyncio
+    async def test_state_model_with_group_outputs_conditional_routing(self):
+        """Test that create_state_model works with components that have group_outputs=True.
+
+        Components with conditional routing (like AgentStep) have multiple outputs with
+        group_outputs=True. These outputs should always be processed even if not connected,
+        so the routing logic can execute and decide which branch to take.
+        """
+
+        class ConditionalRouterComponent(Component):
+            """A simple conditional router for testing."""
+
+            display_name = "Conditional Router"
+
+            inputs = [
+                HandleInput(name="input_value", display_name="Input", input_types=["Message"]),
+            ]
+            outputs = [
+                Output(
+                    display_name="Output A",
+                    name="output_a",
+                    method="get_output_a",
+                    group_outputs=True,
+                ),
+                Output(
+                    display_name="Output B",
+                    name="output_b",
+                    method="get_output_b",
+                    group_outputs=True,
+                ),
+            ]
+
+            def __init__(self, _id: str | None = None):
+                super().__init__(_id=_id)
+                self._route_to_a = True
+
+            def set_route(self, route_to_a: bool):
+                self._route_to_a = route_to_a
+
+            def get_output_a(self) -> Message:
+                if not self._route_to_a:
+                    self.stop("output_a")
+                    return Message(text="")
+                self.stop("output_b")
+                return Message(text="Routed to A")
+
+            def get_output_b(self) -> Message:
+                if self._route_to_a:
+                    self.stop("output_b")
+                    return Message(text="")
+                self.stop("output_a")
+                return Message(text="Routed to B")
+
+        class ReceiverComponent(Component):
+            """A simple receiver component."""
+
+            display_name = "Receiver"
+
+            inputs = [
+                HandleInput(name="input_value", display_name="Input", input_types=["Message"]),
+            ]
+            outputs = [
+                Output(display_name="Output", name="output", method="get_output"),
+            ]
+
+            def get_output(self) -> Message:
+                return self.input_value
+
+        # Create components
+        router = ConditionalRouterComponent(_id="router")
+        receiver = ReceiverComponent(_id="receiver")
+
+        # Connect only output_b to receiver (output_a is NOT connected but has group_outputs=True)
+        receiver.set(input_value=router.get_output_b)
+
+        # Create state model to capture output_a (which is NOT connected to anything)
+        state_model = create_state_model(
+            model_name="RouterState",
+            output_a=router.get_output_a,
+        )()
+
+        assert state_model.output_a is UNDEFINED
+
+        # Build graph from router to receiver (output_b is connected)
+        graph = Graph(router, receiver)
+        graph.prepare()
+
+        # Set routing to A - output_a should fire even though it's not connected
+        router.set_route(route_to_a=True)
+
+        # Run the graph
+        results = [result async for result in graph.async_start()]
+        assert results[-1] == Finish()
+
+        # The key assertion: output_a should have been processed and have a value
+        # even though it's not connected to anything in the graph
+        assert state_model.output_a is not UNDEFINED
+        assert isinstance(state_model.output_a, Message)
+        assert state_model.output_a.text == "Routed to A"
