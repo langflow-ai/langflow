@@ -1,6 +1,7 @@
 """Unit tests for component index hash history functionality."""
 
 import sys
+import pytest
 from pathlib import Path
 
 # Add scripts directory to path so we can import the build script
@@ -159,12 +160,11 @@ def test_merge_hash_history_missing_hash():
 
 
 def test_load_index_from_file_nonexistent():
-    """Test loading a non-existent index returns None."""
+    """Test loading a non-existent index raises ValueError."""
     from pathlib import Path
 
-    result = _load_index_from_file(Path("/nonexistent/path/index.json"))
-
-    assert result is None
+    with pytest.raises(ValueError, match="Index file not found"):
+        _load_index_from_file(Path("/nonexistent/path/index.json"))
 
 
 def test_find_component_in_index():
@@ -192,8 +192,6 @@ def test_find_component_in_index():
 
 def test_find_component_in_index_malformed():
     """Test that malformed index entries raise exceptions."""
-    import pytest
-
     # Test invalid entry format (not a tuple/list)
     index = {
         "entries": [
@@ -218,7 +216,7 @@ def test_find_component_in_index_malformed():
             ["category", "not_a_dict"],  # Invalid: second element not a dict
         ]
     }
-    with pytest.raises(ValueError, match="Invalid components dict"):
+    with pytest.raises(TypeError, match="Invalid components dict"):
         _find_component_in_index(index, "category", "MyAgent")
 
     # Test valid entry works fine

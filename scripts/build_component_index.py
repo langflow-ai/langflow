@@ -351,11 +351,10 @@ def _import_components() -> tuple[dict, int]:
         modules_dict = components_result.get("components", {})
         components_count = sum(len(v) for v in modules_dict.values())
         print(f"Discovered {components_count} components across {len(modules_dict)} categories")
+        return modules_dict, components_count
     except Exception as e:
         msg = f"Failed to import components: {e}"
         raise RuntimeError(msg) from e
-    else:
-        return modules_dict, components_count
 
 
 def build_component_index() -> dict:
