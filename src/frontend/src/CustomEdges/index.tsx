@@ -105,6 +105,7 @@ export function DefaultEdge({
             strokeOpacity={0}
             strokeWidth={20}
             fill="none"
+            data-testid={`edge-context-menu-trigger`}
           />
         </ContextMenuTrigger>
         <ContextMenuContent>
@@ -114,6 +115,7 @@ export function DefaultEdge({
               const newEdges = edges.filter((edge) => edge.id !== props.id);
               setEdges(newEdges);
             }}
+            data-testid="context-menu-item-destructive"
           >
             <IconComponent name="Trash2" className="size-3.5 text-inherit" />
             <span className="text-xs">Delete</span>
