@@ -209,9 +209,7 @@ def _validate_history_entry(entry: dict, entry_index: int) -> None:
                 f"History entry {entry_index} has invalid version range: "
                 f"{entry[VERSION_FIRST_KEY]} > {entry[VERSION_LAST_KEY]}"
             )
-            raise ValueError(
-                msg
-            )
+            raise ValueError(msg)
     except InvalidVersion as e:
         msg = f"History entry {entry_index} has invalid version: {e}"
         raise ValueError(msg) from e
@@ -295,9 +293,7 @@ def _merge_hash_history(current_component: dict, existing_component: dict | None
             f"Version regression detected: current version {current_version} < "
             f"last version {last_version_str}. Cannot build index with older version."
         )
-        raise ValueError(
-            msg
-        )
+        raise ValueError(msg)
 
     # If hash hasn't changed, extend the version_last of the most recent entry
     if current_hash == last_hash:
