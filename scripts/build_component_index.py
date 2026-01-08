@@ -13,12 +13,11 @@ from pathlib import Path
 
 import orjson
 
-# Import packaging early and fail fast if not available
 try:
     from packaging.version import InvalidVersion, Version
 except ImportError as e:
     raise ImportError(
-        "The 'packaging' library is required for version comparison. Install it with: pip install packaging"
+        "The 'packaging' library is required for version comparison"
     ) from e
 
 # Configure logging for build script
@@ -145,7 +144,6 @@ def _compare_versions(version1: str, version2: str) -> int:
     Supports formats like:
     - 1.7.1
     - 1.7.1.dev14 (nightly builds)
-    - 1.7.1.dev20260107 (date-based nightlies)
 
     Args:
         version1: First version string
@@ -163,7 +161,7 @@ def _compare_versions(version1: str, version2: str) -> int:
         from packaging.version import Version
     except ImportError as e:
         raise ImportError(
-            "The 'packaging' library is required for version comparison. Install it with: pip install packaging"
+            "The 'packaging' library is required for version comparison. "
         ) from e
 
     v1 = Version(version1)
@@ -174,33 +172,6 @@ def _compare_versions(version1: str, version2: str) -> int:
     if v1 > v2:
         return 1
     return 0
-
-
-def _validate_version_range(version_first: str, version_last: str, current_version: str) -> bool:
-    """Validate that a version range is valid.
-
-    Ensures:
-    - version_first <= version_last
-    - current_version >= version_last (no going backwards)
-
-    Args:
-        version_first: Start of version range
-        version_last: End of version range
-        current_version: Current version being added
-
-    Returns:
-        True if valid, False otherwise
-    """
-    # Check that first <= last
-    if _compare_versions(version_first, version_last) > 0:
-        return False
-
-    # Check that current >= last (no going backwards)
-    if _compare_versions(current_version, version_last) < 0:
-        return False
-
-    return True
-
 
 def _create_history_entry(hash_value: str, version: str) -> dict:
     """Create a new hash history entry with version range.
@@ -215,73 +186,12 @@ def _create_history_entry(hash_value: str, version: str) -> dict:
     return {"hash": hash_value, "version_first": version, "version_last": version}
 
 
-def _normalize_history_to_range_format(history: list[dict]) -> list[dict]:
-    """Normalize all history entries to range format.
 
-    Converts old format entries ({"hash": ..., "version": ...}) to new range
-    format ({"hash": ..., "version_first": ..., "version_last": ...}).
-
-    Filters out invalid entries to prevent crashes:
-    - Missing hash
-    - Missing version fields
-    - Invalid version strings (not PEP 440 compliant)
-    - Inverted version ranges (first > last)
-
-    Args:
-        history: List of history entries (may be mixed format)
-
-    Returns:
-        List of valid history entries in range format
-    """
-    normalized = []
-    for entry in history:
-        # Skip entries without a hash
-        if not entry.get("hash"):
-            logger.warning("Skipping history entry with missing hash")
-            continue
-
-        if "version_first" in entry:
-            # Already in range format - validate it has required fields
-            version_first = entry.get("version_first")
-            version_last = entry.get("version_last")
-
-            if not version_first or not version_last:
-                logger.warning("Skipping malformed range entry with missing versions")
-                continue
-
-            # Validate versions are PEP 440 compliant and range is not inverted
-            try:
-                v_first = Version(version_first)
-                v_last = Version(version_last)
-
-                # Check for inverted range
-                if v_first > v_last:
-                    logger.warning("Skipping entry with inverted version range: %s > %s", version_first, version_last)
-                    continue
-            except InvalidVersion:
-                logger.warning("Skipping entry with invalid version strings: %s, %s", version_first, version_last)
-                continue
-
-            normalized.append(entry.copy())
-        else:
-            # Old format - migrate to range format
-            version = entry.get("version")
-            if not version:
-                logger.warning("Skipping history entry with missing version")
-                continue
-
-            # Validate version is PEP 440 compliant
-            try:
-                Version(version)
-            except InvalidVersion:
-                logger.warning("Skipping entry with invalid version string: %s", version)
-                continue
-
-            normalized.append({"hash": entry["hash"], "version_first": version, "version_last": version})
-    return normalized
-
-
-def _merge_hash_history(current_component: dict, previous_component: dict | None, current_version: str) -> list[dict]:
+def _merge_hash_history(
+    current_component: dict,
+    previous_component: dict | None,
+    current_version: str
+) -> list[dict]:
     """Merge hash history from previous index with current component using version ranges.
 
     This approach stores version ranges (version_first to version_last) for each hash,
@@ -299,7 +209,7 @@ def _merge_hash_history(current_component: dict, previous_component: dict | None
 
     Args:
         current_component: Current component data with code_hash
-        previous_component: Previous component data (may have hash_history)
+        previous_component: Previous component data (has code_hash but no hash_history)
         current_version: Current Langflow version
 
     Returns:
@@ -308,74 +218,26 @@ def _merge_hash_history(current_component: dict, previous_component: dict | None
     current_hash = current_component.get("metadata", {}).get("code_hash")
     if not current_hash:
         return []
-
-    # If no previous component or history, create first entry
+    
+    # If no previous component, create first entry
     if not previous_component:
         return [_create_history_entry(current_hash, current_version)]
-
-    prev_history = previous_component.get("metadata", {}).get("hash_history", [])
-    if not prev_history:
+    
+    # Get previous component's hash (not history, since it doesn't exist yet)
+    previous_hash = previous_component.get("metadata", {}).get("code_hash")
+    
+    # If no previous hash, start fresh
+    if not previous_hash:
         return [_create_history_entry(current_hash, current_version)]
-
-    # Normalize entire history to range format at the start
-    # This prevents inconsistencies when mixing old and new formats
-    # Also filters out invalid entries (missing hash, invalid versions, etc.)
-    prev_history = _normalize_history_to_range_format(prev_history)
-
-    # If normalization filtered out all entries, start fresh
-    if not prev_history:
-        logger.warning("All previous history entries were invalid, starting fresh")
+    
+    # If hash unchanged, this is the first time we're tracking it
+    # Create a single entry for this hash
+    if previous_hash == current_hash:
         return [_create_history_entry(current_hash, current_version)]
-
-    # Get the last entry (most recent) - now guaranteed to be valid and in range format
-    last_entry = prev_history[-1]
-    last_hash = last_entry.get("hash")
-    last_version_first = last_entry.get("version_first")
-    last_version_last = last_entry.get("version_last")
-
-    # Additional safety check (should never happen after normalization, but be defensive)
-    if not last_hash or not last_version_first or not last_version_last:
-        logger.error("Normalized entry still has missing data, starting fresh: %s", last_entry)
-        return [_create_history_entry(current_hash, current_version)]
-
-    # Validate we're not going backwards in versions
-    if _compare_versions(current_version, last_version_last) < 0:
-        # Version regression detected - log warning but continue
-        logger.warning(
-            "Version regression detected. Current: %s, Previous: %s. Creating new entry.",
-            current_version,
-            last_version_last,
-        )
-        history = prev_history.copy()
-        history.append(_create_history_entry(current_hash, current_version))
-        return history
-
-    # Hash unchanged - extend the version range
-    if last_hash == current_hash:
-        # Copy all previous entries except the last one
-        history = prev_history[:-1].copy() if len(prev_history) > 1 else []
-
-        # Validate the extended range
-        if _validate_version_range(last_version_first, last_version_last, current_version):
-            # Extend the last entry's version range
-            history.append({"hash": current_hash, "version_first": last_version_first, "version_last": current_version})
-        else:
-            # Invalid range - create new entry
-            logger.warning(
-                "Invalid version range detected. First: %s, Last: %s, Current: %s. Creating new entry.",
-                last_version_first,
-                last_version_last,
-                current_version,
-            )
-            history.append(last_entry)  # Keep old entry as-is
-            history.append(_create_history_entry(current_hash, current_version))
-        return history
-
-    # Hash changed - close previous range and start new one
-    # All entries already normalized, so just copy and append
-    history = prev_history.copy()
-    history.append(_create_history_entry(current_hash, current_version))
-    return history
+    
+    # Hash changed - create entry for the new hash
+    # (We don't have history of the old hash, so we just start tracking the new one)
+    return [_create_history_entry(current_hash, current_version)]
 
 
 # Standard location for component index
@@ -441,17 +303,14 @@ def build_component_index(preserve_history: bool = True, previous_index_path: Pa
     """
     print("Building component index...")
 
-    # Load previous index if preserving history
     previous_index = _load_previous_index_for_history(preserve_history, previous_index_path)
 
-    # Import all components
     try:
         modules_dict, components_count = _import_components()
     except RuntimeError as e:
         print(str(e), file=sys.stderr)
         return None
 
-    # Get current version
     current_version = _get_langflow_version()
 
     # Convert modules_dict to entries format and sort for determinism
@@ -464,7 +323,6 @@ def build_component_index(preserve_history: bool = True, previous_index_path: Pa
 
         for comp_name in sorted(components_dict.keys()):
             # Make defensive copies to avoid mutating the original component object
-            # This prevents side effects if modules_dict is used elsewhere
             component = dict(components_dict[comp_name])
             component["metadata"] = dict(component.get("metadata", {}))
 
@@ -477,7 +335,6 @@ def build_component_index(preserve_history: bool = True, previous_index_path: Pa
 
         entries.append([category_name, sorted_components])
 
-    # Build the index structure
     index = {
         "version": current_version,
         "metadata": {
