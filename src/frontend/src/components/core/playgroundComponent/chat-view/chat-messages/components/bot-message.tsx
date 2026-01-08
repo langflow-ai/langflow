@@ -1,4 +1,4 @@
-import { memo, useCallback, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import IconComponent, {
   ForwardedIconComponent,
@@ -12,6 +12,7 @@ import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import type { chatMessagePropsType } from "@/types/components";
 import { cn } from "@/utils/utils";
+import { useThinkingDurationStore } from "../hooks/use-thinking-duration";
 import { useTypingEffect } from "../hooks/use-typing-effect";
 import { convertFiles } from "../utils/convert-files";
 import EditMessageField from "./edit-message-field";
@@ -134,8 +135,29 @@ export const BotMessage = memo(
     );
 
     const thinkingActive = Boolean(isThinking && lastMessage);
+    const { startTime } = useThinkingDurationStore();
+    const [elapsedTime, setElapsedTime] = useState(0);
+
+    // Live timer while building
+    useEffect(() => {
+      if (!isThinking || !startTime) {
+        return;
+      }
+
+      setElapsedTime(Date.now() - startTime);
+
+      const interval = setInterval(() => {
+        const start = useThinkingDurationStore.getState().startTime;
+        if (start) {
+          setElapsedTime(Date.now() - start);
+        }
+      }, 100);
+
+      return () => clearInterval(interval);
+    }, [isThinking, startTime]);
 
     const formatTime = (ms: number) => {
+      if (ms < 1000) return `${Math.round(ms)}ms`;
       const seconds = ms / 1000;
       if (seconds < 60) return `${seconds.toFixed(1)}s`;
       const minutes = Math.floor(seconds / 60);
@@ -155,8 +177,12 @@ export const BotMessage = memo(
         }, 0)
       : 0;
 
-    const displayTime =
-      stepsTotalDuration > 0 ? stepsTotalDuration : (thinkingDuration ?? 0);
+    // Use real-time elapsed time when thinking, otherwise use steps duration or thinking duration
+    const displayTime = thinkingActive
+      ? elapsedTime
+      : stepsTotalDuration > 0
+        ? stepsTotalDuration
+        : (thinkingDuration ?? 0);
 
     return (
       <>
@@ -175,8 +201,10 @@ export const BotMessage = memo(
                     name="Brain"
                     className="h-4 w-4 text-primary"
                   />
-                  <span>
-                    {thinkingActive ? "Thinking for " : "Thought for "}
+                  <span className="w-full flex justify-between">
+                    <span>
+                      {thinkingActive ? "Thinking for" : "Thought for"}
+                    </span>
                     <span className="text-emerald-500">
                       {formatTime(displayTime)}
                     </span>

@@ -1,7 +1,7 @@
 "use client";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Markdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax/browser";
 import remarkGfm from "remark-gfm";
@@ -32,6 +32,10 @@ export function ContentBlockDisplay({
 }: ContentBlockDisplayProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [openTools, setOpenTools] = useState<Record<string, boolean>>({});
+  const [toolStartTimes, setToolStartTimes] = useState<Record<string, number>>(
+    {},
+  );
+  const [elapsedTimes, setElapsedTimes] = useState<Record<string, number>>({});
 
   const toolItems = contentBlocks.flatMap((block, blockIndex) =>
     block.contents
@@ -43,19 +47,83 @@ export function ContentBlockDisplay({
       })),
   );
 
+  // Track tool start times and update elapsed times in real-time
+  useEffect(() => {
+    const newStartTimes: Record<string, number> = {};
+    const newElapsedTimes: Record<string, number> = {};
+
+    toolItems.forEach(({ content, blockIndex, contentIndex }) => {
+      const toolKey = `${blockIndex}-${contentIndex}`;
+      const toolDuration = content.duration || 0;
+
+      // If tool has no duration and is loading, track its start time
+      if (isLoading && toolDuration === 0) {
+        if (!toolStartTimes[toolKey]) {
+          // Tool just started
+          newStartTimes[toolKey] = Date.now();
+        } else {
+          // Tool already started, calculate elapsed time
+          newElapsedTimes[toolKey] = Date.now() - toolStartTimes[toolKey];
+        }
+      } else if (toolDuration > 0) {
+        // Tool has finished, use its duration
+        newElapsedTimes[toolKey] = toolDuration;
+      }
+    });
+
+    if (Object.keys(newStartTimes).length > 0) {
+      setToolStartTimes((prev) => ({ ...prev, ...newStartTimes }));
+    }
+  }, [toolItems, isLoading, toolStartTimes]);
+
+  // Update elapsed times in real-time for active tools
+  useEffect(() => {
+    if (!isLoading) return;
+
+    const interval = setInterval(() => {
+      setElapsedTimes((prev) => {
+        const updated: Record<string, number> = { ...prev };
+        let hasChanges = false;
+
+        toolItems.forEach(({ content, blockIndex, contentIndex }) => {
+          const toolKey = `${blockIndex}-${contentIndex}`;
+          const toolDuration = content.duration || 0;
+
+          // Only update if tool is active (no duration yet)
+          if (toolDuration === 0 && toolStartTimes[toolKey]) {
+            const elapsed = Date.now() - toolStartTimes[toolKey];
+            if (updated[toolKey] !== elapsed) {
+              updated[toolKey] = elapsed;
+              hasChanges = true;
+            }
+          }
+        });
+
+        return hasChanges ? updated : prev;
+      });
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [isLoading, toolItems, toolStartTimes]);
+
   if (!toolItems.length) {
     return null;
   }
 
   const totalDuration = isLoading
     ? undefined
-    : toolItems.reduce((acc, { content }) => acc + (content.duration || 0), 0);
+    : toolItems.reduce((acc, { content, blockIndex, contentIndex }) => {
+        const toolKey = `${blockIndex}-${contentIndex}`;
+        const toolDuration = elapsedTimes[toolKey] ?? content.duration ?? 0;
+        return acc + toolDuration;
+      }, 0);
 
   if (!contentBlocks?.length) {
     return null;
   }
 
   const formatTime = (ms: number) => {
+    if (ms < 1000) return `${Math.round(ms)}ms`;
     const seconds = ms / 1000;
     if (seconds < 60) return `${seconds.toFixed(1)}s`;
     const minutes = Math.floor(seconds / 60);
@@ -158,7 +226,9 @@ export function ContentBlockDisplay({
                     content.name ||
                     `Tool ${flatIdx + 1}`;
                   const toolIcon = content.header?.icon || "Hammer";
-                  const toolDuration = content.duration || 0;
+                  // Use elapsed time if tool is active, otherwise use duration
+                  const toolDuration =
+                    elapsedTimes[toolKey] ?? content.duration ?? 0;
 
                   return (
                     <motion.div

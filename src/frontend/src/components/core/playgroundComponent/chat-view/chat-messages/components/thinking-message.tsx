@@ -35,6 +35,7 @@ export default function ThinkingMessage({
   }, [isThinking, startTime]);
 
   const formatTime = (ms: number) => {
+    if (ms < 1000) return `${Math.round(ms)}ms`;
     const seconds = ms / 1000;
     if (seconds < 60) return `${seconds.toFixed(1)}s`;
     const minutes = Math.floor(seconds / 60);
@@ -51,9 +52,9 @@ export default function ThinkingMessage({
           name="Brain"
           className={`h-4 w-4 ${isThinking ? "text-primary animate-pulse" : "text-muted-foreground"}`}
         />
-        <p className="m-0">
-          {isThinking ? "Thinking for " : "Thought for "}
-          {formatTime(displayTime)}
+        <p className="m-0 w-full flex justify-between">
+          <span>{isThinking ? "Thinking for" : "Thought for"}</span>
+          <span>{formatTime(displayTime)}</span>
         </p>
       </div>
     </div>
