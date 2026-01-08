@@ -8,7 +8,6 @@ need to import all component modules during startup.
 
 import hashlib
 import logging
-from multiprocessing import Value
 import sys
 from pathlib import Path
 
@@ -132,6 +131,7 @@ def _find_component_in_index(index: dict, category: str, component_name: str) ->
 
     return None
 
+
 # Constants for component metadata keys
 METADATA_KEY = "metadata"
 CODE_HASH_KEY = "code_hash"
@@ -156,13 +156,13 @@ def _get_component_hash(component: dict | None) -> str | None:
 
 def _parse_version(version_str: str) -> Version:
     """Parse a version string, handling nightly/dev builds.
-    
+
     Args:
         version_str: Version string (e.g., "1.7.1" or "1.7.1.dev14")
-    
+
     Returns:
         Parsed Version object
-        
+
     Raises:
         InvalidVersion: If version string is malformed
     """
@@ -174,11 +174,11 @@ def _parse_version(version_str: str) -> Version:
 
 def _validate_history_entry(entry: dict, entry_index: int) -> None:
     """Validate a hash history entry has required fields and valid version range.
-    
+
     Args:
         entry: Hash history entry dict
         entry_index: Index in history list (for error messages)
-        
+
     Raises:
         ValueError: If entry is malformed or has invalid version range
     """
@@ -189,12 +189,12 @@ def _validate_history_entry(entry: dict, entry_index: int) -> None:
         raise ValueError(f"History entry {entry_index} missing required field '{VERSION_FIRST_KEY}'")
     if VERSION_LAST_KEY not in entry:
         raise ValueError(f"History entry {entry_index} missing required field '{VERSION_LAST_KEY}'")
-    
+
     # Validate version range (first <= last)
     try:
         version_first = _parse_version(entry[VERSION_FIRST_KEY])
         version_last = _parse_version(entry[VERSION_LAST_KEY])
-        
+
         if version_first > version_last:
             raise ValueError(
                 f"History entry {entry_index} has invalid version range: "
@@ -213,7 +213,7 @@ def _create_history_entry(hash_value: str, version: str) -> dict:
 
     Returns:
         Hash history entry dict
-        
+
     Raises:
         InvalidVersion: If version string is malformed
     """
@@ -245,7 +245,7 @@ def _merge_hash_history(current_component: dict, previous_component: dict | None
 
     Returns:
         List of hash history entries with version ranges
-        
+
     Raises:
         ValueError: If history entries are malformed or version regression detected
         InvalidVersion: If version strings cannot be parsed
@@ -261,20 +261,20 @@ def _merge_hash_history(current_component: dict, previous_component: dict | None
     previous_history = []
     if previous_component:
         previous_history = previous_component.get(METADATA_KEY, {}).get("hash_history", [])
-    
+
     # If no previous history exists, start fresh
     if not previous_history:
         return [_create_history_entry(current_hash, current_version)]
-    
+
     # Validate all previous history entries (will raise on invalid entries)
     for i, entry in enumerate(previous_history):
         _validate_history_entry(entry, i)
-    
+
     # Get the most recent history entry
     last_entry = previous_history[-1]
     last_hash = last_entry.get(HASH_KEY)
     last_version_str = last_entry[VERSION_LAST_KEY]
-    
+
     # Prevent version regression - current must be >= last
     last_ver = _parse_version(last_version_str)
     if current_ver < last_ver:
@@ -282,7 +282,7 @@ def _merge_hash_history(current_component: dict, previous_component: dict | None
             f"Version regression detected: current version {current_version} < "
             f"last version {last_version_str}. Cannot build index with older version."
         )
-    
+
     # If hash hasn't changed, extend the version_last of the most recent entry
     if current_hash == last_hash:
         merged_history = previous_history[:-1] + [
@@ -293,7 +293,7 @@ def _merge_hash_history(current_component: dict, previous_component: dict | None
             }
         ]
         return merged_history
-    
+
     # Hash changed - append new entry to history
     return previous_history + [_create_history_entry(current_hash, current_version)]
 

@@ -57,9 +57,7 @@ def test_merge_hash_history_extends_version_range():
     previous_component = {
         "metadata": {
             "code_hash": "abc123def456",
-            "hash_history": [
-                {"hash": "abc123def456", "version_first": "1.7.0", "version_last": "1.7.0"}
-            ]
+            "hash_history": [{"hash": "abc123def456", "version_first": "1.7.0", "version_last": "1.7.0"}],
         }
     }
     current_version = "1.7.1"
@@ -69,7 +67,7 @@ def test_merge_hash_history_extends_version_range():
     assert len(history) == 1
     assert history[0]["hash"] == "abc123def456"
     assert history[0]["version_first"] == "1.7.0"  # Preserved from previous
-    assert history[0]["version_last"] == "1.7.1"   # Extended to current
+    assert history[0]["version_last"] == "1.7.1"  # Extended to current
 
 
 def test_merge_hash_history_appends_on_change():
@@ -78,9 +76,7 @@ def test_merge_hash_history_appends_on_change():
     previous_component = {
         "metadata": {
             "code_hash": "old_hash_abc",
-            "hash_history": [
-                {"hash": "old_hash_abc", "version_first": "1.7.0", "version_last": "1.7.0"}
-            ]
+            "hash_history": [{"hash": "old_hash_abc", "version_first": "1.7.0", "version_last": "1.7.0"}],
         }
     }
     current_version = "1.7.1"
@@ -106,8 +102,8 @@ def test_merge_hash_history_preserves_multiple_entries():
             "code_hash": "hash_b",
             "hash_history": [
                 {"hash": "hash_a", "version_first": "1.5.0", "version_last": "1.6.0"},
-                {"hash": "hash_b", "version_first": "1.6.1", "version_last": "1.7.0"}
-            ]
+                {"hash": "hash_b", "version_first": "1.6.1", "version_last": "1.7.0"},
+            ],
         }
     }
     current_version = "1.7.1"
@@ -197,7 +193,7 @@ def test_find_component_in_index():
 def test_find_component_in_index_malformed():
     """Test that malformed index entries raise exceptions."""
     import pytest
-    
+
     # Test invalid entry format (not a tuple/list)
     index = {
         "entries": [
@@ -206,7 +202,7 @@ def test_find_component_in_index_malformed():
     }
     with pytest.raises(ValueError, match="Invalid index entry format"):
         _find_component_in_index(index, "agents", "MyAgent")
-    
+
     # Test invalid entry length
     index = {
         "entries": [
@@ -215,7 +211,7 @@ def test_find_component_in_index_malformed():
     }
     with pytest.raises(ValueError, match="Invalid index entry format"):
         _find_component_in_index(index, "agents", "MyAgent")
-    
+
     # Test invalid components dict
     index = {
         "entries": [
@@ -224,7 +220,7 @@ def test_find_component_in_index_malformed():
     }
     with pytest.raises(ValueError, match="Invalid components dict"):
         _find_component_in_index(index, "category", "MyAgent")
-    
+
     # Test valid entry works fine
     index = {
         "entries": [
