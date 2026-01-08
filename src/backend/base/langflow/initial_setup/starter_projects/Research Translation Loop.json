@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-nr0Vp",
+            "id": "ChatInput-sPpAI",
             "name": "message",
             "output_types": [
               "Message"
@@ -15,26 +15,27 @@
           },
           "targetHandle": {
             "fieldName": "search_query",
-            "id": "ArXivComponent-tAHR5",
+            "id": "ArXivComponent-MIXCD",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-nr0Vp{œdataTypeœ:œChatInputœ,œidœ:œChatInput-nr0Vpœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ArXivComponent-tAHR5{œfieldNameœ:œsearch_queryœ,œidœ:œArXivComponent-tAHR5œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-sPpAI{œdataTypeœ:œChatInputœ,œidœ:œChatInput-sPpAIœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ArXivComponent-MIXCD{œfieldNameœ:œsearch_queryœ,œidœ:œArXivComponent-MIXCDœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-nr0Vp",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-nr0Vpœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ArXivComponent-tAHR5",
-        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œArXivComponent-tAHR5œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-sPpAI",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-sPpAIœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ArXivComponent-MIXCD",
+        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œArXivComponent-MIXCDœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
+        "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "LoopComponent",
-            "id": "LoopComponent-GtPZT",
+            "id": "LoopComponent-XCBp8",
             "name": "item",
             "output_types": [
               "Data"
@@ -42,7 +43,7 @@
           },
           "targetHandle": {
             "fieldName": "input_data",
-            "id": "ParserComponent-pXAMb",
+            "id": "ParserComponent-8Oy2r",
             "inputTypes": [
               "DataFrame",
               "Data"
@@ -50,18 +51,20 @@
             "type": "other"
           }
         },
-        "id": "xy-edge__LoopComponent-GtPZT{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-GtPZTœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}-ParserComponent-pXAMb{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-pXAMbœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
-        "source": "LoopComponent-GtPZT",
-        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-GtPZTœ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ]}",
-        "target": "ParserComponent-pXAMb",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-pXAMbœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-LoopComponent-XCBp8{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-XCBp8œ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}-ParserComponent-8Oy2r{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-8Oy2rœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "LoopComponent-XCBp8",
+        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-XCBp8œ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ]}",
+        "target": "ParserComponent-8Oy2r",
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-8Oy2rœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
+        "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ParserComponent",
-            "id": "ParserComponent-pXAMb",
+            "id": "ParserComponent-8Oy2r",
             "name": "parsed_text",
             "output_types": [
               "Message"
@@ -69,25 +72,27 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "LanguageModelComponent-XKvly",
+            "id": "LanguageModelComponent-TS1MJ",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__ParserComponent-pXAMb{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-pXAMbœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-XKvly{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-XKvlyœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ParserComponent-pXAMb",
-        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-pXAMbœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LanguageModelComponent-XKvly",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-XKvlyœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ParserComponent-8Oy2r{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-8Oy2rœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-TS1MJ{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-TS1MJœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ParserComponent-8Oy2r",
+        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-8Oy2rœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "LanguageModelComponent-TS1MJ",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-TS1MJœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
+        "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "LanguageModelComponent",
-            "id": "LanguageModelComponent-XKvly",
+            "id": "LanguageModelComponent-TS1MJ",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -95,7 +100,7 @@
           },
           "targetHandle": {
             "dataType": "LoopComponent",
-            "id": "LoopComponent-GtPZT",
+            "id": "LoopComponent-XCBp8",
             "name": "item",
             "output_types": [
               "Data",
@@ -103,18 +108,20 @@
             ]
           }
         },
-        "id": "xy-edge__LanguageModelComponent-XKvly{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-XKvlyœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-LoopComponent-GtPZT{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-GtPZTœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ,œMessageœ]}",
-        "source": "LanguageModelComponent-XKvly",
-        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-XKvlyœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LoopComponent-GtPZT",
-        "targetHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-GtPZTœ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ, œMessageœ]}"
+        "id": "reactflow__edge-LanguageModelComponent-TS1MJ{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-TS1MJœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-LoopComponent-XCBp8{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-XCBp8œ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ,œMessageœ]}",
+        "selected": false,
+        "source": "LanguageModelComponent-TS1MJ",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-TS1MJœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "LoopComponent-XCBp8",
+        "targetHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-XCBp8œ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ, œMessageœ]}"
       },
       {
+        "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ArXivComponent",
-            "id": "ArXivComponent-tAHR5",
+            "id": "ArXivComponent-MIXCD",
             "name": "dataframe",
             "output_types": [
               "DataFrame"
@@ -122,25 +129,27 @@
           },
           "targetHandle": {
             "fieldName": "data",
-            "id": "LoopComponent-GtPZT",
+            "id": "LoopComponent-XCBp8",
             "inputTypes": [
               "DataFrame"
             ],
             "type": "other"
           }
         },
-        "id": "xy-edge__ArXivComponent-tAHR5{œdataTypeœ:œArXivComponentœ,œidœ:œArXivComponent-tAHR5œ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-LoopComponent-GtPZT{œfieldNameœ:œdataœ,œidœ:œLoopComponent-GtPZTœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}",
-        "source": "ArXivComponent-tAHR5",
-        "sourceHandle": "{œdataTypeœ: œArXivComponentœ, œidœ: œArXivComponent-tAHR5œ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "LoopComponent-GtPZT",
-        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œLoopComponent-GtPZTœ, œinputTypesœ: [œDataFrameœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-ArXivComponent-MIXCD{œdataTypeœ:œArXivComponentœ,œidœ:œArXivComponent-MIXCDœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-LoopComponent-XCBp8{œfieldNameœ:œdataœ,œidœ:œLoopComponent-XCBp8œ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "ArXivComponent-MIXCD",
+        "sourceHandle": "{œdataTypeœ: œArXivComponentœ, œidœ: œArXivComponent-MIXCDœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
+        "target": "LoopComponent-XCBp8",
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œLoopComponent-XCBp8œ, œinputTypesœ: [œDataFrameœ], œtypeœ: œotherœ}"
       },
       {
+        "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "LoopComponent",
-            "id": "LoopComponent-GtPZT",
+            "id": "LoopComponent-XCBp8",
             "name": "done",
             "output_types": [
               "DataFrame"
@@ -148,7 +157,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-YAED9",
+            "id": "ChatOutput-hgO47",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -157,17 +166,18 @@
             "type": "other"
           }
         },
-        "id": "xy-edge__LoopComponent-GtPZT{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-GtPZTœ,œnameœ:œdoneœ,œoutput_typesœ:[œDataFrameœ]}-ChatOutput-YAED9{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-YAED9œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
-        "source": "LoopComponent-GtPZT",
-        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-GtPZTœ, œnameœ: œdoneœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "ChatOutput-YAED9",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-YAED9œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-LoopComponent-XCBp8{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-XCBp8œ,œnameœ:œdoneœ,œoutput_typesœ:[œDataFrameœ]}-ChatOutput-hgO47{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-hgO47œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "LoopComponent-XCBp8",
+        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-XCBp8œ, œnameœ: œdoneœ, œoutput_typesœ: [œDataFrameœ]}",
+        "target": "ChatOutput-hgO47",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-hgO47œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ArXivComponent-tAHR5",
+          "id": "ArXivComponent-MIXCD",
           "node": {
             "base_classes": [
               "DataFrame"
@@ -320,7 +330,7 @@
           "type": "ArXivComponent"
         },
         "dragging": false,
-        "id": "ArXivComponent-tAHR5",
+        "id": "ArXivComponent-MIXCD",
         "measured": {
           "height": 369,
           "width": 320
@@ -334,7 +344,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-YAED9",
+          "id": "ChatOutput-hgO47",
           "node": {
             "base_classes": [
               "Message"
@@ -603,7 +613,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-YAED9",
+        "id": "ChatOutput-hgO47",
         "measured": {
           "height": 48,
           "width": 192
@@ -617,7 +627,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-nr0Vp",
+          "id": "ChatInput-sPpAI",
           "node": {
             "base_classes": [
               "Message"
@@ -881,7 +891,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-nr0Vp",
+        "id": "ChatInput-sPpAI",
         "measured": {
           "height": 204,
           "width": 320
@@ -895,7 +905,7 @@
       },
       {
         "data": {
-          "id": "note-nrMOM",
+          "id": "note-bu7tw",
           "node": {
             "description": "# **Langflow Loop Component Template - ArXiv search result Translator** \nThis template translates research paper summaries on ArXiv into Portuguese and summarizes them. \n Using **Langflow’s looping mechanism**, the template iterates through multiple research papers, translates them with the **OpenAI** model component, and outputs an aggregated version of all translated papers.  \n\n## Quickstart \n 1. Add your OpenAI API key to the **Language Model** component. \n2. In the **Playground**, enter a query related to a research topic (for example, “Quantum Computing Advancements”).  \n\n  The flow fetches a list of research papers from ArXiv matching the query. Each paper in the retrieved list is processed one-by-one using the Langflow **Loop component**. \n\n  The abstract of each paper is translated into Portuguese by the **OpenAI** model component. \n\n Once all papers are translated, the system aggregates them into a **single structured output**.",
             "display_name": "",
@@ -906,7 +916,7 @@
         },
         "dragging": false,
         "height": 647,
-        "id": "note-nrMOM",
+        "id": "note-bu7tw",
         "measured": {
           "height": 647,
           "width": 576
@@ -922,7 +932,7 @@
       },
       {
         "data": {
-          "id": "LanguageModelComponent-XKvly",
+          "id": "LanguageModelComponent-TS1MJ",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -946,7 +956,7 @@
             ],
             "frozen": false,
             "icon": "brain-circuit",
-            "last_updated": "2025-12-18T20:14:17.831Z",
+            "last_updated": "2026-01-08T16:42:17.637Z",
             "legacy": false,
             "lf_version": "1.7.0",
             "metadata": {
@@ -992,6 +1002,8 @@
                 "loop_types": null,
                 "method": "text_response",
                 "name": "text_output",
+                "options": null,
+                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1008,6 +1020,8 @@
                 "loop_types": null,
                 "method": "build_model",
                 "name": "model_output",
+                "options": null,
+                "required_inputs": null,
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
@@ -1020,10 +1034,10 @@
             "priority": 0,
             "template": {
               "_frontend_node_flow_id": {
-                "value": "70f6d78d-41ad-42a3-854d-405e161ee563"
+                "value": "f1bb10fd-c362-4beb-b7f1-de3bd6a4f083"
               },
               "_frontend_node_folder_id": {
-                "value": "afaca9ee-97e3-4211-8569-722a4058ea5e"
+                "value": "f518f23d-3625-4a27-a901-d48bac8a4479"
               },
               "_type": "Component",
               "api_key": {
@@ -1042,7 +1056,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -1085,7 +1099,7 @@
                 "type": "str",
                 "value": ""
               },
-              "is_refresh": true,
+              "is_refresh": false,
               "model": {
                 "_input_type": "ModelInput",
                 "advanced": false,
@@ -1094,6 +1108,7 @@
                 "display_name": "Model Name",
                 "dynamic": false,
                 "info": "Select the model to use",
+                "input_types": [],
                 "name": "model_name",
                 "options": [
                   {
@@ -1133,6 +1148,30 @@
                     "provider": "Anthropic"
                   },
                   {
+                    "category": "Anthropic",
+                    "icon": "Anthropic",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatAnthropic",
+                      "model_name_param": "model"
+                    },
+                    "name": "claude-opus-4-1-20250805",
+                    "provider": "Anthropic"
+                  },
+                  {
+                    "category": "Anthropic",
+                    "icon": "Anthropic",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatAnthropic",
+                      "model_name_param": "model"
+                    },
+                    "name": "claude-opus-4-20250514",
+                    "provider": "Anthropic"
+                  },
+                  {
                     "category": "OpenAI",
                     "icon": "OpenAI",
                     "metadata": {
@@ -1154,9 +1193,12 @@
                       "api_key_param": "api_key",
                       "context_length": 128000,
                       "model_class": "ChatOpenAI",
-                      "model_name_param": "model"
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5"
+                      ]
                     },
-                    "name": "gpt-4o-mini",
+                    "name": "gpt-5",
                     "provider": "OpenAI"
                   },
                   {
@@ -1168,37 +1210,53 @@
                       "model_class": "ChatOpenAI",
                       "model_name_param": "model",
                       "reasoning_models": [
-                        "o1"
+                        "gpt-5-mini"
                       ]
                     },
-                    "name": "o1",
+                    "name": "gpt-5-mini",
                     "provider": "OpenAI"
                   },
                   {
-                    "category": "Ollama",
-                    "icon": "Ollama",
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
                     "metadata": {
-                      "api_key_param": "base_url",
-                      "base_url_param": "base_url",
+                      "api_key_param": "api_key",
                       "context_length": 128000,
-                      "model_class": "ChatOllama",
-                      "model_name_param": "model"
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5-nano"
+                      ]
                     },
-                    "name": "llama3.3",
-                    "provider": "Ollama"
+                    "name": "gpt-5-nano",
+                    "provider": "OpenAI"
                   },
                   {
-                    "category": "Ollama",
-                    "icon": "Ollama",
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
                     "metadata": {
-                      "api_key_param": "base_url",
-                      "base_url_param": "base_url",
+                      "api_key_param": "api_key",
                       "context_length": 128000,
-                      "model_class": "ChatOllama",
+                      "model_class": "ChatOpenAI",
+                      "model_name_param": "model",
+                      "reasoning_models": [
+                        "gpt-5-chat-latest"
+                      ]
+                    },
+                    "name": "gpt-5-chat-latest",
+                    "provider": "OpenAI"
+                  },
+                  {
+                    "category": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                      "api_key_param": "api_key",
+                      "context_length": 128000,
+                      "model_class": "ChatOpenAI",
                       "model_name_param": "model"
                     },
-                    "name": "qwq",
-                    "provider": "Ollama"
+                    "name": "gpt-4o-mini",
+                    "provider": "OpenAI"
                   },
                   {
                     "category": "Google Generative AI",
@@ -1209,6 +1267,16 @@
                     },
                     "name": "__enable_provider_Google Generative AI__",
                     "provider": "Google Generative AI"
+                  },
+                  {
+                    "category": "Ollama",
+                    "icon": "Ollama",
+                    "metadata": {
+                      "is_disabled_provider": true,
+                      "variable_name": "OLLAMA_BASE_URL"
+                    },
+                    "name": "__enable_provider_Ollama__",
+                    "provider": "Ollama"
                   },
                   {
                     "category": "IBM WatsonX",
@@ -1364,7 +1432,7 @@
           "type": "LanguageModelComponent"
         },
         "dragging": false,
-        "id": "LanguageModelComponent-XKvly",
+        "id": "LanguageModelComponent-TS1MJ",
         "measured": {
           "height": 534,
           "width": 320
@@ -1378,7 +1446,7 @@
       },
       {
         "data": {
-          "id": "LoopComponent-GtPZT",
+          "id": "LoopComponent-XCBp8",
           "node": {
             "base_classes": [
               "Data",
@@ -1495,7 +1563,7 @@
           "type": "LoopComponent"
         },
         "dragging": false,
-        "id": "LoopComponent-GtPZT",
+        "id": "LoopComponent-XCBp8",
         "measured": {
           "height": 274,
           "width": 320
@@ -1509,7 +1577,7 @@
       },
       {
         "data": {
-          "id": "ParserComponent-pXAMb",
+          "id": "ParserComponent-8Oy2r",
           "node": {
             "base_classes": [
               "Message"
@@ -1655,7 +1723,7 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": false,
                 "type": "str",
-                "value": "Text: {text}"
+                "value": "Text: {summary}"
               },
               "sep": {
                 "_input_type": "MessageTextInput",
@@ -1689,7 +1757,7 @@
           "type": "ParserComponent"
         },
         "dragging": false,
-        "id": "ParserComponent-pXAMb",
+        "id": "ParserComponent-8Oy2r",
         "measured": {
           "height": 329,
           "width": 320
@@ -1698,21 +1766,21 @@
           "x": 1102.2949192976482,
           "y": -80.12506181353082
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": 245.66793868161778,
-      "y": 267.9129204471257,
-      "zoom": 0.48565229862392995
+      "x": 480.22923419012477,
+      "y": 338.89117859307146,
+      "zoom": 0.4638331373814056
     }
   },
   "description": "This template iterates over search results using LoopComponent and translates each result into Portuguese automatically. 🚀",
   "endpoint_name": null,
   "id": "70f6d78d-41ad-42a3-854d-405e161ee563",
   "is_component": false,
-  "last_tested_version": "1.4.3",
+  "last_tested_version": "1.7.2",
   "name": "Research Translation Loop",
   "tags": [
     "chatbots",

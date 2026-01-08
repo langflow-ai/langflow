@@ -4,7 +4,6 @@ import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
-import { selectGptModel } from "../../utils/select-gpt-model";
 
 withEventDeliveryModes(
   "Research Translation Loop.spec",
@@ -30,23 +29,15 @@ withEventDeliveryModes(
       timeout: 100000,
     });
 
-    await initialGPTsetup(page, {
-      skipAdjustScreenView: true,
-      skipSelectGptModel: true,
-    });
-    // TODO: Uncomment this when we have a way to test Anthropic
-    // await page.getByTestId("dropdown_str_provider").click();
-    // await page.getByTestId("Anthropic-1-option").click();
+    await initialGPTsetup(page);
 
-    await selectGptModel(page);
+    await page.getByTestId("int_int_max_results").fill("1");
 
     await page.getByTestId("playground-btn-flow-io").click();
 
     await page.waitForSelector('[data-testid="button-send"]', {
       timeout: 3000,
     });
-
-    await page.getByTestId("input-chat-playground").fill("This is a test");
 
     await page.getByTestId("button-send").click();
 

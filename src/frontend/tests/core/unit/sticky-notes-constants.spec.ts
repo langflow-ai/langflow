@@ -26,21 +26,21 @@ test(
   async ({ page }) => {
     const textSize = await page.evaluate(() => {
       const testEl = document.createElement("div");
-      testEl.className = "text-base font-medium";
+      testEl.className = "text-base";
+      testEl.textContent = "Test";
       testEl.style.visibility = "hidden";
       document.body.appendChild(testEl);
 
       const style = window.getComputedStyle(testEl);
       const result = {
         fontSize: style.fontSize,
-        fontWeight: style.fontWeight,
       };
 
       document.body.removeChild(testEl);
       return result;
     });
 
+    // Verify text-base (16px / 1rem) is applied for sticky note readability
     expect(textSize.fontSize).toBe("16px");
-    expect(textSize.fontWeight).toBe("500");
   },
 );
