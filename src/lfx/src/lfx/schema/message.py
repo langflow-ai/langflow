@@ -12,9 +12,10 @@ from uuid import UUID
 from fastapi.encoders import jsonable_encoder
 from langchain_core.load import load
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage
-from langchain_core.prompts.chat import BaseChatPromptTemplate, ChatPromptTemplate
-from langchain_core.prompts.prompt import PromptTemplate
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_serializer, field_validator
+
+if TYPE_CHECKING:
+    from langchain_core.prompts.chat import BaseChatPromptTemplate
 
 from lfx.base.prompts.utils import dict_values_to_string
 from lfx.log.logger import logger
@@ -32,6 +33,26 @@ if TYPE_CHECKING:
 
 
 class Message(Data):
+    """Message schema for Langflow.
+
+    Message ID Semantics:
+    - Messages only have an ID after being stored in the database
+    - Messages that are skipped (via Component._should_skip_message) will NOT have an ID
+    - Always use get_id(), has_id(), or require_id() methods to safely access the ID
+    - Never access message.id directly without checking if it exists first
+
+    Safe ID Access Patterns:
+    - Use get_id() when ID may or may not exist (returns None if missing)
+    - Use has_id() to check if ID exists before operations that require it
+    - Use require_id() when ID is required (raises ValueError if missing)
+
+    Example:
+        message_id = message.get_id()  # Safe: returns None if no ID
+        if message.has_id():
+            # Safe to use message_id
+            do_something_with_id(message_id)
+    """
+
     model_config = ConfigDict(arbitrary_types_allowed=True)
     # Helper class to deal with image data
     text_key: str = "text"
@@ -267,6 +288,8 @@ class Message(Data):
         return cls(prompt=prompt_json)
 
     def format_text(self):
+        from langchain_core.prompts.prompt import PromptTemplate
+
         prompt_template = PromptTemplate.from_template(self.template)
         variables_with_str_values = dict_values_to_string(self.variables)
         formatted_prompt = prompt_template.format(**variables_with_str_values)
@@ -282,6 +305,8 @@ class Message(Data):
     # Define a sync version for backwards compatibility with versions >1.0.15, <1.1
     @classmethod
     def from_template(cls, template: str, **variables):
+        from langchain_core.prompts.chat import ChatPromptTemplate
+
         instance = cls(template=template, variables=variables)
         text = instance.format_text()
         message = HumanMessage(content=text)
@@ -313,6 +338,50 @@ class Message(Data):
         from lfx.schema.dataframe import DataFrame  # Local import to avoid circular import
 
         return DataFrame(data=[self])
+
+    def get_id(self) -> str | UUID | None:
+        """Safely get the message ID.
+
+        Returns:
+            The message ID if it exists, None otherwise.
+
+        Note:
+            A message only has an ID if it has been stored in the database.
+            Messages that are skipped (via _should_skip_message) will not have an ID.
+        """
+        return getattr(self, "id", None)
+
+    def has_id(self) -> bool:
+        """Check if the message has an ID.
+
+        Returns:
+            True if the message has an ID, False otherwise.
+
+        Note:
+            A message only has an ID if it has been stored in the database.
+            Messages that are skipped (via _should_skip_message) will not have an ID.
+        """
+        message_id = getattr(self, "id", None)
+        return message_id is not None
+
+    def require_id(self) -> str | UUID:
+        """Get the message ID, raising an error if it doesn't exist.
+
+        Returns:
+            The message ID.
+
+        Raises:
+            ValueError: If the message does not have an ID.
+
+        Note:
+            Use this method when an ID is required for the operation.
+            For optional ID access, use get_id() instead.
+        """
+        message_id = getattr(self, "id", None)
+        if message_id is None:
+            msg = "Message does not have an ID. Messages only have IDs after being stored in the database."
+            raise ValueError(msg)
+        return message_id
 
 
 class DefaultModel(BaseModel):

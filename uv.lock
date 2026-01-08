@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = ">=3.10, <3.14"
 resolution-markers = [
     "python_full_version >= '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
@@ -5530,7 +5530,7 @@ wheels = [
 
 [[package]]
 name = "langflow"
-version = "1.7.1"
+version = "1.7.2"
 source = { editable = "." }
 dependencies = [
     { name = "agent-lifecycle-toolkit" },
@@ -5935,7 +5935,7 @@ dev = [
 
 [[package]]
 name = "langflow-base"
-version = "0.7.1"
+version = "0.7.2"
 source = { editable = "src/backend/base" }
 dependencies = [
     { name = "aiofile" },
@@ -6402,6 +6402,7 @@ dependencies = [
     { name = "asyncer" },
     { name = "cachetools" },
     { name = "chardet" },
+    { name = "cryptography" },
     { name = "defusedxml" },
     { name = "docstring-parser" },
     { name = "emoji" },
@@ -6457,6 +6458,7 @@ requires-dist = [
     { name = "asyncer", specifier = ">=0.0.8,<1.0.0" },
     { name = "cachetools", specifier = ">=6.0.0" },
     { name = "chardet", specifier = ">=5.2.0,<6.0.0" },
+    { name = "cryptography", specifier = ">=43.0.0" },
     { name = "defusedxml", specifier = ">=0.7.1,<1.0.0" },
     { name = "docstring-parser", specifier = ">=0.16,<1.0.0" },
     { name = "emoji", specifier = ">=2.14.1,<3.0.0" },
