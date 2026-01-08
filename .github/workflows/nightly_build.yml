@@ -10,7 +10,7 @@ on:
         options:
           - ubuntu-latest
           - self-hosted
-          - "[self-hosted, linux, ARM64, langflow-ai-arm64-40gb]"
+          - "[self-hosted, linux, ARM64, langflow-ai-arm64-40gb-ephemeral]"
         default: ubuntu-latest
       skip_frontend_tests:
         description: "Skip frontend tests. Only do this for testing purposes."

@@ -43,7 +43,7 @@ on:
         options:
           - ubuntu-latest
           - self-hosted
-          - "[self-hosted, linux, ARM64, langflow-ai-arm64-40gb]"
+          - "[self-hosted, linux, ARM64, langflow-ai-arm64-40gb-ephemeral]"
         default: ubuntu-latest
 env:
   POETRY_VERSION: "1.8.2"
@@ -54,7 +54,6 @@ env:
 
 jobs:
   build:
-
     name: Unit Tests - Python ${{ matrix.python-version }} - Group ${{ matrix.group }}
     runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
     strategy:
@@ -119,7 +118,6 @@ jobs:
             htmlcov/
           retention-days: 30
 
-
   integration-tests:
     name: Integration Tests - Python ${{ matrix.python-version }}
     runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
@@ -144,7 +142,6 @@ jobs:
         env:
           PYLEAK_LOG_LEVEL: debug # enable pyleak logging
           DO_NOT_TRACK: true # disable telemetry reporting
-
 
   lfx-tests:
     name: LFX Tests - Python ${{ matrix.python-version }}
@@ -256,4 +253,3 @@ jobs:
           else
             echo "Server terminated successfully"
           fi
-

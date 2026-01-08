@@ -58,7 +58,7 @@ on:
         options:
           - ubuntu-latest
           - self-hosted
-          - "[self-hosted, linux, ARM64, langflow-ai-arm64-40gb]"
+          - "[self-hosted, linux, ARM64, langflow-ai-arm64-40gb-ephemeral]"
         default: ubuntu-latest
   pull_request:
     types: [opened, synchronize, labeled]
@@ -214,7 +214,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: "3.12"
       - name: Install deps for coverage check
         run: |
           python -m pip install --upgrade pip
