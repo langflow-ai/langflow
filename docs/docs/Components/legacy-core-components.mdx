@@ -1,0 +1,344 @@
+---
+title: Legacy core components
+slug: /legacy-core-components
+---
+
+import Icon from "@site/src/components/icon";
+import PartialLegacy from '@site/docs/_partial-legacy.mdx';
+
+<PartialLegacy />
+
+## Legacy Data components
+
+The following Data components are in legacy status:
+
+* **Load CSV**
+* **Load JSON**
+
+Replace these components with the [**Read File** component](/read-file), which supports loading CSV and JSON files, as well as many other file types.
+
+## Legacy Helper components
+
+The following Helper components are in legacy status:
+
+* **Message Store**: Replaced by the [**Message History** component](/message-history)
+* **Create List**: Replace with [Processing components](/concepts-components)
+* **ID Generator**: Replace with a component that executes arbitrary code to generate an ID or embed an ID generator script your application code (external to your Langflow flows).
+* **Output Parser**: Replace with the [**Structured Output** component](/structured-output) and [**Parser** component](/parser).
+The components you need depend on the data types and complexity of the parsing task.
+
+    The **Output Parser** component transformed the output of a language model into comma-separated values (CSV) format, such as `["item1", "item2", "item3"]`, using LangChain's `CommaSeparatedListOutputParser`.
+    The **Structured Output** component is a good alternative for this component because it also formats LLM responses with support for custom schemas and more complex parsing.
+
+    **Parsing** components only provide formatting instructions and parsing functionality.
+    _They don't include prompts._
+    You must connect parsers to **Prompt Template** components to create prompts that LLMs can use.
+
+## Legacy Logic components
+
+The following Logic components are in legacy status:
+
+<details>
+<summary>Condition</summary>
+
+As an alternative to this legacy component, see the [**If-Else** component](/if-else).
+
+The **Condition** component routes `Data` objects based on a condition applied to a specified key, including Boolean validation.
+It supports `true_output` and `false_output` for routing the results based on the condition evaluation.
+
+This component is useful in workflows that require conditional routing of complex data structures, enabling dynamic decision-making based on data content.
+
+It can process either a single `Data` object or a list of `Data` objects.
+The following actions occur when processing a list of `Data` objects:
+
+- Each object in the list is evaluated individually.
+- Objects meeting the condition go to `true_output`.
+- Objects not meeting the condition go to `false_output`.
+- If all objects go to one output, the other output is empty.
+
+The **Condition** component accepts the following parameters:
+
+| Name          | Type     | Description                                 |
+|---------------|----------|---------------------------------------------|
+| data_input    | Data     | Input parameter. The Data object or list of Data objects to process. This input can handle both single items and lists. |
+| key_name      | String   | Input parameter. The name of the key in the Data object to check.     |
+| operator      | Dropdown | Input parameter. The operator to apply. Options: `equals`, `not equals`, `contains`, `starts with`, `ends with`, `boolean validator`. Default: `equals`. |
+| compare_value | String   | Input parameter. The value to compare against. Not shown/used when operator is `boolean validator`. |
+
+The `operator` options have the following behaviors:
+
+- `equals`: Exact match comparison between the key's value and compare_value.
+- `not equals`: Inverse of exact match.
+- `contains`: Checks if compare_value is found within the key's value.
+- `starts with`: Checks if the key's value begins with compare_value.
+- `ends with`: Checks if the key's value ends with compare_value.
+- `boolean validator`: Treats the key's value as a Boolean. The following values are considered true:
+  - Boolean `true`.
+  - Strings: `true`, `1`, `yes`, `y`, `on` (case-insensitive)
+  - Any other value is converted using Python's `bool()` function
+
+</details>
+
+<details>
+<summary>Pass</summary>
+
+As an alternative to this legacy component, use the [**If-Else** component](/if-else) to pass a message without modification.
+
+The **Pass** component forwards the input message without modification.
+
+It accepts the following parameters:
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| input_message | Input Message | Input parameter. The message to forward. |
+| ignored_message | Ignored Message | Input parameter. A second message that is ignored. Used as a workaround for continuity. |
+| output_message | Output Message | Output parameter. The forwarded message from the input. |
+
+</details>
+
+<details>
+<summary>Flow As Tool</summary>
+
+This component constructed a tool from a function that ran a loaded flow.
+
+It was deprecated in Langflow version 1.1.2 and replaced by the [**Run Flow** component](/run-flow).
+
+</details>
+
+<details>
+<summary>Sub Flow</summary>
+
+This component integrated entire flows as components within a larger workflow.
+It dynamically generated inputs based on the selected flow and executed the flow with provided parameters.
+
+It was deprecated in Langflow version 1.1.2 and replaced by the [**Run Flow** component](/run-flow).
+
+</details>
+
+## Legacy Processing components
+
+The following Processing components are in legacy status:
+
+<details>
+<summary>Alter Metadata</summary>
+
+Replace this legacy component with the [**Data Operations** component](/data-operations).
+
+This component modifies metadata of input objects. It can add new metadata, update existing metadata, and remove specified metadata fields. The component works with both `Message` and `Data` objects, and can also create a new `Data` object from user-provided text.
+
+It accepts the following parameters:
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| input_value | Input | Input parameter. Objects to which Metadata should be added. |
+| text_in | User Text | Input parameter. Text input; the value is contained in the 'text' attribute of the `Data` object. Empty text entries are ignored. |
+| metadata | Metadata | Input parameter. Metadata to add to each object. |
+| remove_fields | Fields to Remove | Input parameter. Metadata fields to remove. |
+| data | Data | Output parameter. List of Input objects, each with added metadata. |
+
+</details>
+
+<details>
+<summary>Combine Data</summary>
+
+Replace this legacy component with the [**Data Operations** component](/data-operations) or the [**Loop** component](/loop).
+
+This component combines multiple data sources into a single unified `Data` object.
+
+The component iterates through a list of `Data` objects, merging them into a single `Data` object (`merged_data`).
+If the input list is empty, it returns an empty data object.
+If there's only one input data object, it returns that object unchanged.
+
+The merging process uses the addition operator to combine data objects.
+
+</details>
+
+<details>
+<summary>Combine Text</summary>
+
+Replace this legacy component with the [**Data Operations** component](/data-operations).
+
+This component concatenates two text inputs into a single text chunk using a specified delimiter, outputting a `Message` object with the combined text.
+
+</details>
+
+<details>
+<summary>Create Data</summary>
+
+Replace this legacy component with the [**Dynamic Create Data** component](/dynamic-create-data).
+This component dynamically creates a `Data` object with a specified number of fields and a text key.
+
+It accepts the following parameters:
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| number_of_fields | Number of Fields | Input parameter. The number of fields to be added to the record. |
+| text_key | Text Key | Input parameter. Key that identifies the field to be used as the text content. |
+| text_key_validator | Text Key Validator | Input parameter. If enabled, checks if the given `Text Key` is present in the given `Data`. |
+
+</details>
+
+<details>
+<summary>Data to DataFrame/Data to Message</summary>
+
+Replace these legacy components with newer Processing components, such as the [**Data Operations** component](/data-operations) and [**Type Convert** component](/type-convert).
+
+These components converted one or more `Data` objects into a `DataFrame` or `Message` object.
+
+For the **Data to DataFrame** component, each `Data` object corresponds to one row in the resulting `DataFrame`.
+Fields from the `.data` attribute become columns, and the `.text` field (if present) is placed in a `text` column.
+
+</details>
+
+<details>
+<summary>Extract Key</summary>
+
+Replace this legacy component with the [**Data Operations** component](/data-operations).
+
+This component extracts a specific key from a `Data` object and returns the value associated with that key.
+
+</details>
+
+<details>
+<summary>Filter Data</summary>
+
+Replace this legacy component with the [**Data Operations** component](/data-operations).
+
+This component filters a `Data` object based on a list of keys (`filter_criteria`), returning a new `Data` object (`filtered_data`) that contains only the key-value pairs that match the filter criteria.
+
+</details>
+
+<details>
+<summary>Filter Values</summary>
+
+Replace this legacy component with the [**Data Operations** component](/data-operations).
+
+The Filter values component filters a list of data items based on a specified key, filter value, and comparison operator.
+
+It accepts the following parameters:
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| input_data | Input data | Input parameter. The list of data items to filter. |
+| filter_key | Filter Key | Input parameter. The key to filter on. |
+| filter_value | Filter Value | Input parameter. The value to filter by. |
+| operator | Comparison Operator | Input parameter. The operator to apply for comparing the values. |
+| filtered_data | Filtered data | Output parameter. The resulting list of filtered data items. |
+
+</details>
+
+<details>
+<summary>JSON Cleaner</summary>
+
+Replace this legacy component with the [**Parser** component](/parser).
+
+This component cleans JSON strings to ensure they are fully compliant with the JSON specification.
+
+It accepts the following parameters:
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| json_str | JSON String | Input parameter. The JSON string to be cleaned. This can be a raw, potentially malformed JSON string produced by language models or other sources that may not fully comply with JSON specifications. |
+| remove_control_chars | Remove Control Characters | Input parameter. If set to `True`, this option removes control characters (ASCII characters 0-31 and 127) from the JSON string. This can help eliminate invisible characters that might cause parsing issues or make the JSON invalid. |
+| normalize_unicode | Normalize Unicode | Input parameter. When enabled, this option normalizes Unicode characters in the JSON string to their canonical composition form (NFC). This ensures consistent representation of Unicode characters across different systems and prevents potential issues with character encoding. |
+| validate_json | Validate JSON | Input parameter. If set to `True`, this option attempts to parse the JSON string to ensure it is well-formed before applying the final repair operation. It raises a ValueError if the JSON is invalid, allowing for early detection of major structural issues in the JSON. |
+| output | Cleaned JSON String | Output parameter. The resulting cleaned, repaired, and validated JSON string that fully complies with the JSON specification. |
+
+</details>
+
+<details>
+<summary>Message to Data</summary>
+
+Replace this legacy component with the [**Type Convert** component](/type-convert).
+
+This component converts `Message` objects to `Data` objects.
+
+</details>
+
+<details>
+<summary>Parse DataFrame</summary>
+
+Replace this legacy component with the [**DataFrame Operations** component](/dataframe-operations) or [**Parser** component](/parser).
+
+This component converts `DataFrame` objects into plain text using templates.
+
+It accepts the following parameters:
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| df | DataFrame | Input parameter. The DataFrame to convert to text rows. |
+| template | Template | Input parameter. Template for formatting (use `{column_name}` placeholders). |
+| sep | Separator | Input parameter. String to join rows in output. |
+| text | Text | Output parameter. All rows combined into single text. |
+
+</details>
+
+<details>
+<summary>Parse JSON</summary>
+
+Replace this legacy component with the [**Parser** component](/parser).
+
+This component converts and extracts JSON fields in `Message` and `Data` objects using JQ queries, then returns `filtered_data`, which is a list of `Data` objects.
+
+</details>
+
+<details>
+<summary>Regex Extractor</summary>
+
+Replace this legacy component with the [**Parser** component](/parser).
+
+This component extracts patterns in text using regular expressions. It can be used to find and extract specific patterns or information in text.
+
+</details>
+
+<details>
+<summary>Select Data</summary>
+
+Replace this legacy component with the [**Data Operations** component](/data-operations).
+
+This component selects a single `Data` object from a list.
+
+It accepts the following parameters:
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data_list | Data List | Input parameter. List of data to select from |
+| data_index | Data Index | Input parameter. Index of the data to select |
+| selected_data | Selected Data | Output parameter. The selected `Data` object. |
+
+</details>
+
+<details>
+<summary>Update Data</summary>
+
+Replace this legacy component with the [**Data Operations** component](/data-operations).
+
+This component dynamically updates or appends data with specified fields.
+
+It accepts the following parameters:
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| old_data | Data | Input parameter. The records to update. |
+| number_of_fields | Number of Fields | Input parameter. The number of fields to add. The maximum is 15. |
+| text_key | Text Key | Input parameter. The key for text content. |
+| text_key_validator | Text Key Validator | Input parameter. Validates the text key presence. |
+| data | Data | Output parameter. The updated Data objects. |
+
+</details>
+
+## Legacy Tools components
+
+The following Tools components are in legacy status:
+
+* **Calculator Tool**: Replaced by the [**Calculator** component](/calculator).
+* **Python Code Structured**: Replaced by the [**Python Interpreter** component](/python-interpreter).
+* **Python REPL**: Replaced by the [**Python Interpreter** component](/python-interpreter).
+* **Search API**: Replaced by the [**SearchApi** bundle](/bundles-searchapi).
+* **SearXNG Search**: No direct replacement. Use another provider's search component, create a custom component, or use a core component like the [**API Request** component](/api-request).
+* **Serp Search API**: Replace by the **SerpApi** bundle.
+* **Tavily Search API**: Replaced by the **Tavily** bundle.
+* **Wikidata API**: Replaced by the [**Wikipedia** bundle](/bundles-wikipedia).
+* **Wikipedia API**: Replaced by the [**Wikipedia** bundle](/bundles-wikipedia).
+* **Yahoo! Finance**: Replaced by the **Yahoo! Search** bundle.
+

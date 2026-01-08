@@ -11,6 +11,7 @@
  * software for all.
  */
 
+// biome-ignore-all lint/suspicious/noExplicitAny: TODO We need to fix this. added suppression for 1.7.1 merge
 import {
   type Connection,
   type Edge,
@@ -121,7 +122,9 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
         const outputTypes =
           targetOutput?.allows_loop && targetOutput?.loop_types
             ? [selectedType, ...targetOutput.loop_types]
-            : [selectedType];
+            : selectedType
+              ? [selectedType]
+              : [];
 
         id = {
           dataType: dataType ?? "",
@@ -347,7 +350,9 @@ export function detectBrokenEdgesEdges(nodes: AllNodeType[], edges: Edge[]) {
         const outputTypes =
           targetOutput?.allows_loop && targetOutput?.loop_types
             ? [selectedType, ...targetOutput.loop_types]
-            : [selectedType];
+            : selectedType
+              ? [selectedType]
+              : [];
 
         id = {
           dataType: dataType ?? "",
@@ -825,6 +830,21 @@ function hasLoop(
         const sourceHandleObject = scapeJSONParse(
           firstEdge?.sourceHandle ?? edge?.sourceHandle ?? "",
         );
+        const targetHandleObject: targetHandleType = scapeJSONParse(
+          e.targetHandle!,
+        );
+
+        // For loop inputs, compare by name and id instead of full stringified comparison
+        // This handles the case where loop inputs have additional loop_types in output_types
+        if (
+          targetHandleObject.output_types &&
+          sourceHandleObject.name === targetHandleObject.name &&
+          sourceHandleObject.id === targetHandleObject.id
+        ) {
+          return true;
+        }
+
+        // Fallback to original comparison for non-loop inputs
         const sourceHandleParsed = scapedJSONStringfy(sourceHandleObject);
         if (sourceHandleParsed === e.targetHandle) {
           return true;

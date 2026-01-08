@@ -1565,8 +1565,10 @@ class Graph:
                                 vertex.result.used_frozen_result = True
                         except Exception:  # noqa: BLE001
                             logger.debug("Error finalizing build", exc_info=True)
+                            vertex.built = False
                             should_build = True
                     except KeyError:
+                        vertex.built = False
                         should_build = True
 
             if should_build:
@@ -2147,6 +2149,17 @@ class Graph:
     def get_vertex_ids(self) -> list[str]:
         """Get all vertex IDs in the graph."""
         return [vertex.id for vertex in self.vertices]
+
+    def get_terminal_nodes(self) -> list[str]:
+        """Returns vertex IDs that are terminal nodes (not source of any edge).
+
+        Terminal nodes are vertices that have no outgoing edges - they are not
+        listed as source_id in any of the graph's edges.
+
+        Returns:
+            list[str]: List of vertex IDs that are terminal nodes.
+        """
+        return [vertex.id for vertex in self.vertices if not self.successor_map.get(vertex.id, [])]
 
     def sort_vertices(
         self,

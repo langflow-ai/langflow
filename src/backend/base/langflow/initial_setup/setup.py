@@ -1274,6 +1274,7 @@ async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> 
 async def sync_flows_from_fs():
     flow_mtimes = {}
     fs_flows_polling_interval = get_settings_service().settings.fs_flows_polling_interval / 1000
+    storage_service = get_storage_service()
     try:
         while True:
             try:
@@ -1282,7 +1283,14 @@ async def sync_flows_from_fs():
                     flows = (await session.exec(stmt)).all()
                     for flow in flows:
                         mtime = flow_mtimes.setdefault(flow.id, 0)
-                        path = anyio.Path(flow.fs_path)
+                        # Resolve path: if relative, construct full path using user's flows directory
+                        fs_path_str = flow.fs_path
+                        if not Path(fs_path_str).is_absolute():
+                            # Relative path - construct full path
+                            path = storage_service.data_dir / "flows" / str(flow.user_id) / fs_path_str
+                        else:
+                            # Absolute path - use as-is
+                            path = anyio.Path(fs_path_str)
                         try:
                             if await path.exists():
                                 new_mtime = (await path.stat()).st_mtime
