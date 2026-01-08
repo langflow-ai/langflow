@@ -180,13 +180,6 @@
                 ],
                 "total_dependencies": 1
               },
-              "hash_history": [
-                {
-                  "hash": "3d80f125b734",
-                  "version_first": "1.7.1",
-                  "version_last": "1.7.1"
-                }
-              ],
               "module": "lfx.components.input_output.text.TextInputComponent"
             },
             "minimized": false,
@@ -323,13 +316,6 @@
                 ],
                 "total_dependencies": 3
               },
-              "hash_history": [
-                {
-                  "hash": "8c87e536cca4",
-                  "version_first": "1.7.1",
-                  "version_last": "1.7.1"
-                }
-              ],
               "module": "lfx.components.input_output.chat_output.ChatOutput"
             },
             "minimized": true,
@@ -939,13 +925,6 @@
                 ],
                 "total_dependencies": 4
               },
-              "hash_history": [
-                {
-                  "hash": "5008cc086d7f",
-                  "version_first": "1.7.1",
-                  "version_last": "1.7.1"
-                }
-              ],
               "module": "lfx.components.files_and_knowledge.file.FileComponent"
             },
             "minimized": false,
@@ -2015,13 +1994,6 @@
                 ],
                 "total_dependencies": 3
               },
-              "hash_history": [
-                {
-                  "hash": "058ca1f51e9f",
-                  "version_first": "1.7.1",
-                  "version_last": "1.7.1"
-                }
-              ],
               "module": "lfx.components.llm_operations.structured_output.StructuredOutputComponent"
             },
             "minimized": false,

@@ -238,13 +238,6 @@
                 ],
                 "total_dependencies": 1
               },
-              "hash_history": [
-                {
-                  "hash": "7a26c54d89ed",
-                  "version_first": "1.7.1",
-                  "version_last": "1.7.1"
-                }
-              ],
               "module": "lfx.components.input_output.chat.ChatInput"
             },
             "output_types": [],
@@ -521,13 +514,6 @@
                 ],
                 "total_dependencies": 3
               },
-              "hash_history": [
-                {
-                  "hash": "8c87e536cca4",
-                  "version_first": "1.7.1",
-                  "version_last": "1.7.1"
-                }
-              ],
               "module": "lfx.components.input_output.chat_output.ChatOutput"
             },
             "output_types": [],
@@ -1238,13 +1224,6 @@
                 ],
                 "total_dependencies": 1
               },
-              "hash_history": [
-                {
-                  "hash": "acbe2603b034",
-                  "version_first": "1.7.1",
-                  "version_last": "1.7.1"
-                }
-              ],
               "module": "lfx.components.utilities.calculator_core.CalculatorComponent"
             },
             "minimized": false,
@@ -1416,13 +1395,6 @@
                 ],
                 "total_dependencies": 2
               },
-              "hash_history": [
-                {
-                  "hash": "625d1f5b3290",
-                  "version_first": "1.7.1",
-                  "version_last": "1.7.1"
-                }
-              ],
               "module": "lfx.components.searchapi.search.SearchComponent"
             },
             "minimized": false,
@@ -1699,13 +1671,6 @@
                 ],
                 "total_dependencies": 3
               },
-              "hash_history": [
-                {
-                  "hash": "bdc309bc2d2a",
-                  "version_first": "1.7.1",
-                  "version_last": "1.7.1"
-                }
-              ],
               "module": "lfx.components.models_and_agents.agent.AgentComponent"
             },
             "minimized": false,
@@ -2202,13 +2167,6 @@
                 ],
                 "total_dependencies": 3
               },
-              "hash_history": [
-                {
-                  "hash": "bdc309bc2d2a",
-                  "version_first": "1.7.1",
-                  "version_last": "1.7.1"
-                }
-              ],
               "module": "lfx.components.models_and_agents.agent.AgentComponent"
             },
             "minimized": false,
@@ -2705,13 +2663,6 @@
                 ],
                 "total_dependencies": 3
               },
-              "hash_history": [
-                {
-                  "hash": "bdc309bc2d2a",
-                  "version_first": "1.7.1",
-                  "version_last": "1.7.1"
-                }
-              ],
               "module": "lfx.components.models_and_agents.agent.AgentComponent"
             },
             "minimized": false,

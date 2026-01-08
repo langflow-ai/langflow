@@ -576,13 +576,6 @@
                 ],
                 "total_dependencies": 3
               },
-              "hash_history": [
-                {
-                  "hash": "8c87e536cca4",
-                  "version_first": "1.7.1",
-                  "version_last": "1.7.1"
-                }
-              ],
               "module": "lfx.components.input_output.chat_output.ChatOutput"
             },
             "output_types": [],
