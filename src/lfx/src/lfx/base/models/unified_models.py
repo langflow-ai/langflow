@@ -61,12 +61,12 @@ def get_model_provider_metadata():
         "OpenAI": {
             "icon": "OpenAI",
             "variable_name": "OPENAI_API_KEY",
-            "api_docs_url": "https://platform.openai.com/api-keys",
+            "api_docs_url": "https://platform.openai.com/docs/overview",
         },
         "Anthropic": {
             "icon": "Anthropic",
             "variable_name": "ANTHROPIC_API_KEY",
-            "api_docs_url": "https://console.anthropic.com/settings/keys",
+            "api_docs_url": "https://console.anthropic.com/docs",
         },
         "Google Generative AI": {
             "icon": "GoogleGenerativeAI",
@@ -81,7 +81,7 @@ def get_model_provider_metadata():
         "IBM WatsonX": {
             "icon": "IBM",
             "variable_name": "WATSONX_APIKEY",
-            "api_docs_url": "https://dataplatform.cloud.ibm.com/docs/content/wsj/analyze-data/fm-api-keys.html",
+            "api_docs_url": "https://www.ibm.com/products/watsonx",
         },
     }
 
