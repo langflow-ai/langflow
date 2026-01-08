@@ -14,12 +14,13 @@ import orjson
 from lfx.constants import BASE_COMPONENTS_PATH
 from lfx.custom.utils import abuild_custom_components, create_component_template
 from lfx.log.logger import logger
-from lfx.utils.validate_cloud import is_astra_cloud_environment
+from lfx.utils.validate_cloud import is_component_disabled_in_cloud
 
 if TYPE_CHECKING:
     from lfx.services.settings.service import SettingsService
 
 MIN_MODULE_PARTS = 2
+MIN_MODULE_PARTS_WITH_FILENAME = 4  # Minimum parts needed to have a module filename (lfx.components.type.filename)
 EXPECTED_RESULT_LENGTH = 2  # Expected length of the tuple returned by _process_single_module
 
 
@@ -336,26 +337,19 @@ async def _load_components_dynamically(
         if "deactivated" in modname:
             continue
 
-        # Skip disabled docling components when ASTRA_CLOUD_DISABLE_COMPONENT is true
-        if is_astra_cloud_environment():
-            parts = modname.split(".")
-            if len(parts) > MIN_MODULE_PARTS and parts[2] == "docling":
-                # Components that are disabled when ASTRA_CLOUD_DISABLE_COMPONENT is true
-                # Only DoclingRemoteComponent (docling_remote) should be available
-                disabled_docling_modules = {
-                    "chunk_docling_document",
-                    "docling_inline",
-                    "export_docling_document",
-                }
-                # Extract the module filename (e.g., "chunk_docling_document" from "lfx.components.docling.chunk_docling_document")
-                if len(parts) > 3 and parts[3] in disabled_docling_modules:
+        # Parse module name once for all checks
+        parts = modname.split(".")
+        if len(parts) > MIN_MODULE_PARTS:
+            component_type = parts[2]
+
+            # Skip disabled components when ASTRA_CLOUD_DISABLE_COMPONENT is true
+            if len(parts) >= MIN_MODULE_PARTS_WITH_FILENAME:
+                module_filename = parts[3]
+                if is_component_disabled_in_cloud(component_type, module_filename):
                     continue
 
-        # If specific modules requested, filter by top-level module name
-        if target_modules:
-            # Extract top-level: "lfx.components.mistral.xyz" -> "mistral"
-            parts = modname.split(".")
-            if len(parts) > MIN_MODULE_PARTS and parts[2].lower() not in target_modules:
+            # If specific modules requested, filter by top-level module name
+            if target_modules and component_type.lower() not in target_modules:
                 continue
 
         module_names.append(modname)
