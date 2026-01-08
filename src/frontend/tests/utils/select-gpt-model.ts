@@ -8,7 +8,9 @@ const SHORT_DELAY = 500;
 
 async function configureOpenAIProvider(page: Page): Promise<boolean> {
   await page.getByTestId("manage-model-providers").click();
-  await page.waitForSelector("text=Model providers", { timeout: MODAL_TIMEOUT });
+  await page.waitForSelector("text=Model providers", {
+    timeout: MODAL_TIMEOUT,
+  });
   await page.getByTestId("provider-item-OpenAI").click();
   await page.waitForTimeout(SHORT_DELAY);
 
@@ -27,7 +29,9 @@ async function configureOpenAIProvider(page: Page): Promise<boolean> {
   }
 
   await page.waitForTimeout(SHORT_DELAY);
-  const isModelEnabled = await page.getByTestId(MODEL_TOGGLE_TESTID).isChecked();
+  const isModelEnabled = await page
+    .getByTestId(MODEL_TOGGLE_TESTID)
+    .isChecked();
   if (!isModelEnabled) {
     await page.getByTestId(MODEL_TOGGLE_TESTID).click();
   }
@@ -43,7 +47,8 @@ async function selectModelFromDropdown(
   await page.getByTestId(dropdownTestId).nth(index).click();
   await page.waitForSelector('[role="listbox"]', { timeout: LISTBOX_TIMEOUT });
 
-  const hasModelOption = (await page.getByTestId(MODEL_OPTION_TESTID).count()) > 0;
+  const hasModelOption =
+    (await page.getByTestId(MODEL_OPTION_TESTID).count()) > 0;
   await page.waitForTimeout(SHORT_DELAY);
 
   if (!hasModelOption) {
