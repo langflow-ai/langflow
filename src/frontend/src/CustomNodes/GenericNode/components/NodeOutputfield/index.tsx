@@ -111,6 +111,7 @@ function NodeOutputField({
   data,
   title,
   id,
+  loopInputId,
   colors,
   tooltipTitle,
   showNode,
@@ -297,7 +298,7 @@ function NodeOutputField({
         <HandleRenderComponent
           left={true}
           tooltipTitle={tooltipTitle}
-          id={id}
+          id={loopInputId}
           title={title}
           nodeId={data.id}
           myData={myData}
@@ -311,7 +312,7 @@ function NodeOutputField({
     }
   }, [
     tooltipTitle,
-    id,
+    loopInputId,
     title,
     data.id,
     myData,
@@ -335,7 +336,11 @@ function NodeOutputField({
         setFilterEdge={setFilterEdge}
         showNode={showNode}
         testIdComplement={`${data?.type?.toLowerCase()}-${showNode ? "shownode" : "noshownode"}`}
-        colorName={colorName}
+        colorName={
+          data.node?.outputs?.[index].allows_loop
+            ? loopInputColorName
+            : colorName
+        }
       />
     ),
     [
@@ -349,6 +354,9 @@ function NodeOutputField({
       showNode,
       data?.type,
       colorName,
+      data.node?.outputs?.[index].allows_loop,
+      loopInputColorName,
+      index,
     ],
   );
 

@@ -1567,11 +1567,22 @@ class Component(CustomComponent):
     def _should_skip_message(self, message: Message) -> bool:
         """Check if the message should be skipped based on vertex configuration and message type.
 
-        Messages should NOT be skipped (i.e., should be sent) when:
-        - The vertex is an output or input vertex
-        - The component is connected to ChatOutput
-        - The component has _stream_to_playground=True (set by parent for inner graphs)
-        - The message is an ErrorMessage
+        When a message is skipped:
+        - It is NOT stored in the database
+        - It will NOT have an ID (message.get_id() will return None)
+        - It is still returned to the caller, but no events are sent to the frontend
+
+        Messages are skipped when:
+        - The component is not an input or output vertex
+        - The component is not connected to a Chat Output
+        - The component does not have _stream_to_playground=True (set by parent for inner graphs)
+        - The message is not an ErrorMessage
+
+        This prevents intermediate components from cluttering the database with messages
+        that aren't meant to be displayed in the chat UI.
+
+        Returns:
+            bool: True if the message should be skipped, False otherwise
         """
         # If parent explicitly enabled streaming for this inner graph component
         if getattr(self, "_stream_to_playground", False):
@@ -1614,12 +1625,31 @@ class Component(CustomComponent):
     async def send_message(self, message: Message, id_: str | None = None, *, skip_db_update: bool = False):
         """Send a message with optional database update control.
 
+        This is the central method for sending messages in Langflow. It handles:
+        - Message storage in the database (unless skipped)
+        - Event emission to the frontend
+        - Streaming support
+        - Error handling and cleanup
+
+        Message ID Rules:
+        - Messages only have an ID after being stored in the database
+        - If _should_skip_message() returns True, the message is not stored and will not have an ID
+        - Always use message.get_id() or message.has_id() to safely check for ID existence
+        - Never access message.id directly without checking if it exists first
+
         Args:
             message: The message to send
-            id_: Optional message ID
+            id_: Optional message ID (used for event emission, not database storage)
             skip_db_update: If True, only update in-memory and send event, skip DB write.
                            Useful during streaming to avoid excessive DB round-trips.
-                           Note: This assumes the message already exists in the database with message.id set.
+                           Note: When skip_db_update=True, the message must already have an ID
+                           (i.e., it must have been stored previously).
+
+        Returns:
+            Message: The stored message (with ID if stored in database, without ID if skipped)
+
+        Raises:
+            ValueError: If skip_db_update=True but message doesn't have an ID
         """
         if self._should_skip_message(message):
             return message
@@ -1632,10 +1662,18 @@ class Component(CustomComponent):
 
         # If skip_db_update is True and message already has an ID, skip the DB write
         # This path is used during agent streaming to avoid excessive DB round-trips
-        if skip_db_update and message.id:
+        # When skip_db_update=True, we require the message to already have an ID
+        # because we're updating an existing message, not creating a new one
+        if skip_db_update:
+            if not message.has_id():
+                msg = (
+                    "skip_db_update=True requires the message to already have an ID. "
+                    "The message must have been stored in the database previously."
+                )
+                raise ValueError(msg)
             # Create a fresh Message instance for consistency with normal flow
             stored_message = await Message.create(**message.model_dump())
-            self._stored_message_id = stored_message.id
+            self._stored_message_id = stored_message.get_id()
             # Still send the event to update the client in real-time
             # Note: If this fails, we don't need DB cleanup since we didn't write to DB
             await self._send_message_event(stored_message, id_=id_)
@@ -1643,7 +1681,9 @@ class Component(CustomComponent):
             # Normal flow: store/update in database
             stored_message = await self._store_message(message)
 
-            self._stored_message_id = stored_message.id
+            # After _store_message, the message should always have an ID
+            # but we use get_id() for safety
+            self._stored_message_id = stored_message.get_id()
             try:
                 complete_message = ""
                 if (
@@ -1664,7 +1704,10 @@ class Component(CustomComponent):
                     await self._send_message_event(stored_message, id_=id_)
             except Exception:
                 # remove the message from the database
-                await delete_message(stored_message.id)
+                # Only delete if the message has an ID
+                message_id = stored_message.get_id()
+                if message_id:
+                    await delete_message(id_=message_id)
                 raise
         self.status = stored_message
         return stored_message
@@ -1714,7 +1757,7 @@ class Component(CustomComponent):
         return bool(
             hasattr(self, "_event_manager")
             and self._event_manager
-            and stored_message.id
+            and stored_message.has_id()
             and not isinstance(original_message.text, str)
         )
 
@@ -1741,14 +1784,20 @@ class Component(CustomComponent):
             msg = "The message must be an iterator or an async iterator."
             raise TypeError(msg)
 
+        # Get message ID safely - streaming requires an ID
+        message_id = message.get_id()
+        if not message_id:
+            msg = "Message must have an ID to stream. Messages only have IDs after being stored in the database."
+            raise ValueError(msg)
+
         if isinstance(iterator, AsyncIterator):
-            return await self._handle_async_iterator(iterator, message.id, message)
+            return await self._handle_async_iterator(iterator, message_id, message)
         try:
             complete_message = ""
             first_chunk = True
             for chunk in iterator:
                 complete_message = await self._process_chunk(
-                    chunk.content, complete_message, message.id, message, first_chunk=first_chunk
+                    chunk.content, complete_message, message_id, message, first_chunk=first_chunk
                 )
                 first_chunk = False
         except Exception as e:
