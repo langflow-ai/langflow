@@ -53,9 +53,9 @@ def parse_flow_key(key: str) -> PublishedFlowMetadata:
 INVALID_FLOW_MSG = (
     "Invalid flow. Flow data must contain ALL of these keys:\n"
     "- name (must be non-empty and contain at least one alphanumeric character)\n"
-    "- description (must exist, can be None or empty)\n"
-    "- nodes (must exist, can be None or empty)\n"
-    "- edges (must exist, can be None or empty)"
+    "- description (can be None or empty)\n"
+    "- nodes (can be None or empty)\n"
+    "- edges (can be None or empty)"
 )
 MISSING_BUCKET_NAME_MSG = "Publish backend bucket name not specified"
 MISSING_ALL_ID_MSG = "user_id and {item_type}_id are required."
@@ -90,10 +90,10 @@ def require_valid_flow(flow_data: dict | None):
 
     Raises a ValueError if the data is None, empty,
     or does not have sufficient fields for publishing:
-    - name (must be none empty and contain at least one alphanumeric character)
-    - description (must exist, can be None or empty)
-    - nodes (must exist, can be None or empty)
-    - edges (must exist, can be None or empty)
+    - name (must contain at least one alphanumeric character)
+    - description (can be None or empty)
+    - nodes (can be None or empty)
+    - edges (can be None or empty)
 
     Modifies flow_data["name"] in-place to remove all non-alphanumeric characters.
     """
