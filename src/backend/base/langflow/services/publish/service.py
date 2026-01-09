@@ -56,7 +56,7 @@ class PublishService(Service):
         user_id: IDType,
         flow_id: IDType,
         key: PublishedFlowMetadata,
-        ) -> None:
+        ) -> str | None:
         """Deletes a published flow from the storage provider."""
         raise NotImplementedError
 

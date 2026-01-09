@@ -2,9 +2,17 @@
 import hashlib
 import re
 from copy import deepcopy
-from datetime import datetime, timezone
+from datetime import datetime
 from uuid import UUID
 
+from botocore.exceptions import (
+    ClientError,
+    NoCredentialsError,
+)
+from botocore.exceptions import (
+    ConnectionError as BotoConnectionError,
+)
+from fastapi import HTTPException, status
 from lfx.log import logger
 
 from langflow.services.database.models.base import orjson_dumps
@@ -34,16 +42,12 @@ def to_alnum_string(s: str | None):
     return ALNUM_PATTERN.sub("", s) if s else None
 
 
-def utc_now_strf() -> str:
-    """Return current UTC timestamp as an alphanumeric string with microsecond precision."""
-    return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
-
-
 KEY_VAL_PATTERN = re.compile(r"([^/]+)=([^/]+)")
-def parse_flow_key(key: str) -> PublishedFlowMetadata:
+def parse_flow_key(key: str, last_modified: datetime | None) -> PublishedFlowMetadata:
     """Matches key-value pairs in an s3 object key to return a PublishedFlowMetadata object."""
     data = dict(KEY_VAL_PATTERN.findall(key))
     data["version_id"] = data["id"]
+    data["last_modified"] = last_modified
     return PublishedFlowMetadata(**data)
 
 
@@ -60,7 +64,7 @@ INVALID_FLOW_MSG = (
 MISSING_BUCKET_NAME_MSG = "Publish backend bucket name not specified"
 MISSING_ALL_ID_MSG = "user_id and {item_type}_id are required."
 MISSING_ITEM_MSG = "{item} is missing or empty."
-INVALID_KEY_MSG = "Invalid key."
+INVALID_KEY_MSG = "Flow or Project Key is invalid or missing."
 
 
 def require_bucket_name(bucket_name: str | None):
@@ -200,3 +204,77 @@ def compute_dict_hash(graph_data: dict | None):
     graph_data = normalized_flow_data(graph_data)
     cleaned_graph_json = orjson_dumps(graph_data, sort_keys=True)
     return hashlib.sha256(cleaned_graph_json.encode("utf-8")).hexdigest()
+
+
+########################################################
+# exception handling
+########################################################
+def handle_s3_error(e: Exception, resource_name: str = "flow", op: str = "get"):
+    """Translates S3 exceptions into user-friendly HTTP exceptions.
+
+    Args:
+        e: The exception caught
+        resource_name: Name of the resource (e.g., "flow")
+        op: The operation being performed ("get", "put", "delete", "list")
+    """
+    if isinstance(e, ClientError):
+        error_code = e.response.get("Error", {}).get("Code", "Unknown")
+        error_msg = e.response.get("Error", {}).get("Message", str(e))
+
+        logger.error(f"S3 error ({error_code}): {error_msg}")
+
+        if error_code in ("NoSuchKey", "404"):
+            if op == "delete":
+                msg = f"The {resource_name} is already deleted or does not exist."
+            else:
+                msg = f"The {resource_name} was not found."
+
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=msg,
+            )
+        if error_code == "NoSuchBucket":
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Server configuration error: Publish bucket not found.",
+            )
+        if error_code == "AccessDenied":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Permission denied accessing storage.",
+            )
+        if error_code == "EntityTooLarge":
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=f"The {resource_name} is too large to publish.",
+            )
+        if error_code in ("PreconditionFailed", "412"):
+            if op == "put":
+                msg = f"The {resource_name} already exists. Please update its contents or retry with a new tag."
+            elif op == "delete":
+                msg = f"The {resource_name} could not be deleted because it has changed or no longer exists."
+            else:
+                msg = f"The {resource_name} state does not match the precondition."
+
+            raise HTTPException(
+                status_code=status.HTTP_412_PRECONDITION_FAILED,
+                detail=msg,
+            )
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Storage service error: {error_msg}",
+        )
+
+    if isinstance(e, (BotoConnectionError, NoCredentialsError)):
+        logger.error(f"S3 connection error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Could not connect to storage service."
+        )
+
+    logger.error(f"Unexpected S3 error: {e}")
+    raise HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail=f"An unexpected error occurred: {e!s}"
+    )

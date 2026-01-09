@@ -40,7 +40,7 @@ from langflow.api.v1.schemas import (
 from langflow.events.event_manager import create_stream_tokens_event_manager
 from langflow.exceptions.api import APIException, InvalidChatInputError
 from langflow.exceptions.serialization import SerializationError
-from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
+from langflow.helpers.flow import get_flow_by_id_or_endpoint_name, get_published_flow
 from langflow.interface.initialize.loading import update_params_with_load_from_db_fields
 from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.schema.graph import Tweaks
@@ -979,3 +979,26 @@ async def get_config() -> ConfigResponse:
 
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.post("/run/{flow_id}/published/{version_id}", response_model=None, response_model_exclude_none=True)
+async def run_published_flow(
+    *,
+    background_tasks: BackgroundTasks,
+    flow: Annotated[FlowRead, Depends(get_published_flow)],
+    input_request: SimplifiedAPIRequest | None = None,
+    stream: bool = False,
+    api_key_user: Annotated[UserRead, Depends(api_key_security)],
+    context: dict | None = None,
+    http_request: Request,
+):
+    """Executes a specific published version of a flow."""
+    return await _run_flow_internal(
+        background_tasks=background_tasks,
+        flow=flow,
+        input_request=input_request,
+        stream=stream,
+        api_key_user=api_key_user,
+        context=context,
+        http_request=http_request,
+    )

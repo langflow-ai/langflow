@@ -23,7 +23,7 @@ from sqlmodel import and_, col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow, remove_api_keys, validate_is_component
-from langflow.api.v1.schemas import FlowListCreate, PublishedFlowRead, PublishFlowCreate
+from langflow.api.v1.schemas import FlowListCreate, MessageResponse, PublishedFlowRead, PublishFlowCreate
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.database.models.flow.model import (
@@ -40,7 +40,7 @@ from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import get_service, get_settings_service, get_storage_service
 from langflow.services.publish.schema import PublishedFlowMetadata
 from langflow.services.publish.service import PublishService
-from langflow.services.publish.utils import MISSING_ITEM_MSG, require_all_ids, require_publish_key
+from langflow.services.publish.utils import MISSING_ITEM_MSG, require_all_ids
 from langflow.services.schema import ServiceType
 from langflow.services.storage.service import StorageService
 from langflow.utils.compression import compress_response
@@ -699,7 +699,11 @@ async def read_basic_examples(
 ########################################################
 # Publish Flow endpoints
 ########################################################
-@router.post("/{flow_id}/publish/", response_model=PublishedFlowRead, status_code=201)
+@router.post(
+    "/{flow_id}/publish/",
+    response_model=PublishedFlowRead | MessageResponse,
+    status_code=201
+    )
 async def publish_flow(
     *,
     session: DbSession,
@@ -722,8 +726,8 @@ async def publish_flow(
             flow_blob=flow_blob,
             publish_tag=publish_tag
         )
-    except HTTPException as httperr:
-        raise httperr from httperr
+    except HTTPException:
+        raise
     except Exception as e:
         msg = f"Failed to publish flow: {e!s}"
         raise HTTPException(status_code=500, detail=msg) from e
@@ -745,9 +749,10 @@ async def list_published_flows(
             user_id=current_user.id,
             flow_id=flow_id,
             )
+    except HTTPException:
+        raise
     except Exception as e:
-        err_msg = str(e)
-        raise HTTPException(status_code=500, detail=err_msg) from e
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
     return flow_data_list
 
@@ -758,53 +763,51 @@ async def read_published_flow(
     flow_id: UUID,
     current_user: CurrentActiveUser,
     version_id: str,
-    timestamp: str,
     flow_name: str,
     ):
     """Retrieve a specific published flow version."""
     require_all_ids(current_user.id, flow_id, "flow")
     try:
-        key = PublishedFlowMetadata(version_id=version_id, timestamp=timestamp, flow_name=flow_name)
+        key = PublishedFlowMetadata(version_id=version_id, flow_name=flow_name)
         publish_service: PublishService = get_service(ServiceType.PUBLISH_SERVICE)
         flow_data = await publish_service.get_flow(
             user_id=current_user.id,
             flow_id=flow_id,
             key=key,
             )
+    except HTTPException:
+        raise
     except Exception as e:
-        err_msg = str(e)
-        if "NoSuchKey" in err_msg:
-            raise HTTPException(status_code=404, detail=f"Published flow not found: {err_msg}") from e
-        raise HTTPException(status_code=500, detail=err_msg) from e
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
     return orjson.loads(flow_data)
 
 
-@router.delete("/{flow_id}/publish/{version_id}", status_code=204)
+@router.delete("/{flow_id}/publish/{version_id}", response_model=MessageResponse, status_code=200)
 async def delete_published_flow(
     *,
     flow_id: UUID,
     current_user: CurrentActiveUser,
     version_id: str,
-    timestamp: str,
     flow_name: str,
     ):
     """Delete a specific published flow version."""
     require_all_ids(current_user.id, flow_id, "flow")
 
     try:
-        key = PublishedFlowMetadata(version_id=version_id, timestamp=timestamp, flow_name=flow_name)
+        key = PublishedFlowMetadata(version_id=version_id, flow_name=flow_name)
         publish_service: PublishService = get_service(ServiceType.PUBLISH_SERVICE)
-        await publish_service.delete_flow(
+        version_id = await publish_service.delete_flow(
             user_id=current_user.id,
             flow_id=flow_id,
             key=key,
             )
+    except HTTPException:
+        raise
     except Exception as e:
-        err_msg = str(e)
-        if "NoSuchKey" in err_msg:
-            raise HTTPException(status_code=404, detail="Published flow not found") from e
-        raise HTTPException(status_code=500, detail=err_msg) from e
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+    return {"message": f"flow publish version deleted: {version_id}"}
 
 
 async def _read_flow_for_publish(

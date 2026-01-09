@@ -1,17 +1,21 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Annotated, Any, cast
 from uuid import UUID
 
-from fastapi import HTTPException
+import orjson
+from fastapi import Depends, HTTPException
 from lfx.log.logger import logger
+from lfx.services.deps import get_service
 from pydantic.v1 import BaseModel, Field, create_model
 from sqlalchemy.orm import aliased
 from sqlmodel import asc, desc, select
 
 from langflow.schema.schema import INPUT_FIELD_NAME
+from langflow.services.auth.utils import api_key_security
 from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.deps import get_settings_service, session_scope
+from langflow.services.schema import ServiceType
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -19,6 +23,9 @@ if TYPE_CHECKING:
     from lfx.graph.graph.base import Graph
     from lfx.graph.schema import RunOutputs
     from lfx.graph.vertex.base import Vertex
+
+    from langflow.services.database.models.user.model import UserRead
+    from langflow.services.publish.service import PublishService
 
 from langflow.schema.data import Data
 
@@ -478,3 +485,52 @@ def json_schema_from_flow(flow: Flow) -> dict:
                     required.append(field_name)
 
     return {"type": "object", "properties": properties, "required": required}
+
+
+async def get_published_flow(
+    flow_id: UUID,
+    version_id: str,
+    api_key_user: Annotated[UserRead, Depends(api_key_security)],
+) -> FlowRead:
+    """Dependency to retrieve a published flow and convert it to FlowRead format."""
+    try:
+        publish_service: PublishService = get_service(ServiceType.PUBLISH_SERVICE)
+
+        # 1. Verify existence and get metadata
+        versions = await publish_service.list_flow_versions(
+            user_id=api_key_user.id,
+            flow_id=flow_id
+        )
+        target_version = next((v for v in versions if v.version_id == version_id), None)
+
+        if not target_version:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Published version {version_id} not found for flow {flow_id}"
+            )
+
+        # 2. Fetch content
+        flow_data_str = await publish_service.get_flow(
+            user_id=api_key_user.id,
+            flow_id=flow_id,
+            key=target_version
+        )
+
+        if not flow_data_str:
+            raise HTTPException(status_code=404, detail="Flow data not found")
+
+        flow_data = orjson.loads(flow_data_str)
+
+        # 3. Convert to FlowRead
+        return FlowRead(
+            id=flow_id,
+            user_id=api_key_user.id,
+            name=target_version.flow_name,
+            description=flow_data.get("description"),
+            data=flow_data,
+            folder_id=None, # Published flows don't really have a folder context
+        )
+    except Exception as exc: # TODO: fix this garbage
+        if isinstance(exc, HTTPException):
+            raise exc from exc
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
