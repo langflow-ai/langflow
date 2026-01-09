@@ -12,11 +12,11 @@ from langflow.services.publish.utils import (
     IDType,
     IDTypeStrict,
     compute_dict_hash,
+    handle_s3_error,
     parse_flow_key,
     require_all_ids,
     require_valid_flow,
     to_alnum_string,
-    utc_now_strf,
     validate_all,
 )
 
@@ -56,14 +56,18 @@ class S3PublishService(PublishService):
         publish_key = self._flow_key(
             user_id=user_id,
             flow_id=flow_id,
-            **key.model_dump(),
+            flow_name=key.flow_name,
+            version_id=key.version_id,
         )
 
         self._flow_key_validate_owner(user_id, flow_id, publish_key)
 
-        async with self._get_client() as client:
-            obj = await client.get_object(Bucket=self.bucket_name, Key=publish_key)
-            return (await obj["Body"].read()).decode("utf-8")
+        try:
+            async with self._get_client() as client:
+                obj = await client.get_object(Bucket=self.bucket_name, Key=publish_key)
+                return (await obj["Body"].read()).decode("utf-8")
+        except Exception as e: # noqa: BLE001
+            handle_s3_error(e, "flow", op="get")
 
     async def put_flow(
         self,
@@ -81,7 +85,6 @@ class S3PublishService(PublishService):
         require_valid_flow(flow_blob)
 
         version_id = to_alnum_string(publish_tag) or compute_dict_hash(flow_blob)
-        timestamp = utc_now_strf()
         flow_name = flow_blob["name"]
 
         key = self._flow_key(
@@ -89,29 +92,28 @@ class S3PublishService(PublishService):
             flow_id=flow_id,
             flow_name=flow_name,
             version_id=version_id,
-            timestamp=timestamp
             )
-
-        print("KEY: ", key)
-        async with self._get_client() as client:
-            await client.put_object(
-                IfNoneMatch="*", # prevent creating new s3 versions if the object already exists
-                Bucket=self.bucket_name,
-                Key=key,
-                Body=json.dumps(flow_blob),
-                ContentType="application/json",
-            )
-
+        try:
+            async with self._get_client() as client:
+                    await client.put_object(
+                        IfNoneMatch="*", # prevent creating new s3 versions if the object already exists
+                        Bucket=self.bucket_name,
+                        Key=key,
+                        Body=json.dumps(flow_blob),
+                        ContentType="application/json",
+                    )
+        except Exception as e: # noqa: BLE001
+            handle_s3_error(e, "flow", op="put")
 
         logger.info(f"Published flow with key s3://{self.bucket_name}/{key}")
-        return PublishedFlowMetadata(version_id=version_id, timestamp=timestamp, flow_name=flow_name)
+        return PublishedFlowMetadata(version_id=version_id, last_modified=None, flow_name=flow_name)
 
     async def delete_flow(
         self,
         user_id: IDType,
         flow_id: IDType,
         key: PublishedFlowMetadata,
-    ) -> None:
+    ) -> str | None:
         validate_all(
             bucket_name=self.bucket_name,
             user_id=user_id,
@@ -120,15 +122,22 @@ class S3PublishService(PublishService):
             )
 
         # Reconstruct key from components
-        publish_key = self._flow_key(user_id=user_id, flow_id=flow_id, **key.model_dump())
+        publish_key = self._flow_key(
+            user_id=user_id,
+            flow_id=flow_id,
+            flow_name=to_alnum_string(key.flow_name),
+            version_id=key.version_id,
+        )
 
         self._flow_key_validate_owner(user_id, flow_id, publish_key)
-
-        async with self._get_client() as client:
-            await client.delete_object(Bucket=self.bucket_name, Key=publish_key)
+        try:
+            async with self._get_client() as client:
+                await client.delete_object(Bucket=self.bucket_name, Key=publish_key, IfMatch="*")
+        except Exception as e: # noqa: BLE001
+            handle_s3_error(e, "flow", op="delete")
 
         logger.info(f"Deleted published flow with key s3://{self.bucket_name}/{publish_key}")
-
+        return key.version_id
 
     async def list_flow_versions(
         self,
@@ -137,35 +146,36 @@ class S3PublishService(PublishService):
         ) -> list[PublishedFlowMetadata] | None:
         """List published versions of the given flow."""
         require_all_ids(user_id=user_id, item_id=flow_id, item_type="flow")
-        versions = []
-        async with self._get_client() as client:
-            paginator = client.get_paginator("list_objects_v2")
-            pages = paginator.paginate(
-                Bucket=self.bucket_name,
-                Prefix=self._flow_key_prefix(user_id, flow_id)
-            )
-            # print(pages)
-            async for page in pages:
-                versions.extend(parse_flow_key(obj["Key"]) for obj in page["Contents"])
-            # print(mylist)
-            return versions
+        try:
+            versions = []
+            async with self._get_client() as client:
+                paginator = client.get_paginator("list_objects_v2")
+                pages = paginator.paginate(
+                    Bucket=self.bucket_name,
+                    Prefix=self._flow_versions_prefix(user_id, flow_id)
+                )
+                async for page in pages:
+                    if "Contents" not in page:
+                        continue
+                    versions.extend([
+                            parse_flow_key(key=obj["Key"], last_modified=obj["LastModified"])
+                            for obj in page["Contents"]
+                        ])
+        except Exception as e: # noqa: BLE001
+            handle_s3_error(e, "flow", op="list")
 
-    # TODO: Get rid of timestamp, use s3 LastModified
-    # + policy to enforce conditional writes (require if-none-match=="*")
-    # such that LastModified remains tied to creation date.
+        return versions
+
     def _flow_key(
         self,
         user_id: IDTypeStrict,
         flow_id: IDTypeStrict,
         flow_name: str,
         version_id: str,
-        timestamp: str,
         ) -> str:
         return (
-            # note: prefix already contains the / at the end
-            f"{self._flow_key_prefix(user_id, flow_id)}"
+            f"{self._flow_versions_prefix(user_id, flow_id)}"
             f"/id={version_id}"
-            f"/timestamp={timestamp}"
             f"/flow_name={flow_name}"
             )
 
@@ -176,15 +186,10 @@ class S3PublishService(PublishService):
         flow_key: str | None,
         ) -> str:
         """Raises a ValueError if the key is None, empty, or does not match provided user and flow ids."""
-        if not (flow_key and flow_key.startswith(self._flow_key_prefix(user_id, flow_id))):
+        if not (flow_key and flow_key.startswith(self._flow_versions_prefix(user_id, flow_id))):
             raise ValueError(INVALID_KEY_MSG)
 
     # note: self.prefix already contains a trailing slash
-    def _flow_key_prefix(self, user_id: IDTypeStrict, flow_id: IDTypeStrict):
-        """Return the key prefix used for publishing flows (without trailing slash)."""
+    def _flow_versions_prefix(self, user_id: IDTypeStrict, flow_id: IDTypeStrict):
+        """Return the versions key prefix used for publishing flows (without trailing slash)."""
         return f"{self.prefix}{user_id!s}/flows/{flow_id!s}/versions"
-
-    # def _flow_key_deploy_prefix(self, user_id: IDTypeStrict, flow_id: IDTypeStrict):
-    #     """Return the key prefix used for deploying flows (without trailing slash)."""
-    #     return f"{self.deploy_prefix}{user_id!s}/flows/{flow_id!s}/versions"
-
