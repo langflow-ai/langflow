@@ -64,6 +64,7 @@ async def run_flow(
     verbose_full: bool = False,
     timing: bool = False,
     global_variables: dict[str, str] | None = None,
+    user_id: str | None = None,
 ) -> dict:
     """Execute a Langflow graph script or JSON flow and return the result.
 
@@ -210,6 +211,12 @@ async def run_flow(
         else:
             error_msg = "No input source provided"
             raise ValueError(error_msg)
+
+        # Set user_id on graph if provided (required for some components like AgentComponent)
+        if user_id:
+            graph.user_id = user_id
+            if verbosity > 0:
+                logger.info(f"Set graph user_id: {user_id}")
 
         # Inject global variables into graph context
         if global_variables:
