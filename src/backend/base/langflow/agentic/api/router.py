@@ -10,11 +10,11 @@ from lfx.custom.validate import create_class, extract_class_name
 from lfx.log.logger import logger
 from lfx.run.base import run_flow
 from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.services.deps import get_variable_service
 from langflow.services.variable.service import VariableService
-from sqlalchemy.ext.asyncio import AsyncSession
 
 # Constants
 MAX_VALIDATION_RETRIES = 3
@@ -97,17 +97,21 @@ def validate_component_code(code: str) -> ValidationResult:
             code=code,
             class_name=class_name,
         )
-    except (ValueError, TypeError, SyntaxError, NameError, ModuleNotFoundError) as e:
+    except (
+        ValueError,
+        TypeError,
+        SyntaxError,
+        NameError,
+        ModuleNotFoundError,
+        AttributeError,
+        ImportError,
+        RuntimeError,
+        KeyError,
+    ) as e:
         return ValidationResult(
             is_valid=False,
             code=code,
-            error=str(e),
-        )
-    except Exception as e:
-        return ValidationResult(
-            is_valid=False,
-            code=code,
-            error=f"Unexpected error: {type(e).__name__}: {e}",
+            error=f"{type(e).__name__}: {e}",
         )
 
 
@@ -169,12 +173,12 @@ async def execute_flow_file(
             check_variables=False,
             user_id=user_id,
         )
-        logger.debug("Flow execution completed successfully")
-        return result
-
     except Exception as e:
         logger.error(f"Error executing flow: {e}")
         raise HTTPException(status_code=500, detail=f"Error executing flow: {e}") from e
+    else:
+        logger.debug("Flow execution completed successfully")
+        return result
 
 
 @router.post("/execute/{flow_name}")
@@ -329,7 +333,7 @@ async def execute_flow_with_validation(
             f"BROKEN CODE:\n```python\n{code}\n```\n\n"
             f"Please provide a corrected version of the component code."
         )
-        logger.info(f"Retrying with error context...")
+        logger.info("Retrying with error context...")
 
     # This should not be reached, but just in case
     return result
@@ -397,7 +401,10 @@ async def run_prompt_flow(
     if not anthropic_key:
         raise HTTPException(
             status_code=400,
-            detail=f"{ANTHROPIC_API_KEY_NAME} is required for Component Forge. Please configure it in your environment or global variables.",
+            detail=(
+                f"{ANTHROPIC_API_KEY_NAME} is required for Component Forge. "
+                "Please configure it in your environment or global variables."
+            ),
         )
 
     # Prepare global variables (API key passed via global_vars, not environment)

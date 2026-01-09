@@ -62,6 +62,11 @@ src/frontend/src/controllers/API/queries/forge/
 └── use-post-forge-prompt.ts  # POST /forge/prompt
 ```
 
+**Additional Hooks Used:**
+- `useAddComponent` - Adds validated component to the canvas
+- `useAddFlow` - Saves component to sidebar ("Saved" section)
+- `usePostValidateComponentCode` - Validates component code before adding/saving
+
 **URL Constants:**
 Located in `src/frontend/src/controllers/API/helpers/constants.ts`:
 - `FORGE_PROMPT: "forge/prompt"`
@@ -78,9 +83,10 @@ Located in `src/frontend/src/controllers/API/helpers/constants.ts`:
 
 **Component Result Actions:**
 When a valid component is generated, users can:
-1. **View Code** - Opens a read-only code modal
-2. **Download** - Downloads the component as a `.py` file
-3. **Add to Canvas** - Validates and adds the component to the current flow
+1. **View Code** (`<>` icon) - Opens a read-only code modal
+2. **Download** (download icon) - Downloads the component as a `.py` file
+3. **Save to Sidebar** (save icon) - Saves the component to the "Saved" section in the sidebar for reuse across flows
+4. **Add to Canvas** (`+` icon) - Validates and adds the component to the current flow
 
 ## Configuration Requirements
 
@@ -109,11 +115,19 @@ Response with validation status + component code
        ↓
 Frontend displays result with action buttons
        ↓
-[User clicks "Add to Canvas"]
+[User clicks action button]
        ↓
-POST /custom_component/validate (existing endpoint)
-       ↓
-useAddComponent() hook adds to flow
+┌─────────────────────────────────────────────────────────┐
+│  "Add to Canvas"              │  "Save to Sidebar"      │
+│         ↓                     │         ↓               │
+│  POST /custom_component/      │  POST /custom_component/│
+│        validate               │        validate         │
+│         ↓                     │         ↓               │
+│  useAddComponent() adds       │  createFlowComponent()  │
+│  node to current flow         │         ↓               │
+│                               │  useAddFlow() saves to  │
+│                               │  "Saved" sidebar section│
+└─────────────────────────────────────────────────────────┘
 ```
 
 ## Technical Decisions
