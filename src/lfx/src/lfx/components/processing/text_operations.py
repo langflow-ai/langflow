@@ -2,7 +2,6 @@ import contextlib
 import re
 from typing import Any
 
-from lfx.inputs.inputs import MultilineInput
 import pandas as pd
 
 from lfx.custom import Component
@@ -14,6 +13,7 @@ from lfx.inputs import (
     SortableListInput,
     StrInput,
 )
+from lfx.inputs.inputs import MultilineInput
 from lfx.io import Output
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
