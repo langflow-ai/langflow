@@ -21,9 +21,9 @@ from tempfile import NamedTemporaryFile
 from typing import Any
 
 from lfx.base.data.base_file import BaseFileComponent
+from lfx.base.data.storage_settings_mixin import StorageSettingsMixin
 from lfx.base.data.storage_utils import parse_storage_path, read_file_bytes, validate_image_content_type
 from lfx.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_file_to_data
-from lfx.inputs import SortableListInput
 from lfx.inputs.inputs import DropdownInput, MessageTextInput, StrInput
 from lfx.io import BoolInput, FileInput, IntInput, Output, SecretStrInput
 from lfx.schema.data import Data
@@ -34,15 +34,7 @@ from lfx.utils.async_helpers import run_until_complete
 from lfx.utils.validate_cloud import is_astra_cloud_environment
 
 
-def _get_storage_location_options():
-    """Get storage location options, filtering out Local if in Astra cloud environment."""
-    all_options = [{"name": "AWS", "icon": "Amazon"}, {"name": "Google Drive", "icon": "google"}]
-    if is_astra_cloud_environment():
-        return all_options
-    return [{"name": "Local", "icon": "hard-drive"}, *all_options]
-
-
-class FileComponent(BaseFileComponent):
+class FileComponent(BaseFileComponent, StorageSettingsMixin):
     """File component with optional Docling processing (isolated in a subprocess)."""
 
     display_name = "Read File"
@@ -101,15 +93,7 @@ class FileComponent(BaseFileComponent):
             break
 
     inputs = [
-        SortableListInput(
-            name="storage_location",
-            display_name="Storage Location",
-            placeholder="Select Location",
-            info="Choose where to read the file from.",
-            options=_get_storage_location_options(),
-            real_time_refresh=True,
-            limit=1,
-        ),
+        *StorageSettingsMixin.get_storage_settings_inputs(),
         *_base_inputs,
         StrInput(
             name="file_path_str",
@@ -369,8 +353,23 @@ class FileComponent(BaseFileComponent):
         """Show/hide Advanced Parser and related fields based on selection context."""
         # Update storage location options dynamically based on cloud environment
         if "storage_location" in build_config:
+            from lfx.base.data.storage_settings_mixin import _get_storage_location_options
+
             updated_options = _get_storage_location_options()
             build_config["storage_location"]["options"] = updated_options
+
+        # Handle use_custom_storage toggle
+        if field_name == "use_custom_storage":
+            storage_fields = [
+                "aws_access_key_id",
+                "aws_secret_access_key",
+                "bucket_name",
+                "aws_region",
+                "s3_file_key",
+                "service_account_key",
+                "file_id",
+            ]
+            return self._update_build_config_for_storage_toggle(build_config, field_value, storage_fields)
 
         # Handle storage location selection
         if field_name == "storage_location":
@@ -552,13 +551,24 @@ class FileComponent(BaseFileComponent):
     # ------------------------------ Core processing ----------------------------------
 
     def _get_selected_storage_location(self) -> str:
-        """Get the selected storage location from the SortableListInput."""
-        if hasattr(self, "storage_location") and self.storage_location:
-            if isinstance(self.storage_location, list) and len(self.storage_location) > 0:
-                return self.storage_location[0].get("name", "")
-            if isinstance(self.storage_location, dict):
-                return self.storage_location.get("name", "")
-        return "Local"  # Default to Local if not specified
+        """Get the selected storage location.
+
+        Overrides mixin to default to "Local" only when using custom storage with no selection.
+        """
+        use_custom = getattr(self, "use_custom_storage", False)
+
+        if use_custom:
+            # Use component-level storage location
+            if hasattr(self, "storage_location") and self.storage_location:
+                if isinstance(self.storage_location, list) and len(self.storage_location) > 0:
+                    return self.storage_location[0].get("name", "")
+                if isinstance(self.storage_location, dict):
+                    return self.storage_location.get("name", "")
+            return "Local"  # Default to Local if custom storage enabled but not specified
+
+        # Use global settings
+        settings = get_settings_service().settings
+        return settings.default_storage_location
 
     def _validate_and_resolve_paths(self) -> list[BaseFileComponent.BaseFile]:
         """Override to handle file_path_str input from tool mode and cloud storage.
@@ -605,13 +615,17 @@ class FileComponent(BaseFileComponent):
         """Read file from AWS S3."""
         from lfx.base.data.cloud_storage_utils import create_s3_client, validate_aws_credentials
 
-        # Validate AWS credentials
-        validate_aws_credentials(self)
+        # Get and validate credentials from component or global settings
+        credentials = self._get_aws_credentials()
+        self._validate_aws_credentials(credentials)
+        self._set_aws_credentials_on_self(credentials)
+
         if not getattr(self, "s3_file_key", None):
             msg = "S3 File Key is required"
             raise ValueError(msg)
 
-        # Create S3 client
+        # Validate and create S3 client
+        validate_aws_credentials(self)
         s3_client = create_s3_client(self)
 
         # Download file to temp location
@@ -646,17 +660,17 @@ class FileComponent(BaseFileComponent):
 
         from lfx.base.data.cloud_storage_utils import create_google_drive_service
 
-        # Validate Google Drive credentials
-        if not getattr(self, "service_account_key", None):
-            msg = "GCP Credentials Secret Key is required for Google Drive storage"
-            raise ValueError(msg)
+        # Get and validate credentials from component or global settings
+        credentials = self._get_google_drive_credentials()
+        self._validate_google_drive_credentials(credentials)
+
         if not getattr(self, "file_id", None):
             msg = "Google Drive File ID is required"
             raise ValueError(msg)
 
         # Create Google Drive service with read-only scope
         drive_service = create_google_drive_service(
-            self.service_account_key, scopes=["https://www.googleapis.com/auth/drive.readonly"]
+            credentials["service_account_key"], scopes=["https://www.googleapis.com/auth/drive.readonly"]
         )
 
         # Get file metadata to determine file name and extension

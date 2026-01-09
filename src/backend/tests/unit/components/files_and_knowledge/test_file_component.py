@@ -580,6 +580,7 @@ class TestFileComponentToolMode:
         component = FileComponent()
         component.set_attributes(
             {
+                "use_custom_storage": True,  # Enable custom storage to use component-level credentials
                 "storage_location": [{"name": "AWS"}],
                 "aws_access_key_id": "test_key",
                 "aws_secret_access_key": "test_secret",
@@ -615,6 +616,7 @@ class TestFileComponentToolMode:
         component = FileComponent()
         component.set_attributes(
             {
+                "use_custom_storage": True,  # Enable custom storage to use component-level credentials
                 "storage_location": [{"name": "Google Drive"}],
                 "service_account_key": '{"type": "service_account", "project_id": "test"}',
                 "file_id": "test-file-id",

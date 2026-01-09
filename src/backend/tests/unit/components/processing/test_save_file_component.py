@@ -347,6 +347,7 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
                 "input": message,
                 "file_name": "test_gdrive_file",
                 "gdrive_format": "txt",
+                "use_custom_storage": True,  # Enable custom storage to use component-level credentials
                 "storage_location": [{"name": "Google Drive"}],
                 "service_account_key": service_account_json,
                 "folder_id": "test_folder_id_123",
@@ -401,6 +402,7 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
                     "input": message,
                     "file_name": "test_file",
                     "gdrive_format": "txt",
+                    "use_custom_storage": True,  # Enable custom storage to use component-level credentials
                     "storage_location": [{"name": "Google Drive"}],
                     "service_account_key": service_account_json,
                     "folder_id": "test_folder",

@@ -39,6 +39,16 @@ export default function SettingsPage(): JSX.Element {
 
   sidebarNavItems.push(
     {
+      title: "Storage",
+      href: "/settings/storage",
+      icon: (
+        <ForwardedIconComponent
+          name="HardDrive"
+          className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
+        />
+      ),
+    },
+    {
       title: "MCP Servers",
       href: "/settings/mcp-servers",
       icon: (
