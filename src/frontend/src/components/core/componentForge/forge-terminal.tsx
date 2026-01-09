@@ -115,14 +115,17 @@ const ComponentResultLine = ({
   code,
   validationAttempts,
   onAddToCanvas,
+  onSaveToSidebar,
 }: {
   className: string;
   code: string;
   validationAttempts?: number;
   onAddToCanvas: (code: string, className: string) => Promise<void>;
+  onSaveToSidebar: (code: string, className: string) => Promise<void>;
 }) => {
   const [isCodeModalOpen, setIsCodeModalOpen] = useState(false);
   const [isAddingToCanvas, setIsAddingToCanvas] = useState(false);
+  const [isSavingToSidebar, setIsSavingToSidebar] = useState(false);
 
   const handleDownload = () => {
     downloadComponentFile(code, className);
@@ -134,6 +137,15 @@ const ComponentResultLine = ({
       await onAddToCanvas(code, className);
     } finally {
       setIsAddingToCanvas(false);
+    }
+  };
+
+  const handleSaveToSidebar = async () => {
+    setIsSavingToSidebar(true);
+    try {
+      await onSaveToSidebar(code, className);
+    } finally {
+      setIsSavingToSidebar(false);
     }
   };
 
@@ -177,6 +189,20 @@ const ComponentResultLine = ({
           <Button
             variant="ghost"
             size="iconSm"
+            onClick={handleSaveToSidebar}
+            disabled={isSavingToSidebar}
+            className="text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 disabled:opacity-50"
+            title="Save to Sidebar"
+          >
+            <ForwardedIconComponent
+              name={isSavingToSidebar ? "Loader2" : "SaveAll"}
+              className={cn("h-4 w-4", isSavingToSidebar && "animate-spin")}
+            />
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="iconSm"
             onClick={handleAddToCanvas}
             disabled={isAddingToCanvas}
             className="text-emerald-400 hover:bg-zinc-800 hover:text-emerald-300 disabled:opacity-50"
@@ -208,9 +234,11 @@ const ComponentResultLine = ({
 const MessageLine = ({
   message,
   onAddToCanvas,
+  onSaveToSidebar,
 }: {
   message: TerminalMessage;
   onAddToCanvas: (code: string, className: string) => Promise<void>;
+  onSaveToSidebar: (code: string, className: string) => Promise<void>;
 }) => {
   const getMessageStyle = () => {
     switch (message.type) {
@@ -262,6 +290,7 @@ const MessageLine = ({
         code={message.metadata.componentCode}
         validationAttempts={message.metadata.validationAttempts}
         onAddToCanvas={onAddToCanvas}
+        onSaveToSidebar={onSaveToSidebar}
       />
     );
   }
@@ -311,6 +340,7 @@ const ForgeTerminal = ({
   onClose,
   onSubmit,
   onAddToCanvas,
+  onSaveToSidebar,
   isLoading = false,
 }: ForgeTerminalProps) => {
   const [messages, setMessages] = useState<TerminalMessage[]>([
@@ -546,6 +576,7 @@ const ForgeTerminal = ({
               key={message.id}
               message={message}
               onAddToCanvas={onAddToCanvas}
+              onSaveToSidebar={onSaveToSidebar}
             />
           ))}
           {isLoading && <LoadingIndicator />}

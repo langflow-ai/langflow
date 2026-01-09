@@ -25,6 +25,7 @@ export type ForgeTerminalProps = {
   onClose: () => void;
   onSubmit: (input: string) => Promise<SubmitResult>;
   onAddToCanvas: (code: string, className: string) => Promise<void>;
+  onSaveToSidebar: (code: string, className: string) => Promise<void>;
   isLoading?: boolean;
 };
 

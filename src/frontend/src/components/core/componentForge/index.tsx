@@ -5,9 +5,12 @@ import {
   usePostForgePrompt,
 } from "@/controllers/API/queries/forge";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
+import useAddFlow from "@/hooks/flows/use-add-flow";
 import { useAddComponent } from "@/hooks/use-add-component";
 import useAlertStore from "@/stores/alertStore";
+import { useDarkStore } from "@/stores/darkStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { createFlowComponent, getNodeId } from "@/utils/reactflowUtils";
 import ForgeButton from "./forge-button";
 import ForgeTerminal from "./forge-terminal";
 import type { ForgePromptResponse, SubmitResult } from "./types";
@@ -51,10 +54,13 @@ const ComponentForge = memo(function ComponentForge() {
   const [isTerminalOpen, setIsTerminalOpen] = useState(false);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const version = useDarkStore((state) => state.version);
   const { data: configData } = useGetForgeConfig();
   const { mutateAsync: executePrompt, isPending } = usePostForgePrompt();
   const { mutateAsync: validateComponentCode } = usePostValidateComponentCode();
   const addComponent = useAddComponent();
+  const addFlow = useAddFlow();
 
   const isConfigured = configData?.configured ?? false;
 
@@ -104,6 +110,28 @@ const ComponentForge = memo(function ComponentForge() {
     [validateComponentCode, addComponent],
   );
 
+  const handleSaveToSidebar = useCallback(
+    async (code: string, className: string) => {
+      const response = await validateComponentCode({
+        code,
+        frontend_node: undefined as never,
+      });
+
+      const nodeId = getNodeId(response.type);
+      const nodeData = {
+        node: response.data,
+        showNode: !response.data.minimized,
+        type: response.type,
+        id: nodeId,
+      };
+
+      const flowComponent = createFlowComponent(nodeData, version);
+      await addFlow({ flow: flowComponent, override: false });
+      setSuccessData({ title: `${className} saved to sidebar` });
+    },
+    [validateComponentCode, addFlow, version, setSuccessData],
+  );
+
   return (
     <>
       <Panel
@@ -121,6 +149,7 @@ const ComponentForge = memo(function ComponentForge() {
         onClose={handleCloseTerminal}
         onSubmit={handleSubmit}
         onAddToCanvas={handleAddToCanvas}
+        onSaveToSidebar={handleSaveToSidebar}
         isLoading={isPending}
       />
     </>
