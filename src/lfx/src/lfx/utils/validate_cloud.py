@@ -94,9 +94,7 @@ def filter_disabled_components_from_dict(modules_dict: dict[str, dict[str, Any]]
         disabled_set = ASTRA_CLOUD_DISABLED_COMPONENTS.get(component_type.lower(), set())
         if disabled_set:
             # Filter out disabled components
-            filtered_components = {
-                name: comp for name, comp in components.items() if name not in disabled_set
-            }
+            filtered_components = {name: comp for name, comp in components.items() if name not in disabled_set}
             if filtered_components:  # Only add if there are remaining components
                 filtered_dict[component_type] = filtered_components
         else:
