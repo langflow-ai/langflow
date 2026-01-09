@@ -28,6 +28,7 @@ from langflow.api.v2 import files_router as files_router_v2
 from langflow.api.v2 import mcp_router as mcp_router_v2
 from langflow.api.v2 import registration_router as registration_router_v2
 from langflow.api.v2 import storage_settings_router as storage_settings_router_v2
+from langflow.api.v2 import workflow_router as workflow_router_v2
 
 router_v1 = APIRouter(
     prefix="/v1",
@@ -63,6 +64,7 @@ router_v2.include_router(files_router_v2)
 router_v2.include_router(mcp_router_v2)
 router_v2.include_router(registration_router_v2)
 router_v2.include_router(storage_settings_router_v2)
+router_v2.include_router(workflow_router_v2)
 
 router = APIRouter(
     prefix="/api",

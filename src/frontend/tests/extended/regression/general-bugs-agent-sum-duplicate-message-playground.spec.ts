@@ -20,11 +20,10 @@ test(
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Simple Agent" }).first().click();
 
-    await page.getByTestId("value-dropdown-model_model").click();
-
+    await page.getByTestId("model_model").click();
     await page.waitForTimeout(200);
 
-    await page.getByText("claude-3-opus-latest").last().click();
+    await page.locator('[role="option"]').first().click();
 
     // Click the Controls button to open the modal
     await page.getByTestId("edit-button-modal").click();

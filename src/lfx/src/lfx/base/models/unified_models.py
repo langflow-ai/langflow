@@ -75,7 +75,7 @@ def get_model_provider_metadata():
             "icon": "Ollama",
             "variable_name": "OLLAMA_BASE_URL",  # Ollama is local but can have custom URL
         },
-        "IBM Watsonx": {
+        "IBM WatsonX": {
             "icon": "WatsonxAI",
             "variable_name": "WATSONX_APIKEY",
         },

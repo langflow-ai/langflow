@@ -6,7 +6,7 @@ import "ace-builds/src-noconflict/ext-language_tools";
 import "ace-builds/src-noconflict/ext-searchbox";
 import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
-import "ace-builds/src-noconflict/theme-twilight";
+import "ace-builds/src-noconflict/theme-monokai";
 import { useEffect, useRef, useState } from "react";
 import AceEditor from "react-ace";
 import type ReactAce from "react-ace/lib/ace";
@@ -221,7 +221,7 @@ export default function CodeAreaModal({
               fontSize={14}
               showGutter
               enableLiveAutocompletion
-              theme={dark ? "twilight" : "github"}
+              theme={dark ? "monokai" : "github"}
               name="CodeEditor"
               onChange={(value) => {
                 setCode(value);
