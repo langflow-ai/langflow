@@ -509,7 +509,7 @@ def test_update_projects_strips_hash_history_from_components():
                 "metadata": {
                     "code_hash": "abc123",
                     "hash_history": [  # This should be stripped
-                        {"hash": "abc123", "version_first": "1.0.0", "version_last": "1.0.1"}
+                        {"hash": "abc123", "v_from": "1.0.0", "version_last": "1.0.1"}
                     ],
                 },
             }
@@ -563,7 +563,7 @@ def test_update_projects_preserves_other_metadata():
                 "metadata": {
                     "code_hash": "abc123",
                     "module": "test.module",
-                    "hash_history": [{"hash": "abc123", "version_first": "1.0.0", "version_last": "1.0.1"}],
+                    "hash_history": [{"hash": "abc123", "v_from": "1.0.0", "v_to": "1.0.1"}],
                 },
             }
         }

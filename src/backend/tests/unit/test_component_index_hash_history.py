@@ -31,8 +31,8 @@ def test_merge_hash_history_new_component():
 
     assert len(history) == 1
     assert history[0]["hash"] == "abc123def456"
-    assert history[0]["version_first"] == "1.7.1"
-    assert history[0]["version_last"] == "1.7.1"
+    assert history[0]["v_from"] == "1.7.1"
+    assert history[0]["v_to"] == "1.7.1"
 
 
 def test_merge_hash_history_no_previous_history():
@@ -49,8 +49,8 @@ def test_merge_hash_history_no_previous_history():
 
     assert len(history) == 1
     assert history[0]["hash"] == "abc123def456"
-    assert history[0]["version_first"] == "1.7.1"
-    assert history[0]["version_last"] == "1.7.1"
+    assert history[0]["v_from"] == "1.7.1"
+    assert history[0]["v_to"] == "1.7.1"
 
 
 def test_merge_hash_history_extends_version_range():
@@ -59,7 +59,7 @@ def test_merge_hash_history_extends_version_range():
     previous_component = {
         "metadata": {
             "code_hash": "abc123def456",
-            "hash_history": [{"hash": "abc123def456", "version_first": "1.7.0", "version_last": "1.7.0"}],
+            "hash_history": [{"hash": "abc123def456", "v_from": "1.7.0", "v_to": "1.7.0"}],
         }
     }
     current_version = "1.7.1"
@@ -68,8 +68,8 @@ def test_merge_hash_history_extends_version_range():
 
     assert len(history) == 1
     assert history[0]["hash"] == "abc123def456"
-    assert history[0]["version_first"] == "1.7.0"  # Preserved from previous
-    assert history[0]["version_last"] == "1.7.1"  # Extended to current
+    assert history[0]["v_from"] == "1.7.0"  # Preserved from previous
+    assert history[0]["v_to"] == "1.7.1"  # Extended to current
 
 
 def test_merge_hash_history_appends_on_change():
@@ -78,7 +78,7 @@ def test_merge_hash_history_appends_on_change():
     previous_component = {
         "metadata": {
             "code_hash": "old_hash_abc",
-            "hash_history": [{"hash": "old_hash_abc", "version_first": "1.7.0", "version_last": "1.7.0"}],
+            "hash_history": [{"hash": "old_hash_abc", "v_from": "1.7.0", "v_to": "1.7.0"}],
         }
     }
     current_version = "1.7.1"
@@ -88,12 +88,12 @@ def test_merge_hash_history_appends_on_change():
     assert len(history) == 2
     # Old entry preserved
     assert history[0]["hash"] == "old_hash_abc"
-    assert history[0]["version_first"] == "1.7.0"
-    assert history[0]["version_last"] == "1.7.0"
+    assert history[0]["v_from"] == "1.7.0"
+    assert history[0]["v_to"] == "1.7.0"
     # New entry appended
     assert history[1]["hash"] == "new_hash_xyz"
-    assert history[1]["version_first"] == "1.7.1"
-    assert history[1]["version_last"] == "1.7.1"
+    assert history[1]["v_from"] == "1.7.1"
+    assert history[1]["v_to"] == "1.7.1"
 
 
 def test_merge_hash_history_preserves_multiple_entries():
@@ -103,8 +103,8 @@ def test_merge_hash_history_preserves_multiple_entries():
         "metadata": {
             "code_hash": "hash_b",
             "hash_history": [
-                {"hash": "hash_a", "version_first": "1.5.0", "version_last": "1.6.0"},
-                {"hash": "hash_b", "version_first": "1.6.1", "version_last": "1.7.0"},
+                {"hash": "hash_a", "v_from": "1.5.0", "v_to": "1.6.0"},
+                {"hash": "hash_b", "v_from": "1.6.1", "v_to": "1.7.0"},
             ],
         }
     }
@@ -116,7 +116,7 @@ def test_merge_hash_history_preserves_multiple_entries():
     assert history[0]["hash"] == "hash_a"
     assert history[1]["hash"] == "hash_b"
     assert history[2]["hash"] == "hash_c"
-    assert history[2]["version_first"] == "1.7.1"
+    assert history[2]["v_from"] == "1.7.1"
 
 
 def test_merge_hash_history_no_previous_hash():
@@ -131,8 +131,8 @@ def test_merge_hash_history_no_previous_hash():
 
     assert len(history) == 1
     assert history[0]["hash"] == "abc123"
-    assert history[0]["version_first"] == "1.7.1"
-    assert history[0]["version_last"] == "1.7.1"
+    assert history[0]["v_from"] == "1.7.1"
+    assert history[0]["v_to"] == "1.7.1"
 
 
 def test_merge_hash_history_empty_hash():
@@ -236,8 +236,8 @@ def test_create_history_entry():
     entry = _create_history_entry("abc123", "1.7.1")
 
     assert entry["hash"] == "abc123"
-    assert entry["version_first"] == "1.7.1"
-    assert entry["version_last"] == "1.7.1"
+    assert entry["v_from"] == "1.7.1"
+    assert entry["v_to"] == "1.7.1"
 
 
 # Tests for version comparison
