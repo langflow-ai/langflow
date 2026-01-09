@@ -2,6 +2,7 @@ import contextlib
 import re
 from typing import Any
 
+from lfx.inputs.inputs import MultilineInput
 import pandas as pd
 
 from lfx.custom import Component
@@ -10,7 +11,6 @@ from lfx.inputs import (
     BoolInput,
     DropdownInput,
     IntInput,
-    MessageTextInput,
     SortableListInput,
     StrInput,
 )
@@ -71,7 +71,7 @@ class TextOperations(Component):
     }
 
     inputs = [
-        MessageTextInput(
+        MultilineInput(
             name="text_input",
             display_name="Text Input",
             info="The input text to process.",
@@ -222,7 +222,7 @@ class TextOperations(Component):
             dynamic=True,
             show=False,
         ),
-        MessageTextInput(
+        MultilineInput(
             name="text_input_2",
             display_name="Second Text Input",
             info="Second text to join with the first text.",
