@@ -1040,9 +1040,13 @@ def update_model_options_in_build_config(
     cached = component.cache.get(cache_key, {"options": []})
     build_config["model"]["options"] = cached["options"]
 
-    # Set default value on initial load when field is empty
-    # Fetch from user's default model setting in the database
-    if not field_value or field_value == "":
+    # Set default value on initial load when model field is empty
+    # Only set default when: initial load (field_name is None) or model field is being set and is empty
+    # Get the current model value to check if it's empty
+    current_model_value = build_config.get("model", {}).get("value")
+    model_is_empty = not current_model_value or current_model_value == "" or current_model_value == []
+    should_set_default = field_name is None or (field_name == "model" and model_is_empty)
+    if should_set_default:
         options = cached.get("options", [])
         if options:
             # Determine model type based on cache_key_prefix
