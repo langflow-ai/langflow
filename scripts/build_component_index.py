@@ -7,7 +7,6 @@ need to import all component modules during startup.
 """
 
 import hashlib
-import logging
 import sys
 from pathlib import Path
 
@@ -18,9 +17,6 @@ try:
 except ImportError as e:
     msg = "The 'packaging' library is required for version comparison"
     raise ImportError(msg) from e
-
-logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s", stream=sys.stderr)
-logger = logging.getLogger(__name__)
 
 
 def _get_langflow_version():
