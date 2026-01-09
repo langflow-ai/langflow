@@ -1,0 +1,172 @@
+# Component Forge
+
+**Feature Status:** In Development
+**Last Updated:** January 2025
+
+## Overview
+
+Component Forge is an AI-powered feature that allows users to create Langflow components through natural language prompts. It uses Claude Sonnet 4.5 (Anthropic) to generate Python component code, validates the generated code, and allows users to add the components directly to their flow canvas.
+
+## Architecture
+
+### Backend
+
+The backend is implemented as a FastAPI router located at:
+```
+src/backend/base/langflow/agentic/api/router.py
+```
+
+**API Endpoints:**
+- `GET /api/v1/forge/check-config` - Checks if ANTHROPIC_API_KEY is configured
+- `POST /api/v1/forge/prompt` - Executes the component creation flow
+
+**Key Functions:**
+- `check_anthropic_api_key()` - Validates API key from global variables or environment
+- `execute_flow_file()` - Executes a flow JSON file with user context
+- `execute_flow_with_validation()` - Executes flow with automatic code validation and retry logic
+- `validate_component_code()` - Validates generated Python code by attempting to create the class
+- `extract_python_code()` - Extracts Python code blocks from markdown responses
+
+**Flow Execution:**
+The feature uses a pre-built flow located at:
+```
+src/backend/base/langflow/agentic/flows/ComponentCreation.json
+```
+
+This flow uses an Agent component with Claude Sonnet 4.5 to generate component code based on user prompts.
+
+**Validation Loop:**
+When the AI generates component code, the backend:
+1. Extracts Python code from the markdown response
+2. Validates the code using `create_class()` from lfx
+3. If validation fails, sends the error back to the AI for correction
+4. Retries up to 3 times (configurable via `MAX_VALIDATION_RETRIES`)
+5. Returns validation status and component code to the frontend
+
+### Frontend
+
+**Component Location:**
+```
+src/frontend/src/components/core/componentForge/
+├── index.tsx           # Main component (ComponentForge)
+├── forge-terminal.tsx  # Terminal UI component (ForgeTerminal)
+├── forge-button.tsx    # Trigger button (ForgeButton)
+└── types.ts            # TypeScript type definitions
+```
+
+**API Hooks:**
+```
+src/frontend/src/controllers/API/queries/forge/
+├── index.ts
+├── use-get-forge-config.ts   # GET /forge/check-config
+└── use-post-forge-prompt.ts  # POST /forge/prompt
+```
+
+**URL Constants:**
+Located in `src/frontend/src/controllers/API/helpers/constants.ts`:
+- `FORGE_PROMPT: "forge/prompt"`
+- `FORGE_CHECK_CONFIG: "forge/check-config"`
+
+### User Interface
+
+**Terminal Features:**
+- Resizable terminal panel (200px - 600px height)
+- Command history with arrow key navigation (stored in sessionStorage)
+- Multi-line input with auto-resize textarea
+- Loading indicator during AI processing
+- Validation badges (Valid/Invalid) for generated components
+
+**Component Result Actions:**
+When a valid component is generated, users can:
+1. **View Code** - Opens a read-only code modal
+2. **Download** - Downloads the component as a `.py` file
+3. **Add to Canvas** - Validates and adds the component to the current flow
+
+## Configuration Requirements
+
+The feature requires `ANTHROPIC_API_KEY` to be configured either:
+1. In environment variables
+2. In Langflow Global Variables (Settings > Global Variables)
+
+If not configured, users see an error notification when trying to open the terminal.
+
+## Data Flow
+
+```
+User Input (Terminal)
+       ↓
+POST /forge/prompt
+       ↓
+execute_flow_with_validation()
+       ↓
+ComponentCreation.json (Agent + Claude Sonnet 4.5)
+       ↓
+extract_python_code() → validate_component_code()
+       ↓
+[If invalid: retry with error context, up to 3 times]
+       ↓
+Response with validation status + component code
+       ↓
+Frontend displays result with action buttons
+       ↓
+[User clicks "Add to Canvas"]
+       ↓
+POST /custom_component/validate (existing endpoint)
+       ↓
+useAddComponent() hook adds to flow
+```
+
+## Technical Decisions
+
+### Why user_id is Required
+The `ComponentCreation.json` flow uses an Agent component that requires `user_id` to:
+1. Access user's global variables (like API keys)
+2. Maintain proper component context during execution
+
+The `user_id` is passed through the chain:
+`run_prompt_flow()` → `execute_flow_with_validation()` → `execute_flow_file()` → `run_flow()` → `graph.user_id`
+
+### Security Considerations
+- API keys are passed via `global_variables`, not environment variables (to avoid global state mutation)
+- API keys are never logged (only key names are logged)
+- Error messages don't expose internal details
+
+### Code Quality (Following DEVELOPMENT_RULE.md)
+- Strong typing with TypeScript and Python type hints
+- Constants extracted to avoid magic strings/numbers
+- Single source of truth for types (defined in `types.ts`)
+- No duplicate type definitions
+- Proper error handling with domain-relevant errors
+
+## Files Modified/Created
+
+### Created
+- `src/frontend/src/components/core/componentForge/` (entire folder)
+- `src/frontend/src/controllers/API/queries/forge/` (entire folder)
+
+### Modified
+- `src/frontend/src/controllers/API/helpers/constants.ts` - Added FORGE_* URLs
+- `src/frontend/src/pages/FlowPage/components/PageComponent/index.tsx` - Import ComponentForge
+- `src/backend/base/langflow/agentic/api/router.py` - Router prefix, messages, function names
+- `src/lfx/src/lfx/run/base.py` - Added `user_id` parameter
+
+## Known Issues / TODO
+
+1. **Unit Tests Missing** - Tests should be created for:
+   - Backend: `extract_python_code()`, `validate_component_code()`, `execute_flow_with_validation()`
+   - Frontend: `ForgeTerminal`, `ComponentResultLine`
+
+2. **Backend Folder Name** - The backend code is still in `/agentic/` folder. Consider renaming to `/forge/` for consistency.
+
+## Naming History
+
+The feature was originally named "Vibe Flow" but was renamed to "Component Forge" to better reflect its purpose (creating components, not general flow operations).
+
+**Renamed items:**
+- VibeFlowComponent → ComponentForge
+- VibeFlowTerminal → ForgeTerminal
+- VibeFlowButton → ForgeButton
+- vibe-flow-terminal-history → component-forge-terminal-history
+- /agentic/* → /forge/* (API routes)
+- useGetAgenticConfig → useGetForgeConfig
+- usePostAgenticPrompt → usePostForgePrompt
