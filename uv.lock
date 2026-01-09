@@ -51,6 +51,18 @@ wheels = [
 ]
 
 [[package]]
+name = "ag-ui-protocol"
+version = "0.1.10"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pydantic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/67/bb/5a5ec893eea5805fb9a3db76a9888c3429710dfb6f24bbb37568f2cf7320/ag_ui_protocol-0.1.10.tar.gz", hash = "sha256:3213991c6b2eb24bb1a8c362ee270c16705a07a4c5962267a083d0959ed894f4", size = 6945, upload-time = "2025-11-06T15:17:17.068Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8f/78/eb55fabaab41abc53f52c0918a9a8c0f747807e5306273f51120fd695957/ag_ui_protocol-0.1.10-py3-none-any.whl", hash = "sha256:c81e6981f30aabdf97a7ee312bfd4df0cd38e718d9fc10019c7d438128b93ab5", size = 7889, upload-time = "2025-11-06T15:17:15.325Z" },
+]
+
+[[package]]
 name = "agent-lifecycle-toolkit"
 version = "0.4.5"
 source = { registry = "https://pypi.org/simple" }
@@ -5531,6 +5543,7 @@ name = "langflow"
 version = "1.8.0"
 source = { editable = "." }
 dependencies = [
+    { name = "ag-ui-protocol" },
     { name = "agent-lifecycle-toolkit" },
     { name = "aioboto3" },
     { name = "aiofile" },
@@ -5741,6 +5754,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "ag-ui-protocol", specifier = ">=0.1.10" },
     { name = "agent-lifecycle-toolkit", specifier = "~=0.4.4" },
     { name = "aioboto3", specifier = ">=15.2.0,<16.0.0" },
     { name = "aiofile", specifier = ">=3.9.0,<4.0.0" },
@@ -6395,6 +6409,7 @@ name = "lfx"
 version = "0.3.0"
 source = { editable = "src/lfx" }
 dependencies = [
+    { name = "ag-ui-protocol" },
     { name = "aiofile" },
     { name = "aiofiles" },
     { name = "asyncer" },
@@ -6451,6 +6466,7 @@ integration = [
 
 [package.metadata]
 requires-dist = [
+    { name = "ag-ui-protocol", specifier = ">=0.1.10" },
     { name = "aiofile", specifier = ">=3.8.0,<4.0.0" },
     { name = "aiofiles", specifier = ">=24.1.0,<25.0.0" },
     { name = "asyncer", specifier = ">=0.0.8,<1.0.0" },
