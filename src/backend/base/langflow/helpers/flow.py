@@ -14,6 +14,7 @@ from sqlmodel import asc, desc, select
 from langflow.schema.schema import INPUT_FIELD_NAME
 from langflow.services.auth.utils import api_key_security
 from langflow.services.database.models.flow.model import Flow, FlowRead
+from langflow.services.database.models.user.model import UserRead  # noqa: TC001
 from langflow.services.deps import get_settings_service, session_scope
 from langflow.services.schema import ServiceType
 
@@ -24,7 +25,6 @@ if TYPE_CHECKING:
     from lfx.graph.schema import RunOutputs
     from lfx.graph.vertex.base import Vertex
 
-    from langflow.services.database.models.user.model import UserRead
     from langflow.services.publish.service import PublishService
 
 from langflow.schema.data import Data
