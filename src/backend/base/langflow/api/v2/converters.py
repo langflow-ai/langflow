@@ -264,20 +264,27 @@ def _build_metadata_for_non_output(
     Returns:
         Metadata dict
     """
+    if output_type != "message" or not isinstance(raw_content, dict):
+        return {}
+
     metadata = {}
 
-    if output_type != "message" or not isinstance(raw_content, dict):
-        return metadata
-
     # Extract model source for LLM components
-    source_info = _extract_model_source(raw_content, vertex_id, vertex_display_name)
-    if source_info:
-        metadata["source"] = source_info
+    model_output = raw_content.get("model_output")
+    if isinstance(model_output, dict):
+        message = model_output.get("message")
+        if isinstance(message, dict):
+            model_name = message.get("model_name")
+            if model_name:
+                metadata["source"] = {"id": vertex_id, "display_name": vertex_display_name, "source": model_name}
 
     # Extract file path for SaveToFile components
-    file_path = _extract_file_path(raw_content, vertex_type)
-    if file_path:
-        metadata["file_path"] = file_path
+    if vertex_type == "SaveToFile":
+        message_dict = raw_content.get("message")
+        if isinstance(message_dict, dict):
+            file_msg = message_dict.get("message")
+            if isinstance(file_msg, str) and "saved successfully" in file_msg.lower():
+                metadata["file_path"] = file_msg
 
     return metadata
 
