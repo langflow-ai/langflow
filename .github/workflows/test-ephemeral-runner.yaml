@@ -33,7 +33,7 @@ jobs:
       - name: Show Runner Info in Summary
         run: |
           {
-            echo "## 🖥️ Self-Hosted Runner Info"
+            echo "## 🖥️ Self-Hosted Runner Info: "
             echo "---------- "
             echo "GITHUB_RUNNER_NAME   : '${{ runner.name }}'"
             echo "GITHUB_RUNNER_OS     : '${{ runner.os }}'"
