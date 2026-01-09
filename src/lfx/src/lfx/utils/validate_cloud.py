@@ -5,6 +5,7 @@ such as disabling certain features when running in Astra cloud environment.
 """
 
 import os
+from typing import Any
 
 
 def is_astra_cloud_environment() -> bool:
@@ -37,28 +38,25 @@ def raise_error_if_astra_cloud_disable_component(msg: str):
         raise ValueError(msg)
 
 
-def get_cloud_disabled_components() -> dict[str, set[str]]:
-    """Get a mapping of component types to their disabled module names when in cloud environment.
-
-    This function returns a dictionary where:
-    - Keys are component type names (e.g., "docling")
-    - Values are sets of module filenames that should be disabled (e.g., {"chunk_docling_document", "docling_inline"})
-
-    To add new disabled components in the future, simply add entries to this dictionary.
-
-    Returns:
-        dict[str, set[str]]: Mapping of component type to disabled module names.
-    """
-    return {
-        "docling": {
-            "chunk_docling_document",
-            "docling_inline",
-            "export_docling_document",
-        }
+# Mapping of component types to their disabled module names and component names when in Astra cloud environment.
+# Keys are component type names (e.g., "docling")
+# Values are sets containing both module filenames (e.g., "chunk_docling_document") and component names (e.g., "ChunkDoclingDocument")
+# To add new disabled components in the future, simply add entries to this dictionary.
+ASTRA_CLOUD_DISABLED_COMPONENTS: dict[str, set[str]] = {
+    "docling": {
+        # Module filenames (for dynamic loading)
+        "chunk_docling_document",
+        "docling_inline",
+        "export_docling_document",
+        # Component names (for index/cache loading)
+        "ChunkDoclingDocument",
+        "DoclingInline",
+        "ExportDoclingDocument",
     }
+}
 
 
-def is_component_disabled_in_cloud(component_type: str, module_filename: str) -> bool:
+def is_component_disabled_in_astra_cloud(component_type: str, module_filename: str) -> bool:
     """Check if a specific component module should be disabled in cloud environment.
 
     Args:
@@ -71,6 +69,37 @@ def is_component_disabled_in_cloud(component_type: str, module_filename: str) ->
     if not is_astra_cloud_environment():
         return False
 
-    disabled_components = get_cloud_disabled_components()
-    disabled_modules = disabled_components.get(component_type, set())
+    disabled_modules = ASTRA_CLOUD_DISABLED_COMPONENTS.get(component_type.lower(), set())
     return module_filename in disabled_modules
+
+
+def filter_disabled_components_from_dict(modules_dict: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    """Filter out disabled components from a loaded modules dictionary.
+
+    This function is used to filter components that were loaded from index/cache,
+    since those bypass the dynamic loading filter.
+
+    Args:
+        modules_dict: Dictionary mapping component types to their components
+
+    Returns:
+        Filtered dictionary with disabled components removed
+    """
+    if not is_astra_cloud_environment():
+        return modules_dict
+
+    filtered_dict: dict[str, dict[str, Any]] = {}
+    for component_type, components in modules_dict.items():
+        disabled_set = ASTRA_CLOUD_DISABLED_COMPONENTS.get(component_type.lower(), set())
+        if disabled_set:
+            # Filter out disabled components
+            filtered_components = {
+                name: comp for name, comp in components.items() if name not in disabled_set
+            }
+            if filtered_components:  # Only add if there are remaining components
+                filtered_dict[component_type] = filtered_components
+        else:
+            # No disabled components for this type, keep all
+            filtered_dict[component_type] = components
+
+    return filtered_dict

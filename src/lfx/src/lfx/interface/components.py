@@ -14,7 +14,10 @@ import orjson
 from lfx.constants import BASE_COMPONENTS_PATH
 from lfx.custom.utils import abuild_custom_components, create_component_template
 from lfx.log.logger import logger
-from lfx.utils.validate_cloud import is_component_disabled_in_cloud
+from lfx.utils.validate_cloud import (
+    filter_disabled_components_from_dict,
+    is_component_disabled_in_astra_cloud,
+)
 
 if TYPE_CHECKING:
     from lfx.services.settings.service import SettingsService
@@ -286,6 +289,8 @@ async def _load_from_index_or_cache(
             if top_level not in modules_dict:
                 modules_dict[top_level] = {}
             modules_dict[top_level].update(components)
+        # Filter disabled components for Astra cloud
+        modules_dict = filter_disabled_components_from_dict(modules_dict)
         await logger.adebug(f"Loaded {len(modules_dict)} component categories from index")
         return modules_dict, "builtin"
 
@@ -305,6 +310,8 @@ async def _load_from_index_or_cache(
                     if top_level not in modules_dict:
                         modules_dict[top_level] = {}
                     modules_dict[top_level].update(components)
+                # Filter disabled components for Astra cloud
+                modules_dict = filter_disabled_components_from_dict(modules_dict)
                 await logger.adebug(f"Loaded {len(modules_dict)} component categories from cache")
                 return modules_dict, "cache"
 
@@ -345,7 +352,7 @@ async def _load_components_dynamically(
             # Skip disabled components when ASTRA_CLOUD_DISABLE_COMPONENT is true
             if len(parts) >= MIN_MODULE_PARTS_WITH_FILENAME:
                 module_filename = parts[3]
-                if is_component_disabled_in_cloud(component_type, module_filename):
+                if is_component_disabled_in_astra_cloud(component_type.lower(), module_filename):
                     continue
 
             # If specific modules requested, filter by top-level module name
