@@ -121,29 +121,25 @@ def _extract_text_from_message(content: dict) -> str | None:
         Extracted text string or None
     """
     # Try message.message (nested structure)
-    text = _extract_nested_value(content, "message", "message")
-    if isinstance(text, str):
-        return text
+    message = content.get("message")
+    if isinstance(message, dict):
+        text = message.get("message")
+        if isinstance(text, str):
+            return text
+        text = message.get("text")
+        if isinstance(text, str):
+            return text
+    elif isinstance(message, str):
+        return message
 
-    # Try message.text
-    text = _extract_nested_value(content, "message", "text")
-    if isinstance(text, str):
-        return text
-
-    # Try direct message
-    text = content.get("message")
-    if isinstance(text, str):
-        return text
-
-    # Try text.text
-    text = _extract_nested_value(content, "text", "text")
-    if isinstance(text, str):
-        return text
-
-    # Try direct text
-    text = content.get("text")
-    if isinstance(text, str):
-        return text
+    # Try text.text for rare structure
+    text_val = content.get("text")
+    if isinstance(text_val, dict):
+        text = text_val.get("text")
+        if isinstance(text, str):
+            return text
+    elif isinstance(text_val, str):
+        return text_val
 
     return None
 
