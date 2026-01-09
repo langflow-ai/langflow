@@ -17,7 +17,7 @@ export default function InspectionPanelFields({
     return Object.keys(data.node?.template || {})
       .filter((templateField) => {
         const template = data.node?.template[templateField];
-        
+
         // Filter out fields that shouldn't be shown
         if (
           templateField.charAt(0) === "_" ||

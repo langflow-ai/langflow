@@ -35,7 +35,15 @@ export default function InspectionPanelField({
   showNode,
   isToolMode = false,
   proxy,
-}: Omit<NodeInputFieldComponentType, "colors" | "tooltipTitle" | "type" | "optionalHandle" | "colorName" | "lastInput">) {
+}: Omit<
+  NodeInputFieldComponentType,
+  | "colors"
+  | "tooltipTitle"
+  | "type"
+  | "optionalHandle"
+  | "colorName"
+  | "lastInput"
+>) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isAutoLogin = useIsAutoLogin();
   const shouldDisplayApiKey = isAuthenticated && !isAutoLogin;
