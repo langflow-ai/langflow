@@ -21,7 +21,7 @@ except ImportError as e:
 
 def _get_lfx_version():
     """Get the installed lfx version.
-    
+
     Components are located in LFX, so use LFX.
     """
     from importlib.metadata import version
@@ -125,7 +125,7 @@ def _find_component_in_index(index: dict, category: str, component_name: str) ->
 
     for item in index.get("entries", []):
         # Validate entry structure: must be list/tuple with exactly 2 elements
-        if not (isinstance(item, (list, tuple)) and len(item) == entry_tuple_size):
+        if not (isinstance(item, list | tuple) and len(item) == entry_tuple_size):
             msg = f"Invalid index entry format: {item}. Expected {entry_tuple_size}-element list/tuple."
             raise ValueError(msg)
 
