@@ -1014,6 +1014,9 @@ def update_model_options_in_build_config(
         time_since_cache = time.time() - component.cache[cache_timestamp_key]
         cache_expired = time_since_cache > cache_ttl
 
+    # Check if is_refresh flag is set in build_config (from frontend refresh request)
+    is_refresh_request = build_config.get("is_refresh", False)
+
     # Check if we need to refresh
     should_refresh = (
         field_name == "api_key"  # API key changed
@@ -1021,6 +1024,7 @@ def update_model_options_in_build_config(
         or field_name == "model"  # Model field refresh button clicked
         or cache_key not in component.cache  # Cache miss
         or cache_expired  # Cache expired
+        or is_refresh_request  # Frontend requested a refresh
     )
 
     if should_refresh:

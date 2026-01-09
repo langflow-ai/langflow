@@ -14,7 +14,6 @@ import {
   usePostGlobalVariables,
 } from "@/controllers/API/queries/variables";
 import { useDebounce } from "@/hooks/use-debounce";
-import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
 import ProviderList from "@/modals/modelProviderModal/components/ProviderList";
 import { Provider } from "@/modals/modelProviderModal/components/types";
 import useAlertStore from "@/stores/alertStore";
@@ -49,7 +48,6 @@ const ModelProvidersContent = ({
     usePatchGlobalVariables();
   const { data: globalVariables = [] } = useGetGlobalVariables();
   const { mutate: updateEnabledModels } = useUpdateEnabledModels();
-  const { refreshAllModelInputs } = useRefreshModelInputs();
 
   const isPending = isCreating || isUpdating;
 
@@ -239,13 +237,8 @@ const ModelProvidersContent = ({
     }
   };
 
-  useEffect(() => {
-    return () => {
-      if (onClose) {
-        refreshAllModelInputs({ silent: true });
-      }
-    };
-  }, [onClose, refreshAllModelInputs]);
+  // Note: refreshAllModelInputs is now called in ModelProviderModal's handleClose
+  // to ensure reliable execution when the modal closes
 
   return (
     <div className="flex flex-row w-full h-full overflow-hidden">
