@@ -127,29 +127,25 @@ def _extract_text_from_message(content: dict) -> str | None:
     Returns:
         Extracted text string or None
     """
-    # Try message.message (nested structure)
-    text = _extract_nested_value(content, "message", "message")
-    if isinstance(text, str):
-        return text
+    # Try message.message (nested structure) and message.text
+    message = content.get("message")
+    if isinstance(message, dict):
+        nested_message = message.get("message")
+        if isinstance(nested_message, str):
+            return nested_message
+        nested_text = message.get("text")
+        if isinstance(nested_text, str):
+            return nested_text
+    elif isinstance(message, str):
+        return message
 
-    # Try message.text
-    text = _extract_nested_value(content, "message", "text")
-    if isinstance(text, str):
-        return text
-
-    # Try direct message
-    text = content.get("message")
-    if isinstance(text, str):
-        return text
-
-    # Try text.text
-    text = _extract_nested_value(content, "text", "text")
-    if isinstance(text, str):
-        return text
-
-    # Try direct text
+    # Try text.text and direct text
     text = content.get("text")
-    if isinstance(text, str):
+    if isinstance(text, dict):
+        nested_text = text.get("text")
+        if isinstance(nested_text, str):
+            return nested_text
+    elif isinstance(text, str):
         return text
 
     return None
@@ -238,9 +234,11 @@ def _simplify_output_content(content: Any, output_type: str) -> Any:
     if output_type == "data":
         # For data types, extract from result.message structure
         # Example: {'result': {'message': {'result': '4'}, 'type': 'object'}}
-        result_data = _extract_nested_value(content, "result", "message")
-        if result_data is not None:
-            return result_data
+        result = content.get("result")
+        if isinstance(result, dict):
+            result_data = result.get("message")
+            if result_data is not None:
+                return result_data
 
     return content
 
