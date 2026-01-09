@@ -19,10 +19,12 @@ The **Prompt Template** component can also output variable instructions to other
 
 ## Prompt Template parameters
 
-| Name     | Display Name   | Description                                                       |
-|----------|----------------|-------------------------------------------------------------------|
-| template | Template       | Input parameter. Create a prompt template with dynamic variables in curly braces, such as `{VARIABLE_NAME}`. <PartialCurlyBraces /> |
-| prompt   | Prompt Message | Output parameter. The built prompt message returned by the `build_prompt` method. |
+| Name                | Display Name        | Description                                                       |
+|---------------------|---------------------|-------------------------------------------------------------------|
+| template            | Template            | Input parameter. Create a prompt template with dynamic variables in curly braces, such as `{VARIABLE_NAME}`. <PartialCurlyBraces /> |
+| use_double_brackets | Use Double Brackets | Advanced parameter. When enabled, use Mustache syntax `{{variable}}` instead of f-string syntax `{variable}`. Useful for templates containing JSON or code. See [When to use Mustache templating](#when-to-use-mustache-templating-double-brackets) for details. |
+| tool_placeholder    | Tool Placeholder    | Advanced parameter. A placeholder input for tool mode. |
+| prompt              | Prompt Message      | Output parameter. The built prompt message returned by the `build_prompt` method. |
 
 ## Define variables in prompts
 
@@ -69,6 +71,39 @@ The following steps demonstrate how to add variables to a **Prompt Template** co
 
 You can add as many variables as you like in your template.
 For example, you could add variables for `{references}` and `{instructions}`, and then feed that information in from other components, such as **Text Input**, **URL**, or **Read File** components.
+
+### Use Mustache templating in prompt templates
+
+F-string escaping can become confusing when you mix escaped braces with variables in the same template.
+For example:
+
+```text
+Generate a response in this JSON format:
+{{"name": "{name}", "age": {age}, "city": "{city}"}}
+
+The user's name is {name}, age is {age}, and they live in {city}.
+```
+
+The characters `{{` and `}}` are escaped literal braces for the JSON structure, but `{name}` is a variable.
+This can make prompts error-prone and difficult to parse.
+Use [Mustache](https://mustache.github.io) in your prompt templates to make the differences clearer.
+
+To enable Mustache templating, do the following:
+
+1. In the **Prompt Template** component, enable **Use Double Brackets**.
+2. In your prompt template, change the variables from `{variable}` to `{{variable}}`.
+    Mustache uses `{` `}` for literal braces and `{{variable}}` for variables.
+
+    ```text
+    Generate a response in this JSON format:
+    {"name": "{{name}}", "age": {{age}}, "city": "{{city}}"}
+
+    The user's name is {{name}}, age is {{age}}, and they live in {{city}}.
+    ```
+
+3. Click **Check & Save**.
+    The component lints the template code and returns **Prompt is ready** if there are no errors.
+    Your prompt is now ready to use in a flow.
 
 ## See also
 
