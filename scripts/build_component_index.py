@@ -257,7 +257,7 @@ def _merge_hash_history(current_component: dict, existing_component: dict | None
     Args:
         current_component: Current component data with code_hash
         existing_component: Existing component from disk
-        current_version: Current Langflow version
+        current_version: Current lfx version
 
     Returns:
         List of hash history entries with version ranges
@@ -334,7 +334,7 @@ def _load_existing_index() -> dict:
 
 
 def _import_components() -> tuple[dict, int]:
-    """Import all Langflow components using the async import function.
+    """Import all lfx components using the async import function.
 
     Returns:
         Tuple of (modules_dict, components_count)
