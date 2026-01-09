@@ -25,9 +25,7 @@ if TYPE_CHECKING:
     from langflow.api.v1.schemas import RunResponse
 
 
-def parse_flat_inputs(
-    inputs: dict[str, Any]
-) -> tuple[dict[str, dict[str, Any]], str | None]:
+def parse_flat_inputs(inputs: dict[str, Any]) -> tuple[dict[str, dict[str, Any]], str | None]:
     """Parse flat inputs structure into tweaks and session_id.
 
     Format: {"component_id.param": value}
@@ -170,11 +168,7 @@ def _extract_model_source(raw_content: dict, vertex_id: str, vertex_display_name
     """
     model_name = _extract_nested_value(raw_content, "model_output", "message", "model_name")
     if model_name:
-        return {
-            "id": vertex_id,
-            "display_name": vertex_display_name,
-            "source": model_name
-        }
+        return {"id": vertex_id, "display_name": vertex_display_name, "source": model_name}
     return None
 
 
@@ -252,11 +246,7 @@ def _simplify_output_content(content: Any, output_type: str) -> Any:
 
 
 def _build_metadata_for_non_output(
-    raw_content: Any,
-    vertex_id: str,
-    vertex_display_name: str,
-    vertex_type: str,
-    output_type: str
+    raw_content: Any, vertex_id: str, vertex_display_name: str, vertex_type: str, output_type: str
 ) -> dict[str, Any]:
     """Build metadata for non-output terminal nodes.
 
@@ -327,9 +317,7 @@ def run_response_to_workflow_response(
         terminal_node_ids = graph.get_terminal_nodes()
     except AttributeError:
         # Fallback: manually check successor_map
-        terminal_node_ids = [
-            vertex.id for vertex in graph.vertices if not graph.successor_map.get(vertex.id, [])
-        ]
+        terminal_node_ids = [vertex.id for vertex in graph.vertices if not graph.successor_map.get(vertex.id, [])]
 
     # Build output data map from run_response using component_id as key
     # This ensures unique keys even when components have duplicate display_names
@@ -392,7 +380,7 @@ def run_response_to_workflow_response(
                         vertex.id,
                         vertex.display_name or vertex.vertex_type,
                         vertex.vertex_type,
-                        output_type
+                        output_type,
                     )
                     metadata.update(extra_metadata)
 
@@ -475,9 +463,7 @@ def create_error_response(
         WorkflowExecutionResponse with error details
     """
     error_detail = ErrorDetail(
-        error=str(error),
-        code="EXECUTION_ERROR",
-        details={"flow_id": flow_id, "error_type": type(error).__name__}
+        error=str(error), code="EXECUTION_ERROR", details={"flow_id": flow_id, "error_type": type(error).__name__}
     )
 
     return WorkflowExecutionResponse(

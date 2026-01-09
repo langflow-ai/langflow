@@ -68,8 +68,7 @@ async def execute_workflow(
     flow = await get_flow_by_id_or_endpoint_name(workflow_request.flow_id, api_key_user.id)
     if not flow:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Flow identifier {workflow_request.flow_id} not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Flow identifier {workflow_request.flow_id} not found"
         )
 
     # Generate job_id for tracking
@@ -88,16 +87,12 @@ async def execute_workflow(
     # Phase 2: Background mode (to be implemented)
     if workflow_request.background:
         raise HTTPException(
-            status_code=status.HTTP_501_NOT_IMPLEMENTED,
-            detail="Background execution not yet implemented"
+            status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Background execution not yet implemented"
         )
 
     # Phase 3: Streaming mode (to be implemented)
     # This should never be reached due to the conditions above, but included for completeness
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Streaming execution not yet implemented"
-    )
+    raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Streaming execution not yet implemented")
 
 
 async def execute_sync_workflow(
@@ -133,9 +128,7 @@ async def execute_sync_workflow(
         user_id = str(api_key_user.id)
         graph_data = flow.data.copy()
         graph_data = process_tweaks(graph_data, tweaks, stream=False)
-        graph = Graph.from_payload(
-            graph_data, flow_id=flow_id_str, user_id=user_id, flow_name=flow.name
-        )
+        graph = Graph.from_payload(graph_data, flow_id=flow_id_str, user_id=user_id, flow_name=flow.name)
 
         # Get terminal nodes - these are the outputs we want
         terminal_node_ids = graph.get_terminal_nodes()
@@ -187,10 +180,7 @@ async def get_workflow_status(
 ) -> WorkflowExecutionResponse | StreamingResponse:
     """Get workflow job status and results by job ID."""
     # TODO: Implementation
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Not implemented /status yet"
-    )
+    raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented /status yet")
 
 
 @router.post(
@@ -210,7 +200,4 @@ async def stop_workflow(
     - force: Whether to force stop the workflow (optional)
     """
     # TODO: Implementation
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Not implemented /stop yet"
-    )
+    raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented /stop yet")
