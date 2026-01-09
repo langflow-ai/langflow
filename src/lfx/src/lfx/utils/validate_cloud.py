@@ -40,7 +40,8 @@ def raise_error_if_astra_cloud_disable_component(msg: str):
 
 # Mapping of component types to their disabled module names and component names when in Astra cloud environment.
 # Keys are component type names (e.g., "docling")
-# Values are sets containing both module filenames (e.g., "chunk_docling_document") and component names (e.g., "ChunkDoclingDocument")
+# Values are sets containing both module filenames (e.g., "chunk_docling_document")
+# and component names (e.g., "ChunkDoclingDocument")
 # To add new disabled components in the future, simply add entries to this dictionary.
 ASTRA_CLOUD_DISABLED_COMPONENTS: dict[str, set[str]] = {
     "docling": {
