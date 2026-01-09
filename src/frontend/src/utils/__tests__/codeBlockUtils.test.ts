@@ -155,8 +155,10 @@ describe("codeBlockUtils", () => {
         // By only using language class and data-language, we prevent this.
 
         // Scenario: code is being streamed and arrives in chunks with newlines
-        const streamingChunk1 = "output_data = {\n    'total_iterations': iteration_count,";
-        const streamingChunk2 = "\n    'termination_reason': termination_reason,\n    'results': results,";
+        const streamingChunk1 =
+          "output_data = {\n    'total_iterations': iteration_count,";
+        const streamingChunk2 =
+          "\n    'termination_reason': termination_reason,\n    'results': results,";
 
         // Without proper language marker, these should NOT be code blocks
         expect(isCodeBlock(undefined, {}, streamingChunk1)).toBe(false);

@@ -62,8 +62,16 @@ describe("Streaming Bug Simulation - Rodrigo's Report", () => {
         // Without language class or data-language, but WITH newlines
         // OLD implementation would return TRUE (BUG!)
 
-        const fragment1IsBlock = isCodeBlockOLD(undefined, {}, streamingFragment1);
-        const fragment2IsBlock = isCodeBlockOLD(undefined, {}, streamingFragment2);
+        const fragment1IsBlock = isCodeBlockOLD(
+          undefined,
+          {},
+          streamingFragment1,
+        );
+        const fragment2IsBlock = isCodeBlockOLD(
+          undefined,
+          {},
+          streamingFragment2,
+        );
 
         // BUG: Both fragments are treated as separate code blocks!
         expect(fragment1IsBlock).toBe(true); // Wrong! Should be false
@@ -71,8 +79,12 @@ describe("Streaming Bug Simulation - Rodrigo's Report", () => {
 
         // This caused the visual bug: 2 separate code blocks rendered
         console.log("OLD BEHAVIOR (BUGGY):");
-        console.log(`Fragment 1 is block: ${fragment1IsBlock} (should be false)`);
-        console.log(`Fragment 2 is block: ${fragment2IsBlock} (should be false)`);
+        console.log(
+          `Fragment 1 is block: ${fragment1IsBlock} (should be false)`,
+        );
+        console.log(
+          `Fragment 2 is block: ${fragment2IsBlock} (should be false)`,
+        );
       });
 
       it("should_show_why_duplicate_blocks_appeared", () => {
@@ -93,7 +105,9 @@ describe("Streaming Bug Simulation - Rodrigo's Report", () => {
 
         // BUG: All 3 chunks become separate blocks!
         expect(blocksCreated.length).toBe(3);
-        console.log(`OLD: ${blocksCreated.length} blocks created from ${chunks.length} chunks`);
+        console.log(
+          `OLD: ${blocksCreated.length} blocks created from ${chunks.length} chunks`,
+        );
       });
     });
 
@@ -102,8 +116,16 @@ describe("Streaming Bug Simulation - Rodrigo's Report", () => {
         // Without language class or data-language
         // NEW implementation correctly returns FALSE
 
-        const fragment1IsBlock = isCodeBlockNEW(undefined, {}, streamingFragment1);
-        const fragment2IsBlock = isCodeBlockNEW(undefined, {}, streamingFragment2);
+        const fragment1IsBlock = isCodeBlockNEW(
+          undefined,
+          {},
+          streamingFragment1,
+        );
+        const fragment2IsBlock = isCodeBlockNEW(
+          undefined,
+          {},
+          streamingFragment2,
+        );
 
         // FIXED: Neither fragment is treated as a code block
         expect(fragment1IsBlock).toBe(false);
@@ -136,8 +158,12 @@ describe("Streaming Bug Simulation - Rodrigo's Report", () => {
         );
         expect(blocksWithMarker.length).toBe(3);
 
-        console.log(`NEW: ${blocksWithoutMarker.length} blocks without marker (correct: 0)`);
-        console.log(`NEW: ${blocksWithMarker.length} blocks with marker (correct: all)`);
+        console.log(
+          `NEW: ${blocksWithoutMarker.length} blocks without marker (correct: 0)`,
+        );
+        console.log(
+          `NEW: ${blocksWithMarker.length} blocks with marker (correct: all)`,
+        );
       });
 
       it("should_handle_complete_code_correctly_when_streaming_ends", () => {
@@ -149,7 +175,11 @@ describe("Streaming Bug Simulation - Rodrigo's Report", () => {
         expect(duringStreaming).toBe(false);
 
         // After streaming (parser adds language class)
-        const afterStreaming = isCodeBlockNEW("language-python", {}, completeCode);
+        const afterStreaming = isCodeBlockNEW(
+          "language-python",
+          {},
+          completeCode,
+        );
         expect(afterStreaming).toBe(true);
 
         console.log("Complete code handling:");
@@ -169,8 +199,12 @@ else "Max iterations reached"`;
 
         console.log("\n=== BUG DEMONSTRATION ===");
         console.log("Content with newlines but NO language marker:");
-        console.log(`OLD isCodeBlock(): ${oldResult} -> Would render as code block (BUG)`);
-        console.log(`NEW isCodeBlock(): ${newResult} -> Correctly NOT a code block (FIXED)`);
+        console.log(
+          `OLD isCodeBlock(): ${oldResult} -> Would render as code block (BUG)`,
+        );
+        console.log(
+          `NEW isCodeBlock(): ${newResult} -> Correctly NOT a code block (FIXED)`,
+        );
 
         expect(oldResult).toBe(true); // Bug
         expect(newResult).toBe(false); // Fixed
