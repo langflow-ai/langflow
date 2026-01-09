@@ -146,8 +146,8 @@ def _find_component_in_index(index: dict, category: str, component_name: str) ->
 METADATA_KEY = "metadata"
 CODE_HASH_KEY = "code_hash"
 HASH_KEY = "hash"  # Key used in hash_history entries
-VERSION_FIRST_KEY = "v_from" # Hash valid from Version (inclusive)
-VERSION_LAST_KEY = "v_to" # Hash valid to version (inclusive)
+VERSION_FIRST_KEY = "v_from"  # Hash valid from Version (inclusive)
+VERSION_LAST_KEY = "v_to"  # Hash valid to version (inclusive)
 
 
 def _get_component_hash(component: dict | None) -> str | None:
