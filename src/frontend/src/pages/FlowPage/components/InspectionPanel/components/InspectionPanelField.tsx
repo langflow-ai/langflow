@@ -23,7 +23,6 @@ import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import useFetchDataOnMount from "@/CustomNodes/hooks/use-fetch-data-on-mount";
 import useHandleOnNewValue from "@/CustomNodes/hooks/use-handle-new-value";
-import getFieldTitle from "@/CustomNodes/utils/get-field-title";
 import NodeInputInfo from "@/CustomNodes/GenericNode/components/NodeInputInfo";
 
 export default function InspectionPanelField({

@@ -226,7 +226,8 @@ export default function NodeInputField({
           />
         </div>
 
-        {data.node?.template[name] !== undefined && (
+        {/* Hide the input component when field has a handle - inputs are edited in Inspection Panel */}
+        {!optionalHandle && data.node?.template[name] !== undefined && (
           <CustomParameterComponent
             handleOnNewValue={handleOnNewValue}
             name={name}
