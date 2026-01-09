@@ -63,10 +63,9 @@ def update_projects_components_with_latest_component_versions(project_data, all_
             # Strip hash_history from component metadata before using in flows
             # hash_history is internal metadata for tracking component evolution
             # and should only exist in component_index.json, not in saved flows
-            component_copy = deepcopy(component)
-            if "metadata" in component_copy and "hash_history" in component_copy["metadata"]:
-                del component_copy["metadata"]["hash_history"]
-            all_types_dict_flat[key] = component_copy
+            if "metadata" in component and "hash_history" in component["metadata"]:
+                del component["metadata"]["hash_history"]
+            all_types_dict_flat[key] = component
 
     node_changes_log = defaultdict(list)
     project_data_copy = deepcopy(project_data)
