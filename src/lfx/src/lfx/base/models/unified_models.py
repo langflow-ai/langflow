@@ -323,14 +323,14 @@ def validate_model_provider_key(variable_name: str, api_key: str) -> None:
 
             default_url = "https://us-south.ml.cloud.ibm.com"
             llm = ChatWatsonx(
-                    apikey=api_key,
-                    url=default_url,
-                    model_id=first_model,
-                    project_id="dummy_project_for_validation",  # Dummy project_id for validation
-                    params={"max_new_tokens": 1},
-                )
+                apikey=api_key,
+                url=default_url,
+                model_id=first_model,
+                project_id="dummy_project_for_validation",  # Dummy project_id for validation
+                params={"max_new_tokens": 1},
+            )
             llm.invoke("test")
-            
+
         elif provider == "Ollama":
             # Ollama is local, just verify the URL is accessible
             import requests
