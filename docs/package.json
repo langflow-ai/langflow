@@ -49,7 +49,9 @@
     ]
   },
   "volta": {
-    "node": "18.18.0"
+  "volta": {
+    "node": "22.12.0"
+  },
   },
   "overrides": {
     "lodash": "4.17.21",
