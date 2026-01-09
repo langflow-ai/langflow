@@ -22,6 +22,7 @@ import { useShallow } from "zustand/react/shallow";
 import { DefaultEdge } from "@/CustomEdges";
 import NoteNode from "@/CustomNodes/NoteNode";
 import FlowToolbar from "@/components/core/flowToolbarComponent";
+import InspectionPanel from "@/pages/FlowPage/components/InspectionPanel";
 import {
   COLOR_OPTIONS,
   DEFAULT_NOTE_SIZE,
@@ -744,6 +745,17 @@ export default function Page({
     maxZoom: MAX_ZOOM,
   };
 
+  // Determine if InspectionPanel should be visible
+  const showInspectionPanel =
+    lastSelection?.nodes?.length === 1 &&
+    lastSelection.nodes[0].type === "genericNode";
+
+  // Get the fresh node data from the store instead of using stale reference
+  const selectedNodeId = showInspectionPanel ? lastSelection.nodes[0].id : null;
+  const selectedNode = selectedNodeId
+    ? (nodes.find((n) => n.id === selectedNodeId) as AllNodeType)
+    : null;
+
   return (
     <div className="h-full w-full bg-canvas" ref={reactFlowWrapper}>
       {showCanvas ? (
@@ -758,6 +770,10 @@ export default function Page({
                   shadowBoxHeight={shadowBoxHeight}
                 />
                 <FlowToolbar />
+                <InspectionPanel
+                  selectedNode={selectedNode}
+                  isVisible={showInspectionPanel}
+                />
               </>
             )}
             <MemoizedSidebarTrigger />
