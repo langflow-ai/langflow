@@ -100,8 +100,8 @@ class TestWorkflowDeveloperAPIProtection:
 
         # Should return 404 because flow doesn't exist, NOT because endpoint is disabled
         assert response.status_code == 404
-        assert "Flow identifier" in response.text
-        assert "not found" in response.text
+        assert "flow" in response.text.lower()
+        assert "not found" in response.text.lower()
         assert "This endpoint is not available" not in response.text
 
     async def test_get_workflow_allowed_when_dev_api_enabled_job_not_found(

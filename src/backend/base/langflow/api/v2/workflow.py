@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import time
 from datetime import datetime, timezone
 from typing import Annotated, Any
@@ -228,10 +229,10 @@ async def _execute_workflow_stream(
 
             task = asyncio.create_task(run_flow())
 
-            # Yield events from queue
+            # Yield events from queue with timeout to prevent hanging
             while True:
                 try:
-                    _event_id, value, _put_time = await queue.get()
+                    _event_id, value, _put_time = await asyncio.wait_for(queue.get(), timeout=60.0)
                     if value is None:
                         break
                     event = WorkflowStreamEvent(
@@ -241,8 +242,23 @@ async def _execute_workflow_stream(
                         raw_event={"data": value.decode("utf-8") if isinstance(value, bytes) else value},
                     )
                     yield f"data: {event.model_dump_json()}\n\n"
+                except asyncio.TimeoutError:
+                    # Timeout waiting for events - emit error and break
+                    timeout_event = WorkflowStreamEvent(
+                        type="error",
+                        run_id=job_id,
+                        timestamp=int(time.time() * 1000),
+                        raw_event={"error": "Stream timeout - no events received"},
+                    )
+                    yield f"data: {timeout_event.model_dump_json()}\n\n"
+                    task.cancel()
+                    with contextlib.suppress(asyncio.CancelledError):
+                        await task
+                    break
                 except asyncio.CancelledError:
                     task.cancel()
+                    with contextlib.suppress(asyncio.CancelledError):
+                        await task
                     break
 
             # Final event
@@ -328,6 +344,7 @@ async def _execute_workflow_background(
             await logger.ainfo(f"Background workflow {job_id} completed successfully")
         except (ValueError, RuntimeError, KeyError) as e:
             await logger.aexception(f"Background workflow {job_id} failed: {e}")
+            raise  # Re-raise so task.exception() is set for status detection
 
     # Create queue for job tracking
     try:
@@ -372,6 +389,13 @@ async def execute_workflow(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Flow {workflow_request.flow_id} not found")
 
     user_id = str(api_key_user.id)
+
+    # Validate mutually exclusive execution modes
+    if workflow_request.background and workflow_request.stream:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Only one execution mode can be selected: either 'background' or 'stream', not both.",
+        )
 
     # Determine execution mode
     if workflow_request.background:
@@ -502,6 +526,10 @@ async def stop_workflow(
         # Cancel the task
         task.cancel()
 
+        # Await cancellation to ensure cleanup
+        with contextlib.suppress(asyncio.CancelledError):
+            await task
+
         if request.force:
             # Force cleanup immediately
             await queue_service.cleanup_job(job_id)
@@ -513,8 +541,8 @@ async def stop_workflow(
 
         return WorkflowStopResponse(
             job_id=job_id,
-            status="stopping",
-            message="Stop signal sent to job",
+            status="stopped",
+            message="Job stopped successfully",
         )
 
     except JobQueueNotFoundError:
