@@ -6,7 +6,7 @@ from typing import Any, TypeVar
 from langchain_core.messages import ToolCall
 from mcp.types import CallToolResult
 from pydantic import BaseModel
-from toolguard import IToolInvoker, load_toolguards
+from toolguard.runtime import IToolInvoker, PolicyViolationException, load_toolguards
 
 from lfx.field_typing import Tool
 from lfx.field_typing.constants import BaseTool
@@ -51,8 +51,6 @@ class GuardedTool(Tool):
         args = self.parse_input(tool_input)
         # print(f"tool={self.name}, args={args}, config={config}, kwargs={kwargs}")
         with load_toolguards(self._tg_dir) as toolguard:
-            from rt_toolguard.data_types import PolicyViolationException  # pyright: ignore[reportMissingImports]
-
             try:
                 toolguard.check_toolcall(self.name, args=args, delegate=self._tool_invoker)
                 return self._orig_tool.run(tool_input=args, config=config, **kwargs)
@@ -67,8 +65,6 @@ class GuardedTool(Tool):
         args = self.parse_input(tool_input)
         # print(f"tool={self.name}, args={args}, config={config}, kwargs={kwargs}")
         with load_toolguards(self._tg_dir) as toolguard:
-            from rt_toolguard.data_types import PolicyViolationException  # pyright: ignore[reportMissingImports]
-
             try:
                 toolguard.check_toolcall(self.name, args=args, delegate=self._tool_invoker)
                 return await self._orig_tool.arun(tool_input=args, config=config, **kwargs)

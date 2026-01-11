@@ -1,8 +1,12 @@
 from pathlib import Path
 from typing import cast
 
-from toolguard import ToolGuardsCodeGenerationResult, ToolGuardSpec
-from toolguard.buildtime import generate_guard_specs, generate_guards_from_specs
+from toolguard.buildtime import (
+    ToolGuardsCodeGenerationResult,
+    ToolGuardSpec,
+    generate_guard_specs,
+    generate_guards_from_specs,
+)
 
 from lfx.base.models import LCModelComponent
 from lfx.base.models.unified_models import (

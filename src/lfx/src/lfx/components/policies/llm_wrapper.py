@@ -1,6 +1,6 @@
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import messages_from_dict
-from toolguard.llm.tg_litellm import LanguageModelBase
+from toolguard.buildtime.llm.tg_litellm import LanguageModelBase
 
 
 def _model_name(lc_model: BaseChatModel) -> str:
