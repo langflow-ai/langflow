@@ -15,6 +15,7 @@ from pydantic import (
     field_serializer,
     field_validator,
     model_serializer,
+    model_validator,
 )
 
 from langflow.schema.dotdict import dotdict
@@ -25,7 +26,7 @@ from langflow.services.database.models.api_key.model import ApiKeyRead
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow.model import FlowCreate, FlowRead
 from langflow.services.database.models.user.model import UserRead
-from langflow.services.publish.schema import PublishedFlowMetadata
+from langflow.services.publish.schema import PublishedFlowMetadata, PublishedProjectMetadata
 from langflow.services.tracing.schema import Log
 
 
@@ -490,6 +491,31 @@ class PublishFlowCreate(BaseModel):
 
 class PublishedFlowRead(PublishedFlowMetadata):
     """Schema for reading a published flow, includes the composite key fields."""
+    model_config = ConfigDict(extra="ignore")
+
+
+class ProjectFlowVersion(BaseModel):
+    flow_id: UUID
+    published_flow_version_id: str | None = Field(
+        None, description="If provided, links to this published version. If null, includes latest flow data."
+    )
+    published_flow_name: str | None = Field(None, description="The name of the flow at the time of publishing.")
+
+    @model_validator(mode="after")
+    def validate_published_version(self):
+        if bool(self.published_flow_version_id) != bool(self.published_flow_name):
+            msg = "published_flow_version_id and published_flow_name must both be provided or both be None."
+            raise ValueError(msg)
+        return self
+
+
+class PublishProjectCreate(BaseModel):
+    publish_tag: str | None = Field(None, description="Optional tag for the published project version.")
+    flows: list[ProjectFlowVersion] = Field(..., description="List of flows to include in the project.")
+
+
+class PublishedProjectRead(PublishedProjectMetadata):
+    """Schema for reading a published project, includes the composite key fields."""
     model_config = ConfigDict(extra="ignore")
 
 

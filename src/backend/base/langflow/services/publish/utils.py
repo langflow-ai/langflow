@@ -3,6 +3,7 @@ import hashlib
 import re
 from copy import deepcopy
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from botocore.exceptions import (
@@ -16,7 +17,6 @@ from fastapi import HTTPException, status
 from lfx.log import logger
 
 from langflow.services.database.models.base import orjson_dumps
-from langflow.services.publish.schema import PublishedFlowMetadata
 
 # commonly used types
 IDType = str | UUID | None
@@ -43,12 +43,12 @@ def to_alnum_string(s: str | None):
 
 
 KEY_VAL_PATTERN = re.compile(r"([^/]+)=([^/]+)")
-def parse_flow_key(key: str, last_modified: datetime | None) -> PublishedFlowMetadata:
-    """Matches key-value pairs in an s3 object key to return a PublishedFlowMetadata object."""
+def parse_blob_key(key: str, last_modified: datetime | None, cls) -> Any:
+    """Matches key-value pairs in an s3 object key to return a metadata object."""
     data = dict(KEY_VAL_PATTERN.findall(key))
     data["version_id"] = data["id"]
     data["last_modified"] = last_modified
-    return PublishedFlowMetadata(**data)
+    return cls(**data)
 
 
 ########################################################
@@ -60,6 +60,12 @@ INVALID_FLOW_MSG = (
     "- description (can be None or empty)\n"
     "- nodes (can be None or empty)\n"
     "- edges (can be None or empty)"
+)
+INVALID_PROJECT_MSG = (
+    "Invalid project. Project data must contain ALL of these keys:\n"
+    "- name (must be non-empty and contain at least one alphanumeric character)\n"
+    "- description (can be None or empty)\n"
+    "- flows (must be a list)"
 )
 MISSING_BUCKET_NAME_MSG = "Publish backend bucket name not specified"
 MISSING_ALL_ID_MSG = "user_id and {item_type}_id are required."
@@ -115,6 +121,22 @@ def require_valid_flow(flow_data: dict | None):
         raise ValueError(INVALID_FLOW_MSG)
 
 
+def require_valid_project(project_data: dict | None):
+    """Validates the project data dictionary for publishing."""
+    if not project_data:
+        raise ValueError(MISSING_ITEM_MSG.format(item="Project data"))
+
+    project_data["name"] = to_alnum_string(project_data.get("name", None))
+
+    if not (
+        project_data["name"] and
+        "description" in project_data and
+        "flows" in project_data and
+        isinstance(project_data["flows"], list)
+    ):
+        raise ValueError(INVALID_PROJECT_MSG)
+
+
 def validate_all(
     bucket_name: str | None,
     user_id: IDType,
@@ -137,7 +159,7 @@ def validate_all(
 
 
 ########################################################
-# flow normalization for version comparison
+# normalization for version comparison
 ########################################################
 # keys to remove when comparing flows versions
 EXCLUDE_NODE_KEYS = {
@@ -199,10 +221,16 @@ def pop_nested(d: dict, keys: tuple):
         cur.pop(keys[-1], None)
 
 
-def compute_dict_hash(graph_data: dict | None):
+def compute_flow_hash(graph_data: dict | None):
     """Returns the SHA256 of the normalized, key-ordered flow json."""
     graph_data = normalized_flow_data(graph_data)
     cleaned_graph_json = orjson_dumps(graph_data, sort_keys=True)
+    return hashlib.sha256(cleaned_graph_json.encode("utf-8")).hexdigest()
+
+
+def compute_project_hash(project_data: dict | None):
+    """Returns the SHA256 of the normalized, key-ordered project json."""
+    cleaned_graph_json = orjson_dumps(project_data, sort_keys=True)
     return hashlib.sha256(cleaned_graph_json.encode("utf-8")).hexdigest()
 
 
