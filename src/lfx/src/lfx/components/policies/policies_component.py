@@ -8,8 +8,12 @@ from lfx.base.models.model import LCModelComponent
 from lfx.log.logger import logger
 from os.path import join
 
-from toolguard import ToolGuardsCodeGenerationResult, ToolGuardSpec
-from toolguard.buildtime import generate_guard_specs, generate_guards_from_specs
+from toolguard.buildtime import (
+    ToolGuardsCodeGenerationResult,
+    ToolGuardSpec,
+    generate_guard_specs,
+    generate_guards_from_specs,
+)
 
 from lfx.base.models import LCModelComponent
 from lfx.components.policies.wrapped_tool import LangchainModelWrapper, WrappedTool
