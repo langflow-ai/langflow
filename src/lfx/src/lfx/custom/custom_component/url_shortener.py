@@ -1,9 +1,10 @@
 # from lfx.field_typing import Data
+import httpx
+from bs4 import BeautifulSoup
+
 from lfx.custom.custom_component.component import Component
 from lfx.io import MessageTextInput, Output
 from lfx.schema.data import Data
-import httpx
-from bs4 import BeautifulSoup
 
 
 class CustomComponent(Component):
@@ -31,7 +32,7 @@ class CustomComponent(Component):
         data = Data(value=self.URL)
         self.log(f"data is {data}")
         try:
-            payload = {"url":self.URL}
+            payload = {"url": self.URL}
             resp = httpx.get("http://grambox.in/bitly/shrink/", params=payload)
             htmlContent = resp.text
             soup = BeautifulSoup(htmlContent, "html.parser")
@@ -40,8 +41,8 @@ class CustomComponent(Component):
             self.status = result
             return result
         except Exception as e:
-            result = Data(value=f"Error: {str(e)}")
-            self.status="failed"
+            result = Data(value=f"Error: {e!s}")
+            self.status = "failed"
             return result
         return ""
         # self.status = data
