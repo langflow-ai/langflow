@@ -11,3 +11,13 @@ class PublishedFlowMetadata(BaseModel):
         None, description="The authoritative creation timestamp from the storage service."
     )
     flow_name: str = Field(..., description="The name of the flow at the time of publishing.")
+
+
+class PublishedProjectMetadata(BaseModel):
+    """Composite key to identify a specific published project version."""
+    model_config = ConfigDict(extra="ignore")
+    version_id: str = Field(..., description="The version ID (publish_id).")
+    last_modified: datetime | None = Field(
+        None, description="The authoritative creation timestamp from the storage service."
+    )
+    project_name: str = Field(..., description="The name of the project at the time of publishing.")
