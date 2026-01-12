@@ -87,11 +87,6 @@ The following issues can occur when Langflow Desktop is setting up or installing
 
 To view Langflow Desktop logs, see [Desktop logs](/logging#desktop-logs).
 
-### [Windows] Failed to install Langflow OSS - Missing C++ Build Tools
-
-Microsoft Windows installations of Langflow Desktop require a C++ compiler that may not be present on your system.
-If you receive a `C++ Build Tools Required!` error, follow the on-screen prompt to install Microsoft C++ Build Tools, or install [Microsoft Visual Studio](https://visualstudio.microsoft.com/downloads/).
-
 ### Failed to install Langflow OSS: Unable to sanity check Langflow OSS version
 
 Desktop installed Langflow OSS but couldn't verify the installation.
@@ -117,6 +112,45 @@ To resolve this error, do the following:
     * On macOS or Linux, run `lsof -i :7860`.
 2. If another process is using the port, stop that process or [configure Langflow Desktop to use a different port](/environment-variables#set-environment-variables-for-langflow-desktop).
 
+### Failed to install uv: Unable to find uv executable
+
+This error can also appear as: `Unable to find uv executable for Python virtual environment setup`.
+
+Langflow Desktop can't locate the `uv` executable on your system, even though it may be installed.
+
+To resolve this error, do the following:
+
+1. Verify `uv` is installed by running `uv --version` in a terminal.
+2. If `uv` is not found, install `uv` using the instructions in "[Windows] All automatic installation strategies failed" below, or see the [uv installation guide](https://github.com/astral-sh/uv#installation).
+3. If `uv` is installed but not found, add it to your PATH environment variable:
+   * Windows: Add `%USERPROFILE%\.cargo\bin` to your PATH. In PowerShell, run:
+     ```powershell
+     [System.Environment]::SetEnvironmentVariable("Path", $env:Path + ";$env:USERPROFILE\.cargo\bin", "User")
+     ```
+   * macOS or Linux: Add `~/.cargo/bin` to your PATH in `~/.bashrc` or `~/.zshrc`.
+
+4. Restart Langflow Desktop.
+
+### [MacOS] Failed to install Langflow OSS: Xcode Command Line Tools are not installed
+
+Langflow Desktop requires [Xcode Command Line Tools](https://mac.install.guide/commandlinetools/) to install Langflow OSS on macOS.
+
+To install XCode Command Line Tools manually, do the following:
+
+1. Open a terminal and run `xcode-select --install`.
+2. **The installation may take over 20 minutes**.
+To start the installation process, in the popup dialogue, click **Install**.
+3. Verify the installation by opening a new terminal and running `xcode-select -p`.
+   The command should return a path like `/Library/Developer/CommandLineTools`.
+4. Restart Langflow Desktop.
+
+If the manual installation doesn't resolve the issue, download Xcode Command Line Tools from [Apple Developer Downloads](https://developer.apple.com/download/all/), and install the `.dmg` file manually.
+
+### [Windows] Failed to install Langflow OSS - Missing C++ Build Tools
+
+Microsoft Windows installations of Langflow Desktop require a C++ compiler that may not be present on your system.
+If you receive a `C++ Build Tools Required!` error, follow the on-screen prompt to install Microsoft C++ Build Tools, or install [Microsoft Visual Studio](https://visualstudio.microsoft.com/downloads/).
+
 ### [Windows] All automatic installation strategies failed
 
 Desktop tried multiple methods to automatically install `uv` but all attempts failed. Desktop requires `uv` to manage Python packages and virtual environments.
@@ -141,40 +175,6 @@ To resolve this error, do the following:
    ```
 
 3. Restart Langflow Desktop.
-
-### Failed to install uv: Unable to find uv executable
-
-This error can also appear as: `Unable to find uv executable for Python virtual environment setup`.
-
-Langflow Desktop can't locate the `uv` executable on your system, even though it may be installed.
-
-To resolve this error, do the following:
-
-1. Verify `uv` is installed by running `uv --version` in a terminal.
-2. If `uv` is not found, install `uv` using the instructions in [[Windows] All automatic installation strategies failed](#windows-all-automatic-installation-strategies-failed), or see the [uv installation guide](https://github.com/astral-sh/uv#installation).
-3. If `uv` is installed but not found, add it to your PATH environment variable:
-   * Windows: Add `%USERPROFILE%\.cargo\bin` to your PATH. In PowerShell, run:
-     ```powershell
-     [System.Environment]::SetEnvironmentVariable("Path", $env:Path + ";$env:USERPROFILE\.cargo\bin", "User")
-     ```
-   * macOS or Linux: Add `~/.cargo/bin` to your PATH in `~/.bashrc` or `~/.zshrc`.
-
-4. Restart Langflow Desktop.
-
-### [MacOS] Failed to install Langflow OSS: Xcode Command Line Tools are not installed
-
-Langflow Desktop requires [Xcode Command Line Tools](https://mac.install.guide/commandlinetools/) to install Langflow OSS on macOS.
-
-To install XCode Command Line Tools manually, do the following:
-
-1. Open a terminal and run `xcode-select --install`.
-2. **The installation may take over 20 minutes**.
-To start the installation process, in the popup dialogue, click **Install**.
-3. Verify the installation by opening a new terminal and running `xcode-select -p`.
-   The command should return a path like `/Library/Developer/CommandLineTools`.
-4. Restart Langflow Desktop.
-
-If the manual installation doesn't resolve the issue, download Xcode Command Line Tools from [Apple Developer Downloads](https://developer.apple.com/download/all/), and install the `.dmg` file manually.
 
 ## Langflow startup issues
 
