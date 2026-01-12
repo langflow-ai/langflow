@@ -10,7 +10,7 @@ export interface TextareaProps
 const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ className, password, editNode, ...props }, ref) => {
     return (
-      <div className="h-full w-full">
+      <div className="w-full">
         <textarea
           data-testid="textarea"
           className={cn(

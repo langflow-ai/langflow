@@ -47,8 +47,6 @@ export default function ChatInput({
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  useAutoResizeTextArea(chatValue, inputRef);
-
   const { mutate } = usePostUploadFile();
 
   // Audio transcription handler - appends transcribed text to the chat input
