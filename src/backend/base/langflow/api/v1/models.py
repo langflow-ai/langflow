@@ -197,7 +197,11 @@ async def get_enabled_providers(
     current_user: CurrentActiveUser,
     providers: Annotated[list[str] | None, Query()] = None,
 ):
-    """Get enabled providers for the current user."""
+    """Get enabled providers for the current user.
+    
+    Only providers with valid API keys are marked as enabled. This prevents
+    providers from appearing enabled when they have invalid credentials.
+    """
     variable_service = get_variable_service()
     try:
         if not isinstance(variable_service, DatabaseVariableService):
@@ -210,9 +214,9 @@ async def get_enabled_providers(
 
         # Get all credential variable names (regardless of default_fields)
         # This includes both env variables and explicitly created model provider credentials
-        credential_names = {var.name for var in all_variables if var.type == CREDENTIAL_TYPE}
+        credential_variables = {var.name: var for var in all_variables if var.type == CREDENTIAL_TYPE}
 
-        if not credential_names:
+        if not credential_variables:
             return {
                 "enabled_providers": [],
                 "provider_status": {},
@@ -221,14 +225,19 @@ async def get_enabled_providers(
         # Get the provider-variable mapping
         provider_variable_map = get_model_provider_variable_mapping()
 
-        enabled_providers = []
-        provider_status = {}
+        # Use shared helper to validate and get enabled providers
+        from lfx.base.models.unified_models import _validate_and_get_enabled_providers
 
-        for provider, var_name in provider_variable_map.items():
-            is_enabled = var_name in credential_names
-            provider_status[provider] = is_enabled
-            if is_enabled:
-                enabled_providers.append(provider)
+        enabled_providers_set = _validate_and_get_enabled_providers(
+            credential_variables, provider_variable_map
+        )
+        enabled_providers = list(enabled_providers_set)
+        
+        # Build provider_status dict for all providers
+        provider_status = {
+            provider: provider in enabled_providers_set
+            for provider in provider_variable_map.keys()
+        }
 
         result = {
             "enabled_providers": enabled_providers,
