@@ -11,7 +11,7 @@ on:
         description: "Python Versions"
         required: false
         type: string
-        default: "['3.11']"
+        default: "['3.10']"
       frontend-tests-folder:
         description: "Frontend Tests Folder"
         required: false
@@ -50,7 +50,7 @@ on:
         description: "Python Versions"
         required: false
         type: string
-        default: "['3.11']"
+        default: "['3.10']"
       runs-on:
         description: "Runner to use for the tests"
         required: false
@@ -240,7 +240,7 @@ jobs:
       (inputs.run-all-tests || needs.path-filter.outputs.python == 'true')
     uses: ./.github/workflows/python_test.yml
     with:
-      python-versions: ${{ inputs.python-versions || '["3.11"]' }}
+      python-versions: ${{ inputs.python-versions || '["3.10"]' }}
       runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
       ref: ${{ inputs.ref || github.ref }}
     secrets:
