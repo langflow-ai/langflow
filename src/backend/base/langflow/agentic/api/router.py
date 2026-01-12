@@ -20,7 +20,7 @@ class FlowRequest(BaseModel):
     input_value: str | None = None
 
 
-router = APIRouter(prefix="/agentic", tags=["Agentic"])
+router = APIRouter(prefix="/v1/agentic", tags=["Agentic"])
 
 
 async def get_openai_api_key(variable_service: VariableService, user_id: UUID | str, session) -> str:
