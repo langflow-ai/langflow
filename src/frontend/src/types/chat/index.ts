@@ -116,19 +116,6 @@ export interface ToolContent extends BaseContent {
   error?: any;
 }
 
-export interface SharedContextEventData {
-  operation: "get" | "set" | "append" | "delete" | "keys" | "has_key";
-  key: string;
-  namespace: string;
-  timestamp: string;
-  component_id: string;
-}
-
-export interface SharedContextContent extends BaseContent {
-  type: "shared_context";
-  events: SharedContextEventData[];
-}
-
 // Union type for all content types
 export type ContentType =
   | ErrorContent
@@ -136,8 +123,7 @@ export type ContentType =
   | MediaContent
   | JSONContent
   | CodeContent
-  | ToolContent
-  | SharedContextContent;
+  | ToolContent;
 
 // Updated ContentBlock interface
 export interface ContentBlock {
