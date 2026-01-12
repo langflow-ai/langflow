@@ -275,10 +275,10 @@ To generate a secret encryption key for `LANGFLOW_SECRET_KEY`, do the following:
 
 ### LANGFLOW_NEW_USER_IS_ACTIVE {#langflow-new-user-is-active}
 
-When `LANGFLOW_NEW_USER_IS_ACTIVE=False` (default), a superuser must explicitly activate a new user's account before they can sign in to the visual editor.
+When `LANGFLOW_NEW_USER_IS_ACTIVE=False` (default), accounts created by superusers are inactive by default and must be explicitly activated before users can sign in to the visual editor.
 The superuser can also deactivate a user's account as needed.
 
-When `LANGFLOW_NEW_USER_IS_ACTIVE=True`, new user accounts are automatically activated.
+When `LANGFLOW_NEW_USER_IS_ACTIVE=True`, accounts created by superusers are automatically activated.
 
 ```text
 LANGFLOW_NEW_USER_IS_ACTIVE=False
