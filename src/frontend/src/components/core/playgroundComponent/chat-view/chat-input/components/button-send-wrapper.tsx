@@ -42,7 +42,7 @@ const ButtonSendWrapper = ({
     <Button
       className={cn(
         buttonClasses,
-        "h-7 w-7 px-0 flex items-center justify-center",
+        "h-6 w-6 px-0 flex items-center justify-center",
       )}
       onClick={handleClick}
       disabled={isLoading}

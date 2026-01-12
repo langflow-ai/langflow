@@ -1,18 +1,7 @@
-import { Textarea } from "@/components/ui/textarea";
+import { useEffect } from "react";
 import { useUtilityStore } from "@/stores/utilityStore";
-import type { FilePreviewType } from "@/types/components";
-import { cn } from "@/utils/utils";
-
-interface TextAreaWrapperProps {
-  checkSendingOk: (event: React.KeyboardEvent<HTMLTextAreaElement>) => boolean;
-  send: () => void;
-  isBuilding: boolean;
-  noInput: boolean;
-  chatValue: string;
-  inputRef: React.RefObject<HTMLTextAreaElement>;
-  files: FilePreviewType[];
-  isDragging: boolean;
-}
+import { Textarea } from "../../../../../../components/ui/textarea";
+import { classNames } from "../../../../../../utils/utils";
 
 const TextAreaWrapper = ({
   checkSendingOk,
@@ -20,10 +9,11 @@ const TextAreaWrapper = ({
   isBuilding,
   noInput,
   chatValue,
+  CHAT_INPUT_PLACEHOLDER,
   inputRef,
   files,
   isDragging,
-}: TextAreaWrapperProps) => {
+}) => {
   const getPlaceholderText = (
     isDragging: boolean,
     noInput: boolean,
@@ -31,7 +21,7 @@ const TextAreaWrapper = ({
     if (isDragging) {
       return "Drop here";
     } else if (noInput) {
-      return "No chat input available";
+      return CHAT_INPUT_PLACEHOLDER;
     } else {
       return "Send a message...";
     }
@@ -41,10 +31,17 @@ const TextAreaWrapper = ({
 
   const setChatValueStore = useUtilityStore((state) => state.setChatValueStore);
 
+  const additionalClassNames =
+    "form-input block w-full border-0 custom-scroll focus:border-ring rounded-none shadow-none focus:ring-0 p-0 sm:text-sm !bg-transparent";
+
+  useEffect(() => {
+    if (!isBuilding && !noInput) {
+      inputRef.current?.focus();
+    }
+  }, [isBuilding, noInput]);
+
   return (
     <Textarea
-      id="chat-input-textarea"
-      name="chat-input"
       data-testid="input-chat-playground"
       onKeyDown={(event) => {
         if (checkSendingOk(event)) {
@@ -55,24 +52,11 @@ const TextAreaWrapper = ({
       rows={1}
       ref={inputRef}
       disabled={isBuilding || noInput}
-      style={{
-        resize: "none",
-        bottom: `${inputRef?.current?.scrollHeight}px`,
-        maxHeight: "60px",
-        overflow: `${
-          inputRef.current && inputRef.current.scrollHeight > 60
-            ? "auto"
-            : "hidden"
-        }`,
-      }}
       value={chatValue}
       onChange={(event): void => {
         setChatValueStore(event.target.value);
       }}
-      className={cn(
-        fileClass,
-        "form-input block w-full border-0 custom-scroll focus:border-0 rounded-none shadow-none focus:ring-0 p-2 sm:text-sm !bg-transparent resize-none outline-none",
-      )}
+      className={classNames(fileClass, additionalClassNames)}
       placeholder={getPlaceholderText(isDragging, noInput)}
     />
   );

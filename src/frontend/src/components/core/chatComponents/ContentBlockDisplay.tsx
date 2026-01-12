@@ -1,6 +1,6 @@
 "use client";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import Markdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax/browser";
@@ -215,17 +215,25 @@ export function ContentBlockDisplay({
                   opacity: { duration: 0.1 },
                 },
               }}
-              className="relative border-t border-border"
+              className="relative"
             >
               {toolItems.map(
                 ({ content, blockIndex, contentIndex }, flatIdx) => {
                   const toolKey = `${blockIndex}-${contentIndex}`;
                   const isToolOpen = openTools[toolKey] ?? false;
-                  const toolTitle =
+                  const rawTitle =
                     content.header?.title ||
                     content.name ||
                     `Tool ${flatIdx + 1}`;
-                  const toolIcon = content.header?.icon || "Hammer";
+                  // Remove "Executed" from the title, replace underscores with spaces, and convert to uppercase
+                  const toolTitle =
+                    typeof rawTitle === "string"
+                      ? rawTitle
+                          .replace(/^Executed\s+/i, "")
+                          .replace(/_/g, " ")
+                          .trim()
+                          .toUpperCase()
+                      : rawTitle;
                   // Use elapsed time if tool is active, otherwise use duration
                   const toolDuration =
                     elapsedTimes[toolKey] ?? content.duration ?? 0;
@@ -236,10 +244,10 @@ export function ContentBlockDisplay({
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ duration: 0.2, delay: 0.05 }}
-                      className="relative border-b border-border last:border-b-0"
+                      className="relative"
                     >
                       <div
-                        className="flex cursor-pointer items-center justify-between px-4 py-3"
+                        className="flex cursor-pointer items-center justify-between px-1 py-1.5 rounded-sm muted text-muted-foreground"
                         onClick={() =>
                           setOpenTools((prev) => ({
                             ...prev,
@@ -247,29 +255,29 @@ export function ContentBlockDisplay({
                           }))
                         }
                       >
-                        <div className="flex items-center gap-2">
-                          <ForwardedIconComponent
-                            name={toolIcon}
-                            className="h-4 w-4 text-primary"
-                            strokeWidth={1.5}
-                          />
+                        <div className="flex items-center gap-1 text-sm font-normal">
+                          <motion.div
+                            animate={{ rotate: isToolOpen ? 90 : 0 }}
+                            transition={{ duration: 0.2, ease: "easeInOut" }}
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </motion.div>
+                          <span className="text-muted-foreground">
+                            Called tool{" "}
+                          </span>
                           <Markdown
-                            className="text-sm font-semibold text-foreground"
+                            className="inline muted-foreground bg-muted py-1 px-1.5 rounded-sm text-xs font-normal"
                             remarkPlugins={[remarkGfm]}
                             rehypePlugins={[rehypeMathjax]}
                           >
                             {toolTitle}
                           </Markdown>
+                        </div>
+                        <div className="flex items-center gap-2">
                           <span className="text-xs text-emerald-500">
                             {formatTime(toolDuration)}
                           </span>
                         </div>
-                        <motion.div
-                          animate={{ rotate: isToolOpen ? 180 : 0 }}
-                          transition={{ duration: 0.2, ease: "easeInOut" }}
-                        >
-                          <ChevronDown className="h-4 w-4" />
-                        </motion.div>
                       </div>
                       <AnimatePresence>
                         {isToolOpen && (

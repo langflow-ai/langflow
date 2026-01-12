@@ -123,7 +123,7 @@ export function FlowPageSlidingContainerContent({
 
   return (
     <div
-      className="h-full w-full bg-background shadow-lg flex flex-col relative z-[50] @container/chat-panel"
+      className="h-full w-full muted shadow-lg flex flex-col relative z-[50] @container/chat-panel"
       onDragOver={dragOver}
       onDragEnter={dragEnter}
       onDragLeave={dragLeave}
@@ -166,7 +166,7 @@ export function FlowPageSlidingContainerContent({
               resize="smooth"
               initial="instant"
             >
-              <StickToBottom.Content className="flex flex-col min-h-full overflow-x-hidden p-6">
+              <StickToBottom.Content className="flex flex-col min-h-full overflow-x-hidden p-4">
                 <div className="flex flex-col w-full">
                   <Messages
                     visibleSession={currentSessionId ?? currentFlowId ?? null}
@@ -179,7 +179,9 @@ export function FlowPageSlidingContainerContent({
             <div
               className={`flex-shrink-0 p-4 ${isFullscreen ? "flex justify-center" : ""}`}
             >
-              <div className={isFullscreen ? "w-full max-w-[744px]" : "w-full"}>
+              <div
+                className={`${isFullscreen ? "w-full max-w-[744px]" : "w-full"} p-0`}
+              >
                 <ChatInput
                   noInput={noInput}
                   files={files}
