@@ -21,6 +21,7 @@ from lfx.field_typing import LanguageModel, Tool
 from lfx.io import BoolInput, HandleInput, MessageTextInput, ModelInput, Output, SecretStrInput, TabInput
 from lfx.log.logger import logger
 
+TOOLGUARD_WORK_DIR = Path("tmp_toolguard")
 STEP1 = "Step_1"
 STEP2 = "Step_2"
 BUILD_MODE_GENERATE = "Generate"
@@ -88,12 +89,12 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             input_types=[],
         ),
         MessageTextInput(
-            name="guard_code_path",
-            display_name="ToolGuards Generated Code Path",
+            name="project_path",
+            display_name="ToolGuard Project",
             info="Automatically generated ToolGuards code",
             # show_if={"enable_tool_guard": True},
-            value="tmp",  # TODO: decide on the path
-            advanced=True,
+            value="my_project",
+            # advanced=True,
         ),
         ModelInput(
             name="model",
@@ -149,11 +150,15 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             field_value=field_value,
         )
 
+    @property
+    def work_dir(self) -> Path:
+        return TOOLGUARD_WORK_DIR / str(self.user_id) / self.project_path
+
     async def _build_guard_specs(self) -> list[ToolGuardSpec]:
         logger.info("🔒️ToolGuard: Starting step 1")
         logger.info(f"model = {self.model}")
         llm = LangchainModelWrapper(self.build_model())
-        toolguard_step1_dir = Path(self.guard_code_path) / STEP1
+        toolguard_step1_dir = self.work_dir / STEP1
         policy_text = "\n".join(self.policies)
         specs = await generate_guard_specs(
             policy_text=policy_text, tools=self.in_tools, llm=llm, work_dir=toolguard_step1_dir, short=False
@@ -163,7 +168,7 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
 
     async def _build_guards(self, specs: list[ToolGuardSpec]) -> ToolGuardsCodeGenerationResult:
         logger.info("🔒️ToolGuard: Starting step 2")
-        out_dir = Path(self.guard_code_path) / STEP2
+        out_dir = self.work_dir / STEP2
         llm = LangchainModelWrapper(self.build_model())
         gen_result = await generate_guards_from_specs(tools=self.in_tools, tool_specs=specs, work_dir=out_dir, llm=llm)
         logger.info("🔒️ToolGuard: Step 2 Done")
@@ -185,13 +190,13 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             if build_mode == BUILD_MODE_GENERATE:  # run buildtime steps
                 logger.info("🔒️ToolGuard: execution (build) mode")
                 specs = await self._build_guard_specs()
-                guards = await self._build_guards(specs)
-                self.guard_code_path = guards.out_dir
+                await self._build_guards(specs)
+                # self.project_path = guards.out_dir
             else:  # build_mode == "use cache"
                 self.log("🔒️ToolGuard: run mode (cached code from path)", name="info")
-                # make sure self.guard_code_path contains the path to pre-built guards
-                # assert self.guard_code_path, "🔒️ToolGuard: guard path should be a valid code path!"
-            code_dir = Path(self.guard_code_path) / STEP2
+                # make sure self.project_path contains the path to pre-built guards
+                # assert self.project_path, "🔒️ToolGuard: guard path should be a valid code path!"
+            code_dir = self.work_dir / STEP2
             return cast("list[Tool]", [GuardedTool(tool, self.in_tools, code_dir) for tool in self.in_tools])
 
         return self.in_tools
