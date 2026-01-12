@@ -37,6 +37,62 @@ const saveToHistory = (input: string) => {
   }
 };
 
+const MODEL_NAME = "Claude Sonnet 4.5";
+const MIN_RETRIES = 0;
+const MAX_RETRIES_LIMIT = 5;
+
+type CommandResult = {
+  handled: boolean;
+  message?: string;
+  type?: TerminalMessage["type"];
+  action?: "clear";
+};
+
+type CommandContext = {
+  maxRetries: number;
+  onMaxRetriesChange: (value: number) => void;
+};
+
+const HELP_TEXT = `Available commands:
+  MAX_RETRIES=<0-5>  Set validation retry attempts
+  HELP or ?          Show this help message
+  CLEAR              Clear terminal history
+
+Type any other text to generate a component.`;
+
+const parseCommand = (input: string, context: CommandContext): CommandResult => {
+  const trimmed = input.trim();
+  const upper = trimmed.toUpperCase();
+
+  if (upper === "HELP" || upper === "?") {
+    return { handled: true, message: HELP_TEXT, type: "system" };
+  }
+
+  if (upper === "CLEAR") {
+    return { handled: true, action: "clear" };
+  }
+
+  const maxRetriesMatch = trimmed.match(/^MAX_RETRIES\s*=\s*(\d+)$/i);
+  if (maxRetriesMatch) {
+    const value = parseInt(maxRetriesMatch[1], 10);
+    if (value < MIN_RETRIES || value > MAX_RETRIES_LIMIT) {
+      return {
+        handled: true,
+        message: `Invalid value. MAX_RETRIES must be between ${MIN_RETRIES} and ${MAX_RETRIES_LIMIT}.`,
+        type: "error",
+      };
+    }
+    context.onMaxRetriesChange(value);
+    return {
+      handled: true,
+      message: `MAX_RETRIES set to ${value}`,
+      type: "system",
+    };
+  }
+
+  return { handled: false };
+};
+
 const TerminalHeader = ({
   onClose,
   onClear,
@@ -45,13 +101,20 @@ const TerminalHeader = ({
   onClear: () => void;
 }) => (
   <div className="flex items-center justify-between border-b border-zinc-700 bg-zinc-900 px-4 py-2">
-    <div className="flex items-center gap-2">
-      <ForwardedIconComponent
-        name="Terminal"
-        className="h-4 w-4 text-emerald-400"
-      />
-      <span className="font-mono text-sm font-medium text-zinc-200">
-        Component Forge
+    <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
+        <ForwardedIconComponent
+          name="Terminal"
+          className="h-4 w-4 text-emerald-400"
+        />
+        <span className="font-mono text-sm font-medium text-zinc-200">
+          Component Forge
+        </span>
+      </div>
+      <span className="text-xs text-zinc-500">|</span>
+      <span className="flex items-center gap-1.5 text-xs text-zinc-400">
+        <ForwardedIconComponent name="Bot" className="h-3 w-3" />
+        {MODEL_NAME}
       </span>
     </div>
     <div className="flex items-center gap-1">
@@ -120,7 +183,7 @@ const ComponentResultLine = ({
   className: string;
   code: string;
   validationAttempts?: number;
-  onAddToCanvas: (code: string, className: string) => Promise<void>;
+  onAddToCanvas: (code: string) => Promise<void>;
   onSaveToSidebar: (code: string, className: string) => Promise<void>;
 }) => {
   const [isCodeModalOpen, setIsCodeModalOpen] = useState(false);
@@ -134,7 +197,7 @@ const ComponentResultLine = ({
   const handleAddToCanvas = async () => {
     setIsAddingToCanvas(true);
     try {
-      await onAddToCanvas(code, className);
+      await onAddToCanvas(code);
     } finally {
       setIsAddingToCanvas(false);
     }
@@ -154,79 +217,81 @@ const ComponentResultLine = ({
       <div className="flex items-center gap-2">
         <ValidationBadge validated={true} className={className} />
         {validationAttempts && validationAttempts > 1 && (
-          <span className="text-xs text-zinc-500">
-            (after {validationAttempts} attempts)
+          <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-xs text-amber-400 border border-amber-500/20">
+            <ForwardedIconComponent name="RotateCw" className="h-3 w-3" />
+            {validationAttempts} attempts
           </span>
         )}
       </div>
 
-      <div className="flex items-center gap-3">
-        <span className="font-mono text-sm text-emerald-400">
-          {className}.py
-        </span>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className="font-mono text-sm text-emerald-400">
+            {className}.py
+          </span>
 
-        <div className="flex items-center">
-          <Button
-            variant="ghost"
-            size="iconSm"
-            onClick={() => setIsCodeModalOpen(true)}
-            className="text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
-            title="View Code"
-          >
-            <ForwardedIconComponent name="Code" className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-0.5">
+            <Button
+              variant="ghost"
+              size="iconSm"
+              onClick={() => setIsCodeModalOpen(true)}
+              className="text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
+              title="View Code"
+            >
+              <ForwardedIconComponent name="Code" className="h-3.5 w-3.5" />
+            </Button>
 
-          <Button
-            variant="ghost"
-            size="iconSm"
-            onClick={handleDownload}
-            className="text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
-            title="Download"
-          >
-            <ForwardedIconComponent name="Download" className="h-4 w-4" />
-          </Button>
+            <Button
+              variant="ghost"
+              size="iconSm"
+              onClick={handleDownload}
+              className="text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
+              title="Download"
+            >
+              <ForwardedIconComponent name="Download" className="h-3.5 w-3.5" />
+            </Button>
 
-          <Button
-            variant="ghost"
-            size="iconSm"
-            onClick={handleSaveToSidebar}
-            disabled={isSavingToSidebar}
-            className="text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 disabled:opacity-50"
-            title="Save to Sidebar"
-          >
-            <ForwardedIconComponent
-              name={isSavingToSidebar ? "Loader2" : "SaveAll"}
-              className={cn("h-4 w-4", isSavingToSidebar && "animate-spin")}
-            />
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="iconSm"
-            onClick={handleAddToCanvas}
-            disabled={isAddingToCanvas}
-            className="text-emerald-400 hover:bg-zinc-800 hover:text-emerald-300 disabled:opacity-50"
-            title="Add to Canvas"
-          >
-            <ForwardedIconComponent
-              name={isAddingToCanvas ? "Loader2" : "Plus"}
-              className={cn("h-4 w-4", isAddingToCanvas && "animate-spin")}
-            />
-          </Button>
+            <Button
+              variant="ghost"
+              size="iconSm"
+              onClick={handleSaveToSidebar}
+              disabled={isSavingToSidebar}
+              className="text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 disabled:opacity-50"
+              title="Save to Sidebar"
+            >
+              <ForwardedIconComponent
+                name={isSavingToSidebar ? "Loader2" : "SaveAll"}
+                className={cn("h-3.5 w-3.5", isSavingToSidebar && "animate-spin")}
+              />
+            </Button>
+          </div>
         </div>
 
-        <CodeAreaModal
-          value={code}
-          setValue={() => {}}
-          nodeClass={undefined}
-          setNodeClass={() => {}}
-          readonly={true}
-          open={isCodeModalOpen}
-          setOpen={setIsCodeModalOpen}
+        <Button
+          size="sm"
+          onClick={handleAddToCanvas}
+          disabled={isAddingToCanvas}
+          className="bg-emerald-600 hover:bg-emerald-500 text-white gap-1.5 px-3 h-7 disabled:opacity-50"
         >
-          <span />
-        </CodeAreaModal>
+          <ForwardedIconComponent
+            name={isAddingToCanvas ? "Loader2" : "Plus"}
+            className={cn("h-3.5 w-3.5", isAddingToCanvas && "animate-spin")}
+          />
+          <span className="text-xs font-medium">Add to Canvas</span>
+        </Button>
       </div>
+
+      <CodeAreaModal
+        value={code}
+        setValue={() => {}}
+        nodeClass={undefined}
+        setNodeClass={() => {}}
+        readonly={true}
+        open={isCodeModalOpen}
+        setOpen={setIsCodeModalOpen}
+      >
+        <span />
+      </CodeAreaModal>
     </div>
   );
 };
@@ -237,7 +302,7 @@ const MessageLine = ({
   onSaveToSidebar,
 }: {
   message: TerminalMessage;
-  onAddToCanvas: (code: string, className: string) => Promise<void>;
+  onAddToCanvas: (code: string) => Promise<void>;
   onSaveToSidebar: (code: string, className: string) => Promise<void>;
 }) => {
   const getMessageStyle = () => {
@@ -278,7 +343,6 @@ const MessageLine = ({
     }
   };
 
-  // Show ComponentResultLine for validated components with code
   if (
     message.type === "validated" &&
     message.metadata?.componentCode &&
@@ -325,12 +389,16 @@ const MessageLine = ({
 };
 
 const LoadingIndicator = () => (
-  <div className="flex items-center gap-2 font-mono text-sm text-zinc-500">
-    <span className="select-none opacity-70">&gt; </span>
-    <div className="flex gap-1">
-      <span className="animate-pulse">.</span>
-      <span className="animate-pulse delay-100">.</span>
-      <span className="animate-pulse delay-200">.</span>
+  <div className="flex flex-col gap-1.5 py-2">
+    <div className="flex items-center gap-2 font-mono text-sm text-zinc-400">
+      <ForwardedIconComponent
+        name="Loader2"
+        className="h-3.5 w-3.5 animate-spin text-emerald-400"
+      />
+      <span>Generating component...</span>
+    </div>
+    <div className="ml-5.5 flex items-center gap-2 font-mono text-xs text-zinc-500">
+      <span>Code will be validated automatically.</span>
     </div>
   </div>
 );
@@ -342,15 +410,28 @@ const ForgeTerminal = ({
   onAddToCanvas,
   onSaveToSidebar,
   isLoading = false,
+  maxRetries,
+  onMaxRetriesChange,
 }: ForgeTerminalProps) => {
-  const [messages, setMessages] = useState<TerminalMessage[]>([
-    {
-      id: nanoid(),
-      type: "system",
-      content: "Welcome to Component Forge. Type your prompt and press Enter.",
-      timestamp: new Date(),
-    },
-  ]);
+  const getWelcomeMessages = useCallback(
+    (): TerminalMessage[] => [
+      {
+        id: nanoid(),
+        type: "system",
+        content: "Welcome to Component Forge. Type HELP for commands.",
+        timestamp: new Date(),
+      },
+      {
+        id: nanoid(),
+        type: "system",
+        content: `MAX_RETRIES=${maxRetries}`,
+        timestamp: new Date(),
+      },
+    ],
+    [maxRetries],
+  );
+
+  const [messages, setMessages] = useState<TerminalMessage[]>(getWelcomeMessages);
   const [inputValue, setInputValue] = useState("");
   const [height, setHeight] = useState(TERMINAL_DEFAULT_HEIGHT);
   const [historyIndex, setHistoryIndex] = useState(-1);
@@ -374,9 +455,10 @@ const ForgeTerminal = ({
 
   useEffect(() => {
     if (isOpen) {
+      scrollToBottom();
       textareaRef.current?.focus();
     }
-  }, [isOpen]);
+  }, [isOpen, scrollToBottom]);
 
   const adjustTextareaHeight = useCallback(() => {
     const textarea = textareaRef.current;
@@ -421,6 +503,23 @@ const ForgeTerminal = ({
     [],
   );
 
+  const handleClear = useCallback(() => {
+    setMessages([
+      {
+        id: nanoid(),
+        type: "system",
+        content: "Terminal cleared. Type HELP for commands.",
+        timestamp: new Date(),
+      },
+      {
+        id: nanoid(),
+        type: "system",
+        content: `MAX_RETRIES=${maxRetries}`,
+        timestamp: new Date(),
+      },
+    ]);
+  }, [maxRetries]);
+
   const handleSubmit = useCallback(async () => {
     const trimmedInput = inputValue.trim();
     if (!trimmedInput || isLoading) return;
@@ -430,12 +529,24 @@ const ForgeTerminal = ({
     addMessage("input", trimmedInput);
     setInputValue("");
 
+    const commandResult = parseCommand(trimmedInput, {
+      maxRetries,
+      onMaxRetriesChange,
+    });
+
+    if (commandResult.handled) {
+      if (commandResult.action === "clear") {
+        handleClear();
+      } else if (commandResult.message) {
+        addMessage(commandResult.type || "system", commandResult.message);
+      }
+      return;
+    }
+
     try {
       const response: SubmitResult = await onSubmit(trimmedInput);
 
-      // Determine message type based on validation status
       if (response.validated === true) {
-        // Successfully validated component
         addMessageWithMetadata("validated", response.content, {
           validated: true,
           className: response.className,
@@ -443,7 +554,6 @@ const ForgeTerminal = ({
           componentCode: response.componentCode,
         });
       } else if (response.validated === false) {
-        // Validation failed after retries
         addMessageWithMetadata("validation_error", response.content, {
           validated: false,
           validationAttempts: response.validationAttempts,
@@ -452,7 +562,6 @@ const ForgeTerminal = ({
           addMessage("error", `Validation error: ${response.validationError}`);
         }
       } else {
-        // No validation info (regular response)
         addMessage("output", response.content);
       }
     } catch (error) {
@@ -460,7 +569,7 @@ const ForgeTerminal = ({
         error instanceof Error ? error.message : "An error occurred";
       addMessage("error", errorMessage);
     }
-  }, [inputValue, isLoading, onSubmit, addMessage, addMessageWithMetadata]);
+  }, [inputValue, isLoading, onSubmit, addMessage, addMessageWithMetadata, maxRetries, onMaxRetriesChange, handleClear]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -473,7 +582,6 @@ const ForgeTerminal = ({
       const history = getHistory();
       if (history.length === 0) return;
 
-      // Only navigate history when cursor is at the start/end of input
       const textarea = e.currentTarget;
       const isAtStart = textarea.selectionStart === 0 && textarea.selectionEnd === 0;
       const isAtEnd = textarea.selectionStart === textarea.value.length;
@@ -500,17 +608,6 @@ const ForgeTerminal = ({
     },
     [handleSubmit, historyIndex],
   );
-
-  const handleClear = useCallback(() => {
-    setMessages([
-      {
-        id: nanoid(),
-        type: "system",
-        content: "Terminal cleared.",
-        timestamp: new Date(),
-      },
-    ]);
-  }, []);
 
   const handleResizeStart = useCallback(
     (e: React.MouseEvent) => {
@@ -543,7 +640,7 @@ const ForgeTerminal = ({
   return (
     <div
       ref={terminalRef}
-      className="absolute bottom-0 left-0 right-0 z-50 flex flex-col overflow-hidden rounded-t-lg border border-b-0 border-zinc-700 bg-zinc-900 shadow-2xl"
+      className="absolute bottom-0 left-0 right-0 z-40 flex flex-col overflow-hidden rounded-t-lg border border-b-0 border-zinc-700 bg-zinc-900 shadow-2xl"
       style={{ height }}
     >
       <div

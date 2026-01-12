@@ -29,6 +29,7 @@ class FlowExecutionRequest(BaseModel):
     component_id: str | None = None
     field_name: str | None = None
     input_value: str | None = None
+    max_retries: int | None = None
 
 
 class ValidationResult(BaseModel):
@@ -418,10 +419,11 @@ async def run_prompt_flow(
     logger.debug(f"Executing {COMPONENT_CREATION_FLOW} with input: {input_preview}...")
 
     # Execute flow with validation loop
+    max_retries = request.max_retries if request.max_retries is not None else MAX_VALIDATION_RETRIES
     return await execute_flow_with_validation(
         flow_filename=COMPONENT_CREATION_FLOW,
         input_value=request.input_value or "",
         global_variables=global_vars,
-        max_retries=MAX_VALIDATION_RETRIES,
+        max_retries=max_retries,
         user_id=str(user_id),
     )

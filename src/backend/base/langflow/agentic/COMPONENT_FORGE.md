@@ -50,8 +50,12 @@ When the AI generates component code, the backend:
 src/frontend/src/components/core/componentForge/
 ├── index.tsx           # Main component (ComponentForge)
 ├── forge-terminal.tsx  # Terminal UI component (ForgeTerminal)
-├── forge-button.tsx    # Trigger button (ForgeButton)
 └── types.ts            # TypeScript type definitions
+```
+
+**State Management:**
+```
+src/frontend/src/stores/forgeStore.ts  # Zustand store for terminal state
 ```
 
 **API Hooks:**
@@ -74,12 +78,25 @@ Located in `src/frontend/src/controllers/API/helpers/constants.ts`:
 
 ### User Interface
 
+**Access:**
+- Button located in the sidebar footer, next to "New Custom Component"
+- Click "Component Forge" button to open the terminal
+
 **Terminal Features:**
 - Resizable terminal panel (200px - 600px height)
 - Command history with arrow key navigation (stored in sessionStorage)
 - Multi-line input with auto-resize textarea
-- Loading indicator during AI processing
+- Loading indicator showing model name (Claude Sonnet 4.5) during AI processing
 - Validation badges (Valid/Invalid) for generated components
+- Configurable max retries (0-5) in the terminal header
+- Model name displayed in the terminal header
+
+**Terminal Commands:**
+- `MAX_RETRIES=<0-5>` - Set validation retry attempts
+- `HELP` or `?` - Show help message with available commands
+- `CLEAR` - Clear terminal history
+
+Any other text is treated as a prompt to generate a component.
 
 **Component Result Actions:**
 When a valid component is generated, users can:
@@ -157,11 +174,14 @@ The `user_id` is passed through the chain:
 ### Created
 - `src/frontend/src/components/core/componentForge/` (entire folder)
 - `src/frontend/src/controllers/API/queries/forge/` (entire folder)
+- `src/frontend/src/stores/forgeStore.ts` - Zustand store for terminal state
 
 ### Modified
 - `src/frontend/src/controllers/API/helpers/constants.ts` - Added FORGE_* URLs
 - `src/frontend/src/pages/FlowPage/components/PageComponent/index.tsx` - Import ComponentForge
-- `src/backend/base/langflow/agentic/api/router.py` - Router prefix, messages, function names
+- `src/frontend/src/pages/FlowPage/components/flowSidebarComponent/components/sidebarFooterButtons.tsx` - Added Component Forge button
+- `src/frontend/src/modals/codeAreaModal/index.tsx` - Hide "Check & Save" button in readonly mode
+- `src/backend/base/langflow/agentic/api/router.py` - Router prefix, messages, function names, max_retries parameter
 - `src/lfx/src/lfx/run/base.py` - Added `user_id` parameter
 
 ## Known Issues / TODO

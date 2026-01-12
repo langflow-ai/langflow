@@ -8,6 +8,7 @@ type ForgePromptRequest = {
   inputValue: string;
   componentId?: string;
   fieldName?: string;
+  maxRetries?: number;
 };
 
 async function postForgePrompt({
@@ -15,6 +16,7 @@ async function postForgePrompt({
   inputValue,
   componentId,
   fieldName,
+  maxRetries,
 }: ForgePromptRequest): Promise<ForgePromptResponse> {
   const response = await api.post<ForgePromptResponse>(
     getURL("FORGE_PROMPT"),
@@ -23,6 +25,7 @@ async function postForgePrompt({
       input_value: inputValue,
       component_id: componentId,
       field_name: fieldName,
+      max_retries: maxRetries,
     },
   );
   return response.data;
