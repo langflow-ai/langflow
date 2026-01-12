@@ -30,6 +30,7 @@ class TestWhileLoopComponent:
         output_names = [o.name for o in comp.outputs]
 
         assert "loop" in output_names
+        assert "done" in output_names
 
     def test_loop_output_allows_loop(self):
         """Test that loop output has allows_loop=True."""
@@ -43,17 +44,21 @@ class TestWhileLoopComponent:
         max_iter_input = next(i for i in comp.inputs if i.name == "max_iterations")
         assert max_iter_input.value == 10
 
-    def test_loop_output_returns_dataframe(self):
-        """Test that loop_output returns input as DataFrame."""
+    def test_loop_output_method_exists(self):
+        """Test that loop_output method exists and is callable."""
         comp = WhileLoopComponent()
-        comp.input_value = Message(text="Hello", sender="User")
+        # Note: loop_output calls self.stop() which requires a vertex context
+        # In a real graph execution, the vertex is set. Here we just verify the method exists.
+        assert hasattr(comp, "loop_output")
+        assert callable(comp.loop_output)
 
-        result = comp.loop_output()
-
-        assert isinstance(result, DataFrame)
-        assert len(result) == 1
-        assert result.iloc[0]["text"] == "Hello"
-        assert result.iloc[0]["sender"] == "User"
+    def test_outputs_have_group_outputs(self):
+        """Test that both outputs have group_outputs=True."""
+        comp = WhileLoopComponent()
+        loop_output = next(o for o in comp.outputs if o.name == "loop")
+        done_output = next(o for o in comp.outputs if o.name == "done")
+        assert loop_output.group_outputs is True
+        assert done_output.group_outputs is True
 
 
 class TestToDataFrame:
@@ -189,20 +194,20 @@ class TestWhileLoopInitialState:
         initial_state_input = next(i for i in comp.inputs if i.name == "initial_state")
         assert initial_state_input.required is False
 
-    def test_loop_output_without_initial_state(self):
-        """Test that loop_output works without initial_state (original behavior)."""
+    def test_build_initial_state_without_history(self):
+        """Test that _build_initial_state works without initial_state."""
         comp = WhileLoopComponent()
         comp.initial_state = None
         comp.input_value = Message(text="Hello", sender="User")
 
-        result = comp.loop_output()
+        result = comp._build_initial_state()
 
         assert isinstance(result, DataFrame)
         assert len(result) == 1
         assert result.iloc[0]["text"] == "Hello"
 
-    def test_loop_output_with_initial_state(self):
-        """Test that loop_output prepends initial_state to input_value."""
+    def test_build_initial_state_with_history(self):
+        """Test that _build_initial_state prepends initial_state to input_value."""
         comp = WhileLoopComponent()
 
         # Simulate history from MessageHistory component
@@ -217,7 +222,7 @@ class TestWhileLoopInitialState:
         # Current message from ChatInput
         comp.input_value = Message(text="New question", sender="User")
 
-        result = comp.loop_output()
+        result = comp._build_initial_state()
 
         assert isinstance(result, DataFrame)
         assert len(result) == 3  # 2 from history + 1 current
@@ -228,7 +233,7 @@ class TestWhileLoopInitialState:
         # Current message should be last
         assert result.iloc[2]["text"] == "New question"
 
-    def test_loop_output_with_empty_initial_state(self):
+    def test_build_initial_state_with_empty_history(self):
         """Test that empty initial_state is handled like None."""
         comp = WhileLoopComponent()
 
@@ -236,7 +241,7 @@ class TestWhileLoopInitialState:
         comp.initial_state = DataFrame([])
         comp.input_value = Message(text="Hello", sender="User")
 
-        result = comp.loop_output()
+        result = comp._build_initial_state()
 
         assert isinstance(result, DataFrame)
         assert len(result) == 1
@@ -256,7 +261,7 @@ class TestWhileLoopInitialState:
         comp.initial_state = history_df
         comp.input_value = Message(text="Thanks!", sender="User")
 
-        result = comp.loop_output()
+        result = comp._build_initial_state()
 
         assert len(result) == 3
         # Check that tool_calls column is preserved
@@ -264,3 +269,34 @@ class TestWhileLoopInitialState:
         # Check that is_tool_result is preserved
         assert result.iloc[1]["is_tool_result"] is True
         assert result.iloc[1]["tool_call_id"] == "123"
+
+
+class TestWhileLoopSubgraphExecution:
+    """Tests for subgraph execution methods."""
+
+    def test_get_loop_body_vertices_without_vertex(self):
+        """Test that get_loop_body_vertices returns empty set without vertex context."""
+        comp = WhileLoopComponent()
+        # No _vertex set
+        result = comp.get_loop_body_vertices()
+        assert result == set()
+
+    def test_get_loop_body_start_vertex_without_vertex(self):
+        """Test that _get_loop_body_start_vertex returns None without vertex context."""
+        comp = WhileLoopComponent()
+        # No _vertex set
+        result = comp._get_loop_body_start_vertex()
+        assert result is None
+
+    def test_extract_loop_output_with_empty_results(self):
+        """Test that _extract_loop_output returns None with empty results."""
+        comp = WhileLoopComponent()
+        result = comp._extract_loop_output([])
+        assert result is None
+
+    def test_extract_loop_output_without_end_vertex(self):
+        """Test that _extract_loop_output returns None without end vertex."""
+        comp = WhileLoopComponent()
+        # No incoming edge configured, so get_incoming_edge_by_target_param returns None
+        result = comp._extract_loop_output([{"some": "result"}])
+        assert result is None

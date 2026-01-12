@@ -1,22 +1,25 @@
-"""WhileLoop component - manages iteration and state accumulation for loops.
+"""WhileLoop component - executes loop body until termination condition.
 
-This component manages the iteration cycle for workflows that need accumulation.
-It accumulates data across iterations, building up state over time.
+Uses subgraph execution pattern for proper isolation and event streaming.
 
 Flow pattern (agent example):
 MessageHistory → WhileLoop.initial_state (past conversations)
 ChatInput → WhileLoop.input_value (current message)
-WhileLoop → CallModel → [Tool Calls] → ExecuteTool
-    ↑                                        ↓
-    +----------------------------------------+
-                 ↓ (CallModel ai_message - done)
-            ChatOutput
+WhileLoop.loop → AgentStep → [tool_calls] → ExecuteTool → WhileLoop.loop (feedback)
+                          → [ai_message] → ChatOutput (terminates loop)
+WhileLoop.done → (outputs final accumulated state)
 """
 
 from __future__ import annotations
 
+import copy
 from typing import Any
 
+from lfx.base.flow_controls.loop_utils import (
+    get_loop_body_start_edge,
+    get_loop_body_start_vertex,
+    get_loop_body_vertices,
+)
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import HandleInput, IntInput
 from lfx.schema.data import Data
@@ -26,20 +29,19 @@ from lfx.template.field.base import Output
 
 
 class WhileLoopComponent(Component):
-    """Manages iteration and state accumulation for loops.
+    """Executes loop body repeatedly with state accumulation.
 
-    This component enables visual loops with state accumulation by:
-    1. Combining initial_state (if provided) with input_value on first iteration
-    2. Accumulating new data from each iteration with existing state
-    3. Continuing iterations until max_iterations or loop body stops
+    Uses subgraph execution for proper isolation and event streaming.
+    The loop body is executed as an isolated subgraph for each iteration.
 
-    The loop stops when:
+    Termination conditions:
     - max_iterations is reached
-    - A downstream component stops the branch (e.g., CallModel's ai_message)
+    - Loop body produces no feedback (branch stopped, e.g., ai_message instead of tool_calls)
+    - Error in loop body execution
     """
 
     display_name = "While Loop"
-    description = "Manages iteration and state accumulation for loops."
+    description = "Executes loop body repeatedly with state accumulation until termination."
     icon = "repeat"
 
     inputs = [
@@ -53,7 +55,7 @@ class WhileLoopComponent(Component):
         HandleInput(
             name="input_value",
             display_name="Input",
-            info="The input to append to initial_state on the first iteration.",
+            info="The input for the first iteration. Combined with initial_state.",
             input_types=["DataFrame", "Data", "Message"],
         ),
         IntInput(
@@ -72,7 +74,15 @@ class WhileLoopComponent(Component):
             method="loop_output",
             allows_loop=True,
             loop_types=["DataFrame"],
-            info="Connect to CallModel. Outputs accumulated DataFrame for each iteration.",
+            info="Connect to loop body (e.g., AgentStep). Receives feedback from loop end.",
+            group_outputs=True,
+        ),
+        Output(
+            display_name="Done",
+            name="done",
+            method="done_output",
+            info="Outputs final accumulated state when loop terminates.",
+            group_outputs=True,
         ),
     ]
 
@@ -107,50 +117,36 @@ class WhileLoopComponent(Component):
             return DataFrame([msg_data])
         return DataFrame([Data(text=str(value))])
 
-    def _get_loop_feedback(self) -> DataFrame | None:
-        """Get the feedback value from the loop connection if available.
+    def get_loop_body_vertices(self) -> set[str]:
+        """Identify vertices in this loop's body via graph traversal.
 
-        When ExecuteTool connects to the 'loop' output (allows_loop=True),
-        the graph resolves the source vertex's result and passes it directly
-        to _attributes["loop"]. This happens after ExecuteTool has been built.
+        Traverses from the loop's "loop" output to the vertex that feeds back
+        to the loop's "loop" input, collecting all vertices in between.
 
         Returns:
-            The feedback DataFrame from ExecuteTool, or None if not available.
+            Set of vertex IDs that form this loop's body
         """
-        # Check if there's a loop feedback value in _attributes
-        loop_value = self._attributes.get("loop")
+        if not hasattr(self, "_vertex") or self._vertex is None:
+            return set()
 
-        if loop_value is None:
+        return get_loop_body_vertices(
+            vertex=self._vertex,
+            graph=self.graph,
+            get_incoming_edge_by_target_param_fn=self.get_incoming_edge_by_target_param,
+            loop_output_name="loop",
+            feedback_input_name="loop",
+        )
+
+    def _get_loop_body_start_vertex(self) -> str | None:
+        """Get the first vertex in the loop body (connected to loop's output).
+
+        Returns:
+            The vertex ID of the first vertex in the loop body, or None if not found
+        """
+        if not hasattr(self, "_vertex") or self._vertex is None:
             return None
 
-        # The graph resolves the source vertex's result, so loop_value
-        # is already the DataFrame (or other value) from ExecuteTool
-        if isinstance(loop_value, DataFrame):
-            return loop_value
-
-        # Handle other potential value types
-        if hasattr(loop_value, "built"):
-            # It's a Vertex - get its result
-            if loop_value.built and loop_value.results:
-                for result in loop_value.results.values():
-                    if result is not None:
-                        return self._to_dataframe(result)
-            if loop_value.built and loop_value.built_object is not None:
-                return self._to_dataframe(loop_value.built_object)
-
-        return None
-
-    def _get_accumulated_state(self) -> DataFrame | None:
-        """Get the accumulated state from previous iterations.
-
-        This is stored in _attributes["_accumulated_state"] and persists
-        across iterations within the same graph execution.
-        """
-        return self._attributes.get("_accumulated_state")
-
-    def _set_accumulated_state(self, state: DataFrame) -> None:
-        """Set the accumulated state for subsequent iterations."""
-        self._attributes["_accumulated_state"] = state
+        return get_loop_body_start_vertex(vertex=self._vertex, loop_output_name="loop")
 
     def _build_initial_state(self) -> DataFrame:
         """Build the initial state by combining initial_state input with input_value.
@@ -172,40 +168,154 @@ class WhileLoopComponent(Component):
 
         return input_df
 
-    def loop_output(self) -> DataFrame:
-        """Output the accumulated state to the loop body.
+    def _extract_loop_output(self, results: list) -> DataFrame | None:
+        """Extract the output from subgraph execution results.
 
-        On first iteration: combines initial_state (if any) with input_value
-        On subsequent iterations: accumulates loop feedback with existing state
+        Looks for the result from the vertex that feeds back to the loop input.
+        If that vertex didn't produce output (e.g., branch was stopped), returns None.
 
-        The feedback is connected to the 'loop' output which has allows_loop=True.
-        When the loop body builds, its result is available via feedback.
-        We accumulate these with our existing state.
+        Args:
+            results: List of VertexBuildResult objects from subgraph execution
+
+        Returns:
+            DataFrame containing the loop iteration output, or None if no feedback
         """
-        # Check for loop feedback (subsequent iterations)
-        feedback = self._get_loop_feedback()
+        if not results:
+            return None
 
-        if feedback is not None:
-            # Get existing accumulated state
-            accumulated = self._get_accumulated_state()
+        # Get the vertex ID that feeds back to the loop input (end of loop body)
+        # Requires vertex context to find the incoming edge
+        if not hasattr(self, "_vertex") or self._vertex is None:
+            return None
 
-            if accumulated is not None:
-                # Accumulate: existing state + new data from loop body
-                # Use add_rows to maintain DataFrame type
-                feedback_rows = feedback.to_dict(orient="records")
-                new_state = accumulated.add_rows(feedback_rows)
-            else:
-                # First feedback but no accumulated state yet - shouldn't happen normally
-                # but handle gracefully by building initial state + feedback
-                initial = self._build_initial_state()
-                feedback_rows = feedback.to_dict(orient="records")
-                new_state = initial.add_rows(feedback_rows)
+        end_vertex_id = self.get_incoming_edge_by_target_param("loop")
 
-            # Store the new accumulated state
-            self._set_accumulated_state(new_state)
-            return new_state
+        if not end_vertex_id:
+            return None
 
-        # First iteration: build initial state and store it
-        initial_state = self._build_initial_state()
-        self._set_accumulated_state(initial_state)
-        return initial_state
+        # Find the result for the end vertex
+        for result in results:
+            if (
+                hasattr(result, "vertex")
+                and result.vertex.id == end_vertex_id
+                and hasattr(result, "result_dict")
+                and result.result_dict.outputs
+            ):
+                # Get first output value
+                first_output = next(iter(result.result_dict.outputs.values()))
+
+                # Handle both dict (from model_dump()) and object formats
+                value = None
+                if isinstance(first_output, dict) and "message" in first_output:
+                    value = first_output["message"]
+                elif hasattr(first_output, "message"):
+                    value = first_output.message
+                else:
+                    value = first_output
+
+                if value is not None:
+                    return self._to_dataframe(value)
+
+        # End vertex didn't produce output - loop body stopped (termination condition)
+        return None
+
+    async def execute_loop(self, event_manager=None) -> DataFrame:
+        """Execute the loop body repeatedly until termination.
+
+        Creates an isolated subgraph for the loop body and executes it
+        for each iteration, accumulating state until termination.
+
+        Args:
+            event_manager: Optional event manager for UI event emission
+
+        Returns:
+            Final accumulated DataFrame after loop terminates
+        """
+        # Get the loop body configuration once
+        loop_body_vertex_ids = self.get_loop_body_vertices()
+        start_vertex_id = self._get_loop_body_start_vertex()
+        start_edge = get_loop_body_start_edge(self._vertex, loop_output_name="loop")
+
+        if not loop_body_vertex_ids:
+            # No loop body connected - just return initial state
+            return self._build_initial_state()
+
+        # Create base subgraph (once)
+        base_subgraph = self.graph.create_subgraph(loop_body_vertex_ids)
+
+        # Initialize accumulated state
+        accumulated_state = self._build_initial_state()
+
+        for iteration in range(self.max_iterations):
+            # Deep copy for this iteration
+            iteration_subgraph = copy.deepcopy(base_subgraph)
+            iteration_subgraph.prepare()
+
+            # Inject current accumulated state as input to the first vertex in loop body
+            if start_vertex_id and start_edge:
+                start_vertex = iteration_subgraph.get_vertex(start_vertex_id)
+                # Get the target parameter name from the edge
+                target_param = (
+                    start_edge.target_handle.fieldName if hasattr(start_edge.target_handle, "fieldName") else "messages"
+                )
+                # Use set() with the target parameter as a keyword argument
+                if hasattr(start_vertex, "custom_component") and start_vertex.custom_component:
+                    start_vertex.custom_component.set(**{target_param: accumulated_state})
+
+            # Execute subgraph and collect results
+            # Pass event_manager so UI receives events from subgraph execution
+            results = []
+            async for result in iteration_subgraph.async_start(event_manager=event_manager):
+                results.append(result)
+                # Stop on error
+                if hasattr(result, "valid") and not result.valid:
+                    from lfx.log.logger import logger
+
+                    await logger.aerror(f"Error in loop iteration {iteration}: {result}")
+                    return accumulated_state
+
+            # Extract output from this iteration
+            iteration_output = self._extract_loop_output(results)
+
+            if iteration_output is None:
+                # No feedback output - loop body took a different branch (termination)
+                # This happens when e.g. AgentStep outputs ai_message instead of tool_calls
+                break
+
+            # Accumulate: existing state + new data from loop body
+            new_rows = iteration_output.to_dict(orient="records")
+            accumulated_state = accumulated_state.add_rows(new_rows)
+
+        return accumulated_state
+
+    def loop_output(self) -> DataFrame:
+        """Loop output is handled internally by subgraph execution.
+
+        This method stops the branch as the actual loop execution
+        happens in done_output() via subgraph iteration.
+        """
+        self.stop("loop")
+        return DataFrame([])
+
+    async def done_output(self, event_manager=None) -> DataFrame:
+        """Execute the loop and return final accumulated state.
+
+        This is the main execution point for the while loop. It:
+        1. Builds initial state from inputs
+        2. Executes loop body as isolated subgraph for each iteration
+        3. Accumulates state until termination condition
+        4. Returns final accumulated state
+
+        Args:
+            event_manager: Optional event manager for UI event emission
+
+        Returns:
+            Final accumulated DataFrame after loop terminates
+        """
+        try:
+            return await self.execute_loop(event_manager=event_manager)
+        except Exception as e:
+            from lfx.log.logger import logger
+
+            await logger.aerror(f"Error executing while loop: {e}")
+            raise
