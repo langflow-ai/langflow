@@ -14,6 +14,7 @@ export interface SessionMoreMenuProps {
   onMessageLogs?: () => void;
   onDelete: () => void;
   showMessageLogs?: boolean;
+  showDelete?: boolean;
   // Positioning props
   side?: "top" | "right" | "bottom" | "left";
   align?: "start" | "center" | "end";
@@ -32,6 +33,7 @@ export function SessionMoreMenu({
   onMessageLogs,
   onDelete,
   showMessageLogs = true,
+  showDelete = true,
   side = "bottom",
   align = "end",
   sideOffset = DEFAULT_SIDE_OFFSET,
@@ -113,12 +115,17 @@ export function SessionMoreMenu({
               </div>
             </SelectItem>
           )}
-          <SelectItem value="delete" className="session-more-menu-item">
-            <div className="flex items-center text-status-red hover:text-status-red">
-              <ForwardedIconComponent name="Trash2" className="mr-2 h-4 w-4" />
-              Delete
-            </div>
-          </SelectItem>
+          {showDelete && (
+            <SelectItem value="delete" className="session-more-menu-item">
+              <div className="flex items-center text-status-red hover:text-status-red">
+                <ForwardedIconComponent
+                  name="Trash2"
+                  className="mr-2 h-4 w-4"
+                />
+                Delete
+              </div>
+            </SelectItem>
+          )}
         </SelectContent>
       </Select>
     </div>
