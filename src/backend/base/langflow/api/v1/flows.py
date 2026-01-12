@@ -735,7 +735,7 @@ async def publish_flow(
     return publish_data
 
 
-@router.get("/{flow_id}/publish/", response_model=list[PublishedFlowRead], status_code=200)
+@router.get("/{flow_id}/versions/", response_model=list[PublishedFlowRead], status_code=200)
 async def list_published_flows(
     *,
     flow_id: UUID,
@@ -757,7 +757,7 @@ async def list_published_flows(
     return flow_data_list
 
 
-@router.get("/{flow_id}/publish/{version_id}", response_model=dict, status_code=200)
+@router.get("/{flow_id}/versions/{version_id}", response_model=dict, status_code=200)
 async def read_published_flow(
     *,
     flow_id: UUID,
@@ -783,7 +783,7 @@ async def read_published_flow(
     return orjson.loads(flow_data)
 
 
-@router.delete("/{flow_id}/publish/{version_id}", response_model=MessageResponse, status_code=200)
+@router.delete("/{flow_id}/versions/{version_id}", response_model=MessageResponse, status_code=200)
 async def delete_published_flow(
     *,
     flow_id: UUID,

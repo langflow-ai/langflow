@@ -65,7 +65,7 @@ INVALID_PROJECT_MSG = (
     "Invalid project. Project data must contain ALL of these keys:\n"
     "- name (must be non-empty and contain at least one alphanumeric character)\n"
     "- description (can be None or empty)\n"
-    "- flows (must be a list)"
+    "- flows (must be a nonempty list)"
 )
 MISSING_BUCKET_NAME_MSG = "Publish backend bucket name not specified"
 MISSING_ALL_ID_MSG = "user_id and {item_type}_id are required."
@@ -131,8 +131,8 @@ def require_valid_project(project_data: dict | None):
     if not (
         project_data["name"] and
         "description" in project_data and
-        "flows" in project_data and
-        isinstance(project_data["flows"], list)
+        (flows := project_data.get("flows", None)) and
+        isinstance(flows, list)
     ):
         raise ValueError(INVALID_PROJECT_MSG)
 

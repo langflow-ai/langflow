@@ -17,6 +17,7 @@ from pydantic import (
     model_serializer,
     model_validator,
 )
+from sqlalchemy import String, Uuid, column
 
 from langflow.schema.dotdict import dotdict
 from langflow.schema.graph import Tweaks
@@ -508,11 +509,27 @@ class ProjectFlowVersion(BaseModel):
             raise ValueError(msg)
         return self
 
+    def to_tuple(self):
+        return (
+            self.flow_id,
+            self.published_flow_version_id,
+            self.published_flow_name,
+            )
+
+    @classmethod
+    def column_def(cls):
+        return (
+            column("flow_id", Uuid),
+            column("published_flow_version_id", String),
+            column("published_flow_name", String),
+        )
 
 class PublishProjectCreate(BaseModel):
     publish_tag: str | None = Field(None, description="Optional tag for the published project version.")
     flows: list[ProjectFlowVersion] = Field(..., description="List of flows to include in the project.")
 
+    def flows_to_tuple(self):
+        return [flow.to_tuple() for flow in self.flows]
 
 class PublishedProjectRead(PublishedProjectMetadata):
     """Schema for reading a published project, includes the composite key fields."""
