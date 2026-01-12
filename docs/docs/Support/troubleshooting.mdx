@@ -147,6 +147,40 @@ In Langflow OSS, you can follow the error message's instructions to install the 
 
 To manage dependencies in Langflow Desktop, see [Install custom dependencies in Langflow Desktop](/install-custom-dependencies#langflow-desktop).
 
+### An API key must be passed as query or header
+
+After upgrading to Langflow 1.7.1+, users attempting to sign up receive an error: "An API key must be passed as query or header."
+
+When attempting to sign up for a new account with `LANGFLOW_AUTO_LOGIN=false` set in the `.env`, users attempting to sign up on the Langflow login page receive the following errors:
+
+    * UI: `An API key must be passed as query or header`
+    * Server logs: `Client error during session scope: 403: An API key must be passed as query or header`
+
+In Langflow versions prior to 1.7.1, sign-up would succeed and a Langflow administrator would activate the account.
+This allowed anyone to create user accounts with the public sign-up endpoint.
+User accounts were inactive by default, but this created security vulnerabilities.
+
+The 1.7.1 change ensures only authenticated superusers can create accounts.
+It is a known issue that the "Sign Up" button remains visible in the UI when `LANGFLOW_AUTO_LOGIN=false`, which is misleading.
+
+The solution to this issue depends on your Langflow environment.
+
+For development environments where authentication is not needed, remove the `LANGFLOW_AUTO_LOGIN=false` environment variable or set it to `true`.
+
+For production environments where authentication is required, do the following:
+
+1. Configure Langflow with authentication enabled.
+    ```bash
+    LANGFLOW_AUTO_LOGIN=false
+    ```
+
+2. Create user acounts with the Langflow superuser account.
+    Only superusers can create new user accounts.
+
+3. Sign in user accounts on the Langflow login page with credentials provided by superuser.
+
+For more information, see [Start Langflow Server with Authentication](/configuration-authentication).
+
 ## Langflow upgrade issues
 
 The following issues can occur when upgrading your Langflow version.
