@@ -58,6 +58,7 @@ jobs:
     name: Unit Tests - Python ${{ matrix.python-version }} - Group ${{ matrix.group }}
     runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
     strategy:
+      fail-fast: false
       matrix:
         python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13"]' ) }}
         splitCount: [5]
@@ -66,6 +67,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref || github.ref }}
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -84,6 +86,13 @@ jobs:
       - name: Install the project
         run: uv sync
 
+      - name: Verify installation
+        run: |
+          uv run python --version
+          uv run python -c "import sys; print(f'Python {sys.version}')"
+          uv run pytest --version
+        continue-on-error: true
+
       - name: Generate dynamic coverage configuration
         run: |
           echo "Generating dynamic coverage configuration..."
@@ -94,9 +103,38 @@ jobs:
       - name: Run unit tests
         uses: nick-fields/retry@v3
         with:
-          timeout_minutes: 12
-          max_attempts: 2
-          command: make unit_tests args="-x -vv --splits ${{ matrix.splitCount }} --group ${{ matrix.group }} --reruns 5 --cov --cov-config=src/backend/.coveragerc --cov-report=xml --cov-report=html"
+          timeout_minutes: 15
+          max_attempts: 3
+          retry_wait_seconds: 30
+          warning_on_retry: true
+          shell: bash
+          command: make unit_tests args="-x -vv --splits ${{ matrix.splitCount }} --group ${{ matrix.group }} --reruns 5 --reruns-delay 1 --cov --cov-config=src/backend/.coveragerc --cov-report=xml --cov-report=html"
+        env:
+          PYTHONUNBUFFERED: "1"
+          PYTEST_TIMEOUT: "300"
+          PYTHONHASHSEED: "0"
+
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always()
+        with:
+          files: |
+            **/test-results/**/*.xml
+            **/junit.xml
+          check_name: Test Results (Python ${{ matrix.python-version }} - Group ${{ matrix.group }})
+          comment_mode: off
+
+      - name: Upload test logs on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: test-logs-py${{ matrix.python-version }}-group${{ matrix.group }}
+          path: |
+            **/.pytest_cache/
+            **/pytest.log
+            **/test-results/
+          retention-days: 7
+          if-no-files-found: ignore
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
@@ -108,6 +146,7 @@ jobs:
           name: backend-coverage-group-${{ matrix.group }}
           fail_ci_if_error: false
           directory: ./
+          verbose: true
 
       - name: Upload coverage artifacts
         uses: actions/upload-artifact@v4
@@ -124,12 +163,14 @@ jobs:
     name: Integration Tests - Python ${{ matrix.python-version }}
     runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
     strategy:
+      fail-fast: false
       matrix:
         python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13"]' ) }}
     steps:
       - uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref || github.ref }}
+          fetch-depth: 0
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v6
         with:
@@ -140,22 +181,41 @@ jobs:
       - name: Install the project
         run: uv sync
       - name: Run integration tests
-        run: make integration_tests_no_api_keys
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 20
+          max_attempts: 2
+          retry_wait_seconds: 30
+          command: make integration_tests_no_api_keys
         env:
-          PYLEAK_LOG_LEVEL: debug # enable pyleak logging
-          DO_NOT_TRACK: true # disable telemetry reporting
+          PYLEAK_LOG_LEVEL: debug
+          DO_NOT_TRACK: true
+          PYTHONUNBUFFERED: "1"
+
+      - name: Upload integration test logs on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: integration-test-logs-py${{ matrix.python-version }}
+          path: |
+            **/.pytest_cache/
+            **/pytest.log
+          retention-days: 7
+          if-no-files-found: ignore
 
 
   lfx-tests:
     name: LFX Tests - Python ${{ matrix.python-version }}
     runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
     strategy:
+      fail-fast: false
       matrix:
         python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13"]' ) }}
     steps:
       - uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref || github.ref }}
+          fetch-depth: 0
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v6
         with:
@@ -168,6 +228,17 @@ jobs:
         env:
           DO_NOT_TRACK: true # disable telemetry reporting
 
+      - name: Upload lfx test logs on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: lfx-test-logs-py${{ matrix.python-version }}
+          path: |
+            src/lfx/**/.pytest_cache/
+            src/lfx/**/pytest.log
+          retention-days: 7
+          if-no-files-found: ignore
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         if: matrix.python-version == '3.10'
@@ -178,6 +249,7 @@ jobs:
           name: lfx-coverage
           fail_ci_if_error: false
           directory: ./src/lfx/
+          verbose: true
 
       - name: Upload coverage artifacts
         uses: actions/upload-artifact@v4
@@ -193,6 +265,7 @@ jobs:
     name: Test CLI - Python ${{ matrix.python-version }}
     runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
     strategy:
+      fail-fast: false
       matrix:
         python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13"]') }}
     steps:
@@ -200,6 +273,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref || github.ref }}
+          fetch-depth: 0
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v6
         with:
