@@ -29,6 +29,7 @@ from lfx.field_typing import Tool
 from lfx.inputs.inputs import BoolInput, MessageTextInput
 from lfx.io import HandleInput, MessageTextInput, Output, SecretStrInput
 
+TOOLGUARD_WORK_DIR = Path("tmp_toolguard")
 STEP1 = "Step_1"
 STEP2 = "Step_2"
 BUILD_MODE_GENERATE = "Generate"
@@ -96,12 +97,12 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             input_types=[],
         ),
         MessageTextInput(
-            name="guard_code_path",
-            display_name="ToolGuards Generated Code Path",
+            name="project_path",
+            display_name="ToolGuard Project",
             info="Automatically generated ToolGuards code",
             # show_if={"enable_tool_guard": True},
-            value="tmp",  # TODO: decide on the path
-            advanced=True,
+            value="my_project",
+            # advanced=True,
         ),
         DropdownInput(
             name="model_provider",
@@ -177,7 +178,7 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
 
     async def _build_guards(self, specs: list[ToolGuardSpec]) -> ToolGuardsCodeGenerationResult:
         logger.info("🔒️ToolGuard: Starting step 2")
-        out_dir = Path(self.guard_code_path) / STEP2
+        out_dir = self.work_dir / STEP2
         llm = LangchainModelWrapper(self.build_model())
         gen_result = await generate_guards_from_specs(tools=self.in_tools, tool_specs=specs, work_dir=out_dir, llm=llm)
         logger.info("🔒️ToolGuard: Step 2 Done")
