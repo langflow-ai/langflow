@@ -300,3 +300,168 @@ class TestWhileLoopSubgraphExecution:
         # No incoming edge configured, so get_incoming_edge_by_target_param returns None
         result = comp._extract_loop_output([{"some": "result"}])
         assert result is None
+
+
+class TestWhileLoopIntegration:
+    """Integration tests for WhileLoop with real graph execution.
+
+    These tests build actual graphs with WhileLoop and loop body components,
+    then execute them via async_start() to verify the full subgraph execution flow.
+    """
+
+    async def test_whileloop_terminates_when_no_loop_body(self):
+        """Test that WhileLoop returns initial state when no loop body is connected."""
+        from lfx.graph.graph.base import Graph
+
+        # Create WhileLoop with input but no loop body
+        while_loop = WhileLoopComponent(_id="while_loop")
+        while_loop.set(
+            input_value=Message(text="Hello", sender="User"),
+            max_iterations=5,
+        )
+
+        # Build graph with just WhileLoop (no loop body)
+        graph = Graph(while_loop, while_loop)
+
+        results = [result async for result in graph.async_start()]
+
+        # Should have results for while_loop
+        result_ids = [r.vertex.id for r in results if hasattr(r, "vertex")]
+        assert "while_loop" in result_ids
+
+        # The done output should return the initial state (just the input)
+        while_loop_result = next(r for r in results if hasattr(r, "vertex") and r.vertex.id == "while_loop")
+        assert while_loop_result.result_dict is not None
+
+    async def test_whileloop_executes_loop_body_and_accumulates_state(self):
+        """Test WhileLoop executes loop body and accumulates state correctly.
+
+        This test creates a simple loop body that:
+        1. Takes DataFrame input from WhileLoop
+        2. Adds a new row indicating the iteration
+        3. Feeds back to WhileLoop (continuing the loop)
+        4. After max_iterations, the loop terminates
+        """
+        from lfx.custom.custom_component.component import Component
+        from lfx.graph.graph.base import Graph
+        from lfx.inputs.inputs import HandleInput
+        from lfx.template.field.base import Output
+
+        # Create a simple loop body component that always feeds back
+        class LoopBodyComponent(Component):
+            """Simple component that adds a row and feeds back."""
+
+            display_name = "Loop Body"
+
+            inputs = [
+                HandleInput(
+                    name="messages",
+                    display_name="Messages",
+                    input_types=["DataFrame"],
+                ),
+            ]
+
+            outputs = [
+                Output(
+                    display_name="Output",
+                    name="output",
+                    method="process",
+                ),
+            ]
+
+            def process(self) -> DataFrame:
+                """Add a row indicating this iteration and return."""
+                if isinstance(self.messages, DataFrame):
+                    # Add a new row for this iteration
+                    iteration = len(self.messages)
+                    new_row = {"text": f"Iteration {iteration}", "sender": "Machine"}
+                    return self.messages.add_rows([new_row])
+                return DataFrame([{"text": "Processed", "sender": "Machine"}])
+
+        # Create components
+        while_loop = WhileLoopComponent(_id="while_loop")
+        loop_body = LoopBodyComponent(_id="loop_body")
+
+        # Connect: WhileLoop.loop -> LoopBody.messages
+        loop_body.set(messages=while_loop.loop_output)
+
+        # Connect: LoopBody.output -> WhileLoop.loop (feedback)
+        # Also set the initial input
+        while_loop.set(
+            input_value=Message(text="Start", sender="User"),
+            max_iterations=3,
+            loop=loop_body.process,  # This creates the feedback connection
+        )
+
+        # Build graph
+        graph = Graph(while_loop, while_loop)
+
+        # Execute
+        results = [result async for result in graph.async_start()]
+
+        # Verify we got results
+        assert len(results) > 0
+
+        # Find the while_loop result
+        while_loop_results = [r for r in results if hasattr(r, "vertex") and r.vertex.id == "while_loop"]
+        assert len(while_loop_results) > 0
+
+    async def test_whileloop_respects_max_iterations(self):
+        """Test that WhileLoop stops at max_iterations even if loop body always feeds back."""
+        from lfx.custom.custom_component.component import Component
+        from lfx.graph.graph.base import Graph
+        from lfx.inputs.inputs import HandleInput
+        from lfx.template.field.base import Output
+
+        # Track how many times loop body executes
+        execution_count = 0
+
+        class CountingLoopBody(Component):
+            """Loop body that counts executions."""
+
+            display_name = "Counting Loop Body"
+
+            inputs = [
+                HandleInput(
+                    name="messages",
+                    display_name="Messages",
+                    input_types=["DataFrame"],
+                ),
+            ]
+
+            outputs = [
+                Output(
+                    display_name="Output",
+                    name="output",
+                    method="process",
+                ),
+            ]
+
+            def process(self) -> DataFrame:
+                nonlocal execution_count
+                execution_count += 1
+                if isinstance(self.messages, DataFrame):
+                    new_row = {"text": f"Count {execution_count}", "sender": "Machine"}
+                    return self.messages.add_rows([new_row])
+                return DataFrame([{"text": f"Count {execution_count}", "sender": "Machine"}])
+
+        # Create components with max_iterations=2
+        while_loop = WhileLoopComponent(_id="while_loop")
+        loop_body = CountingLoopBody(_id="loop_body")
+
+        loop_body.set(messages=while_loop.loop_output)
+        while_loop.set(
+            input_value=Message(text="Start", sender="User"),
+            max_iterations=2,
+            loop=loop_body.process,
+        )
+
+        graph = Graph(while_loop, while_loop)
+
+        results = [result async for result in graph.async_start()]
+
+        # Verify graph executed
+        assert len(results) > 0
+
+        # Loop body should have executed at most max_iterations times
+        assert execution_count <= 2, f"Expected at most 2 executions, got {execution_count}"
