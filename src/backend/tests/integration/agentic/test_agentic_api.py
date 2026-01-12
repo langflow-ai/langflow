@@ -20,6 +20,9 @@ from tests.api_keys import has_api_key
 # Check if OpenAI API key is available for integration tests
 HAS_OPENAI_KEY = bool(os.environ.get("OPENAI_API_KEY"))
 
+# Check if agentic experience is enabled
+AGENTIC_ENABLED = os.environ.get("LANGFLOW_AGENTIC_EXPERIENCE", "false").lower() == "true"
+
 
 @pytest.fixture
 async def openai_api_key_variable(client, logged_in_headers, active_user):  # noqa: ARG001
@@ -46,6 +49,7 @@ async def openai_api_key_variable(client, logged_in_headers, active_user):  # no
         yield {"name": "OPENAI_API_KEY"}
 
 
+@pytest.mark.skipif(not AGENTIC_ENABLED, reason="Agentic experience is disabled")
 class TestAgenticPromptEndpoint:
     """Test cases for POST /agentic/prompt endpoint."""
 
@@ -207,6 +211,7 @@ class TestAgenticPromptEndpoint:
             await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
 
 
+@pytest.mark.skipif(not AGENTIC_ENABLED, reason="Agentic experience is disabled")
 class TestAgenticNextComponentEndpoint:
     """Test cases for POST /agentic/next_component endpoint."""
 
@@ -351,6 +356,7 @@ class TestAgenticNextComponentEndpoint:
         ]
 
 
+@pytest.mark.skipif(not AGENTIC_ENABLED, reason="Agentic experience is disabled")
 class TestAgenticAPIErrorHandling:
     """Test error handling for Agentic API endpoints."""
 
@@ -412,6 +418,7 @@ class TestAgenticAPIErrorHandling:
         ]
 
 
+@pytest.mark.skipif(not AGENTIC_ENABLED, reason="Agentic experience is disabled")
 class TestAgenticAPIRequestSchema:
     """Test the request schema for Agentic API endpoints."""
 
@@ -512,6 +519,7 @@ class TestAgenticAPIRequestSchema:
             await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
 
 
+@pytest.mark.skipif(not AGENTIC_ENABLED, reason="Agentic experience is disabled")
 class TestAgenticAPIIntegration:
     """Integration tests combining Agentic API with other Langflow features."""
 
@@ -635,6 +643,7 @@ class TestAgenticAPIIntegration:
             await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
 
 
+@pytest.mark.skipif(not AGENTIC_ENABLED, reason="Agentic experience is disabled")
 class TestAgenticAPIConcurrency:
     """Test concurrent requests to Agentic API endpoints."""
 
