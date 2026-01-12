@@ -219,7 +219,7 @@ async def handle_on_tool_start(
     tool_blocks_map[tool_key] = tool_content
     agent_message.content_blocks[0].contents.append(tool_content)
 
-    agent_message = await send_message_callback(message=agent_message, skip_db_update=not stream_tool_updates)
+    agent_message = await send_message_callback(message=agent_message, skip_db_update=True)
     if agent_message.content_blocks and agent_message.content_blocks[0].contents:
         tool_blocks_map[tool_key] = agent_message.content_blocks[0].contents[-1]
     return agent_message, new_start_time
@@ -241,7 +241,7 @@ async def handle_on_tool_end(
 
     if tool_content and isinstance(tool_content, ToolContent):
         # Call send_message_callback first to get the updated message structure
-        agent_message = await send_message_callback(message=agent_message, skip_db_update=not stream_tool_updates)
+        agent_message = await send_message_callback(message=agent_message, skip_db_update=True)
         new_start_time = perf_counter()
 
         # Now find and update the tool content in the current message
