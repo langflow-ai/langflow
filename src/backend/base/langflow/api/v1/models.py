@@ -198,7 +198,7 @@ async def get_enabled_providers(
     providers: Annotated[list[str] | None, Query()] = None,
 ):
     """Get enabled providers for the current user.
-    
+
     Only providers with valid API keys are marked as enabled. This prevents
     providers from appearing enabled when they have invalid credentials.
     """
@@ -228,16 +228,11 @@ async def get_enabled_providers(
         # Use shared helper to validate and get enabled providers
         from lfx.base.models.unified_models import _validate_and_get_enabled_providers
 
-        enabled_providers_set = _validate_and_get_enabled_providers(
-            credential_variables, provider_variable_map
-        )
+        enabled_providers_set = _validate_and_get_enabled_providers(credential_variables, provider_variable_map)
         enabled_providers = list(enabled_providers_set)
-        
+
         # Build provider_status dict for all providers
-        provider_status = {
-            provider: provider in enabled_providers_set
-            for provider in provider_variable_map.keys()
-        }
+        provider_status = {provider: provider in enabled_providers_set for provider in provider_variable_map.keys()}
 
         result = {
             "enabled_providers": enabled_providers,
