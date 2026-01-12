@@ -89,7 +89,7 @@ To view Langflow Desktop logs, see [Desktop logs](/logging#desktop-logs).
 
 ### Failed to install Langflow OSS: Unable to sanity check Langflow OSS version
 
-Desktop installed Langflow OSS but couldn't verify the installation. You may see the error message: `Langflow Installation Error: langflow-install-error` or `Langflow Installation Error: <error details>`.
+Desktop installed Langflow OSS but couldn't verify the installation. You may see the error message: `Langflow Installation Error: langflow-install-error` or other `Langflow Installation Error:` messages.
 
 To resolve this error, do the following:
 
@@ -103,7 +103,7 @@ If the issue persists, ensure Python 3.9+ is installed and accessible, or reinst
 
 ### Langflow OSS health check failed
 
-Desktop installed Langflow OSS but the OSS backend isn't responding to health checks. You may see the error message: `Langflow Health Check Error: Timeout after 80 attempts - Langflow did not become ready` or `Langflow Health Check Error: <error details>`.
+Desktop installed Langflow OSS but the OSS backend isn't responding to health checks. You may see the error message: `Langflow Health Check Error: Timeout after 80 attempts - Langflow did not become ready` or other `Langflow Health Check Error:` messages.
 
 To resolve this error, do the following:
 
@@ -114,7 +114,7 @@ To resolve this error, do the following:
 
 ### Failed to install uv: Unable to find uv executable
 
-This error can also appear as: `Unable to find uv executable for Python virtual environment setup`. You may see the error messages: `UV Installation Error: UV installation failed - binary not found after installation` or `Python Environment Error: UV binary not found at: <path>`.
+This error can also appear as: `Unable to find uv executable for Python virtual environment setup`. You may see the error messages: `UV Installation Error: UV installation failed - binary not found after installation` or `Python Environment Error: UV binary not found at:` followed by a file path.
 
 Langflow Desktop can't locate the `uv` executable on your system, even though it may be installed.
 
@@ -133,7 +133,7 @@ To resolve this error, do the following:
 
 ### Failed to create Python virtual environment
 
-Desktop failed to create the Python virtual environment required for Langflow OSS. You may see the error message: `Python Environment Error: error_dns`, `Python Environment Error: Creation failed: <stderr>`, or `Python Environment Error: <error details>`.
+Desktop failed to create the Python virtual environment required for Langflow OSS. You may see the error message: `Python Environment Error: error_dns`, `Python Environment Error: Creation failed:` followed by error details, or other `Python Environment Error:` messages.
 
 To resolve this error, do the following:
 
@@ -149,7 +149,7 @@ If the issue persists, ensure Python 3.9+ is installed and accessible, or reinst
 
 ### Failed to sanity check Python execution
 
-Desktop created the Python virtual environment but couldn't verify that Python is working correctly. You may see the error message: `Python Environment Error: Python check failed: <stderr>` or `Python Environment Error: <error details>`.
+Desktop created the Python virtual environment but couldn't verify that Python is working correctly. You may see the error message: `Python Environment Error: Python check failed:` followed by error details, or other `Python Environment Error:` messages.
 
 To resolve this error, see [Failed to create Python virtual environment](#failed-to-create-python-virtual-environment).
 
