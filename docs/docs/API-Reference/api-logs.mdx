@@ -3,34 +3,23 @@ title: Logs endpoints
 slug: /api-logs
 ---
 
-import Tabs from '@theme/Tabs';
-import TabItem from '@theme/TabItem';
-
-Retrieve logs for your Langflow flow.
+Retrieve logs for your Langflow flows and server.
 
 ## Enable log retrieval
 
 The `/logs` endpoint requires log retrieval to be enabled in your Langflow instance.
 
-1. To enable log retrieval, include these values in your `.env` file:
+To enable log retrieval, include set the following [environment variables](/environment-variables) in your Langflow `.env` file, and then start Langflow with `uv run langflow run --env-file .env`:
 
-    ```text
-    LANGFLOW_ENABLE_LOG_RETRIEVAL=True
-    LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE=10000
-    LANGFLOW_LOG_LEVEL=DEBUG
-    ```
-
-    Log retrieval requires that `LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE` is greater than 0. The default value is `10000`.
-
-2. Start Langflow with the updated `.env`:
-
-   ```text
-   uv run langflow run --env-file .env
-   ```
+```text
+LANGFLOW_ENABLE_LOG_RETRIEVAL=True
+LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE=10000. // Must be greater than 0
+LANGFLOW_LOG_LEVEL=DEBUG. // Can be DEBUG, ERROR, INFO, WARNING, or CRITICAL
+```
 
 ## Stream logs
 
-Stream logs in real-time using Server Sent Events (SSE).
+Stream logs in real-time using Server Sent Events (SSE):
 
 ```bash
 curl -X GET \

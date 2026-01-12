@@ -67,8 +67,15 @@ async def login_to_get_access_token(
             domain=auth_settings.COOKIE_DOMAIN,
         )
         await get_variable_service().initialize_user_variables(user.id, db)
+        # Initialize agentic variables if agentic experience is enabled
+        from langflow.api.utils.mcp.agentic_mcp import initialize_agentic_user_variables
+
         # Create default project for user if it doesn't exist
         _ = await get_or_create_default_folder(db, user.id)
+
+        if get_settings_service().settings.agentic_experience:
+            await initialize_agentic_user_variables(user.id, db)
+
         return tokens
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -108,6 +115,11 @@ async def auto_login(response: Response, db: DbSession):
                 expires=None,  # Set to None to make it a session cookie
                 domain=auth_settings.COOKIE_DOMAIN,
             )
+
+            if get_settings_service().settings.agentic_experience:
+                from langflow.api.utils.mcp.agentic_mcp import initialize_agentic_user_variables
+
+                await initialize_agentic_user_variables(user.id, db)
 
         return tokens
 
@@ -160,7 +172,27 @@ async def refresh_token(
 
 @router.post("/logout")
 async def logout(response: Response):
-    response.delete_cookie("refresh_token_lf")
-    response.delete_cookie("access_token_lf")
-    response.delete_cookie("apikey_tkn_lflw")
+    auth_settings = get_settings_service().auth_settings
+
+    response.delete_cookie(
+        "refresh_token_lf",
+        httponly=auth_settings.REFRESH_HTTPONLY,
+        samesite=auth_settings.REFRESH_SAME_SITE,
+        secure=auth_settings.REFRESH_SECURE,
+        domain=auth_settings.COOKIE_DOMAIN,
+    )
+    response.delete_cookie(
+        "access_token_lf",
+        httponly=auth_settings.ACCESS_HTTPONLY,
+        samesite=auth_settings.ACCESS_SAME_SITE,
+        secure=auth_settings.ACCESS_SECURE,
+        domain=auth_settings.COOKIE_DOMAIN,
+    )
+    response.delete_cookie(
+        "apikey_tkn_lflw",
+        httponly=auth_settings.ACCESS_HTTPONLY,
+        samesite=auth_settings.ACCESS_SAME_SITE,
+        secure=auth_settings.ACCESS_SECURE,
+        domain=auth_settings.COOKIE_DOMAIN,
+    )
     return {"message": "Logout successful"}

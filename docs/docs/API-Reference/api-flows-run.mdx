@@ -3,9 +3,6 @@ title: Flow trigger endpoints
 slug: /api-flows-run
 ---
 
-import Tabs from '@theme/Tabs';
-import TabItem from '@theme/TabItem';
-
 Use the `/run` and `/webhook` endpoints to run flows.
 
 To create, read, update, and delete flows, see [Flow management endpoints](/api-flows).
@@ -178,7 +175,7 @@ curl -X POST \
 Use the `/webhook` endpoint to start a flow by sending an HTTP `POST` request.
 
 :::tip
-After you add a [**Webhook** component](/components-data#webhook) to a flow, open the [**API access** pane](/concepts-publish), and then click the **Webhook curl** tab to get an automatically generated `POST /webhook` request for your flow.
+After you add a [**Webhook** component](/webhook) to a flow, open the [**API access** pane](/concepts-publish), and then click the **Webhook curl** tab to get an automatically generated `POST /webhook` request for your flow.
 For more information, see [Trigger flows with webhooks](/webhook).
 :::
 

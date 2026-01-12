@@ -3,10 +3,10 @@ title: Files endpoints
 slug: /api-files
 ---
 
-import Tabs from '@theme/Tabs';
-import TabItem from '@theme/TabItem';
-
 Use the `/files` endpoints to move files between your local machine and Langflow.
+
+All `/files` endpoints (both `/v1/files` and `/v2/files`) require authentication with a Langflow API key.
+You can only access files that belong to your own user account, even as a superuser.
 
 ## Differences between `/v1/files` and `/v2/files`
 
@@ -61,7 +61,7 @@ Not all file types are supported.
 
 Send image files to Langflow to use them in flows.
 
-The default file limit is 100 MB.
+The default file limit is 1024 MB.
 To change this limit, set the `LANGFLOW_MAX_FILE_SIZE_UPLOAD` [environment variable](/environment-variables).
 
 1. Attach the image to a `POST /v1/files/upload/$FLOW_ID` request with `--form` (`-F`) and the file path:
@@ -232,15 +232,15 @@ You must include the ampersand (`@`) in the request to instruct curl to upload t
 
 ### Send files to your flows (v2)
 
-:::important
+:::info
 The `/v2/files` endpoint can't send image files to flows.
 To send image files to your flows through the API, see [Upload image files (v1)](#upload-image-files-v1).
 :::
 
 This endpoint uploads files to your Langflow server's file management system.
-To use an uploaded file in a flow, send the file path to a flow with a [**File** component](/components-data#file).
+To use an uploaded file in a flow, send the file path to a flow with a [**Read File** component](/read-file).
 
-The default file limit is 100 MB. To configure this value, change the `LANGFLOW_MAX_FILE_SIZE_UPLOAD` [environment variable](/environment-variables).
+The default file limit is 1024 MB. To configure this value, change the `LANGFLOW_MAX_FILE_SIZE_UPLOAD` [environment variable](/environment-variables).
 
 1. To send a file to your flow with the API, POST the file to the `/api/v2/files` endpoint.
 
@@ -268,10 +268,10 @@ The default file limit is 100 MB. To configure this value, change the `LANGFLOW_
     }
     ```
 
-2. To use this file in your flow, add a **File** component to your flow.
+2. To use this file in your flow, add a **Read File** component to your flow.
 This component loads files into flows from your local machine or Langflow file management.
 
-3. Run the flow, passing the `path` to the `File` component in the `tweaks` object:
+3. Run the flow, passing the `path` to the `Read-File` component in the `tweaks` object:
 
     ```text
     curl --request POST \
@@ -283,7 +283,7 @@ This component loads files into flows from your local machine or Langflow file m
       "output_type": "chat",
       "input_type": "text",
       "tweaks": {
-        "File-1olS3": {
+        "Read-File-1olS3": {
           "path": [
             "07e5b864-e367-4f52-b647-a48035ae7e5e/3a290013-fe1e-4d3d-a454-cacae81288f3.pdf"
           ]
@@ -292,7 +292,7 @@ This component loads files into flows from your local machine or Langflow file m
     }'
     ```
 
-    To get the `File` component's ID, call the [Read flow](/api-flows#read-flow) endpoint or inspect the component in the visual editor.
+    To get the `Read-File` component's ID, call the [Read flow](/api-flows#read-flow) endpoint or inspect the component in the visual editor.
 
     If the file path is valid, the flow runs successfully.
 

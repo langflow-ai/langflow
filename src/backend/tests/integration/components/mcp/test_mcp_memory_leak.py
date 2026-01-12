@@ -13,8 +13,8 @@ import time
 
 import psutil
 import pytest
-from langflow.base.mcp.util import MCPSessionManager
-from loguru import logger
+from lfx.base.mcp.util import MCPSessionManager
+from lfx.log.logger import logger
 from mcp import StdioServerParameters
 
 pytestmark = [

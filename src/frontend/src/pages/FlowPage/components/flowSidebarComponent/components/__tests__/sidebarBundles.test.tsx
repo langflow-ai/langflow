@@ -31,11 +31,34 @@ jest.mock("../bundleItems", () => ({
   ),
 }));
 
+// Mock the SearchConfigTrigger component
+jest.mock("../searchConfigTrigger", () => ({
+  SearchConfigTrigger: ({ showConfig, setShowConfig }: any) => (
+    <button
+      data-testid="search-config-trigger"
+      onClick={() => setShowConfig(!showConfig)}
+    >
+      Config Toggle: {showConfig.toString()}
+    </button>
+  ),
+}));
+
+// Mock darkStore to avoid import.meta issues
+jest.mock("@/stores/darkStore", () => ({
+  useDarkStore: () => ({ isDark: false }),
+}));
+
+// Mock feature flags
+jest.mock("@/customization/feature-flags", () => ({
+  ENABLE_NEW_SIDEBAR: true, // Set to true for SearchConfigTrigger tests
+}));
+
 describe("MemoizedSidebarGroup (SidebarBundles)", () => {
   const mockSetOpenCategories = jest.fn();
   const mockOnDragStart = jest.fn();
   const mockSensitiveSort = jest.fn();
   const mockHandleKeyDownInput = jest.fn();
+  const mockSetShowConfig = jest.fn();
 
   const mockAPIClass = {
     description: "Test component",
@@ -73,10 +96,14 @@ describe("MemoizedSidebarGroup (SidebarBundles)", () => {
     handleKeyDownInput: mockHandleKeyDownInput,
     openCategories: [],
     setOpenCategories: mockSetOpenCategories,
+    showSearchConfigTrigger: false,
+    showConfig: false,
+    setShowConfig: mockSetShowConfig,
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockSetShowConfig.mockClear();
   });
 
   describe("Basic Rendering", () => {
@@ -100,7 +127,7 @@ describe("MemoizedSidebarGroup (SidebarBundles)", () => {
     it("should apply correct CSS classes", () => {
       render(<MemoizedSidebarGroup {...defaultProps} />);
 
-      expect(screen.getByTestId("sidebar-group")).toHaveClass("p-3");
+      expect(screen.getByTestId("sidebar-group")).toHaveClass("p-3", "pr-2");
       expect(screen.getByTestId("sidebar-group-label")).toHaveClass(
         "cursor-default",
       );
@@ -126,6 +153,39 @@ describe("MemoizedSidebarGroup (SidebarBundles)", () => {
       expect(
         screen.getByText("Bundle Item: Bundle 3 - Open: false"),
       ).toBeInTheDocument();
+    });
+
+    it("should not render SearchConfigTrigger when showSearchConfigTrigger is false", () => {
+      render(<MemoizedSidebarGroup {...defaultProps} />);
+
+      expect(
+        screen.queryByTestId("search-config-trigger"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should render SearchConfigTrigger when showSearchConfigTrigger is true", () => {
+      const propsWithConfigTrigger = {
+        ...defaultProps,
+        showSearchConfigTrigger: true,
+      };
+
+      render(<MemoizedSidebarGroup {...propsWithConfigTrigger} />);
+
+      expect(screen.getByTestId("search-config-trigger")).toBeInTheDocument();
+      expect(screen.getByText("Config Toggle: false")).toBeInTheDocument();
+    });
+
+    it("should render SearchConfigTrigger with showConfig true", () => {
+      const propsWithConfigTriggerAndShowConfig = {
+        ...defaultProps,
+        showSearchConfigTrigger: true,
+        showConfig: true,
+      };
+
+      render(<MemoizedSidebarGroup {...propsWithConfigTriggerAndShowConfig} />);
+
+      expect(screen.getByTestId("search-config-trigger")).toBeInTheDocument();
+      expect(screen.getByText("Config Toggle: true")).toBeInTheDocument();
     });
   });
 

@@ -1,5 +1,8 @@
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
-import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
+import {
+  getApiSampleHeaders,
+  getBaseUrl,
+} from "@/customization/utils/custom-code-samples";
 import { GetCodeType } from "@/types/tweaks";
 import {
   getAllChatInputNodeIds,
@@ -13,21 +16,21 @@ import {
  *
  * @param {Object} options - The options for generating the cURL command.
  * @param {string} options.flowId - The ID of the flow.
- * @param {boolean} options.isAuth - Indicates whether authentication is required.
+ * @param {boolean} options.webhookAuthEnable - Indicates whether authentication is required for webhooks.
  * @param {string} options.endpointName - The name of the webhook endpoint.
  * @returns {string} The cURL command.
  */
 export function getCurlWebhookCode({
   flowId,
-  isAuth,
+  webhookAuthEnable,
   endpointName,
   format = "multiline",
-}: GetCodeType & { format?: "multiline" | "singleline" }) {
-  const { protocol, host } = customGetHostProtocol();
-  const baseUrl = `${protocol}//${host}/api/v1/webhook/${
-    endpointName || flowId
-  }`;
-  const authHeader = !isAuth ? `-H 'x-api-key: <your api key>'` : "";
+}: GetCodeType & {
+  webhookAuthEnable: boolean;
+  format?: "multiline" | "singleline";
+}) {
+  const baseUrl = `${getBaseUrl()}/api/v1/webhook/${endpointName || flowId}`;
+  const authHeader = webhookAuthEnable ? `-H 'x-api-key: <your api key>'` : "";
 
   if (format === "singleline") {
     return `curl -X POST "${baseUrl}" -H 'Content-Type: application/json' ${authHeader} -d '{"any": "data"}'`.trim();
@@ -36,12 +39,8 @@ export function getCurlWebhookCode({
   return `curl -X POST \\
   "${baseUrl}" \\
   -H 'Content-Type: application/json' \\${
-    isAuth ? `\n  -H 'x-api-key: <your api key>' \\` : ""
-  }${
-    ENABLE_DATASTAX_LANGFLOW
-      ? `\n  -H 'Authorization: Bearer <YOUR_APPLICATION_TOKEN>' \\`
-      : ""
-  }
+    webhookAuthEnable ? `\n  -H 'x-api-key: <your api key>' \\` : ""
+  }${ENABLE_DATASTAX_LANGFLOW ? `${getApiSampleHeaders("curl")}` : ""}
   -d '{"any": "data"}'
   `.trim();
 }
@@ -60,8 +59,7 @@ export function getNewCurlCode({
   platform?: "unix" | "powershell";
   shouldDisplayApiKey: boolean;
 }): { steps: { title: string; code: string }[] } | string {
-  const { protocol, host } = customGetHostProtocol();
-  const baseUrl = `${protocol}//${host}`;
+  const baseUrl = getBaseUrl();
   const apiUrl = `${baseUrl}/api/v1/run/${endpointName || flowId}`;
 
   // Auto-detect if no platform specified
@@ -94,6 +92,7 @@ ${singleLinePayload}
 
 curl.exe --request POST \`
      --url "${apiUrl}?stream=false" \`
+${getApiSampleHeaders("curl")}
      --header "Content-Type: application/json" \`${
        authHeader ? "\n" + authHeader : ""
      }
@@ -138,14 +137,14 @@ curl.exe --request POST \`
       uploadCommands.push(
         `curl.exe --request POST \`
      --url "${baseUrl}/api/v1/files/upload/${flowId}" \`
-     ${shouldDisplayApiKey ? '--header "x-api-key: YOUR_API_KEY_HERE" \\' : ""}
+     ${shouldDisplayApiKey ? '--header "x-api-key: YOUR_API_KEY_HERE" \\' : getApiSampleHeaders("curl")}
      --form "file=@your_image_${uploadCounter}.jpg"`,
       );
     } else {
       uploadCommands.push(
         `curl --request POST \\
      --url "${baseUrl}/api/v1/files/upload/${flowId}" \\
-     ${shouldDisplayApiKey ? '--header "x-api-key: YOUR_API_KEY_HERE" \\' : ""}
+     ${shouldDisplayApiKey ? '--header "x-api-key: YOUR_API_KEY_HERE" \\' : getApiSampleHeaders("curl")}
      --form "file=@your_image_${uploadCounter}.jpg"`,
       );
     }
@@ -171,14 +170,14 @@ curl.exe --request POST \`
       uploadCommands.push(
         `curl.exe --request POST \`
      --url "${baseUrl}/api/v2/files" \`
-     ${shouldDisplayApiKey ? '--header "x-api-key: YOUR_API_KEY_HERE" \\' : ""}
+     ${shouldDisplayApiKey ? '--header "x-api-key: YOUR_API_KEY_HERE" \\' : getApiSampleHeaders("curl")}
      --form "file=@your_file_${uploadCounter}.pdf"`,
       );
     } else {
       uploadCommands.push(
         `curl --request POST \\
      --url "${baseUrl}/api/v2/files" \\
-     ${shouldDisplayApiKey ? '--header "x-api-key: YOUR_API_KEY_HERE" \\' : ""}
+     ${shouldDisplayApiKey ? '--header "x-api-key: YOUR_API_KEY_HERE" \\' : getApiSampleHeaders("curl")}
      --form "file=@your_file_${uploadCounter}.pdf"`,
       );
     }

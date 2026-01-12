@@ -1,0 +1,53 @@
+---
+title: Weaviate
+slug: /bundles-weaviate
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialConditionalParams from '@site/docs/_partial-conditional-params.mdx';
+import PartialVectorSearchResults from '@site/docs/_partial-vector-search-results.mdx';
+import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Weaviate** bundle.
+
+## Weaviate vector store
+
+The **Weaviate** component reads and writes to Weaviate vector stores using an instance of `Weaviate` vector store.
+
+<details>
+<summary>About vector store instances</summary>
+
+<PartialVectorStoreInstance />
+
+</details>
+
+<PartialVectorSearchResults />
+
+:::tip
+For a tutorial using a vector database in a flow, see [Create a vector RAG chatbot](/chat-with-rag).
+:::
+
+### Weaviate parameters
+
+You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
+
+<PartialParams />
+
+<PartialConditionalParams />
+
+For information about accepted values and functionality, see the [Weaviate documentation](https://weaviate.io/developers/weaviate) or inspect [component code](/concepts-components#component-code).
+
+| Name          | Type         | Description                               |
+|---------------|--------------|-------------------------------------------|
+| weaviate_url  | String | Input parameter. The default instance URL. |
+| api_key       | SecretString | Input parameter. The optional API key for authentication. |
+| index_name    | String | Input parameter. The optional index name. |
+| text_key      | String | Input parameter. The default text extraction key. |
+| input         | Data or DataFrame | Input parameter. The document or record.  |
+| cache_vector_store | Cache Vector Store | Input parameter. If `true`, the component caches the vector store in memory for faster reads. Default: Enabled (`true`). |
+| embedding     | Embeddings | Input parameter. Connect an [embedding model component](/components-embedding-models). |
+| number_of_results | Integer | Input parameter. The number of search results to return. Default: `4`. |
+| search_by_text | Boolean | Input parameter. Indicates whether to search by text. Default: Disabled (`false`). |

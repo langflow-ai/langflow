@@ -1,3 +1,4 @@
+import { ENABLE_KNOWLEDGE_BASES } from "@/customization/feature-flags";
 import BaseModal from "@/modals/baseModal";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { CardData } from "@/types/templates/types";
@@ -10,8 +11,20 @@ import multiAgentHorizontal from "../../../../assets/temp-pat-m-3.png";
 
 import TemplateGetStartedCardComponent from "../TemplateGetStartedCardComponent";
 
-export default function GetStartedComponent() {
+interface GetStartedComponentProps {
+  loading: boolean;
+  onFlowCreating: (loading: boolean) => void;
+}
+
+export default function GetStartedComponent({
+  loading,
+  onFlowCreating,
+}: GetStartedComponentProps) {
   const examples = useFlowsManagerStore((state) => state.examples);
+
+  const filteredExamples = examples.filter((example) => {
+    return !(!ENABLE_KNOWLEDGE_BASES && example.name?.includes("Knowledge"));
+  });
 
   // Define the card data
   const cardData: CardData[] = [
@@ -20,21 +33,25 @@ export default function GetStartedComponent() {
       bgHorizontalImage: memoryChatbotHorizontal,
       icon: "MessagesSquare",
       category: "prompting",
-      flow: examples.find((example) => example.name === "Basic Prompting"),
+      flow: filteredExamples.find(
+        (example) => example.name === "Basic Prompting",
+      ),
     },
     {
       bgImage: vectorRag,
       bgHorizontalImage: vectorRagHorizontal,
       icon: "Database",
       category: "RAG",
-      flow: examples.find((example) => example.name === "Vector Store RAG"),
+      flow: filteredExamples.find(
+        (example) => example.name === "Vector Store RAG",
+      ),
     },
     {
       bgImage: multiAgent,
       bgHorizontalImage: multiAgentHorizontal,
       icon: "Bot",
       category: "Agents",
-      flow: examples.find((example) => example.name === "Simple Agent"),
+      flow: filteredExamples.find((example) => example.name === "Simple Agent"),
     },
   ];
 
@@ -45,7 +62,12 @@ export default function GetStartedComponent() {
       </BaseModal.Header>
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-3">
         {cardData.map((card, index) => (
-          <TemplateGetStartedCardComponent key={index} {...card} />
+          <TemplateGetStartedCardComponent
+            key={index}
+            {...card}
+            loading={loading}
+            onFlowCreating={onFlowCreating}
+          />
         ))}
       </div>
     </div>

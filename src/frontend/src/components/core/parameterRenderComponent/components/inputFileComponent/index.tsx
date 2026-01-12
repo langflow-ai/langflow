@@ -182,14 +182,14 @@ export default function InputFileComponent({
       }
       handleOnNewValue({
         value: isList
-          ? (files
-              ?.filter((f) => selectedFiles.includes(f.path))
-              .map((f) => f.name) ?? [])
+          ? (files ?? [])
+              .filter((f) => selectedFiles.includes(f.path))
+              .map((f) => f.name)
           : (files?.find((f) => selectedFiles.includes(f.path))?.name ?? ""),
         file_path: isList
-          ? (files
-              ?.filter((f) => selectedFiles.includes(f.path))
-              .map((f) => f.path) ?? [])
+          ? (files ?? [])
+              .filter((f) => selectedFiles.includes(f.path))
+              .map((f) => f.path)
           : (files?.find((f) => selectedFiles.includes(f.path))?.path ?? ""),
       });
     }
@@ -215,10 +215,12 @@ export default function InputFileComponent({
                         value: isList
                           ? newSelectedFiles.map(
                               (file) =>
-                                files.find((f) => f.path === file)?.name,
+                                (files ?? []).find((f) => f.path === file)
+                                  ?.name,
                             )
-                          : (files.find((f) => f.path == newSelectedFiles[0]) ??
-                            ""),
+                          : ((files ?? []).find(
+                              (f) => f.path === newSelectedFiles[0],
+                            )?.name ?? ""),
                         file_path: isList
                           ? newSelectedFiles
                           : (newSelectedFiles[0] ?? ""),
@@ -233,9 +235,12 @@ export default function InputFileComponent({
                     handleOnNewValue({
                       value: isList
                         ? selectedFiles.map(
-                            (file) => files.find((f) => f.path === file)?.name,
+                            (file) =>
+                              (files ?? []).find((f) => f.path === file)?.name,
                           )
-                        : (files.find((f) => f.path == selectedFiles[0]) ?? ""),
+                        : ((files ?? []).find(
+                            (f) => f.path === selectedFiles[0],
+                          )?.name ?? ""),
                       file_path: isList
                         ? selectedFiles
                         : (selectedFiles[0] ?? ""),

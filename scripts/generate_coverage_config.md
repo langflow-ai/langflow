@@ -26,7 +26,7 @@ The script runs automatically in CI before backend tests via `.github/workflows/
 ## Files affected
 
 - **Input**: `src/frontend/src/utils/styleUtils.ts` (SIDEBAR_BUNDLES)
-- **Input**: `src/backend/base/langflow/components/**/*.py` (legacy components)  
+- **Input**: `src/backend/base/langflow/components/**/*.py` (legacy components)
 - **Output**: `src/backend/.coveragerc` (auto-generated, in .gitignore)
 
 ## Benefits

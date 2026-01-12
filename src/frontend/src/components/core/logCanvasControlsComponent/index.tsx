@@ -8,7 +8,7 @@ const LogCanvasControls = () => {
     <Panel
       data-testid="canvas_controls"
       className="react-flow__controls !m-2 rounded-md"
-      position="bottom-right"
+      position="bottom-left"
     >
       <FlowLogsModal>
         <Button

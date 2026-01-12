@@ -4,6 +4,7 @@ import type { MCPServerType } from "@/types/mcp";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
+import type { getMCPServersResponse } from "./use-get-mcp-servers";
 
 interface PatchMCPServerResponse {
   message: string;
@@ -43,6 +44,17 @@ export const usePatchMCPServer: useMutationFunctionType<
         payload,
       );
 
+      queryClient.setQueryData(
+        ["useGetMCPServers"],
+        (oldData: getMCPServersResponse = []) => {
+          return oldData.map((server) => {
+            return server.name === body.name
+              ? { ...server, toolsCount: null }
+              : server;
+          });
+        },
+      );
+
       return {
         message: res.data?.message || "MCP Server patched successfully",
       };
@@ -62,6 +74,8 @@ export const usePatchMCPServer: useMutationFunctionType<
     MCPServerType
   > = mutate(["usePatchMCPServer"], patchMCPServer, {
     ...options,
+    retry: 0,
+
     onSuccess: (data, variables, context) => {
       queryClient.invalidateQueries({
         queryKey: ["useGetMCPServers"],

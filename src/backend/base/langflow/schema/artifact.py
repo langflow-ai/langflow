@@ -2,9 +2,9 @@ from collections.abc import Generator
 from enum import Enum
 
 from fastapi.encoders import jsonable_encoder
+from lfx.log.logger import logger
 from pydantic import BaseModel
 
-from langflow.logging.logger import logger
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.encoders import CUSTOM_ENCODERS

@@ -4,20 +4,20 @@ from pathlib import Path
 from uuid import UUID, uuid4
 
 from aiofile import async_open
+from lfx.graph import Graph
+from lfx.graph.vertex.param_handler import ParameterHandler
+from lfx.log.logger import configure, logger
+from lfx.utils.util import update_settings
 from sqlmodel import delete, select, text
 
 from langflow.api.utils import cascade_delete_flow
-from langflow.graph import Graph
-from langflow.graph.vertex.param_handler import ParameterHandler
 from langflow.load.utils import replace_tweaks_with_env
-from langflow.logging.logger import configure, logger
 from langflow.processing.process import process_tweaks, run_graph
 from langflow.services.auth.utils import get_password_hash
 from langflow.services.cache.service import AsyncBaseCacheService
 from langflow.services.database.models import Flow, User, Variable
 from langflow.services.database.utils import initialize_database
 from langflow.services.deps import get_cache_service, get_storage_service, session_scope
-from langflow.utils.util import update_settings
 
 
 class LangflowRunnerExperimental:
@@ -169,7 +169,7 @@ class LangflowRunnerExperimental:
             user_id = str(uuid4())
             user = User(id=user_id, username=user_id, password=get_password_hash(str(uuid4())), is_active=True)
             session.add(user)
-            await session.commit()
+            await session.flush()
             await session.refresh(user)
             return user
 
@@ -180,7 +180,6 @@ class LangflowRunnerExperimental:
                 name=flow_dict.get("name"), id=UUID(flow_dict["id"]), data=flow_dict.get("data", {}), user_id=user_id
             )
             session.add(flow_db)
-            await session.commit()
 
     @staticmethod
     async def run_graph(

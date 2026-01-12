@@ -7,7 +7,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useDeleteFileV2 } from "@/controllers/API/queries/file-management/use-delete-file";
-import { useDuplicateFileV2 } from "@/controllers/API/queries/file-management/use-duplicate-file";
+import { useDuplicateFileV2 } from "@/customization/hooks/use-custom-duplicate-file";
 import { useCustomHandleSingleFileDownload } from "@/customization/hooks/use-custom-handle-single-file-download";
 import ConfirmationModal from "@/modals/confirmationModal";
 import useAlertStore from "@/stores/alertStore";

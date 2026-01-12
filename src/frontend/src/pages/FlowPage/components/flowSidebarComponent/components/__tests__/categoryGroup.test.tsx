@@ -12,6 +12,11 @@ jest.mock("@/components/ui/sidebar", () => ({
   SidebarGroupContent: ({ children }: any) => (
     <div data-testid="sidebar-group-content">{children}</div>
   ),
+  SidebarGroupLabel: ({ children, className }: any) => (
+    <div data-testid="sidebar-group-label" className={className}>
+      {children}
+    </div>
+  ),
   SidebarMenu: ({ children }: any) => (
     <div data-testid="sidebar-menu">{children}</div>
   ),
@@ -35,10 +40,28 @@ jest.mock("@/utils/styleUtils", () => ({
   ],
 }));
 
+// Mock the SearchConfigTrigger component
+jest.mock("../searchConfigTrigger", () => ({
+  SearchConfigTrigger: ({ showConfig, setShowConfig }: any) => (
+    <button
+      data-testid="search-config-trigger"
+      onClick={() => setShowConfig(!showConfig)}
+    >
+      Config Toggle: {showConfig.toString()}
+    </button>
+  ),
+}));
+
+// Mock feature flags
+jest.mock("@/customization/feature-flags", () => ({
+  ENABLE_NEW_SIDEBAR: true, // Set to true for SearchConfigTrigger tests
+}));
+
 describe("CategoryGroup", () => {
   const mockSetOpenCategories = jest.fn();
   const mockOnDragStart = jest.fn();
   const mockSensitiveSort = jest.fn();
+  const mockSetShowConfig = jest.fn();
 
   const mockAPIClass = {
     description: "Test component",
@@ -77,10 +100,13 @@ describe("CategoryGroup", () => {
     },
     onDragStart: mockOnDragStart,
     sensitiveSort: mockSensitiveSort,
+    showConfig: false,
+    setShowConfig: mockSetShowConfig,
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockSetShowConfig.mockClear();
   });
 
   describe("Basic Rendering", () => {
@@ -112,6 +138,25 @@ describe("CategoryGroup", () => {
       expect(
         screen.getByText("CategoryDisclosure for Category 2 - Open: false"),
       ).toBeInTheDocument();
+    });
+
+    it("should render SearchConfigTrigger with correct props", () => {
+      render(<CategoryGroup {...defaultProps} />);
+
+      expect(screen.getByTestId("search-config-trigger")).toBeInTheDocument();
+      expect(screen.getByText("Config Toggle: false")).toBeInTheDocument();
+    });
+
+    it("should render SearchConfigTrigger with showConfig true", () => {
+      const propsWithShowConfig = {
+        ...defaultProps,
+        showConfig: true,
+      };
+
+      render(<CategoryGroup {...propsWithShowConfig} />);
+
+      expect(screen.getByTestId("search-config-trigger")).toBeInTheDocument();
+      expect(screen.getByText("Config Toggle: true")).toBeInTheDocument();
     });
   });
 

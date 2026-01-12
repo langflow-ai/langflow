@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 import Markdown from "react-markdown";
-import rehypeMathjax from "rehype-mathjax";
+import rehypeMathjax from "rehype-mathjax/browser";
 import remarkGfm from "remark-gfm";
 import { BorderTrail } from "@/components/core/border-trail";
 import type { ContentBlock } from "@/types/chat";
@@ -171,7 +171,6 @@ export function ContentBlockDisplay({
                         <Markdown
                           className="text-sm font-semibold text-foreground"
                           remarkPlugins={[remarkGfm]}
-                          linkTarget="_blank"
                           rehypePlugins={[rehypeMathjax]}
                           components={{
                             p({ node, ...props }) {

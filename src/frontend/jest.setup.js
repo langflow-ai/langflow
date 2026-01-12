@@ -48,3 +48,59 @@ if (!Array.prototype.toSorted) {
     configurable: true,
   });
 }
+
+// Global module stubs to avoid ESM/context issues in unit tests
+jest.mock("@radix-ui/react-form", () => ({
+  __esModule: true,
+  Field: (props) => props.children,
+  Label: (props) => props.children,
+  Control: (props) => props.children,
+  Message: (props) => props.children,
+  Submit: (props) => props.children,
+  Root: (props) => props.children,
+}));
+
+jest.mock("react-markdown", () => ({ __esModule: true, default: () => null }));
+
+jest.mock("lucide-react/dynamicIconImports", () => ({}), { virtual: true });
+
+// Avoid darkStore import in tests via genericIconComponent
+jest.mock("@/components/common/genericIconComponent", () => ({
+  __esModule: true,
+  default: () => null,
+}));
+
+// Stub custom icon that uses JSX file to avoid transform issues in Jest
+jest.mock("@/icons/BotMessageSquare", () => ({
+  __esModule: true,
+  BotMessageSquareIcon: () => null,
+}));
+
+// Provide a minimal import.meta.env shim used in some stores when running under Jest
+if (typeof global.import === "undefined") {
+  global.import = { meta: { env: { CI: process.env.CI || false } } };
+} else if (!global.import.meta) {
+  global.import.meta = { env: { CI: process.env.CI || false } };
+} else if (!global.import.meta.env) {
+  global.import.meta.env = { CI: process.env.CI || false };
+}
+
+// Mock darkStore to avoid import.meta usage in modules during tests
+jest.mock("@/stores/darkStore", () => ({
+  __esModule: true,
+  useDarkStore: (selector) =>
+    selector
+      ? selector({
+          dark: false,
+          stars: 0,
+          version: "",
+          latestVersion: "",
+          discordCount: 0,
+          refreshLatestVersion: () => {},
+          setDark: () => {},
+          refreshVersion: () => {},
+          refreshStars: () => {},
+          refreshDiscordCount: () => {},
+        })
+      : {},
+}));

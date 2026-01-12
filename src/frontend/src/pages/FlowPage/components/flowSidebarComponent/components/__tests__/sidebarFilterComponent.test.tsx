@@ -44,9 +44,8 @@ describe("SidebarFilterComponent", () => {
   const mockResetFilters = jest.fn();
 
   const defaultProps = {
-    isInput: true,
-    type: "string",
-    color: "blue",
+    name: "Input",
+    description: "string",
     resetFilters: mockResetFilters,
   };
 
@@ -97,138 +96,116 @@ describe("SidebarFilterComponent", () => {
     });
   });
 
-  describe("Input/Output Display", () => {
-    it("should display 'Input:' when isInput is true", () => {
+  describe("Name Display", () => {
+    it("should display name correctly", () => {
       render(<SidebarFilterComponent {...defaultProps} />);
 
       expect(screen.getByText("Input:")).toBeInTheDocument();
-      expect(screen.queryByText("Output:")).not.toBeInTheDocument();
     });
 
-    it("should display 'Output:' when isInput is false", () => {
-      const propsWithOutput = { ...defaultProps, isInput: false };
-      render(<SidebarFilterComponent {...propsWithOutput} />);
+    it("should display different names correctly", () => {
+      const propsWithDifferentName = { ...defaultProps, name: "Output" };
+      render(<SidebarFilterComponent {...propsWithDifferentName} />);
 
       expect(screen.getByText("Output:")).toBeInTheDocument();
       expect(screen.queryByText("Input:")).not.toBeInTheDocument();
     });
 
-    it("should display correct label for input", () => {
-      render(<SidebarFilterComponent {...defaultProps} />);
+    it("should display custom names correctly", () => {
+      const propsWithCustomName = { ...defaultProps, name: "Custom Filter" };
+      render(<SidebarFilterComponent {...propsWithCustomName} />);
 
-      expect(screen.getByText("Input:")).toBeInTheDocument();
+      expect(screen.getByText("Custom Filter:")).toBeInTheDocument();
     });
 
-    it("should display correct label for output", () => {
-      const propsWithOutput = { ...defaultProps, isInput: false };
-      render(<SidebarFilterComponent {...propsWithOutput} />);
+    it("should handle empty names", () => {
+      const propsWithEmptyName = { ...defaultProps, name: "" };
+      render(<SidebarFilterComponent {...propsWithEmptyName} />);
 
-      expect(screen.getByText("Output:")).toBeInTheDocument();
+      expect(screen.getByText(":")).toBeInTheDocument();
     });
   });
 
-  describe("Type Display", () => {
-    it("should display single type correctly", () => {
+  describe("Description Display", () => {
+    it("should display single description correctly", () => {
       render(<SidebarFilterComponent {...defaultProps} />);
 
       expect(screen.getByText("string")).toBeInTheDocument();
     });
 
-    it("should display multiple types correctly", () => {
-      const propsWithMultipleTypes = {
+    it("should display multiple descriptions correctly", () => {
+      const propsWithMultipleDescriptions = {
         ...defaultProps,
-        type: "string\nint\nboolean",
+        description: "string\nint\nboolean",
       };
 
-      render(<SidebarFilterComponent {...propsWithMultipleTypes} />);
+      render(<SidebarFilterComponent {...propsWithMultipleDescriptions} />);
 
       expect(screen.getByText("string, int, boolean")).toBeInTheDocument();
     });
 
-    it("should handle empty type", () => {
-      const propsWithEmptyType = { ...defaultProps, type: "" };
-      render(<SidebarFilterComponent {...propsWithEmptyType} />);
+    it("should handle empty description", () => {
+      const propsWithEmptyDescription = { ...defaultProps, description: "" };
+      render(<SidebarFilterComponent {...propsWithEmptyDescription} />);
 
       // Should not crash
       expect(screen.getByTestId("icon-ListFilter")).toBeInTheDocument();
     });
 
-    it("should handle type with special characters", () => {
-      const propsWithSpecialType = { ...defaultProps, type: "List[str]" };
-      render(<SidebarFilterComponent {...propsWithSpecialType} />);
+    it("should handle description with special characters", () => {
+      const propsWithSpecialDescription = {
+        ...defaultProps,
+        description: "List[str]",
+      };
+      render(<SidebarFilterComponent {...propsWithSpecialDescription} />);
 
       expect(screen.getByText("List[str]")).toBeInTheDocument();
     });
   });
 
   describe("Pluralization", () => {
-    it("should use singular form for single type", () => {
+    it("should use singular form for single description", () => {
       render(<SidebarFilterComponent {...defaultProps} />);
 
       expect(screen.getByText("Input:")).toBeInTheDocument();
       expect(screen.queryByText("Inputs:")).not.toBeInTheDocument();
     });
 
-    it("should use plural form for multiple types", () => {
-      const propsWithMultipleTypes = {
+    it("should use plural form for multiple descriptions", () => {
+      const propsWithMultipleDescriptions = {
         ...defaultProps,
-        type: "string\nint",
+        description: "string\nint",
       };
 
-      render(<SidebarFilterComponent {...propsWithMultipleTypes} />);
+      render(<SidebarFilterComponent {...propsWithMultipleDescriptions} />);
 
       expect(screen.getByText("Inputs:")).toBeInTheDocument();
       expect(screen.queryByText("Input:")).not.toBeInTheDocument();
     });
 
-    it("should use plural form for output with multiple types", () => {
-      const propsWithMultipleOutputTypes = {
+    it("should use plural form for any name with multiple descriptions", () => {
+      const propsWithMultipleDescriptions = {
         ...defaultProps,
-        isInput: false,
-        type: "string\nint\nfloat",
+        name: "Output",
+        description: "string\nint\nfloat",
       };
 
-      render(<SidebarFilterComponent {...propsWithMultipleOutputTypes} />);
+      render(<SidebarFilterComponent {...propsWithMultipleDescriptions} />);
 
       expect(screen.getByText("Outputs:")).toBeInTheDocument();
       expect(screen.queryByText("Output:")).not.toBeInTheDocument();
     });
 
-    it("should handle edge case with empty lines in type", () => {
+    it("should handle edge case with empty lines in description", () => {
       const propsWithEmptyLines = {
         ...defaultProps,
-        type: "string\n\nint",
+        description: "string\n\nint",
       };
 
       render(<SidebarFilterComponent {...propsWithEmptyLines} />);
 
-      // Should treat empty line as a separate type for pluralization
+      // Should treat empty line as a separate description for pluralization
       expect(screen.getByText("Inputs:")).toBeInTheDocument();
-    });
-  });
-
-  describe("Color Styling", () => {
-    it("should render with different color props", () => {
-      render(<SidebarFilterComponent {...defaultProps} />);
-
-      // Just verify component renders with color prop - inline styles are complex to test
-      expect(screen.getByTestId("icon-ListFilter")).toBeInTheDocument();
-    });
-
-    it("should handle different colors", () => {
-      const propsWithDifferentColor = { ...defaultProps, color: "red" };
-      render(<SidebarFilterComponent {...propsWithDifferentColor} />);
-
-      // Verify component renders without errors with different color
-      expect(screen.getByTestId("icon-ListFilter")).toBeInTheDocument();
-    });
-
-    it("should handle custom color values", () => {
-      const propsWithCustomColor = { ...defaultProps, color: "custom-green" };
-      render(<SidebarFilterComponent {...propsWithCustomColor} />);
-
-      // Verify component renders without errors with custom color
-      expect(screen.getByTestId("icon-ListFilter")).toBeInTheDocument();
     });
   });
 
@@ -297,7 +274,7 @@ describe("SidebarFilterComponent", () => {
       const tooltip = screen.getByTestId("tooltip");
 
       expect(container).toBeInTheDocument();
-      expect(container).toContainElement(iconContainer);
+      expect(container).toContainElement(iconContainer!);
       expect(container).toContainElement(tooltip);
       expect(tooltip).toContainElement(resetButton);
     });
@@ -360,34 +337,26 @@ describe("SidebarFilterComponent", () => {
   });
 
   describe("Props Handling", () => {
-    it("should handle different isInput values", () => {
+    it("should handle different name values", () => {
       const { rerender } = render(
-        <SidebarFilterComponent {...defaultProps} isInput={true} />,
+        <SidebarFilterComponent {...defaultProps} name="Input" />,
       );
       expect(screen.getByText("Input:")).toBeInTheDocument();
 
-      rerender(<SidebarFilterComponent {...defaultProps} isInput={false} />);
+      rerender(<SidebarFilterComponent {...defaultProps} name="Output" />);
       expect(screen.getByText("Output:")).toBeInTheDocument();
     });
 
-    it("should handle different type values", () => {
+    it("should handle different description values", () => {
       const { rerender } = render(
-        <SidebarFilterComponent {...defaultProps} type="string" />,
+        <SidebarFilterComponent {...defaultProps} description="string" />,
       );
       expect(screen.getByText("string")).toBeInTheDocument();
 
-      rerender(<SidebarFilterComponent {...defaultProps} type="number" />);
+      rerender(
+        <SidebarFilterComponent {...defaultProps} description="number" />,
+      );
       expect(screen.getByText("number")).toBeInTheDocument();
-    });
-
-    it("should handle different color values", () => {
-      const { rerender } = render(
-        <SidebarFilterComponent {...defaultProps} color="blue" />,
-      );
-      expect(screen.getByText("string")).toBeInTheDocument();
-
-      rerender(<SidebarFilterComponent {...defaultProps} color="green" />);
-      expect(screen.getByText("string")).toBeInTheDocument();
     });
 
     it("should handle missing resetFilters function gracefully", () => {
@@ -403,94 +372,103 @@ describe("SidebarFilterComponent", () => {
   });
 
   describe("Edge Cases", () => {
-    it("should handle very long type names", () => {
-      const propsWithLongType = {
+    it("should handle very long description names", () => {
+      const propsWithLongDescription = {
         ...defaultProps,
-        type: "VeryLongTypeNameThatExceedsNormalLength",
+        description: "VeryLongDescriptionNameThatExceedsNormalLength",
       };
 
-      render(<SidebarFilterComponent {...propsWithLongType} />);
+      render(<SidebarFilterComponent {...propsWithLongDescription} />);
 
       expect(
-        screen.getByText("VeryLongTypeNameThatExceedsNormalLength"),
+        screen.getByText("VeryLongDescriptionNameThatExceedsNormalLength"),
       ).toBeInTheDocument();
     });
 
-    it("should handle multiple very long type names", () => {
-      const propsWithMultipleLongTypes = {
+    it("should handle multiple very long description names", () => {
+      const propsWithMultipleLongDescriptions = {
         ...defaultProps,
-        type: "FirstVeryLongTypeName\nSecondVeryLongTypeName\nThirdVeryLongTypeName",
+        description:
+          "FirstVeryLongDescriptionName\nSecondVeryLongDescriptionName\nThirdVeryLongDescriptionName",
       };
 
-      render(<SidebarFilterComponent {...propsWithMultipleLongTypes} />);
+      render(<SidebarFilterComponent {...propsWithMultipleLongDescriptions} />);
 
       expect(
         screen.getByText(
-          "FirstVeryLongTypeName, SecondVeryLongTypeName, ThirdVeryLongTypeName",
+          "FirstVeryLongDescriptionName, SecondVeryLongDescriptionName, ThirdVeryLongDescriptionName",
         ),
       ).toBeInTheDocument();
     });
 
-    it("should handle types with newlines and commas", () => {
-      const propsWithComplexTypes = {
+    it("should handle descriptions with newlines and commas", () => {
+      const propsWithComplexDescriptions = {
         ...defaultProps,
-        type: "List[str, int]\nDict[str, Any]",
+        description: "List[str, int]\nDict[str, Any]",
       };
 
-      render(<SidebarFilterComponent {...propsWithComplexTypes} />);
+      render(<SidebarFilterComponent {...propsWithComplexDescriptions} />);
 
       expect(
         screen.getByText("List[str, int], Dict[str, Any]"),
       ).toBeInTheDocument();
     });
 
-    it("should handle empty color", () => {
-      const propsWithEmptyColor = { ...defaultProps, color: "" };
-      render(<SidebarFilterComponent {...propsWithEmptyColor} />);
+    it("should handle very long names", () => {
+      const propsWithLongName = {
+        ...defaultProps,
+        name: "VeryLongFilterNameThatMightCauseIssues",
+      };
+      render(<SidebarFilterComponent {...propsWithLongName} />);
 
-      // Verify component renders without errors with empty color
-      expect(screen.getByTestId("icon-ListFilter")).toBeInTheDocument();
+      // Verify component renders without errors with long name
+      expect(
+        screen.getByText("VeryLongFilterNameThatMightCauseIssues:"),
+      ).toBeInTheDocument();
     });
 
-    it("should handle single newline character as type", () => {
-      const propsWithNewlineType = { ...defaultProps, type: "\n" };
-      render(<SidebarFilterComponent {...propsWithNewlineType} />);
+    it("should handle single newline character as description", () => {
+      const propsWithNewlineDescription = {
+        ...defaultProps,
+        description: "\n",
+      };
+      render(<SidebarFilterComponent {...propsWithNewlineDescription} />);
 
       expect(screen.getByText("Inputs:")).toBeInTheDocument(); // Should be plural due to split
     });
   });
 
   describe("Text Content", () => {
-    it("should display correct text for input with single type", () => {
+    it("should display correct text for filter with single description", () => {
       render(<SidebarFilterComponent {...defaultProps} />);
 
       expect(screen.getByText("Input:")).toBeInTheDocument();
       expect(screen.getByText("string")).toBeInTheDocument();
     });
 
-    it("should display correct text for output with multiple types", () => {
-      const propsWithMultipleOutputTypes = {
+    it("should display correct text for filter with multiple descriptions", () => {
+      const propsWithMultipleDescriptions = {
         ...defaultProps,
-        isInput: false,
-        type: "str\nint\nfloat",
+        name: "Output",
+        description: "str\nint\nfloat",
       };
 
-      render(<SidebarFilterComponent {...propsWithMultipleOutputTypes} />);
+      render(<SidebarFilterComponent {...propsWithMultipleDescriptions} />);
 
       expect(screen.getByText("Outputs:")).toBeInTheDocument();
       expect(screen.getByText("str, int, float")).toBeInTheDocument();
     });
 
-    it("should join multiple types with commas and spaces", () => {
-      const propsWithMultipleTypes = {
+    it("should join multiple descriptions with commas and spaces", () => {
+      const propsWithMultipleDescriptions = {
         ...defaultProps,
-        type: "type1\ntype2\ntype3\ntype4",
+        description: "desc1\ndesc2\ndesc3\ndesc4",
       };
 
-      render(<SidebarFilterComponent {...propsWithMultipleTypes} />);
+      render(<SidebarFilterComponent {...propsWithMultipleDescriptions} />);
 
       expect(
-        screen.getByText("type1, type2, type3, type4"),
+        screen.getByText("desc1, desc2, desc3, desc4"),
       ).toBeInTheDocument();
     });
   });
@@ -515,9 +493,9 @@ describe("SidebarFilterComponent", () => {
   describe("Callback Functions", () => {
     it("should work with different resetFilters implementations", async () => {
       const user = userEvent.setup();
-      const customResetFilters = jest.fn((data) => {
-        // Custom implementation that might accept parameters
-        console.log("Custom reset", data);
+      const customResetFilters = jest.fn(() => {
+        // Custom implementation
+        console.log("Custom reset");
       });
 
       const propsWithCustomCallback = {

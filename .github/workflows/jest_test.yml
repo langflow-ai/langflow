@@ -18,7 +18,7 @@ on:
         type: string
 
 env:
-  NODE_VERSION: "21"
+  NODE_VERSION: "22"
 
 jobs:
   jest-unit-tests:
@@ -30,7 +30,7 @@ jobs:
       checks: write
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref || github.ref }}
 

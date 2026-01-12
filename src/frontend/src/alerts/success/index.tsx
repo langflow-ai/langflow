@@ -45,7 +45,7 @@ export default function SuccessAlert({
             />
           </div>
           <div className="ml-3">
-            <p className="success-alert-message line-clamp-2">{title}</p>
+            <p className="success-alert-message line-clamp-3">{title}</p>
           </div>
         </div>
       </div>

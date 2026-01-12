@@ -4,9 +4,9 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
-from langflow.components.vectorstores.local_db import LocalDBComponent
-from langflow.schema.data import Data
 from langflow.services.cache.utils import CACHE_DIR
+from lfx.components.vectorstores.local_db import LocalDBComponent
+from lfx.schema.data import Data
 
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
 
@@ -21,12 +21,14 @@ class TestLocalDBComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def default_kwargs(self, tmp_path: Path) -> dict[str, Any]:
         """Return the default kwargs for the component."""
-        from langflow.components.openai.openai import OpenAIEmbeddingsComponent
+        from lfx.components.openai.openai import OpenAIEmbeddingsComponent
 
-        if os.getenv("OPENAI_API_KEY") is None:
+        from tests.api_keys import get_openai_api_key
+
+        try:
+            api_key = get_openai_api_key()
+        except ValueError:
             pytest.skip("OPENAI_API_KEY is not set")
-
-        api_key = os.getenv("OPENAI_API_KEY")
 
         return {
             "embedding": OpenAIEmbeddingsComponent(openai_api_key=api_key).build_embeddings(),
@@ -370,7 +372,7 @@ class TestLocalDBComponent(ComponentTestBaseWithoutClient):
         updated_config = component.update_build_config(build_config, "new_collection", "existing_collections")
         assert updated_config["collection_name"]["value"] == "new_collection"
 
-    @patch("langflow.components.vectorstores.local_db.LocalDBComponent.list_existing_collections")
+    @patch("lfx.components.vectorstores.local_db.LocalDBComponent.list_existing_collections")
     def test_list_existing_collections(self, mock_list: MagicMock, component_class: type[LocalDBComponent]) -> None:
         """Test the list_existing_collections method."""
         mock_list.return_value = ["collection1", "collection2", "collection3"]
@@ -380,3 +382,28 @@ class TestLocalDBComponent(ComponentTestBaseWithoutClient):
 
         assert collections == ["collection1", "collection2", "collection3"]
         mock_list.assert_called_once()
+
+    def test_build_vector_store_disabled_in_astra_cloud(
+        self, component_class: type[LocalDBComponent], default_kwargs: dict[str, Any]
+    ) -> None:
+        """Test that build_vector_store raises an error when ASTRA_CLOUD_DISABLE_COMPONENT is true."""
+        with patch.dict(os.environ, {"ASTRA_CLOUD_DISABLE_COMPONENT": "true"}):
+            component: LocalDBComponent = component_class().set(**default_kwargs)
+
+            with pytest.raises(ValueError) as exc_info:  # noqa: PT011
+                component.build_vector_store()
+
+            # Verify the error message mentions cloud/astra
+            error_msg = str(exc_info.value).lower()
+            assert "astra" in error_msg or "cloud" in error_msg or "s3" in error_msg
+
+    def test_build_vector_store_works_when_not_in_astra_cloud(
+        self, component_class: type[LocalDBComponent], default_kwargs: dict[str, Any]
+    ) -> None:
+        """Test that build_vector_store works normally when ASTRA_CLOUD_DISABLE_COMPONENT is false."""
+        with patch.dict(os.environ, {"ASTRA_CLOUD_DISABLE_COMPONENT": "false"}):
+            component: LocalDBComponent = component_class().set(**default_kwargs)
+
+            # Should work without raising cloud-related errors
+            vector_store = component.build_vector_store()
+            assert vector_store is not None

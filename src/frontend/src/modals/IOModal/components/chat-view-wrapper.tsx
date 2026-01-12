@@ -13,7 +13,6 @@ export const ChatViewWrapper = ({
   sidebarOpen,
   currentFlowId,
   setSidebarOpen,
-  isPlayground,
   setvisibleSession,
   setSelectedViewField,
   messagesFetched,
@@ -21,7 +20,6 @@ export const ChatViewWrapper = ({
   sendMessage,
   canvasOpen,
   setOpen,
-  playgroundTitle,
   playgroundPage,
 }: ChatViewWrapperProps) => {
   return (
@@ -33,7 +31,7 @@ export const ChatViewWrapper = ({
     >
       <div
         className={cn(
-          "mb-4 flex h-[5%] items-center text-base font-semibold",
+          "flex h-10 shrink-0 items-center text-base font-semibold",
           playgroundPage ? "justify-between" : "lg:justify-start",
         )}
       >

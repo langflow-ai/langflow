@@ -5,9 +5,9 @@ from collections import OrderedDict
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
+from lfx.log.logger import logger
 from typing_extensions import override
 
-from langflow.logging.logger import logger
 from langflow.serialization.serialization import serialize
 from langflow.services.tracing.base import BaseTracer
 
@@ -16,8 +16,8 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from langchain.callbacks.base import BaseCallbackHandler
+    from lfx.graph.vertex.base import Vertex
 
-    from langflow.graph.vertex.base import Vertex
     from langflow.services.tracing.schema import Log
 
 

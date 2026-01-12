@@ -9,12 +9,12 @@ from uuid import UUID, uuid4
 import emoji
 from emoji import purely_emoji
 from fastapi import HTTPException, status
+from lfx.log.logger import logger
 from pydantic import BaseModel, ValidationInfo, field_serializer, field_validator
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy import Text, UniqueConstraint, text
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
-from langflow.logging.logger import logger
 from langflow.schema.data import Data
 
 if TYPE_CHECKING:
@@ -203,6 +203,7 @@ class Flow(FlowBase, table=True):  # type: ignore[call-arg]
             "name": serialized.pop("name"),
             "description": serialized.pop("description"),
             "updated_at": serialized.pop("updated_at"),
+            "folder_id": serialized.pop("folder_id"),
         }
         return Data(data=data)
 

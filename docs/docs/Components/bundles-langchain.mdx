@@ -5,7 +5,7 @@ slug: /bundles-langchain
 
 import Icon from "@site/src/components/icon";
 
-[Bundles](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
 
 This page describes the components that are available in the **LangChain** bundle.
 
@@ -30,7 +30,7 @@ For more information, see the [LangChain CSV agent documentation](https://python
 This component is based on the [**Agent** core component](/agents).
 
 This component creates an OpenAI Tools Agent.
-For more information, see the [LangChain OpenAI agent documentation](https://api.python.langchain.com/en/latest/agents/langchain.agents.openai_functions_agent.base.create_openai_functions_agent.html).
+For more information, see the [LangChain OpenAI agent documentation](https://python.langchain.com/api_reference/langchain/agents/langchain.agents.openai_functions_agent.base.create_openai_functions_agent.html).
 
 ### OpenAI Tools Agent parameters
 
@@ -52,7 +52,7 @@ For more information, see the [LangChain OpenAI agent documentation](https://api
 This component is based on the [**Agent** core component](/agents).
 
 This component creates an agent for interacting with OpenAPI services.
-For more information, see the [LangChain OpenAPI toolkit documentation](https://python.langchain.com/docs/integrations/tools/openapi/).
+For more information, see the [LangChain OpenAPI toolkit documentation](https://docs.langchain.com/oss/python/integrations/tools/openapi).
 
 ### OpenAPI Agent parameters
 
@@ -67,7 +67,7 @@ For more information, see the [LangChain OpenAPI toolkit documentation](https://
 
 ## Prompt Hub
 
-This component fetches prompts from the [LangChain Hub](https://docs.smith.langchain.com/old/category/prompt-hub).
+This component fetches prompts from the [LangChain Hub](https://docs.langchain.com/langsmith/manage-prompts#public-prompt-hub).
 
 Like the [**Prompt Template** core component](/components-prompts), additional fields are added to the component for each variable in the prompt.
 For example, the default prompt `efriis/my-first-prompt` adds fields for `profession` and `question`.
@@ -85,7 +85,7 @@ For example, the default prompt `efriis/my-first-prompt` adds fields for `profes
 This component is based on the [**Agent** core component](/agents).
 
 This component creates an agent for interacting with SQL databases.
-For more information, see the [LangChain SQL agent documentation](https://python.langchain.com/docs/tutorials/sql_qa/).
+For more information, see the [LangChain SQL agent documentation](https://docs.langchain.com/oss/python/langchain/sql-agent).
 
 ### SQL Agent parameters
 
@@ -106,11 +106,11 @@ For more information, see the [LangChain SQL agent documentation](https://python
 
 The LangChain **SQL Database** component establishes a connection to an SQL database.
 
-This component is different from the [**SQL Database** core component](/components-data#sql-database), which executes SQL queries on SQLAlchemy-compatible databases.
+This component is different from the [**SQL Database** core component](/sql-database), which executes SQL queries on SQLAlchemy-compatible databases.
 
 ## Text Splitters
 
-The LangChain bundle includes the following text splitter components:
+The **LangChain** bundle includes the following text splitter components:
 
 - **Character Text Splitter**
 - **Language Recursive Text Splitter**
@@ -123,7 +123,7 @@ The LangChain bundle includes the following text splitter components:
 This component is based on the [**Agent** core component](/agents).
 
 This component creates an agent for structured tool calling with various language models.
-For more information, see the [LangChain tool calling documentation](https://python.langchain.com/docs/concepts/tool_calling/).
+For more information, see the [LangChain tool calling documentation](https://docs.langchain.com/oss/python/langchain/agents#tools).
 
 ### Tool Calling Agent parameters
 
@@ -145,7 +145,7 @@ This component is based on the [**Agent** core component](/agents).
 
 This component creates an XML Agent using LangChain.
 The agent uses XML formatting for tool instructions to the LLM.
-For more information, see the [LangChain XML Agent documentation](https://python.langchain.com/api_reference/langchain/agents/langchain.agents.xml.base.XMLAgent.html).
+For more information, see the [LangChain XML Agent documentation](https://python.langchain.com/api_reference/langchain/agents/langchain.agents.xml.base.create_xml_agent.html).
 
 ### XML Agent parameters
 
@@ -158,7 +158,7 @@ For more information, see the [LangChain XML Agent documentation](https://python
 
 ## Other LangChain components
 
-Other components in the LangChain bundle include the following:
+Other components in the **LangChain** bundle include the following:
 
 - **Fake Embeddings**
 - **HTML Link Extractor**
@@ -167,8 +167,11 @@ Other components in the LangChain bundle include the following:
 
 ## Legacy LangChain components
 
-The following LangChain components are considered legacy.
-You can still use these components in your flows, but they are no longer maintained and they can be removed in future releases.
+import PartialLegacy from '@site/docs/_partial-legacy.mdx';
+
+<PartialLegacy />
+
+The following LangChain components are in legacy status:
 
 * **Conversation Chain**
 * **LLM Checker Chain**
@@ -176,48 +179,8 @@ You can still use these components in your flows, but they are no longer maintai
 * **Natural Language to SQL**
 * **Retrieval QA**
 * **Self Query Retriever**
+* **JSON Agent**
+* **Vector Store Info/Agent**
+* **VectorStoreRouterAgent**
 
-<details>
-<summary>JSON Agent</summary>
-
-This component creates a JSON agent from a JSON or YAML file and an LLM.
-
-It accepts the following parameters:
-
-| Name | Type | Description |
-|------|------|-------------|
-| llm | LanguageModel | Input parameter. The language model to use for the agent. |
-| path | File | Input parameter. The path to the JSON or YAML file. |
-| agent | AgentExecutor | Output parameter. The JSON agent instance. |
-
-</details>
-
-<details>
-<summary>Vector Store Info/Agent</summary>
-
-This component creates a Vector Store Agent using LangChain.
-
-It accepts the following parameters:
-
-| Name | Type | Description |
-|------|------|-------------|
-| llm | LanguageModel | Input parameter. The language model to use for the agent. |
-| vectorstore | VectorStoreInfo | Input parameter. The vector store information for the agent to use. |
-| agent | AgentExecutor | Output parameter. The Vector Store Agent instance. |
-
-</details>
-
-<details>
-<summary>VectorStoreRouterAgent</summary>
-
-This component creates a Vector Store Router Agent using LangChain.
-
-It accepts the following parameters:
-
-| Name | Type | Description |
-|------|------|-------------|
-| llm | LanguageModel | Input parameter. The language model to use for the agent. |
-| vectorstores | List[VectorStoreInfo] | Input parameter. The list of vector store information for the agent to route between. |
-| agent | AgentExecutor | Output parameter. The Vector Store Router Agent instance. |
-
-</details>
+To replace these components, consider other components in the **LangChain** bundle or general Langflow components, such as the [**Agent** component](/components-agents) or the [**SQL Database** component](/sql-database).

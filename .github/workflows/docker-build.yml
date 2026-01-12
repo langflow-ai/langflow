@@ -23,6 +23,11 @@ on:
         required: false
         type: string
         description: "Ref to check out. If not specified, will default to the main version or current branch."
+      warning_check:
+        required: true
+        type: boolean
+        description: "Warning - use docker-build-v2 unless you have a very valid reason for using this deprecated workflow. By setting to True, you acknowledge all risks of using a possibly breaking workflow."
+        default: false
 
   workflow_dispatch:
     inputs:
@@ -47,6 +52,11 @@ on:
         required: false
         type: string
         description: "Ref to check out. If not specified, will default to the main version or current branch."
+      warning_check:
+        description: "Warning - use docker-build-v2 unless you have a very valid reason for using this deprecated workflow. By setting to True, you acknowledge all risks of using a possibly breaking workflow."
+        required: true
+        type: boolean
+        default: false
 
 
 env:
@@ -60,6 +70,15 @@ jobs:
     outputs:
       version: ${{ steps.get-version-input.outputs.version || steps.get-version-base.outputs.version || steps.get-version-main.outputs.version }}
     steps:
+      - name: Verify warning check
+        run: |
+          if [[ "${{ inputs.warning_check }}" == "false" ]]; then
+            echo "Warning - use docker-build-v2 unless you have a very valid reason for using this deprecated workflow. By setting to True, you acknowledge all risks of using a possibly breaking workflow."
+            exit 1
+          else
+            echo "User has acknowledged the risks of using this deprecated workflow. Proceeding with build."
+          fi
+
       - name: Verify a main version exists
         if: ${{ inputs.main_version == '' }}
         run: |
@@ -68,7 +87,7 @@ jobs:
           exit 1
 
       - name: Check out the code at a specific ref
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref || inputs.main_version || github.ref }}
           persist-credentials: true
@@ -183,11 +202,11 @@ jobs:
             fi
           fi
   build:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
     needs: [get-version, setup]
     steps:
       - name: Check out the code at a specific ref
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref || inputs.main_version || github.ref }}
           persist-credentials: true
@@ -205,6 +224,20 @@ jobs:
           else
             uv sync --no-dev --no-sources
           fi
+
+      - name: Docker System Info and Cleanup
+        run: |
+          echo "=== Docker System Usage Before Cleanup ==="
+          docker system df || true
+          docker buildx du || true
+
+          echo "=== Cleaning up Docker System ==="
+          docker system prune -af --volumes || true
+          docker buildx prune -af || true
+
+          echo "=== Docker System Usage After Cleanup ==="
+          docker system df || true
+          docker buildx du || true
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -256,7 +289,7 @@ jobs:
 
   build_components:
     if: ${{ inputs.release_type == 'main' }}
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
     permissions:
       packages: write
     needs: [build, get-version]
@@ -282,9 +315,23 @@ jobs:
             langflow_image: ghcr.io/langflow-ai/langflow:${{ needs.get-version.outputs.version }}
     steps:
       - name: Check out the code at a specific ref
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref || inputs.main_version || github.ref }}
+
+      - name: Docker System Info and Cleanup
+        run: |
+          echo "=== Docker System Usage Before Cleanup ==="
+          docker system df || true
+          docker buildx du || true
+
+          echo "=== Cleaning up Docker System ==="
+          docker system prune -af --volumes || true
+          docker buildx prune -af || true
+
+          echo "=== Docker System Usage After Cleanup ==="
+          docker system df || true
+          docker buildx du || true
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -339,7 +386,7 @@ jobs:
           - "3.13"
     steps:
       - name: Check out the code at a specific ref
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref || inputs.main_version || github.ref }}
       - name: "Setup Environment"

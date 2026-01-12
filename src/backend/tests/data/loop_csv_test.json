@@ -1,0 +1,2666 @@
+{
+  "data": {
+    "edges": [
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "File",
+            "id": "File-aTpU1",
+            "name": "dataframe",
+            "output_types": [
+              "DataFrame"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "data",
+            "id": "LoopComponent-kBJgN",
+            "inputTypes": [
+              "DataFrame"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__File-aTpU1{œdataTypeœ:œFileœ,œidœ:œFile-aTpU1œ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-LoopComponent-kBJgN{œfieldNameœ:œdataœ,œidœ:œLoopComponent-kBJgNœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "File-aTpU1",
+        "sourceHandle": "{œdataTypeœ:œFileœ,œidœ:œFile-aTpU1œ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}",
+        "target": "LoopComponent-kBJgN",
+        "targetHandle": "{œfieldNameœ:œdataœ,œidœ:œLoopComponent-kBJgNœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "LoopComponent",
+            "id": "LoopComponent-kBJgN",
+            "name": "item",
+            "output_types": [
+              "Data"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "data",
+            "id": "DataOperations-fFxSd",
+            "inputTypes": [
+              "Data"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__LoopComponent-kBJgN{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-kBJgNœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}-DataOperations-fFxSd{œfieldNameœ:œdataœ,œidœ:œDataOperations-fFxSdœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "LoopComponent-kBJgN",
+        "sourceHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-kBJgNœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}",
+        "target": "DataOperations-fFxSd",
+        "targetHandle": "{œfieldNameœ:œdataœ,œidœ:œDataOperations-fFxSdœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "LoopComponent",
+            "id": "LoopComponent-kBJgN",
+            "name": "item",
+            "output_types": [
+              "Data"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "data",
+            "id": "DataOperations-1ZBoZ",
+            "inputTypes": [
+              "Data"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__LoopComponent-kBJgN{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-kBJgNœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}-DataOperations-1ZBoZ{œfieldNameœ:œdataœ,œidœ:œDataOperations-1ZBoZœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "LoopComponent-kBJgN",
+        "sourceHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-kBJgNœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}",
+        "target": "DataOperations-1ZBoZ",
+        "targetHandle": "{œfieldNameœ:œdataœ,œidœ:œDataOperations-1ZBoZœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "DataOperations",
+            "id": "DataOperations-fFxSd",
+            "name": "data_output",
+            "output_types": [
+              "Data"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_data",
+            "id": "TypeConverterComponent-z73yT",
+            "inputTypes": [
+              "Message",
+              "Data",
+              "DataFrame"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__DataOperations-fFxSd{œdataTypeœ:œDataOperationsœ,œidœ:œDataOperations-fFxSdœ,œnameœ:œdata_outputœ,œoutput_typesœ:[œDataœ]}-TypeConverterComponent-z73yT{œfieldNameœ:œinput_dataœ,œidœ:œTypeConverterComponent-z73yTœ,œinputTypesœ:[œMessageœ,œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "DataOperations-fFxSd",
+        "sourceHandle": "{œdataTypeœ:œDataOperationsœ,œidœ:œDataOperations-fFxSdœ,œnameœ:œdata_outputœ,œoutput_typesœ:[œDataœ]}",
+        "target": "TypeConverterComponent-z73yT",
+        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œTypeConverterComponent-z73yTœ,œinputTypesœ:[œMessageœ,œDataœ,œDataFrameœ],œtypeœ:œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "DataOperations",
+            "id": "DataOperations-1ZBoZ",
+            "name": "data_output",
+            "output_types": [
+              "Data"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_data",
+            "id": "TypeConverterComponent-De2Qe",
+            "inputTypes": [
+              "Message",
+              "Data",
+              "DataFrame"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__DataOperations-1ZBoZ{œdataTypeœ:œDataOperationsœ,œidœ:œDataOperations-1ZBoZœ,œnameœ:œdata_outputœ,œoutput_typesœ:[œDataœ]}-TypeConverterComponent-De2Qe{œfieldNameœ:œinput_dataœ,œidœ:œTypeConverterComponent-De2Qeœ,œinputTypesœ:[œMessageœ,œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "DataOperations-1ZBoZ",
+        "sourceHandle": "{œdataTypeœ:œDataOperationsœ,œidœ:œDataOperations-1ZBoZœ,œnameœ:œdata_outputœ,œoutput_typesœ:[œDataœ]}",
+        "target": "TypeConverterComponent-De2Qe",
+        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œTypeConverterComponent-De2Qeœ,œinputTypesœ:[œMessageœ,œDataœ,œDataFrameœ],œtypeœ:œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "TypeConverterComponent",
+            "id": "TypeConverterComponent-z73yT",
+            "name": "message_output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "letter",
+            "id": "Prompt Template-JXGuO",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "xy-edge__TypeConverterComponent-z73yT{œdataTypeœ:œTypeConverterComponentœ,œidœ:œTypeConverterComponent-z73yTœ,œnameœ:œmessage_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt Template-JXGuO{œfieldNameœ:œletterœ,œidœ:œPrompt Template-JXGuOœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "TypeConverterComponent-z73yT",
+        "sourceHandle": "{œdataTypeœ:œTypeConverterComponentœ,œidœ:œTypeConverterComponent-z73yTœ,œnameœ:œmessage_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt Template-JXGuO",
+        "targetHandle": "{œfieldNameœ:œletterœ,œidœ:œPrompt Template-JXGuOœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "TypeConverterComponent",
+            "id": "TypeConverterComponent-De2Qe",
+            "name": "message_output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "number",
+            "id": "Prompt Template-JXGuO",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "xy-edge__TypeConverterComponent-De2Qe{œdataTypeœ:œTypeConverterComponentœ,œidœ:œTypeConverterComponent-De2Qeœ,œnameœ:œmessage_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt Template-JXGuO{œfieldNameœ:œnumberœ,œidœ:œPrompt Template-JXGuOœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "TypeConverterComponent-De2Qe",
+        "sourceHandle": "{œdataTypeœ:œTypeConverterComponentœ,œidœ:œTypeConverterComponent-De2Qeœ,œnameœ:œmessage_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt Template-JXGuO",
+        "targetHandle": "{œfieldNameœ:œnumberœ,œidœ:œPrompt Template-JXGuOœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "TypeConverterComponent",
+            "id": "TypeConverterComponent-NCR14",
+            "name": "data_output",
+            "output_types": [
+              "Data"
+            ]
+          },
+          "targetHandle": {
+            "dataType": "LoopComponent",
+            "id": "LoopComponent-kBJgN",
+            "name": "item",
+            "output_types": [
+              "Data"
+            ]
+          }
+        },
+        "id": "xy-edge__TypeConverterComponent-NCR14{œdataTypeœ:œTypeConverterComponentœ,œidœ:œTypeConverterComponent-NCR14œ,œnameœ:œdata_outputœ,œoutput_typesœ:[œDataœ]}-LoopComponent-kBJgN{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-kBJgNœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}",
+        "selected": false,
+        "source": "TypeConverterComponent-NCR14",
+        "sourceHandle": "{œdataTypeœ:œTypeConverterComponentœ,œidœ:œTypeConverterComponent-NCR14œ,œnameœ:œdata_outputœ,œoutput_typesœ:[œDataœ]}",
+        "target": "LoopComponent-kBJgN",
+        "targetHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-kBJgNœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "LoopComponent",
+            "id": "LoopComponent-kBJgN",
+            "name": "done",
+            "output_types": [
+              "DataFrame"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-MZask",
+            "inputTypes": [
+              "Data",
+              "DataFrame",
+              "Message"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__LoopComponent-kBJgN{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-kBJgNœ,œnameœ:œdoneœ,œoutput_typesœ:[œDataFrameœ]}-ChatOutput-MZask{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-MZaskœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "LoopComponent-kBJgN",
+        "sourceHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-kBJgNœ,œnameœ:œdoneœ,œoutput_typesœ:[œDataFrameœ]}",
+        "target": "ChatOutput-MZask",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-MZaskœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt Template",
+            "id": "Prompt Template-JXGuO",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-tJacB",
+            "inputTypes": [
+              "Data",
+              "DataFrame",
+              "Message"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__Prompt Template-JXGuO{œdataTypeœ:œPrompt Templateœ,œidœ:œPrompt Template-JXGuOœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-tJacB{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-tJacBœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "Prompt Template-JXGuO",
+        "sourceHandle": "{œdataTypeœ:œPrompt Templateœ,œidœ:œPrompt Template-JXGuOœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-tJacB",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-tJacBœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatOutput",
+            "id": "ChatOutput-tJacB",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_data",
+            "id": "TypeConverterComponent-NCR14",
+            "inputTypes": [
+              "Message",
+              "Data",
+              "DataFrame"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__ChatOutput-tJacB{œdataTypeœ:œChatOutputœ,œidœ:œChatOutput-tJacBœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-TypeConverterComponent-NCR14{œfieldNameœ:œinput_dataœ,œidœ:œTypeConverterComponent-NCR14œ,œinputTypesœ:[œMessageœ,œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "ChatOutput-tJacB",
+        "sourceHandle": "{œdataTypeœ:œChatOutputœ,œidœ:œChatOutput-tJacBœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "TypeConverterComponent-NCR14",
+        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œTypeConverterComponent-NCR14œ,œinputTypesœ:[œMessageœ,œDataœ,œDataFrameœ],œtypeœ:œotherœ}"
+      }
+    ],
+    "nodes": [
+      {
+        "data": {
+          "id": "File-aTpU1",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "category": "data",
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Loads content from one or more files.",
+            "display_name": "File",
+            "documentation": "https://docs.langflow.org/components-data#file",
+            "edited": false,
+            "field_order": [
+              "path",
+              "file_path",
+              "separator",
+              "silent_errors",
+              "delete_server_file_after_processing",
+              "ignore_unsupported_extensions",
+              "ignore_unspecified_files",
+              "advanced_mode",
+              "pipeline",
+              "ocr_engine",
+              "md_image_placeholder",
+              "md_page_break_placeholder",
+              "doc_key",
+              "use_multithreading",
+              "concurrency_multithreading",
+              "markdown"
+            ],
+            "frozen": false,
+            "icon": "file-text",
+            "key": "File",
+            "last_updated": "2025-10-09T12:36:30.062Z",
+            "legacy": false,
+            "lf_version": "1.6.0",
+            "metadata": {},
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Structured Content",
+                "group_outputs": false,
+                "hidden": null,
+                "method": "load_files_structured",
+                "name": "dataframe",
+                "options": null,
+                "required_inputs": null,
+                "selected": "DataFrame",
+                "tool_mode": true,
+                "types": [
+                  "DataFrame"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Raw Content",
+                "group_outputs": false,
+                "method": "load_files_message",
+                "name": "message",
+                "options": null,
+                "required_inputs": null,
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "File Path",
+                "group_outputs": false,
+                "hidden": null,
+                "method": "load_files_path",
+                "name": "path",
+                "options": null,
+                "required_inputs": null,
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "score": 2.220446049250313e-16,
+            "template": {
+              "_type": "Component",
+              "advanced_mode": {
+                "_input_type": "BoolInput",
+                "advanced": false,
+                "display_name": "Advanced Parser",
+                "dynamic": false,
+                "info": "Enable advanced document processing and export with Docling for PDFs, images, and office documents. Available only for single file processing.Note that advanced document processing can consume significant resources.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "advanced_mode",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "\"\"\"Enhanced file component with Docling support and process isolation.\n\nNotes:\n-----\n- ALL Docling parsing/export runs in a separate OS process to prevent memory\n  growth and native library state from impacting the main Langflow process.\n- Standard text/structured parsing continues to use existing BaseFileComponent\n  utilities (and optional threading via `parallel_load_data`).\n\"\"\"\n\nfrom __future__ import annotations\n\nimport json\nimport subprocess\nimport sys\nimport textwrap\nfrom copy import deepcopy\nfrom typing import TYPE_CHECKING, Any\n\nfrom langflow.base.data.base_file import BaseFileComponent\nfrom langflow.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_file_to_data\nfrom langflow.io import (\n    BoolInput,\n    DropdownInput,\n    FileInput,\n    IntInput,\n    MessageTextInput,\n    Output,\n    StrInput,\n)\nfrom langflow.schema.data import Data\nfrom langflow.schema.message import Message\n\nif TYPE_CHECKING:\n    from langflow.schema import DataFrame\n\n\nclass FileComponent(BaseFileComponent):\n    \"\"\"File component with optional Docling processing (isolated in a subprocess).\"\"\"\n\n    display_name = \"File\"\n    description = \"Loads content from one or more files.\"\n    documentation: str = \"https://docs.langflow.org/components-data#file\"\n    icon = \"file-text\"\n    name = \"File\"\n\n    # Docling-supported/compatible extensions; TEXT_FILE_TYPES are supported by the base loader.\n    VALID_EXTENSIONS = [\n        *TEXT_FILE_TYPES,\n        \"adoc\",\n        \"asciidoc\",\n        \"asc\",\n        \"bmp\",\n        \"dotx\",\n        \"dotm\",\n        \"docm\",\n        \"jpeg\",\n        \"png\",\n        \"potx\",\n        \"ppsx\",\n        \"pptm\",\n        \"potm\",\n        \"ppsm\",\n        \"pptx\",\n        \"tiff\",\n        \"xls\",\n        \"xlsx\",\n        \"xhtml\",\n        \"webp\",\n    ]\n\n    # Fixed export settings used when markdown export is requested.\n    EXPORT_FORMAT = \"Markdown\"\n    IMAGE_MODE = \"placeholder\"\n\n    # ---- Inputs / Outputs (kept as close to original as possible) -------------------\n    _base_inputs = deepcopy(BaseFileComponent._base_inputs)\n    for input_item in _base_inputs:\n        if isinstance(input_item, FileInput) and input_item.name == \"path\":\n            input_item.real_time_refresh = True\n            break\n\n    inputs = [\n        *_base_inputs,\n        BoolInput(\n            name=\"advanced_mode\",\n            display_name=\"Advanced Parser\",\n            value=False,\n            real_time_refresh=True,\n            info=(\n                \"Enable advanced document processing and export with Docling for PDFs, images, and office documents. \"\n                \"Available only for single file processing.\"\n                \"Note that advanced document processing can consume significant resources.\"\n            ),\n            show=False,\n        ),\n        DropdownInput(\n            name=\"pipeline\",\n            display_name=\"Pipeline\",\n            info=\"Docling pipeline to use\",\n            options=[\"standard\", \"vlm\"],\n            value=\"standard\",\n            advanced=True,\n            real_time_refresh=True,\n        ),\n        DropdownInput(\n            name=\"ocr_engine\",\n            display_name=\"OCR Engine\",\n            info=\"OCR engine to use. Only available when pipeline is set to 'standard'.\",\n            options=[\"None\", \"easyocr\"],\n            value=\"easyocr\",\n            show=False,\n            advanced=True,\n        ),\n        StrInput(\n            name=\"md_image_placeholder\",\n            display_name=\"Image placeholder\",\n            info=\"Specify the image placeholder for markdown exports.\",\n            value=\"<!-- image -->\",\n            advanced=True,\n            show=False,\n        ),\n        StrInput(\n            name=\"md_page_break_placeholder\",\n            display_name=\"Page break placeholder\",\n            info=\"Add this placeholder between pages in the markdown output.\",\n            value=\"\",\n            advanced=True,\n            show=False,\n        ),\n        MessageTextInput(\n            name=\"doc_key\",\n            display_name=\"Doc Key\",\n            info=\"The key to use for the DoclingDocument column.\",\n            value=\"doc\",\n            advanced=True,\n            show=False,\n        ),\n        # Deprecated input retained for backward-compatibility.\n        BoolInput(\n            name=\"use_multithreading\",\n            display_name=\"[Deprecated] Use Multithreading\",\n            advanced=True,\n            value=True,\n            info=\"Set 'Processing Concurrency' greater than 1 to enable multithreading.\",\n        ),\n        IntInput(\n            name=\"concurrency_multithreading\",\n            display_name=\"Processing Concurrency\",\n            advanced=True,\n            info=\"When multiple files are being processed, the number of files to process concurrently.\",\n            value=1,\n        ),\n        BoolInput(\n            name=\"markdown\",\n            display_name=\"Markdown Export\",\n            info=\"Export processed documents to Markdown format. Only available when advanced mode is enabled.\",\n            value=False,\n            show=False,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Raw Content\", name=\"message\", method=\"load_files_message\"),\n    ]\n\n    # ------------------------------ UI helpers --------------------------------------\n\n    def _path_value(self, template: dict) -> list[str]:\n        \"\"\"Return the list of currently selected file paths from the template.\"\"\"\n        return template.get(\"path\", {}).get(\"file_path\", [])\n\n    def update_build_config(\n        self,\n        build_config: dict[str, Any],\n        field_value: Any,\n        field_name: str | None = None,\n    ) -> dict[str, Any]:\n        \"\"\"Show/hide Advanced Parser and related fields based on selection context.\"\"\"\n        if field_name == \"path\":\n            paths = self._path_value(build_config)\n            file_path = paths[0] if paths else \"\"\n            file_count = len(field_value) if field_value else 0\n\n            # Advanced mode only for single (non-tabular) file\n            allow_advanced = file_count == 1 and not file_path.endswith((\".csv\", \".xlsx\", \".parquet\"))\n            build_config[\"advanced_mode\"][\"show\"] = allow_advanced\n            if not allow_advanced:\n                build_config[\"advanced_mode\"][\"value\"] = False\n                for f in (\"pipeline\", \"ocr_engine\", \"doc_key\", \"md_image_placeholder\", \"md_page_break_placeholder\"):\n                    if f in build_config:\n                        build_config[f][\"show\"] = False\n\n        # Docling Processing\n        elif field_name == \"advanced_mode\":\n            for f in (\"pipeline\", \"ocr_engine\", \"doc_key\", \"md_image_placeholder\", \"md_page_break_placeholder\"):\n                if f in build_config:\n                    build_config[f][\"show\"] = bool(field_value)\n\n        elif field_name == \"pipeline\":\n            if field_value == \"standard\":\n                build_config[\"ocr_engine\"][\"show\"] = True\n                build_config[\"ocr_engine\"][\"value\"] = \"easyocr\"\n            else:\n                build_config[\"ocr_engine\"][\"show\"] = False\n                build_config[\"ocr_engine\"][\"value\"] = \"None\"\n\n        return build_config\n\n    def update_outputs(self, frontend_node: dict[str, Any], field_name: str, field_value: Any) -> dict[str, Any]:  # noqa: ARG002\n        \"\"\"Dynamically show outputs based on file count/type and advanced mode.\"\"\"\n        if field_name not in [\"path\", \"advanced_mode\", \"pipeline\"]:\n            return frontend_node\n\n        template = frontend_node.get(\"template\", {})\n        paths = self._path_value(template)\n        if not paths:\n            return frontend_node\n\n        frontend_node[\"outputs\"] = []\n        if len(paths) == 1:\n            file_path = paths[0] if field_name == \"path\" else frontend_node[\"template\"][\"path\"][\"file_path\"][0]\n            if file_path.endswith((\".csv\", \".xlsx\", \".parquet\")):\n                frontend_node[\"outputs\"].append(\n                    Output(display_name=\"Structured Content\", name=\"dataframe\", method=\"load_files_structured\"),\n                )\n            elif file_path.endswith(\".json\"):\n                frontend_node[\"outputs\"].append(\n                    Output(display_name=\"Structured Content\", name=\"json\", method=\"load_files_json\"),\n                )\n\n            advanced_mode = frontend_node.get(\"template\", {}).get(\"advanced_mode\", {}).get(\"value\", False)\n            if advanced_mode:\n                frontend_node[\"outputs\"].append(\n                    Output(display_name=\"Structured Output\", name=\"advanced_dataframe\", method=\"load_files_dataframe\"),\n                )\n                frontend_node[\"outputs\"].append(\n                    Output(display_name=\"Markdown\", name=\"advanced_markdown\", method=\"load_files_markdown\"),\n                )\n                frontend_node[\"outputs\"].append(\n                    Output(display_name=\"File Path\", name=\"path\", method=\"load_files_path\"),\n                )\n            else:\n                frontend_node[\"outputs\"].append(\n                    Output(display_name=\"Raw Content\", name=\"message\", method=\"load_files_message\"),\n                )\n                frontend_node[\"outputs\"].append(\n                    Output(display_name=\"File Path\", name=\"path\", method=\"load_files_path\"),\n                )\n        else:\n            # Multiple files => DataFrame output; advanced parser disabled\n            frontend_node[\"outputs\"].append(Output(display_name=\"Files\", name=\"dataframe\", method=\"load_files\"))\n\n        return frontend_node\n\n    # ------------------------------ Core processing ----------------------------------\n\n    def _is_docling_compatible(self, file_path: str) -> bool:\n        \"\"\"Lightweight extension gate for Docling-compatible types.\"\"\"\n        docling_exts = (\n            \".adoc\",\n            \".asciidoc\",\n            \".asc\",\n            \".bmp\",\n            \".csv\",\n            \".dotx\",\n            \".dotm\",\n            \".docm\",\n            \".docx\",\n            \".htm\",\n            \".html\",\n            \".jpeg\",\n            \".json\",\n            \".md\",\n            \".pdf\",\n            \".png\",\n            \".potx\",\n            \".ppsx\",\n            \".pptm\",\n            \".potm\",\n            \".ppsm\",\n            \".pptx\",\n            \".tiff\",\n            \".txt\",\n            \".xls\",\n            \".xlsx\",\n            \".xhtml\",\n            \".xml\",\n            \".webp\",\n        )\n        return file_path.lower().endswith(docling_exts)\n\n    def _process_docling_in_subprocess(self, file_path: str) -> Data | None:\n        \"\"\"Run Docling in a separate OS process and map the result to a Data object.\n\n        We avoid multiprocessing pickling by launching `python -c \"<script>\"` and\n        passing JSON config via stdin. The child prints a JSON result to stdout.\n        \"\"\"\n        if not file_path:\n            return None\n\n        args: dict[str, Any] = {\n            \"file_path\": file_path,\n            \"markdown\": bool(self.markdown),\n            \"image_mode\": str(self.IMAGE_MODE),\n            \"md_image_placeholder\": str(self.md_image_placeholder),\n            \"md_page_break_placeholder\": str(self.md_page_break_placeholder),\n            \"pipeline\": str(self.pipeline),\n            \"ocr_engine\": (\n                self.ocr_engine if self.ocr_engine and self.ocr_engine != \"None\" and self.pipeline != \"vlm\" else None\n            ),\n        }\n\n        self.log(f\"Starting Docling subprocess for file: {file_path}\")\n        self.log(args)\n\n        # Child script for isolating the docling processing\n        child_script = textwrap.dedent(\n            r\"\"\"\n            import json, sys\n\n            def try_imports():\n                # Strategy 1: latest layout\n                try:\n                    from docling.datamodel.base_models import ConversionStatus, InputFormat  # type: ignore\n                    from docling.document_converter import DocumentConverter  # type: ignore\n                    from docling_core.types.doc import ImageRefMode  # type: ignore\n                    return ConversionStatus, InputFormat, DocumentConverter, ImageRefMode, \"latest\"\n                except Exception:\n                    pass\n                # Strategy 2: alternative layout\n                try:\n                    from docling.document_converter import DocumentConverter  # type: ignore\n                    try:\n                        from docling_core.types import ConversionStatus, InputFormat  # type: ignore\n                    except Exception:\n                        try:\n                            from docling.datamodel import ConversionStatus, InputFormat  # type: ignore\n                        except Exception:\n                            class ConversionStatus: SUCCESS = \"success\"\n                            class InputFormat:\n                                PDF=\"pdf\"; IMAGE=\"image\"\n                    try:\n                        from docling_core.types.doc import ImageRefMode  # type: ignore\n                    except Exception:\n                        class ImageRefMode:\n                            PLACEHOLDER=\"placeholder\"; EMBEDDED=\"embedded\"\n                    return ConversionStatus, InputFormat, DocumentConverter, ImageRefMode, \"alternative\"\n                except Exception:\n                    pass\n                # Strategy 3: basic converter only\n                try:\n                    from docling.document_converter import DocumentConverter  # type: ignore\n                    class ConversionStatus: SUCCESS = \"success\"\n                    class InputFormat:\n                        PDF=\"pdf\"; IMAGE=\"image\"\n                    class ImageRefMode:\n                        PLACEHOLDER=\"placeholder\"; EMBEDDED=\"embedded\"\n                    return ConversionStatus, InputFormat, DocumentConverter, ImageRefMode, \"basic\"\n                except Exception as e:\n                    raise ImportError(f\"Docling imports failed: {e}\") from e\n\n            def create_converter(strategy, input_format, DocumentConverter, pipeline, ocr_engine):\n                # --- Standard PDF/IMAGE pipeline (your existing behavior), with optional OCR ---\n                if pipeline == \"standard\":\n                    try:\n                        from docling.datamodel.pipeline_options import PdfPipelineOptions  # type: ignore\n                        from docling.document_converter import PdfFormatOption  # type: ignore\n\n                        pipe = PdfPipelineOptions()\n                        pipe.do_ocr = False\n\n                        if ocr_engine:\n                            try:\n                                from docling.models.factories import get_ocr_factory  # type: ignore\n                                pipe.do_ocr = True\n                                fac = get_ocr_factory(allow_external_plugins=False)\n                                pipe.ocr_options = fac.create_options(kind=ocr_engine)\n                            except Exception:\n                                # If OCR setup fails, disable it\n                                pipe.do_ocr = False\n\n                        fmt = {}\n                        if hasattr(input_format, \"PDF\"):\n                            fmt[getattr(input_format, \"PDF\")] = PdfFormatOption(pipeline_options=pipe)\n                        if hasattr(input_format, \"IMAGE\"):\n                            fmt[getattr(input_format, \"IMAGE\")] = PdfFormatOption(pipeline_options=pipe)\n\n                        return DocumentConverter(format_options=fmt)\n                    except Exception:\n                        return DocumentConverter()\n\n                # --- Vision-Language Model (VLM) pipeline ---\n                if pipeline == \"vlm\":\n                    try:\n                        from docling.pipeline.vlm_pipeline import VlmPipeline\n                        from docling.document_converter import PdfFormatOption  # type: ignore\n\n                        vl_pipe = VlmPipelineOptions()\n\n                        # VLM paths generally don't need OCR; keep OCR off by default here.\n                        fmt = {}\n                        if hasattr(input_format, \"PDF\"):\n                            fmt[getattr(input_format, \"PDF\")] = PdfFormatOption(pipeline_cls=VlmPipeline)\n                        if hasattr(input_format, \"IMAGE\"):\n                            fmt[getattr(input_format, \"IMAGE\")] = PdfFormatOption(pipeline_cls=VlmPipeline)\n\n                        return DocumentConverter(format_options=fmt)\n                    except Exception:\n                        return DocumentConverter()\n\n                # --- Fallback: default converter with no special options ---\n                return DocumentConverter()\n\n            def export_markdown(document, ImageRefMode, image_mode, img_ph, pg_ph):\n                try:\n                    mode = getattr(ImageRefMode, image_mode.upper(), image_mode)\n                    return document.export_to_markdown(\n                        image_mode=mode,\n                        image_placeholder=img_ph,\n                        page_break_placeholder=pg_ph,\n                    )\n                except Exception:\n                    try:\n                        return document.export_to_text()\n                    except Exception:\n                        return str(document)\n\n            def to_rows(doc_dict):\n                rows = []\n                for t in doc_dict.get(\"texts\", []):\n                    prov = t.get(\"prov\") or []\n                    page_no = None\n                    if prov and isinstance(prov, list) and isinstance(prov[0], dict):\n                        page_no = prov[0].get(\"page_no\")\n                    rows.append({\n                        \"page_no\": page_no,\n                        \"label\": t.get(\"label\"),\n                        \"text\": t.get(\"text\"),\n                        \"level\": t.get(\"level\"),\n                    })\n                return rows\n\n            def main():\n                cfg = json.loads(sys.stdin.read())\n                file_path = cfg[\"file_path\"]\n                markdown = cfg[\"markdown\"]\n                image_mode = cfg[\"image_mode\"]\n                img_ph = cfg[\"md_image_placeholder\"]\n                pg_ph = cfg[\"md_page_break_placeholder\"]\n                pipeline = cfg[\"pipeline\"]\n                ocr_engine = cfg.get(\"ocr_engine\")\n                meta = {\"file_path\": file_path}\n\n                try:\n                    ConversionStatus, InputFormat, DocumentConverter, ImageRefMode, strategy = try_imports()\n                    converter = create_converter(strategy, InputFormat, DocumentConverter, pipeline, ocr_engine)\n                    try:\n                        res = converter.convert(file_path)\n                    except Exception as e:\n                        print(json.dumps({\"ok\": False, \"error\": f\"Docling conversion error: {e}\", \"meta\": meta}))\n                        return\n\n                    ok = False\n                    if hasattr(res, \"status\"):\n                        try:\n                            ok = (res.status == ConversionStatus.SUCCESS) or (str(res.status).lower() == \"success\")\n                        except Exception:\n                            ok = (str(res.status).lower() == \"success\")\n                    if not ok and hasattr(res, \"document\"):\n                        ok = getattr(res, \"document\", None) is not None\n                    if not ok:\n                        print(json.dumps({\"ok\": False, \"error\": \"Docling conversion failed\", \"meta\": meta}))\n                        return\n\n                    doc = getattr(res, \"document\", None)\n                    if doc is None:\n                        print(json.dumps({\"ok\": False, \"error\": \"Docling produced no document\", \"meta\": meta}))\n                        return\n\n                    if markdown:\n                        text = export_markdown(doc, ImageRefMode, image_mode, img_ph, pg_ph)\n                        print(json.dumps({\"ok\": True, \"mode\": \"markdown\", \"text\": text, \"meta\": meta}))\n                        return\n\n                    # structured\n                    try:\n                        doc_dict = doc.export_to_dict()\n                    except Exception as e:\n                        print(json.dumps({\"ok\": False, \"error\": f\"Docling export_to_dict failed: {e}\", \"meta\": meta}))\n                        return\n\n                    rows = to_rows(doc_dict)\n                    print(json.dumps({\"ok\": True, \"mode\": \"structured\", \"doc\": rows, \"meta\": meta}))\n                except Exception as e:\n                    print(\n                        json.dumps({\n                            \"ok\": False,\n                            \"error\": f\"Docling processing error: {e}\",\n                            \"meta\": {\"file_path\": file_path},\n                        })\n                    )\n\n            if __name__ == \"__main__\":\n                main()\n            \"\"\"\n        )\n\n        # Validate file_path to avoid command injection or unsafe input\n        if not isinstance(args[\"file_path\"], str) or any(c in args[\"file_path\"] for c in [\";\", \"|\", \"&\", \"$\", \"`\"]):\n            return Data(data={\"error\": \"Unsafe file path detected.\", \"file_path\": args[\"file_path\"]})\n\n        proc = subprocess.run(  # noqa: S603\n            [sys.executable, \"-u\", \"-c\", child_script],\n            input=json.dumps(args).encode(\"utf-8\"),\n            capture_output=True,\n            check=False,\n        )\n\n        if not proc.stdout:\n            err_msg = proc.stderr.decode(\"utf-8\", errors=\"replace\") or \"no output from child process\"\n            return Data(data={\"error\": f\"Docling subprocess error: {err_msg}\", \"file_path\": file_path})\n\n        try:\n            result = json.loads(proc.stdout.decode(\"utf-8\"))\n        except Exception as e:  # noqa: BLE001\n            err_msg = proc.stderr.decode(\"utf-8\", errors=\"replace\")\n            return Data(\n                data={\"error\": f\"Invalid JSON from Docling subprocess: {e}. stderr={err_msg}\", \"file_path\": file_path},\n            )\n\n        if not result.get(\"ok\"):\n            return Data(data={\"error\": result.get(\"error\", \"Unknown Docling error\"), **result.get(\"meta\", {})})\n\n        meta = result.get(\"meta\", {})\n        if result.get(\"mode\") == \"markdown\":\n            exported_content = str(result.get(\"text\", \"\"))\n            return Data(\n                text=exported_content,\n                data={\"exported_content\": exported_content, \"export_format\": self.EXPORT_FORMAT, **meta},\n            )\n\n        rows = list(result.get(\"doc\", []))\n        return Data(data={\"doc\": rows, \"export_format\": self.EXPORT_FORMAT, **meta})\n\n    def process_files(\n        self,\n        file_list: list[BaseFileComponent.BaseFile],\n    ) -> list[BaseFileComponent.BaseFile]:\n        \"\"\"Process input files.\n\n        - Single file + advanced_mode => Docling in a separate process.\n        - Otherwise => standard parsing in current process (optionally threaded).\n        \"\"\"\n        if not file_list:\n            msg = \"No files to process.\"\n            raise ValueError(msg)\n\n        def process_file_standard(file_path: str, *, silent_errors: bool = False) -> Data | None:\n            try:\n                return parse_text_file_to_data(file_path, silent_errors=silent_errors)\n            except FileNotFoundError as e:\n                self.log(f\"File not found: {file_path}. Error: {e}\")\n                if not silent_errors:\n                    raise\n                return None\n            except Exception as e:\n                self.log(f\"Unexpected error processing {file_path}: {e}\")\n                if not silent_errors:\n                    raise\n                return None\n\n        # Advanced path: only for a single Docling-compatible file\n        if len(file_list) == 1:\n            file_path = str(file_list[0].path)\n            if self.advanced_mode and self._is_docling_compatible(file_path):\n                advanced_data: Data | None = self._process_docling_in_subprocess(file_path)\n\n                # --- UNNEST: expand each element in `doc` to its own Data row\n                payload = getattr(advanced_data, \"data\", {}) or {}\n                doc_rows = payload.get(\"doc\")\n                if isinstance(doc_rows, list):\n                    rows: list[Data | None] = [\n                        Data(\n                            data={\n                                \"file_path\": file_path,\n                                **(item if isinstance(item, dict) else {\"value\": item}),\n                            },\n                        )\n                        for item in doc_rows\n                    ]\n                    return self.rollup_data(file_list, rows)\n\n                # If not structured, keep as-is (e.g., markdown export or error dict)\n                return self.rollup_data(file_list, [advanced_data])\n\n        # Standard multi-file (or single non-advanced) path\n        concurrency = 1 if not self.use_multithreading else max(1, self.concurrency_multithreading)\n        file_paths = [str(f.path) for f in file_list]\n        self.log(f\"Starting parallel processing of {len(file_paths)} files with concurrency: {concurrency}.\")\n        my_data = parallel_load_data(\n            file_paths,\n            silent_errors=self.silent_errors,\n            load_function=process_file_standard,\n            max_concurrency=concurrency,\n        )\n        return self.rollup_data(file_list, my_data)\n\n    # ------------------------------ Output helpers -----------------------------------\n\n    def load_files_helper(self) -> DataFrame:\n        result = self.load_files()\n\n        # Error condition - raise error if no text and an error is present\n        if not hasattr(result, \"text\"):\n            if hasattr(result, \"error\"):\n                raise ValueError(result.error[0])\n            msg = \"No content generated.\"\n            raise ValueError(msg)\n\n        return result\n\n    def load_files_dataframe(self) -> DataFrame:\n        \"\"\"Load files using advanced Docling processing and export to DataFrame format.\"\"\"\n        self.markdown = False\n        return self.load_files_helper()\n\n    def load_files_markdown(self) -> Message:\n        \"\"\"Load files using advanced Docling processing and export to Markdown format.\"\"\"\n        self.markdown = True\n        result = self.load_files_helper()\n        return Message(text=str(result.text[0]))\n"
+              },
+              "concurrency_multithreading": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Processing Concurrency",
+                "dynamic": false,
+                "info": "When multiple files are being processed, the number of files to process concurrently.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "concurrency_multithreading",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 1
+              },
+              "delete_server_file_after_processing": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Delete Server File After Processing",
+                "dynamic": false,
+                "info": "If true, the Server File Path will be deleted after processing.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "delete_server_file_after_processing",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
+              "doc_key": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Doc Key",
+                "dynamic": false,
+                "info": "The key to use for the DoclingDocument column.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "doc_key",
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "doc"
+              },
+              "file_path": {
+                "_input_type": "HandleInput",
+                "advanced": true,
+                "display_name": "Server File Path",
+                "dynamic": false,
+                "info": "Data object with a 'file_path' property pointing to server file or a Message object with a path to the file. Supercedes 'Path' but supports same file types.",
+                "input_types": [
+                  "Data",
+                  "Message"
+                ],
+                "list": true,
+                "list_add_label": "Add More",
+                "name": "file_path",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "other",
+                "value": ""
+              },
+              "ignore_unspecified_files": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Ignore Unspecified Files",
+                "dynamic": false,
+                "info": "If true, Data with no 'file_path' property will be ignored.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "ignore_unspecified_files",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "ignore_unsupported_extensions": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Ignore Unsupported Extensions",
+                "dynamic": false,
+                "info": "If true, files with unsupported extensions will not be processed.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "ignore_unsupported_extensions",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
+              "markdown": {
+                "_input_type": "BoolInput",
+                "advanced": false,
+                "display_name": "Markdown Export",
+                "dynamic": false,
+                "info": "Export processed documents to Markdown format. Only available when advanced mode is enabled.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "markdown",
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "md_image_placeholder": {
+                "_input_type": "StrInput",
+                "advanced": true,
+                "display_name": "Image placeholder",
+                "dynamic": false,
+                "info": "Specify the image placeholder for markdown exports.",
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "md_image_placeholder",
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "<!-- image -->"
+              },
+              "md_page_break_placeholder": {
+                "_input_type": "StrInput",
+                "advanced": true,
+                "display_name": "Page break placeholder",
+                "dynamic": false,
+                "info": "Add this placeholder between pages in the markdown output.",
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "md_page_break_placeholder",
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "ocr_engine": {
+                "_input_type": "DropdownInput",
+                "advanced": true,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "OCR Engine",
+                "dynamic": false,
+                "external_options": {},
+                "info": "OCR engine to use. Only available when pipeline is set to 'standard'.",
+                "name": "ocr_engine",
+                "options": [
+                  "None",
+                  "easyocr"
+                ],
+                "options_metadata": [],
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "easyocr"
+              },
+              "path": {
+                "_input_type": "FileInput",
+                "advanced": false,
+                "display_name": "Files",
+                "dynamic": false,
+                "fileTypes": [
+                  "csv",
+                  "json",
+                  "pdf",
+                  "txt",
+                  "md",
+                  "mdx",
+                  "yaml",
+                  "yml",
+                  "xml",
+                  "html",
+                  "htm",
+                  "docx",
+                  "py",
+                  "sh",
+                  "sql",
+                  "js",
+                  "ts",
+                  "tsx",
+                  "adoc",
+                  "asciidoc",
+                  "asc",
+                  "bmp",
+                  "dotx",
+                  "dotm",
+                  "docm",
+                  "jpeg",
+                  "png",
+                  "potx",
+                  "ppsx",
+                  "pptm",
+                  "potm",
+                  "ppsm",
+                  "pptx",
+                  "tiff",
+                  "xls",
+                  "xlsx",
+                  "xhtml",
+                  "webp",
+                  "zip",
+                  "tar",
+                  "tgz",
+                  "bz2",
+                  "gz"
+                ],
+                "file_path": [
+                  "loop_test.csv"
+                ],
+                "info": "Supported file extensions: csv, json, pdf, txt, md, mdx, yaml, yml, xml, html, htm, docx, py, sh, sql, js, ts, tsx, adoc, asciidoc, asc, bmp, dotx, dotm, docm, jpeg, png, potx, ppsx, pptm, potm, ppsm, pptx, tiff, xls, xlsx, xhtml, webp; optionally bundled in file extensions: zip, tar, tgz, bz2, gz",
+                "list": true,
+                "list_add_label": "Add More",
+                "name": "path",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "temp_file": false,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "file",
+                "value": ""
+              },
+              "pipeline": {
+                "_input_type": "DropdownInput",
+                "advanced": true,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Pipeline",
+                "dynamic": false,
+                "external_options": {},
+                "info": "Docling pipeline to use",
+                "name": "pipeline",
+                "options": [
+                  "standard",
+                  "vlm"
+                ],
+                "options_metadata": [],
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "standard"
+              },
+              "separator": {
+                "_input_type": "StrInput",
+                "advanced": true,
+                "display_name": "Separator",
+                "dynamic": false,
+                "info": "Specify the separator to use between multiple outputs in Message format.",
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "separator",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "\n\n"
+              },
+              "silent_errors": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Silent Errors",
+                "dynamic": false,
+                "info": "If true, errors will not raise an exception.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "silent_errors",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "use_multithreading": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "[Deprecated] Use Multithreading",
+                "dynamic": false,
+                "info": "Set 'Processing Concurrency' greater than 1 to enable multithreading.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "use_multithreading",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              }
+            },
+            "tool_mode": false
+          },
+          "selected_output": "dataframe",
+          "showNode": true,
+          "type": "File"
+        },
+        "id": "File-aTpU1",
+        "measured": {
+          "height": 217,
+          "width": 320
+        },
+        "position": {
+          "x": 71,
+          "y": 235
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "LoopComponent-kBJgN",
+          "node": {
+            "base_classes": [
+              "Data",
+              "DataFrame"
+            ],
+            "beta": false,
+            "category": "logic",
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Iterates over a list of Data objects, outputting one item at a time and aggregating results from loop inputs.",
+            "display_name": "Loop",
+            "documentation": "https://docs.langflow.org/components-logic#loop",
+            "edited": false,
+            "field_order": [
+              "data"
+            ],
+            "frozen": false,
+            "icon": "infinity",
+            "key": "LoopComponent",
+            "legacy": false,
+            "lf_version": "1.6.0",
+            "metadata": {},
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": true,
+                "cache": true,
+                "display_name": "Item",
+                "group_outputs": true,
+                "method": "item_output",
+                "name": "item",
+                "selected": "Data",
+                "tool_mode": true,
+                "types": [
+                  "Data"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Done",
+                "group_outputs": true,
+                "method": "done_output",
+                "name": "done",
+                "selected": "DataFrame",
+                "tool_mode": true,
+                "types": [
+                  "DataFrame"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "score": 0.001,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from langflow.custom.custom_component.component import Component\nfrom langflow.inputs.inputs import HandleInput\nfrom langflow.schema.data import Data\nfrom langflow.schema.dataframe import DataFrame\nfrom langflow.template.field.base import Output\n\n\nclass LoopComponent(Component):\n    display_name = \"Loop\"\n    description = (\n        \"Iterates over a list of Data objects, outputting one item at a time and aggregating results from loop inputs.\"\n    )\n    documentation: str = \"https://docs.langflow.org/components-logic#loop\"\n    icon = \"infinity\"\n\n    inputs = [\n        HandleInput(\n            name=\"data\",\n            display_name=\"Inputs\",\n            info=\"The initial list of Data objects or DataFrame to iterate over.\",\n            input_types=[\"DataFrame\"],\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Item\", name=\"item\", method=\"item_output\", allows_loop=True, group_outputs=True),\n        Output(display_name=\"Done\", name=\"done\", method=\"done_output\", group_outputs=True),\n    ]\n\n    def initialize_data(self) -> None:\n        \"\"\"Initialize the data list, context index, and aggregated list.\"\"\"\n        if self.ctx.get(f\"{self._id}_initialized\", False):\n            return\n\n        # Ensure data is a list of Data objects\n        data_list = self._validate_data(self.data)\n\n        # Store the initial data and context variables\n        self.update_ctx(\n            {\n                f\"{self._id}_data\": data_list,\n                f\"{self._id}_index\": 0,\n                f\"{self._id}_aggregated\": [],\n                f\"{self._id}_initialized\": True,\n            }\n        )\n\n    def _validate_data(self, data):\n        \"\"\"Validate and return a list of Data objects.\"\"\"\n        if isinstance(data, DataFrame):\n            return data.to_data_list()\n        if isinstance(data, Data):\n            return [data]\n        if isinstance(data, list) and all(isinstance(item, Data) for item in data):\n            return data\n        msg = \"The 'data' input must be a DataFrame, a list of Data objects, or a single Data object.\"\n        raise TypeError(msg)\n\n    def evaluate_stop_loop(self) -> bool:\n        \"\"\"Evaluate whether to stop item or done output.\"\"\"\n        current_index = self.ctx.get(f\"{self._id}_index\", 0)\n        data_length = len(self.ctx.get(f\"{self._id}_data\", []))\n        return current_index > data_length\n\n    def item_output(self) -> Data:\n        \"\"\"Output the next item in the list or stop if done.\"\"\"\n        self.initialize_data()\n        current_item = Data(text=\"\")\n\n        if self.evaluate_stop_loop():\n            self.stop(\"item\")\n        else:\n            # Get data list and current index\n            data_list, current_index = self.loop_variables()\n            if current_index < len(data_list):\n                # Output current item and increment index\n                try:\n                    current_item = data_list[current_index]\n                except IndexError:\n                    current_item = Data(text=\"\")\n            self.aggregated_output()\n            self.update_ctx({f\"{self._id}_index\": current_index + 1})\n\n        # Now we need to update the dependencies for the next run\n        self.update_dependency()\n        return current_item\n\n    def update_dependency(self):\n        item_dependency_id = self.get_incoming_edge_by_target_param(\"item\")\n        if item_dependency_id not in self.graph.run_manager.run_predecessors[self._id]:\n            self.graph.run_manager.run_predecessors[self._id].append(item_dependency_id)\n\n    def done_output(self) -> DataFrame:\n        \"\"\"Trigger the done output when iteration is complete.\"\"\"\n        self.initialize_data()\n\n        if self.evaluate_stop_loop():\n            self.stop(\"item\")\n            self.start(\"done\")\n\n            aggregated = self.ctx.get(f\"{self._id}_aggregated\", [])\n\n            return DataFrame(aggregated)\n        self.stop(\"done\")\n        return DataFrame([])\n\n    def loop_variables(self):\n        \"\"\"Retrieve loop variables from context.\"\"\"\n        return (\n            self.ctx.get(f\"{self._id}_data\", []),\n            self.ctx.get(f\"{self._id}_index\", 0),\n        )\n\n    def aggregated_output(self) -> list[Data]:\n        \"\"\"Return the aggregated list once all items are processed.\"\"\"\n        self.initialize_data()\n\n        # Get data list and aggregated list\n        data_list = self.ctx.get(f\"{self._id}_data\", [])\n        aggregated = self.ctx.get(f\"{self._id}_aggregated\", [])\n        loop_input = self.item\n        if loop_input is not None and not isinstance(loop_input, str) and len(aggregated) <= len(data_list):\n            aggregated.append(loop_input)\n            self.update_ctx({f\"{self._id}_aggregated\": aggregated})\n        return aggregated\n"
+              },
+              "data": {
+                "_input_type": "HandleInput",
+                "advanced": false,
+                "display_name": "Inputs",
+                "dynamic": false,
+                "info": "The initial list of Data objects or DataFrame to iterate over.",
+                "input_types": [
+                  "DataFrame"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "data",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "other",
+                "value": ""
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "LoopComponent"
+        },
+        "dragging": false,
+        "id": "LoopComponent-kBJgN",
+        "measured": {
+          "height": 241,
+          "width": 320
+        },
+        "position": {
+          "x": 468,
+          "y": 228
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "DataOperations-fFxSd",
+          "node": {
+            "base_classes": [
+              "Data"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Perform various operations on a Data object.",
+            "display_name": "Data Operations",
+            "documentation": "https://docs.langflow.org/components-processing#data-operations",
+            "edited": false,
+            "field_order": [
+              "data",
+              "operations",
+              "select_keys_input",
+              "filter_key",
+              "operator",
+              "filter_values",
+              "append_update_data",
+              "remove_keys_input",
+              "rename_keys_input"
+            ],
+            "frozen": false,
+            "icon": "file-json",
+            "last_updated": "2025-10-09T12:37:08.029Z",
+            "legacy": false,
+            "metadata": {
+              "keywords": [
+                "data",
+                "operations",
+                "filter values",
+                "Append or Update",
+                "remove keys",
+                "rename keys",
+                "select keys",
+                "literal eval",
+                "combine",
+                "filter",
+                "append",
+                "update",
+                "remove",
+                "rename",
+                "data operations",
+                "data manipulation",
+                "data transformation",
+                "data filtering",
+                "data selection",
+                "data combination"
+              ]
+            },
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Data",
+                "group_outputs": false,
+                "method": "as_data",
+                "name": "data_output",
+                "options": null,
+                "required_inputs": null,
+                "selected": "Data",
+                "tool_mode": true,
+                "types": [
+                  "Data"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "append_update_data": {
+                "_input_type": "DictInput",
+                "advanced": false,
+                "display_name": "Append or Update",
+                "dynamic": false,
+                "info": "Data to Append or Updatethe existing data with.",
+                "list": true,
+                "list_add_label": "Add More",
+                "name": "append_update_data",
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "type": "dict",
+                "value": {
+                  "key": "value"
+                }
+              },
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "import ast\nfrom typing import TYPE_CHECKING, Any\n\nfrom langflow.custom import Component\nfrom langflow.inputs import DictInput, DropdownInput, MessageTextInput, SortableListInput\nfrom langflow.io import DataInput, Output\nfrom langflow.logging import logger\nfrom langflow.schema import Data\nfrom langflow.schema.dotdict import dotdict\nfrom langflow.utils.component_utils import set_current_fields, set_field_display\n\nif TYPE_CHECKING:\n    from collections.abc import Callable\n\nACTION_CONFIG = {\n    \"Select Keys\": {\"is_list\": False, \"log_msg\": \"setting filter fields\"},\n    \"Literal Eval\": {\"is_list\": False, \"log_msg\": \"setting evaluate fields\"},\n    \"Combine\": {\"is_list\": True, \"log_msg\": \"setting combine fields\"},\n    \"Filter Values\": {\"is_list\": False, \"log_msg\": \"setting filter values fields\"},\n    \"Append or Update\": {\"is_list\": False, \"log_msg\": \"setting Append or Update fields\"},\n    \"Remove Keys\": {\"is_list\": False, \"log_msg\": \"setting remove keys fields\"},\n    \"Rename Keys\": {\"is_list\": False, \"log_msg\": \"setting rename keys fields\"},\n}\nOPERATORS = {\n    \"equals\": lambda a, b: str(a) == str(b),\n    \"not equals\": lambda a, b: str(a) != str(b),\n    \"contains\": lambda a, b: str(b) in str(a),\n    \"starts with\": lambda a, b: str(a).startswith(str(b)),\n    \"ends with\": lambda a, b: str(a).endswith(str(b)),\n}\n\n\nclass DataOperationsComponent(Component):\n    display_name = \"Data Operations\"\n    description = \"Perform various operations on a Data object.\"\n    documentation: str = \"https://docs.langflow.org/components-processing#data-operations\"\n    icon = \"file-json\"\n    name = \"DataOperations\"\n    default_keys = [\"operations\", \"data\"]\n    metadata = {\n        \"keywords\": [\n            \"data\",\n            \"operations\",\n            \"filter values\",\n            \"Append or Update\",\n            \"remove keys\",\n            \"rename keys\",\n            \"select keys\",\n            \"literal eval\",\n            \"combine\",\n            \"filter\",\n            \"append\",\n            \"update\",\n            \"remove\",\n            \"rename\",\n            \"data operations\",\n            \"data manipulation\",\n            \"data transformation\",\n            \"data filtering\",\n            \"data selection\",\n            \"data combination\",\n        ],\n    }\n    actions_data = {\n        \"Select Keys\": [\"select_keys_input\", \"operations\"],\n        \"Literal Eval\": [],\n        \"Combine\": [],\n        \"Filter Values\": [\"filter_values\", \"operations\", \"operator\", \"filter_key\"],\n        \"Append or Update\": [\"append_update_data\", \"operations\"],\n        \"Remove Keys\": [\"remove_keys_input\", \"operations\"],\n        \"Rename Keys\": [\"rename_keys_input\", \"operations\"],\n    }\n\n    inputs = [\n        DataInput(name=\"data\", display_name=\"Data\", info=\"Data object to filter.\", required=True, is_list=True),\n        SortableListInput(\n            name=\"operations\",\n            display_name=\"Operations\",\n            placeholder=\"Select Operation\",\n            info=\"List of operations to perform on the data.\",\n            options=[\n                {\"name\": \"Select Keys\", \"icon\": \"lasso-select\"},\n                {\"name\": \"Literal Eval\", \"icon\": \"braces\"},\n                {\"name\": \"Combine\", \"icon\": \"merge\"},\n                {\"name\": \"Filter Values\", \"icon\": \"filter\"},\n                {\"name\": \"Append or Update\", \"icon\": \"circle-plus\"},\n                {\"name\": \"Remove Keys\", \"icon\": \"eraser\"},\n                {\"name\": \"Rename Keys\", \"icon\": \"pencil-line\"},\n            ],\n            real_time_refresh=True,\n            limit=1,\n        ),\n        # select keys inputs\n        MessageTextInput(\n            name=\"select_keys_input\",\n            display_name=\"Select Keys\",\n            info=\"List of keys to select from the data.\",\n            show=False,\n            is_list=True,\n        ),\n        # filter values inputs\n        MessageTextInput(\n            name=\"filter_key\",\n            display_name=\"Filter Key\",\n            info=\"Key to filter by.\",\n            is_list=True,\n            show=False,\n        ),\n        DropdownInput(\n            name=\"operator\",\n            display_name=\"Comparison Operator\",\n            options=[\"equals\", \"not equals\", \"contains\", \"starts with\", \"ends with\"],\n            info=\"The operator to apply for comparing the values.\",\n            value=\"equals\",\n            advanced=False,\n            show=False,\n        ),\n        DictInput(\n            name=\"filter_values\",\n            display_name=\"Filter Values\",\n            info=\"List of values to filter by.\",\n            show=False,\n            is_list=True,\n        ),\n        # update/ Append data inputs\n        DictInput(\n            name=\"append_update_data\",\n            display_name=\"Append or Update\",\n            info=\"Data to Append or Updatethe existing data with.\",\n            show=False,\n            value={\"key\": \"value\"},\n            is_list=True,\n        ),\n        # remove keys inputs\n        MessageTextInput(\n            name=\"remove_keys_input\",\n            display_name=\"Remove Keys\",\n            info=\"List of keys to remove from the data.\",\n            show=False,\n            is_list=True,\n        ),\n        # rename keys inputs\n        DictInput(\n            name=\"rename_keys_input\",\n            display_name=\"Rename Keys\",\n            info=\"List of keys to rename in the data.\",\n            show=False,\n            is_list=True,\n            value={\"old_key\": \"new_key\"},\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Data\", name=\"data_output\", method=\"as_data\"),\n    ]\n\n    # Helper methods for data operations\n    def get_data_dict(self) -> dict:\n        \"\"\"Extract data dictionary from Data object.\"\"\"\n        # TODO: rasie error if it s list of data objects\n        data = self.data[0] if isinstance(self.data, list) and len(self.data) == 1 else self.data\n        return data.model_dump()\n\n    def get_normalized_data(self) -> dict:\n        \"\"\"Get normalized data dictionary, handling the 'data' key if present.\"\"\"\n        data_dict = self.get_data_dict()\n        return data_dict.get(\"data\", data_dict)\n\n    def data_is_list(self) -> bool:\n        \"\"\"Check if data contains multiple items.\"\"\"\n        return isinstance(self.data, list) and len(self.data) > 1\n\n    def validate_single_data(self, operation: str) -> None:\n        \"\"\"Validate that the operation is being performed on a single data object.\"\"\"\n        if self.data_is_list():\n            msg = f\"{operation} operation is not supported for multiple data objects.\"\n            raise ValueError(msg)\n\n    def operation_exception(self, operations: list[str]) -> None:\n        \"\"\"Raise exception for incompatible operations.\"\"\"\n        msg = f\"{operations} operations are not supported in combination with each other.\"\n        raise ValueError(msg)\n\n    # Data transformation operations\n    def select_keys(self, *, evaluate: bool | None = None) -> Data:\n        \"\"\"Select specific keys from the data dictionary.\"\"\"\n        self.validate_single_data(\"Select Keys\")\n        data_dict = self.get_normalized_data()\n        filter_criteria: list[str] = self.select_keys_input\n\n        # Filter the data\n        if len(filter_criteria) == 1 and filter_criteria[0] == \"data\":\n            filtered = data_dict[\"data\"]\n        else:\n            if not all(key in data_dict for key in filter_criteria):\n                msg = f\"Select key not found in data. Available keys: {list(data_dict.keys())}\"\n                raise ValueError(msg)\n            filtered = {key: value for key, value in data_dict.items() if key in filter_criteria}\n\n        # Create a new Data object with the filtered data\n        if evaluate:\n            filtered = self.recursive_eval(filtered)\n\n        # Return a new Data object with the filtered data directly in the data attribute\n        return Data(data=filtered)\n\n    def remove_keys(self) -> Data:\n        \"\"\"Remove specified keys from the data dictionary.\"\"\"\n        self.validate_single_data(\"Remove Keys\")\n        data_dict = self.get_normalized_data()\n        remove_keys_input: list[str] = self.remove_keys_input\n\n        for key in remove_keys_input:\n            if key in data_dict:\n                data_dict.pop(key)\n            else:\n                logger.warning(f\"Key '{key}' not found in data. Skipping removal.\")\n\n        return Data(**data_dict)\n\n    def rename_keys(self) -> Data:\n        \"\"\"Rename keys in the data dictionary.\"\"\"\n        self.validate_single_data(\"Rename Keys\")\n        data_dict = self.get_normalized_data()\n        rename_keys_input: dict[str, str] = self.rename_keys_input\n\n        for old_key, new_key in rename_keys_input.items():\n            if old_key in data_dict:\n                data_dict[new_key] = data_dict[old_key]\n                data_dict.pop(old_key)\n            else:\n                msg = f\"Key '{old_key}' not found in data. Skipping rename.\"\n                raise ValueError(msg)\n\n        return Data(**data_dict)\n\n    def recursive_eval(self, data: Any) -> Any:\n        \"\"\"Recursively evaluate string values in a dictionary or list.\n\n        If the value is a string that can be evaluated, it will be evaluated.\n        Otherwise, the original value is returned.\n        \"\"\"\n        if isinstance(data, dict):\n            return {k: self.recursive_eval(v) for k, v in data.items()}\n        if isinstance(data, list):\n            return [self.recursive_eval(item) for item in data]\n        if isinstance(data, str):\n            try:\n                # Only attempt to evaluate strings that look like Python literals\n                if (\n                    data.strip().startswith((\"{\", \"[\", \"(\", \"'\", '\"'))\n                    or data.strip().lower() in (\"true\", \"false\", \"none\")\n                    or data.strip().replace(\".\", \"\").isdigit()\n                ):\n                    return ast.literal_eval(data)\n                # return data\n            except (ValueError, SyntaxError, TypeError, MemoryError):\n                # If evaluation fails for any reason, return the original string\n                return data\n            else:\n                return data\n        return data\n\n    def evaluate_data(self) -> Data:\n        \"\"\"Evaluate string values in the data dictionary.\"\"\"\n        self.validate_single_data(\"Literal Eval\")\n        logger.info(\"evaluating data\")\n        return Data(**self.recursive_eval(self.get_data_dict()))\n\n    def combine_data(self, *, evaluate: bool | None = None) -> Data:\n        \"\"\"Combine multiple data objects into one.\"\"\"\n        logger.info(\"combining data\")\n        if not self.data_is_list():\n            return self.data[0] if self.data else Data(data={})\n\n        if len(self.data) == 1:\n            msg = \"Combine operation requires multiple data inputs.\"\n            raise ValueError(msg)\n\n        data_dicts = [data.model_dump().get(\"data\", data.model_dump()) for data in self.data]\n        combined_data = {}\n\n        for data_dict in data_dicts:\n            for key, value in data_dict.items():\n                if key not in combined_data:\n                    combined_data[key] = value\n                elif isinstance(combined_data[key], list):\n                    if isinstance(value, list):\n                        combined_data[key].extend(value)\n                    else:\n                        combined_data[key].append(value)\n                else:\n                    # If current value is not a list, convert it to list and add new value\n                    combined_data[key] = (\n                        [combined_data[key], value] if not isinstance(value, list) else [combined_data[key], *value]\n                    )\n\n        if evaluate:\n            combined_data = self.recursive_eval(combined_data)\n\n        return Data(**combined_data)\n\n    def compare_values(self, item_value: Any, filter_value: str, operator: str) -> bool:\n        \"\"\"Compare values based on the specified operator.\"\"\"\n        comparison_func = OPERATORS.get(operator)\n        if comparison_func:\n            return comparison_func(item_value, filter_value)\n        return False\n\n    def filter_data(self, input_data: list[dict[str, Any]], filter_key: str, filter_value: str, operator: str) -> list:\n        \"\"\"Filter list data based on key, value, and operator.\"\"\"\n        # Validate inputs\n        if not input_data:\n            self.status = \"Input data is empty.\"\n            return []\n\n        if not filter_key or not filter_value:\n            self.status = \"Filter key or value is missing.\"\n            return input_data\n\n        # Filter the data\n        filtered_data = []\n        for item in input_data:\n            if isinstance(item, dict) and filter_key in item:\n                if self.compare_values(item[filter_key], filter_value, operator):\n                    filtered_data.append(item)\n            else:\n                self.status = f\"Warning: Some items don't have the key '{filter_key}' or are not dictionaries.\"\n\n        return filtered_data\n\n    def multi_filter_data(self) -> Data:\n        \"\"\"Apply multiple filters to the data.\"\"\"\n        self.validate_single_data(\"Filter Values\")\n        data_filtered = self.get_normalized_data()\n\n        for filter_key in self.filter_key:\n            if filter_key not in data_filtered:\n                msg = f\"Filter key '{filter_key}' not found in data. Available keys: {list(data_filtered.keys())}\"\n                raise ValueError(msg)\n\n            if isinstance(data_filtered[filter_key], list):\n                for filter_data in self.filter_values:\n                    filter_value = self.filter_values.get(filter_data)\n                    if filter_value is not None:\n                        data_filtered[filter_key] = self.filter_data(\n                            input_data=data_filtered[filter_key],\n                            filter_key=filter_data,\n                            filter_value=filter_value,\n                            operator=self.operator,\n                        )\n            else:\n                msg = f\"Filter key '{filter_key}' is not a list.\"\n                raise TypeError(msg)\n\n        return Data(**data_filtered)\n\n    def append_update(self) -> Data:\n        \"\"\"Append or Update with new key-value pairs.\"\"\"\n        self.validate_single_data(\"Append or Update\")\n        data_filtered = self.get_normalized_data()\n\n        for key, value in self.append_update_data.items():\n            data_filtered[key] = value\n\n        return Data(**data_filtered)\n\n    # Configuration and execution methods\n    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:\n        \"\"\"Update build configuration based on selected action.\"\"\"\n        if field_name != \"operations\":\n            return build_config\n\n        build_config[\"operations\"][\"value\"] = field_value\n        selected_actions = [action[\"name\"] for action in field_value]\n\n        # Handle single action case\n        if len(selected_actions) == 1 and selected_actions[0] in ACTION_CONFIG:\n            action = selected_actions[0]\n            config = ACTION_CONFIG[action]\n\n            build_config[\"data\"][\"is_list\"] = config[\"is_list\"]\n            logger.info(config[\"log_msg\"])\n\n            return set_current_fields(\n                build_config=build_config,\n                action_fields=self.actions_data,\n                selected_action=action,\n                default_fields=self.default_keys,\n                func=set_field_display,\n            )\n\n        # Handle no operations case\n        if not selected_actions:\n            logger.info(\"setting default fields\")\n            return set_current_fields(\n                build_config=build_config,\n                action_fields=self.actions_data,\n                selected_action=None,\n                default_fields=self.default_keys,\n                func=set_field_display,\n            )\n\n        return build_config\n\n    def as_data(self) -> Data:\n        \"\"\"Execute the selected action on the data.\"\"\"\n        if not hasattr(self, \"operations\") or not self.operations:\n            return Data(data={})\n\n        selected_actions = [action[\"name\"] for action in self.operations]\n        logger.info(f\"selected_actions: {selected_actions}\")\n\n        # Only handle single action case for now\n        if len(selected_actions) != 1:\n            return Data(data={})\n\n        action = selected_actions[0]\n\n        # Explicitly type the action_map\n        action_map: dict[str, Callable[[], Data]] = {\n            \"Select Keys\": self.select_keys,\n            \"Literal Eval\": self.evaluate_data,\n            \"Combine\": self.combine_data,\n            \"Filter Values\": self.multi_filter_data,\n            \"Append or Update\": self.append_update,\n            \"Remove Keys\": self.remove_keys,\n            \"Rename Keys\": self.rename_keys,\n        }\n\n        handler: Callable[[], Data] | None = action_map.get(action)\n        if handler:\n            try:\n                return handler()\n            except Exception as e:\n                logger.error(f\"Error executing {action}: {e!s}\")\n                raise\n\n        return Data(data={})\n"
+              },
+              "data": {
+                "_input_type": "DataInput",
+                "advanced": false,
+                "display_name": "Data",
+                "dynamic": false,
+                "info": "Data object to filter.",
+                "input_types": [
+                  "Data"
+                ],
+                "is_list": false,
+                "list": true,
+                "list_add_label": "Add More",
+                "name": "data",
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "other",
+                "value": ""
+              },
+              "filter_key": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "Filter Key",
+                "dynamic": false,
+                "info": "Key to filter by.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": true,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "filter_key",
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "filter_values": {
+                "_input_type": "DictInput",
+                "advanced": false,
+                "display_name": "Filter Values",
+                "dynamic": false,
+                "info": "List of values to filter by.",
+                "list": true,
+                "list_add_label": "Add More",
+                "name": "filter_values",
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "type": "dict",
+                "value": {}
+              },
+              "operations": {
+                "_input_type": "SortableListInput",
+                "advanced": false,
+                "display_name": "Operations",
+                "dynamic": false,
+                "info": "List of operations to perform on the data.",
+                "limit": 1,
+                "name": "operations",
+                "options": [
+                  {
+                    "icon": "lasso-select",
+                    "name": "Select Keys"
+                  },
+                  {
+                    "icon": "braces",
+                    "name": "Literal Eval"
+                  },
+                  {
+                    "icon": "merge",
+                    "name": "Combine"
+                  },
+                  {
+                    "icon": "filter",
+                    "name": "Filter Values"
+                  },
+                  {
+                    "icon": "circle-plus",
+                    "name": "Append or Update"
+                  },
+                  {
+                    "icon": "eraser",
+                    "name": "Remove Keys"
+                  },
+                  {
+                    "icon": "pencil-line",
+                    "name": "Rename Keys"
+                  }
+                ],
+                "placeholder": "Select Operation",
+                "real_time_refresh": true,
+                "required": false,
+                "search_category": [],
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "sortableList",
+                "value": [
+                  {
+                    "chosen": false,
+                    "icon": "lasso-select",
+                    "name": "Select Keys",
+                    "selected": false
+                  }
+                ]
+              },
+              "operator": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Comparison Operator",
+                "dynamic": false,
+                "external_options": {},
+                "info": "The operator to apply for comparing the values.",
+                "name": "operator",
+                "options": [
+                  "equals",
+                  "not equals",
+                  "contains",
+                  "starts with",
+                  "ends with"
+                ],
+                "options_metadata": [],
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "equals"
+              },
+              "remove_keys_input": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "Remove Keys",
+                "dynamic": false,
+                "info": "List of keys to remove from the data.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": true,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "remove_keys_input",
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "rename_keys_input": {
+                "_input_type": "DictInput",
+                "advanced": false,
+                "display_name": "Rename Keys",
+                "dynamic": false,
+                "info": "List of keys to rename in the data.",
+                "list": true,
+                "list_add_label": "Add More",
+                "name": "rename_keys_input",
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "type": "dict",
+                "value": {
+                  "old_key": "new_key"
+                }
+              },
+              "select_keys_input": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "Select Keys",
+                "dynamic": false,
+                "info": "List of keys to select from the data.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": true,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "select_keys_input",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": [
+                  "number"
+                ]
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "DataOperations"
+        },
+        "dragging": false,
+        "id": "DataOperations-fFxSd",
+        "measured": {
+          "height": 315,
+          "width": 320
+        },
+        "position": {
+          "x": 1046.0000009307396,
+          "y": -308.9999901003151
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "DataOperations-1ZBoZ",
+          "node": {
+            "base_classes": [
+              "Data"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Perform various operations on a Data object.",
+            "display_name": "Data Operations",
+            "documentation": "https://docs.langflow.org/components-processing#data-operations",
+            "edited": false,
+            "field_order": [
+              "data",
+              "operations",
+              "select_keys_input",
+              "filter_key",
+              "operator",
+              "filter_values",
+              "append_update_data",
+              "remove_keys_input",
+              "rename_keys_input"
+            ],
+            "frozen": false,
+            "icon": "file-json",
+            "last_updated": "2025-10-09T12:37:20.510Z",
+            "legacy": false,
+            "lf_version": "1.6.0",
+            "metadata": {
+              "keywords": [
+                "data",
+                "operations",
+                "filter values",
+                "Append or Update",
+                "remove keys",
+                "rename keys",
+                "select keys",
+                "literal eval",
+                "combine",
+                "filter",
+                "append",
+                "update",
+                "remove",
+                "rename",
+                "data operations",
+                "data manipulation",
+                "data transformation",
+                "data filtering",
+                "data selection",
+                "data combination"
+              ]
+            },
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Data",
+                "group_outputs": false,
+                "method": "as_data",
+                "name": "data_output",
+                "options": null,
+                "required_inputs": null,
+                "selected": "Data",
+                "tool_mode": true,
+                "types": [
+                  "Data"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "append_update_data": {
+                "_input_type": "DictInput",
+                "advanced": false,
+                "display_name": "Append or Update",
+                "dynamic": false,
+                "info": "Data to Append or Updatethe existing data with.",
+                "list": true,
+                "list_add_label": "Add More",
+                "name": "append_update_data",
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "type": "dict",
+                "value": {
+                  "key": "value"
+                }
+              },
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "import ast\nfrom typing import TYPE_CHECKING, Any\n\nfrom langflow.custom import Component\nfrom langflow.inputs import DictInput, DropdownInput, MessageTextInput, SortableListInput\nfrom langflow.io import DataInput, Output\nfrom langflow.logging import logger\nfrom langflow.schema import Data\nfrom langflow.schema.dotdict import dotdict\nfrom langflow.utils.component_utils import set_current_fields, set_field_display\n\nif TYPE_CHECKING:\n    from collections.abc import Callable\n\nACTION_CONFIG = {\n    \"Select Keys\": {\"is_list\": False, \"log_msg\": \"setting filter fields\"},\n    \"Literal Eval\": {\"is_list\": False, \"log_msg\": \"setting evaluate fields\"},\n    \"Combine\": {\"is_list\": True, \"log_msg\": \"setting combine fields\"},\n    \"Filter Values\": {\"is_list\": False, \"log_msg\": \"setting filter values fields\"},\n    \"Append or Update\": {\"is_list\": False, \"log_msg\": \"setting Append or Update fields\"},\n    \"Remove Keys\": {\"is_list\": False, \"log_msg\": \"setting remove keys fields\"},\n    \"Rename Keys\": {\"is_list\": False, \"log_msg\": \"setting rename keys fields\"},\n}\nOPERATORS = {\n    \"equals\": lambda a, b: str(a) == str(b),\n    \"not equals\": lambda a, b: str(a) != str(b),\n    \"contains\": lambda a, b: str(b) in str(a),\n    \"starts with\": lambda a, b: str(a).startswith(str(b)),\n    \"ends with\": lambda a, b: str(a).endswith(str(b)),\n}\n\n\nclass DataOperationsComponent(Component):\n    display_name = \"Data Operations\"\n    description = \"Perform various operations on a Data object.\"\n    documentation: str = \"https://docs.langflow.org/components-processing#data-operations\"\n    icon = \"file-json\"\n    name = \"DataOperations\"\n    default_keys = [\"operations\", \"data\"]\n    metadata = {\n        \"keywords\": [\n            \"data\",\n            \"operations\",\n            \"filter values\",\n            \"Append or Update\",\n            \"remove keys\",\n            \"rename keys\",\n            \"select keys\",\n            \"literal eval\",\n            \"combine\",\n            \"filter\",\n            \"append\",\n            \"update\",\n            \"remove\",\n            \"rename\",\n            \"data operations\",\n            \"data manipulation\",\n            \"data transformation\",\n            \"data filtering\",\n            \"data selection\",\n            \"data combination\",\n        ],\n    }\n    actions_data = {\n        \"Select Keys\": [\"select_keys_input\", \"operations\"],\n        \"Literal Eval\": [],\n        \"Combine\": [],\n        \"Filter Values\": [\"filter_values\", \"operations\", \"operator\", \"filter_key\"],\n        \"Append or Update\": [\"append_update_data\", \"operations\"],\n        \"Remove Keys\": [\"remove_keys_input\", \"operations\"],\n        \"Rename Keys\": [\"rename_keys_input\", \"operations\"],\n    }\n\n    inputs = [\n        DataInput(name=\"data\", display_name=\"Data\", info=\"Data object to filter.\", required=True, is_list=True),\n        SortableListInput(\n            name=\"operations\",\n            display_name=\"Operations\",\n            placeholder=\"Select Operation\",\n            info=\"List of operations to perform on the data.\",\n            options=[\n                {\"name\": \"Select Keys\", \"icon\": \"lasso-select\"},\n                {\"name\": \"Literal Eval\", \"icon\": \"braces\"},\n                {\"name\": \"Combine\", \"icon\": \"merge\"},\n                {\"name\": \"Filter Values\", \"icon\": \"filter\"},\n                {\"name\": \"Append or Update\", \"icon\": \"circle-plus\"},\n                {\"name\": \"Remove Keys\", \"icon\": \"eraser\"},\n                {\"name\": \"Rename Keys\", \"icon\": \"pencil-line\"},\n            ],\n            real_time_refresh=True,\n            limit=1,\n        ),\n        # select keys inputs\n        MessageTextInput(\n            name=\"select_keys_input\",\n            display_name=\"Select Keys\",\n            info=\"List of keys to select from the data.\",\n            show=False,\n            is_list=True,\n        ),\n        # filter values inputs\n        MessageTextInput(\n            name=\"filter_key\",\n            display_name=\"Filter Key\",\n            info=\"Key to filter by.\",\n            is_list=True,\n            show=False,\n        ),\n        DropdownInput(\n            name=\"operator\",\n            display_name=\"Comparison Operator\",\n            options=[\"equals\", \"not equals\", \"contains\", \"starts with\", \"ends with\"],\n            info=\"The operator to apply for comparing the values.\",\n            value=\"equals\",\n            advanced=False,\n            show=False,\n        ),\n        DictInput(\n            name=\"filter_values\",\n            display_name=\"Filter Values\",\n            info=\"List of values to filter by.\",\n            show=False,\n            is_list=True,\n        ),\n        # update/ Append data inputs\n        DictInput(\n            name=\"append_update_data\",\n            display_name=\"Append or Update\",\n            info=\"Data to Append or Updatethe existing data with.\",\n            show=False,\n            value={\"key\": \"value\"},\n            is_list=True,\n        ),\n        # remove keys inputs\n        MessageTextInput(\n            name=\"remove_keys_input\",\n            display_name=\"Remove Keys\",\n            info=\"List of keys to remove from the data.\",\n            show=False,\n            is_list=True,\n        ),\n        # rename keys inputs\n        DictInput(\n            name=\"rename_keys_input\",\n            display_name=\"Rename Keys\",\n            info=\"List of keys to rename in the data.\",\n            show=False,\n            is_list=True,\n            value={\"old_key\": \"new_key\"},\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Data\", name=\"data_output\", method=\"as_data\"),\n    ]\n\n    # Helper methods for data operations\n    def get_data_dict(self) -> dict:\n        \"\"\"Extract data dictionary from Data object.\"\"\"\n        # TODO: rasie error if it s list of data objects\n        data = self.data[0] if isinstance(self.data, list) and len(self.data) == 1 else self.data\n        return data.model_dump()\n\n    def get_normalized_data(self) -> dict:\n        \"\"\"Get normalized data dictionary, handling the 'data' key if present.\"\"\"\n        data_dict = self.get_data_dict()\n        return data_dict.get(\"data\", data_dict)\n\n    def data_is_list(self) -> bool:\n        \"\"\"Check if data contains multiple items.\"\"\"\n        return isinstance(self.data, list) and len(self.data) > 1\n\n    def validate_single_data(self, operation: str) -> None:\n        \"\"\"Validate that the operation is being performed on a single data object.\"\"\"\n        if self.data_is_list():\n            msg = f\"{operation} operation is not supported for multiple data objects.\"\n            raise ValueError(msg)\n\n    def operation_exception(self, operations: list[str]) -> None:\n        \"\"\"Raise exception for incompatible operations.\"\"\"\n        msg = f\"{operations} operations are not supported in combination with each other.\"\n        raise ValueError(msg)\n\n    # Data transformation operations\n    def select_keys(self, *, evaluate: bool | None = None) -> Data:\n        \"\"\"Select specific keys from the data dictionary.\"\"\"\n        self.validate_single_data(\"Select Keys\")\n        data_dict = self.get_normalized_data()\n        filter_criteria: list[str] = self.select_keys_input\n\n        # Filter the data\n        if len(filter_criteria) == 1 and filter_criteria[0] == \"data\":\n            filtered = data_dict[\"data\"]\n        else:\n            if not all(key in data_dict for key in filter_criteria):\n                msg = f\"Select key not found in data. Available keys: {list(data_dict.keys())}\"\n                raise ValueError(msg)\n            filtered = {key: value for key, value in data_dict.items() if key in filter_criteria}\n\n        # Create a new Data object with the filtered data\n        if evaluate:\n            filtered = self.recursive_eval(filtered)\n\n        # Return a new Data object with the filtered data directly in the data attribute\n        return Data(data=filtered)\n\n    def remove_keys(self) -> Data:\n        \"\"\"Remove specified keys from the data dictionary.\"\"\"\n        self.validate_single_data(\"Remove Keys\")\n        data_dict = self.get_normalized_data()\n        remove_keys_input: list[str] = self.remove_keys_input\n\n        for key in remove_keys_input:\n            if key in data_dict:\n                data_dict.pop(key)\n            else:\n                logger.warning(f\"Key '{key}' not found in data. Skipping removal.\")\n\n        return Data(**data_dict)\n\n    def rename_keys(self) -> Data:\n        \"\"\"Rename keys in the data dictionary.\"\"\"\n        self.validate_single_data(\"Rename Keys\")\n        data_dict = self.get_normalized_data()\n        rename_keys_input: dict[str, str] = self.rename_keys_input\n\n        for old_key, new_key in rename_keys_input.items():\n            if old_key in data_dict:\n                data_dict[new_key] = data_dict[old_key]\n                data_dict.pop(old_key)\n            else:\n                msg = f\"Key '{old_key}' not found in data. Skipping rename.\"\n                raise ValueError(msg)\n\n        return Data(**data_dict)\n\n    def recursive_eval(self, data: Any) -> Any:\n        \"\"\"Recursively evaluate string values in a dictionary or list.\n\n        If the value is a string that can be evaluated, it will be evaluated.\n        Otherwise, the original value is returned.\n        \"\"\"\n        if isinstance(data, dict):\n            return {k: self.recursive_eval(v) for k, v in data.items()}\n        if isinstance(data, list):\n            return [self.recursive_eval(item) for item in data]\n        if isinstance(data, str):\n            try:\n                # Only attempt to evaluate strings that look like Python literals\n                if (\n                    data.strip().startswith((\"{\", \"[\", \"(\", \"'\", '\"'))\n                    or data.strip().lower() in (\"true\", \"false\", \"none\")\n                    or data.strip().replace(\".\", \"\").isdigit()\n                ):\n                    return ast.literal_eval(data)\n                # return data\n            except (ValueError, SyntaxError, TypeError, MemoryError):\n                # If evaluation fails for any reason, return the original string\n                return data\n            else:\n                return data\n        return data\n\n    def evaluate_data(self) -> Data:\n        \"\"\"Evaluate string values in the data dictionary.\"\"\"\n        self.validate_single_data(\"Literal Eval\")\n        logger.info(\"evaluating data\")\n        return Data(**self.recursive_eval(self.get_data_dict()))\n\n    def combine_data(self, *, evaluate: bool | None = None) -> Data:\n        \"\"\"Combine multiple data objects into one.\"\"\"\n        logger.info(\"combining data\")\n        if not self.data_is_list():\n            return self.data[0] if self.data else Data(data={})\n\n        if len(self.data) == 1:\n            msg = \"Combine operation requires multiple data inputs.\"\n            raise ValueError(msg)\n\n        data_dicts = [data.model_dump().get(\"data\", data.model_dump()) for data in self.data]\n        combined_data = {}\n\n        for data_dict in data_dicts:\n            for key, value in data_dict.items():\n                if key not in combined_data:\n                    combined_data[key] = value\n                elif isinstance(combined_data[key], list):\n                    if isinstance(value, list):\n                        combined_data[key].extend(value)\n                    else:\n                        combined_data[key].append(value)\n                else:\n                    # If current value is not a list, convert it to list and add new value\n                    combined_data[key] = (\n                        [combined_data[key], value] if not isinstance(value, list) else [combined_data[key], *value]\n                    )\n\n        if evaluate:\n            combined_data = self.recursive_eval(combined_data)\n\n        return Data(**combined_data)\n\n    def compare_values(self, item_value: Any, filter_value: str, operator: str) -> bool:\n        \"\"\"Compare values based on the specified operator.\"\"\"\n        comparison_func = OPERATORS.get(operator)\n        if comparison_func:\n            return comparison_func(item_value, filter_value)\n        return False\n\n    def filter_data(self, input_data: list[dict[str, Any]], filter_key: str, filter_value: str, operator: str) -> list:\n        \"\"\"Filter list data based on key, value, and operator.\"\"\"\n        # Validate inputs\n        if not input_data:\n            self.status = \"Input data is empty.\"\n            return []\n\n        if not filter_key or not filter_value:\n            self.status = \"Filter key or value is missing.\"\n            return input_data\n\n        # Filter the data\n        filtered_data = []\n        for item in input_data:\n            if isinstance(item, dict) and filter_key in item:\n                if self.compare_values(item[filter_key], filter_value, operator):\n                    filtered_data.append(item)\n            else:\n                self.status = f\"Warning: Some items don't have the key '{filter_key}' or are not dictionaries.\"\n\n        return filtered_data\n\n    def multi_filter_data(self) -> Data:\n        \"\"\"Apply multiple filters to the data.\"\"\"\n        self.validate_single_data(\"Filter Values\")\n        data_filtered = self.get_normalized_data()\n\n        for filter_key in self.filter_key:\n            if filter_key not in data_filtered:\n                msg = f\"Filter key '{filter_key}' not found in data. Available keys: {list(data_filtered.keys())}\"\n                raise ValueError(msg)\n\n            if isinstance(data_filtered[filter_key], list):\n                for filter_data in self.filter_values:\n                    filter_value = self.filter_values.get(filter_data)\n                    if filter_value is not None:\n                        data_filtered[filter_key] = self.filter_data(\n                            input_data=data_filtered[filter_key],\n                            filter_key=filter_data,\n                            filter_value=filter_value,\n                            operator=self.operator,\n                        )\n            else:\n                msg = f\"Filter key '{filter_key}' is not a list.\"\n                raise TypeError(msg)\n\n        return Data(**data_filtered)\n\n    def append_update(self) -> Data:\n        \"\"\"Append or Update with new key-value pairs.\"\"\"\n        self.validate_single_data(\"Append or Update\")\n        data_filtered = self.get_normalized_data()\n\n        for key, value in self.append_update_data.items():\n            data_filtered[key] = value\n\n        return Data(**data_filtered)\n\n    # Configuration and execution methods\n    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:\n        \"\"\"Update build configuration based on selected action.\"\"\"\n        if field_name != \"operations\":\n            return build_config\n\n        build_config[\"operations\"][\"value\"] = field_value\n        selected_actions = [action[\"name\"] for action in field_value]\n\n        # Handle single action case\n        if len(selected_actions) == 1 and selected_actions[0] in ACTION_CONFIG:\n            action = selected_actions[0]\n            config = ACTION_CONFIG[action]\n\n            build_config[\"data\"][\"is_list\"] = config[\"is_list\"]\n            logger.info(config[\"log_msg\"])\n\n            return set_current_fields(\n                build_config=build_config,\n                action_fields=self.actions_data,\n                selected_action=action,\n                default_fields=self.default_keys,\n                func=set_field_display,\n            )\n\n        # Handle no operations case\n        if not selected_actions:\n            logger.info(\"setting default fields\")\n            return set_current_fields(\n                build_config=build_config,\n                action_fields=self.actions_data,\n                selected_action=None,\n                default_fields=self.default_keys,\n                func=set_field_display,\n            )\n\n        return build_config\n\n    def as_data(self) -> Data:\n        \"\"\"Execute the selected action on the data.\"\"\"\n        if not hasattr(self, \"operations\") or not self.operations:\n            return Data(data={})\n\n        selected_actions = [action[\"name\"] for action in self.operations]\n        logger.info(f\"selected_actions: {selected_actions}\")\n\n        # Only handle single action case for now\n        if len(selected_actions) != 1:\n            return Data(data={})\n\n        action = selected_actions[0]\n\n        # Explicitly type the action_map\n        action_map: dict[str, Callable[[], Data]] = {\n            \"Select Keys\": self.select_keys,\n            \"Literal Eval\": self.evaluate_data,\n            \"Combine\": self.combine_data,\n            \"Filter Values\": self.multi_filter_data,\n            \"Append or Update\": self.append_update,\n            \"Remove Keys\": self.remove_keys,\n            \"Rename Keys\": self.rename_keys,\n        }\n\n        handler: Callable[[], Data] | None = action_map.get(action)\n        if handler:\n            try:\n                return handler()\n            except Exception as e:\n                logger.error(f\"Error executing {action}: {e!s}\")\n                raise\n\n        return Data(data={})\n"
+              },
+              "data": {
+                "_input_type": "DataInput",
+                "advanced": false,
+                "display_name": "Data",
+                "dynamic": false,
+                "info": "Data object to filter.",
+                "input_types": [
+                  "Data"
+                ],
+                "is_list": false,
+                "list": true,
+                "list_add_label": "Add More",
+                "name": "data",
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "other",
+                "value": ""
+              },
+              "filter_key": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "Filter Key",
+                "dynamic": false,
+                "info": "Key to filter by.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": true,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "filter_key",
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "filter_values": {
+                "_input_type": "DictInput",
+                "advanced": false,
+                "display_name": "Filter Values",
+                "dynamic": false,
+                "info": "List of values to filter by.",
+                "list": true,
+                "list_add_label": "Add More",
+                "name": "filter_values",
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "type": "dict",
+                "value": {}
+              },
+              "operations": {
+                "_input_type": "SortableListInput",
+                "advanced": false,
+                "display_name": "Operations",
+                "dynamic": false,
+                "info": "List of operations to perform on the data.",
+                "limit": 1,
+                "name": "operations",
+                "options": [
+                  {
+                    "icon": "lasso-select",
+                    "name": "Select Keys"
+                  },
+                  {
+                    "icon": "braces",
+                    "name": "Literal Eval"
+                  },
+                  {
+                    "icon": "merge",
+                    "name": "Combine"
+                  },
+                  {
+                    "icon": "filter",
+                    "name": "Filter Values"
+                  },
+                  {
+                    "icon": "circle-plus",
+                    "name": "Append or Update"
+                  },
+                  {
+                    "icon": "eraser",
+                    "name": "Remove Keys"
+                  },
+                  {
+                    "icon": "pencil-line",
+                    "name": "Rename Keys"
+                  }
+                ],
+                "placeholder": "Select Operation",
+                "real_time_refresh": true,
+                "required": false,
+                "search_category": [],
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "sortableList",
+                "value": [
+                  {
+                    "chosen": false,
+                    "icon": "lasso-select",
+                    "name": "Select Keys",
+                    "selected": false
+                  }
+                ]
+              },
+              "operator": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Comparison Operator",
+                "dynamic": false,
+                "external_options": {},
+                "info": "The operator to apply for comparing the values.",
+                "name": "operator",
+                "options": [
+                  "equals",
+                  "not equals",
+                  "contains",
+                  "starts with",
+                  "ends with"
+                ],
+                "options_metadata": [],
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "equals"
+              },
+              "remove_keys_input": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "Remove Keys",
+                "dynamic": false,
+                "info": "List of keys to remove from the data.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": true,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "remove_keys_input",
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "rename_keys_input": {
+                "_input_type": "DictInput",
+                "advanced": false,
+                "display_name": "Rename Keys",
+                "dynamic": false,
+                "info": "List of keys to rename in the data.",
+                "list": true,
+                "list_add_label": "Add More",
+                "name": "rename_keys_input",
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "type": "dict",
+                "value": {
+                  "old_key": "new_key"
+                }
+              },
+              "select_keys_input": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "Select Keys",
+                "dynamic": false,
+                "info": "List of keys to select from the data.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": true,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "select_keys_input",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": [
+                  "letter"
+                ]
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "DataOperations"
+        },
+        "dragging": false,
+        "id": "DataOperations-1ZBoZ",
+        "measured": {
+          "height": 315,
+          "width": 320
+        },
+        "position": {
+          "x": 1044.0000009307396,
+          "y": 96.00000989968493
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "Prompt Template-JXGuO",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {
+              "template": [
+                "number",
+                "letter"
+              ]
+            },
+            "description": "Create a prompt template with dynamic variables.",
+            "display_name": "Prompt Template",
+            "documentation": "https://docs.langflow.org/components-prompts",
+            "edited": false,
+            "error": null,
+            "field_order": [
+              "template",
+              "tool_placeholder"
+            ],
+            "frozen": false,
+            "full_path": null,
+            "icon": "braces",
+            "is_composition": null,
+            "is_input": null,
+            "is_output": null,
+            "legacy": false,
+            "lf_version": "1.6.0",
+            "metadata": {},
+            "minimized": false,
+            "name": "",
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Prompt",
+                "group_outputs": false,
+                "hidden": null,
+                "method": "build_prompt",
+                "name": "prompt",
+                "options": null,
+                "required_inputs": null,
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "priority": 0,
+            "replacement": null,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from langflow.base.prompts.api_utils import process_prompt_template\nfrom langflow.custom.custom_component.component import Component\nfrom langflow.inputs.inputs import DefaultPromptField\nfrom langflow.io import MessageTextInput, Output, PromptInput\nfrom langflow.schema.message import Message\nfrom langflow.template.utils import update_template_values\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt Template\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    documentation: str = \"https://docs.langflow.org/components-prompts\"\n    icon = \"braces\"\n    trace_type = \"prompt\"\n    name = \"Prompt Template\"\n    priority = 0  # Set priority to 0 to make it appear first\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n        MessageTextInput(\n            name=\"tool_placeholder\",\n            display_name=\"Tool Placeholder\",\n            tool_mode=True,\n            advanced=True,\n            info=\"A placeholder input for tool mode.\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt\", name=\"prompt\", method=\"build_prompt\"),\n    ]\n\n    async def build_prompt(self) -> Message:\n        prompt = Message.from_template(**self._attributes)\n        self.status = prompt.text\n        return prompt\n\n    def _update_template(self, frontend_node: dict):\n        prompt_template = frontend_node[\"template\"][\"template\"][\"value\"]\n        custom_fields = frontend_node[\"custom_fields\"]\n        frontend_node_template = frontend_node[\"template\"]\n        _ = process_prompt_template(\n            template=prompt_template,\n            name=\"template\",\n            custom_fields=custom_fields,\n            frontend_node_template=frontend_node_template,\n        )\n        return frontend_node\n\n    async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict):\n        \"\"\"This function is called after the code validation is done.\"\"\"\n        frontend_node = await super().update_frontend_node(new_frontend_node, current_frontend_node)\n        template = frontend_node[\"template\"][\"template\"][\"value\"]\n        # Kept it duplicated for backwards compatibility\n        _ = process_prompt_template(\n            template=template,\n            name=\"template\",\n            custom_fields=frontend_node[\"custom_fields\"],\n            frontend_node_template=frontend_node[\"template\"],\n        )\n        # Now that template is updated, we need to grab any values that were set in the current_frontend_node\n        # and update the frontend_node with those values\n        update_template_values(new_template=frontend_node, previous_template=current_frontend_node[\"template\"])\n        return frontend_node\n\n    def _get_fallback_input(self, **kwargs):\n        return DefaultPromptField(**kwargs)\n"
+              },
+              "letter": {
+                "advanced": false,
+                "display_name": "letter",
+                "dynamic": false,
+                "field_type": "str",
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "letter",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "number": {
+                "advanced": false,
+                "display_name": "number",
+                "dynamic": false,
+                "field_type": "str",
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "number",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "template": {
+                "_input_type": "PromptInput",
+                "advanced": false,
+                "display_name": "Template",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "template",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "type": "prompt",
+                "value": "{number}\n\n{letter}"
+              },
+              "tool_placeholder": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Tool Placeholder",
+                "dynamic": false,
+                "info": "A placeholder input for tool mode.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "tool_placeholder",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": true,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "Prompt Template"
+        },
+        "dragging": false,
+        "id": "Prompt Template-JXGuO",
+        "measured": {
+          "height": 401,
+          "width": 320
+        },
+        "position": {
+          "x": 1830.0000022845425,
+          "y": -314.9999901003151
+        },
+        "selected": true,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "TypeConverterComponent-z73yT",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "category": "processing",
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Convert between different types (Message, Data, DataFrame)",
+            "display_name": "Type Convert",
+            "documentation": "https://docs.langflow.org/components-processing#type-convert",
+            "edited": false,
+            "field_order": [
+              "input_data",
+              "output_type"
+            ],
+            "frozen": false,
+            "icon": "repeat",
+            "key": "TypeConverterComponent",
+            "last_updated": "2025-10-09T12:38:16.160Z",
+            "legacy": false,
+            "metadata": {},
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Message Output",
+                "group_outputs": false,
+                "method": "convert_to_message",
+                "name": "message_output",
+                "options": null,
+                "required_inputs": null,
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "score": 0.007568328950209746,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from typing import Any\n\nfrom langflow.custom import Component\nfrom langflow.io import HandleInput, Output, TabInput\nfrom langflow.schema import Data, DataFrame, Message\n\n\ndef convert_to_message(v) -> Message:\n    \"\"\"Convert input to Message type.\n\n    Args:\n        v: Input to convert (Message, Data, DataFrame, or dict)\n\n    Returns:\n        Message: Converted Message object\n    \"\"\"\n    return v if isinstance(v, Message) else v.to_message()\n\n\ndef convert_to_data(v: DataFrame | Data | Message | dict) -> Data:\n    \"\"\"Convert input to Data type.\n\n    Args:\n        v: Input to convert (Message, Data, DataFrame, or dict)\n\n    Returns:\n        Data: Converted Data object\n    \"\"\"\n    if isinstance(v, dict):\n        return Data(v)\n    if isinstance(v, Message):\n        return v.to_data()\n    return v if isinstance(v, Data) else v.to_data()\n\n\ndef convert_to_dataframe(v: DataFrame | Data | Message | dict) -> DataFrame:\n    \"\"\"Convert input to DataFrame type.\n\n    Args:\n        v: Input to convert (Message, Data, DataFrame, or dict)\n\n    Returns:\n        DataFrame: Converted DataFrame object\n    \"\"\"\n    if isinstance(v, dict):\n        return DataFrame([v])\n    return v if isinstance(v, DataFrame) else v.to_dataframe()\n\n\nclass TypeConverterComponent(Component):\n    display_name = \"Type Convert\"\n    description = \"Convert between different types (Message, Data, DataFrame)\"\n    documentation: str = \"https://docs.langflow.org/components-processing#type-convert\"\n    icon = \"repeat\"\n\n    inputs = [\n        HandleInput(\n            name=\"input_data\",\n            display_name=\"Input\",\n            input_types=[\"Message\", \"Data\", \"DataFrame\"],\n            info=\"Accept Message, Data or DataFrame as input\",\n            required=True,\n        ),\n        TabInput(\n            name=\"output_type\",\n            display_name=\"Output Type\",\n            options=[\"Message\", \"Data\", \"DataFrame\"],\n            info=\"Select the desired output data type\",\n            real_time_refresh=True,\n            value=\"Message\",\n        ),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"Message Output\",\n            name=\"message_output\",\n            method=\"convert_to_message\",\n        )\n    ]\n\n    def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:\n        \"\"\"Dynamically show only the relevant output based on the selected output type.\"\"\"\n        if field_name == \"output_type\":\n            # Start with empty outputs\n            frontend_node[\"outputs\"] = []\n\n            # Add only the selected output type\n            if field_value == \"Message\":\n                frontend_node[\"outputs\"].append(\n                    Output(\n                        display_name=\"Message Output\",\n                        name=\"message_output\",\n                        method=\"convert_to_message\",\n                    ).to_dict()\n                )\n            elif field_value == \"Data\":\n                frontend_node[\"outputs\"].append(\n                    Output(\n                        display_name=\"Data Output\",\n                        name=\"data_output\",\n                        method=\"convert_to_data\",\n                    ).to_dict()\n                )\n            elif field_value == \"DataFrame\":\n                frontend_node[\"outputs\"].append(\n                    Output(\n                        display_name=\"DataFrame Output\",\n                        name=\"dataframe_output\",\n                        method=\"convert_to_dataframe\",\n                    ).to_dict()\n                )\n\n        return frontend_node\n\n    def convert_to_message(self) -> Message:\n        \"\"\"Convert input to Message type.\"\"\"\n        input_value = self.input_data[0] if isinstance(self.input_data, list) else self.input_data\n\n        # Handle string input by converting to Message first\n        if isinstance(input_value, str):\n            input_value = Message(text=input_value)\n\n        result = convert_to_message(input_value)\n        self.status = result\n        return result\n\n    def convert_to_data(self) -> Data:\n        \"\"\"Convert input to Data type.\"\"\"\n        input_value = self.input_data[0] if isinstance(self.input_data, list) else self.input_data\n\n        # Handle string input by converting to Message first\n        if isinstance(input_value, str):\n            input_value = Message(text=input_value)\n\n        result = convert_to_data(input_value)\n        self.status = result\n        return result\n\n    def convert_to_dataframe(self) -> DataFrame:\n        \"\"\"Convert input to DataFrame type.\"\"\"\n        input_value = self.input_data[0] if isinstance(self.input_data, list) else self.input_data\n\n        # Handle string input by converting to Message first\n        if isinstance(input_value, str):\n            input_value = Message(text=input_value)\n\n        result = convert_to_dataframe(input_value)\n        self.status = result\n        return result\n"
+              },
+              "input_data": {
+                "_input_type": "HandleInput",
+                "advanced": false,
+                "display_name": "Input",
+                "dynamic": false,
+                "info": "Accept Message, Data or DataFrame as input",
+                "input_types": [
+                  "Message",
+                  "Data",
+                  "DataFrame"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "input_data",
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "other",
+                "value": ""
+              },
+              "output_type": {
+                "_input_type": "TabInput",
+                "advanced": false,
+                "display_name": "Output Type",
+                "dynamic": false,
+                "info": "Select the desired output data type",
+                "name": "output_type",
+                "options": [
+                  "Message",
+                  "Data",
+                  "DataFrame"
+                ],
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "tab",
+                "value": "Message"
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "TypeConverterComponent"
+        },
+        "dragging": false,
+        "id": "TypeConverterComponent-z73yT",
+        "measured": {
+          "height": 261,
+          "width": 320
+        },
+        "position": {
+          "x": 1430.0000010153524,
+          "y": -311.9999901003151
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "TypeConverterComponent-De2Qe",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "category": "processing",
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Convert between different types (Message, Data, DataFrame)",
+            "display_name": "Type Convert",
+            "documentation": "https://docs.langflow.org/components-processing#type-convert",
+            "edited": false,
+            "field_order": [
+              "input_data",
+              "output_type"
+            ],
+            "frozen": false,
+            "icon": "repeat",
+            "key": "TypeConverterComponent",
+            "legacy": false,
+            "lf_version": "1.6.0",
+            "metadata": {},
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Message Output",
+                "group_outputs": false,
+                "method": "convert_to_message",
+                "name": "message_output",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "score": 0.007568328950209746,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from typing import Any\n\nfrom langflow.custom import Component\nfrom langflow.io import HandleInput, Output, TabInput\nfrom langflow.schema import Data, DataFrame, Message\n\n\ndef convert_to_message(v) -> Message:\n    \"\"\"Convert input to Message type.\n\n    Args:\n        v: Input to convert (Message, Data, DataFrame, or dict)\n\n    Returns:\n        Message: Converted Message object\n    \"\"\"\n    return v if isinstance(v, Message) else v.to_message()\n\n\ndef convert_to_data(v: DataFrame | Data | Message | dict) -> Data:\n    \"\"\"Convert input to Data type.\n\n    Args:\n        v: Input to convert (Message, Data, DataFrame, or dict)\n\n    Returns:\n        Data: Converted Data object\n    \"\"\"\n    if isinstance(v, dict):\n        return Data(v)\n    if isinstance(v, Message):\n        return v.to_data()\n    return v if isinstance(v, Data) else v.to_data()\n\n\ndef convert_to_dataframe(v: DataFrame | Data | Message | dict) -> DataFrame:\n    \"\"\"Convert input to DataFrame type.\n\n    Args:\n        v: Input to convert (Message, Data, DataFrame, or dict)\n\n    Returns:\n        DataFrame: Converted DataFrame object\n    \"\"\"\n    if isinstance(v, dict):\n        return DataFrame([v])\n    return v if isinstance(v, DataFrame) else v.to_dataframe()\n\n\nclass TypeConverterComponent(Component):\n    display_name = \"Type Convert\"\n    description = \"Convert between different types (Message, Data, DataFrame)\"\n    documentation: str = \"https://docs.langflow.org/components-processing#type-convert\"\n    icon = \"repeat\"\n\n    inputs = [\n        HandleInput(\n            name=\"input_data\",\n            display_name=\"Input\",\n            input_types=[\"Message\", \"Data\", \"DataFrame\"],\n            info=\"Accept Message, Data or DataFrame as input\",\n            required=True,\n        ),\n        TabInput(\n            name=\"output_type\",\n            display_name=\"Output Type\",\n            options=[\"Message\", \"Data\", \"DataFrame\"],\n            info=\"Select the desired output data type\",\n            real_time_refresh=True,\n            value=\"Message\",\n        ),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"Message Output\",\n            name=\"message_output\",\n            method=\"convert_to_message\",\n        )\n    ]\n\n    def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:\n        \"\"\"Dynamically show only the relevant output based on the selected output type.\"\"\"\n        if field_name == \"output_type\":\n            # Start with empty outputs\n            frontend_node[\"outputs\"] = []\n\n            # Add only the selected output type\n            if field_value == \"Message\":\n                frontend_node[\"outputs\"].append(\n                    Output(\n                        display_name=\"Message Output\",\n                        name=\"message_output\",\n                        method=\"convert_to_message\",\n                    ).to_dict()\n                )\n            elif field_value == \"Data\":\n                frontend_node[\"outputs\"].append(\n                    Output(\n                        display_name=\"Data Output\",\n                        name=\"data_output\",\n                        method=\"convert_to_data\",\n                    ).to_dict()\n                )\n            elif field_value == \"DataFrame\":\n                frontend_node[\"outputs\"].append(\n                    Output(\n                        display_name=\"DataFrame Output\",\n                        name=\"dataframe_output\",\n                        method=\"convert_to_dataframe\",\n                    ).to_dict()\n                )\n\n        return frontend_node\n\n    def convert_to_message(self) -> Message:\n        \"\"\"Convert input to Message type.\"\"\"\n        input_value = self.input_data[0] if isinstance(self.input_data, list) else self.input_data\n\n        # Handle string input by converting to Message first\n        if isinstance(input_value, str):\n            input_value = Message(text=input_value)\n\n        result = convert_to_message(input_value)\n        self.status = result\n        return result\n\n    def convert_to_data(self) -> Data:\n        \"\"\"Convert input to Data type.\"\"\"\n        input_value = self.input_data[0] if isinstance(self.input_data, list) else self.input_data\n\n        # Handle string input by converting to Message first\n        if isinstance(input_value, str):\n            input_value = Message(text=input_value)\n\n        result = convert_to_data(input_value)\n        self.status = result\n        return result\n\n    def convert_to_dataframe(self) -> DataFrame:\n        \"\"\"Convert input to DataFrame type.\"\"\"\n        input_value = self.input_data[0] if isinstance(self.input_data, list) else self.input_data\n\n        # Handle string input by converting to Message first\n        if isinstance(input_value, str):\n            input_value = Message(text=input_value)\n\n        result = convert_to_dataframe(input_value)\n        self.status = result\n        return result\n"
+              },
+              "input_data": {
+                "_input_type": "HandleInput",
+                "advanced": false,
+                "display_name": "Input",
+                "dynamic": false,
+                "info": "Accept Message, Data or DataFrame as input",
+                "input_types": [
+                  "Message",
+                  "Data",
+                  "DataFrame"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "input_data",
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "other",
+                "value": ""
+              },
+              "output_type": {
+                "_input_type": "TabInput",
+                "advanced": false,
+                "display_name": "Output Type",
+                "dynamic": false,
+                "info": "Select the desired output data type",
+                "name": "output_type",
+                "options": [
+                  "Message",
+                  "Data",
+                  "DataFrame"
+                ],
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "tab",
+                "value": "Message"
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "TypeConverterComponent"
+        },
+        "dragging": false,
+        "id": "TypeConverterComponent-De2Qe",
+        "measured": {
+          "height": 261,
+          "width": 320
+        },
+        "position": {
+          "x": 1430.0000009307396,
+          "y": 91.00000989968493
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "TypeConverterComponent-NCR14",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "category": "processing",
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Convert between different types (Message, Data, DataFrame)",
+            "display_name": "Type Convert",
+            "documentation": "https://docs.langflow.org/components-processing#type-convert",
+            "edited": false,
+            "field_order": [
+              "input_data",
+              "output_type"
+            ],
+            "frozen": false,
+            "icon": "repeat",
+            "key": "TypeConverterComponent",
+            "last_updated": "2025-10-09T12:38:27.641Z",
+            "legacy": false,
+            "metadata": {},
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Data Output",
+                "group_outputs": false,
+                "hidden": null,
+                "method": "convert_to_data",
+                "name": "data_output",
+                "options": null,
+                "required_inputs": null,
+                "selected": "Data",
+                "tool_mode": true,
+                "types": [
+                  "Data"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "score": 0.007568328950209746,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from typing import Any\n\nfrom langflow.custom import Component\nfrom langflow.io import HandleInput, Output, TabInput\nfrom langflow.schema import Data, DataFrame, Message\n\n\ndef convert_to_message(v) -> Message:\n    \"\"\"Convert input to Message type.\n\n    Args:\n        v: Input to convert (Message, Data, DataFrame, or dict)\n\n    Returns:\n        Message: Converted Message object\n    \"\"\"\n    return v if isinstance(v, Message) else v.to_message()\n\n\ndef convert_to_data(v: DataFrame | Data | Message | dict) -> Data:\n    \"\"\"Convert input to Data type.\n\n    Args:\n        v: Input to convert (Message, Data, DataFrame, or dict)\n\n    Returns:\n        Data: Converted Data object\n    \"\"\"\n    if isinstance(v, dict):\n        return Data(v)\n    if isinstance(v, Message):\n        return v.to_data()\n    return v if isinstance(v, Data) else v.to_data()\n\n\ndef convert_to_dataframe(v: DataFrame | Data | Message | dict) -> DataFrame:\n    \"\"\"Convert input to DataFrame type.\n\n    Args:\n        v: Input to convert (Message, Data, DataFrame, or dict)\n\n    Returns:\n        DataFrame: Converted DataFrame object\n    \"\"\"\n    if isinstance(v, dict):\n        return DataFrame([v])\n    return v if isinstance(v, DataFrame) else v.to_dataframe()\n\n\nclass TypeConverterComponent(Component):\n    display_name = \"Type Convert\"\n    description = \"Convert between different types (Message, Data, DataFrame)\"\n    documentation: str = \"https://docs.langflow.org/components-processing#type-convert\"\n    icon = \"repeat\"\n\n    inputs = [\n        HandleInput(\n            name=\"input_data\",\n            display_name=\"Input\",\n            input_types=[\"Message\", \"Data\", \"DataFrame\"],\n            info=\"Accept Message, Data or DataFrame as input\",\n            required=True,\n        ),\n        TabInput(\n            name=\"output_type\",\n            display_name=\"Output Type\",\n            options=[\"Message\", \"Data\", \"DataFrame\"],\n            info=\"Select the desired output data type\",\n            real_time_refresh=True,\n            value=\"Message\",\n        ),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"Message Output\",\n            name=\"message_output\",\n            method=\"convert_to_message\",\n        )\n    ]\n\n    def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:\n        \"\"\"Dynamically show only the relevant output based on the selected output type.\"\"\"\n        if field_name == \"output_type\":\n            # Start with empty outputs\n            frontend_node[\"outputs\"] = []\n\n            # Add only the selected output type\n            if field_value == \"Message\":\n                frontend_node[\"outputs\"].append(\n                    Output(\n                        display_name=\"Message Output\",\n                        name=\"message_output\",\n                        method=\"convert_to_message\",\n                    ).to_dict()\n                )\n            elif field_value == \"Data\":\n                frontend_node[\"outputs\"].append(\n                    Output(\n                        display_name=\"Data Output\",\n                        name=\"data_output\",\n                        method=\"convert_to_data\",\n                    ).to_dict()\n                )\n            elif field_value == \"DataFrame\":\n                frontend_node[\"outputs\"].append(\n                    Output(\n                        display_name=\"DataFrame Output\",\n                        name=\"dataframe_output\",\n                        method=\"convert_to_dataframe\",\n                    ).to_dict()\n                )\n\n        return frontend_node\n\n    def convert_to_message(self) -> Message:\n        \"\"\"Convert input to Message type.\"\"\"\n        input_value = self.input_data[0] if isinstance(self.input_data, list) else self.input_data\n\n        # Handle string input by converting to Message first\n        if isinstance(input_value, str):\n            input_value = Message(text=input_value)\n\n        result = convert_to_message(input_value)\n        self.status = result\n        return result\n\n    def convert_to_data(self) -> Data:\n        \"\"\"Convert input to Data type.\"\"\"\n        input_value = self.input_data[0] if isinstance(self.input_data, list) else self.input_data\n\n        # Handle string input by converting to Message first\n        if isinstance(input_value, str):\n            input_value = Message(text=input_value)\n\n        result = convert_to_data(input_value)\n        self.status = result\n        return result\n\n    def convert_to_dataframe(self) -> DataFrame:\n        \"\"\"Convert input to DataFrame type.\"\"\"\n        input_value = self.input_data[0] if isinstance(self.input_data, list) else self.input_data\n\n        # Handle string input by converting to Message first\n        if isinstance(input_value, str):\n            input_value = Message(text=input_value)\n\n        result = convert_to_dataframe(input_value)\n        self.status = result\n        return result\n"
+              },
+              "input_data": {
+                "_input_type": "HandleInput",
+                "advanced": false,
+                "display_name": "Input",
+                "dynamic": false,
+                "info": "Accept Message, Data or DataFrame as input",
+                "input_types": [
+                  "Message",
+                  "Data",
+                  "DataFrame"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "input_data",
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "other",
+                "value": ""
+              },
+              "output_type": {
+                "_input_type": "TabInput",
+                "advanced": false,
+                "display_name": "Output Type",
+                "dynamic": false,
+                "info": "Select the desired output data type",
+                "name": "output_type",
+                "options": [
+                  "Message",
+                  "Data",
+                  "DataFrame"
+                ],
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "tab",
+                "value": "Data"
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "TypeConverterComponent"
+        },
+        "dragging": false,
+        "id": "TypeConverterComponent-NCR14",
+        "measured": {
+          "height": 261,
+          "width": 320
+        },
+        "position": {
+          "x": 2602.7435624943905,
+          "y": -167.10172626807935
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "ChatOutput-MZask",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "category": "input_output",
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Display a chat message in the Playground.",
+            "display_name": "Chat Output",
+            "documentation": "https://docs.langflow.org/components-io#chat-output",
+            "edited": false,
+            "field_order": [
+              "input_value",
+              "should_store_message",
+              "sender",
+              "sender_name",
+              "session_id",
+              "data_template"
+            ],
+            "frozen": false,
+            "icon": "MessagesSquare",
+            "key": "ChatOutput",
+            "legacy": false,
+            "lf_version": "1.6.0",
+            "metadata": {},
+            "minimized": true,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Output Message",
+                "group_outputs": false,
+                "method": "message_response",
+                "name": "message",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "score": 0.003169567463043492,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from collections.abc import Generator\nfrom typing import Any\n\nimport orjson\nfrom fastapi.encoders import jsonable_encoder\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.helpers.data import safe_convert\nfrom langflow.inputs.inputs import BoolInput, DropdownInput, HandleInput, MessageTextInput\nfrom langflow.schema.data import Data\nfrom langflow.schema.dataframe import DataFrame\nfrom langflow.schema.message import Message\nfrom langflow.schema.properties import Source\nfrom langflow.template.field.base import Output\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_AI,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    documentation: str = \"https://docs.langflow.org/components-io#chat-output\"\n    icon = \"MessagesSquare\"\n    name = \"ChatOutput\"\n    minimized = True\n\n    inputs = [\n        HandleInput(\n            name=\"input_value\",\n            display_name=\"Inputs\",\n            info=\"Message to be passed as output.\",\n            input_types=[\"Data\", \"DataFrame\", \"Message\"],\n            required=True,\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_AI,\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_AI,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n    ]\n    outputs = [\n        Output(\n            display_name=\"Output Message\",\n            name=\"message\",\n            method=\"message_response\",\n        ),\n    ]\n\n    def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:\n        source_dict = {}\n        if id_:\n            source_dict[\"id\"] = id_\n        if display_name:\n            source_dict[\"display_name\"] = display_name\n        if source:\n            # Handle case where source is a ChatOpenAI object\n            if hasattr(source, \"model_name\"):\n                source_dict[\"source\"] = source.model_name\n            elif hasattr(source, \"model\"):\n                source_dict[\"source\"] = str(source.model)\n            else:\n                source_dict[\"source\"] = str(source)\n        return Source(**source_dict)\n\n    async def message_response(self) -> Message:\n        # First convert the input to string if needed\n        text = self.convert_to_string()\n\n        # Get source properties\n        source, icon, display_name, source_id = self.get_properties_from_source_component()\n\n        # Create or use existing Message object\n        if isinstance(self.input_value, Message):\n            message = self.input_value\n            # Update message properties\n            message.text = text\n        else:\n            message = Message(text=text)\n\n        # Set message properties\n        message.sender = self.sender\n        message.sender_name = self.sender_name\n        message.session_id = self.session_id\n        message.flow_id = self.graph.flow_id if hasattr(self, \"graph\") else None\n        message.properties.source = self._build_source(source_id, display_name, source)\n\n        # Store message if needed\n        if self.session_id and self.should_store_message:\n            stored_message = await self.send_message(message)\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n\n    def _serialize_data(self, data: Data) -> str:\n        \"\"\"Serialize Data object to JSON string.\"\"\"\n        # Convert data.data to JSON-serializable format\n        serializable_data = jsonable_encoder(data.data)\n        # Serialize with orjson, enabling pretty printing with indentation\n        json_bytes = orjson.dumps(serializable_data, option=orjson.OPT_INDENT_2)\n        # Convert bytes to string and wrap in Markdown code blocks\n        return \"```json\\n\" + json_bytes.decode(\"utf-8\") + \"\\n```\"\n\n    def _validate_input(self) -> None:\n        \"\"\"Validate the input data and raise ValueError if invalid.\"\"\"\n        if self.input_value is None:\n            msg = \"Input data cannot be None\"\n            raise ValueError(msg)\n        if isinstance(self.input_value, list) and not all(\n            isinstance(item, Message | Data | DataFrame | str) for item in self.input_value\n        ):\n            invalid_types = [\n                type(item).__name__\n                for item in self.input_value\n                if not isinstance(item, Message | Data | DataFrame | str)\n            ]\n            msg = f\"Expected Data or DataFrame or Message or str, got {invalid_types}\"\n            raise TypeError(msg)\n        if not isinstance(\n            self.input_value,\n            Message | Data | DataFrame | str | list | Generator | type(None),\n        ):\n            type_name = type(self.input_value).__name__\n            msg = f\"Expected Data or DataFrame or Message or str, Generator or None, got {type_name}\"\n            raise TypeError(msg)\n\n    def convert_to_string(self) -> str | Generator[Any, None, None]:\n        \"\"\"Convert input data to string with proper error handling.\"\"\"\n        self._validate_input()\n        if isinstance(self.input_value, list):\n            clean_data: bool = getattr(self, \"clean_data\", False)\n            return \"\\n\".join([safe_convert(item, clean_data=clean_data) for item in self.input_value])\n        if isinstance(self.input_value, Generator):\n            return self.input_value\n        return safe_convert(self.input_value)\n"
+              },
+              "data_template": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Data Template",
+                "dynamic": false,
+                "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "data_template",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "{text}"
+              },
+              "input_value": {
+                "_input_type": "HandleInput",
+                "advanced": false,
+                "display_name": "Inputs",
+                "dynamic": false,
+                "info": "Message to be passed as output.",
+                "input_types": [
+                  "Data",
+                  "DataFrame",
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "input_value",
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "other",
+                "value": ""
+              },
+              "sender": {
+                "_input_type": "DropdownInput",
+                "advanced": true,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Sender Type",
+                "dynamic": false,
+                "external_options": {},
+                "info": "Type of sender.",
+                "name": "sender",
+                "options": [
+                  "Machine",
+                  "User"
+                ],
+                "options_metadata": [],
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "Machine"
+              },
+              "sender_name": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Sender Name",
+                "dynamic": false,
+                "info": "Name of the sender.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "sender_name",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "AI"
+              },
+              "session_id": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Session ID",
+                "dynamic": false,
+                "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "session_id",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "should_store_message": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Store Messages",
+                "dynamic": false,
+                "info": "Store the message in the history.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "should_store_message",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": false,
+          "type": "ChatOutput"
+        },
+        "dragging": false,
+        "id": "ChatOutput-MZask",
+        "measured": {
+          "height": 48,
+          "width": 192
+        },
+        "position": {
+          "x": 1128.4837624458542,
+          "y": 807.2501299957237
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "ChatOutput-tJacB",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "category": "input_output",
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Display a chat message in the Playground.",
+            "display_name": "Chat Output",
+            "documentation": "https://docs.langflow.org/components-io#chat-output",
+            "edited": false,
+            "field_order": [
+              "input_value",
+              "should_store_message",
+              "sender",
+              "sender_name",
+              "session_id",
+              "data_template"
+            ],
+            "frozen": false,
+            "icon": "MessagesSquare",
+            "key": "ChatOutput",
+            "legacy": false,
+            "metadata": {},
+            "minimized": true,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Output Message",
+                "group_outputs": false,
+                "method": "message_response",
+                "name": "message",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "score": 0.003169567463043492,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from collections.abc import Generator\nfrom typing import Any\n\nimport orjson\nfrom fastapi.encoders import jsonable_encoder\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.helpers.data import safe_convert\nfrom langflow.inputs.inputs import BoolInput, DropdownInput, HandleInput, MessageTextInput\nfrom langflow.schema.data import Data\nfrom langflow.schema.dataframe import DataFrame\nfrom langflow.schema.message import Message\nfrom langflow.schema.properties import Source\nfrom langflow.template.field.base import Output\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_AI,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    documentation: str = \"https://docs.langflow.org/components-io#chat-output\"\n    icon = \"MessagesSquare\"\n    name = \"ChatOutput\"\n    minimized = True\n\n    inputs = [\n        HandleInput(\n            name=\"input_value\",\n            display_name=\"Inputs\",\n            info=\"Message to be passed as output.\",\n            input_types=[\"Data\", \"DataFrame\", \"Message\"],\n            required=True,\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_AI,\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_AI,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n    ]\n    outputs = [\n        Output(\n            display_name=\"Output Message\",\n            name=\"message\",\n            method=\"message_response\",\n        ),\n    ]\n\n    def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:\n        source_dict = {}\n        if id_:\n            source_dict[\"id\"] = id_\n        if display_name:\n            source_dict[\"display_name\"] = display_name\n        if source:\n            # Handle case where source is a ChatOpenAI object\n            if hasattr(source, \"model_name\"):\n                source_dict[\"source\"] = source.model_name\n            elif hasattr(source, \"model\"):\n                source_dict[\"source\"] = str(source.model)\n            else:\n                source_dict[\"source\"] = str(source)\n        return Source(**source_dict)\n\n    async def message_response(self) -> Message:\n        # First convert the input to string if needed\n        text = self.convert_to_string()\n\n        # Get source properties\n        source, icon, display_name, source_id = self.get_properties_from_source_component()\n\n        # Create or use existing Message object\n        if isinstance(self.input_value, Message):\n            message = self.input_value\n            # Update message properties\n            message.text = text\n        else:\n            message = Message(text=text)\n\n        # Set message properties\n        message.sender = self.sender\n        message.sender_name = self.sender_name\n        message.session_id = self.session_id\n        message.flow_id = self.graph.flow_id if hasattr(self, \"graph\") else None\n        message.properties.source = self._build_source(source_id, display_name, source)\n\n        # Store message if needed\n        if self.session_id and self.should_store_message:\n            stored_message = await self.send_message(message)\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n\n    def _serialize_data(self, data: Data) -> str:\n        \"\"\"Serialize Data object to JSON string.\"\"\"\n        # Convert data.data to JSON-serializable format\n        serializable_data = jsonable_encoder(data.data)\n        # Serialize with orjson, enabling pretty printing with indentation\n        json_bytes = orjson.dumps(serializable_data, option=orjson.OPT_INDENT_2)\n        # Convert bytes to string and wrap in Markdown code blocks\n        return \"```json\\n\" + json_bytes.decode(\"utf-8\") + \"\\n```\"\n\n    def _validate_input(self) -> None:\n        \"\"\"Validate the input data and raise ValueError if invalid.\"\"\"\n        if self.input_value is None:\n            msg = \"Input data cannot be None\"\n            raise ValueError(msg)\n        if isinstance(self.input_value, list) and not all(\n            isinstance(item, Message | Data | DataFrame | str) for item in self.input_value\n        ):\n            invalid_types = [\n                type(item).__name__\n                for item in self.input_value\n                if not isinstance(item, Message | Data | DataFrame | str)\n            ]\n            msg = f\"Expected Data or DataFrame or Message or str, got {invalid_types}\"\n            raise TypeError(msg)\n        if not isinstance(\n            self.input_value,\n            Message | Data | DataFrame | str | list | Generator | type(None),\n        ):\n            type_name = type(self.input_value).__name__\n            msg = f\"Expected Data or DataFrame or Message or str, Generator or None, got {type_name}\"\n            raise TypeError(msg)\n\n    def convert_to_string(self) -> str | Generator[Any, None, None]:\n        \"\"\"Convert input data to string with proper error handling.\"\"\"\n        self._validate_input()\n        if isinstance(self.input_value, list):\n            clean_data: bool = getattr(self, \"clean_data\", False)\n            return \"\\n\".join([safe_convert(item, clean_data=clean_data) for item in self.input_value])\n        if isinstance(self.input_value, Generator):\n            return self.input_value\n        return safe_convert(self.input_value)\n"
+              },
+              "data_template": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Data Template",
+                "dynamic": false,
+                "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "data_template",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "{text}"
+              },
+              "input_value": {
+                "_input_type": "HandleInput",
+                "advanced": false,
+                "display_name": "Inputs",
+                "dynamic": false,
+                "info": "Message to be passed as output.",
+                "input_types": [
+                  "Data",
+                  "DataFrame",
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "input_value",
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "other",
+                "value": ""
+              },
+              "sender": {
+                "_input_type": "DropdownInput",
+                "advanced": true,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Sender Type",
+                "dynamic": false,
+                "external_options": {},
+                "info": "Type of sender.",
+                "name": "sender",
+                "options": [
+                  "Machine",
+                  "User"
+                ],
+                "options_metadata": [],
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "Machine"
+              },
+              "sender_name": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Sender Name",
+                "dynamic": false,
+                "info": "Name of the sender.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "sender_name",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "AI"
+              },
+              "session_id": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Session ID",
+                "dynamic": false,
+                "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "session_id",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "should_store_message": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Store Messages",
+                "dynamic": false,
+                "info": "Store the message in the history.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "should_store_message",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": false,
+          "type": "ChatOutput"
+        },
+        "dragging": false,
+        "id": "ChatOutput-tJacB",
+        "measured": {
+          "height": 48,
+          "width": 192
+        },
+        "position": {
+          "x": 2328.8845935287563,
+          "y": 42.179705482924305
+        },
+        "selected": false,
+        "type": "genericNode"
+      }
+    ],
+    "viewport": {
+      "x": -123.62859754763599,
+      "y": 397.30625221504,
+      "zoom": 0.5000000211531738
+    }
+  },
+  "description": "Building Linguistic Labyrinths.",
+  "endpoint_name": null,
+  "id": "d585cf51-c388-4b09-ae4d-4b21cd98053e",
+  "is_component": false,
+  "last_tested_version": "1.6.0",
+  "name": "loop",
+  "tags": []
+}

@@ -4,6 +4,10 @@ run-name: Langflow Release by @${{ github.actor }}
 on:
   workflow_dispatch:
     inputs:
+      release_tag:
+        description: "Tag to release from. This is the tag that contains the source code for the release."
+        required: true
+        type: string
       release_package_base:
         description: "Release Langflow Base"
         required: true
@@ -12,6 +16,11 @@ on:
       release_package_main:
         description: "Release Langflow"
         required: true
+        type: boolean
+        default: false
+      release_lfx:
+        description: "Release LFX package (manually triggered)"
+        required: false
         type: boolean
         default: false
       build_docker_base:
@@ -24,11 +33,6 @@ on:
         required: true
         type: boolean
         default: false
-      build_docker_ep:
-        description: "Build Docker Image for Langflow with Entrypoint"
-        required: false
-        type: boolean
-        default: false
       pre_release:
         description: "Pre-release"
         required: false
@@ -38,33 +42,208 @@ on:
         description: "Whether to create a gh release"
         required: false
         type: boolean
+        default: false
+      dry_run:
+        description: "Dry run mode - disables all pushes to external services (PyPI, Docker, GitHub releases)"
+        required: false
+        type: boolean
         default: true
 
-
-
 jobs:
+  echo-inputs:
+    name: Echo Workflow Inputs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Echo workflow inputs
+        run: |
+          echo "release_tag: ${{ inputs.release_tag }}"
+          echo "release_package_base: ${{ inputs.release_package_base }}"
+          echo "release_package_main: ${{ inputs.release_package_main }}"
+          echo "release_lfx: ${{ inputs.release_lfx }}"
+          echo "build_docker_base: ${{ inputs.build_docker_base }}"
+          echo "build_docker_main: ${{ inputs.build_docker_main }}"
+          echo "pre_release: ${{ inputs.pre_release }}"
+          echo "create_release: ${{ inputs.create_release }}"
+          echo "dry_run: ${{ inputs.dry_run }}"
+
+  validate-tag:
+    name: Validate Tag Input
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0 # Fetch all history - required for tags (?)
+      - name: Validate that input is a tag, not a branch
+        run: |
+          # Check if the input exists as a tag
+          if ! git tag -l | grep -q "^${{ inputs.release_tag }}$"; then
+            echo "Error: '${{ inputs.release_tag }}' is not a valid tag."
+            echo "Available tags:"
+            git tag -l | head -20
+            exit 1
+          fi
+
+          # Check if the input also exists as a branch (warn if so, but don't fail)
+          if git branch -r | grep -q "origin/${{ inputs.release_tag }}$"; then
+            echo "Tag '${{ inputs.release_tag }}' also exists as a branch. Exiting out of caution."
+            exit 1
+          fi
+
+          echo "Validated: '${{ inputs.release_tag }}' is a valid tag."
+
+  validate-dependencies:
+    name: Validate Release Dependencies
+    runs-on: ubuntu-latest
+    if: ${{ inputs.release_package_base || inputs.release_package_main || inputs.release_lfx || inputs.build_docker_base || inputs.build_docker_main }}
+    needs: [validate-tag]
+    steps:
+      - name: Validate that build-base is enabled if build-main is enabled
+        run: |
+          if [ "${{ inputs.release_package_main }}" = "true" ] && [ "${{ inputs.release_package_base }}" = "false" ]; then
+            echo "Error: Cannot release Langflow Main without releasing Langflow Base."
+            echo "Please enable 'release_package_base' or disable 'release_package_main'."
+            exit 1
+          fi
+
+          echo "✅ Release dependencies validated successfully."
+
   ci:
-    if: ${{ github.event.inputs.release_package_base == 'true' || github.event.inputs.release_package_main == 'true' }}
     name: CI
+    needs: [validate-tag, validate-dependencies]
     uses: ./.github/workflows/ci.yml
     with:
+      ref: ${{ inputs.release_tag }}
       python-versions: "['3.10', '3.11', '3.12', '3.13']"
       frontend-tests-folder: "tests"
       release: true
+      run-all-tests: true
+      runs-on: ubuntu-latest
     secrets: inherit
 
+  # Automatically ensure lfx is published before building langflow-base
+  # This job checks if the required lfx version exists on PyPI and publishes it if not
+  ensure-lfx-published:
+    name: Ensure LFX Dependency is Published
+    needs: [ci]
+    if: ${{ inputs.release_package_base }}
+    runs-on: ubuntu-latest
+    outputs:
+      lfx-version: ${{ steps.check-lfx.outputs.lfx_version }}
+      lfx-published: ${{ steps.check-lfx.outputs.already_published }}
+      lfx-published-now: ${{ steps.publish-lfx.outputs.published }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.release_tag }}
+
+      - name: Setup Environment
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.13"
+          prune-cache: false
+
+      - name: Check LFX version requirement
+        id: check-lfx
+        run: |
+          # Get the lfx version required by langflow-base from pyproject.toml
+          cd src/backend/base
+          LFX_REQUIREMENT=$(grep -E "^\s*\"lfx" pyproject.toml | head -1 | sed 's/.*lfx[~>=<]*//' | sed 's/[",].*//')
+          echo "LFX requirement from langflow-base: $LFX_REQUIREMENT"
+
+          # Get the actual lfx version from source
+          cd ../../lfx
+          LFX_SOURCE_VERSION=$(grep -E "^version\s*=" pyproject.toml | head -1 | sed 's/.*"\(.*\)".*/\1/')
+          echo "LFX source version: $LFX_SOURCE_VERSION"
+          echo "lfx_version=$LFX_SOURCE_VERSION" >> $GITHUB_OUTPUT
+
+          # Check if this version exists on PyPI
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://pypi.org/pypi/lfx/$LFX_SOURCE_VERSION/json")
+
+          if [ "$HTTP_STATUS" = "200" ]; then
+            echo "✅ LFX version $LFX_SOURCE_VERSION already exists on PyPI"
+            echo "already_published=true" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️ LFX version $LFX_SOURCE_VERSION NOT found on PyPI (HTTP: $HTTP_STATUS)"
+            echo "Will build and publish LFX first..."
+            echo "already_published=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install LFX dependencies
+        if: steps.check-lfx.outputs.already_published == 'false'
+        run: uv sync --dev --package lfx
+
+      - name: Build LFX
+        if: steps.check-lfx.outputs.already_published == 'false'
+        run: |
+          cd src/lfx
+          rm -rf dist/
+          uv build --wheel --out-dir dist
+          echo "Built LFX wheel:"
+          ls -la dist/
+
+      - name: Test LFX CLI
+        if: steps.check-lfx.outputs.already_published == 'false'
+        run: |
+          cd src/lfx
+          uv pip install dist/*.whl --force-reinstall
+          uv run lfx --help
+          echo "✅ LFX CLI test passed"
+
+      - name: Publish LFX to PyPI
+        id: publish-lfx
+        if: steps.check-lfx.outputs.already_published == 'false' && !inputs.dry_run
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          cd src/lfx
+          echo "Publishing LFX ${{ steps.check-lfx.outputs.lfx_version }} to PyPI..."
+          uv publish dist/*.whl
+          echo "published=true" >> $GITHUB_OUTPUT
+          echo "✅ LFX published successfully"
+
+      - name: Wait for PyPI propagation
+        if: steps.publish-lfx.outputs.published == 'true'
+        run: |
+          echo "Waiting 60 seconds for PyPI propagation..."
+          sleep 60
+
+          # Verify the package is available
+          LFX_VERSION="${{ steps.check-lfx.outputs.lfx_version }}"
+          for i in {1..5}; do
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://pypi.org/pypi/lfx/$LFX_VERSION/json")
+            if [ "$HTTP_STATUS" = "200" ]; then
+              echo "✅ LFX $LFX_VERSION is now available on PyPI"
+              exit 0
+            fi
+            echo "Attempt $i: LFX not yet available (HTTP: $HTTP_STATUS), waiting 30s..."
+            sleep 30
+          done
+          echo "❌ LFX $LFX_VERSION still not available on PyPI after waiting"
+          exit 1
+
+      - name: Skip publishing (dry run)
+        if: steps.check-lfx.outputs.already_published == 'false' && inputs.dry_run
+        run: |
+          echo "⚠️ DRY RUN: Would have published LFX ${{ steps.check-lfx.outputs.lfx_version }} to PyPI"
+          echo "In actual release, this step will publish the package"
 
   build-base:
     name: Build Langflow Base
-    needs: [ci]
-    if: inputs.release_package_base == true
+    needs: [ci, ensure-lfx-published]
+    if: ${{ inputs.release_package_base }}
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.check-version.outputs.version }}
       skipped: ${{ steps.check-version.outputs.skipped }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.release_tag }}
       - name: Setup Environment
         uses: astral-sh/setup-uv@v6
         with:
@@ -84,7 +263,7 @@ jobs:
           if [ "$version" = "$last_released_version" ]; then
             echo "Version $version is already released. Skipping release."
             echo skipped=true >> $GITHUB_OUTPUT
-            exit 0
+            exit 1
           else
             echo version=$version >> $GITHUB_OUTPUT
             echo skipped=false >> $GITHUB_OUTPUT
@@ -125,14 +304,16 @@ jobs:
 
   build-main:
     name: Build Langflow Main
-    if: inputs.release_package_main == true
+    if: ${{ inputs.release_package_main }}
     needs: [build-base]
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.check-version.outputs.version }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.release_tag }}
       - name: Setup Environment
         uses: astral-sh/setup-uv@v6
         with:
@@ -148,9 +329,10 @@ jobs:
       # If pre-release is true, we need to check if  ["a", "b", "rc", "dev", "post"] is in the version string
       # if the version string is incorrect, we need to exit the workflow
       - name: Check if pre-release
-        if: inputs.pre_release == 'true'
+        if: inputs.pre_release
         run: |
-          version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//')
+          version="${{ inputs.release_tag }}"
+          echo "$version"
           if [[ "${version}" =~ ^([0-9]+\.)?([0-9]+\.)?[0-9]+((a|b|rc|dev|post)([0-9]+))$ ]]; then
             echo "Pre-release version detected. Continuing with the release."
           else
@@ -164,6 +346,7 @@ jobs:
           last_released_version=$(curl -s "https://pypi.org/pypi/langflow/json" | jq -r '.releases | keys | .[]' | sort -V | tail -n 1)
           if [ "$version" = "$last_released_version" ]; then
             echo "Version $version is already released. Skipping release."
+            echo skipped=true >> $GITHUB_OUTPUT
             exit 1
           else
             echo version=$version >> $GITHUB_OUTPUT
@@ -200,23 +383,76 @@ jobs:
           name: dist-main
           path: dist
 
+  build-lfx:
+    name: Build LFX
+    needs: [build-base]
+    if: ${{ inputs.release_lfx }}
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check-version.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.release_tag }}
+      - name: Setup Environment
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.13"
+          prune-cache: false
+      - name: Install LFX dependencies
+        run: uv sync --dev --package lfx
+      - name: Check Version
+        id: check-version
+        run: |
+          cd src/lfx
+          version=$(uv tree | grep 'lfx' | head -n 1 | awk '{print $2}' | sed 's/^v//')
+          last_released_version=$(curl -s "https://pypi.org/pypi/lfx/json" | jq -r '.releases | keys | .[]' | sort -V | tail -n 1)
+          if [ "$version" = "$last_released_version" ]; then
+            echo "Version $version is already released. Skipping release."
+            exit 1
+          else
+            echo version=$version >> $GITHUB_OUTPUT
+          fi
+      - name: Build project for distribution
+        run: |
+          cd src/lfx
+          rm -rf dist/
+          uv build --wheel --out-dir dist
+      - name: Test CLI
+        run: |
+          cd src/lfx
+          uv pip install dist/*.whl --force-reinstall
+          uv run lfx --help
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-lfx
+          path: src/lfx/dist
+
   test-cross-platform:
     name: Test Cross-Platform Installation
-    if: inputs.release_package_base == true || inputs.release_package_main == true
     needs: [build-base, build-main]
+    if: |
+      always() &&
+      !cancelled() &&
+      (needs.build-base.result == 'success' || needs.build-main.result == 'success')
     uses: ./.github/workflows/cross-platform-test.yml
     with:
       base-artifact-name: "dist-base"
       main-artifact-name: "dist-main"
+      lfx-artifact-name: "${{ inputs.release_lfx && 'dist-lfx' || '' }}"
 
   publish-base:
     name: Publish Langflow Base to PyPI
-    if: inputs.release_package_base == true
+    if: ${{ inputs.release_package_base }}
     needs: [build-base, test-cross-platform]
     runs-on: ubuntu-latest
     steps:
       - name: Download base artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: dist-base
           path: src/backend/base/dist
@@ -226,7 +462,7 @@ jobs:
           enable-cache: false
           python-version: "3.13"
       - name: Publish base to PyPI
-        if: needs.build-base.outputs.skipped == 'false'
+        if: ${{ !inputs.dry_run }}
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         run: |
@@ -234,12 +470,12 @@ jobs:
 
   publish-main:
     name: Publish Langflow Main to PyPI
-    if: inputs.release_package_main == true
+    if: ${{ inputs.release_package_main }}
     needs: [build-main, test-cross-platform, publish-base]
     runs-on: ubuntu-latest
     steps:
       - name: Download main artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: dist-main
           path: dist
@@ -249,61 +485,143 @@ jobs:
           enable-cache: false
           python-version: "3.13"
       - name: Publish main to PyPI
+        if: ${{ !inputs.dry_run }}
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         run: |
           uv publish dist/*.whl
 
+  publish-lfx:
+    name: Publish LFX to PyPI
+    if: ${{ inputs.release_lfx }}
+    needs: [build-lfx, test-cross-platform]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download LFX artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: dist-lfx
+          path: src/lfx/dist
+      - name: Setup Environment
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: false
+          python-version: "3.13"
+      - name: Publish LFX to PyPI
+        if: ${{ !inputs.dry_run }}
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          cd src/lfx && uv publish dist/*.whl
+
+  # test-lfx-cross-platform:
+  #   name: Test LFX Cross-Platform Installation
+  #   if: ${{ inputs.release_lfx }}
+  #   needs: [build-lfx]
+  #   runs-on: ${{ matrix.os }}
+  #   strategy:
+  #     matrix:
+  #       os: [ubuntu-latest, windows-latest, macos-latest]
+  #       python-version: ["3.10", "3.11", "3.12", "3.13"]
+  #   steps:
+  #     - name: Download LFX artifact
+  #       uses: actions/download-artifact@v5
+  #       with:
+  #         name: dist-lfx
+  #         path: dist-lfx
+  #     - name: Setup Environment
+  #       uses: astral-sh/setup-uv@v6
+  #       with:
+  #         enable-cache: false
+  #         python-version: ${{ matrix.python-version }}
+  #     - name: Test LFX installation
+  #       run: |
+  #         uv pip install dist-lfx/*.whl
+  #         uv run lfx --help
+
   call_docker_build_base:
     name: Call Docker Build Workflow for Langflow Base
-    if: inputs.build_docker_base == true
-    needs: [publish-base, publish-main]
-    uses: ./.github/workflows/docker-build.yml
+    if: ${{ inputs.build_docker_base }}
+    needs: [ci]
+    uses: ./.github/workflows/docker-build-v2.yml
     with:
-      base_version: ${{ needs.publish-base.needs.build-base.outputs.version }}
-      main_version: ${{ needs.publish-main.needs.build-main.outputs.version }}
+      ref: ${{ inputs.release_tag }}
       release_type: base
       pre_release: ${{ inputs.pre_release }}
-    secrets: inherit
-
-  call_docker_build_main_ep:
-    name: Call Docker Build Workflow for Langflow with Entrypoint
-    if: inputs.build_docker_ep == true
-    needs: [publish-main, call_docker_build_base]
-    uses: ./.github/workflows/docker-build.yml
-    with:
-      main_version: ${{ needs.publish-main.needs.build-main.outputs.version }}
-      release_type: main-ep
-      pre_release: False
+      push_to_registry: ${{ !inputs.dry_run }}
     secrets: inherit
 
   call_docker_build_main:
     name: Call Docker Build Workflow for Langflow
-    if: inputs.build_docker_main == true
-    needs: [publish-main, call_docker_build_main_ep]
-    uses: ./.github/workflows/docker-build.yml
+    if: ${{ inputs.build_docker_main }}
+    needs: [ci]
+    uses: ./.github/workflows/docker-build-v2.yml
     with:
-      main_version: ${{ needs.publish-main.needs.build-main.outputs.version }}
+      ref: ${{ inputs.release_tag }}
       release_type: main
       pre_release: ${{ inputs.pre_release }}
+      push_to_registry: ${{ !inputs.dry_run }}
+    secrets: inherit
+
+  call_docker_build_main_backend:
+    name: Call Docker Build Workflow for Langflow Backend
+    if: ${{ inputs.build_docker_main && !inputs.dry_run }}
+    needs: [call_docker_build_main]
+    uses: ./.github/workflows/docker-build-v2.yml
+    with:
+      ref: ${{ inputs.release_tag }}
+      release_type: main-backend
+      pre_release: ${{ inputs.pre_release }}
+      push_to_registry: ${{ !inputs.dry_run }}
+    secrets: inherit
+
+  call_docker_build_main_frontend:
+    name: Call Docker Build Workflow for Langflow Frontend
+    if: ${{ inputs.build_docker_main && !inputs.dry_run }}
+    needs: [call_docker_build_main]
+    uses: ./.github/workflows/docker-build-v2.yml
+    with:
+      ref: ${{ inputs.release_tag }}
+      release_type: main-frontend
+      pre_release: ${{ inputs.pre_release }}
+      push_to_registry: ${{ !inputs.dry_run }}
+    secrets: inherit
+
+  call_docker_build_main_ep:
+    name: Call Docker Build Workflow for Langflow with Entrypoint
+    if: ${{ inputs.build_docker_main }}
+    needs: [ci]
+    uses: ./.github/workflows/docker-build-v2.yml
+    with:
+      ref: ${{ inputs.release_tag }}
+      release_type: main-ep
+      pre_release: ${{ inputs.pre_release }}
+      push_to_registry: ${{ !inputs.dry_run }}
     secrets: inherit
 
   call_docker_build_main_all:
     name: Call Docker Build Workflow for langflow-all
-    if: inputs.build_docker_main == true
-    needs: [publish-main]
-    uses: ./.github/workflows/docker-build.yml
+    if: ${{ inputs.build_docker_main }}
+    needs: [ci]
+    uses: ./.github/workflows/docker-build-v2.yml
     with:
-      main_version: ${{ needs.publish-main.needs.build-main.outputs.version }}
+      ref: ${{ inputs.release_tag }}
       release_type: main-all
       pre_release: ${{ inputs.pre_release }}
+      push_to_registry: ${{ !inputs.dry_run }}
     secrets: inherit
-
 
   create_release:
     name: Create Release
     runs-on: ubuntu-latest
-    needs: publish-main
+    needs: [build-main, publish-main]
+    if: |
+      always() &&
+      !cancelled() &&
+      !inputs.dry_run &&
+      inputs.create_release &&
+      needs.build-main.result == 'success' &&
+      needs.publish-main.result == 'success'
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -312,10 +630,11 @@ jobs:
       - name: Create Release
         uses: ncipollo/release-action@v1
         with:
-          artifacts: "dist/*"
+          artifacts: dist/*
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: false
           generateReleaseNotes: true
           prerelease: ${{ inputs.pre_release }}
-          tag: ${{ needs.publish-main.needs.build-main.outputs.version }}
-          commit: ${{ github.ref }}
+          tag: ${{ needs.build-main.outputs.version }}
+          allowUpdates: true
+          updateOnlyUnreleased: false

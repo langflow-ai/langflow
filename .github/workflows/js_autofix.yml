@@ -9,13 +9,14 @@ permissions:
   contents: read
 
 env:
-  NODE_VERSION: "21"
+  NODE_VERSION: "22"
 jobs:
   autofix:
+    if: ${{ github.actor != 'github-actions[bot]' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

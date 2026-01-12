@@ -2,7 +2,7 @@
 build/
 dist/
 
-# Dependencies  
+# Dependencies
 node_modules/
 
 # Test outputs
@@ -10,4 +10,4 @@ coverage/
 test-results/
 playwright-report/
 blob-report/
-playwright/.cache/ 
+playwright/.cache/

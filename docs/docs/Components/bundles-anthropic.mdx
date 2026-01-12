@@ -4,8 +4,9 @@ slug: /bundles-anthropic
 ---
 
 import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
-[Bundles](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
 
 This page describes the components that are available in the **Anthropic** bundle.
 
@@ -16,16 +17,15 @@ For more information about Anthropic features and functionality used by Anthropi
 The **Anthropic** component generates text using Anthropic Chat and Language models like Claude.
 
 It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
-Specifically, the **Language Model** output is an instance of [`ChatAnthropic`](https://python.langchain.com/docs/integrations/chat/anthropic/) configured according to the component's parameters.
+Specifically, the **Language Model** output is an instance of [`ChatAnthropic`](https://docs.langchain.com/oss/python/integrations/chat/anthropic) configured according to the component's parameters.
 
-Use the **Language Model** output when you want to use an Anthropic model as the LLM for another LLM-driven component, such as a **Language Model** or **Smart Function** component.
+Use the **Language Model** output when you want to use an Anthropic model as the LLM for another LLM-driven component, such as an **Agent** or **Smart Transform** component.
 
-For more information, see [**Language Model** components](/components-models).
+For more information, see [Language model components](/components-models).
 
 ### Anthropic text generation parameters
 
-Many **Anthropic** component input parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -33,5 +33,5 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 | model | String | Input parameter. The name of the Anthropic model to use. Options include various Claude 3 models. |
 | anthropic_api_key | SecretString | Input parameter. Your Anthropic API key for authentication. |
 | temperature | Float | Input parameter. Controls randomness in the output. Default: `0.1`. |
-| anthropic_api_url | String | Input parameter. Endpoint of the Anthropic API. Defaults to `https://api.anthropic.com` if not specified (advanced). |
-| prefill | String | Input parameter. Prefill text to guide the model's response (advanced). |
+| anthropic_api_url | String | Input parameter. Endpoint of the Anthropic API. Defaults to `https://api.anthropic.com` if not specified. |
+| prefill | String | Input parameter. Prefill text to guide the model's response. |

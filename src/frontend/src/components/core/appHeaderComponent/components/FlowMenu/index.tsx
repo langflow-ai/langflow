@@ -72,6 +72,7 @@ export const MenuBar = memo((): JSX.Element => {
   );
 
   const handleSave = () => {
+    if (!onFlowPage) return;
     saveFlow().then(() => {
       setSuccessData({ title: "Saved successfully" });
     });
@@ -140,7 +141,6 @@ export const MenuBar = memo((): JSX.Element => {
               >
                 {currentFlowName || "Untitled Flow"}
               </span>
-
               <IconComponent
                 name="pencil"
                 className={cn(
@@ -195,7 +195,6 @@ export const MenuBar = memo((): JSX.Element => {
         align="center"
         sideOffset={15}
       >
-        <span className="text-sm font-semibold">Flow Details</span>
         <FlowSettingsComponent
           close={() => setOpenSettings(false)}
           open={openSettings}

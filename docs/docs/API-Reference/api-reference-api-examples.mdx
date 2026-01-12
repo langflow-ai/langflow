@@ -122,6 +122,32 @@ You can retrieve flow IDs from the [**API access** pane](/concepts-publish#api-a
 
 Once you have your Langflow server URL, try calling these endpoints that return Langflow metadata.
 
+### Health check
+
+Returns the health status of the Langflow database and chat services:
+
+```bash
+curl -X GET \
+  "$LANGFLOW_SERVER_URL/health_check" \
+  -H "accept: application/json"
+```
+
+<details>
+<summary>Result</summary>
+
+```json
+{
+  "status": "ok",
+  "chat": "ok",
+  "db": "ok"
+}
+```
+
+</details>
+
+Langflow provides an additional `GET /health` endpoint.
+This endpoint is served by uvicorn before Langflow is fully initialized, so it's not reliable for checking Langflow service health.
+
 ### Get version
 
 Returns the current Langflow API version:
@@ -130,7 +156,6 @@ Returns the current Langflow API version:
 curl -X GET \
   "$LANGFLOW_SERVER_URL/api/v1/version" \
   -H "accept: application/json"
-  -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
 <details>
@@ -138,8 +163,8 @@ curl -X GET \
 
 ```text
 {
-    "version": "1.1.1",
-    "main_version": "1.1.1",
+    "version": "1.6.0",
+    "main_version": "1.6.0",
     "package": "Langflow"
 }
 ```
@@ -148,12 +173,13 @@ curl -X GET \
 
 ### Get configuration
 
-Returns configuration details for your Langflow deployment:
+Returns configuration details for your Langflow deployment.
+Requires a [Langflow API key](/api-keys-and-authentication).
 
 ```bash
 curl -X GET \
   "$LANGFLOW_SERVER_URL/api/v1/config" \
-  -H "accept: application/json"
+  -H "accept: application/json" \
   -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
@@ -165,11 +191,21 @@ curl -X GET \
   "feature_flags": {
     "mvp_components": false
   },
+  "serialization_max_items_length": 1000,
+  "serialization_max_text_length": 6000,
   "frontend_timeout": 0,
   "auto_saving": true,
   "auto_saving_interval": 1000,
   "health_check_max_retries": 5,
-  "max_file_size_upload": 100
+  "max_file_size_upload": 1024,
+  "webhook_polling_interval": 5000,
+  "public_flow_cleanup_interval": 3600,
+  "public_flow_expiration": 86400,
+  "event_delivery": "streaming",
+  "webhook_auth_enable": false,
+  "voice_mode_available": false,
+  "default_folder_name": "Starter Project",
+  "hide_getting_started_progress": false
 }
 ```
 
@@ -177,7 +213,8 @@ curl -X GET \
 
 ### Get all components
 
-Returns a dictionary of all Langflow components:
+Returns a dictionary of all Langflow components.
+Requires a [Langflow API key](/api-keys-and-authentication).
 
 ```bash
 curl -X GET \
@@ -209,9 +246,13 @@ Other endpoints are helpful for specific use cases, such as administration and f
   * POST `/v1/run/advanced/{flow_id}`: Advanced run with explicit `inputs`, `outputs`, `tweaks`, and optional `session_id`.
   * POST `/v1/webhook/{flow_id_or_name}`: Trigger a flow via webhook payload.
 
+* [OpenAI Responses API](/api-openai-responses):
+  * POST `/v1/responses`: Execute flows using an OpenAI-compatible request format.
+
 * Deployment details:
   * GET `/v1/version`: Return Langflow version. See [Get version](/api-reference-api-examples#get-version).
   * GET `/v1/config`: Return deployment configuration. See [Get configuration](/api-reference-api-examples#get-configuration).
+  * GET `/health_check`: Health check endpoint that validates database and chat service connectivity. Returns 500 status if any service is unavailable.
 
 * [Projects endpoints](/api-projects):
   * POST `/v1/projects/`: Create a project.
@@ -269,47 +310,12 @@ Other endpoints are helpful for specific use cases, such as administration and f
   * PATCH `/v1/users/{user_id}/reset-password`: Reset own password.
   * DELETE `/v1/users/{user_id}`: Delete a user (cannot delete yourself).
 
-</TabItem>
-<TabItem value="Custom components" label="Custom components">
-
-You might use these endpoints when developing custom Langflow components for your own use or to share with the Langflow community:
-
-* Develop custom components:
-    * GET `/v1/all`: Return all available Langflow component types. See [Get all components](/api-reference-api-examples#get-all-components).
-    * POST `/v1/custom_component`: Build a custom component from code and return its node.
-    * POST `/v1/custom_component/update`: Update an existing custom component's build config and outputs.
-    * POST `/v1/validate/code`: Validate a Python code snippet for a custom component.
-
-* Langflow Store:
-    * GET `/v1/store/check/`: Return whether the Store feature is enabled.
-    * GET `/v1/store/check/api_key`: Check if a Store API key exists and is valid.
-    * POST `/v1/store/components/`: Share a component to the Store.
-    * PATCH `/v1/store/components/{component_id}`: Update a shared component.
-    * GET `/v1/store/components/`: List available Store components (filters supported).
-    * GET `/v1/store/components/{component_id}`: Download a component from the Store.
-    * GET `/v1/store/tags`: List Store tags.
-    * GET `/v1/store/users/likes`: List components liked by the current user.
-    * POST `/v1/store/users/likes/{component_id}`: Like a component.
-
-</TabItem>
-<TabItem value="MCP" label="MCP servers and clients">
-
-The following endpoints are for managing Langflow MCP servers, both Langflow-hosted MCP servers and external MCP server connections:
-
-* **MCP (global)**:
-  * HEAD `/v1/mcp/sse`: Health check for MCP SSE.
-  * GET `/v1/mcp/sse`: Open SSE stream for MCP server events.
-  * POST `/v1/mcp/`: Post messages to the MCP server.
-
-* **MCP (project-specific)**:
-  * GET `/v1/mcp/project/{project_id}`: List MCP-enabled tools and project auth settings.
-  * HEAD `/v1/mcp/project/{project_id}/sse`: Health check for project SSE.
-  * GET `/v1/mcp/project/{project_id}/sse`: Open project-scoped MCP SSE.
-  * POST `/v1/mcp/project/{project_id}`: Post messages to project MCP server.
-  * POST `/v1/mcp/project/{project_id}/` (trailing slash): Same as above.
-  * PATCH `/v1/mcp/project/{project_id}`: Update MCP settings for flows and project auth settings.
-  * POST `/v1/mcp/project/{project_id}/install`: Install MCP client config for Cursor/Windsurf/Claude (local only).
-  * GET `/v1/mcp/project/{project_id}/installed`: Check which clients have MCP config installed.
+* Custom components: You might use these endpoints when developing custom Langflow components for your own use or to share with the Langflow community:
+  * GET `/v1/all`: Return all available Langflow component types. See [Get all components](/api-reference-api-examples#get-all-components).
+  * POST `/v1/custom_component`: Build a custom component from code and return its node.
+  * POST `/v1/custom_component/update`: Update an existing custom component's build config and outputs.
+  * POST `/v1/validate/code`: Validate a Python code snippet for a custom component.
+  * POST `/v1/validate/prompt`: Validate a prompt payload.
 
 </TabItem>
 <TabItem value="Codebase contribution" label="Codebase development">
@@ -359,6 +365,35 @@ The following endpoints are most often used when contributing to the Langflow co
   * WS `/v1/voice/ws/flow_tts/{flow_id}/{session_id}`: Same as above with explicit session ID.
   * GET `/v1/voice/elevenlabs/voice_ids`: List available ElevenLabs voice IDs for the user.
 
+* MCP servers: The following endpoints are for managing Langflow MCP servers and MCP server connections.
+They aren't typically called directly; instead, they are used to drive internal functionality in the Langflow frontend and when running flows that call MCP servers.
+Langflow MCP servers support both streamable HTTP and SSE transport.
+  * HEAD `/v1/mcp/streamable`: Health check for streamable HTTP MCP.
+  * GET `/v1/mcp/streamable`: Open streamable HTTP connection for MCP server.
+  * POST `/v1/mcp/streamable`: Post messages to the MCP server via streamable HTTP.
+  * DELETE `/v1/mcp/streamable`: Close streamable HTTP connection.
+  * HEAD `/v1/mcp/sse` (LEGACY): Health check for MCP SSE.
+  * GET `/v1/mcp/sse` (LEGACY): Open SSE stream for MCP server events.
+  * POST `/v1/mcp/` (LEGACY): Post messages to the MCP server.
+  * GET `/v1/mcp/project/{project_id}`: List MCP-enabled tools and project auth settings.
+  * HEAD `/v1/mcp/project/{project_id}/streamable`: Health check for project streamable HTTP MCP.
+  * GET `/v1/mcp/project/{project_id}/streamable`: Open project-scoped streamable HTTP connection.
+  * POST `/v1/mcp/project/{project_id}/streamable`: Post messages to project MCP server via streamable HTTP.
+  * DELETE `/v1/mcp/project/{project_id}/streamable`: Close project streamable HTTP connection.
+  * HEAD `/v1/mcp/project/{project_id}/sse` (LEGACY): Health check for project SSE.
+  * GET `/v1/mcp/project/{project_id}/sse` (LEGACY): Open project-scoped MCP SSE.
+  * POST `/v1/mcp/project/{project_id}` (LEGACY): Post messages to project MCP server.
+  * PATCH `/v1/mcp/project/{project_id}`: Update MCP settings for flows and project auth settings.
+  * POST `/v1/mcp/project/{project_id}/install`: Install MCP client config for Cursor/Windsurf/Claude (local only).
+  * GET `/v1/mcp/project/{project_id}/installed`: Check which clients have MCP config installed.
+
+* Custom components: You might use these endpoints when developing custom Langflow components for your own use or to share with the Langflow community:
+  * GET `/v1/all`: Return all available Langflow component types. See [Get all components](/api-reference-api-examples#get-all-components).
+  * POST `/v1/custom_component`: Build a custom component from code and return its node.
+  * POST `/v1/custom_component/update`: Update an existing custom component's build config and outputs.
+  * POST `/v1/validate/code`: Validate a Python code snippet for a custom component.
+  * POST `/v1/validate/prompt`: Validate a prompt payload.
+
 </TabItem>
 <TabItem value="Deprecated" label="Deprecated">
 
@@ -371,6 +406,15 @@ The following endpoints are deprecated:
 * POST `/v1/build/{flow_id}/vertices`: Replaced by [`/monitor/builds`](/api-monitor).
 * POST `/v1/build/{flow_id}/vertices/{vertex_id}`: Replaced by [`/monitor/builds`](/api-monitor).
 * GET `/v1/build/{flow_id}/{vertex_id}/stream`: Replaced by [`/monitor/builds`](/api-monitor).
+* GET `/v1/store/check/`: Return whether the Store feature is enabled.
+* GET `/v1/store/check/api_key`: Check if a Store API key exists and is valid.
+* POST `/v1/store/components/`: Share a component to the Store.
+* PATCH `/v1/store/components/{component_id}`: Update a shared component.
+* GET `/v1/store/components/`: List available Store components (filters supported).
+* GET `/v1/store/components/{component_id}`: Download a component from the Store.
+* GET `/v1/store/tags`: List Store tags.
+* GET `/v1/store/users/likes`: List components liked by the current user.
+* POST `/v1/store/users/likes/{component_id}`: Like a component.
 
 </TabItem>
 </Tabs>

@@ -3,20 +3,29 @@ name: Smoke Tests
 on:
   pull_request:
     types: [opened, labeled, synchronize, reopened]
+  release:
+    types: [published]
   workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Git ref to checkout (branch, tag, or commit SHA)'
+        required: false
+        default: ''
+        type: string
 
 jobs:
-  smoke-tests:
-    if: contains(github.event.pull_request.labels.*.name, 'smoke-test')
-    name: "Smoke Tests (No API Keys)"
+  backend-smoke-tests:
+    if: contains(github.event.pull_request.labels.*.name, 'smoke-test') || github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+    name: "Backend Smoke Tests"
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
 
     steps:
       - name: Checkout PR
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          ref: ${{ github.event.inputs.ref || github.ref }}
 
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
@@ -40,16 +49,55 @@ jobs:
             src/backend/tests/unit/api/v1/test_validate.py \
             src/backend/tests/unit/test_endpoints.py \
             src/backend/tests/unit/api/v1/test_flows.py \
-            src/backend/tests/unit/graph/test_graph.py \
-            src/backend/tests/unit/services/flow/test_flow_runner.py \
             src/backend/tests/unit/test_chat_endpoint.py \
             src/backend/tests/unit/api/v1/test_api_key.py \
             src/backend/tests/unit/api/v1/test_endpoints.py \
             src/backend/tests/unit/components/languagemodels/test_openai_model.py \
             src/backend/tests/unit/components/agents/test_agent_component.py \
             src/backend/tests/unit/services/tracing/test_tracing_service.py \
-            src/backend/tests/unit/custom/component/test_component_instance_attributes.py \
-            src/backend/tests/unit/schema/test_schema_message.py \
+            -m 'not api_key_required' \
+            --tb=short \
+            -v
+        env:
+          LANGFLOW_SUPERUSER: admin
+          LANGFLOW_SUPERUSER_PASSWORD: 123456
+
+  lfx-smoke-tests:
+    # created a separate label for this since it's a different test suite for LFX components
+    if: contains(github.event.pull_request.labels.*.name, 'smoke-test') || github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+    name: "LFX Smoke Tests"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.ref || github.ref }}
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "latest"
+
+      - name: Install lfx dependencies (isolated)
+        run: |
+          cd src/lfx
+          uv sync --dev
+
+      - name: Run lfx smoke tests (critical tests only)
+        run: |
+          cd src/lfx
+          uv run pytest \
+            tests/unit/graph/test_graph.py \
+            tests/unit/custom/component/test_component_instance_attributes.py \
+            tests/unit/schema/test_schema_message.py \
             -m 'not api_key_required' \
             --tb=short \
             --maxfail=5 \
@@ -58,10 +106,23 @@ jobs:
           LANGFLOW_SUPERUSER: admin
           LANGFLOW_SUPERUSER_PASSWORD: 123456
 
+  frontend-smoke-tests:
+    if: contains(github.event.pull_request.labels.*.name, 'smoke-test') || github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+    name: "Frontend Smoke Tests"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.ref || github.ref }}
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "21"
+          node-version: "22"
           cache: "npm"
           cache-dependency-path: src/frontend/package-lock.json
 
@@ -77,28 +138,49 @@ jobs:
         env:
           NODE_ENV: test
 
+  comment-results:
+    if: always() && (contains(github.event.pull_request.labels.*.name, 'smoke-test') || github.event_name == 'release' || github.event_name == 'workflow_dispatch')
+    name: "Comment Results"
+    needs: [backend-smoke-tests, lfx-smoke-tests, frontend-smoke-tests]
+    runs-on: ubuntu-latest
+
+    steps:
       - name: Comment on PR with results
-        if: always()
         uses: actions/github-script@v7
         with:
           script: |
-            const conclusion = '${{ job.status }}';
-            const emoji = conclusion === 'success' ? '✅' : '❌';
-            const status = conclusion === 'success' ? 'passed' : 'failed';
+            const backendStatus = '${{ needs.backend-smoke-tests.result }}';
+            const lfxStatus = '${{ needs.lfx-smoke-tests.result }}';
+            const frontendStatus = '${{ needs.frontend-smoke-tests.result }}';
+            
+            const overallSuccess = backendStatus === 'success' && lfxStatus === 'success' && frontendStatus === 'success';
+            const emoji = overallSuccess ? '✅' : '❌';
+            const status = overallSuccess ? 'passed' : 'failed';
+            
+            const backendEmoji = backendStatus === 'success' ? '✅' : '❌';
+            const lfxEmoji = lfxStatus === 'success' ? '✅' : '❌';
+            const frontendEmoji = frontendStatus === 'success' ? '✅' : '❌';
 
             const comment = `${emoji} **Smoke tests ${status}**
 
-            Critical functionality validated (~5-8 minutes):
+            Critical functionality validated:
 
-            - **Backend**: 10 essential test files (imports, schema, serialization, core utils)
-            - **Frontend**: Unit tests only (components, utilities)
-            - **Coverage**: Core functionality without external dependencies
+            - ${backendEmoji} **Backend**: 11 essential test files (database, auth, API endpoints, flows, components)
+            - ${lfxEmoji} **LFX**: Graph tests (langflow execution) - runs in isolation
+            - ${frontendEmoji} **Frontend**: Unit tests only (components, utilities)
+            
+            **Coverage**: Core functionality without external dependencies
 
             View details in the [Actions tab](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}).`;
 
-            await github.rest.issues.createComment({
-              issue_number: context.payload.pull_request.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: comment
-            });
+            // Only comment on PRs, not on releases or manual runs
+            if (context.payload.pull_request) {
+              await github.rest.issues.createComment({
+                issue_number: context.payload.pull_request.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            } else {
+              console.log('Smoke test results:', comment);
+            }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAddMCPServer } from "@/controllers/API/queries/mcp/use-add-mcp-server";
 import { useGetMCPServers } from "@/controllers/API/queries/mcp/use-get-mcp-servers";
 import AddMcpServerModal from "@/modals/addMcpServerModal";
@@ -16,7 +16,8 @@ export default function McpComponent({
   editNode = false,
   id = "",
 }: InputProps<string, any>): JSX.Element {
-  const { data: mcpServers } = useGetMCPServers();
+  const [open, setOpen] = useState(false);
+  const { data: mcpServers } = useGetMCPServers({ withCounts: true });
   const { mutate: addMcpServer } = useAddMCPServer();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const options = useMemo(
@@ -36,7 +37,6 @@ export default function McpComponent({
       })),
     [mcpServers],
   );
-  const [open, setOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any[]>([]);
   const { name, config } = useMemo(
@@ -187,7 +187,11 @@ export default function McpComponent({
           )}
         </div>
       ) : (
-        <Button size="sm" onClick={handleAddButtonClick}>
+        <Button
+          size="sm"
+          onClick={handleAddButtonClick}
+          data-testid="add-mcp-server-simple-button"
+        >
           <span>Add MCP Server</span>
         </Button>
       )}

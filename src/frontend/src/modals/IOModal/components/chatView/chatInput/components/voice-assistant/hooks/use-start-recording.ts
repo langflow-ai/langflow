@@ -5,6 +5,7 @@ export const useStartRecording = async (
   microphoneRef: MutableRefObject<MediaStreamAudioSourceNode | null>,
   analyserRef: MutableRefObject<AnalyserNode | null>,
   wsRef: MutableRefObject<WebSocket | null>,
+  mediaStreamRef: MutableRefObject<MediaStream | null>,
   setIsRecording: (isRecording: boolean) => void,
   playNextAudioChunk: () => void,
   isPlayingRef: MutableRefObject<boolean>,
@@ -30,6 +31,9 @@ export const useStartRecording = async (
       },
     });
     if (!audioContextRef.current) return;
+
+    // Store the MediaStream reference so we can stop it later
+    mediaStreamRef.current = stream;
 
     microphoneRef.current =
       audioContextRef?.current?.createMediaStreamSource(stream);

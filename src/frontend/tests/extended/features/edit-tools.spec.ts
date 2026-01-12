@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
@@ -12,12 +12,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("url");
 
-    await page.waitForSelector('[data-testid="dataURL"]', {
+    await page.waitForSelector('[data-testid="data_sourceURL"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("dataURL")
+      .getByTestId("data_sourceURL")
       .hover()
       .then(async () => {
         await page.getByTestId("add-component-button-url").click();
@@ -179,6 +179,14 @@ test(
     await page.locator('[data-testid="input_update_description"]').fill("");
 
     await page.waitForTimeout(500);
+
+    await page.getByTestId("btn_close_tools_modal").click();
+
+    await page.waitForTimeout(500);
+
+    await expect(page.getByTestId("btn_close_tools_modal")).not.toBeInViewport({
+      timeout: 3000,
+    });
 
     await page.getByText("Close").last().click();
 

@@ -2,12 +2,12 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import HTTPException, status
+from lfx.log.logger import logger
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.attributes import flag_modified
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.logging.logger import logger
 from langflow.services.database.models.user.model import User, UserUpdate
 
 
@@ -45,9 +45,8 @@ async def update_user(user_db: User | None, user: UserUpdate, db: AsyncSession) 
     flag_modified(user_db, "updated_at")
 
     try:
-        await db.commit()
+        await db.flush()
     except IntegrityError as e:
-        await db.rollback()
         raise HTTPException(status_code=400, detail=str(e)) from e
 
     return user_db

@@ -12,6 +12,7 @@ export default function DropdownComponent({
   options,
   name,
   dialogInputs,
+  externalOptions,
   optionsMetaData,
   placeholder,
   nodeClass,
@@ -23,8 +24,21 @@ export default function DropdownComponent({
   hasRefreshButton,
   ...baseInputProps
 }: InputProps<string, DropDownComponentType>) {
-  const onChange = (value: any, dbValue?: boolean, skipSnapshot?: boolean) => {
-    handleOnNewValue({ value, load_from_db: dbValue }, { skipSnapshot });
+  const onChange = (
+    value: any,
+    dbValue?: boolean,
+    skipSnapshot?: boolean,
+    selectedMetadata?: any,
+  ) => {
+    const changes: Record<string, any> = {
+      value,
+      load_from_db: dbValue,
+    };
+    // If metadata provided, include it as selected_metadata
+    if (selectedMetadata !== undefined) {
+      changes.selected_metadata = selectedMetadata;
+    }
+    handleOnNewValue(changes, { skipSnapshot });
   };
 
   return (
@@ -45,6 +59,7 @@ export default function DropdownComponent({
         id={`dropdown_${id}`}
         name={name}
         dialogInputs={dialogInputs}
+        externalOptions={externalOptions}
         handleOnNewValue={handleOnNewValue}
         hasRefreshButton={hasRefreshButton}
         {...baseInputProps}

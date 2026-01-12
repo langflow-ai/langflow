@@ -3,14 +3,14 @@ import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from langflow.services.settings.base import Settings
-from langflow.services.settings.service import SettingsService
 from langflow.services.tracing.base import BaseTracer
 from langflow.services.tracing.service import (
     TracingService,
     component_context_var,
     trace_context_var,
 )
+from lfx.services.settings.base import Settings
+from lfx.services.settings.service import SettingsService
 
 
 class MockTracer(BaseTracer):
@@ -110,8 +110,10 @@ def tracing_service(mock_settings_service):
 @pytest.fixture
 def mock_component():
     component = MagicMock()
-    component._vertex = MagicMock()
-    component._vertex.id = "test_vertex_id"
+    mock_vertex = MagicMock()
+    mock_vertex.id = "test_vertex_id"
+    component._vertex = mock_vertex
+    component.get_vertex = MagicMock(return_value=mock_vertex)
     component.trace_type = "test_trace_type"
     return component
 

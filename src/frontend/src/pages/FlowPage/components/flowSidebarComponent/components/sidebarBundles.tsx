@@ -5,8 +5,10 @@ import {
   SidebarGroupLabel,
   SidebarMenu,
 } from "@/components/ui/sidebar";
+import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import type { SidebarGroupProps } from "../types";
 import { BundleItem } from "./bundleItems";
+import { SearchConfigTrigger } from "./searchConfigTrigger";
 
 export const MemoizedSidebarGroup = memo(
   ({
@@ -20,6 +22,9 @@ export const MemoizedSidebarGroup = memo(
     handleKeyDownInput,
     openCategories,
     setOpenCategories,
+    showSearchConfigTrigger,
+    showConfig,
+    setShowConfig,
   }: SidebarGroupProps) => {
     const sortedBundles = useMemo(() => {
       return BUNDLES.toSorted((a, b) => {
@@ -36,9 +41,15 @@ export const MemoizedSidebarGroup = memo(
     }, [BUNDLES, search, sortedCategories, dataFilter]);
 
     return (
-      <SidebarGroup className="p-3">
-        <SidebarGroupLabel className="cursor-default">
-          Bundles
+      <SidebarGroup className="p-3 pr-2">
+        <SidebarGroupLabel className="cursor-default w-full flex items-center justify-between">
+          <span>Bundles</span>
+          {showSearchConfigTrigger && ENABLE_NEW_SIDEBAR && (
+            <SearchConfigTrigger
+              showConfig={showConfig}
+              setShowConfig={setShowConfig}
+            />
+          )}
         </SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu>

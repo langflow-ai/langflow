@@ -22,7 +22,7 @@ export function AppInitPage() {
 
   const { isFetched: isLoaded } = useCustomPrimaryLoading();
 
-  const { isFetched, refetch } = useGetAutoLogin({ enabled: isLoaded });
+  const { isFetched } = useGetAutoLogin({ enabled: isLoaded });
   useGetVersionQuery({ enabled: isFetched });
   const { isFetched: isConfigFetched } = useGetConfig({ enabled: isFetched });
   useGetGlobalVariables({ enabled: isFetched });
@@ -38,7 +38,6 @@ export function AppInitPage() {
     }
 
     if (isConfigFetched) {
-      refetch();
       refetchExamples();
     }
   }, [isFetched, isConfigFetched]);
