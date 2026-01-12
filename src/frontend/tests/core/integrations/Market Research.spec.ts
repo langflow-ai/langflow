@@ -35,7 +35,7 @@ withEventDeliveryModes(
     });
 
     await initialGPTsetup(page);
-    
+
     // Fill Tavily API key - try multiple approaches for robustness
     const tavilyApiKey = process.env.TAVILY_API_KEY ?? "";
 
