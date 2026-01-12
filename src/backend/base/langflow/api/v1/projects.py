@@ -2,7 +2,7 @@ import io
 import json
 import zipfile
 from datetime import datetime, timezone
-from typing import Annotated, cast
+from typing import Annotated
 from urllib.parse import quote
 from uuid import UUID
 
@@ -14,9 +14,9 @@ from fastapi_pagination import Params
 from fastapi_pagination.ext.sqlmodel import apaginate
 from lfx.log.logger import logger
 from lfx.services.mcp_composer.service import MCPComposerService
-from sqlalchemy import CTE, or_, update
+from sqlalchemy import CTE, Uuid, cast, or_, update
 from sqlalchemy.orm import selectinload
-from sqlmodel import column, select, values
+from sqlmodel import String, column, select, values
 
 from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow, custom_params, remove_api_keys
 from langflow.api.utils.mcp.config_utils import validate_mcp_server_for_project
@@ -30,6 +30,7 @@ from langflow.api.v1.mcp_projects import (
 from langflow.api.v1.schemas import (
     FlowListCreate,
     MessageResponse,
+    ProjectFlowVersion,
     PublishedProjectRead,
     PublishProjectCreate,
 )
@@ -53,7 +54,7 @@ from langflow.services.database.models.folder.pagination_model import FolderWith
 from langflow.services.deps import get_service, get_settings_service, get_storage_service
 from langflow.services.publish.schema import PublishedProjectMetadata
 from langflow.services.publish.service import PublishService
-from langflow.services.publish.utils import require_all_ids
+from langflow.services.publish.utils import require_all_ids, require_valid_project, to_alnum_string
 from langflow.services.schema import ServiceType
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
@@ -698,6 +699,7 @@ async def upload_file(
 
     return await create_flows(session=session, flow_list=flow_list, current_user=current_user)
 
+
 @router.post("/{project_id}/publish/", response_model=PublishedProjectRead, status_code=201)
 async def publish_project(
     *,
@@ -707,10 +709,15 @@ async def publish_project(
     current_user: CurrentActiveUser,
 ):
     """Publish a project to the configured object storage."""
+    require_all_ids(current_user.id, project_id, "project")
+    if not project_data.flows:
+        raise HTTPException(status_code=400, detail="No flows provided in the project data.")
+
     try:
         project = await _read_project_for_publish(session, project_id, current_user.id)
         project_blob = await _create_project_blob(session, project, project_data)
-
+        # print(f"project_blob: {project_blob}") # for debugging
+        # return
         publish_service: PublishService = get_service(ServiceType.PUBLISH_SERVICE)
         return await publish_service.put_project(
             user_id=current_user.id,
@@ -724,12 +731,12 @@ async def publish_project(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.get("/{project_id}/publish/", response_model=list[PublishedProjectRead], status_code=200)
+@router.get("/{project_id}/versions/", response_model=list[PublishedProjectRead], status_code=200)
 async def list_published_projects(
     *,
     project_id: UUID,
     current_user: CurrentActiveUser,
-):
+    ):
     """List all published versions of the project."""
     require_all_ids(current_user.id, project_id, "project")
     try:
@@ -737,7 +744,7 @@ async def list_published_projects(
         project_data_list = await publish_service.list_project_versions(
             user_id=current_user.id,
             project_id=project_id,
-        )
+            )
     except HTTPException:
         raise
     except Exception as e:
@@ -746,18 +753,18 @@ async def list_published_projects(
     return project_data_list
 
 
-@router.get("/{project_id}/publish/{version_id}", response_model=dict, status_code=200)
+@router.get("/{project_id}/versions/{version_id}", response_model=dict, status_code=200)
 async def read_published_project(
     *,
     project_id: UUID,
     current_user: CurrentActiveUser,
     version_id: str,
     project_name: str,
-):
+    ):
     """Retrieve a specific published project version."""
     require_all_ids(current_user.id, project_id, "project")
     try:
-        key = PublishedProjectMetadata(version_id=version_id, project_name=project_name)
+        key = PublishedProjectMetadata(version_id=version_id, project_name=to_alnum_string(project_name))
         publish_service: PublishService = get_service(ServiceType.PUBLISH_SERVICE)
         project_data = await publish_service.get_project(
             user_id=current_user.id,
@@ -772,7 +779,7 @@ async def read_published_project(
     return orjson.loads(project_data)
 
 
-@router.delete("/{project_id}/publish/{version_id}", response_model=MessageResponse, status_code=200)
+@router.delete("/{project_id}/versions/{version_id}", response_model=MessageResponse, status_code=200)
 async def delete_published_project(
     *,
     project_id: UUID,
@@ -823,14 +830,9 @@ async def _create_project_blob(
     ):
     """Create a blob for a published project."""
     requested_flow: CTE = (
-        values(
-            column("flow_id", UUID),
-            column("published_flow_version_id", str | None),
-            column("published_flow_name", str),
-            )
-        .data([flow.model_dump() for flow in project_data.flows])
+        values(*ProjectFlowVersion.column_def())
+        .data(project_data.flows_to_tuple())
         ).cte("requested_flow")
-
     db_flows = (
         await session.exec(
             select(

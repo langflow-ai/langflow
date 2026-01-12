@@ -981,7 +981,7 @@ async def get_config() -> ConfigResponse:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-@router.post("/run/{flow_id}/published/{version_id}", response_model=None, response_model_exclude_none=True)
+@router.post("/run/{flow_id}/versions/{version_id}", response_model=None, response_model_exclude_none=True)
 async def run_published_flow(
     *,
     background_tasks: BackgroundTasks,
