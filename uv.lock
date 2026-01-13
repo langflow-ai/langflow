@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = ">=3.10, <3.14"
 resolution-markers = [
     "python_full_version >= '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
@@ -23,9 +23,9 @@ resolution-markers = [
 
 [manifest]
 members = [
-    "langflow",
-    "langflow-base",
-    "lfx",
+    "langflow-base-nightly",
+    "langflow-nightly",
+    "lfx-nightly",
 ]
 overrides = [{ name = "python-pptx", specifier = ">=1.0.2" }]
 
@@ -2419,23 +2419,21 @@ name = "easyocr"
 version = "1.7.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "ninja" },
-    { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
-    { name = "opencv-python-headless", version = "4.11.0.86", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
-    { name = "opencv-python-headless", version = "4.12.0.88", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
-    { name = "pillow" },
-    { name = "pyclipper" },
-    { name = "python-bidi" },
-    { name = "pyyaml" },
-    { name = "scikit-image", version = "0.25.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "scikit-image", version = "0.26.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "scipy", version = "1.16.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "shapely" },
-    { name = "torch", version = "2.2.2", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'darwin'" },
+    { name = "ninja", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.12' and platform_machine != 'x86_64') or (python_full_version < '3.12' and sys_platform != 'darwin')" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.12' and platform_machine != 'x86_64') or (python_full_version >= '3.12' and sys_platform != 'darwin')" },
+    { name = "opencv-python-headless", version = "4.11.0.86", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.12' and platform_machine != 'x86_64') or (python_full_version < '3.12' and sys_platform != 'darwin')" },
+    { name = "opencv-python-headless", version = "4.12.0.88", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.12' and platform_machine != 'x86_64') or (python_full_version >= '3.12' and sys_platform != 'darwin')" },
+    { name = "pillow", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "pyclipper", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "python-bidi", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "pyyaml", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "scikit-image", version = "0.25.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and platform_machine != 'x86_64') or (python_full_version < '3.11' and sys_platform != 'darwin')" },
+    { name = "scikit-image", version = "0.26.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and platform_machine != 'x86_64') or (python_full_version >= '3.11' and sys_platform != 'darwin')" },
+    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and platform_machine != 'x86_64') or (python_full_version < '3.11' and sys_platform != 'darwin')" },
+    { name = "scipy", version = "1.16.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and platform_machine != 'x86_64') or (python_full_version >= '3.11' and sys_platform != 'darwin')" },
+    { name = "shapely", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
     { name = "torch", version = "2.9.1", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
-    { name = "torchvision", version = "0.17.2", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'darwin'" },
     { name = "torchvision", version = "0.24.1", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
 ]
 wheels = [
@@ -3260,10 +3258,10 @@ name = "gassist"
 version = "0.0.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama", marker = "python_full_version < '3.12' or platform_machine != 'arm64' or sys_platform != 'darwin'" },
-    { name = "flask", marker = "python_full_version < '3.12' or platform_machine != 'arm64' or sys_platform != 'darwin'" },
-    { name = "flask-cors", marker = "python_full_version < '3.12' or platform_machine != 'arm64' or sys_platform != 'darwin'" },
-    { name = "tqdm", marker = "python_full_version < '3.12' or platform_machine != 'arm64' or sys_platform != 'darwin'" },
+    { name = "colorama", marker = "(python_full_version >= '3.12' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.12' and sys_platform == 'linux') or (platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'linux')" },
+    { name = "flask", marker = "(python_full_version >= '3.12' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.12' and sys_platform == 'linux') or (platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'linux')" },
+    { name = "flask-cors", marker = "(python_full_version >= '3.12' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.12' and sys_platform == 'linux') or (platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'linux')" },
+    { name = "tqdm", marker = "(python_full_version >= '3.12' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.12' and sys_platform == 'linux') or (platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'linux')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b0/2e/f79632d7300874f7f0e60b61a6ab22455a245e1556116a1729542a77b0da/gassist-0.0.1-py3-none-any.whl", hash = "sha256:bb0fac74b453153a6c74b2db40a14fdde7879cbc10ec692ed170e576c8e2b6aa", size = 23819, upload-time = "2025-05-09T18:22:23.609Z" },
@@ -4416,9 +4414,9 @@ name = "imageio"
 version = "2.37.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
-    { name = "pillow" },
+    { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.12' and platform_machine != 'x86_64') or (python_full_version < '3.12' and sys_platform != 'darwin')" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.12' and platform_machine != 'x86_64') or (python_full_version >= '3.12' and sys_platform != 'darwin')" },
+    { name = "pillow", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/a3/6f/606be632e37bf8d05b253e8626c2291d74c691ddc7bcdf7d6aaf33b32f6a/imageio-2.37.2.tar.gz", hash = "sha256:0212ef2727ac9caa5ca4b2c75ae89454312f440a756fcfc8ef1993e718f50f8a", size = 389600, upload-time = "2025-11-04T14:29:39.898Z" }
 wheels = [
@@ -5540,8 +5538,277 @@ wheels = [
 ]
 
 [[package]]
-name = "langflow"
-version = "1.8.0"
+name = "langflow-base-nightly"
+version = "1.8.0.dev4"
+source = { editable = "src/backend/base" }
+dependencies = [
+    { name = "aiofile" },
+    { name = "aiofiles" },
+    { name = "aiosqlite" },
+    { name = "alembic" },
+    { name = "assemblyai" },
+    { name = "asyncer" },
+    { name = "bcrypt" },
+    { name = "cachetools" },
+    { name = "chardet" },
+    { name = "clickhouse-connect" },
+    { name = "cryptography" },
+    { name = "defusedxml" },
+    { name = "diskcache" },
+    { name = "docstring-parser" },
+    { name = "duckdb" },
+    { name = "elevenlabs", version = "1.58.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.12.*'" },
+    { name = "elevenlabs", version = "1.59.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version != '3.12.*'" },
+    { name = "email-validator" },
+    { name = "emoji" },
+    { name = "fastapi" },
+    { name = "fastapi-pagination" },
+    { name = "filelock" },
+    { name = "firecrawl-py" },
+    { name = "grandalf" },
+    { name = "greenlet" },
+    { name = "gunicorn" },
+    { name = "httpx", extra = ["http2"] },
+    { name = "ibm-watsonx-ai", version = "1.3.42", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "ibm-watsonx-ai", version = "1.4.11", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "jq", marker = "sys_platform != 'win32'" },
+    { name = "json-repair" },
+    { name = "jsonquerylang" },
+    { name = "langchain" },
+    { name = "langchain-chroma" },
+    { name = "langchain-community" },
+    { name = "langchain-core" },
+    { name = "langchain-experimental" },
+    { name = "langchain-ibm" },
+    { name = "langchainhub" },
+    { name = "lfx-nightly" },
+    { name = "loguru" },
+    { name = "mcp" },
+    { name = "multiprocess" },
+    { name = "nanoid" },
+    { name = "nest-asyncio" },
+    { name = "networkx" },
+    { name = "opentelemetry-api" },
+    { name = "opentelemetry-exporter-prometheus" },
+    { name = "opentelemetry-instrumentation-fastapi" },
+    { name = "opentelemetry-sdk" },
+    { name = "orjson" },
+    { name = "pandas" },
+    { name = "passlib" },
+    { name = "pillow" },
+    { name = "pip" },
+    { name = "platformdirs" },
+    { name = "prometheus-client" },
+    { name = "pydantic" },
+    { name = "pydantic-settings" },
+    { name = "pypdf" },
+    { name = "pyperclip" },
+    { name = "python-docx" },
+    { name = "python-jose" },
+    { name = "python-multipart" },
+    { name = "rich" },
+    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "scipy", version = "1.16.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "sentry-sdk", extra = ["fastapi", "loguru"] },
+    { name = "setuptools" },
+    { name = "spider-client" },
+    { name = "sqlalchemy", extra = ["aiosqlite"] },
+    { name = "sqlmodel" },
+    { name = "structlog" },
+    { name = "trustcall" },
+    { name = "typer" },
+    { name = "uncurl" },
+    { name = "uvicorn" },
+    { name = "validators" },
+]
+
+[package.optional-dependencies]
+all = [
+    { name = "ctransformers" },
+    { name = "llama-cpp-python" },
+    { name = "sentence-transformers" },
+]
+audio = [
+    { name = "webrtcvad" },
+]
+local = [
+    { name = "ctransformers" },
+    { name = "llama-cpp-python" },
+    { name = "sentence-transformers" },
+]
+postgresql = [
+    { name = "sqlalchemy", extra = ["postgresql-psycopg", "postgresql-psycopg2binary"] },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "asgi-lifespan" },
+    { name = "codeflash" },
+    { name = "devtools" },
+    { name = "dictdiffer" },
+    { name = "httpx", extra = ["http2"] },
+    { name = "ipykernel" },
+    { name = "mypy" },
+    { name = "pandas-stubs" },
+    { name = "pre-commit" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-cov" },
+    { name = "pytest-flakefinder" },
+    { name = "pytest-github-actions-annotate-failures" },
+    { name = "pytest-instafail" },
+    { name = "pytest-mock" },
+    { name = "pytest-profiling" },
+    { name = "pytest-split" },
+    { name = "pytest-sugar" },
+    { name = "pytest-xdist" },
+    { name = "requests" },
+    { name = "respx" },
+    { name = "ruff" },
+    { name = "types-aiofiles" },
+    { name = "types-google-cloud-ndb" },
+    { name = "types-markdown" },
+    { name = "types-passlib" },
+    { name = "types-pillow" },
+    { name = "types-python-jose" },
+    { name = "types-pywin32" },
+    { name = "types-pyyaml" },
+    { name = "types-redis" },
+    { name = "types-requests" },
+    { name = "vulture" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aiofile", specifier = ">=3.9.0,<4.0.0" },
+    { name = "aiofiles", specifier = ">=24.1.0,<25.0.0" },
+    { name = "aiosqlite", specifier = ">=0.20.0,<1.0.0" },
+    { name = "alembic", specifier = ">=1.13.0,<2.0.0" },
+    { name = "assemblyai", specifier = ">=0.33.0,<1.0.0" },
+    { name = "asyncer", specifier = ">=0.0.5,<1.0.0" },
+    { name = "bcrypt", specifier = "==4.0.1" },
+    { name = "cachetools", specifier = ">=6.0.0" },
+    { name = "chardet", specifier = ">=5.2.0,<6.0.0" },
+    { name = "clickhouse-connect", specifier = "==0.7.19" },
+    { name = "cryptography", specifier = ">=43.0.1,<44.0.0" },
+    { name = "ctransformers", marker = "extra == 'all'", specifier = ">=0.2" },
+    { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2" },
+    { name = "defusedxml", specifier = ">=0.7.1,<1.0.0" },
+    { name = "diskcache", specifier = ">=5.6.3,<6.0.0" },
+    { name = "docstring-parser", specifier = ">=0.16,<1.0.0" },
+    { name = "duckdb", specifier = ">=1.0.0,<2.0.0" },
+    { name = "elevenlabs", marker = "python_full_version != '3.12.*'", specifier = ">=1.52.0,<2.0.0" },
+    { name = "elevenlabs", marker = "python_full_version == '3.12.*'", specifier = "==1.58.1" },
+    { name = "email-validator", specifier = ">=2.0.0" },
+    { name = "emoji", specifier = ">=2.12.0,<3.0.0" },
+    { name = "fastapi", specifier = ">=0.115.2,<1.0.0" },
+    { name = "fastapi-pagination", specifier = ">=0.13.1,<1.0.0" },
+    { name = "filelock", specifier = ">=3.15.4,<4.0.0" },
+    { name = "firecrawl-py", specifier = ">=1.0.16,<2.0.0" },
+    { name = "grandalf", specifier = ">=0.8.0,<1.0.0" },
+    { name = "greenlet", specifier = ">=3.1.1,<4.0.0" },
+    { name = "gunicorn", specifier = ">=22.0.0,<23.0.0" },
+    { name = "httpx", extras = ["http2"], specifier = ">=0.27,<1.0.0" },
+    { name = "ibm-watsonx-ai", specifier = ">=1.3.1,<2.0.0" },
+    { name = "jq", marker = "sys_platform != 'win32'", specifier = ">=1.7.0,<2.0.0" },
+    { name = "json-repair", specifier = ">=0.30.3,<1.0.0" },
+    { name = "jsonquerylang", specifier = ">=1.1.1,<2.0.0" },
+    { name = "langchain", specifier = "~=0.3.21" },
+    { name = "langchain-chroma", specifier = ">=0.1.4,<1.0.0" },
+    { name = "langchain-community", specifier = ">=0.3.0,<1.0.0" },
+    { name = "langchain-core", specifier = ">=0.3.45,<1.0.0" },
+    { name = "langchain-experimental", specifier = ">=0.3.0,<1.0.0" },
+    { name = "langchain-ibm", specifier = ">=0.3.8,<1.0.0" },
+    { name = "langchainhub", specifier = "~=0.1.15" },
+    { name = "lfx-nightly", editable = "src/lfx" },
+    { name = "llama-cpp-python", marker = "extra == 'all'", specifier = ">=0.2.0" },
+    { name = "llama-cpp-python", marker = "extra == 'local'", specifier = ">=0.2.0" },
+    { name = "loguru", specifier = ">=0.7.1,<1.0.0" },
+    { name = "mcp", specifier = ">=1.17.0,<2.0.0" },
+    { name = "multiprocess", specifier = ">=0.70.14,<1.0.0" },
+    { name = "nanoid", specifier = ">=2.0.0,<3.0.0" },
+    { name = "nest-asyncio", specifier = ">=1.6.0,<2.0.0" },
+    { name = "networkx", specifier = ">=3.4.2,<4.0.0" },
+    { name = "opentelemetry-api", specifier = ">=1.25.0,<2.0.0" },
+    { name = "opentelemetry-exporter-prometheus", specifier = ">=0.46b0,<1.0.0" },
+    { name = "opentelemetry-instrumentation-fastapi", specifier = ">=0.46b0,<1.0.0" },
+    { name = "opentelemetry-sdk", specifier = ">=1.25.0,<2.0.0" },
+    { name = "orjson", specifier = "==3.10.15" },
+    { name = "pandas", specifier = "==2.2.3" },
+    { name = "passlib", specifier = ">=1.7.4,<2.0.0" },
+    { name = "pillow", specifier = ">=11.1.0,<12.0.0" },
+    { name = "pip", specifier = ">=25.3,<26.0.0" },
+    { name = "platformdirs", specifier = ">=4.2.0,<5.0.0" },
+    { name = "prometheus-client", specifier = ">=0.20.0,<1.0.0" },
+    { name = "pydantic", specifier = "~=2.11.0" },
+    { name = "pydantic-settings", specifier = ">=2.2.0,<3.0.0" },
+    { name = "pypdf", specifier = "~=5.1.0" },
+    { name = "pyperclip", specifier = ">=1.8.2,<2.0.0" },
+    { name = "python-docx", specifier = ">=1.1.0,<2.0.0" },
+    { name = "python-jose", specifier = ">=3.3.0,<4.0.0" },
+    { name = "python-multipart", specifier = ">=0.0.12,<1.0.0" },
+    { name = "rich", specifier = ">=13.7.0,<14.0.0" },
+    { name = "scipy", specifier = ">=1.15.2,<2.0.0" },
+    { name = "sentence-transformers", marker = "extra == 'all'", specifier = ">=2.0.0" },
+    { name = "sentence-transformers", marker = "extra == 'local'", specifier = ">=2.0.0" },
+    { name = "sentry-sdk", extras = ["fastapi", "loguru"], specifier = ">=2.5.1,<3.0.0" },
+    { name = "setuptools", specifier = ">=78.1.1,<79.0.0" },
+    { name = "spider-client", specifier = ">=0.0.27,<1.0.0" },
+    { name = "sqlalchemy", extras = ["aiosqlite"], specifier = ">=2.0.38,<3.0.0" },
+    { name = "sqlalchemy", extras = ["postgresql-psycopg"], marker = "extra == 'postgresql'", specifier = ">=2.0.38,<3.0.0" },
+    { name = "sqlalchemy", extras = ["postgresql-psycopg2binary"], marker = "extra == 'postgresql'", specifier = ">=2.0.38,<3.0.0" },
+    { name = "sqlmodel", specifier = "==0.0.22" },
+    { name = "structlog", specifier = ">=25.4.0,<26.0.0" },
+    { name = "trustcall", specifier = ">=0.0.38,<1.0.0" },
+    { name = "typer", specifier = ">=0.13.0,<1.0.0" },
+    { name = "uncurl", specifier = ">=0.0.11,<1.0.0" },
+    { name = "uvicorn", specifier = ">=0.30.0,<1.0.0" },
+    { name = "validators", specifier = ">=0.34.0,<1.0.0" },
+    { name = "webrtcvad", marker = "extra == 'audio'", specifier = ">=2.0.10" },
+]
+provides-extras = ["audio", "postgresql", "local", "all"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "asgi-lifespan", specifier = ">=2.1.0" },
+    { name = "codeflash", specifier = ">=0.8.4" },
+    { name = "devtools", specifier = ">=0.12.2" },
+    { name = "dictdiffer", specifier = ">=0.9.0" },
+    { name = "httpx", extras = ["http2"], specifier = ">=0.27" },
+    { name = "ipykernel", specifier = ">=6.29.0" },
+    { name = "mypy", specifier = ">=1.11.0" },
+    { name = "pandas-stubs", specifier = ">=2.1.4.231227" },
+    { name = "pre-commit", specifier = ">=3.7.0" },
+    { name = "pytest", specifier = ">=8.2.0" },
+    { name = "pytest-asyncio", specifier = ">=0.23.0" },
+    { name = "pytest-cov", specifier = ">=5.0.0" },
+    { name = "pytest-flakefinder", specifier = ">=1.1.0" },
+    { name = "pytest-github-actions-annotate-failures", specifier = ">=0.2.0" },
+    { name = "pytest-instafail", specifier = ">=0.5.0" },
+    { name = "pytest-mock", specifier = ">=3.14.0" },
+    { name = "pytest-profiling", specifier = ">=1.7.0" },
+    { name = "pytest-split", specifier = ">=0.9.0" },
+    { name = "pytest-sugar", specifier = ">=1.0.0" },
+    { name = "pytest-xdist", specifier = ">=3.6.0" },
+    { name = "requests", specifier = ">=2.32.0" },
+    { name = "respx", specifier = ">=0.21.1" },
+    { name = "ruff", specifier = ">=0.12.7" },
+    { name = "types-aiofiles", specifier = ">=24.1.0.20240626" },
+    { name = "types-google-cloud-ndb", specifier = ">=2.2.0.0" },
+    { name = "types-markdown", specifier = ">=3.7.0.20240822" },
+    { name = "types-passlib", specifier = ">=1.7.7.13" },
+    { name = "types-pillow", specifier = ">=10.2.0.20240213" },
+    { name = "types-python-jose", specifier = ">=3.3.4.8" },
+    { name = "types-pywin32", specifier = ">=306.0.0.4" },
+    { name = "types-pyyaml", specifier = ">=6.0.12.8" },
+    { name = "types-redis", specifier = ">=4.6.0.5" },
+    { name = "types-requests", specifier = ">=2.32.0" },
+    { name = "vulture", specifier = ">=2.11" },
+]
+
+[[package]]
+name = "langflow-nightly"
+version = "1.8.0.dev4"
 source = { editable = "." }
 dependencies = [
     { name = "ag-ui-protocol" },
@@ -5616,7 +5883,7 @@ dependencies = [
     { name = "langchain-pinecone" },
     { name = "langchain-sambanova" },
     { name = "langchain-unstructured" },
-    { name = "langflow-base" },
+    { name = "langflow-base-nightly" },
     { name = "langfuse" },
     { name = "langsmith" },
     { name = "langwatch" },
@@ -5831,7 +6098,7 @@ requires-dist = [
     { name = "langchain-pinecone", specifier = ">=0.2.8,<1.0.0" },
     { name = "langchain-sambanova", specifier = "==0.1.0" },
     { name = "langchain-unstructured", specifier = "==0.1.5" },
-    { name = "langflow-base", editable = "src/backend/base" },
+    { name = "langflow-base-nightly", editable = "src/backend/base" },
     { name = "langfuse", specifier = "==2.53.9" },
     { name = "langsmith", specifier = ">=0.3.42,<1.0.0" },
     { name = "langwatch", specifier = ">=0.2.11,<0.3.0" },
@@ -5933,275 +6200,6 @@ dev = [
     { name = "respx", specifier = ">=0.21.1" },
     { name = "ruff", specifier = ">=0.12.7" },
     { name = "scrapegraph-py", specifier = ">=1.10.2" },
-    { name = "types-aiofiles", specifier = ">=24.1.0.20240626" },
-    { name = "types-google-cloud-ndb", specifier = ">=2.2.0.0" },
-    { name = "types-markdown", specifier = ">=3.7.0.20240822" },
-    { name = "types-passlib", specifier = ">=1.7.7.13" },
-    { name = "types-pillow", specifier = ">=10.2.0.20240213" },
-    { name = "types-python-jose", specifier = ">=3.3.4.8" },
-    { name = "types-pywin32", specifier = ">=306.0.0.4" },
-    { name = "types-pyyaml", specifier = ">=6.0.12.8" },
-    { name = "types-redis", specifier = ">=4.6.0.5" },
-    { name = "types-requests", specifier = ">=2.32.0" },
-    { name = "vulture", specifier = ">=2.11" },
-]
-
-[[package]]
-name = "langflow-base"
-version = "0.8.0"
-source = { editable = "src/backend/base" }
-dependencies = [
-    { name = "aiofile" },
-    { name = "aiofiles" },
-    { name = "aiosqlite" },
-    { name = "alembic" },
-    { name = "assemblyai" },
-    { name = "asyncer" },
-    { name = "bcrypt" },
-    { name = "cachetools" },
-    { name = "chardet" },
-    { name = "clickhouse-connect" },
-    { name = "cryptography" },
-    { name = "defusedxml" },
-    { name = "diskcache" },
-    { name = "docstring-parser" },
-    { name = "duckdb" },
-    { name = "elevenlabs", version = "1.58.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.12.*'" },
-    { name = "elevenlabs", version = "1.59.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version != '3.12.*'" },
-    { name = "email-validator" },
-    { name = "emoji" },
-    { name = "fastapi" },
-    { name = "fastapi-pagination" },
-    { name = "filelock" },
-    { name = "firecrawl-py" },
-    { name = "grandalf" },
-    { name = "greenlet" },
-    { name = "gunicorn" },
-    { name = "httpx", extra = ["http2"] },
-    { name = "ibm-watsonx-ai", version = "1.3.42", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "ibm-watsonx-ai", version = "1.4.11", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "jq", marker = "sys_platform != 'win32'" },
-    { name = "json-repair" },
-    { name = "jsonquerylang" },
-    { name = "langchain" },
-    { name = "langchain-chroma" },
-    { name = "langchain-community" },
-    { name = "langchain-core" },
-    { name = "langchain-experimental" },
-    { name = "langchain-ibm" },
-    { name = "langchainhub" },
-    { name = "lfx" },
-    { name = "loguru" },
-    { name = "mcp" },
-    { name = "multiprocess" },
-    { name = "nanoid" },
-    { name = "nest-asyncio" },
-    { name = "networkx" },
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-exporter-prometheus" },
-    { name = "opentelemetry-instrumentation-fastapi" },
-    { name = "opentelemetry-sdk" },
-    { name = "orjson" },
-    { name = "pandas" },
-    { name = "passlib" },
-    { name = "pillow" },
-    { name = "pip" },
-    { name = "platformdirs" },
-    { name = "prometheus-client" },
-    { name = "pydantic" },
-    { name = "pydantic-settings" },
-    { name = "pypdf" },
-    { name = "pyperclip" },
-    { name = "python-docx" },
-    { name = "python-jose" },
-    { name = "python-multipart" },
-    { name = "rich" },
-    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "scipy", version = "1.16.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "sentry-sdk", extra = ["fastapi", "loguru"] },
-    { name = "setuptools" },
-    { name = "spider-client" },
-    { name = "sqlalchemy", extra = ["aiosqlite"] },
-    { name = "sqlmodel" },
-    { name = "structlog" },
-    { name = "trustcall" },
-    { name = "typer" },
-    { name = "uncurl" },
-    { name = "uvicorn" },
-    { name = "validators" },
-]
-
-[package.optional-dependencies]
-all = [
-    { name = "ctransformers" },
-    { name = "llama-cpp-python" },
-    { name = "sentence-transformers" },
-]
-audio = [
-    { name = "webrtcvad" },
-]
-local = [
-    { name = "ctransformers" },
-    { name = "llama-cpp-python" },
-    { name = "sentence-transformers" },
-]
-postgresql = [
-    { name = "sqlalchemy", extra = ["postgresql-psycopg", "postgresql-psycopg2binary"] },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "asgi-lifespan" },
-    { name = "codeflash" },
-    { name = "devtools" },
-    { name = "dictdiffer" },
-    { name = "httpx", extra = ["http2"] },
-    { name = "ipykernel" },
-    { name = "mypy" },
-    { name = "pandas-stubs" },
-    { name = "pre-commit" },
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-cov" },
-    { name = "pytest-flakefinder" },
-    { name = "pytest-github-actions-annotate-failures" },
-    { name = "pytest-instafail" },
-    { name = "pytest-mock" },
-    { name = "pytest-profiling" },
-    { name = "pytest-split" },
-    { name = "pytest-sugar" },
-    { name = "pytest-xdist" },
-    { name = "requests" },
-    { name = "respx" },
-    { name = "ruff" },
-    { name = "types-aiofiles" },
-    { name = "types-google-cloud-ndb" },
-    { name = "types-markdown" },
-    { name = "types-passlib" },
-    { name = "types-pillow" },
-    { name = "types-python-jose" },
-    { name = "types-pywin32" },
-    { name = "types-pyyaml" },
-    { name = "types-redis" },
-    { name = "types-requests" },
-    { name = "vulture" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "aiofile", specifier = ">=3.9.0,<4.0.0" },
-    { name = "aiofiles", specifier = ">=24.1.0,<25.0.0" },
-    { name = "aiosqlite", specifier = ">=0.20.0,<1.0.0" },
-    { name = "alembic", specifier = ">=1.13.0,<2.0.0" },
-    { name = "assemblyai", specifier = ">=0.33.0,<1.0.0" },
-    { name = "asyncer", specifier = ">=0.0.5,<1.0.0" },
-    { name = "bcrypt", specifier = "==4.0.1" },
-    { name = "cachetools", specifier = ">=6.0.0" },
-    { name = "chardet", specifier = ">=5.2.0,<6.0.0" },
-    { name = "clickhouse-connect", specifier = "==0.7.19" },
-    { name = "cryptography", specifier = ">=43.0.1,<44.0.0" },
-    { name = "ctransformers", marker = "extra == 'all'", specifier = ">=0.2" },
-    { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2" },
-    { name = "defusedxml", specifier = ">=0.7.1,<1.0.0" },
-    { name = "diskcache", specifier = ">=5.6.3,<6.0.0" },
-    { name = "docstring-parser", specifier = ">=0.16,<1.0.0" },
-    { name = "duckdb", specifier = ">=1.0.0,<2.0.0" },
-    { name = "elevenlabs", marker = "python_full_version != '3.12.*'", specifier = ">=1.52.0,<2.0.0" },
-    { name = "elevenlabs", marker = "python_full_version == '3.12.*'", specifier = "==1.58.1" },
-    { name = "email-validator", specifier = ">=2.0.0" },
-    { name = "emoji", specifier = ">=2.12.0,<3.0.0" },
-    { name = "fastapi", specifier = ">=0.115.2,<1.0.0" },
-    { name = "fastapi-pagination", specifier = ">=0.13.1,<1.0.0" },
-    { name = "filelock", specifier = ">=3.15.4,<4.0.0" },
-    { name = "firecrawl-py", specifier = ">=1.0.16,<2.0.0" },
-    { name = "grandalf", specifier = ">=0.8.0,<1.0.0" },
-    { name = "greenlet", specifier = ">=3.1.1,<4.0.0" },
-    { name = "gunicorn", specifier = ">=22.0.0,<23.0.0" },
-    { name = "httpx", extras = ["http2"], specifier = ">=0.27,<1.0.0" },
-    { name = "ibm-watsonx-ai", specifier = ">=1.3.1,<2.0.0" },
-    { name = "jq", marker = "sys_platform != 'win32'", specifier = ">=1.7.0,<2.0.0" },
-    { name = "json-repair", specifier = ">=0.30.3,<1.0.0" },
-    { name = "jsonquerylang", specifier = ">=1.1.1,<2.0.0" },
-    { name = "langchain", specifier = "~=0.3.21" },
-    { name = "langchain-chroma", specifier = ">=0.1.4,<1.0.0" },
-    { name = "langchain-community", specifier = ">=0.3.0,<1.0.0" },
-    { name = "langchain-core", specifier = ">=0.3.45,<1.0.0" },
-    { name = "langchain-experimental", specifier = ">=0.3.0,<1.0.0" },
-    { name = "langchain-ibm", specifier = ">=0.3.8,<1.0.0" },
-    { name = "langchainhub", specifier = "~=0.1.15" },
-    { name = "lfx", editable = "src/lfx" },
-    { name = "llama-cpp-python", marker = "extra == 'all'", specifier = ">=0.2.0" },
-    { name = "llama-cpp-python", marker = "extra == 'local'", specifier = ">=0.2.0" },
-    { name = "loguru", specifier = ">=0.7.1,<1.0.0" },
-    { name = "mcp", specifier = ">=1.17.0,<2.0.0" },
-    { name = "multiprocess", specifier = ">=0.70.14,<1.0.0" },
-    { name = "nanoid", specifier = ">=2.0.0,<3.0.0" },
-    { name = "nest-asyncio", specifier = ">=1.6.0,<2.0.0" },
-    { name = "networkx", specifier = ">=3.4.2,<4.0.0" },
-    { name = "opentelemetry-api", specifier = ">=1.25.0,<2.0.0" },
-    { name = "opentelemetry-exporter-prometheus", specifier = ">=0.46b0,<1.0.0" },
-    { name = "opentelemetry-instrumentation-fastapi", specifier = ">=0.46b0,<1.0.0" },
-    { name = "opentelemetry-sdk", specifier = ">=1.25.0,<2.0.0" },
-    { name = "orjson", specifier = "==3.10.15" },
-    { name = "pandas", specifier = "==2.2.3" },
-    { name = "passlib", specifier = ">=1.7.4,<2.0.0" },
-    { name = "pillow", specifier = ">=11.1.0,<12.0.0" },
-    { name = "pip", specifier = ">=25.3,<26.0.0" },
-    { name = "platformdirs", specifier = ">=4.2.0,<5.0.0" },
-    { name = "prometheus-client", specifier = ">=0.20.0,<1.0.0" },
-    { name = "pydantic", specifier = "~=2.11.0" },
-    { name = "pydantic-settings", specifier = ">=2.2.0,<3.0.0" },
-    { name = "pypdf", specifier = "~=5.1.0" },
-    { name = "pyperclip", specifier = ">=1.8.2,<2.0.0" },
-    { name = "python-docx", specifier = ">=1.1.0,<2.0.0" },
-    { name = "python-jose", specifier = ">=3.3.0,<4.0.0" },
-    { name = "python-multipart", specifier = ">=0.0.12,<1.0.0" },
-    { name = "rich", specifier = ">=13.7.0,<14.0.0" },
-    { name = "scipy", specifier = ">=1.15.2,<2.0.0" },
-    { name = "sentence-transformers", marker = "extra == 'all'", specifier = ">=2.0.0" },
-    { name = "sentence-transformers", marker = "extra == 'local'", specifier = ">=2.0.0" },
-    { name = "sentry-sdk", extras = ["fastapi", "loguru"], specifier = ">=2.5.1,<3.0.0" },
-    { name = "setuptools", specifier = ">=78.1.1,<79.0.0" },
-    { name = "spider-client", specifier = ">=0.0.27,<1.0.0" },
-    { name = "sqlalchemy", extras = ["aiosqlite"], specifier = ">=2.0.38,<3.0.0" },
-    { name = "sqlalchemy", extras = ["postgresql-psycopg"], marker = "extra == 'postgresql'", specifier = ">=2.0.38,<3.0.0" },
-    { name = "sqlalchemy", extras = ["postgresql-psycopg2binary"], marker = "extra == 'postgresql'", specifier = ">=2.0.38,<3.0.0" },
-    { name = "sqlmodel", specifier = "==0.0.22" },
-    { name = "structlog", specifier = ">=25.4.0,<26.0.0" },
-    { name = "trustcall", specifier = ">=0.0.38,<1.0.0" },
-    { name = "typer", specifier = ">=0.13.0,<1.0.0" },
-    { name = "uncurl", specifier = ">=0.0.11,<1.0.0" },
-    { name = "uvicorn", specifier = ">=0.30.0,<1.0.0" },
-    { name = "validators", specifier = ">=0.34.0,<1.0.0" },
-    { name = "webrtcvad", marker = "extra == 'audio'", specifier = ">=2.0.10" },
-]
-provides-extras = ["audio", "postgresql", "local", "all"]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "asgi-lifespan", specifier = ">=2.1.0" },
-    { name = "codeflash", specifier = ">=0.8.4" },
-    { name = "devtools", specifier = ">=0.12.2" },
-    { name = "dictdiffer", specifier = ">=0.9.0" },
-    { name = "httpx", extras = ["http2"], specifier = ">=0.27" },
-    { name = "ipykernel", specifier = ">=6.29.0" },
-    { name = "mypy", specifier = ">=1.11.0" },
-    { name = "pandas-stubs", specifier = ">=2.1.4.231227" },
-    { name = "pre-commit", specifier = ">=3.7.0" },
-    { name = "pytest", specifier = ">=8.2.0" },
-    { name = "pytest-asyncio", specifier = ">=0.23.0" },
-    { name = "pytest-cov", specifier = ">=5.0.0" },
-    { name = "pytest-flakefinder", specifier = ">=1.1.0" },
-    { name = "pytest-github-actions-annotate-failures", specifier = ">=0.2.0" },
-    { name = "pytest-instafail", specifier = ">=0.5.0" },
-    { name = "pytest-mock", specifier = ">=3.14.0" },
-    { name = "pytest-profiling", specifier = ">=1.7.0" },
-    { name = "pytest-split", specifier = ">=0.9.0" },
-    { name = "pytest-sugar", specifier = ">=1.0.0" },
-    { name = "pytest-xdist", specifier = ">=3.6.0" },
-    { name = "requests", specifier = ">=2.32.0" },
-    { name = "respx", specifier = ">=0.21.1" },
-    { name = "ruff", specifier = ">=0.12.7" },
     { name = "types-aiofiles", specifier = ">=24.1.0.20240626" },
     { name = "types-google-cloud-ndb", specifier = ">=2.2.0.0" },
     { name = "types-markdown", specifier = ">=3.7.0.20240822" },
@@ -6359,7 +6357,7 @@ name = "lazy-loader"
 version = "0.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "packaging" },
+    { name = "packaging", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/6f/6b/c875b30a1ba490860c93da4cabf479e03f584eba06fe5963f6f6644653d8/lazy_loader-0.4.tar.gz", hash = "sha256:47c75182589b91a4e1a85a136c074285a5ad4d9f39c63e0d7fb76391c4574cd1", size = 15431, upload-time = "2024-04-05T13:03:12.261Z" }
 wheels = [
@@ -6406,8 +6404,8 @@ wheels = [
 ]
 
 [[package]]
-name = "lfx"
-version = "0.3.0"
+name = "lfx-nightly"
+version = "0.3.0.dev4"
 source = { editable = "src/lfx" }
 dependencies = [
     { name = "ag-ui-protocol" },
@@ -7968,7 +7966,7 @@ name = "nvidia-cudnn-cu12"
 version = "9.10.2.21"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-cublas-cu12", marker = "(python_full_version < '3.12' and platform_machine == 'arm64') or (platform_machine != 'arm64' and platform_machine != 'x86_64') or sys_platform != 'darwin'" },
+    { name = "nvidia-cublas-cu12", marker = "(python_full_version >= '3.12' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.12' and sys_platform == 'linux') or (platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'linux')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ba/51/e123d997aa098c61d029f76663dedbfb9bc8dcf8c60cbd6adbe42f76d049/nvidia_cudnn_cu12-9.10.2.21-py3-none-manylinux_2_27_x86_64.whl", hash = "sha256:949452be657fa16687d0930933f032835951ef0892b37d2d53824d1a84dc97a8", size = 706758467, upload-time = "2025-06-06T21:54:08.597Z" },
@@ -7979,7 +7977,7 @@ name = "nvidia-cufft-cu12"
 version = "11.3.3.83"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-nvjitlink-cu12", marker = "(python_full_version < '3.12' and platform_machine == 'arm64') or (platform_machine != 'arm64' and platform_machine != 'x86_64') or sys_platform != 'darwin'" },
+    { name = "nvidia-nvjitlink-cu12", marker = "(python_full_version >= '3.12' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.12' and sys_platform == 'linux') or (platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'linux')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/1f/13/ee4e00f30e676b66ae65b4f08cb5bcbb8392c03f54f2d5413ea99a5d1c80/nvidia_cufft_cu12-11.3.3.83-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:4d2dd21ec0b88cf61b62e6b43564355e5222e4a3fb394cac0db101f2dd0d4f74", size = 193118695, upload-time = "2025-03-07T01:45:27.821Z" },
@@ -8006,9 +8004,9 @@ name = "nvidia-cusolver-cu12"
 version = "11.7.3.90"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-cublas-cu12", marker = "(python_full_version < '3.12' and platform_machine == 'arm64') or (platform_machine != 'arm64' and platform_machine != 'x86_64') or sys_platform != 'darwin'" },
-    { name = "nvidia-cusparse-cu12", marker = "(python_full_version < '3.12' and platform_machine == 'arm64') or (platform_machine != 'arm64' and platform_machine != 'x86_64') or sys_platform != 'darwin'" },
-    { name = "nvidia-nvjitlink-cu12", marker = "(python_full_version < '3.12' and platform_machine == 'arm64') or (platform_machine != 'arm64' and platform_machine != 'x86_64') or sys_platform != 'darwin'" },
+    { name = "nvidia-cublas-cu12", marker = "(python_full_version >= '3.12' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.12' and sys_platform == 'linux') or (platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'linux')" },
+    { name = "nvidia-cusparse-cu12", marker = "(python_full_version >= '3.12' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.12' and sys_platform == 'linux') or (platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'linux')" },
+    { name = "nvidia-nvjitlink-cu12", marker = "(python_full_version >= '3.12' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.12' and sys_platform == 'linux') or (platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'linux')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/85/48/9a13d2975803e8cf2777d5ed57b87a0b6ca2cc795f9a4f59796a910bfb80/nvidia_cusolver_cu12-11.7.3.90-py3-none-manylinux_2_27_x86_64.whl", hash = "sha256:4376c11ad263152bd50ea295c05370360776f8c3427b30991df774f9fb26c450", size = 267506905, upload-time = "2025-03-07T01:47:16.273Z" },
@@ -8019,7 +8017,7 @@ name = "nvidia-cusparse-cu12"
 version = "12.5.8.93"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-nvjitlink-cu12", marker = "(python_full_version < '3.12' and platform_machine == 'arm64') or (platform_machine != 'arm64' and platform_machine != 'x86_64') or sys_platform != 'darwin'" },
+    { name = "nvidia-nvjitlink-cu12", marker = "(python_full_version >= '3.12' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.12' and sys_platform == 'linux') or (platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'linux')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c2/f5/e1854cb2f2bcd4280c44736c93550cc300ff4b8c95ebe370d0aa7d2b473d/nvidia_cusparse_cu12-12.5.8.93-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:1ec05d76bbbd8b61b06a80e1eaf8cf4959c3d4ce8e711b65ebd0443bb0ebb13b", size = 288216466, upload-time = "2025-03-07T01:48:13.779Z" },
@@ -8079,9 +8077,9 @@ name = "ocrmac"
 version = "1.0.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "click" },
-    { name = "pillow" },
-    { name = "pyobjc-framework-vision" },
+    { name = "click", marker = "python_full_version >= '3.12' or sys_platform == 'darwin'" },
+    { name = "pillow", marker = "python_full_version >= '3.12' or sys_platform == 'darwin'" },
+    { name = "pyobjc-framework-vision", marker = "python_full_version >= '3.12' or sys_platform == 'darwin'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/5e/07/3e15ab404f75875c5e48c47163300eb90b7409044d8711fc3aaf52503f2e/ocrmac-1.0.1.tar.gz", hash = "sha256:507fe5e4cbd67b2d03f6729a52bbc11f9d0b58241134eb958a5daafd4b9d93d9", size = 1454317, upload-time = "2026-01-08T16:44:26.412Z" }
 wheels = [
@@ -8299,7 +8297,7 @@ resolution-markers = [
     "(python_full_version < '3.11' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.11' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.12' and platform_machine != 'x86_64') or (python_full_version < '3.12' and sys_platform != 'darwin')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/36/2f/5b2b3ba52c864848885ba988f24b7f105052f68da9ab0e693cc7c25b0b30/opencv-python-headless-4.11.0.86.tar.gz", hash = "sha256:996eb282ca4b43ec6a3972414de0e2331f5d9cda2b41091a49739c19fb843798", size = 95177929, upload-time = "2025-01-16T13:53:40.22Z" }
 wheels = [
@@ -8324,7 +8322,7 @@ resolution-markers = [
     "(python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine != 'arm64' and platform_machine != 'x86_64') or (python_full_version >= '3.12' and python_full_version < '3.12.4' and sys_platform != 'darwin')",
 ]
 dependencies = [
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.12' and platform_machine != 'x86_64') or (python_full_version >= '3.12' and sys_platform != 'darwin')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/a4/63/6861102ec149c3cd298f4d1ea7ce9d6adbc7529221606ff1dab991a19adb/opencv-python-headless-4.12.0.88.tar.gz", hash = "sha256:cfdc017ddf2e59b6c2f53bc12d74b6b0be7ded4ec59083ea70763921af2b6c09", size = 95379675, upload-time = "2025-07-07T09:21:06.815Z" }
 wheels = [
@@ -10782,7 +10780,7 @@ name = "pyobjc-framework-cocoa"
 version = "12.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pyobjc-core" },
+    { name = "pyobjc-core", marker = "python_full_version >= '3.12' or sys_platform == 'darwin'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/02/a3/16ca9a15e77c061a9250afbae2eae26f2e1579eb8ca9462ae2d2c71e1169/pyobjc_framework_cocoa-12.1.tar.gz", hash = "sha256:5556c87db95711b985d5efdaaf01c917ddd41d148b1e52a0c66b1a2e2c5c1640", size = 2772191, upload-time = "2025-11-14T10:13:02.069Z" }
 wheels = [
@@ -10798,8 +10796,8 @@ name = "pyobjc-framework-coreml"
 version = "12.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pyobjc-core" },
-    { name = "pyobjc-framework-cocoa" },
+    { name = "pyobjc-core", marker = "python_full_version >= '3.12' or sys_platform == 'darwin'" },
+    { name = "pyobjc-framework-cocoa", marker = "python_full_version >= '3.12' or sys_platform == 'darwin'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/30/2d/baa9ea02cbb1c200683cb7273b69b4bee5070e86f2060b77e6a27c2a9d7e/pyobjc_framework_coreml-12.1.tar.gz", hash = "sha256:0d1a4216891a18775c9e0170d908714c18e4f53f9dc79fb0f5263b2aa81609ba", size = 40465, upload-time = "2025-11-14T10:14:02.265Z" }
 wheels = [
@@ -10815,8 +10813,8 @@ name = "pyobjc-framework-quartz"
 version = "12.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pyobjc-core" },
-    { name = "pyobjc-framework-cocoa" },
+    { name = "pyobjc-core", marker = "python_full_version >= '3.12' or sys_platform == 'darwin'" },
+    { name = "pyobjc-framework-cocoa", marker = "python_full_version >= '3.12' or sys_platform == 'darwin'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/94/18/cc59f3d4355c9456fc945eae7fe8797003c4da99212dd531ad1b0de8a0c6/pyobjc_framework_quartz-12.1.tar.gz", hash = "sha256:27f782f3513ac88ec9b6c82d9767eef95a5cf4175ce88a1e5a65875fee799608", size = 3159099, upload-time = "2025-11-14T10:21:24.31Z" }
 wheels = [
@@ -10832,10 +10830,10 @@ name = "pyobjc-framework-vision"
 version = "12.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pyobjc-core" },
-    { name = "pyobjc-framework-cocoa" },
-    { name = "pyobjc-framework-coreml" },
-    { name = "pyobjc-framework-quartz" },
+    { name = "pyobjc-core", marker = "python_full_version >= '3.12' or sys_platform == 'darwin'" },
+    { name = "pyobjc-framework-cocoa", marker = "python_full_version >= '3.12' or sys_platform == 'darwin'" },
+    { name = "pyobjc-framework-coreml", marker = "python_full_version >= '3.12' or sys_platform == 'darwin'" },
+    { name = "pyobjc-framework-quartz", marker = "python_full_version >= '3.12' or sys_platform == 'darwin'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/c2/5a/08bb3e278f870443d226c141af14205ff41c0274da1e053b72b11dfc9fb2/pyobjc_framework_vision-12.1.tar.gz", hash = "sha256:a30959100e85dcede3a786c544e621ad6eb65ff6abf85721f805822b8c5fe9b0", size = 59538, upload-time = "2025-11-14T10:23:21.979Z" }
 wheels = [
@@ -12343,14 +12341,14 @@ resolution-markers = [
     "(python_full_version < '3.11' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.11' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "imageio", marker = "python_full_version < '3.11'" },
-    { name = "lazy-loader", marker = "python_full_version < '3.11'" },
-    { name = "networkx", marker = "python_full_version < '3.11'" },
-    { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "packaging", marker = "python_full_version < '3.11'" },
-    { name = "pillow", marker = "python_full_version < '3.11'" },
-    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "tifffile", version = "2025.5.10", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "imageio", marker = "(python_full_version < '3.11' and platform_machine != 'x86_64') or (python_full_version < '3.11' and sys_platform != 'darwin')" },
+    { name = "lazy-loader", marker = "(python_full_version < '3.11' and platform_machine != 'x86_64') or (python_full_version < '3.11' and sys_platform != 'darwin')" },
+    { name = "networkx", marker = "(python_full_version < '3.11' and platform_machine != 'x86_64') or (python_full_version < '3.11' and sys_platform != 'darwin')" },
+    { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and platform_machine != 'x86_64') or (python_full_version < '3.11' and sys_platform != 'darwin')" },
+    { name = "packaging", marker = "(python_full_version < '3.11' and platform_machine != 'x86_64') or (python_full_version < '3.11' and sys_platform != 'darwin')" },
+    { name = "pillow", marker = "(python_full_version < '3.11' and platform_machine != 'x86_64') or (python_full_version < '3.11' and sys_platform != 'darwin')" },
+    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and platform_machine != 'x86_64') or (python_full_version < '3.11' and sys_platform != 'darwin')" },
+    { name = "tifffile", version = "2025.5.10", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and platform_machine != 'x86_64') or (python_full_version < '3.11' and sys_platform != 'darwin')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/c7/a8/3c0f256012b93dd2cb6fda9245e9f4bff7dc0486880b248005f15ea2255e/scikit_image-0.25.2.tar.gz", hash = "sha256:e5a37e6cd4d0c018a7a55b9d601357e3382826d3888c10d0213fc63bff977dde", size = 22693594, upload-time = "2025-02-18T18:05:24.538Z" }
 wheels = [
@@ -12393,15 +12391,15 @@ resolution-markers = [
     "(python_full_version == '3.11.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "imageio", marker = "python_full_version >= '3.11'" },
-    { name = "lazy-loader", marker = "python_full_version >= '3.11'" },
-    { name = "networkx", marker = "python_full_version >= '3.11'" },
-    { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
-    { name = "packaging", marker = "python_full_version >= '3.11'" },
-    { name = "pillow", marker = "python_full_version >= '3.11'" },
-    { name = "scipy", version = "1.16.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "tifffile", version = "2025.12.20", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "imageio", marker = "(python_full_version >= '3.11' and platform_machine != 'x86_64') or (python_full_version >= '3.11' and sys_platform != 'darwin')" },
+    { name = "lazy-loader", marker = "(python_full_version >= '3.11' and platform_machine != 'x86_64') or (python_full_version >= '3.11' and sys_platform != 'darwin')" },
+    { name = "networkx", marker = "(python_full_version >= '3.11' and platform_machine != 'x86_64') or (python_full_version >= '3.11' and sys_platform != 'darwin')" },
+    { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version == '3.11.*' and platform_machine != 'x86_64') or (python_full_version == '3.11.*' and sys_platform != 'darwin')" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.12' and platform_machine != 'x86_64') or (python_full_version >= '3.12' and sys_platform != 'darwin')" },
+    { name = "packaging", marker = "(python_full_version >= '3.11' and platform_machine != 'x86_64') or (python_full_version >= '3.11' and sys_platform != 'darwin')" },
+    { name = "pillow", marker = "(python_full_version >= '3.11' and platform_machine != 'x86_64') or (python_full_version >= '3.11' and sys_platform != 'darwin')" },
+    { name = "scipy", version = "1.16.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and platform_machine != 'x86_64') or (python_full_version >= '3.11' and sys_platform != 'darwin')" },
+    { name = "tifffile", version = "2025.12.20", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and platform_machine != 'x86_64') or (python_full_version >= '3.11' and sys_platform != 'darwin')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/a1/b4/2528bb43c67d48053a7a649a9666432dc307d66ba02e3a6d5c40f46655df/scikit_image-0.26.0.tar.gz", hash = "sha256:f5f970ab04efad85c24714321fcc91613fcb64ef2a892a13167df2f3e59199fa", size = 22729739, upload-time = "2025-12-20T17:12:21.824Z" }
 wheels = [
@@ -13323,7 +13321,7 @@ resolution-markers = [
     "(python_full_version < '3.11' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.11' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and platform_machine != 'x86_64') or (python_full_version < '3.11' and sys_platform != 'darwin')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/44/d0/18fed0fc0916578a4463f775b0fbd9c5fed2392152d039df2fb533bfdd5d/tifffile-2025.5.10.tar.gz", hash = "sha256:018335d34283aa3fd8c263bae5c3c2b661ebc45548fde31504016fcae7bf1103", size = 365290, upload-time = "2025-05-10T19:22:34.386Z" }
 wheels = [
@@ -13346,8 +13344,8 @@ resolution-markers = [
     "(python_full_version == '3.11.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version == '3.11.*' and platform_machine != 'x86_64') or (python_full_version == '3.11.*' and sys_platform != 'darwin')" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.12' and platform_machine != 'x86_64') or (python_full_version >= '3.12' and sys_platform != 'darwin')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/f8/a6/85e8ecfd7cb4167f8bd17136b2d42cba296fbc08a247bba70d5747e2046a/tifffile-2025.12.20.tar.gz", hash = "sha256:cb8a4fee327d15b3e3eeac80bbdd8a53b323c80473330bcfb99418ee4c1c827f", size = 373364, upload-time = "2025-12-21T06:23:54.241Z" }
 wheels = [
