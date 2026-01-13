@@ -1,4 +1,9 @@
 # https://github.com/dorny/paths-filter
+# CI-only changes (workflow files, configs, etc.)
+# Used to skip all tests when only CI configuration is modified
+ci-only:
+  - ".github/**"
+  - "!.github/changes-filter.yaml"  # Exclude this file as it affects test filtering
 # Backend changes that should trigger Python tests
 python:
   - "src/backend/**"
