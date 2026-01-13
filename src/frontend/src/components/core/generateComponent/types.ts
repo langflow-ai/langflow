@@ -20,7 +20,7 @@ export type SubmitResult = {
   componentCode?: string;
 };
 
-export type ForgeTerminalProps = {
+export type GenerateComponentTerminalProps = {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (input: string) => Promise<SubmitResult>;
@@ -31,7 +31,7 @@ export type ForgeTerminalProps = {
   onMaxRetriesChange: (value: number) => void;
 };
 
-export type ForgePromptResponse = {
+export type GenerateComponentPromptResponse = {
   result?: string;
   text?: string;
   logs?: string;

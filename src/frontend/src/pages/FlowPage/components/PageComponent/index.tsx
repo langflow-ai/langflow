@@ -22,7 +22,7 @@ import { useShallow } from "zustand/react/shallow";
 import { DefaultEdge } from "@/CustomEdges";
 import NoteNode from "@/CustomNodes/NoteNode";
 import FlowToolbar from "@/components/core/flowToolbarComponent";
-import ComponentForge from "@/components/core/componentForge";
+import GenerateComponent from "@/components/core/generateComponent";
 import {
   COLOR_OPTIONS,
   DEFAULT_NOTE_SIZE,
@@ -759,7 +759,7 @@ export default function Page({
                   shadowBoxHeight={shadowBoxHeight}
                 />
                 <FlowToolbar />
-                <ComponentForge />
+                <GenerateComponent />
               </>
             )}
             <MemoizedSidebarTrigger />

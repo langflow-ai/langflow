@@ -1,17 +1,17 @@
 import { memo, useCallback } from "react";
-import { usePostForgePrompt } from "@/controllers/API/queries/forge";
+import { usePostGenerateComponentPrompt } from "@/controllers/API/queries/generate-component";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import useAddFlow from "@/hooks/flows/use-add-flow";
 import { useAddComponent } from "@/hooks/use-add-component";
 import useAlertStore from "@/stores/alertStore";
 import { useDarkStore } from "@/stores/darkStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import { useForgeStore } from "@/stores/forgeStore";
+import { useGenerateComponentStore } from "@/stores/generateComponentStore";
 import { createFlowComponent, getNodeId } from "@/utils/reactflowUtils";
-import ForgeTerminal from "./forge-terminal";
-import type { ForgePromptResponse, SubmitResult } from "./types";
+import GenerateComponentTerminal from "./generate-component-terminal";
+import type { GenerateComponentPromptResponse, SubmitResult } from "./types";
 
-function extractSubmitResult(response: ForgePromptResponse): SubmitResult {
+function extractSubmitResult(response: GenerateComponentPromptResponse): SubmitResult {
   let content: string;
   if (response.result) {
     content = response.result;
@@ -44,16 +44,16 @@ function extractSubmitResult(response: ForgePromptResponse): SubmitResult {
   return result;
 }
 
-const ComponentForge = memo(function ComponentForge() {
-  const isTerminalOpen = useForgeStore((state) => state.isTerminalOpen);
-  const setTerminalOpen = useForgeStore((state) => state.setTerminalOpen);
-  const maxRetries = useForgeStore((state) => state.maxRetries);
-  const setMaxRetries = useForgeStore((state) => state.setMaxRetries);
+const GenerateComponent = memo(function GenerateComponent() {
+  const isTerminalOpen = useGenerateComponentStore((state) => state.isTerminalOpen);
+  const setTerminalOpen = useGenerateComponentStore((state) => state.setTerminalOpen);
+  const maxRetries = useGenerateComponentStore((state) => state.maxRetries);
+  const setMaxRetries = useGenerateComponentStore((state) => state.setMaxRetries);
 
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const version = useDarkStore((state) => state.version);
-  const { mutateAsync: executePrompt, isPending } = usePostForgePrompt();
+  const { mutateAsync: executePrompt, isPending } = usePostGenerateComponentPrompt();
   const { mutateAsync: validateComponentCode } = usePostValidateComponentCode();
   const addComponent = useAddComponent();
   const addFlow = useAddFlow();
@@ -74,7 +74,7 @@ const ComponentForge = memo(function ComponentForge() {
         maxRetries,
       });
 
-      return extractSubmitResult(response as ForgePromptResponse);
+      return extractSubmitResult(response as GenerateComponentPromptResponse);
     },
     [currentFlowId, executePrompt, maxRetries],
   );
@@ -114,7 +114,7 @@ const ComponentForge = memo(function ComponentForge() {
   );
 
   return (
-    <ForgeTerminal
+    <GenerateComponentTerminal
       isOpen={isTerminalOpen}
       onClose={handleCloseTerminal}
       onSubmit={handleSubmit}
@@ -127,4 +127,4 @@ const ComponentForge = memo(function ComponentForge() {
   );
 });
 
-export default ComponentForge;
+export default GenerateComponent;

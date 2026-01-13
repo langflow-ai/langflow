@@ -1,7 +1,7 @@
 import { create } from "zustand";
 
 const DEFAULT_MAX_RETRIES = 3;
-const STORAGE_KEY = "component-forge-max-retries";
+const STORAGE_KEY = "generate-component-max-retries";
 
 const getStoredMaxRetries = (): number => {
   try {
@@ -18,7 +18,7 @@ const getStoredMaxRetries = (): number => {
   return DEFAULT_MAX_RETRIES;
 };
 
-type ForgeStoreType = {
+type GenerateComponentStoreType = {
   isTerminalOpen: boolean;
   maxRetries: number;
   setTerminalOpen: (open: boolean) => void;
@@ -26,7 +26,7 @@ type ForgeStoreType = {
   setMaxRetries: (value: number) => void;
 };
 
-export const useForgeStore = create<ForgeStoreType>((set) => ({
+export const useGenerateComponentStore = create<GenerateComponentStoreType>((set) => ({
   isTerminalOpen: false,
   maxRetries: getStoredMaxRetries(),
   setTerminalOpen: (open) => set({ isTerminalOpen: open }),

@@ -36,8 +36,8 @@ export const URLs = {
   RUN: `run`,
   RUN_SESSION: `run/session`,
   REGISTRATION: `registration`,
-  FORGE_PROMPT: `forge/prompt`,
-  FORGE_CHECK_CONFIG: `forge/check-config`,
+  GENERATE_COMPONENT_PROMPT: `generate-component/prompt`,
+  GENERATE_COMPONENT_CHECK_CONFIG: `generate-component/check-config`,
 } as const;
 
 // IMPORTANT: FOLDERS endpoint now points to 'projects' for backward compatibility
