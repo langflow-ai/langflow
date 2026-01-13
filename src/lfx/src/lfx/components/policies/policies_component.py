@@ -161,7 +161,7 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         toolguard_step1_dir = self.work_dir / STEP1
         policy_text = "\n".join(self.policies)
         specs = await generate_guard_specs(
-            policy_text=policy_text, tools=self.in_tools, llm=llm, work_dir=toolguard_step1_dir, short=False
+            policy_text=policy_text, tools=self.in_tools, llm=llm, work_dir=toolguard_step1_dir, short=True
         )
         logger.info("🔒️ToolGuard: Step 1 Done")
         return specs
@@ -190,7 +190,7 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         if not self.bypass_policies:
             build_mode = getattr(self, "build_mode", BUILD_MODE_GENERATE)
             if build_mode == BUILD_MODE_GENERATE:  # run buildtime steps
-                logger.info("🔒️ToolGuard: execution (build) mode")
+                self.log("🔒️ToolGuard: execution (build) mode", name="info")
                 specs = await self._build_guard_specs()
                 await self._build_guards(specs)
                 # self.project = guards.out_dir
