@@ -45,7 +45,7 @@ dependencies = [
     "bcrypt==4.0.1",
     "pillow>=11.1.0,<12.0.0",
     "docstring-parser>=0.16,<1.0.0",
-    "PyJWT>=2.8.0,<3.0.0",
+    "PyJWT>=2.8.0,<2.10.1",
     "pandas==2.2.3",
     "multiprocess>=0.70.14,<1.0.0",
     "duckdb>=1.0.0,<2.0.0",
