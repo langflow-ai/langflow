@@ -81,9 +81,122 @@ sudo apt-get install gcc
 
 If you experience an error from the `webrtcvad` package, run `uv pip install webrtcvad-wheels` in your virtual environment, and then retry the Langflow installation.
 
-### C++ build tools required for Langflow Desktop on Windows
+## Langflow Desktop installation issues
 
-Microsoft Windows installations of Langflow Desktop require a C++ compiler that may not be present on your system. If you receive a `C++ Build Tools Required!` error, follow the on-screen prompt to install Microsoft C++ Build Tools, or [install Microsoft Visual Studio](https://visualstudio.microsoft.com/downloads/).
+The following issues can occur when Langflow Desktop is setting up or installing Langflow OSS automatically during first-time setup or updates.
+
+To view Langflow Desktop logs, see [Desktop logs](/logging#desktop-logs).
+
+### Failed to install Langflow OSS: Unable to sanity check Langflow OSS version
+
+Desktop installed Langflow OSS but couldn't verify the installation. You may see the error message: `Langflow Installation Error: langflow-install-error` or other `Langflow Installation Error:` messages.
+
+To resolve this error, do the following:
+
+1. Close Langflow Desktop.
+2. Clear Langflow Desktop's Python virtual environment.
+    Navigate to Langflow Desktop's data directory at `%LOCALAPPDATA%\com.LangflowDesktop` on Windows, or `~/Library/Application Support/com.LangflowDesktop` on macOS.
+3. Delete the `venv` or `python_env` folder.
+4. Restart Langflow Desktop.
+
+If the issue persists, ensure Python version >=3.10 is installed and accessible, or reinstall Langflow Desktop from [langflow.org/desktop](https://langflow.org/desktop).
+
+### Langflow OSS health check failed
+
+Desktop installed Langflow OSS but the OSS backend isn't responding to health checks. You may see the error message: `Langflow Health Check Error: Timeout after 80 attempts - Langflow did not become ready` or other `Langflow Health Check Error:` messages.
+
+To resolve this error, do the following:
+
+1. Check if another process is using Langflow Desktop's default port `7860`.
+    * On Windows, run `netstat -ano | findstr :7860`.
+    * On macOS or Linux, run `lsof -i :7860`.
+2. If another process is using the port, stop that process or [configure Langflow Desktop to use a different port](/environment-variables#set-environment-variables-for-langflow-desktop).
+
+### Failed to install uv: Unable to find uv executable
+
+This error can also appear as: `Unable to find uv executable for Python virtual environment setup`. You may see the error messages: `UV Installation Error: UV installation failed - binary not found after installation` or `Python Environment Error: UV binary not found at:` followed by a file path.
+
+Langflow Desktop can't locate the `uv` executable on your system, even though it may be installed.
+
+To resolve this error, do the following:
+
+1. Verify `uv` is installed by running `uv --version` in a terminal.
+2. If `uv` is not found, install `uv` using the instructions in "[Windows] All automatic installation strategies failed" below, or see the [uv installation guide](https://github.com/astral-sh/uv#installation).
+3. If `uv` is installed but not found, add it to your PATH environment variable:
+   * Windows: Add `%USERPROFILE%\.cargo\bin` to your PATH. In PowerShell, run:
+     ```powershell
+     [System.Environment]::SetEnvironmentVariable("Path", $env:Path + ";$env:USERPROFILE\.cargo\bin", "User")
+     ```
+   * macOS or Linux: Add `~/.cargo/bin` to your PATH in `~/.bashrc` or `~/.zshrc`.
+
+4. Restart Langflow Desktop.
+
+### Failed to create Python virtual environment
+
+Desktop failed to create the Python virtual environment required for Langflow OSS. You may see the error message: `Python Environment Error: error_dns`, `Python Environment Error: Creation failed:` followed by error details, or other `Python Environment Error:` messages.
+
+To resolve this error, do the following:
+
+1. Ensure you have sufficient disk space available (at least 2 GB free).
+2. Ensure that you have write permissions in the Langflow Desktop data directory:
+   * On Windows: `%LOCALAPPDATA%\com.LangflowDesktop`
+   * On macOS: `~/Library/Application Support/com.LangflowDesktop`
+3. Close Langflow Desktop.
+4. Delete the `venv` or `python_env` folder in the Langflow Desktop data directory.
+5. Restart Langflow Desktop.
+
+If the issue persists, ensure Python version >=3.10 is installed and accessible, or reinstall Langflow Desktop from [langflow.org/desktop](https://langflow.org/desktop).
+
+### Failed to sanity check Python execution
+
+Desktop created the Python virtual environment but couldn't verify that Python is working correctly. You may see the error message: `Python Environment Error: Python check failed:` followed by error details, or other `Python Environment Error:` messages.
+
+To resolve this error, see [Failed to create Python virtual environment](#failed-to-create-python-virtual-environment).
+
+### [macOS] Failed to install Langflow OSS: Xcode Command Line Tools are not installed
+
+Langflow Desktop requires [Xcode Command Line Tools](https://mac.install.guide/commandlinetools/) to install Langflow OSS on macOS. You may see the error message: `Langflow Installation Error: error_xcode` or a detailed message with the title "Xcode Command Line Tools required!".
+
+To install XCode Command Line Tools manually, do the following:
+
+1. Open a terminal and run `xcode-select --install`.
+2. **The installation may take over 20 minutes**.
+To start the installation process, in the popup dialogue, click **Install**.
+3. Verify the installation by opening a new terminal and running `xcode-select -p`.
+   The command should return a path like `/Library/Developer/CommandLineTools`.
+4. Restart Langflow Desktop.
+
+If the manual installation doesn't resolve the issue, download Xcode Command Line Tools from [Apple Developer Downloads](https://developer.apple.com/download/all/), and install the `.dmg` file manually.
+
+### [Windows] Failed to install Langflow OSS - Missing C++ Build Tools
+
+Microsoft Windows installations of Langflow Desktop require a C++ compiler that may not be present on your system.
+If you receive a `C++ Build Tools Required!` error, see the error message `Langflow Installation Error: error_cpp`, or see a detailed message with the title "C++ Build Tools required!", follow the on-screen prompt to install Microsoft C++ Build Tools, or install [Microsoft Visual Studio](https://visualstudio.microsoft.com/downloads/).
+
+### [Windows] All automatic installation strategies failed
+
+Desktop tried multiple methods to automatically install `uv` but all attempts failed. Desktop requires `uv` to manage Python packages and virtual environments. You may see the error message: `UV Installation Error: uv-manual-install-required` or a detailed manual installation message.
+
+To resolve this error, do the following:
+
+1. Install `uv` manually using PowerShell:
+    ```powershell
+    powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+    ```
+
+    Or install using pip:
+    ```bash
+    pip install uv
+    ```
+
+2. Verify the installation by running `uv --version` in a new PowerShell or Command Prompt window.
+
+   If `uv` is not found, add it to your PATH. In PowerShell, run:
+   ```powershell
+   [System.Environment]::SetEnvironmentVariable("Path", $env:Path + ";$env:USERPROFILE\.cargo\bin", "User")
+   ```
+
+3. Restart Langflow Desktop.
 
 ## Langflow startup issues
 
@@ -97,7 +210,7 @@ When you try to run Langflow with the command `langflow run`, you encounter the 
 > No module named 'langflow.__main__'
 ```
 
-To resolve this issue, try the following:
+To resolve this issue, do the following:
 
 1. Run `uv run langflow run` instead of `langflow run`.
 2. If that doesn't work, reinstall the latest Langflow version with `uv pip install langflow -U`.
