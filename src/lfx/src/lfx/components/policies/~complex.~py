@@ -1,8 +1,7 @@
 # from lfx.field_typing import Data
 import asyncio
-
 from lfx.custom.custom_component.component import Component
-from lfx.io import HandleInput, IntInput, Output
+from lfx.io import IntInput, Output, HandleInput
 from lfx.schema.data import Data
 
 
@@ -32,13 +31,18 @@ class CustomComponent(Component):
     ]
 
     async def build_output(self) -> Data:
-        get_user_tool = [t for t in self.in_tools if t.name == "get_user"][0]
-        get_pays_tool = [t for t in self.in_tools if t.name == "get_user_payment_methods"][0]
+        get_user_tool = [t for t in self.in_tools if t.name == 'get_user'][0]
+        get_pays_tool = [t for t in self.in_tools if t.name == 'get_user_payment_methods'][0]
 
-        [user, pays] = await asyncio.gather(*[
-            get_user_tool.ainvoke(input={"user_id":self.userid}),
-            get_pays_tool.ainvoke(input={"user_id":self.userid})
-        ])
+        user = await get_user_tool.ainvoke(input={"user_id":self.userid})
+        pays = await get_pays_tool.ainvoke(input={"user_id":self.userid})
+        # [user, pays] = await asyncio.gather(*[
+        #     get_user_tool.ainvoke(input={"user_id":self.userid}),
+        #     get_pays_tool.ainvoke(input={"user_id":self.userid})
+        # ])
+
+        print(f"user={user.content[0].text}")
+        print(f"pays={pays.content[0].text}")
 
         res = None
         if user and pays:

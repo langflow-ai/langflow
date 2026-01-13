@@ -18,7 +18,7 @@ from lfx.components.policies.guarded_tool import GuardedTool
 from lfx.components.policies.llm_wrapper import LangchainModelWrapper
 from lfx.components.policies.models import BUILDTIME_MODELS
 from lfx.field_typing import LanguageModel, Tool
-from lfx.io import BoolInput, HandleInput, MessageTextInput, ModelInput, Output, SecretStrInput, TabInput
+from lfx.io import BoolInput, HandleInput, ModelInput, Output, SecretStrInput, StrInput, TabInput
 from lfx.log.logger import logger
 
 TOOLGUARD_WORK_DIR = Path("tmp_toolguard")
@@ -78,7 +78,7 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         #     #advanced=True,
         #     input_types=["DataFrame"],
         # ),
-        MessageTextInput(
+        StrInput(
             name="policies",
             display_name="Policies",
             info="Enter one or more clear, well-defined and self-contained business policies, Using the '+' button.",
@@ -88,8 +88,8 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             list_add_label="Add Policy",
             input_types=[],
         ),
-        MessageTextInput(
-            name="project_path",
+        StrInput(
+            name="project",
             display_name="ToolGuard Project",
             info="Automatically generated ToolGuards code",
             # show_if={"enable_tool_guard": True},
@@ -125,8 +125,12 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         Output(display_name="Guarded Tools", type_=Tool, name="guard_code", method="build_guards"),
     ]
 
+    @property
+    def work_dir(self) -> Path:
+        logger.info("project=" + to_snake_case(self.project))
+        return TOOLGUARD_WORK_DIR / str(self.user_id) / to_snake_case(self.project)
+
     def build_model(self) -> LanguageModel:
-        logger.info(f"model={self.model}")
         llm_model = get_llm(
             model=self.model,
             user_id=self.user_id,
@@ -150,10 +154,6 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             field_value=field_value,
         )
 
-    @property
-    def work_dir(self) -> Path:
-        return TOOLGUARD_WORK_DIR / str(self.user_id) / self.project_path
-
     async def _build_guard_specs(self) -> list[ToolGuardSpec]:
         logger.info("🔒️ToolGuard: Starting step 1")
         logger.info(f"model = {self.model}")
@@ -170,7 +170,9 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         logger.info("🔒️ToolGuard: Starting step 2")
         out_dir = self.work_dir / STEP2
         llm = LangchainModelWrapper(self.build_model())
-        gen_result = await generate_guards_from_specs(tools=self.in_tools, tool_specs=specs, work_dir=out_dir, llm=llm)
+        gen_result = await generate_guards_from_specs(
+            tools=self.in_tools, tool_specs=specs, work_dir=out_dir, llm=llm, app_name=to_snake_case(self.self.project)
+        )
         logger.info("🔒️ToolGuard: Step 2 Done")
         return gen_result
 
@@ -191,12 +193,23 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
                 logger.info("🔒️ToolGuard: execution (build) mode")
                 specs = await self._build_guard_specs()
                 await self._build_guards(specs)
-                # self.project_path = guards.out_dir
+                # self.project = guards.out_dir
             else:  # build_mode == "use cache"
                 self.log("🔒️ToolGuard: run mode (cached code from path)", name="info")
-                # make sure self.project_path contains the path to pre-built guards
-                # assert self.project_path, "🔒️ToolGuard: guard path should be a valid code path!"
+                # make sure self.project contains the path to pre-built guards
+                # assert self.project, "🔒️ToolGuard: guard path should be a valid code path!"
             code_dir = self.work_dir / STEP2
             return cast("list[Tool]", [GuardedTool(tool, self.in_tools, code_dir) for tool in self.in_tools])
 
         return self.in_tools
+
+
+def to_snake_case(human_name: str) -> str:
+    return (
+        human_name.lower()
+        .replace(" ", "_")
+        .replace("-", "_")
+        .replace("'", "_")
+        .replace(",", "_")  # ASCII apostrophe
+        .replace("’", "_")  # noqa: RUF001 Unicode right single quotation mark
+    )
