@@ -294,12 +294,12 @@ async def test_sync_flows_from_fs(client: AsyncClient, logged_in_headers):
             "locked": False,
             "fs_path": flow_filename,
         }
-        
+
         # Retry logic for database resource issues in CI
         max_retries = 3
         retry_delay = 0.2
         response = None
-        
+
         for attempt in range(max_retries):
             response = await client.post("api/v1/flows/", json=basic_case, headers=logged_in_headers)
             if response.status_code == 201:
@@ -309,7 +309,7 @@ async def test_sync_flows_from_fs(client: AsyncClient, logged_in_headers):
                     await asyncio.sleep(retry_delay * (attempt + 1))
                     continue
             break
-        
+
         assert response is not None
         assert response.status_code == 201, f"Failed to create flow: {response.text}"
         created_flow = response.json()

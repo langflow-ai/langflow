@@ -420,7 +420,9 @@ async def client_fixture(
             monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
             monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
             # Set SQLite pragmas for better concurrency in tests
-            monkeypatch.setenv("LANGFLOW_SQLITE_PRAGMAS", '{"journal_mode": "WAL", "busy_timeout": "5000", "synchronous": "NORMAL"}')
+            monkeypatch.setenv(
+                "LANGFLOW_SQLITE_PRAGMAS", '{"journal_mode": "WAL", "busy_timeout": "5000", "synchronous": "NORMAL"}'
+            )
             if "load_flows" in request.keywords:
                 shutil.copyfile(
                     pytest.BASIC_EXAMPLE_PATH, Path(load_flows_dir) / "c54f9130-f2fa-4a3e-b22a-3856d946351b.json"
