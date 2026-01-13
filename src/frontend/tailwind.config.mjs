@@ -351,7 +351,6 @@ const config = {
       },
       fontSize: {
         xxs: "11px",
-        sm: "12px",
         mmd: "13px",
       },
       width: {
