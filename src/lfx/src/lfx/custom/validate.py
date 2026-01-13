@@ -43,7 +43,7 @@ def _check_and_block_if_not_allowed(code: str, context: str = "code") -> bool:
 
         if not is_code_hash_allowed(code):
             logger.warning(
-                f"Custom {context} blocked: not found in component index. LANGFLOW_ALLOW_CUSTOM_COMPONENTS is disabled."
+                f"Custom {context} blocked: not found in component index. Custom Component execution is disabled."
             )
             return False
     except Exception:  # noqa: BLE001
@@ -53,12 +53,10 @@ def _check_and_block_if_not_allowed(code: str, context: str = "code") -> bool:
 
 
 def validate_code(code):
-    # Initialize the errors dictionary
     errors = {"imports": {"errors": []}, "function": {"errors": []}}
 
     # Check hash validation first if blocking is enabled
     if not _check_and_block_if_not_allowed(code, "component validation"):
-        # Try to extract component name for better error message
         component_name = "Unknown"
         try:
             component_name = extract_class_name(code)
