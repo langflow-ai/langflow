@@ -84,6 +84,7 @@ async def run_flow(
         verbose_full: Show full debugging output including component logs
         timing: Include detailed timing information in output
         global_variables: Dict of global variables to inject into the graph context
+        user_id: User ID to associate with the execution
 
     Returns:
         dict: Result data containing the execution results, logs, and optionally timing info

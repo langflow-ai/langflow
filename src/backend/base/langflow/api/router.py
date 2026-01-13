@@ -1,6 +1,7 @@
 # Router for base api
 from fastapi import APIRouter
 
+from langflow.agentic.api import router as agentic_router
 from langflow.api.v1 import (
     api_key_router,
     chat_router,
@@ -60,8 +61,6 @@ router_v1.include_router(models_router)
 router_v1.include_router(model_options_router)
 
 # Agentic flow execution
-from langflow.agentic.api import router as agentic_router
-
 router_v1.include_router(agentic_router)
 
 router_v2.include_router(files_router_v2)
