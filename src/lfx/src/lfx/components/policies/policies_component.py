@@ -86,7 +86,7 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         #     #advanced=True,
         #     input_types=["DataFrame"],
         # ),
-        MessageTextInput(
+        StrInput(
             name="policies",
             display_name="Policies",
             info="Enter one or more clear, well-defined and self-contained business policies, Using the '+' button.",
@@ -96,8 +96,8 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             list_add_label="Add Policy",
             input_types=[],
         ),
-        MessageTextInput(
-            name="project_path",
+        StrInput(
+            name="project",
             display_name="ToolGuard Project",
             info="Automatically generated ToolGuards code",
             # show_if={"enable_tool_guard": True},
@@ -180,7 +180,9 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         logger.info("🔒️ToolGuard: Starting step 2")
         out_dir = self.work_dir / STEP2
         llm = LangchainModelWrapper(self.build_model())
-        gen_result = await generate_guards_from_specs(tools=self.in_tools, tool_specs=specs, work_dir=out_dir, llm=llm)
+        gen_result = await generate_guards_from_specs(
+            tools=self.in_tools, tool_specs=specs, work_dir=out_dir, llm=llm, app_name=to_snake_case(self.self.project)
+        )
         logger.info("🔒️ToolGuard: Step 2 Done")
         return gen_result
 
