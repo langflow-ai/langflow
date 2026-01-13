@@ -171,7 +171,7 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         toolguard_step1_dir = join(self.guard_code_path, STEP1)
         policy_text = "\n".join(self.policies)
         specs = await generate_guard_specs(
-            policy_text=policy_text, tools=self.in_tools, llm=llm, work_dir=toolguard_step1_dir, short=False
+            policy_text=policy_text, tools=self.in_tools, llm=llm, work_dir=toolguard_step1_dir, short=True
         )
         logger.info("🔒️ToolGuard: Step 1 Done")
         return specs
