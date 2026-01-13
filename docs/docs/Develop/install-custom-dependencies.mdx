@@ -56,10 +56,10 @@ uv pip install "langflow[postgresql,openai]"
 
 ### Install optional dependency groups for `langflow-base`
 
-The `langflow-base` package (base) provides its own optional dependency groups that are separate from those in the `langflow` package. The `langflow-base` package can be installed as a standalone package with these optional dependency groups. This is useful if you only need the core Langflow infrastructure without the full `langflow` package, or if you want to install `langflow-base` dependencies separately.
+`langflow-base` is recommended when you want to deploy Langflow with specific dependencies only.
+It contains the same codebase as `langflow`, but `langflow` includes `langflow-base` as a dependency and adds many additional dependencies on top of it.
 
-The `langflow` package (`main`) depends on `langflow-base`, so when you install `langflow`, it automatically includes `langflow-base` as a dependency.
-However, the optional dependency groups for `langflow` and `langflow-base` are different and managed separately.
+The `langflow-base` package provides its own optional dependency groups that are separate from those in the `langflow` package. The `langflow-base` package can be installed as a standalone package with these optional dependency groups.
 
 By default, installing `langflow-base` without any extras includes all dependencies listed in the `[project.dependencies]` section. Optional dependency groups are not installed by default and must be explicitly requested.
 These optional dependency groups are listed in the in the [langflow-base `pyproject.toml`](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/pyproject.toml) file under `[project.optional-dependencies]`.
@@ -76,7 +76,7 @@ To install multiple extras, use commas to separate each dependency group:
 uv pip install "langflow-base[postgresql,openai]"
 ```
 
-To install all optional dependencies, use the `all` extra:
+To install all optional dependencies for `langflow-base`, use the `all` extra:
 
 ```bash
 uv pip install "langflow-base[all]"
