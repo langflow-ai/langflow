@@ -44,32 +44,46 @@ def _generate_short_hash(source_code: str) -> str:
 
 
 def _extract_hashes_from_index(index: dict) -> set[str]:
-    """Extract all code hashes from component index.
+    """Extract all code hashes from component index, including hash_history.
+
+    This function extracts both the current code_hash and all historical hashes
+    from the hash_history array. This ensures that older versions of core components
+    are still recognized as trusted when allow_custom_components is disabled.
 
     Args:
         index: Component index dictionary
 
     Returns:
-        Set of code hashes (12-character prefixes)
+        Set of code hashes (12-character prefixes) from both current and historical versions
     """
     hashes: set[str] = set()
 
     if not index or "entries" not in index:
         return hashes
 
-    for category_name, components_dict in index.get("entries", []):
+    for _category_name, components_dict in index.get("entries", []):
         if not isinstance(components_dict, dict):
             continue
 
-        for component_name, component_data in components_dict.items():
+        for component_data in components_dict.values():
             if not isinstance(component_data, dict):
                 continue
 
             metadata = component_data.get("metadata", {})
             if isinstance(metadata, dict):
+                # Add current code hash
                 code_hash = metadata.get("code_hash")
                 if isinstance(code_hash, str) and code_hash:
                     hashes.add(code_hash)
+
+                # Add historical hashes from hash_history
+                hash_history = metadata.get("hash_history", [])
+                if isinstance(hash_history, list):
+                    for entry in hash_history:
+                        if isinstance(entry, dict):
+                            hist_hash = entry.get("hash")
+                            if isinstance(hist_hash, str) and hist_hash:
+                                hashes.add(hist_hash)
 
     return hashes
 
@@ -100,9 +114,7 @@ def _load_component_index_hashes(settings_service: "SettingsService") -> set[str
         )
         return set()
 
-    hashes = _extract_hashes_from_index(index)
-
-    return hashes
+    return _extract_hashes_from_index(index)
 
 
 def _get_cached_hashes(settings_service: "SettingsService") -> set[str]:
@@ -114,7 +126,7 @@ def _get_cached_hashes(settings_service: "SettingsService") -> set[str]:
     Returns:
         Set of allowed code hashes
     """
-    global _component_hash_cache, _cache_settings_key
+    global _component_hash_cache, _cache_settings_key  # noqa: PLW0603
 
     # Create a cache key based on settings that affect the index
     current_key = (
@@ -180,8 +192,7 @@ def is_code_hash_allowed(source_code: str, settings_service: "SettingsService | 
                 f"Index has {len(allowed_hashes)} allowed hashes. "
                 "Set LANGFLOW_ALLOW_CUSTOM_COMPONENTS=true to allow custom code."
             )
-
-        return is_allowed
+        return is_allowed  # noqa: TRY300
     except Exception as exc:  # noqa: BLE001
         # If hash generation fails, log and allow (fail open for safety)
         logger.warning(f"Error validating code hash: {exc}. Allowing code execution.")

@@ -132,6 +132,161 @@ class TestExtractHashesFromIndex:
         hashes = _extract_hashes_from_index(index)
         assert len(hashes) == 0
 
+    def test_extract_hashes_includes_hash_history(self):
+        """Test that hashes from hash_history are also extracted."""
+        index = {
+            "entries": [
+                [
+                    "TestCategory",
+                    {
+                        "Component1": {
+                            "metadata": {
+                                "code_hash": "current_hash",
+                                "hash_history": [
+                                    {"hash": "old_hash_1", "v_from": "1.0.0", "v_to": "1.1.0"},
+                                    {"hash": "old_hash_2", "v_from": "1.1.0", "v_to": "1.2.0"},
+                                ],
+                            },
+                        },
+                    },
+                ]
+            ]
+        }
+        hashes = _extract_hashes_from_index(index)
+        assert "current_hash" in hashes
+        assert "old_hash_1" in hashes
+        assert "old_hash_2" in hashes
+        assert len(hashes) == 3
+
+    def test_extract_hashes_hash_history_only_current(self):
+        """Test extraction when component has current hash but no history."""
+        index = {
+            "entries": [
+                [
+                    "TestCategory",
+                    {
+                        "Component1": {
+                            "metadata": {
+                                "code_hash": "current_hash",
+                                "hash_history": [],  # Empty history
+                            },
+                        },
+                    },
+                ]
+            ]
+        }
+        hashes = _extract_hashes_from_index(index)
+        assert "current_hash" in hashes
+        assert len(hashes) == 1
+
+    def test_extract_hashes_hash_history_no_duplicates(self):
+        """Test that duplicate hashes in history are deduplicated."""
+        index = {
+            "entries": [
+                [
+                    "TestCategory",
+                    {
+                        "Component1": {
+                            "metadata": {
+                                "code_hash": "same_hash",
+                                "hash_history": [
+                                    {"hash": "same_hash", "v_from": "1.0.0", "v_to": "1.1.0"},
+                                    {"hash": "same_hash", "v_from": "1.1.0", "v_to": "1.2.0"},
+                                ],
+                            },
+                        },
+                    },
+                ]
+            ]
+        }
+        hashes = _extract_hashes_from_index(index)
+        assert "same_hash" in hashes
+        assert len(hashes) == 1  # Should be deduplicated
+
+    def test_extract_hashes_hash_history_multiple_components(self):
+        """Test extraction from multiple components with hash histories."""
+        index = {
+            "entries": [
+                [
+                    "Category1",
+                    {
+                        "Comp1": {
+                            "metadata": {
+                                "code_hash": "comp1_current",
+                                "hash_history": [{"hash": "comp1_old", "v_from": "1.0.0", "v_to": "1.1.0"}],
+                            },
+                        },
+                    },
+                ],
+                [
+                    "Category2",
+                    {
+                        "Comp2": {
+                            "metadata": {
+                                "code_hash": "comp2_current",
+                                "hash_history": [{"hash": "comp2_old", "v_from": "1.0.0", "v_to": "1.1.0"}],
+                            },
+                        },
+                    },
+                ],
+            ]
+        }
+        hashes = _extract_hashes_from_index(index)
+        assert "comp1_current" in hashes
+        assert "comp1_old" in hashes
+        assert "comp2_current" in hashes
+        assert "comp2_old" in hashes
+        assert len(hashes) == 4
+
+    def test_extract_hashes_hash_history_malformed_entries(self):
+        """Test that malformed hash_history entries are skipped gracefully."""
+        index = {
+            "entries": [
+                [
+                    "TestCategory",
+                    {
+                        "Component1": {
+                            "metadata": {
+                                "code_hash": "current_hash",
+                                "hash_history": [
+                                    {"hash": "valid_hash", "v_from": "1.0.0", "v_to": "1.1.0"},
+                                    {"no_hash_key": "invalid"},  # Missing 'hash' key
+                                    "not_a_dict",  # Not a dict
+                                    {"hash": "", "v_from": "1.0.0", "v_to": "1.1.0"},  # Empty hash
+                                    {"hash": None, "v_from": "1.0.0", "v_to": "1.1.0"},  # None hash
+                                ],
+                            },
+                        },
+                    },
+                ]
+            ]
+        }
+        hashes = _extract_hashes_from_index(index)
+        assert "current_hash" in hashes
+        assert "valid_hash" in hashes
+        assert len(hashes) == 2  # Only valid hashes
+
+    def test_extract_hashes_hash_history_not_a_list(self):
+        """Test that non-list hash_history is handled gracefully."""
+        index = {
+            "entries": [
+                [
+                    "TestCategory",
+                    {
+                        "Component1": {
+                            "metadata": {
+                                "code_hash": "current_hash",
+                                "hash_history": "not_a_list",  # Invalid type
+                            },
+                        },
+                    },
+                ]
+            ]
+        }
+        hashes = _extract_hashes_from_index(index)
+        assert "current_hash" in hashes
+        assert len(hashes) == 1  # Should still get current hash
+
 
 class TestIsCodeHashAllowed:
     """Tests for is_code_hash_allowed function."""
@@ -175,7 +330,7 @@ class TestIsCodeHashAllowed:
     def test_allowed_when_settings_service_unavailable(self):
         """Test that code is allowed when settings service can't be fetched."""
         code = "class TestComponent:\n    pass"
-        with patch("lfx.custom.hash_validator.get_settings_service", side_effect=Exception("Service unavailable")):
+        with patch("lfx.services.deps.get_settings_service", side_effect=Exception("Service unavailable")):
             # Should default to allowing code when service unavailable
             assert is_code_hash_allowed(code) is True
 
@@ -278,7 +433,7 @@ class TestIsCodeHashAllowed:
 class TestIntegrationWithComponentIndex:
     """Integration tests with actual component index structure."""
 
-    def test_with_real_index_structure(self, tmp_path):
+    def test_with_real_index_structure(self):
         """Test with a structure similar to real component index."""
         # Create a mock index file
         index_data = {
