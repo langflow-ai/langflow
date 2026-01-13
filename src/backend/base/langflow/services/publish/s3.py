@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
 
-from langflow.services.publish.schema import PublishedFlowMetadata, PublishedProjectMetadata
+from langflow.services.publish.schema import PublishedFlowMetadata, PublishedProjectMetadata, ReleaseStage
 from langflow.services.publish.service import PublishService
 from langflow.services.publish.utils import (
     INVALID_KEY_MSG,
@@ -45,7 +45,8 @@ class S3PublishService(PublishService):
         self,
         user_id: IDType,
         flow_id: IDType,
-        key: PublishedFlowMetadata,
+        metadata: PublishedFlowMetadata,
+        stage: ReleaseStage = ReleaseStage.PUBLISH,
         ) -> str | None:
         validate_all(
             bucket_name=self.bucket_name,
@@ -58,11 +59,11 @@ class S3PublishService(PublishService):
         publish_key = self._flow_key(
             user_id=user_id,
             flow_id=flow_id,
-            flow_name=key.flow_name,
-            version_id=key.version_id,
-        )
+            version_id=metadata.version_id,
+            stage=stage,
+            )
 
-        self._flow_key_validate_owner(user_id, flow_id, publish_key)
+        self._flow_key_validate_owner(user_id, flow_id, publish_key, stage=stage)
 
         try:
             async with self._get_client() as client:
@@ -76,8 +77,9 @@ class S3PublishService(PublishService):
         user_id: IDType,
         flow_id: IDType,
         flow_blob: dict,
-        publish_tag: str | None
-    ) -> PublishedFlowMetadata:
+        publish_tag: str | None,
+        stage: ReleaseStage = ReleaseStage.PUBLISH,
+        ) -> PublishedFlowMetadata:
         validate_all(
             bucket_name=self.bucket_name,
             user_id=user_id,
@@ -87,13 +89,12 @@ class S3PublishService(PublishService):
         require_valid_flow(flow_blob)
 
         version_id = to_alnum_string(publish_tag) or compute_flow_hash(flow_blob)
-        flow_name = flow_blob["name"]
 
         key = self._flow_key(
             user_id=user_id,
             flow_id=flow_id,
-            flow_name=flow_name,
             version_id=version_id,
+            stage=stage,
             )
         try:
             async with self._get_client() as client:
@@ -103,19 +104,20 @@ class S3PublishService(PublishService):
                     Key=key,
                     Body=json.dumps(flow_blob),
                     ContentType="application/json",
-                )
+                    )
         except Exception as e: # noqa: BLE001
             handle_s3_error(e, "flow", op="put")
 
         logger.info(f"Published flow with key s3://{self.bucket_name}/{key}")
-        return PublishedFlowMetadata(version_id=version_id, last_modified=None, flow_name=flow_name)
+        return PublishedFlowMetadata(version_id=version_id, last_modified=None)
 
     async def delete_flow(
         self,
         user_id: IDType,
         flow_id: IDType,
-        key: PublishedFlowMetadata,
-    ) -> str | None:
+        metadata: PublishedFlowMetadata,
+        stage: ReleaseStage = ReleaseStage.PUBLISH,
+        ) -> str | None:
         validate_all(
             bucket_name=self.bucket_name,
             user_id=user_id,
@@ -127,11 +129,11 @@ class S3PublishService(PublishService):
         publish_key = self._flow_key(
             user_id=user_id,
             flow_id=flow_id,
-            flow_name=to_alnum_string(key.flow_name),
-            version_id=key.version_id,
+            version_id=metadata.version_id,
+            stage=stage,
         )
 
-        self._flow_key_validate_owner(user_id, flow_id, publish_key)
+        self._flow_key_validate_owner(user_id, flow_id, publish_key, stage=stage)
         try:
             async with self._get_client() as client:
                 await client.delete_object(Bucket=self.bucket_name, Key=publish_key, IfMatch="*")
@@ -139,12 +141,13 @@ class S3PublishService(PublishService):
             handle_s3_error(e, "flow", op="delete")
 
         logger.info(f"Deleted published flow with key s3://{self.bucket_name}/{publish_key}")
-        return key.version_id
+        return metadata.version_id
 
     async def list_flow_versions(
         self,
         user_id: IDType,
         flow_id: IDType,
+        stage: ReleaseStage = ReleaseStage.PUBLISH,
         ) -> list[PublishedFlowMetadata] | None:
         """List published versions of the given flow."""
         require_all_ids(user_id=user_id, item_id=flow_id, item_type="flow")
@@ -154,7 +157,7 @@ class S3PublishService(PublishService):
                 paginator = client.get_paginator("list_objects_v2")
                 pages = paginator.paginate(
                     Bucket=self.bucket_name,
-                    Prefix=self._flow_versions_prefix(user_id, flow_id)
+                    Prefix=self._flow_versions_prefix(user_id, flow_id, stage=stage)
                     )
                 async for page in pages:
                     if "Contents" not in page:
@@ -176,7 +179,8 @@ class S3PublishService(PublishService):
         self,
         user_id: IDType,
         project_id: IDType,
-        key: PublishedProjectMetadata,
+        metadata: PublishedProjectMetadata,
+        stage: ReleaseStage = ReleaseStage.PUBLISH,
         ) -> str | None:
         validate_all(
             bucket_name=self.bucket_name,
@@ -188,11 +192,11 @@ class S3PublishService(PublishService):
         publish_key = self._project_key(
             user_id=user_id,
             project_id=project_id,
-            project_name=key.project_name,
-            version_id=key.version_id,
+            version_id=metadata.version_id,
+            stage=stage,
             )
 
-        self._project_key_validate_owner(user_id, project_id, publish_key)
+        self._project_key_validate_owner(user_id, project_id, publish_key, stage=stage)
 
         try:
             async with self._get_client() as client:
@@ -207,6 +211,7 @@ class S3PublishService(PublishService):
         project_id: IDType,
         project_blob: dict,
         publish_tag: str | None,
+        stage: ReleaseStage = ReleaseStage.PUBLISH,
         ) -> PublishedProjectMetadata:
         validate_all(
             bucket_name=self.bucket_name,
@@ -217,13 +222,12 @@ class S3PublishService(PublishService):
         require_valid_project(project_blob)
 
         version_id = to_alnum_string(publish_tag) or compute_project_hash(project_blob)
-        project_name = project_blob["name"]
 
         key = self._project_key(
             user_id=user_id,
             project_id=project_id,
-            project_name=project_name,
             version_id=version_id,
+            stage=stage,
             )
         try:
             async with self._get_client() as client:
@@ -238,13 +242,14 @@ class S3PublishService(PublishService):
             handle_s3_error(e, "project", op="put")
 
         logger.info(f"Published project with key s3://{self.bucket_name}/{key}")
-        return PublishedProjectMetadata(version_id=version_id, last_modified=None, project_name=project_name)
+        return PublishedProjectMetadata(version_id=version_id, last_modified=None)
 
     async def delete_project(
         self,
         user_id: IDType,
         project_id: IDType,
-        key: PublishedProjectMetadata,
+        metadata: PublishedProjectMetadata,
+        stage: ReleaseStage = ReleaseStage.PUBLISH,
         ) -> str | None:
         validate_all(
             bucket_name=self.bucket_name,
@@ -256,11 +261,11 @@ class S3PublishService(PublishService):
         publish_key = self._project_key(
             user_id=user_id,
             project_id=project_id,
-            project_name=to_alnum_string(key.project_name),
-            version_id=key.version_id,
+            version_id=metadata.version_id,
+            stage=stage,
             )
 
-        self._project_key_validate_owner(user_id, project_id, publish_key)
+        self._project_key_validate_owner(user_id, project_id, publish_key, stage=stage)
         try:
             async with self._get_client() as client:
                 await client.delete_object(Bucket=self.bucket_name, Key=publish_key, IfMatch="*")
@@ -268,12 +273,13 @@ class S3PublishService(PublishService):
             handle_s3_error(e, "project", op="delete")
 
         logger.info(f"Deleted published project with key s3://{self.bucket_name}/{publish_key}")
-        return key.version_id
+        return metadata.version_id
 
     async def list_project_versions(
         self,
         user_id: IDType,
         project_id: IDType,
+        stage: ReleaseStage = ReleaseStage.PUBLISH,
         ) -> list[PublishedProjectMetadata] | None:
         """List published versions of the given project."""
         require_all_ids(user_id=user_id, item_id=project_id, item_type="project")
@@ -282,7 +288,8 @@ class S3PublishService(PublishService):
             async with self._get_client() as client:
                 paginator = client.get_paginator("list_objects_v2")
                 pages = paginator.paginate(
-                    Bucket=self.bucket_name, Prefix=self._project_versions_prefix(user_id, project_id)
+                    Bucket=self.bucket_name,
+                    Prefix=self._project_versions_prefix(user_id, project_id, stage=stage)
                     )
                 async for page in pages:
                     if "Contents" not in page:
@@ -304,13 +311,12 @@ class S3PublishService(PublishService):
         self,
         user_id: IDTypeStrict,
         flow_id: IDTypeStrict,
-        flow_name: str,
         version_id: str,
+        stage: ReleaseStage = ReleaseStage.PUBLISH,
         ) -> str:
         return (
-            f"{self._flow_versions_prefix(user_id, flow_id)}"
+            f"{self._flow_versions_prefix(user_id, flow_id, stage=stage)}"
             f"/id={version_id}"
-            f"/flow_name={flow_name}"
             )
 
     def _flow_key_validate_owner(
@@ -318,27 +324,33 @@ class S3PublishService(PublishService):
         user_id: IDTypeStrict,
         flow_id: IDTypeStrict,
         flow_key: str | None,
+        stage: ReleaseStage = ReleaseStage.PUBLISH,
         ) -> str:
         """Raises a ValueError if the key is None, empty, or does not match provided user and flow ids."""
-        if not (flow_key and flow_key.startswith(self._flow_versions_prefix(user_id, flow_id))):
+        if not (flow_key and flow_key.startswith(self._flow_versions_prefix(user_id, flow_id, stage=stage))):
             raise ValueError(INVALID_KEY_MSG)
 
     # note: self.prefix already contains a trailing slash
-    def _flow_versions_prefix(self, user_id: IDTypeStrict, flow_id: IDTypeStrict):
+    def _flow_versions_prefix(
+        self,
+        user_id: IDTypeStrict,
+        flow_id: IDTypeStrict,
+        stage: ReleaseStage = ReleaseStage.PUBLISH,
+        ) -> str:
         """Return the versions key prefix used for publishing flows (without trailing slash)."""
-        return f"{self.prefix}{user_id!s}/flows/{flow_id!s}/versions"
+        base_prefix = self.deploy_prefix if stage == ReleaseStage.DEPLOY else self.prefix
+        return f"{base_prefix}{user_id!s}/flows/{flow_id!s}/versions"
 
     def _project_key(
         self,
         user_id: IDTypeStrict,
         project_id: IDTypeStrict,
-        project_name: str,
         version_id: str,
+        stage: ReleaseStage = ReleaseStage.PUBLISH,
         ) -> str:
         return (
-            f"{self._project_versions_prefix(user_id, project_id)}"
+            f"{self._project_versions_prefix(user_id, project_id, stage=stage)}"
             f"/id={version_id}"
-            f"/project_name={project_name}"
             )
 
     def _project_key_validate_owner(
@@ -346,9 +358,19 @@ class S3PublishService(PublishService):
         user_id: IDTypeStrict,
         project_id: IDTypeStrict,
         project_key: str | None,
+        stage: ReleaseStage = ReleaseStage.PUBLISH,
         ) -> str:
-        if not (project_key and project_key.startswith(self._project_versions_prefix(user_id, project_id))):
+        if not (
+            project_key
+            and project_key.startswith(self._project_versions_prefix(user_id, project_id, stage=stage))
+        ):
             raise ValueError(INVALID_KEY_MSG)
 
-    def _project_versions_prefix(self, user_id: IDTypeStrict, project_id: IDTypeStrict):
-        return f"{self.prefix}{user_id!s}/projects/{project_id!s}/versions"
+    def _project_versions_prefix(
+        self,
+        user_id: IDTypeStrict,
+        project_id: IDTypeStrict,
+        stage: ReleaseStage = ReleaseStage.PUBLISH,
+        ) -> str:
+        base_prefix = self.deploy_prefix if stage == ReleaseStage.DEPLOY else self.prefix
+        return f"{base_prefix}{user_id!s}/projects/{project_id!s}/versions"

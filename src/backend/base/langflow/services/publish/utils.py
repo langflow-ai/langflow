@@ -122,7 +122,16 @@ def require_valid_flow(flow_data: dict | None):
 
 
 def require_valid_project(project_data: dict | None):
-    """Validates the project data dictionary for publishing."""
+    """Validates the project data dictionary for publishing.
+
+    Raises a ValueError if the data is None, empty,
+    or does not have sufficient fields for publishing:
+    - name (must contain at least one alphanumeric character)
+    - description (can be None or empty)
+    - flows (must be a nonempty list of flows)
+
+    Modifies project_data["name"] in-place to remove all non-alphanumeric characters.
+    """
     if not project_data:
         raise ValueError(MISSING_ITEM_MSG.format(item="Project data"))
 

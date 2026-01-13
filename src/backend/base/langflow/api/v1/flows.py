@@ -23,7 +23,13 @@ from sqlmodel import and_, col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow, remove_api_keys, validate_is_component
-from langflow.api.v1.schemas import FlowListCreate, MessageResponse, PublishedFlowRead, PublishFlowCreate
+from langflow.api.v1.schemas import (
+    DeployFlowCreate,
+    FlowListCreate,
+    MessageResponse,
+    PublishedFlowRead,
+    PublishFlowCreate,
+)
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.database.models.flow.model import (
@@ -38,7 +44,7 @@ from langflow.services.database.models.flow.utils import get_webhook_component_i
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import get_service, get_settings_service, get_storage_service
-from langflow.services.publish.schema import PublishedFlowMetadata
+from langflow.services.publish.schema import PublishedFlowMetadata, ReleaseStage
 from langflow.services.publish.service import PublishService
 from langflow.services.publish.utils import MISSING_ITEM_MSG, require_all_ids
 from langflow.services.schema import ServiceType
@@ -735,11 +741,54 @@ async def publish_flow(
     return publish_data
 
 
+@router.post(
+    "/{flow_id}/deploy/",
+    response_model=PublishedFlowRead | MessageResponse,
+    status_code=201,
+)
+async def deploy_flow(
+    *,
+    current_user: CurrentActiveUser,
+    flow_id: UUID,
+    body: DeployFlowCreate,
+):
+    """Deploy a published flow version to the configured object storage."""
+    require_all_ids(current_user.id, flow_id, "flow")
+
+    try:
+        publish_service: PublishService = get_service(ServiceType.PUBLISH_SERVICE)
+        metadata = PublishedFlowMetadata(version_id=body.version_id)
+
+        flow_blob: str = await publish_service.get_flow(
+            user_id=current_user.id,
+            flow_id=flow_id,
+            metadata=metadata,
+            stage=ReleaseStage.PUBLISH,
+        )
+
+        deploy_data: PublishedFlowMetadata = await publish_service.put_flow(
+            user_id=current_user.id,
+            flow_id=flow_id,
+            flow_blob=orjson.loads(flow_blob),
+            publish_tag=body.version_id, # Use existing version ID as tag to preserve it
+            stage=ReleaseStage.DEPLOY,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        msg = f"Failed to deploy flow: {e!s}"
+        raise HTTPException(status_code=500, detail=msg) from e
+
+    return deploy_data
+
+
 @router.get("/{flow_id}/versions/", response_model=list[PublishedFlowRead], status_code=200)
 async def list_published_flows(
     *,
     flow_id: UUID,
     current_user: CurrentActiveUser,
+    stage: ReleaseStage = ReleaseStage.PUBLISH,
     ):
     """List all published versions of the flow."""
     require_all_ids(current_user.id, flow_id, "flow")
@@ -748,6 +797,7 @@ async def list_published_flows(
         flow_data_list = await publish_service.list_flow_versions(
             user_id=current_user.id,
             flow_id=flow_id,
+            stage=stage,
             )
     except HTTPException:
         raise
@@ -763,17 +813,18 @@ async def read_published_flow(
     flow_id: UUID,
     current_user: CurrentActiveUser,
     version_id: str,
-    flow_name: str,
+    stage: ReleaseStage = ReleaseStage.PUBLISH,
     ):
     """Retrieve a specific published flow version."""
     require_all_ids(current_user.id, flow_id, "flow")
     try:
-        key = PublishedFlowMetadata(version_id=version_id, flow_name=flow_name)
+        metadata = PublishedFlowMetadata(version_id=version_id)
         publish_service: PublishService = get_service(ServiceType.PUBLISH_SERVICE)
         flow_data = await publish_service.get_flow(
             user_id=current_user.id,
             flow_id=flow_id,
-            key=key,
+            metadata=metadata,
+            stage=stage,
             )
     except HTTPException:
         raise
@@ -789,18 +840,19 @@ async def delete_published_flow(
     flow_id: UUID,
     current_user: CurrentActiveUser,
     version_id: str,
-    flow_name: str,
+    stage: ReleaseStage = ReleaseStage.PUBLISH,
     ):
     """Delete a specific published flow version."""
     require_all_ids(current_user.id, flow_id, "flow")
 
     try:
-        key = PublishedFlowMetadata(version_id=version_id, flow_name=flow_name)
+        metadata = PublishedFlowMetadata(version_id=version_id)
         publish_service: PublishService = get_service(ServiceType.PUBLISH_SERVICE)
         version_id = await publish_service.delete_flow(
             user_id=current_user.id,
             flow_id=flow_id,
-            key=key,
+            metadata=metadata,
+            stage=stage,
             )
     except HTTPException:
         raise

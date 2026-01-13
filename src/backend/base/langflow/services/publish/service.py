@@ -4,6 +4,7 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING
 
 from langflow.services.base import Service
+from langflow.services.publish.schema import ReleaseStage
 from langflow.services.publish.utils import IDType, add_trailing_slash
 
 if TYPE_CHECKING:
@@ -34,8 +35,9 @@ class PublishService(Service):
         self,
         user_id: IDType,
         flow_id: IDType,
-        key: PublishedFlowMetadata,
-        ) -> str:
+        metadata: PublishedFlowMetadata,
+        stage: ReleaseStage = ReleaseStage.PUBLISH,
+    ) -> str:
         """Retrieves a published flow from the storage provider."""
         raise NotImplementedError
 
@@ -46,7 +48,8 @@ class PublishService(Service):
         flow_id: IDType,
         flow_blob: dict,
         publish_tag: str | None,
-        ) -> PublishedFlowMetadata:
+        stage: ReleaseStage = ReleaseStage.PUBLISH,
+    ) -> PublishedFlowMetadata:
         """Publishes a flow to the storage provider."""
         raise NotImplementedError
 
@@ -55,8 +58,9 @@ class PublishService(Service):
         self,
         user_id: IDType,
         flow_id: IDType,
-        key: PublishedFlowMetadata,
-        ) -> str | None:
+        metadata: PublishedFlowMetadata,
+        stage: ReleaseStage = ReleaseStage.PUBLISH,
+    ) -> str | None:
         """Deletes a published flow from the storage provider."""
         raise NotImplementedError
 
@@ -65,7 +69,8 @@ class PublishService(Service):
         self,
         user_id: IDType,
         flow_id: IDType,
-        ) -> list[PublishedFlowMetadata] | None:
+        stage: ReleaseStage = ReleaseStage.PUBLISH,
+    ) -> list[PublishedFlowMetadata] | None:
         """List published versions of the given flow."""
         raise NotImplementedError
 
@@ -77,7 +82,8 @@ class PublishService(Service):
         self,
         user_id: IDType,
         project_id: IDType,
-        key: PublishedProjectMetadata,
+        metadata: PublishedProjectMetadata,
+        stage: ReleaseStage = ReleaseStage.PUBLISH,
     ) -> str:
         """Retrieves a published project from the storage provider."""
         raise NotImplementedError
@@ -89,6 +95,7 @@ class PublishService(Service):
         project_id: IDType,
         project_blob: dict,
         publish_tag: str | None,
+        stage: ReleaseStage = ReleaseStage.PUBLISH,
     ) -> PublishedProjectMetadata:
         """Publishes a project to the storage provider."""
         raise NotImplementedError
@@ -98,7 +105,8 @@ class PublishService(Service):
         self,
         user_id: IDType,
         project_id: IDType,
-        key: PublishedProjectMetadata,
+        metadata: PublishedProjectMetadata,
+        stage: ReleaseStage = ReleaseStage.PUBLISH,
     ) -> str | None:
         """Deletes a published project from the storage provider."""
         raise NotImplementedError
@@ -108,6 +116,7 @@ class PublishService(Service):
         self,
         user_id: IDType,
         project_id: IDType,
+        stage: ReleaseStage = ReleaseStage.PUBLISH,
     ) -> list[PublishedProjectMetadata] | None:
         """List published versions of the given project."""
         raise NotImplementedError
