@@ -211,20 +211,20 @@ async def async_client() -> AsyncGenerator:
 @pytest.fixture(name="session")
 def session_fixture():
     from sqlalchemy import event
-    
+
     engine = create_engine(
         "sqlite+pysqlite:///:memory:",
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
-    
+
     # Enable foreign key constraints for SQLite
     @event.listens_for(engine, "connect")
-    def set_sqlite_pragma(dbapi_conn, connection_record):
+    def set_sqlite_pragma(dbapi_conn):
         cursor = dbapi_conn.cursor()
         cursor.execute("PRAGMA foreign_keys=ON")
         cursor.close()
-    
+
     try:
         SQLModel.metadata.create_all(engine)
         with Session(engine) as session:
@@ -237,16 +237,16 @@ def session_fixture():
 @pytest.fixture
 async def async_session():
     from sqlalchemy import event
-    
+
     engine = create_async_engine("sqlite+aiosqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
-    
+
     # Enable foreign key constraints for SQLite
     @event.listens_for(engine.sync_engine, "connect")
-    def set_sqlite_pragma(dbapi_conn, connection_record):
+    def set_sqlite_pragma(dbapi_conn):
         cursor = dbapi_conn.cursor()
         cursor.execute("PRAGMA foreign_keys=ON")
         cursor.close()
-    
+
     try:
         async with engine.begin() as conn:
             await conn.run_sync(SQLModel.metadata.create_all)
