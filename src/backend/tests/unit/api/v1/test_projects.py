@@ -82,18 +82,46 @@ async def test_read_project(client: AsyncClient, logged_in_headers, basic_case):
 
 
 async def test_update_project(client: AsyncClient, logged_in_headers, basic_case):
+    import asyncio
+    
     update_case = basic_case.copy()
     update_case["name"] = "Updated Project"
 
-    # Create a project first
-    response_ = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+    # Create a project first with retry logic for CI
+    max_retries = 3
+    retry_delay = 0.2
+    response_ = None
+    
+    for attempt in range(max_retries):
+        response_ = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+        if response_.status_code == 201:
+            break
+        if response_.status_code == 500 and "Resource temporarily unavailable" in response_.text:
+            if attempt < max_retries - 1:
+                await asyncio.sleep(retry_delay * (attempt + 1))
+                continue
+        break
+    
+    assert response_ is not None
+    assert response_.status_code == 201, f"Failed to create project: {response_.text}"
     id_ = response_.json()["id"]
 
-    # Update the project
-    response = await client.patch(f"api/v1/projects/{id_}", json=update_case, headers=logged_in_headers)
+    # Update the project with retry logic for CI
+    response = None
+    for attempt in range(max_retries):
+        response = await client.patch(f"api/v1/projects/{id_}", json=update_case, headers=logged_in_headers)
+        if response.status_code == status.HTTP_200_OK:
+            break
+        if response.status_code == 500 and "Resource temporarily unavailable" in response.text:
+            if attempt < max_retries - 1:
+                await asyncio.sleep(retry_delay * (attempt + 1))
+                continue
+        break
+    
+    assert response is not None
     result = response.json()
 
-    assert response.status_code == status.HTTP_200_OK
+    assert response.status_code == status.HTTP_200_OK, f"Failed to update project: {response.text}"
     assert isinstance(result, dict), "The result must be a dictionary"
     assert "name" in result, "The dictionary must contain a key called 'name'"
     assert "description" in result, "The dictionary must contain a key called 'description'"
