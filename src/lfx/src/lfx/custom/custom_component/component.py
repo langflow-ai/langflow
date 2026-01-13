@@ -1730,7 +1730,7 @@ class Component(CustomComponent):
             message_id = id_ or data_dict.get("data", {}).get("id") or getattr(message, "id", None)
             if message_id and not data_dict.get("id"):
                 data_dict["id"] = message_id
-            
+
             category = category or data_dict.get("category", None)
 
             def _send_event():
