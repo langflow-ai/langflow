@@ -34,7 +34,7 @@ If you're working within a cloned Langflow repository, add dependencies with `uv
 uv add DEPENDENCY
 ```
 
-### Install optional dependency groups for langflow
+### Install optional dependency groups for `langflow`
 
 The `langflow` package (main) provides optional dependency groups that extend its functionality.
 
@@ -54,11 +54,11 @@ To install multiple extras, use commas to separate each dependency group:
 uv pip install "langflow[postgresql,openai]"
 ```
 
-### Install optional dependency groups for langflow-base
+### Install optional dependency groups for `langflow-base`
 
 The `langflow-base` package (base) provides its own optional dependency groups that are separate from those in the `langflow` package. The `langflow-base` package can be installed as a standalone package with these optional dependency groups. This is useful if you only need the core Langflow infrastructure without the full `langflow` package, or if you want to install `langflow-base` dependencies separately.
 
-The `langflow` package (main) depends on `langflow-base`, so when you install `langflow`, it automatically includes `langflow-base` as a dependency.
+The `langflow` package (`main`) depends on `langflow-base`, so when you install `langflow`, it automatically includes `langflow-base` as a dependency.
 However, the optional dependency groups for `langflow` and `langflow-base` are different and managed separately.
 
 By default, installing `langflow-base` without any extras includes all dependencies listed in the `[project.dependencies]` section. Optional dependency groups are not installed by default and must be explicitly requested.
