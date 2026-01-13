@@ -71,7 +71,10 @@ export const Messages = ({
                   thinkingDuration={duration}
                 />
                 {isLastUserMessage && (
-                  <ThinkingMessage isThinking={isBuilding} duration={null} />
+                  <ThinkingMessage
+                    isThinking={isBuilding}
+                    duration={null}
+                  />
                 )}
               </Fragment>
             );
