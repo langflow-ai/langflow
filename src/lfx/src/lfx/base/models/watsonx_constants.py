@@ -6,7 +6,7 @@ WATSONX_DEFAULT_LLM_MODELS = [
         name="ibm/granite-3-2b-instruct",
         icon="WatsonxAI",
         model_type="llm",
-        tool_calling=False,
+        tool_calling=True,
         default=True,
     ),
     create_model_metadata(
@@ -22,7 +22,7 @@ WATSONX_DEFAULT_LLM_MODELS = [
         name="ibm/granite-13b-instruct-v2",
         icon="WatsonxAI",
         model_type="llm",
-        tool_calling=False,
+        tool_calling=True,
         default=True,
     ),
 ]
@@ -33,6 +33,7 @@ WATSONX_DEFAULT_EMBEDDING_MODELS = [
         name="sentence-transformers/all-minilm-l12-v2",
         icon="WatsonxAI",
         model_type="embeddings",
+        tool_calling=True,
         default=True,
     ),
     create_model_metadata(
@@ -40,6 +41,7 @@ WATSONX_DEFAULT_EMBEDDING_MODELS = [
         name="ibm/slate-125m-english-rtrvr-v2",
         icon="WatsonxAI",
         model_type="embeddings",
+        tool_calling=True,
         default=True,
     ),
     create_model_metadata(
@@ -47,6 +49,7 @@ WATSONX_DEFAULT_EMBEDDING_MODELS = [
         name="ibm/slate-30m-english-rtrvr-v2",
         icon="WatsonxAI",
         model_type="embeddings",
+        tool_calling=True,
         default=True,
     ),
     create_model_metadata(
@@ -54,6 +57,7 @@ WATSONX_DEFAULT_EMBEDDING_MODELS = [
         name="intfloat/multilingual-e5-large",
         icon="WatsonxAI",
         model_type="embeddings",
+        tool_calling=True,
         default=True,
     ),
 ]
