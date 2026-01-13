@@ -92,7 +92,7 @@ jobs:
           echo "Bundled components and legacy files excluded from coverage"
 
       - name: Run unit tests
-        uses: step-security/retry@v3
+        uses: nick-fields/retry@v3
         with:
           timeout_minutes: 20
           max_attempts: 2
