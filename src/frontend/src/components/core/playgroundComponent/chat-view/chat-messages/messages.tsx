@@ -1,10 +1,11 @@
-import { memo, useEffect, useRef } from "react";
+import { Fragment, memo, useEffect, useRef } from "react";
 import { StickToBottom } from "use-stick-to-bottom";
 import useFlowStore from "@/stores/flowStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { ChatMessageType } from "@/types/chat";
 import { cn } from "@/utils/utils";
 import ChatMessage from "./components/chat-message";
+import ThinkingMessage from "./components/thinking-message";
 import { useChatHistory } from "./hooks/use-chat-history";
 import {
   useThinkingDurationStore,
@@ -55,17 +56,27 @@ export const Messages = ({
       {chatHistory && (isBuilding || chatHistory.length > 0) && (
         <>
           {chatHistory.map((chat, index) => {
+            const isLastMessage = chatHistory.length - 1 === index;
+            const isLastUserMessage =
+              isLastMessage && chat.isSend && isBuilding;
             return (
-              <MemoizedChatMessage
-                key={`${chat.id}-${index}`}
-                chat={chat}
-                lastMessage={chatHistory.length - 1 === index}
-                updateChat={updateChat ?? (() => {})}
-                closeChat={closeChat}
-                playgroundPage={playgroundPage}
-                isThinking={isBuilding && chat.category !== "error"}
-                thinkingDuration={duration}
-              />
+              <Fragment key={`${chat.id}-${index}`}>
+                <MemoizedChatMessage
+                  chat={chat}
+                  lastMessage={isLastMessage}
+                  updateChat={updateChat}
+                  closeChat={closeChat}
+                  playgroundPage={playgroundPage}
+                  isThinking={false}
+                  thinkingDuration={duration}
+                />
+                {isLastUserMessage && (
+                  <ThinkingMessage
+                    isThinking={isBuilding}
+                    duration={null}
+                  />
+                )}
+              </Fragment>
             );
           })}
           {isPlaygroundOpen && (
