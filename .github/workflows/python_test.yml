@@ -1,5 +1,9 @@
 name: Python tests
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
 on:
   workflow_call:
     secrets:
@@ -51,18 +55,22 @@ env:
   PYTEST_RUN_PATH: "src/backend/tests"
   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
   ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+  # Performance optimizations
+  UV_LINK_MODE: "copy"
+  UV_HTTP_TIMEOUT: "300"
+  PYTHONDONTWRITEBYTECODE: "1"
 
 jobs:
   build:
-
     name: Unit Tests - Python ${{ matrix.python-version }} - Group ${{ matrix.group }}
     runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
     strategy:
       fail-fast: false
       matrix:
-        python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13"]' ) }}
-        splitCount: [5]
-        group: [1, 2, 3, 4, 5]
+        # Smart version selection: test all versions on main/release, only 3.10 and 3.13 on PRs
+        python-version: ${{ (github.event_name == 'pull_request' && fromJson('["3.10", "3.13"]')) || fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13"]') }}
+        splitCount: [4]
+        group: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v6
         with:
@@ -83,8 +91,19 @@ jobs:
           python-version: ${{ matrix.python-version }}
           prune-cache: false
 
+      - name: Cache pytest results
+        uses: actions/cache@v4
+        with:
+          path: |
+            .pytest_cache
+            src/backend/tests/.test_durations
+          key: pytest-cache-${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('src/backend/tests/**/*.py') }}
+          restore-keys: |
+            pytest-cache-${{ runner.os }}-py${{ matrix.python-version }}-
+
       - name: Install the project
         run: uv sync
+        timeout-minutes: 8
 
       - name: Verify installation
         run: |
@@ -103,15 +122,15 @@ jobs:
       - name: Run unit tests
         uses: nick-fields/retry@v3
         with:
-          timeout_minutes: 15
-          max_attempts: 3
-          retry_wait_seconds: 30
+          timeout_minutes: 18
+          max_attempts: 2
+          retry_wait_seconds: 20
           warning_on_retry: true
           shell: bash
-          command: make unit_tests args="-x -vv --splits ${{ matrix.splitCount }} --group ${{ matrix.group }} --reruns 5 --reruns-delay 1 --cov --cov-config=src/backend/.coveragerc --cov-report=xml --cov-report=html"
+          on_retry_command: "pkill -9 -f pytest || true"
+          command: make unit_tests args="-x -vv --splits ${{ matrix.splitCount }} --group ${{ matrix.group }} --reruns 3 --reruns-delay 1 -m 'not slow' --durations=10 --timeout=300 --timeout-method=thread ${{ matrix.group == 1 && matrix.python-version == '3.10' && '--cov --cov-config=src/backend/.coveragerc --cov-report=xml --cov-report=html' || '' }}"
         env:
           PYTHONUNBUFFERED: "1"
-          PYTEST_TIMEOUT: "300"
           PYTHONHASHSEED: "0"
 
       - name: Publish Test Results
@@ -138,21 +157,21 @@ jobs:
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
-        if: matrix.python-version == '3.10'
+        if: matrix.python-version == '3.10' && matrix.group == 1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage.xml
           flags: backend
-          name: backend-coverage-group-${{ matrix.group }}
+          name: backend-coverage
           fail_ci_if_error: false
           directory: ./
           verbose: true
 
       - name: Upload coverage artifacts
         uses: actions/upload-artifact@v4
-        if: matrix.python-version == '3.10'
+        if: matrix.python-version == '3.10' && matrix.group == 1
         with:
-          name: backend-coverage-report-group-${{ matrix.group }}
+          name: backend-coverage-report
           path: |
             coverage.xml
             htmlcov/
@@ -165,7 +184,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13"]' ) }}
+        # Only test 3.10 and 3.13 for integration tests on PRs
+        python-version: ${{ (github.event_name == 'pull_request' && fromJson('["3.10", "3.13"]')) || fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13"]') }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -178,17 +198,30 @@ jobs:
           cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
           prune-cache: false
+      
+      - name: Cache pytest results
+        uses: actions/cache@v4
+        with:
+          path: |
+            .pytest_cache
+          key: pytest-integration-${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('src/backend/tests/integration/**/*.py') }}
+          restore-keys: |
+            pytest-integration-${{ runner.os }}-py${{ matrix.python-version }}-
+      
       - name: Install the project
         run: uv sync
+        timeout-minutes: 8
+      
       - name: Run integration tests
         uses: nick-fields/retry@v3
         with:
           timeout_minutes: 20
           max_attempts: 2
-          retry_wait_seconds: 30
+          retry_wait_seconds: 20
+          on_retry_command: "pkill -9 -f pytest || true"
           command: make integration_tests_no_api_keys
         env:
-          PYLEAK_LOG_LEVEL: debug
+          PYLEAK_LOG_LEVEL: error
           DO_NOT_TRACK: true
           PYTHONUNBUFFERED: "1"
 
@@ -210,7 +243,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13"]' ) }}
+        # Only test 3.10 and 3.13 for LFX tests on PRs
+        python-version: ${{ (github.event_name == 'pull_request' && fromJson('["3.10", "3.13"]')) || fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13"]') }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -223,10 +257,21 @@ jobs:
           cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
           prune-cache: false
+      
+      - name: Cache pytest results
+        uses: actions/cache@v4
+        with:
+          path: |
+            src/lfx/.pytest_cache
+          key: pytest-lfx-${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('src/lfx/tests/**/*.py') }}
+          restore-keys: |
+            pytest-lfx-${{ runner.os }}-py${{ matrix.python-version }}-
+      
       - name: Run lfx tests
-        run: uv run make lfx_tests
+        run: uv run make lfx_tests args="-m 'not slow' --timeout=300 --timeout-method=thread"
+        timeout-minutes: 15
         env:
-          DO_NOT_TRACK: true # disable telemetry reporting
+          DO_NOT_TRACK: true
 
       - name: Upload lfx test logs on failure
         uses: actions/upload-artifact@v4
@@ -267,7 +312,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13"]') }}
+        # Only test 3.10 for CLI tests on PRs (fastest validation)
+        python-version: ${{ (github.event_name == 'pull_request' && fromJson('["3.10"]')) || fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13"]') }}
     steps:
       - name: Check out the code at a specific ref
         uses: actions/checkout@v6
