@@ -1,9 +1,9 @@
 import { useMutation } from "@tanstack/react-query";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
-import type { ForgePromptResponse } from "@/components/core/componentForge/types";
+import type { GenerateComponentPromptResponse } from "@/components/core/generateComponent/types";
 
-type ForgePromptRequest = {
+type GenerateComponentPromptRequest = {
   flowId: string;
   inputValue: string;
   componentId?: string;
@@ -11,15 +11,15 @@ type ForgePromptRequest = {
   maxRetries?: number;
 };
 
-async function postForgePrompt({
+async function postGenerateComponentPrompt({
   flowId,
   inputValue,
   componentId,
   fieldName,
   maxRetries,
-}: ForgePromptRequest): Promise<ForgePromptResponse> {
-  const response = await api.post<ForgePromptResponse>(
-    getURL("FORGE_PROMPT"),
+}: GenerateComponentPromptRequest): Promise<GenerateComponentPromptResponse> {
+  const response = await api.post<GenerateComponentPromptResponse>(
+    getURL("GENERATE_COMPONENT_PROMPT"),
     {
       flow_id: flowId,
       input_value: inputValue,
@@ -31,9 +31,9 @@ async function postForgePrompt({
   return response.data;
 }
 
-export function usePostForgePrompt() {
+export function usePostGenerateComponentPrompt() {
   return useMutation({
-    mutationFn: postForgePrompt,
-    mutationKey: ["usePostForgePrompt"],
+    mutationFn: postGenerateComponentPrompt,
+    mutationKey: ["usePostGenerateComponentPrompt"],
   });
 }

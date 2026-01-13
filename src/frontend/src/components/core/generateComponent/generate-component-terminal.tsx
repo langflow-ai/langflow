@@ -10,13 +10,13 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import CodeAreaModal from "@/modals/codeAreaModal";
 import { cn } from "@/utils/utils";
-import type { SubmitResult, TerminalMessage, ForgeTerminalProps } from "./types";
+import type { SubmitResult, TerminalMessage, GenerateComponentTerminalProps } from "./types";
 
 const TERMINAL_MIN_HEIGHT = 200;
 const TERMINAL_MAX_HEIGHT = 600;
 const TERMINAL_DEFAULT_HEIGHT = 300;
 const RESIZE_HANDLE_HEIGHT = 8;
-const HISTORY_STORAGE_KEY = "component-forge-terminal-history";
+const HISTORY_STORAGE_KEY = "generate-component-terminal-history";
 const MAX_HISTORY_SIZE = 50;
 const TEXTAREA_MAX_HEIGHT = 150;
 
@@ -108,7 +108,7 @@ const TerminalHeader = ({
           className="h-4 w-4 text-emerald-400"
         />
         <span className="font-mono text-sm font-medium text-zinc-200">
-          Component Forge
+          Generate component
         </span>
       </div>
       <span className="text-xs text-zinc-500">|</span>
@@ -403,7 +403,7 @@ const LoadingIndicator = () => (
   </div>
 );
 
-const ForgeTerminal = ({
+const GenerateComponentTerminal = ({
   isOpen,
   onClose,
   onSubmit,
@@ -412,13 +412,13 @@ const ForgeTerminal = ({
   isLoading = false,
   maxRetries,
   onMaxRetriesChange,
-}: ForgeTerminalProps) => {
+}: GenerateComponentTerminalProps) => {
   const getWelcomeMessages = useCallback(
     (): TerminalMessage[] => [
       {
         id: nanoid(),
         type: "system",
-        content: "Welcome to Component Forge. Type HELP for commands.",
+        content: "Welcome to Generate component. Type HELP for commands.",
         timestamp: new Date(),
       },
       {
@@ -717,4 +717,4 @@ const ForgeTerminal = ({
   );
 };
 
-export default ForgeTerminal;
+export default GenerateComponentTerminal;

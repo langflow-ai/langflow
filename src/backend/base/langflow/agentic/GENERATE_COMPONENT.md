@@ -1,11 +1,11 @@
-# Component Forge
+# Generate Component
 
 **Feature Status:** In Development
 **Last Updated:** January 2025
 
 ## Overview
 
-Component Forge is an AI-powered feature that allows users to create Langflow components through natural language prompts. It uses Claude Sonnet 4.5 (Anthropic) to generate Python component code, validates the generated code, and allows users to add the components directly to their flow canvas.
+Generate Component is an AI-powered feature that allows users to create Langflow components through natural language prompts. It uses Claude Sonnet 4.5 (Anthropic) to generate Python component code, validates the generated code, and allows users to add the components directly to their flow canvas.
 
 ## Architecture
 
@@ -17,8 +17,8 @@ src/backend/base/langflow/agentic/api/router.py
 ```
 
 **API Endpoints:**
-- `GET /api/v1/forge/check-config` - Checks if ANTHROPIC_API_KEY is configured
-- `POST /api/v1/forge/prompt` - Executes the component creation flow
+- `GET /api/v1/generate-component/check-config` - Checks if ANTHROPIC_API_KEY is configured
+- `POST /api/v1/generate-component/prompt` - Executes the component creation flow
 
 **Key Functions:**
 - `check_anthropic_api_key()` - Validates API key from global variables or environment
@@ -47,23 +47,23 @@ When the AI generates component code, the backend:
 
 **Component Location:**
 ```
-src/frontend/src/components/core/componentForge/
-├── index.tsx           # Main component (ComponentForge)
-├── forge-terminal.tsx  # Terminal UI component (ForgeTerminal)
-└── types.ts            # TypeScript type definitions
+src/frontend/src/components/core/generateComponent/
+├── index.tsx                       # Main component (GenerateComponent)
+├── generate-component-terminal.tsx # Terminal UI component (GenerateComponentTerminal)
+└── types.ts                        # TypeScript type definitions
 ```
 
 **State Management:**
 ```
-src/frontend/src/stores/forgeStore.ts  # Zustand store for terminal state
+src/frontend/src/stores/generateComponentStore.ts  # Zustand store for terminal state
 ```
 
 **API Hooks:**
 ```
-src/frontend/src/controllers/API/queries/forge/
+src/frontend/src/controllers/API/queries/generate-component/
 ├── index.ts
-├── use-get-forge-config.ts   # GET /forge/check-config
-└── use-post-forge-prompt.ts  # POST /forge/prompt
+├── use-get-generate-component-config.ts   # GET /generate-component/check-config
+└── use-post-generate-component-prompt.ts  # POST /generate-component/prompt
 ```
 
 **Additional Hooks Used:**
@@ -73,14 +73,14 @@ src/frontend/src/controllers/API/queries/forge/
 
 **URL Constants:**
 Located in `src/frontend/src/controllers/API/helpers/constants.ts`:
-- `FORGE_PROMPT: "forge/prompt"`
-- `FORGE_CHECK_CONFIG: "forge/check-config"`
+- `GENERATE_COMPONENT_PROMPT: "generate-component/prompt"`
+- `GENERATE_COMPONENT_CHECK_CONFIG: "generate-component/check-config"`
 
 ### User Interface
 
 **Access:**
-- Button located in the sidebar footer, next to "New Custom Component"
-- Click "Component Forge" button to open the terminal
+- Button located in the sidebar footer, in first position
+- Click "Generate component" button to open the terminal
 
 **Terminal Features:**
 - Resizable terminal panel (200px - 600px height)
@@ -118,7 +118,7 @@ If not configured, users see an error notification when trying to open the termi
 ```
 User Input (Terminal)
        ↓
-POST /forge/prompt
+POST /generate-component/prompt
        ↓
 execute_flow_with_validation()
        ↓
@@ -172,14 +172,14 @@ The `user_id` is passed through the chain:
 ## Files Modified/Created
 
 ### Created
-- `src/frontend/src/components/core/componentForge/` (entire folder)
-- `src/frontend/src/controllers/API/queries/forge/` (entire folder)
-- `src/frontend/src/stores/forgeStore.ts` - Zustand store for terminal state
+- `src/frontend/src/components/core/generateComponent/` (entire folder)
+- `src/frontend/src/controllers/API/queries/generate-component/` (entire folder)
+- `src/frontend/src/stores/generateComponentStore.ts` - Zustand store for terminal state
 
 ### Modified
-- `src/frontend/src/controllers/API/helpers/constants.ts` - Added FORGE_* URLs
-- `src/frontend/src/pages/FlowPage/components/PageComponent/index.tsx` - Import ComponentForge
-- `src/frontend/src/pages/FlowPage/components/flowSidebarComponent/components/sidebarFooterButtons.tsx` - Added Component Forge button
+- `src/frontend/src/controllers/API/helpers/constants.ts` - Added GENERATE_COMPONENT_* URLs
+- `src/frontend/src/pages/FlowPage/components/PageComponent/index.tsx` - Import GenerateComponent
+- `src/frontend/src/pages/FlowPage/components/flowSidebarComponent/components/sidebarFooterButtons.tsx` - Added Generate component button
 - `src/frontend/src/modals/codeAreaModal/index.tsx` - Hide "Check & Save" button in readonly mode
 - `src/backend/base/langflow/agentic/api/router.py` - Router prefix, messages, function names, max_retries parameter
 - `src/lfx/src/lfx/run/base.py` - Added `user_id` parameter
@@ -188,19 +188,19 @@ The `user_id` is passed through the chain:
 
 1. **Unit Tests Missing** - Tests should be created for:
    - Backend: `extract_python_code()`, `validate_component_code()`, `execute_flow_with_validation()`
-   - Frontend: `ForgeTerminal`, `ComponentResultLine`
+   - Frontend: `GenerateComponentTerminal`, `ComponentResultLine`
 
-2. **Backend Folder Name** - The backend code is still in `/agentic/` folder. Consider renaming to `/forge/` for consistency.
+2. **Backend Folder Name** - The backend code is still in `/agentic/` folder. Consider renaming to `/generate-component/` for consistency.
 
 ## Naming History
 
-The feature was originally named "Vibe Flow" but was renamed to "Component Forge" to better reflect its purpose (creating components, not general flow operations).
+The feature was originally named "Vibe Flow", then renamed to "Component Forge", and finally renamed to "Generate Component" to better reflect its purpose and match UI/UX guidelines.
 
 **Renamed items:**
-- VibeFlowComponent → ComponentForge
-- VibeFlowTerminal → ForgeTerminal
-- VibeFlowButton → ForgeButton
-- vibe-flow-terminal-history → component-forge-terminal-history
-- /agentic/* → /forge/* (API routes)
-- useGetAgenticConfig → useGetForgeConfig
-- usePostAgenticPrompt → usePostForgePrompt
+- VibeFlowComponent → ComponentForge → GenerateComponent
+- VibeFlowTerminal → ForgeTerminal → GenerateComponentTerminal
+- VibeFlowButton → ForgeButton → GenerateComponentButton
+- vibe-flow-terminal-history → component-forge-terminal-history → generate-component-terminal-history
+- /agentic/* → /forge/* → /generate-component/* (API routes)
+- useGetAgenticConfig → useGetForgeConfig → useGetGenerateComponentConfig
+- usePostAgenticPrompt → usePostForgePrompt → usePostGenerateComponentPrompt

@@ -117,7 +117,7 @@ def validate_component_code(code: str) -> ValidationResult:
         )
 
 
-router = APIRouter(prefix="/forge", tags=["Component Forge"])
+router = APIRouter(prefix="/generate-component", tags=["Generate Component"])
 
 # Base path for flow JSON files
 FLOWS_BASE_PATH = Path(__file__).parent.parent / "flows"
@@ -363,11 +363,11 @@ async def check_anthropic_api_key(
 
 
 @router.get("/check-config")
-async def check_forge_config(
+async def check_generate_component_config(
     current_user: CurrentActiveUser,
     session: DbSession,
 ) -> dict:
-    """Check if Component Forge is properly configured.
+    """Check if Generate Component is properly configured.
 
     Returns whether the ANTHROPIC_API_KEY is available for using Claude Sonnet 4.5.
     """
@@ -418,7 +418,7 @@ async def run_prompt_flow(
         raise HTTPException(
             status_code=400,
             detail=(
-                f"{ANTHROPIC_API_KEY_NAME} is required for Component Forge. "
+                f"{ANTHROPIC_API_KEY_NAME} is required for Generate Component. "
                 "Please configure it in your environment or global variables."
             ),
         )
