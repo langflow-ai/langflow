@@ -202,7 +202,6 @@ export const BotMessage = memo(
                   </span>
                 </div>
               )}
-
               {chat.content_blocks && chat.content_blocks.length > 0 && (
                 <ContentBlockDisplay
                   playgroundPage={playgroundPage}
