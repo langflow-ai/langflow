@@ -12,8 +12,6 @@ import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import type { chatMessagePropsType } from "@/types/components";
 import { cn } from "@/utils/utils";
-import { useThinkingDurationStore } from "../hooks/use-thinking-duration";
-import { useTypingEffect } from "../hooks/use-typing-effect";
 import { convertFiles } from "../utils/convert-files";
 import EditMessageField from "./edit-message-field";
 import { EditMessageButton } from "./message-options";
@@ -49,25 +47,12 @@ export const BotMessage = memo(
 
     const isEmpty = decodedMessage?.trim() === "";
 
-    // Capture at mount time whether this message should animate
-    // This is true if we were awaiting a bot response when this message appeared
-    const willAnimateRef = useRef(awaitingBotResponse && lastMessage);
-
-    // Can start typing when: build is done + has content
-    const canStart = !isBuilding && decodedMessage !== "";
-
-    const handleTypingComplete = useCallback(() => {
-      setAwaitingBotResponse(false);
-    }, [setAwaitingBotResponse]);
-
-    const { displayedText, isTyping } = useTypingEffect({
-      text: decodedMessage,
-      willAnimate: willAnimateRef.current,
-      canStart,
-      speed: 3,
-      interval: 30,
-      onComplete: handleTypingComplete,
-    });
+    // Reset awaiting bot response when message is displayed
+    useEffect(() => {
+      if (lastMessage && decodedMessage !== "") {
+        setAwaitingBotResponse(false);
+      }
+    }, [lastMessage, decodedMessage, setAwaitingBotResponse]);
     const { mutate: updateMessageMutation } = useUpdateMessage();
 
     const handleEditMessage = (message: string) => {
@@ -86,7 +71,7 @@ export const BotMessage = memo(
         },
         {
           onSuccess: () => {
-            updateChat(chat, message);
+            updateChat?.(chat, message);
             setEditMessage(false);
           },
           onError: () => {
@@ -134,56 +119,6 @@ export const BotMessage = memo(
       /[\u2600-\u27BF\uD83C-\uDBFF\uDC00-\uDFFF]/,
     );
 
-    const thinkingActive = Boolean(isThinking && lastMessage);
-    const { startTime } = useThinkingDurationStore();
-    const [elapsedTime, setElapsedTime] = useState(0);
-
-    // Live timer while building
-    useEffect(() => {
-      if (!isThinking || !startTime) {
-        return;
-      }
-
-      setElapsedTime(Date.now() - startTime);
-
-      const interval = setInterval(() => {
-        const start = useThinkingDurationStore.getState().startTime;
-        if (start) {
-          setElapsedTime(Date.now() - start);
-        }
-      }, 100);
-
-      return () => clearInterval(interval);
-    }, [isThinking, startTime]);
-
-    const formatTime = (ms: number) => {
-      if (ms < 1000) return `${Math.round(ms)}ms`;
-      const seconds = ms / 1000;
-      if (seconds < 60) return `${seconds.toFixed(1)}s`;
-      const minutes = Math.floor(seconds / 60);
-      const remainingSeconds = seconds % 60;
-      return `${minutes}m ${remainingSeconds.toFixed(0)}s`;
-    };
-
-    const stepsTotalDuration = chat.content_blocks
-      ? chat.content_blocks.reduce((blockAcc, block) => {
-          return (
-            blockAcc +
-            block.contents.reduce(
-              (contentAcc, content) => contentAcc + (content.duration || 0),
-              0,
-            )
-          );
-        }, 0)
-      : 0;
-
-    // Use real-time elapsed time when thinking, otherwise use steps duration or thinking duration
-    const displayTime = thinkingActive
-      ? elapsedTime
-      : stepsTotalDuration > 0
-        ? stepsTotalDuration
-        : (thinkingDuration ?? 0);
-
     return (
       <>
         <div className="w-full py-4 word-break-break-word">
@@ -193,24 +128,8 @@ export const BotMessage = memo(
               editMessage ? "" : "hover:bg-muted",
             )}
           >
-            {/* Content: thinking (paragraph) -> steps dropdown -> answer with bot avatar */}
+            {/* Content: steps dropdown -> answer with bot avatar */}
             <div className="flex w-full flex-col gap-2">
-              {(thinkingActive || displayTime > 0) && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <ForwardedIconComponent
-                    name="Brain"
-                    className="h-4 w-4 text-primary"
-                  />
-                  <span className="w-full flex justify-between">
-                    <span>
-                      {thinkingActive ? "Thinking for" : "Thought for"}
-                    </span>
-                    <span className="text-emerald-500">
-                      {formatTime(displayTime)}
-                    </span>
-                  </span>
-                </div>
-              )}
 
               {chat.content_blocks && chat.content_blocks.length > 0 && (
                 <ContentBlockDisplay
@@ -228,10 +147,7 @@ export const BotMessage = memo(
               )}
 
               <div className="flex w-full items-start gap-3">
-                {(thinkingActive ||
-                  displayTime > 0 ||
-                  chatMessage !== "" ||
-                  isTyping) && (
+                {chatMessage !== "" && (
                   <div
                     className="relative hidden h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded bg-white text-2xl @[45rem]/chat-panel:!flex"
                     style={
@@ -272,18 +188,13 @@ export const BotMessage = memo(
                                   onCancel={() => setEditMessage(false)}
                                 />
                               ) : (
-                                <>
-                                  <CustomMarkdownField
-                                    isAudioMessage={isAudioMessage}
-                                    chat={chat}
-                                    isEmpty={isEmpty && !isTyping}
-                                    chatMessage={displayedText}
-                                    editedFlag={!isTyping ? editedFlag : null}
-                                  />
-                                  {isTyping && (
-                                    <span className="inline-block w-1 h-4 bg-foreground animate-pulse ml-0.5 align-middle" />
-                                  )}
-                                </>
+                                <CustomMarkdownField
+                                  isAudioMessage={isAudioMessage}
+                                  chat={chat}
+                                  isEmpty={isEmpty}
+                                  chatMessage={decodedMessage}
+                                  editedFlag={editedFlag}
+                                />
                               )}
                             </div>
                           )}

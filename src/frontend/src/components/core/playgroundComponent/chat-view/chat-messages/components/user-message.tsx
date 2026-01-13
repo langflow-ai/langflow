@@ -48,7 +48,7 @@ export const UserMessage = memo(
         },
         {
           onSuccess: () => {
-            updateChat(chat, message);
+            updateChat?.(chat, message);
             setEditMessage(false);
           },
           onError: () => {
