@@ -323,10 +323,15 @@ class ServiceManager:
     def discover_plugins(self, config_dir: Path | None = None) -> None:
         """Discover and register service plugins from multiple sources.
 
-        Discovery order (last wins):
-        1. Entry points (installed packages)
-        2. Config files (lfx.toml / pyproject.toml)
-        3. Decorator-registered services (already in self.service_classes)
+        Discovery order (highest priority wins):
+        1. Config files (highest - override=True, discovered last)
+        2. Decorator-registered services (medium - override=True, but registered at import time)
+        3. Entry points (lowest - override=False, won't replace existing)
+
+        Note: Decorators register services when their modules are imported, which
+        typically happens before discover_plugins() is called. Entry points use
+        override=False so they won't replace decorator registrations. Config files
+        use override=True and are processed last, so they always win.
 
         Args:
             config_dir: Directory to search for config files.
