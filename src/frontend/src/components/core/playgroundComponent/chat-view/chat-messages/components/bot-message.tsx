@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import IconComponent, {
   ForwardedIconComponent,
@@ -9,9 +9,10 @@ import { CustomMarkdownField } from "@/customization/components/custom-markdown-
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import { useUtilityStore } from "@/stores/utilityStore";
 import type { chatMessagePropsType } from "@/types/components";
 import { cn } from "@/utils/utils";
+import { useStreamingMessage } from "../hooks/use-streaming-message";
+import { useThinkingDurationStore } from "../hooks/use-thinking-duration";
 import { convertFiles } from "../utils/convert-files";
 import EditMessageField from "./edit-message-field";
 import { EditMessageButton } from "./message-options";
@@ -29,30 +30,17 @@ export const BotMessage = memo(
     const [editMessage, setEditMessage] = useState(false);
     const isBuilding = useFlowStore((state) => state.isBuilding);
     const flow_id = useFlowsManagerStore((state) => state.currentFlowId);
-    const awaitingBotResponse = useUtilityStore(
-      (state) => state.awaitingBotResponse,
-    );
-    const setAwaitingBotResponse = useUtilityStore(
-      (state) => state.setAwaitingBotResponse,
-    );
 
     const isAudioMessage = chat.category === "audio";
-    const chatMessage = chat.message ? chat.message.toString() : "";
-    let decodedMessage = chatMessage ?? "";
-    try {
-      decodedMessage = decodeURIComponent(chatMessage);
-    } catch (_e) {
-      // ignore decode errors
-    }
+
+    const { chatMessage: decodedMessage, isStreaming } = useStreamingMessage({
+      chat,
+      isBuilding,
+      updateChat,
+    });
 
     const isEmpty = decodedMessage?.trim() === "";
-
-    // Reset awaiting bot response when message is displayed
-    useEffect(() => {
-      if (lastMessage && decodedMessage !== "") {
-        setAwaitingBotResponse(false);
-      }
-    }, [lastMessage, decodedMessage, setAwaitingBotResponse]);
+    const chatMessage = chat.message ? chat.message.toString() : "";
     const { mutate: updateMessageMutation } = useUpdateMessage();
 
     const handleEditMessage = (message: string) => {
@@ -119,6 +107,74 @@ export const BotMessage = memo(
       /[\u2600-\u27BF\uD83C-\uDBFF\uDC00-\uDFFF]/,
     );
 
+    const thinkingActive = Boolean(isBuilding && lastMessage);
+    const { startTime } = useThinkingDurationStore();
+    const [elapsedTime, setElapsedTime] = useState(0);
+    const lastElapsedTimeRef = useRef(0);
+
+    // Live timer while building
+    useEffect(() => {
+      if (!isBuilding || !startTime) {
+        // When building stops, preserve the last elapsed time
+        if (!isBuilding && lastElapsedTimeRef.current > 0) {
+          // Keep the last elapsed time for "Thought for" display
+        }
+        return;
+      }
+
+      const updateElapsed = () => {
+        const start = useThinkingDurationStore.getState().startTime;
+        if (start) {
+          const elapsed = Date.now() - start;
+          setElapsedTime(elapsed);
+          lastElapsedTimeRef.current = elapsed;
+        }
+      };
+
+      updateElapsed();
+
+      const interval = setInterval(updateElapsed, 100);
+
+      return () => clearInterval(interval);
+    }, [isBuilding, startTime]);
+
+    const formatTime = (ms: number) => {
+      if (ms < 1000) return `${Math.round(ms)}ms`;
+      const seconds = ms / 1000;
+      if (seconds < 60) return `${seconds.toFixed(1)}s`;
+      const minutes = Math.floor(seconds / 60);
+      const remainingSeconds = seconds % 60;
+      return `${minutes}m ${remainingSeconds.toFixed(0)}s`;
+    };
+
+    const stepsTotalDuration = chat.content_blocks
+      ? chat.content_blocks.reduce((blockAcc, block) => {
+          return (
+            blockAcc +
+            block.contents.reduce(
+              (contentAcc, content) => contentAcc + (content.duration || 0),
+              0,
+            )
+          );
+        }, 0)
+      : 0;
+
+    // Use real-time elapsed time when thinking, otherwise use steps duration, thinking duration, or preserved elapsedTime
+    // For the last message that just finished building, use the preserved elapsedTime if available
+    const displayTime = thinkingActive
+      ? elapsedTime
+      : stepsTotalDuration > 0
+        ? stepsTotalDuration
+        : (thinkingDuration ?? 0) ||
+          (lastMessage && lastElapsedTimeRef.current > 0
+            ? lastElapsedTimeRef.current
+            : 0);
+
+    // Show thinking/thought message if:
+    // 1. Actively thinking (isBuilding && lastMessage), OR
+    // 2. We have a duration to display (from thinkingDuration, stepsTotalDuration, or preserved elapsedTime)
+    const shouldShowThinkingMessage = thinkingActive || displayTime > 0;
+
     return (
       <>
         <div className="w-full py-4 word-break-break-word">
@@ -128,8 +184,25 @@ export const BotMessage = memo(
               editMessage ? "" : "hover:bg-muted",
             )}
           >
-            {/* Content: steps dropdown -> answer with bot avatar */}
+            {/* Content: thinking (paragraph) -> steps dropdown -> answer with bot avatar */}
             <div className="flex w-full flex-col gap-2">
+              {shouldShowThinkingMessage && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <ForwardedIconComponent
+                    name="Brain"
+                    className="h-4 w-4 text-primary"
+                  />
+                  <span className="w-full flex justify-between">
+                    <span>
+                      {thinkingActive ? "Thinking for" : "Thought for"}
+                    </span>
+                    <span className="text-emerald-500">
+                      {formatTime(displayTime)}
+                    </span>
+                  </span>
+                </div>
+              )}
+
               {chat.content_blocks && chat.content_blocks.length > 0 && (
                 <ContentBlockDisplay
                   playgroundPage={playgroundPage}
@@ -146,7 +219,7 @@ export const BotMessage = memo(
               )}
 
               <div className="flex w-full items-start gap-3">
-                {chatMessage !== "" && (
+                {(thinkingActive || displayTime > 0 || chatMessage !== "") && (
                   <div
                     className="relative hidden h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded bg-white text-2xl @[45rem]/chat-panel:!flex"
                     style={
@@ -172,7 +245,9 @@ export const BotMessage = memo(
                           data-testid={`chat-message-${chat.sender_name}-${chatMessage}`}
                           className="flex w-full flex-col"
                         >
-                          {chatMessage === "" && isBuilding && lastMessage ? (
+                          {(chatMessage === "" || (isEmpty && !isStreaming)) &&
+                          isBuilding &&
+                          lastMessage ? (
                             <IconComponent
                               name="MoreHorizontal"
                               className="h-8 w-8 animate-pulse"
@@ -187,13 +262,15 @@ export const BotMessage = memo(
                                   onCancel={() => setEditMessage(false)}
                                 />
                               ) : (
-                                <CustomMarkdownField
-                                  isAudioMessage={isAudioMessage}
-                                  chat={chat}
-                                  isEmpty={isEmpty}
-                                  chatMessage={decodedMessage}
-                                  editedFlag={editedFlag}
-                                />
+                                <>
+                                  <CustomMarkdownField
+                                    isAudioMessage={isAudioMessage}
+                                    chat={chat}
+                                    isEmpty={isEmpty && !isStreaming}
+                                    chatMessage={decodedMessage}
+                                    editedFlag={editedFlag}
+                                  />
+                                </>
                               )}
                             </div>
                           )}

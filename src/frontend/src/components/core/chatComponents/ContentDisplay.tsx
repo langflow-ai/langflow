@@ -17,31 +17,6 @@ export default function ContentDisplay({
   chatId: string;
   playgroundPage?: boolean;
 }) {
-  // First render the common BaseContent elements if they exist
-  const renderHeader = content.header && (
-    <>
-      <div className="flex items-center gap-2 pb-[12px]">
-        {content.header.icon && (
-          <ForwardedIconComponent
-            name={content.header.icon}
-            className="h-4 w-4"
-            strokeWidth={1.5}
-          />
-        )}
-        {content.header.title && (
-          <>
-            <Markdown
-              remarkPlugins={[remarkGfm]}
-              rehypePlugins={[rehypeMathjax]}
-              className="inline-block w-fit max-w-full text-sm font-semibold text-foreground"
-            >
-              {content.header.title}
-            </Markdown>
-          </>
-        )}
-      </div>
-    </>
-  );
   const renderDuration = content.duration !== undefined && !playgroundPage && (
     <div className="absolute right-2 top-4">
       <DurationDisplay duration={content.duration} chatId={chatId} />
@@ -152,7 +127,7 @@ export default function ContentDisplay({
       break;
 
     case "tool_use": {
-      const formatToolOutput = (output: any) => {
+      const formatToolOutput = (output: unknown) => {
         if (output === null || output === undefined) return "";
 
         // If it's a string, render as markdown
@@ -221,7 +196,7 @@ export default function ContentDisplay({
             language="json"
             code={JSON.stringify(content.tool_input, null, 2)}
           />
-          {content.output && (
+          {content.output !== undefined && (
             <>
               <Markdown
                 remarkPlugins={[remarkGfm]}
@@ -233,7 +208,7 @@ export default function ContentDisplay({
               <div className="mt-1">{formatToolOutput(content.output)}</div>
             </>
           )}
-          {content.error && (
+          {content.error !== undefined && (
             <div className="text-red-500">
               <Markdown
                 remarkPlugins={[remarkGfm]}
@@ -271,7 +246,6 @@ export default function ContentDisplay({
 
   return (
     <div className="relative p-[16px]">
-      {renderHeader}
       {renderDuration}
       {contentData}
     </div>
