@@ -23,6 +23,7 @@ import { DefaultEdge } from "@/CustomEdges";
 import NoteNode from "@/CustomNodes/NoteNode";
 import FlowToolbar from "@/components/core/flowToolbarComponent";
 import ComponentForge from "@/components/core/componentForge";
+import { LANGFLOW_AGENTIC_EXPERIENCE } from "@/customization/feature-flags";
 import {
   COLOR_OPTIONS,
   DEFAULT_NOTE_SIZE,
@@ -759,7 +760,7 @@ export default function Page({
                   shadowBoxHeight={shadowBoxHeight}
                 />
                 <FlowToolbar />
-                <ComponentForge />
+                {LANGFLOW_AGENTIC_EXPERIENCE && <ComponentForge />}
               </>
             )}
             <MemoizedSidebarTrigger />

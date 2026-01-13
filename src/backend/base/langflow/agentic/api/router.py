@@ -5,16 +5,17 @@ import re
 from pathlib import Path
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, status
 from lfx.custom.validate import create_class, extract_class_name
 from lfx.log.logger import logger
 from lfx.run.base import run_flow
-from pydantic import BaseModel
+from lfx.services.deps import get_settings_service
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.services.deps import get_variable_service
 from langflow.services.variable.service import VariableService
+from pydantic import BaseModel
 
 # Constants
 MAX_VALIDATION_RETRIES = 3
@@ -370,6 +371,13 @@ async def check_forge_config(
 
     Returns whether the ANTHROPIC_API_KEY is available for using Claude Sonnet 4.5.
     """
+    # Feature flag: Only allow access if agentic_experience is enabled
+    if not get_settings_service().settings.agentic_experience:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="This endpoint is not available",
+        )
+
     variable_service = get_variable_service()
     anthropic_key = await check_anthropic_api_key(variable_service, current_user.id, session)
 
@@ -393,6 +401,13 @@ async def run_prompt_flow(
     If the response contains component code, it validates the code and
     retries with error feedback if validation fails (up to MAX_VALIDATION_RETRIES times).
     """
+    # Feature flag: Only allow access if agentic_experience is enabled
+    if not get_settings_service().settings.agentic_experience:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="This endpoint is not available",
+        )
+
     variable_service = get_variable_service()
     user_id = current_user.id
 

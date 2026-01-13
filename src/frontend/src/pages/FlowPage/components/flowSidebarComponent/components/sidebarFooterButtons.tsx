@@ -2,7 +2,10 @@ import { useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { SidebarMenuButton, useSidebar } from "@/components/ui/sidebar";
-import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
+import {
+  ENABLE_NEW_SIDEBAR,
+  LANGFLOW_AGENTIC_EXPERIENCE,
+} from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import AddMcpServerModal from "@/modals/addMcpServerModal";
 import { useForgeStore } from "@/stores/forgeStore";
@@ -104,23 +107,25 @@ const SidebarMenuButtons = ({
           </span>
         </Button>
       </SidebarMenuButton>
-      <SidebarMenuButton asChild className="group">
-        <Button
-          unstyled
-          disabled={isLoading}
-          onClick={handleForgeClick}
-          data-testid="sidebar-component-forge-button"
-          className="flex items-center w-full h-full gap-3 hover:bg-muted"
-        >
-          <ForwardedIconComponent
-            name="Sparkles"
-            className="h-4 w-4 text-muted-foreground"
-          />
-          <span className="group-data-[state=open]/collapsible:font-semibold">
-            Component Forge
-          </span>
-        </Button>
-      </SidebarMenuButton>
+      {LANGFLOW_AGENTIC_EXPERIENCE && (
+        <SidebarMenuButton asChild className="group">
+          <Button
+            unstyled
+            disabled={isLoading}
+            onClick={handleForgeClick}
+            data-testid="sidebar-component-forge-button"
+            className="flex items-center w-full h-full gap-3 hover:bg-muted"
+          >
+            <ForwardedIconComponent
+              name="Sparkles"
+              className="h-4 w-4 text-muted-foreground"
+            />
+            <span className="group-data-[state=open]/collapsible:font-semibold">
+              Component Forge
+            </span>
+          </Button>
+        </SidebarMenuButton>
+      )}
     </>
   );
 };
