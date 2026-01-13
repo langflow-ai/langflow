@@ -83,7 +83,7 @@ async def test_read_project(client: AsyncClient, logged_in_headers, basic_case):
 
 async def test_update_project(client: AsyncClient, logged_in_headers, basic_case):
     import asyncio
-    
+
     update_case = basic_case.copy()
     update_case["name"] = "Updated Project"
 
@@ -91,17 +91,20 @@ async def test_update_project(client: AsyncClient, logged_in_headers, basic_case
     max_retries = 3
     retry_delay = 0.2
     response_ = None
-    
+
     for attempt in range(max_retries):
         response_ = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
         if response_.status_code == 201:
             break
-        if response_.status_code == 500 and "Resource temporarily unavailable" in response_.text:
-            if attempt < max_retries - 1:
-                await asyncio.sleep(retry_delay * (attempt + 1))
-                continue
+        if (
+            response_.status_code == 500
+            and "Resource temporarily unavailable" in response_.text
+            and attempt < max_retries - 1
+        ):
+            await asyncio.sleep(retry_delay * (attempt + 1))
+            continue
         break
-    
+
     assert response_ is not None
     assert response_.status_code == 201, f"Failed to create project: {response_.text}"
     id_ = response_.json()["id"]
@@ -112,12 +115,15 @@ async def test_update_project(client: AsyncClient, logged_in_headers, basic_case
         response = await client.patch(f"api/v1/projects/{id_}", json=update_case, headers=logged_in_headers)
         if response.status_code == status.HTTP_200_OK:
             break
-        if response.status_code == 500 and "Resource temporarily unavailable" in response.text:
-            if attempt < max_retries - 1:
-                await asyncio.sleep(retry_delay * (attempt + 1))
-                continue
+        if (
+            response.status_code == 500
+            and "Resource temporarily unavailable" in response.text
+            and attempt < max_retries - 1
+        ):
+            await asyncio.sleep(retry_delay * (attempt + 1))
+            continue
         break
-    
+
     assert response is not None
     result = response.json()
 
