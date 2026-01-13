@@ -35,13 +35,20 @@ const resizeTextarea = (
     textarea.style.height = `${CHAT_INPUT_MIN_HEIGHT}px`;
     previousScrollHeightRef.current = CHAT_INPUT_MIN_HEIGHT;
   } else {
-    // Only resize if the scroll height changed significantly (more than 1px difference)
-    // This prevents tiny resizes on every character that don't change the visual appearance
-    if (Math.abs(scrollHeight - previousScrollHeight) > 1) {
+    // Only resize when:
+    // 1. scrollHeight increased significantly (content wrapped to new line) - use 10px threshold
+    // 2. scrollHeight decreased significantly (content unwrapped) - use 10px threshold
+    // This prevents any micro-adjustments that cause visible growth on every character
+    const threshold = 10;
+    const heightDifference = scrollHeight - previousScrollHeight;
+
+    if (Math.abs(heightDifference) > threshold) {
+      // Content wrapped/unwrapped significantly - resize to fit
       textarea.style.height = `${scrollHeight}px`;
       previousScrollHeightRef.current = scrollHeight;
     } else {
-      // Restore the previous height if we're not resizing
+      // No significant change - restore previous height immediately to prevent any visual growth
+      // Don't update the ref so we maintain the stable height
       textarea.style.height = `${previousScrollHeight}px`;
     }
   }

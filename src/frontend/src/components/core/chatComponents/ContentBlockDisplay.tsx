@@ -231,6 +231,7 @@ export function ContentBlockDisplay({
                       ? rawTitle
                           .replace(/^Executed\s+/i, "")
                           .replace(/_/g, " ")
+                          .replace(/\*\*/g, "")
                           .trim()
                           .toUpperCase()
                       : rawTitle;
@@ -244,10 +245,10 @@ export function ContentBlockDisplay({
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ duration: 0.2, delay: 0.05 }}
-                      className="relative"
+                      className="relative "
                     >
                       <div
-                        className="flex cursor-pointer items-center justify-between px-1 py-1.5 rounded-sm muted text-muted-foreground"
+                        className="flex cursor-pointer items-center justify-between px-1 py-1.5 rounded-sm muted text-muted-foreground w-full"
                         onClick={() =>
                           setOpenTools((prev) => ({
                             ...prev,
@@ -255,23 +256,22 @@ export function ContentBlockDisplay({
                           }))
                         }
                       >
-                        <div className="flex items-center gap-1 text-sm font-normal">
+                        <div className="flex items-center gap-1 text-sm font-normal min-w-0 flex-1 overflow-hidden">
                           <motion.div
                             animate={{ rotate: isToolOpen ? 90 : 0 }}
                             transition={{ duration: 0.2, ease: "easeInOut" }}
+                            className="flex-shrink-0"
                           >
                             <ChevronRight className="h-4 w-4" />
                           </motion.div>
-                          <span className="text-muted-foreground">
+                          <div className="text-muted-foreground whitespace-nowrap flex-shrink-0">
                             Called tool{" "}
-                          </span>
-                          <Markdown
-                            className="inline muted-foreground bg-muted py-1 px-1.5 rounded-sm text-xs font-normal"
-                            remarkPlugins={[remarkGfm]}
-                            rehypePlugins={[rehypeMathjax]}
-                          >
-                            {toolTitle}
-                          </Markdown>
+                          </div>
+                          <div className="truncate flex-1 muted-foreground bg-muted py-1 px-1.5 rounded-sm text-xs max-w-fit">
+                            <p className="truncate font-normal font-mono">
+                              {toolTitle}
+                            </p>
+                          </div>
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-emerald-500">
