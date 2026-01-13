@@ -520,7 +520,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.123.0"
+                    "version": "0.128.0"
                   },
                   {
                     "name": "lfx",
@@ -811,7 +811,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "0.3.80"
+                    "version": "0.3.81"
                   }
                 ],
                 "total_dependencies": 3
@@ -1168,26 +1168,6 @@
                 "trigger_text": "Open table",
                 "type": "table",
                 "value": []
-              },
-              "stream_tool_updates": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Stream Tool Updates",
-                "dynamic": false,
-                "info": "Show tool invocations in real-time as they happen. Enabling increases database writes but provides immediate visibility.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "stream_tool_updates",
-                "override_skip": false,
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "bool",
-                "value": false
               },
               "system_prompt": {
                 "_input_type": "MultilineInput",
@@ -1703,7 +1683,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "0.3.80"
+                    "version": "0.3.81"
                   }
                 ],
                 "total_dependencies": 2
@@ -2423,7 +2403,7 @@
                 "dependencies": [
                   {
                     "name": "langchain_core",
-                    "version": "0.3.80"
+                    "version": "0.3.81"
                   },
                   {
                     "name": "lfx",
