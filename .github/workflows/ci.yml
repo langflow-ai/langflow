@@ -175,7 +175,9 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       python: ${{ steps.filter.outputs.python }}
+      backend-only: ${{ steps.filter.outputs.backend-only }}
       frontend: ${{ steps.filter.outputs.frontend }}
+      frontend-only: ${{ steps.filter.outputs.frontend-only }}
       docs: ${{ steps.filter.outputs.docs }}
       frontend-tests: ${{ steps.filter.outputs.frontend-tests }}
       components-changes: ${{ steps.filter.outputs.components-changes }}
@@ -200,12 +202,42 @@ jobs:
         steps.filter.outputs.database != 'true' &&
         steps.filter.outputs.docker != 'true'
         }}
+      # Optimization: Skip Jest tests when only backend files changed
+      skip-jest: ${{
+        steps.filter.outputs.backend-only == 'true' &&
+        steps.filter.outputs.frontend != 'true'
+        }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref || github.ref }}
+      
+      - name: Check for component_index.json conflicts
+        id: check-conflicts
+        run: |
+          COMPONENT_INDEX="src/lfx/src/lfx/_assets/component_index.json"
+          if grep -q "<<<<<<< HEAD" "$COMPONENT_INDEX" 2>/dev/null; then
+            echo "conflict=true" >> $GITHUB_OUTPUT
+            echo "⚠️  Merge conflict detected in component_index.json"
+          else
+            echo "conflict=false" >> $GITHUB_OUTPUT
+            echo "✅ No conflicts in component_index.json"
+          fi
+      
+      - name: Resolve component_index.json conflict
+        if: steps.check-conflicts.outputs.conflict == 'true'
+        run: |
+          echo "🔧 Regenerating component_index.json to resolve conflict..."
+          # Use the branch version (discard conflict markers)
+          git checkout --ours src/lfx/src/lfx/_assets/component_index.json
+          # Regenerate the component index
+          make build_component_index
+          # Stage the regenerated file
+          git add src/lfx/src/lfx/_assets/component_index.json
+          echo "✅ component_index.json regenerated successfully"
+      
       - name: Filter Paths
         id: filter
         uses: dorny/paths-filter@v3
@@ -251,10 +283,13 @@ jobs:
   test-frontend-unit:
     needs: [path-filter, set-ci-condition]
     name: Run Frontend Unit Tests
+    # Optimization: Skip Jest tests when only backend files changed (no frontend changes)
+    # This saves CI time while still running E2E tests that verify backend changes don't break the UI
     if: |
       always() &&
       !cancelled() &&
       needs.set-ci-condition.outputs.should-run-tests == 'true' &&
+      needs.path-filter.outputs.skip-jest != 'true' &&
       (inputs.run-all-tests || needs.path-filter.outputs.frontend == 'true')
     uses: ./.github/workflows/jest_test.yml
     with:
@@ -265,6 +300,11 @@ jobs:
   test-frontend:
     needs: [path-filter, set-ci-condition]
     name: Run Frontend Tests
+    # E2E tests run for BOTH frontend AND backend changes because:
+    # - Backend API changes can break frontend functionality
+    # - Component changes affect UI behavior
+    # - Database schema changes impact data display
+    # This ensures backend changes don't introduce regressions in the UI
     if: |
       always() &&
       !cancelled() &&

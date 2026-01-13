@@ -1,4 +1,5 @@
 # https://github.com/dorny/paths-filter
+# Backend changes that should trigger Python tests
 python:
   - "src/backend/**"
   - "src/backend/**.py"
@@ -9,6 +10,16 @@ python:
   - "**/python_test.yml"
   - ".github/workflows/ci.yml"
   - "src/lfx/src/lfx/_assets/component_index.json"
+# Backend-only changes (no frontend files modified)
+# Used to skip Jest tests when only backend code changes
+backend-only:
+  - "src/backend/**"
+  - "src/lfx/**"
+  - "pyproject.toml"
+  - "uv.lock"
+  - "src/backend/base/pyproject.toml"
+  - "src/backend/base/uv.lock"
+  - "**/python_test.yml"
 components-changes:
   - "src/backend/base/langflow/components/**"
   - "src/lfx/src/lfx/_assets/component_index.json"
@@ -16,6 +27,14 @@ starter-projects-changes:
   - "src/backend/base/langflow/initial_setup/**"
 frontend-tests:
   - "src/frontend/tests/**"
+# Frontend changes that should trigger Jest unit tests
+# Excludes backend files to prevent unnecessary Jest runs
+frontend-only:
+  - "src/frontend/**"
+  - "!src/frontend/tests/**"
+  - "**/jest_test.yml"
+# Frontend changes that should trigger any frontend tests (Jest + E2E)
+# Includes component_index.json since it affects frontend component rendering
 frontend:
   - "src/frontend/**"
   - "**/typescript_test.yml"
