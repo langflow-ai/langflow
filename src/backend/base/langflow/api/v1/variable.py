@@ -98,6 +98,8 @@ async def _cleanup_provider_models(
     await _cleanup_model_list_variable(variable_service, user_id, ENABLED_MODELS_VAR, provider_models, session)
 
 
+
+
 @router.post("/", response_model=VariableRead, status_code=201)
 async def create_variable(
     *,
@@ -174,68 +176,106 @@ async def read_variables(
         ]
         
         # Validate model provider credentials and clear default_fields if invalid
-        for var in filtered_variables:
-            if var.name in model_provider_variable_mapping.values() and var.type == CREDENTIAL_TYPE:
+        # Build dict of credential variables for validation
+        credential_variables = {var.name: var for var in filtered_variables if var.type == CREDENTIAL_TYPE}
+        provider_variable_map = get_model_provider_variable_mapping()
+        
+        # Create reverse mapping: variable_name -> provider
+        var_to_provider = {var_name: provider for provider, var_name in provider_variable_map.items()}
+        
+        # Validate each provider credential once and capture both enabled status and error messages
+        validation_results: dict[str, tuple[bool, str | None, list[str] | None]] = {}  # var_name -> (is_valid, error, default_fields)
+        
+        for provider, var_name in provider_variable_map.items():
+            if var_name in credential_variables:
+                credential_var = credential_variables[var_name]
+                is_valid = False
+                error_message = None
                 variable_obj = None
-                # Mark as a provider credential (for frontend to know to check validation)
-                var.is_valid = None  # Will be set to True/False below
-                var.validation_error = None  # Will be set if validation fails
                 
                 try:
                     # Get the raw Variable object to access the encrypted value
                     variable_obj = await variable_service.get_variable_object(
-                        user_id=current_user.id, name=var.name, session=session
+                        user_id=current_user.id, name=var_name, session=session
                     )
                     if variable_obj and variable_obj.value:
-                        # Decrypt the credential value
+                        # Decrypt the API key value
+                        from langflow.services.deps import get_settings_service
+                        settings_service = get_settings_service()
                         decrypted_value = auth_utils.decrypt_api_key(
-                            variable_obj.value, settings_service=variable_service.settings_service
+                            variable_obj.value, settings_service=settings_service
                         )
-                        # Validate the key by making a test call
-                        # Run validation off the event loop to avoid blocking
-                        await asyncio.to_thread(validate_model_provider_key, var.name, decrypted_value)
-                        # If validation passes, the variable is valid - keep default_fields as is
-                        var.is_valid = True
-                        var.validation_error = None
-                except (ValueError, Exception) as e:
-                    # Validation failed - key is invalid
+                        if decrypted_value and decrypted_value.strip():
+                            # Validate the key (this will raise ValueError if invalid)
+                            await asyncio.to_thread(validate_model_provider_key, var_name, decrypted_value)
+                            # Validation passed
+                            is_valid = True
+                            error_message = None
+                        else:
+                            error_message = "API key is empty"
+                    else:
+                        error_message = "Variable value is empty"
+                except ValueError as e:
+                    # Validation failed - get the error message
                     error_message = str(e)
-                    var.is_valid = False
-                    var.validation_error = error_message
-                    
-                    # Clear default_fields to prevent provider from appearing enabled
-                    logger.debug(
-                        "Invalid key detected for variable %s, clearing default_fields: %s",
-                        var.name,
-                        error_message,
-                    )
-                    
+                except Exception as e:  # noqa: BLE001
+                    error_message = f"Validation error: {str(e)}"
+                
+                # Update default_fields based on validation result
+                updated_default_fields = None
+                if variable_obj and variable_obj.id:
                     try:
-                        # Get variable_obj if we don't have it yet (in case get_variable_object failed)
-                        if variable_obj is None:
-                            variable_obj = await variable_service.get_variable_object(
-                                user_id=current_user.id, name=var.name, session=session
-                            )
-                        if variable_obj and variable_obj.id and variable_obj.default_fields:
-                            # Only update if default_fields are set (to avoid unnecessary DB writes)
-                            await variable_service.update_variable_fields(
-                                user_id=current_user.id,
-                                variable_id=variable_obj.id,
-                                variable=VariableUpdate(
-                                    id=variable_obj.id,
-                                    default_fields=[],
-                                ),
-                                session=session,
-                            )
-                            # Update the returned variable object to reflect the change
-                            var.default_fields = []
-                    except Exception as update_error:  # noqa: BLE001
-                        # Log but don't fail the request if we can't update
-                        logger.warning(
-                            "Failed to clear default_fields for invalid variable %s: %s",
-                            var.name,
-                            str(update_error),
-                        )
+                        if is_valid:
+                            # Key is valid - ensure default_fields are set (important for migration)
+                            provider_name = var_to_provider.get(var_name)
+                            expected_default_fields = [provider_name, "api_key"] if provider_name else []
+                            if variable_obj.default_fields != expected_default_fields:
+                                await variable_service.update_variable_fields(
+                                    user_id=current_user.id,
+                                    variable_id=variable_obj.id,
+                                    variable=VariableUpdate(
+                                        id=variable_obj.id,
+                                        default_fields=expected_default_fields,
+                                    ),
+                                    session=session,
+                                )
+                            updated_default_fields = expected_default_fields
+                        else:
+                            # Key is invalid - clear default_fields
+                            if variable_obj.default_fields:
+                                await variable_service.update_variable_fields(
+                                    user_id=current_user.id,
+                                    variable_id=variable_obj.id,
+                                    variable=VariableUpdate(
+                                        id=variable_obj.id,
+                                        default_fields=[],
+                                    ),
+                                    session=session,
+                                )
+                            updated_default_fields = []
+                    except Exception:  # noqa: BLE001
+                        # Log but don't fail if we can't update
+                        # Use current default_fields if update failed
+                        updated_default_fields = variable_obj.default_fields if variable_obj else None
+                
+                validation_results[var_name] = (is_valid, error_message, updated_default_fields)
+        
+        # Set validation status on each variable and update default_fields in response
+        for var in filtered_variables:
+            if var.name in model_provider_variable_mapping.values() and var.type == CREDENTIAL_TYPE:
+                result = validation_results.get(var.name)
+                if result:
+                    is_valid, error_message, updated_default_fields = result
+                    var.is_valid = is_valid
+                    var.validation_error = error_message
+                    # Update default_fields in response to reflect what we set in database
+                    # This is important for migration - valid keys will have default_fields set
+                    if updated_default_fields is not None:
+                        var.default_fields = updated_default_fields
+                else:
+                    # Variable not found in validation results
+                    var.is_valid = False
+                    var.validation_error = "Variable not found"
             else:
                 # Not a model provider credential, validation fields remain None
                 var.is_valid = None

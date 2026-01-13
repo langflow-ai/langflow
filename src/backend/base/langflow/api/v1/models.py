@@ -217,9 +217,9 @@ async def get_enabled_providers(
 
         # Get all credential variable names (regardless of default_fields)
         # This includes both env variables and explicitly created model provider credentials
-        credential_variables = {var.name: var for var in all_variables if var.type == CREDENTIAL_TYPE}
+        credential_variable_names = {var.name for var in all_variables if var.type == CREDENTIAL_TYPE}
 
-        if not credential_variables:
+        if not credential_variable_names:
             return {
                 "enabled_providers": [],
                 "provider_status": {},
@@ -227,6 +227,30 @@ async def get_enabled_providers(
 
         # Get the provider-variable mapping
         provider_variable_map = get_model_provider_variable_mapping()
+
+        # Build credential_variables dict with objects that have encrypted values
+        # VariableRead sets value=None for CREDENTIAL_TYPE (via validator), but _validate_and_get_enabled_providers
+        # needs the encrypted value to decrypt and validate. So we create simple objects with the encrypted value.
+        credential_variables = {}
+        
+        for var_name in credential_variable_names:
+            if var_name in provider_variable_map.values():
+                try:
+                    # Get the raw Variable object to access the encrypted value
+                    variable_obj = await variable_service.get_variable_object(
+                        user_id=current_user.id, name=var_name, session=session
+                    )
+                    if variable_obj and variable_obj.value:
+                        # Create a simple object with the encrypted value
+                        # _validate_and_get_enabled_providers only needs .value attribute
+                        class VarWithValue:
+                            def __init__(self, value):
+                                self.value = value
+                        
+                        credential_variables[var_name] = VarWithValue(variable_obj.value)
+                except (ValueError, Exception):  # noqa: BLE001
+                    # Variable not found or error accessing it - skip
+                    continue
 
         # Use shared helper to validate and get enabled providers
         from lfx.base.models.unified_models import _validate_and_get_enabled_providers
