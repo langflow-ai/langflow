@@ -130,7 +130,6 @@ export const BotMessage = memo(
           >
             {/* Content: steps dropdown -> answer with bot avatar */}
             <div className="flex w-full flex-col gap-2">
-
               {chat.content_blocks && chat.content_blocks.length > 0 && (
                 <ContentBlockDisplay
                   playgroundPage={playgroundPage}
