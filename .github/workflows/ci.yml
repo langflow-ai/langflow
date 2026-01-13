@@ -279,10 +279,12 @@ jobs:
   test-backend:
     needs: [path-filter, set-ci-condition]
     name: Run Backend Tests
+    # Skip when only CI configuration files changed
     if: |
       always() &&
       !cancelled() &&
       needs.set-ci-condition.outputs.should-run-tests == 'true' &&
+      needs.path-filter.outputs.ci-only-changes != 'true' &&
       (inputs.run-all-tests || needs.path-filter.outputs.python == 'true')
     uses: ./.github/workflows/python_test.yml
     with:
@@ -297,12 +299,15 @@ jobs:
   test-frontend-unit:
     needs: [path-filter, set-ci-condition]
     name: Run Frontend Unit Tests
-    # Optimization: Skip Jest tests when only backend files changed (no frontend changes)
+    # Optimization: Skip Jest tests when:
+    # 1. Only backend files changed (no frontend changes)
+    # 2. Only CI configuration files changed
     # This saves CI time while still running E2E tests that verify backend changes don't break the UI
     if: |
       always() &&
       !cancelled() &&
       needs.set-ci-condition.outputs.should-run-tests == 'true' &&
+      needs.path-filter.outputs.ci-only-changes != 'true' &&
       needs.path-filter.outputs.skip-jest != 'true' &&
       (inputs.run-all-tests || needs.path-filter.outputs.frontend == 'true')
     uses: ./.github/workflows/jest_test.yml
@@ -319,10 +324,12 @@ jobs:
     # - Component changes affect UI behavior
     # - Database schema changes impact data display
     # This ensures backend changes don't introduce regressions in the UI
+    # Skip when only CI configuration files changed
     if: |
       always() &&
       !cancelled() &&
       needs.set-ci-condition.outputs.should-run-tests == 'true' &&
+      needs.path-filter.outputs.ci-only-changes != 'true' &&
       (inputs.run-all-tests || needs.path-filter.outputs.frontend == 'true' || needs.path-filter.outputs.frontend-tests == 'true' || needs.path-filter.outputs.components-changes == 'true' || needs.path-filter.outputs.starter-projects-changes == 'true' || needs.path-filter.outputs.starter-projects == 'true' || needs.path-filter.outputs.components == 'true' || needs.path-filter.outputs.workspace == 'true' || needs.path-filter.outputs.api == 'true' || needs.path-filter.outputs.database == 'true')
     uses: ./.github/workflows/typescript_test.yml
     with:
@@ -341,6 +348,7 @@ jobs:
     if: |
       always() &&
       !cancelled() &&
+      needs.path-filter.outputs.ci-only-changes != 'true' &&
       (inputs.run-all-tests || needs.path-filter.outputs.python == 'true')
     name: Lint Backend
     uses: ./.github/workflows/lint-py.yml
@@ -350,6 +358,7 @@ jobs:
     if: |
       always() &&
       !cancelled() &&
+      needs.path-filter.outputs.ci-only-changes != 'true' &&
       (inputs.run-all-tests || needs.path-filter.outputs.docs == 'true')
     name: Test Docs Build
     uses: ./.github/workflows/docs_test.yml
@@ -361,6 +370,7 @@ jobs:
       always() &&
       !cancelled() &&
       needs.set-ci-condition.outputs.should-run-tests == 'true' &&
+      needs.path-filter.outputs.ci-only-changes != 'true' &&
       (inputs.run-all-tests || needs.path-filter.outputs.python == 'true' || needs.path-filter.outputs.frontend == 'true')
     runs-on: ubuntu-latest
     steps:
@@ -390,7 +400,7 @@ jobs:
   test-docker:
     needs: [path-filter, set-ci-condition]
     name: Test Docker Images
-    if: ${{ needs.path-filter.outputs.docker == 'true' && needs.set-ci-condition.outputs.should-run-tests == 'true' }}
+    if: ${{ needs.path-filter.outputs.docker == 'true' && needs.set-ci-condition.outputs.should-run-tests == 'true' && needs.path-filter.outputs.ci-only-changes != 'true' }}
     uses: ./.github/workflows/docker_test.yml
     secrets:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
