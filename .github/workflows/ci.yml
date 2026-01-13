@@ -203,6 +203,8 @@ jobs:
         steps.filter.outputs.database != 'true' &&
         steps.filter.outputs.docker != 'true'
         }}
+                        # Optimization: Skip all tests when only CI config files changed
+      ci-only-changes: ${{ steps.ci-check.outputs.ci-only-changes }}
       # Optimization: Skip Jest tests when only backend files changed
       skip-jest: ${{
         steps.filter.outputs.backend-only == 'true' &&
