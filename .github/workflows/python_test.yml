@@ -1,9 +1,5 @@
 name: Python tests
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event.pull_request.number || github.sha }}
-  cancel-in-progress: true
-
 on:
   workflow_call:
     secrets:
@@ -55,27 +51,21 @@ env:
   PYTEST_RUN_PATH: "src/backend/tests"
   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
   ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-  # Performance optimizations
-  UV_LINK_MODE: "copy"
-  UV_HTTP_TIMEOUT: "300"
-  PYTHONDONTWRITEBYTECODE: "1"
 
 jobs:
   build:
+
     name: Unit Tests - Python ${{ matrix.python-version }} - Group ${{ matrix.group }}
     runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
     strategy:
-      fail-fast: false
       matrix:
-        # Smart version selection: test all versions on main/release, only 3.10 and 3.13 on PRs
-        python-version: ${{ (github.event_name == 'pull_request' && fromJson('["3.10", "3.13"]')) || fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13"]') }}
-        splitCount: [4]
-        group: [1, 2, 3, 4]
+        python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13"]' ) }}
+        splitCount: [5]
+        group: [1, 2, 3, 4, 5]
     steps:
       - uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref || github.ref }}
-          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -91,26 +81,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
           prune-cache: false
 
-      - name: Cache pytest results
-        uses: actions/cache@v4
-        with:
-          path: |
-            .pytest_cache
-            src/backend/tests/.test_durations
-          key: pytest-cache-${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('src/backend/tests/**/*.py') }}
-          restore-keys: |
-            pytest-cache-${{ runner.os }}-py${{ matrix.python-version }}-
-
       - name: Install the project
         run: uv sync
-        timeout-minutes: 8
-
-      - name: Verify installation
-        run: |
-          uv run python --version
-          uv run python -c "import sys; print(f'Python {sys.version}')"
-          uv run pytest --version
-        continue-on-error: true
 
       - name: Generate dynamic coverage configuration
         run: |
@@ -120,58 +92,28 @@ jobs:
           echo "Bundled components and legacy files excluded from coverage"
 
       - name: Run unit tests
-        uses: nick-fields/retry@v3
+        uses: step-security/retry@v3
         with:
-          timeout_minutes: 18
+          timeout_minutes: 20
           max_attempts: 2
-          retry_wait_seconds: 20
-          warning_on_retry: true
-          shell: bash
-          on_retry_command: "pkill -9 -f pytest || true"
-          command: make unit_tests args="-x -vv --splits ${{ matrix.splitCount }} --group ${{ matrix.group }} --reruns 3 --reruns-delay 1 -m 'not slow' --durations=10 --timeout=300 --timeout-method=thread ${{ matrix.group == 1 && matrix.python-version == '3.10' && '--cov --cov-config=src/backend/.coveragerc --cov-report=xml --cov-report=html' || '' }}"
-        env:
-          PYTHONUNBUFFERED: "1"
-          PYTHONHASHSEED: "0"
-
-      - name: Publish Test Results
-        uses: EnricoMi/publish-unit-test-result-action@v2
-        if: always()
-        with:
-          files: |
-            **/test-results/**/*.xml
-            **/junit.xml
-          check_name: Test Results (Python ${{ matrix.python-version }} - Group ${{ matrix.group }})
-          comment_mode: off
-
-      - name: Upload test logs on failure
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: test-logs-py${{ matrix.python-version }}-group${{ matrix.group }}
-          path: |
-            **/.pytest_cache/
-            **/pytest.log
-            **/test-results/
-          retention-days: 7
-          if-no-files-found: ignore
+          command: make unit_tests args="-x -vv --splits ${{ matrix.splitCount }} --group ${{ matrix.group }} --reruns 5 --cov --cov-config=src/backend/.coveragerc --cov-report=xml --cov-report=html"
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
-        if: matrix.python-version == '3.10' && matrix.group == 1
+        if: matrix.python-version == '3.10'
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage.xml
           flags: backend
-          name: backend-coverage
+          name: backend-coverage-group-${{ matrix.group }}
           fail_ci_if_error: false
           directory: ./
-          verbose: true
 
       - name: Upload coverage artifacts
         uses: actions/upload-artifact@v4
-        if: matrix.python-version == '3.10' && matrix.group == 1
+        if: matrix.python-version == '3.10'
         with:
-          name: backend-coverage-report
+          name: backend-coverage-report-group-${{ matrix.group }}
           path: |
             coverage.xml
             htmlcov/
@@ -182,15 +124,12 @@ jobs:
     name: Integration Tests - Python ${{ matrix.python-version }}
     runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
     strategy:
-      fail-fast: false
       matrix:
-        # Only test 3.10 and 3.13 for integration tests on PRs
-        python-version: ${{ (github.event_name == 'pull_request' && fromJson('["3.10", "3.13"]')) || fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13"]') }}
+        python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13"]' ) }}
     steps:
       - uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref || github.ref }}
-          fetch-depth: 0
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v6
         with:
@@ -198,58 +137,25 @@ jobs:
           cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
           prune-cache: false
-      
-      - name: Cache pytest results
-        uses: actions/cache@v4
-        with:
-          path: |
-            .pytest_cache
-          key: pytest-integration-${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('src/backend/tests/integration/**/*.py') }}
-          restore-keys: |
-            pytest-integration-${{ runner.os }}-py${{ matrix.python-version }}-
-      
       - name: Install the project
         run: uv sync
-        timeout-minutes: 8
-      
       - name: Run integration tests
-        uses: nick-fields/retry@v3
-        with:
-          timeout_minutes: 20
-          max_attempts: 2
-          retry_wait_seconds: 20
-          on_retry_command: "pkill -9 -f pytest || true"
-          command: make integration_tests_no_api_keys
+        run: make integration_tests_no_api_keys
         env:
-          PYLEAK_LOG_LEVEL: error
-          DO_NOT_TRACK: true
-          PYTHONUNBUFFERED: "1"
-
-      - name: Upload integration test logs on failure
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: integration-test-logs-py${{ matrix.python-version }}
-          path: |
-            **/.pytest_cache/
-            **/pytest.log
-          retention-days: 7
-          if-no-files-found: ignore
+          PYLEAK_LOG_LEVEL: debug # enable pyleak logging
+          DO_NOT_TRACK: true # disable telemetry reporting
 
 
   lfx-tests:
     name: LFX Tests - Python ${{ matrix.python-version }}
     runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
     strategy:
-      fail-fast: false
       matrix:
-        # Only test 3.10 and 3.13 for LFX tests on PRs
-        python-version: ${{ (github.event_name == 'pull_request' && fromJson('["3.10", "3.13"]')) || fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13"]') }}
+        python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13"]' ) }}
     steps:
       - uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref || github.ref }}
-          fetch-depth: 0
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v6
         with:
@@ -257,32 +163,10 @@ jobs:
           cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
           prune-cache: false
-      
-      - name: Cache pytest results
-        uses: actions/cache@v4
-        with:
-          path: |
-            src/lfx/.pytest_cache
-          key: pytest-lfx-${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('src/lfx/tests/**/*.py') }}
-          restore-keys: |
-            pytest-lfx-${{ runner.os }}-py${{ matrix.python-version }}-
-      
       - name: Run lfx tests
-        run: uv run make lfx_tests args="-m 'not slow' --timeout=300 --timeout-method=thread"
-        timeout-minutes: 15
+        run: uv run make lfx_tests
         env:
-          DO_NOT_TRACK: true
-
-      - name: Upload lfx test logs on failure
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: lfx-test-logs-py${{ matrix.python-version }}
-          path: |
-            src/lfx/**/.pytest_cache/
-            src/lfx/**/pytest.log
-          retention-days: 7
-          if-no-files-found: ignore
+          DO_NOT_TRACK: true # disable telemetry reporting
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
@@ -294,7 +178,6 @@ jobs:
           name: lfx-coverage
           fail_ci_if_error: false
           directory: ./src/lfx/
-          verbose: true
 
       - name: Upload coverage artifacts
         uses: actions/upload-artifact@v4
@@ -310,16 +193,13 @@ jobs:
     name: Test CLI - Python ${{ matrix.python-version }}
     runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
     strategy:
-      fail-fast: false
       matrix:
-        # Only test 3.10 for CLI tests on PRs (fastest validation)
-        python-version: ${{ (github.event_name == 'pull_request' && fromJson('["3.10"]')) || fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13"]') }}
+        python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13"]') }}
     steps:
       - name: Check out the code at a specific ref
         uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref || github.ref }}
-          fetch-depth: 0
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v6
         with:
