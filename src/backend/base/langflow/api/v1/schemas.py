@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from enum import Enum
+from functools import cache
 from pathlib import Path
 from typing import Any, Literal
 from uuid import UUID
@@ -516,6 +517,7 @@ class ProjectFlowVersion(BaseModel):
         )
 
     @classmethod
+    @cache
     def column_def(cls):
         return (
             column("flow_id", Uuid),
