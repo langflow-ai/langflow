@@ -273,32 +273,30 @@ def _validate_and_get_enabled_providers(
     provider_variable_map: dict[str, str],
 ) -> set[str]:
     """Validate API keys and return set of enabled providers.
-    
+
     This helper function validates API keys for credential variables and returns
     only providers with valid keys. Used by get_enabled_providers and model options functions.
-    
+
     Args:
         credential_variables: Dictionary mapping variable names to VariableRead objects
         provider_variable_map: Dictionary mapping provider names to variable names
-        
+
     Returns:
         Set of provider names that have valid API keys
     """
     from langflow.services.auth import utils as auth_utils
     from langflow.services.deps import get_settings_service
-    
+
     settings_service = get_settings_service()
     enabled = set()
-    
+
     for provider, var_name in provider_variable_map.items():
         if var_name in credential_variables:
             # Validate the API key before marking as enabled
             credential_var = credential_variables[var_name]
             try:
                 # Decrypt the API key value
-                api_key = auth_utils.decrypt_api_key(
-                    credential_var.value, settings_service=settings_service
-                )
+                api_key = auth_utils.decrypt_api_key(credential_var.value, settings_service=settings_service)
                 # Validate the key (this will raise ValueError if invalid)
                 if api_key and api_key.strip():
                     validate_model_provider_key(var_name, api_key)
@@ -306,7 +304,7 @@ def _validate_and_get_enabled_providers(
             except (ValueError, Exception):  # noqa: BLE001
                 # Key validation failed or decryption failed - don't enable provider
                 pass
-    
+
     return enabled
 
 
@@ -481,7 +479,7 @@ def get_language_model_options(
                     )
                     credential_vars = {var.name: var for var in all_vars if var.type == CREDENTIAL_TYPE}
                     provider_variable_map = get_model_provider_variable_mapping()
-                    
+
                     # Use shared helper to validate and get enabled providers
                     return _validate_and_get_enabled_providers(credential_vars, provider_variable_map)
 
@@ -667,7 +665,7 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
                     )
                     credential_vars = {var.name: var for var in all_vars if var.type == CREDENTIAL_TYPE}
                     provider_variable_map = get_model_provider_variable_mapping()
-                    
+
                     # Use shared helper to validate and get enabled providers
                     return _validate_and_get_enabled_providers(credential_vars, provider_variable_map)
 
