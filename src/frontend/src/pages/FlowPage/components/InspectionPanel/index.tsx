@@ -9,11 +9,13 @@ import InspectionPanelHeader from "./components/InspectionPanelHeader";
 interface InspectionPanelProps {
   selectedNode: AllNodeType | null;
   isVisible: boolean;
+  onClose?: () => void;
 }
 
 const InspectionPanel = memo(function InspectionPanel({
   selectedNode,
   isVisible,
+  onClose,
 }: InspectionPanelProps) {
   return (
     <AnimatePresence mode="wait">
@@ -37,7 +39,7 @@ const InspectionPanel = memo(function InspectionPanel({
               "overflow-hidden flex flex-col",
             )}
           >
-            <InspectionPanelHeader data={selectedNode.data} />
+            <InspectionPanelHeader data={selectedNode.data} onClose={onClose} />
             <div className="overflow-y-auto flex-1">
               <InspectionPanelFields data={selectedNode.data} />
             </div>

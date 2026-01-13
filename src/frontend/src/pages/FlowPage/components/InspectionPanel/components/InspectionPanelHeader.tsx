@@ -10,10 +10,12 @@ import type { NodeDataType } from "@/types/flow";
 
 interface InspectionPanelHeaderProps {
   data: NodeDataType;
+  onClose?: () => void;
 }
 
 export default function InspectionPanelHeader({
   data,
+  onClose,
 }: InspectionPanelHeaderProps) {
   const [openCodeModal, setOpenCodeModal] = useState(false);
   const { handleNodeClass } = useHandleNodeClass(data.id);
@@ -57,18 +59,32 @@ export default function InspectionPanelHeader({
             </span>
           </div>
         </div>
-        {hasCode && (
-          <ShadTooltip content="View Code" side="left">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={handleOpenCode}
-            >
-              <IconComponent name="Code" className="h-4 w-4" />
-            </Button>
-          </ShadTooltip>
-        )}
+        <div className="flex items-center gap-1">
+          {hasCode && (
+            <ShadTooltip content="View Code" side="left">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={handleOpenCode}
+              >
+                <IconComponent name="Code" className="h-4 w-4" />
+              </Button>
+            </ShadTooltip>
+          )}
+          {onClose && (
+            <ShadTooltip content="Close" side="left">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={onClose}
+              >
+                <IconComponent name="X" className="h-4 w-4" />
+              </Button>
+            </ShadTooltip>
+          )}
+        </div>
       </div>
 
       {hasCode && openCodeModal && (

@@ -756,6 +756,16 @@ export default function Page({
     ? (nodes.find((n) => n.id === selectedNodeId) as AllNodeType)
     : null;
 
+  // Handler to close the inspection panel by deselecting all nodes
+  const handleCloseInspectionPanel = useCallback(() => {
+    setNodes((nds) =>
+      nds.map((node) => ({
+        ...node,
+        selected: false,
+      })),
+    );
+  }, [setNodes]);
+
   return (
     <div className="h-full w-full bg-canvas" ref={reactFlowWrapper}>
       {showCanvas ? (
@@ -773,6 +783,7 @@ export default function Page({
                 <InspectionPanel
                   selectedNode={selectedNode}
                   isVisible={showInspectionPanel}
+                  onClose={handleCloseInspectionPanel}
                 />
               </>
             )}
