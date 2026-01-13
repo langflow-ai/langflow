@@ -1666,6 +1666,7 @@ class Component(CustomComponent):
                     "The message must have been stored in the database previously."
                 )
                 raise ValueError(msg)
+
             # Create a fresh Message instance for consistency with normal flow
             stored_message = await Message.create(**message.model_dump())
             self._stored_message_id = stored_message.get_id()
@@ -1721,9 +1722,15 @@ class Component(CustomComponent):
 
     async def _send_message_event(self, message: Message, id_: str | None = None, category: str | None = None) -> None:
         if hasattr(self, "_event_manager") and self._event_manager:
-            data_dict = message.model_dump()["data"] if hasattr(message, "data") else message.model_dump()
-            if id_ and not data_dict.get("id"):
-                data_dict["id"] = id_
+            # Use full model_dump() to include all Message fields (content_blocks, properties, etc.)
+            data_dict = message.model_dump()
+
+            # The message ID is stored in message.data["id"], which ends up in data_dict["data"]["id"]
+            # But the frontend expects it at data_dict["id"], so we need to copy it to the top level
+            message_id = id_ or data_dict.get("data", {}).get("id") or getattr(message, "id", None)
+            if message_id and not data_dict.get("id"):
+                data_dict["id"] = message_id
+
             category = category or data_dict.get("category", None)
 
             def _send_event():
