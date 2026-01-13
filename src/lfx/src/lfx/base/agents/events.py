@@ -291,7 +291,7 @@ async def handle_on_tool_error(
         tool_content.error = event["data"].get("error", "Unknown error")
         tool_content.duration = _calculate_duration(start_time)
         tool_content.header = {"title": f"Error using **{tool_content.name}**", "icon": "Hammer"}
-        agent_message = await send_message_callback(message=agent_message, skip_db_update=not stream_tool_updates)
+        agent_message = await send_message_callback(message=agent_message, skip_db_update=True)
         start_time = perf_counter()
     return agent_message, start_time
 
