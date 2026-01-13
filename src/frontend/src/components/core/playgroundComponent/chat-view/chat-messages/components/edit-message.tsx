@@ -32,7 +32,6 @@ export const MarkdownField = ({
     <div className="w-full items-baseline gap-2">
       <Markdown
         remarkPlugins={[remarkGfm]}
-        linkTarget="_blank"
         rehypePlugins={[rehypeMathjax, rehypeRaw]}
         className={cn(
           "markdown prose flex w-full max-w-full flex-col items-baseline text-sm font-normal word-break-break-word dark:prose-invert",
