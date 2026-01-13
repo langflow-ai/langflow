@@ -770,7 +770,7 @@
                   },
                   {
                     "name": "langchain_cohere",
-                    "version": "0.4.6"
+                    "version": "0.3.5"
                   }
                 ],
                 "total_dependencies": 8
