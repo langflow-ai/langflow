@@ -500,11 +500,7 @@ async def get_published_flow(
         metadata = PublishedFlowMetadata(version_id=version_id)
 
         # 2. Fetch content
-        flow_data_str = await publish_service.get_flow(
-            user_id=api_key_user.id,
-            flow_id=flow_id,
-            metadata=metadata
-        )
+        flow_data_str = await publish_service.get_flow(user_id=api_key_user.id, flow_id=flow_id, metadata=metadata)
 
         if not flow_data_str:
             raise HTTPException(status_code=404, detail="Flow data not found")
@@ -518,7 +514,7 @@ async def get_published_flow(
             name=flow_data.get("name"),
             description=flow_data.get("description"),
             data=flow_data,
-            folder_id=None, # published flows don't really have a folder context (yet?)
+            folder_id=None,  # published flows don't really have a folder context (yet?)
         )
     except Exception as exc:
         if isinstance(exc, HTTPException):

@@ -724,12 +724,13 @@ async def publish_project(
             project_id=project_id,
             project_blob=project_blob,
             publish_tag=project_data.publish_tag,
-            )
+        )
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
     return publish_data
+
 
 @router.post("/{project_id}/deploy/", response_model=PublishedProjectRead, status_code=201)
 async def deploy_project(
@@ -737,7 +738,7 @@ async def deploy_project(
     project_id: UUID,
     body: DeployProjectCreate,
     current_user: CurrentActiveUser,
-    ):
+):
     """Deploy a published project version to the configured object storage."""
     require_all_ids(current_user.id, project_id, "project")
 
@@ -750,7 +751,7 @@ async def deploy_project(
             project_id=project_id,
             metadata=metadata,
             stage=ReleaseStage.PUBLISH,
-            )
+        )
 
         return await publish_service.put_project(
             user_id=current_user.id,
@@ -758,7 +759,7 @@ async def deploy_project(
             project_blob=orjson.loads(project_blob),
             publish_tag=body.version_id,
             stage=ReleaseStage.DEPLOY,
-            )
+        )
     except HTTPException:
         raise
     except Exception as e:
@@ -769,13 +770,13 @@ async def deploy_project(
     "/{project_id}/versions/",
     response_model=list[PublishedProjectRead],
     status_code=200,
-    )
+)
 async def list_published_projects(
     *,
     project_id: UUID,
     current_user: CurrentActiveUser,
     stage: ReleaseStage = ReleaseStage.PUBLISH,
-    ):
+):
     """List all published versions of the project."""
     require_all_ids(current_user.id, project_id, "project")
     try:
@@ -784,7 +785,7 @@ async def list_published_projects(
             user_id=current_user.id,
             project_id=project_id,
             stage=stage,
-            )
+        )
     except HTTPException:
         raise
     except Exception as e:
@@ -800,7 +801,7 @@ async def read_published_project(
     current_user: CurrentActiveUser,
     version_id: str,
     stage: ReleaseStage = ReleaseStage.PUBLISH,
-    ):
+):
     """Retrieve a specific published project version."""
     require_all_ids(current_user.id, project_id, "project")
     try:
@@ -824,14 +825,14 @@ async def read_published_project(
     "/{project_id}/versions/{version_id}",
     response_model=MessageResponse,
     status_code=200,
-    )
+)
 async def delete_published_project(
     *,
     project_id: UUID,
     current_user: CurrentActiveUser,
     version_id: str,
     stage: ReleaseStage = ReleaseStage.PUBLISH,
-    ):
+):
     """Delete a specific published project version."""
     require_all_ids(current_user.id, project_id, "project")
 
@@ -856,14 +857,11 @@ async def _read_project_for_publish(
     session: DbSession,
     project_id: UUID,
     user_id: UUID,
-    ) -> Folder:
+) -> Folder:
     """Read a project for publish."""
     db_project = (
-        await session.exec(
-            select(Folder)
-            .where(Folder.user_id == user_id)
-            .where(Folder.id == project_id))
-        ).first()
+        await session.exec(select(Folder).where(Folder.user_id == user_id).where(Folder.id == project_id))
+    ).first()
     if not db_project:
         raise HTTPException(status_code=404, detail="Project not found")
     return db_project
@@ -873,12 +871,11 @@ async def _create_project_blob(
     session: DbSession,
     project: Folder,
     project_data: PublishProjectCreate,
-    ):
+):
     """Create a blob for a published project."""
-    requested_flow: CTE = (
-        values(*ProjectFlowVersion.column_def())
-        .data(project_data.flows_to_tuple())
-        ).cte("requested_flow")
+    requested_flow: CTE = (values(*ProjectFlowVersion.column_def()).data(project_data.flows_to_tuple())).cte(
+        "requested_flow"
+    )
     db_flows = (
         await session.exec(
             select(
@@ -887,12 +884,12 @@ async def _create_project_blob(
                 Flow.name,
                 Flow.description,
                 requested_flow.c.published_flow_version_id,
-                )
+            )
             .where(Flow.folder_id == project.id)
             .join(requested_flow, Flow.id == requested_flow.c.flow_id)
-            .order_by(Flow.id) # deterministic ordering
-            )
-        ).all()
+            .order_by(Flow.id)  # deterministic ordering
+        )
+    ).all()
 
     if len(db_flows) < len(project_data.flows):
         raise HTTPException(
@@ -901,8 +898,8 @@ async def _create_project_blob(
                 "Some flows were not found. "
                 "Please ensure all flows belong to the "
                 f"requested project: {project.name} (id: {project.id})"
-                )
-            )
+            ),
+        )
     # build project blob:
     # if a flow is provided with a
     # published version id, use it
@@ -914,12 +911,12 @@ async def _create_project_blob(
     for db_flow in db_flows:
         flow_entry = {
             "id": str(db_flow.id),
-            "name": db_flow.name, # current flow name
+            "name": db_flow.name,  # current flow name
         }
         if db_flow.published_flow_version_id:
             flow_entry["published_version"] = {
                 "version_id": db_flow.published_flow_version_id,
-                }
+            }
         else:
             # latest flow data at the time of project publish
             flow_entry["database_flow_data"] = db_flow.data
@@ -930,4 +927,4 @@ async def _create_project_blob(
         "name": project.name,
         "description": project.description,
         "flows": flow_blobs,
-        }
+    }

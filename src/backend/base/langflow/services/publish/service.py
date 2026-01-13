@@ -12,12 +12,10 @@ if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
 
 
-
 class PublishService(Service):
     name = "publish_service"
 
     def __init__(self, settings_service: SettingsService):
-
         self.settings_service = settings_service
 
         self.prefix = settings_service.settings.publish_backend_prefix
