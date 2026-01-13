@@ -152,15 +152,15 @@ async def read_variables(
     current_user: CurrentActiveUser,
 ):
     """Read all variables.
-    
+
     Model provider credentials are validated when reading from the database.
     If a provider key is invalid, its default_fields are cleared to prevent
-    the provider from appearing enabled. 
-    
+    the provider from appearing enabled.
+
     Each variable in the response includes:
     - is_valid: bool | None - True if valid, False if invalid, None if not a provider credential
     - validation_error: str | None - Error message if validation failed
-    
+
     Returns a list of variables with validation status for model provider credentials.
     """
     variable_service = get_variable_service()
@@ -169,12 +169,12 @@ async def read_variables(
         raise TypeError(msg)
     try:
         all_variables = await variable_service.get_all(user_id=current_user.id, session=session)
-        
+
         # Filter out internal variables (those starting and ending with __)
         filtered_variables = [
             var for var in all_variables if not (var.name and var.name.startswith("__") and var.name.endswith("__"))
         ]
-        
+
         # Validate model provider credentials and clear default_fields if invalid
         # Build dict of credential variables for validation
         credential_variables = {var.name: var for var in filtered_variables if var.type == CREDENTIAL_TYPE}
@@ -280,7 +280,7 @@ async def read_variables(
                 # Not a model provider credential, validation fields remain None
                 var.is_valid = None
                 var.validation_error = None
-        
+
         return filtered_variables
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
