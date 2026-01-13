@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { CHAT_INPUT_MIN_HEIGHT } from "@/constants/constants";
 import { useUtilityStore } from "@/stores/utilityStore";
 import type { FilePreviewType } from "@/types/components";
@@ -18,27 +18,31 @@ interface TextAreaWrapperProps {
 }
 
 //Resizes a textarea element to fit its content, with a minimum height when empty.
-const resizeTextarea = (textarea: HTMLTextAreaElement, value: string): void => {
-  // Get the current height before resetting
-  const currentHeight = textarea.offsetHeight;
-
+const resizeTextarea = (
+  textarea: HTMLTextAreaElement,
+  value: string,
+  previousScrollHeightRef: React.MutableRefObject<number>,
+): void => {
   // Reset height to auto to get the correct scrollHeight
   textarea.style.height = "auto";
 
   // Get the new scroll height
   const scrollHeight = textarea.scrollHeight;
+  const previousScrollHeight = previousScrollHeightRef.current;
 
   // If empty, set minimal height (one line)
   if (!value || value.trim() === "") {
     textarea.style.height = `${CHAT_INPUT_MIN_HEIGHT}px`;
+    previousScrollHeightRef.current = CHAT_INPUT_MIN_HEIGHT;
   } else {
-    // Only resize if the scroll height is significantly different (more than 2px difference)
+    // Only resize if the scroll height changed significantly (more than 1px difference)
     // This prevents tiny resizes on every character that don't change the visual appearance
-    if (Math.abs(scrollHeight - currentHeight) > 2) {
+    if (Math.abs(scrollHeight - previousScrollHeight) > 1) {
       textarea.style.height = `${scrollHeight}px`;
+      previousScrollHeightRef.current = scrollHeight;
     } else {
       // Restore the previous height if we're not resizing
-      textarea.style.height = `${currentHeight}px`;
+      textarea.style.height = `${previousScrollHeight}px`;
     }
   }
 
@@ -59,6 +63,7 @@ const TextAreaWrapper = ({
   isDragging,
 }: TextAreaWrapperProps) => {
   const setChatValueStore = useUtilityStore((state) => state.setChatValueStore);
+  const previousScrollHeightRef = useRef<number>(CHAT_INPUT_MIN_HEIGHT);
 
   const getPlaceholderText = useCallback((): string => {
     if (isDragging) {
@@ -87,7 +92,7 @@ const TextAreaWrapper = ({
   useEffect(() => {
     const textarea = inputRef.current;
     if (textarea) {
-      resizeTextarea(textarea, chatValue);
+      resizeTextarea(textarea, chatValue, previousScrollHeightRef);
     }
   }, [chatValue, inputRef]);
 
@@ -96,7 +101,7 @@ const TextAreaWrapper = ({
       const newValue = event.target.value;
       setChatValueStore(newValue);
       // Resize immediately on user input for better UX
-      resizeTextarea(event.target, newValue);
+      resizeTextarea(event.target, newValue, previousScrollHeightRef);
     },
     [setChatValueStore],
   );
