@@ -19,15 +19,27 @@ interface TextAreaWrapperProps {
 
 //Resizes a textarea element to fit its content, with a minimum height when empty.
 const resizeTextarea = (textarea: HTMLTextAreaElement, value: string): void => {
+  // Get the current height before resetting
+  const currentHeight = textarea.offsetHeight;
+
   // Reset height to auto to get the correct scrollHeight
   textarea.style.height = "auto";
+
+  // Get the new scroll height
+  const scrollHeight = textarea.scrollHeight;
 
   // If empty, set minimal height (one line)
   if (!value || value.trim() === "") {
     textarea.style.height = `${CHAT_INPUT_MIN_HEIGHT}px`;
   } else {
-    // Set height to scrollHeight to fit all content
-    textarea.style.height = `${textarea.scrollHeight}px`;
+    // Only resize if the scroll height is significantly different (more than 2px difference)
+    // This prevents tiny resizes on every character that don't change the visual appearance
+    if (Math.abs(scrollHeight - currentHeight) > 2) {
+      textarea.style.height = `${scrollHeight}px`;
+    } else {
+      // Restore the previous height if we're not resizing
+      textarea.style.height = `${currentHeight}px`;
+    }
   }
 
   // Ensure no overflow and no max-height constraint
