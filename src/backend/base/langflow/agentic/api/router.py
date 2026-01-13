@@ -117,7 +117,7 @@ def validate_component_code(code: str) -> ValidationResult:
         )
 
 
-router = APIRouter(prefix="/generate-component", tags=["Generate Component"])
+router = APIRouter(prefix="/agentic", tags=["Agentic"])
 
 # Base path for flow JSON files
 FLOWS_BASE_PATH = Path(__file__).parent.parent / "flows"
@@ -387,8 +387,8 @@ async def check_generate_component_config(
     }
 
 
-@router.post("/prompt")
-async def run_prompt_flow(
+@router.post("/generate-component")
+async def run_generate_component(
     request: FlowExecutionRequest,
     current_user: CurrentActiveUser,
     session: DbSession,
