@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
-    from .policies import PoliciesComponent
+    from .policies_component import PoliciesComponent
 
 _dynamic_imports = {
     "PoliciesComponent": "policies",
