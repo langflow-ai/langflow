@@ -210,11 +210,21 @@ async def async_client() -> AsyncGenerator:
 
 @pytest.fixture(name="session")
 def session_fixture():
+    from sqlalchemy import event
+    
     engine = create_engine(
         "sqlite+pysqlite:///:memory:",
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
+    
+    # Enable foreign key constraints for SQLite
+    @event.listens_for(engine, "connect")
+    def set_sqlite_pragma(dbapi_conn, connection_record):
+        cursor = dbapi_conn.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+    
     try:
         SQLModel.metadata.create_all(engine)
         with Session(engine) as session:
@@ -226,7 +236,17 @@ def session_fixture():
 
 @pytest.fixture
 async def async_session():
+    from sqlalchemy import event
+    
     engine = create_async_engine("sqlite+aiosqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+    
+    # Enable foreign key constraints for SQLite
+    @event.listens_for(engine.sync_engine, "connect")
+    def set_sqlite_pragma(dbapi_conn, connection_record):
+        cursor = dbapi_conn.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+    
     try:
         async with engine.begin() as conn:
             await conn.run_sync(SQLModel.metadata.create_all)
@@ -419,10 +439,6 @@ async def client_fixture(
             db_path = Path(db_dir) / "test.db"
             monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
             monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
-            # Set SQLite pragmas for better concurrency in tests
-            monkeypatch.setenv(
-                "LANGFLOW_SQLITE_PRAGMAS", '{"journal_mode": "WAL", "busy_timeout": "5000", "synchronous": "NORMAL"}'
-            )
             if "load_flows" in request.keywords:
                 shutil.copyfile(
                     pytest.BASIC_EXAMPLE_PATH, Path(load_flows_dir) / "c54f9130-f2fa-4a3e-b22a-3856d946351b.json"
