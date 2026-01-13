@@ -13,9 +13,9 @@ from datetime import timedelta
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import jwt
 import pytest
 from fastapi import HTTPException
-import jwt
 from jwt import InvalidTokenError
 from pydantic import SecretStr
 

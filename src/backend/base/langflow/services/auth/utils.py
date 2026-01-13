@@ -6,10 +6,10 @@ from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Annotated, Final
 from uuid import UUID
 
+import jwt
 from cryptography.fernet import Fernet
 from fastapi import Depends, HTTPException, Request, Security, WebSocketException, status
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
-import jwt
 from jwt import InvalidTokenError
 from lfx.log.logger import logger
 from lfx.services.deps import injectable_session_scope, session_scope
