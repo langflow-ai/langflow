@@ -210,9 +210,9 @@ class Settings(BaseSettings):
     publish_backend_bucket_name: str | None = "langflow-bucket" # should this be in a different bucket?
     """The bucket name for the publish backend."""
     publish_backend_prefix: str | None = "publish"
-    """The prefix for the publish backend used to publish the flow."""
+    """The prefix used by the publish backend to publish flows and projects."""
     publish_backend_prefix_deploy: str | None = "deploy"
-    """The prefix for the publish backend used to mark the artifact as ready for deployment."""
+    """The prefix used by the publish backend to deploy flows and projects."""
 
     celery_enabled: bool = False
 

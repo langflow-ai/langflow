@@ -16,6 +16,7 @@ from langflow.services.auth.utils import api_key_security
 from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.user.model import UserRead  # noqa: TC001
 from langflow.services.deps import get_settings_service, session_scope
+from langflow.services.publish.schema import PublishedFlowMetadata
 from langflow.services.schema import ServiceType
 
 if TYPE_CHECKING:
@@ -495,25 +496,14 @@ async def get_published_flow(
     """Dependency to retrieve a published flow and convert it to FlowRead format."""
     try:
         publish_service: PublishService = get_service(ServiceType.PUBLISH_SERVICE)
-
-        # 1. Verify existence and get metadata
-        versions = await publish_service.list_flow_versions(
-            user_id=api_key_user.id,
-            flow_id=flow_id
-        )
-        target_version = next((v for v in versions if v.version_id == version_id), None)
-
-        if not target_version:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Published version {version_id} not found for flow {flow_id}"
-            )
+        # we dont need to list versions, we can just get the metadata for the version we want
+        metadata = PublishedFlowMetadata(version_id=version_id)
 
         # 2. Fetch content
         flow_data_str = await publish_service.get_flow(
             user_id=api_key_user.id,
             flow_id=flow_id,
-            key=target_version
+            metadata=metadata
         )
 
         if not flow_data_str:
@@ -525,12 +515,12 @@ async def get_published_flow(
         return FlowRead(
             id=flow_id,
             user_id=api_key_user.id,
-            name=target_version.flow_name,
+            name=flow_data.get("name"),
             description=flow_data.get("description"),
             data=flow_data,
-            folder_id=None, # Published flows don't really have a folder context
+            folder_id=None, # published flows don't really have a folder context (yet?)
         )
-    except Exception as exc: # TODO: fix this garbage
+    except Exception as exc:
         if isinstance(exc, HTTPException):
             raise exc from exc
         raise HTTPException(status_code=500, detail=str(exc)) from exc

@@ -15,7 +15,6 @@ from pydantic import (
     field_serializer,
     field_validator,
     model_serializer,
-    model_validator,
 )
 from sqlalchemy import String, Uuid, column
 
@@ -495,25 +494,24 @@ class PublishedFlowRead(PublishedFlowMetadata):
     model_config = ConfigDict(extra="ignore")
 
 
+class DeployFlowCreate(BaseModel):
+    version_id: str = Field(..., description="The ID of the published version to deploy.")
+
+
+class DeployProjectCreate(BaseModel):
+    version_id: str = Field(..., description="The ID of the published version to deploy.")
+
+
 class ProjectFlowVersion(BaseModel):
     flow_id: UUID
     published_flow_version_id: str | None = Field(
         None, description="If provided, links to this published version. If null, includes latest flow data."
     )
-    published_flow_name: str | None = Field(None, description="The name of the flow at the time of publishing.")
-
-    @model_validator(mode="after")
-    def validate_published_version(self):
-        if bool(self.published_flow_version_id) != bool(self.published_flow_name):
-            msg = "published_flow_version_id and published_flow_name must both be provided or both be None."
-            raise ValueError(msg)
-        return self
 
     def to_tuple(self):
         return (
             self.flow_id,
             self.published_flow_version_id,
-            self.published_flow_name,
             )
 
     @classmethod
@@ -521,7 +519,6 @@ class ProjectFlowVersion(BaseModel):
         return (
             column("flow_id", Uuid),
             column("published_flow_version_id", String),
-            column("published_flow_name", String),
         )
 
 class PublishProjectCreate(BaseModel):

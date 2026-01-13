@@ -2,7 +2,7 @@ import io
 import json
 import zipfile
 from datetime import datetime, timezone
-from typing import Annotated
+from typing import Annotated, cast
 from urllib.parse import quote
 from uuid import UUID
 
@@ -14,9 +14,9 @@ from fastapi_pagination import Params
 from fastapi_pagination.ext.sqlmodel import apaginate
 from lfx.log.logger import logger
 from lfx.services.mcp_composer.service import MCPComposerService
-from sqlalchemy import CTE, Uuid, cast, or_, update
+from sqlalchemy import CTE, or_, update
 from sqlalchemy.orm import selectinload
-from sqlmodel import String, column, select, values
+from sqlmodel import select, values
 
 from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow, custom_params, remove_api_keys
 from langflow.api.utils.mcp.config_utils import validate_mcp_server_for_project
@@ -28,6 +28,7 @@ from langflow.api.v1.mcp_projects import (
     register_project_with_composer,
 )
 from langflow.api.v1.schemas import (
+    DeployProjectCreate,
     FlowListCreate,
     MessageResponse,
     ProjectFlowVersion,
@@ -52,9 +53,9 @@ from langflow.services.database.models.folder.model import (
 )
 from langflow.services.database.models.folder.pagination_model import FolderWithPaginatedFlows
 from langflow.services.deps import get_service, get_settings_service, get_storage_service
-from langflow.services.publish.schema import PublishedProjectMetadata
+from langflow.services.publish.schema import PublishedProjectMetadata, ReleaseStage
 from langflow.services.publish.service import PublishService
-from langflow.services.publish.utils import require_all_ids, require_valid_project, to_alnum_string
+from langflow.services.publish.utils import require_all_ids
 from langflow.services.schema import ServiceType
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
@@ -714,12 +715,11 @@ async def publish_project(
         raise HTTPException(status_code=400, detail="No flows provided in the project data.")
 
     try:
-        project = await _read_project_for_publish(session, project_id, current_user.id)
-        project_blob = await _create_project_blob(session, project, project_data)
-        # print(f"project_blob: {project_blob}") # for debugging
-        # return
+        db_project: Folder = await _read_project_for_publish(session, project_id, current_user.id)
+        project_blob: dict = await _create_project_blob(session, db_project, project_data)
+
         publish_service: PublishService = get_service(ServiceType.PUBLISH_SERVICE)
-        return await publish_service.put_project(
+        publish_data: PublishedProjectMetadata = await publish_service.put_project(
             user_id=current_user.id,
             project_id=project_id,
             project_blob=project_blob,
@@ -729,28 +729,68 @@ async def publish_project(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
+    return publish_data
 
-
-@router.get("/{project_id}/versions/", response_model=list[PublishedProjectRead], status_code=200)
-async def list_published_projects(
+@router.post("/{project_id}/deploy/", response_model=PublishedProjectRead, status_code=201)
+async def deploy_project(
     *,
     project_id: UUID,
+    body: DeployProjectCreate,
     current_user: CurrentActiveUser,
     ):
-    """List all published versions of the project."""
+    """Deploy a published project version to the configured object storage."""
     require_all_ids(current_user.id, project_id, "project")
+
     try:
         publish_service: PublishService = get_service(ServiceType.PUBLISH_SERVICE)
-        project_data_list = await publish_service.list_project_versions(
+        metadata = PublishedProjectMetadata(version_id=body.version_id)
+
+        project_blob: str = await publish_service.get_project(
             user_id=current_user.id,
             project_id=project_id,
+            metadata=metadata,
+            stage=ReleaseStage.PUBLISH,
+            )
+
+        return await publish_service.put_project(
+            user_id=current_user.id,
+            project_id=project_id,
+            project_blob=orjson.loads(project_blob),
+            publish_tag=body.version_id,
+            stage=ReleaseStage.DEPLOY,
             )
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
-    return project_data_list
+
+@router.get(
+    "/{project_id}/versions/",
+    response_model=list[PublishedProjectRead],
+    status_code=200,
+    )
+async def list_published_projects(
+    *,
+    project_id: UUID,
+    current_user: CurrentActiveUser,
+    stage: ReleaseStage = ReleaseStage.PUBLISH,
+    ):
+    """List all published versions of the project."""
+    require_all_ids(current_user.id, project_id, "project")
+    try:
+        publish_service: PublishService = get_service(ServiceType.PUBLISH_SERVICE)
+        project_versions = await publish_service.list_project_versions(
+            user_id=current_user.id,
+            project_id=project_id,
+            stage=stage,
+            )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+    return project_versions
 
 
 @router.get("/{project_id}/versions/{version_id}", response_model=dict, status_code=200)
@@ -759,44 +799,50 @@ async def read_published_project(
     project_id: UUID,
     current_user: CurrentActiveUser,
     version_id: str,
-    project_name: str,
+    stage: ReleaseStage = ReleaseStage.PUBLISH,
     ):
     """Retrieve a specific published project version."""
     require_all_ids(current_user.id, project_id, "project")
     try:
-        key = PublishedProjectMetadata(version_id=version_id, project_name=to_alnum_string(project_name))
+        metadata = PublishedProjectMetadata(version_id=version_id)
         publish_service: PublishService = get_service(ServiceType.PUBLISH_SERVICE)
-        project_data = await publish_service.get_project(
+        project_blob: str = await publish_service.get_project(
             user_id=current_user.id,
             project_id=project_id,
-            key=key,
+            metadata=metadata,
+            stage=stage,
         )
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
-    return orjson.loads(project_data)
+    return orjson.loads(project_blob)
 
 
-@router.delete("/{project_id}/versions/{version_id}", response_model=MessageResponse, status_code=200)
+@router.delete(
+    "/{project_id}/versions/{version_id}",
+    response_model=MessageResponse,
+    status_code=200,
+    )
 async def delete_published_project(
     *,
     project_id: UUID,
     current_user: CurrentActiveUser,
     version_id: str,
-    project_name: str,
-):
+    stage: ReleaseStage = ReleaseStage.PUBLISH,
+    ):
     """Delete a specific published project version."""
     require_all_ids(current_user.id, project_id, "project")
 
     try:
-        key = PublishedProjectMetadata(version_id=version_id, project_name=project_name)
+        metadata = PublishedProjectMetadata(version_id=version_id)
         publish_service: PublishService = get_service(ServiceType.PUBLISH_SERVICE)
         version_id = await publish_service.delete_project(
             user_id=current_user.id,
             project_id=project_id,
-            key=key,
+            metadata=metadata,
+            stage=stage,
         )
     except HTTPException:
         raise
@@ -841,7 +887,6 @@ async def _create_project_blob(
                 Flow.name,
                 Flow.description,
                 requested_flow.c.published_flow_version_id,
-                requested_flow.c.published_flow_name,
                 )
             .where(Flow.folder_id == project.id)
             .join(requested_flow, Flow.id == requested_flow.c.flow_id)
@@ -860,13 +905,12 @@ async def _create_project_blob(
             )
     # build project blob:
     # if a flow is provided with a
-    # published version id (and name)
-    # include that metadata
-    # (use it to build the object
-    # key for the published flow).
+    # published version id, use it
+    # to build the object key
+    # for the published flow.
     # otherwise, include the latest
     # flow data at the time of project publish.
-    flows_blob_list = []
+    flow_blobs = []
     for db_flow in db_flows:
         flow_entry = {
             "id": str(db_flow.id),
@@ -875,17 +919,15 @@ async def _create_project_blob(
         if db_flow.published_flow_version_id:
             flow_entry["published_version"] = {
                 "version_id": db_flow.published_flow_version_id,
-                # name at the time of flow publish
-                "name": db_flow.published_flow_name,
                 }
         else:
             # latest flow data at the time of project publish
             flow_entry["database_flow_data"] = db_flow.data
 
-        flows_blob_list.append(flow_entry)
+        flow_blobs.append(flow_entry)
 
     return {
         "name": project.name,
         "description": project.description,
-        "flows": flows_blob_list,
+        "flows": flow_blobs,
         }
