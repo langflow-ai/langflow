@@ -150,15 +150,15 @@ async def read_variables(
     current_user: CurrentActiveUser,
 ):
     """Read all variables.
-    
+
     Model provider credentials are validated when reading from the database.
     If a provider key is invalid, its default_fields are cleared to prevent
-    the provider from appearing enabled. 
-    
+    the provider from appearing enabled.
+
     Each variable in the response includes:
     - is_valid: bool | None - True if valid, False if invalid, None if not a provider credential
     - validation_error: str | None - Error message if validation failed
-    
+
     Returns a list of variables with validation status for model provider credentials.
     """
     variable_service = get_variable_service()
@@ -167,12 +167,12 @@ async def read_variables(
         raise TypeError(msg)
     try:
         all_variables = await variable_service.get_all(user_id=current_user.id, session=session)
-        
+
         # Filter out internal variables (those starting and ending with __)
         filtered_variables = [
             var for var in all_variables if not (var.name and var.name.startswith("__") and var.name.endswith("__"))
         ]
-        
+
         # Validate model provider credentials and clear default_fields if invalid
         for var in filtered_variables:
             if var.name in model_provider_variable_mapping.values() and var.type == CREDENTIAL_TYPE:
@@ -180,7 +180,7 @@ async def read_variables(
                 # Mark as a provider credential (for frontend to know to check validation)
                 var.is_valid = None  # Will be set to True/False below
                 var.validation_error = None  # Will be set if validation fails
-                
+
                 try:
                     # Get the raw Variable object to access the encrypted value
                     variable_obj = await variable_service.get_variable_object(
@@ -202,14 +202,14 @@ async def read_variables(
                     error_message = str(e)
                     var.is_valid = False
                     var.validation_error = error_message
-                    
+
                     # Clear default_fields to prevent provider from appearing enabled
                     logger.debug(
                         "Invalid key detected for variable %s, clearing default_fields: %s",
                         var.name,
                         error_message,
                     )
-                    
+
                     try:
                         # Get variable_obj if we don't have it yet (in case get_variable_object failed)
                         if variable_obj is None:
@@ -240,7 +240,7 @@ async def read_variables(
                 # Not a model provider credential, validation fields remain None
                 var.is_valid = None
                 var.validation_error = None
-        
+
         return filtered_variables
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
