@@ -178,7 +178,12 @@ class ServiceManager:
                     continue
 
             if dependency_type:
+                # Check for circular dependency (service depending on itself)
+                if dependency_type == service_name:
+                    msg = f"Circular dependency detected: {service_name.value} depends on itself"
+                    raise RuntimeError(msg)
                 # Recursively create dependency if not exists
+                # Note: Thread safety is handled by the caller's keyed lock context
                 if dependency_type not in self.services:
                     self._create_service(dependency_type)
                 dependencies[param_name] = self.services[dependency_type]

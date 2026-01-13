@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING
 from aiofile import async_open
 
 from lfx.log.logger import logger
-from lfx.services.base import Service
 from lfx.services.storage.service import StorageService
 
 if TYPE_CHECKING:
@@ -19,7 +18,7 @@ if TYPE_CHECKING:
 EXPECTED_PATH_PARTS = 2  # Path format: "flow_id/filename"
 
 
-class LocalStorageService(StorageService, Service):
+class LocalStorageService(StorageService):
     """A service class for handling local file storage operations."""
 
     def __init__(
