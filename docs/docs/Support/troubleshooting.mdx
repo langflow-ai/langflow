@@ -81,6 +81,16 @@ sudo apt-get install gcc
 
 If you experience an error from the `webrtcvad` package, run `uv pip install webrtcvad-wheels` in your virtual environment, and then retry the Langflow installation.
 
+### Protocol buffers (protoc) required for Intel-based Macs
+
+If you're installing Langflow on an Intel-based Mac, you may encounter installation errors if Protocol Buffers Compiler (`protoc`) is not installed.
+
+This requirement doesn't apply to Apple Silicon Macs on ARM64.
+
+To resolve this issue, install `protoc` using `brew install protobuf`.
+
+For more information, including alternative installation methods, see the [Protocol buffers installation documentation](https://protobuf.dev/installation/).
+
 ### C++ build tools required for Langflow Desktop on Windows
 
 Microsoft Windows installations of Langflow Desktop require a C++ compiler that may not be present on your system. If you receive a `C++ Build Tools Required!` error, follow the on-screen prompt to install Microsoft C++ Build Tools, or [install Microsoft Visual Studio](https://visualstudio.microsoft.com/downloads/).
