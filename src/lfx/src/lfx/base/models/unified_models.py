@@ -468,6 +468,9 @@ def get_language_model_options(
                     variable_service = get_variable_service()
                     if variable_service is None:
                         return set()
+                    import asyncio
+
+                    from langflow.services.auth import utils as auth_utils
                     from langflow.services.variable.constants import CREDENTIAL_TYPE
                     from langflow.services.variable.service import DatabaseVariableService
 
@@ -654,6 +657,9 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
                     variable_service = get_variable_service()
                     if variable_service is None:
                         return set()
+                    import asyncio
+
+                    from langflow.services.auth import utils as auth_utils
                     from langflow.services.variable.constants import CREDENTIAL_TYPE
                     from langflow.services.variable.service import DatabaseVariableService
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from typing import Annotated
@@ -9,10 +10,12 @@ from lfx.base.models.unified_models import (
     get_model_provider_variable_mapping,
     get_model_providers,
     get_unified_models_detailed,
+    validate_model_provider_key,
 )
 from pydantic import BaseModel, field_validator
 
 from langflow.api.utils import CurrentActiveUser, DbSession
+from langflow.services.auth import utils as auth_utils
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.deps import get_variable_service
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
@@ -209,7 +212,7 @@ async def get_enabled_providers(
                 status_code=500,
                 detail="Variable service is not an instance of DatabaseVariableService",
             )
-        # Get all credential variables for the user
+        # Get all variables to check which credential variables exist
         all_variables = await variable_service.get_all(user_id=current_user.id, session=session)
 
         # Get all credential variable names (regardless of default_fields)
