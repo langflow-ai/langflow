@@ -1,6 +1,12 @@
 export type TerminalMessage = {
   id: string;
-  type: "input" | "output" | "error" | "system" | "validated" | "validation_error";
+  type:
+    | "input"
+    | "output"
+    | "error"
+    | "system"
+    | "validated"
+    | "validation_error";
   content: string;
   timestamp: Date;
   metadata?: {

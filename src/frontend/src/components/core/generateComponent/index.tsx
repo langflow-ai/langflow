@@ -11,7 +11,9 @@ import { createFlowComponent, getNodeId } from "@/utils/reactflowUtils";
 import GenerateComponentTerminal from "./generate-component-terminal";
 import type { GenerateComponentPromptResponse, SubmitResult } from "./types";
 
-function extractSubmitResult(response: GenerateComponentPromptResponse): SubmitResult {
+function extractSubmitResult(
+  response: GenerateComponentPromptResponse,
+): SubmitResult {
   let content: string;
   if (response.result) {
     content = response.result;
@@ -45,15 +47,22 @@ function extractSubmitResult(response: GenerateComponentPromptResponse): SubmitR
 }
 
 const GenerateComponent = memo(function GenerateComponent() {
-  const isTerminalOpen = useGenerateComponentStore((state) => state.isTerminalOpen);
-  const setTerminalOpen = useGenerateComponentStore((state) => state.setTerminalOpen);
+  const isTerminalOpen = useGenerateComponentStore(
+    (state) => state.isTerminalOpen,
+  );
+  const setTerminalOpen = useGenerateComponentStore(
+    (state) => state.setTerminalOpen,
+  );
   const maxRetries = useGenerateComponentStore((state) => state.maxRetries);
-  const setMaxRetries = useGenerateComponentStore((state) => state.setMaxRetries);
+  const setMaxRetries = useGenerateComponentStore(
+    (state) => state.setMaxRetries,
+  );
 
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const version = useDarkStore((state) => state.version);
-  const { mutateAsync: executePrompt, isPending } = usePostGenerateComponentPrompt();
+  const { mutateAsync: executePrompt, isPending } =
+    usePostGenerateComponentPrompt();
   const { mutateAsync: validateComponentCode } = usePostValidateComponentCode();
   const addComponent = useAddComponent();
   const addFlow = useAddFlow();

@@ -31,11 +31,14 @@ export const CategoryGroup = memo(function CategoryGroup({
   showConfig,
   setShowConfig,
 }: CategoryGroupProps) {
-  const toggleTerminal = useGenerateComponentStore((state) => state.toggleTerminal);
+  const toggleTerminal = useGenerateComponentStore(
+    (state) => state.toggleTerminal,
+  );
   const { data: generateComponentConfigData } = useGetGenerateComponentConfig();
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
-  const isGenerateComponentConfigured = generateComponentConfigData?.configured ?? false;
+  const isGenerateComponentConfigured =
+    generateComponentConfigData?.configured ?? false;
 
   const handleGenerateComponentClick = () => {
     if (!isGenerateComponentConfigured) {
@@ -80,16 +83,11 @@ export const CategoryGroup = memo(function CategoryGroup({
                 }}
                 className="user-select-none flex cursor-pointer items-center gap-2"
               >
-                <ForwardedIconComponent
-                  name="Sparkles"
-                  className="h-4 w-4"
-                />
+                <ForwardedIconComponent name="Sparkles" className="h-4 w-4" />
                 <span className="whitespace-nowrap pr-1">
                   Generate component
                 </span>
-                <Badge
-                  className="ml-auto shrink-0 bg-accent-pink hover:bg-accent-pink text-white border-0 rounded-md px-1.5 py-0 text-[10px] font-medium"
-                >
+                <Badge className="ml-auto shrink-0 bg-accent-pink hover:bg-accent-pink text-white border-0 rounded-md px-1.5 py-0 text-[10px] font-medium">
                   New
                 </Badge>
               </div>

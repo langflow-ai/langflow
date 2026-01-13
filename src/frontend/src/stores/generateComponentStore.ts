@@ -26,17 +26,20 @@ type GenerateComponentStoreType = {
   setMaxRetries: (value: number) => void;
 };
 
-export const useGenerateComponentStore = create<GenerateComponentStoreType>((set) => ({
-  isTerminalOpen: false,
-  maxRetries: getStoredMaxRetries(),
-  setTerminalOpen: (open) => set({ isTerminalOpen: open }),
-  toggleTerminal: () => set((state) => ({ isTerminalOpen: !state.isTerminalOpen })),
-  setMaxRetries: (value) => {
-    try {
-      localStorage.setItem(STORAGE_KEY, value.toString());
-    } catch {
-      // localStorage not available
-    }
-    set({ maxRetries: value });
-  },
-}));
+export const useGenerateComponentStore = create<GenerateComponentStoreType>(
+  (set) => ({
+    isTerminalOpen: false,
+    maxRetries: getStoredMaxRetries(),
+    setTerminalOpen: (open) => set({ isTerminalOpen: open }),
+    toggleTerminal: () =>
+      set((state) => ({ isTerminalOpen: !state.isTerminalOpen })),
+    setMaxRetries: (value) => {
+      try {
+        localStorage.setItem(STORAGE_KEY, value.toString());
+      } catch {
+        // localStorage not available
+      }
+      set({ maxRetries: value });
+    },
+  }),
+);

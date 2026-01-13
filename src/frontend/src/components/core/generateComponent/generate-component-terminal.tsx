@@ -10,7 +10,11 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import CodeAreaModal from "@/modals/codeAreaModal";
 import { cn } from "@/utils/utils";
-import type { SubmitResult, TerminalMessage, GenerateComponentTerminalProps } from "./types";
+import type {
+  SubmitResult,
+  TerminalMessage,
+  GenerateComponentTerminalProps,
+} from "./types";
 
 const TERMINAL_MIN_HEIGHT = 200;
 const TERMINAL_MAX_HEIGHT = 600;
@@ -60,7 +64,10 @@ const HELP_TEXT = `Available commands:
 
 Type any other text to generate a component.`;
 
-const parseCommand = (input: string, context: CommandContext): CommandResult => {
+const parseCommand = (
+  input: string,
+  context: CommandContext,
+): CommandResult => {
   const trimmed = input.trim();
   const upper = trimmed.toUpperCase();
 
@@ -261,7 +268,10 @@ const ComponentResultLine = ({
             >
               <ForwardedIconComponent
                 name={isSavingToSidebar ? "Loader2" : "SaveAll"}
-                className={cn("h-3.5 w-3.5", isSavingToSidebar && "animate-spin")}
+                className={cn(
+                  "h-3.5 w-3.5",
+                  isSavingToSidebar && "animate-spin",
+                )}
               />
             </Button>
           </div>
@@ -379,7 +389,10 @@ const MessageLine = ({
         </div>
       )}
       <div
-        className={cn("font-mono text-sm whitespace-pre-wrap", getMessageStyle())}
+        className={cn(
+          "font-mono text-sm whitespace-pre-wrap",
+          getMessageStyle(),
+        )}
       >
         <span className="select-none opacity-70">{getPrefix()}</span>
         {message.content}
@@ -431,7 +444,8 @@ const GenerateComponentTerminal = ({
     [maxRetries],
   );
 
-  const [messages, setMessages] = useState<TerminalMessage[]>(getWelcomeMessages);
+  const [messages, setMessages] =
+    useState<TerminalMessage[]>(getWelcomeMessages);
   const [inputValue, setInputValue] = useState("");
   const [height, setHeight] = useState(TERMINAL_DEFAULT_HEIGHT);
   const [historyIndex, setHistoryIndex] = useState(-1);
@@ -569,7 +583,16 @@ const GenerateComponentTerminal = ({
         error instanceof Error ? error.message : "An error occurred";
       addMessage("error", errorMessage);
     }
-  }, [inputValue, isLoading, onSubmit, addMessage, addMessageWithMetadata, maxRetries, onMaxRetriesChange, handleClear]);
+  }, [
+    inputValue,
+    isLoading,
+    onSubmit,
+    addMessage,
+    addMessageWithMetadata,
+    maxRetries,
+    onMaxRetriesChange,
+    handleClear,
+  ]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -583,14 +606,16 @@ const GenerateComponentTerminal = ({
       if (history.length === 0) return;
 
       const textarea = e.currentTarget;
-      const isAtStart = textarea.selectionStart === 0 && textarea.selectionEnd === 0;
+      const isAtStart =
+        textarea.selectionStart === 0 && textarea.selectionEnd === 0;
       const isAtEnd = textarea.selectionStart === textarea.value.length;
 
       if (e.key === "ArrowUp" && isAtStart) {
         e.preventDefault();
-        const newIndex = historyIndex === -1
-          ? history.length - 1
-          : Math.max(0, historyIndex - 1);
+        const newIndex =
+          historyIndex === -1
+            ? history.length - 1
+            : Math.max(0, historyIndex - 1);
         setHistoryIndex(newIndex);
         setInputValue(history[newIndex]);
       } else if (e.key === "ArrowDown" && isAtEnd) {
