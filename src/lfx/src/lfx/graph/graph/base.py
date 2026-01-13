@@ -15,6 +15,9 @@ from functools import partial
 from itertools import chain
 from typing import TYPE_CHECKING, Any, cast
 
+from ag_ui.core import RunFinishedEvent, RunStartedEvent
+
+from lfx.events.observability.lifecycle_events import observable
 from lfx.exceptions.component import ComponentBuildError
 from lfx.graph.edge.base import CycleEdge, Edge
 from lfx.graph.graph.constants import Finish, lazy_load_vertex_dict
@@ -728,6 +731,7 @@ class Graph:
                 raise ValueError(msg)
             vertex.update_raw_params(inputs, overwrite=True)
 
+    @observable
     async def _run(
         self,
         *,
@@ -2309,3 +2313,22 @@ class Graph:
             predecessors = [i.id for i in self.get_predecessors(vertex)]
             result |= {vertex_id: {"successors": sucessors, "predecessors": predecessors}}
         return result
+
+    def raw_event_metrics(self, optional_fields: dict | None = None) -> dict:
+        if optional_fields is None:
+            optional_fields = {}
+        import time
+
+        return {"timestamp": time.time(), **optional_fields}
+
+    def before_callback_event(self, *args, **kwargs) -> RunStartedEvent:  # noqa: ARG002
+        metrics = {}
+        if hasattr(self, "raw_event_metrics"):
+            metrics = self.raw_event_metrics({"total_components": len(self.vertices)})
+        return RunStartedEvent(run_id=self._run_id, thread_id=self.flow_id, raw_event=metrics)
+
+    def after_callback_event(self, result: Any = None, *args, **kwargs) -> RunFinishedEvent:  # noqa: ARG002
+        metrics = {}
+        if hasattr(self, "raw_event_metrics"):
+            metrics = self.raw_event_metrics({"total_components": len(self.vertices)})
+        return RunFinishedEvent(run_id=self._run_id, thread_id=self.flow_id, result=None, raw_event=metrics)
