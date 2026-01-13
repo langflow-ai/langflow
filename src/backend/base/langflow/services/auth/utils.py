@@ -9,7 +9,8 @@ from uuid import UUID
 from cryptography.fernet import Fernet
 from fastapi import Depends, HTTPException, Request, Security, WebSocketException, status
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
-from jose import JWTError, jwt
+import jwt
+from jwt import InvalidTokenError
 from lfx.log.logger import logger
 from lfx.services.deps import injectable_session_scope, session_scope
 from lfx.services.settings.service import SettingsService
@@ -260,7 +261,7 @@ async def get_current_user_by_jwt(
                 detail="Invalid token details.",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-    except JWTError as e:
+    except InvalidTokenError as e:
         logger.debug("JWT validation failed: Invalid token format or signature")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -499,9 +500,10 @@ def create_user_api_key(user_id: UUID) -> dict:
 
 def get_user_id_from_token(token: str) -> UUID:
     try:
-        user_id = jwt.get_unverified_claims(token)["sub"]
+        claims = jwt.decode(token, options={"verify_signature": False})
+        user_id = claims["sub"]
         return UUID(user_id)
-    except (KeyError, JWTError, ValueError):
+    except (KeyError, InvalidTokenError, ValueError):
         return UUID(int=0)
 
 
@@ -563,7 +565,7 @@ async def create_refresh_token(refresh_token: str, db: AsyncSession):
 
         return await create_user_tokens(user_id, db)
 
-    except JWTError as e:
+    except InvalidTokenError as e:
         logger.exception("JWT decoding error")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
