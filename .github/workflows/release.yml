@@ -175,7 +175,7 @@ jobs:
           tag: ${{ inputs.release_tag }}
 
       - name: Fail if image exists in ghcr.io
-        if: steps.check-ghcr.outputs.exists == 'true'
+        if: steps.check-ghcr.outputs.tag.exists == 'found'
         run: |
           echo "❌ Image tag '${{ inputs.release_tag }}' already exists in ghcr.io"
           exit 1
@@ -189,7 +189,7 @@ jobs:
           tag: ${{ inputs.release_tag }}
 
       - name: Fail if image exists in docker.io
-        if: steps.check-dockerhub.outputs.exists == 'true'
+        if: steps.check-dockerhub.outputs.tag.exists == 'found'
         run: |
           echo "❌ Image tag '${{ inputs.release_tag }}' already exists in docker.io"
           exit 1
