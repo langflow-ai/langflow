@@ -40,6 +40,7 @@ import ToolbarModals from "./components/toolbar-modals";
 import useShortcuts from "./hooks/use-shortcuts";
 import ShortcutDisplay from "./shortcutDisplay";
 import ToolbarSelectItem from "./toolbarSelectItem";
+import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 
 const NodeToolbarComponent = memo(
   ({
@@ -467,10 +468,30 @@ const NodeToolbarComponent = memo(
       }
     };
 
+    const isCustomComponent = useMemo(() => {
+      const isCustom = data.type === "CustomComponent" && !data.node?.edited;
+      if (isCustom) {
+        data.node.edited = true;
+      }
+      return isCustom;
+    }, [data.type, data.node]);
+
     const renderToolbarButtons = useMemo(
       () => (
         <>
-          {nodeLength > 0 && (
+          {hasCode && !ENABLE_INSPECTION_PANEL && (
+            <ToolbarButton
+              className={isCustomComponent ? "animate-pulse-pink" : ""}
+              icon="Code"
+              label="Code"
+              onClick={() => setOpenModal(true)}
+              shortcut={shortcuts.find((s) =>
+                s.name.toLowerCase().startsWith("code"),
+              )}
+              dataTestId="code-button-modal"
+            />
+          )}
+          {nodeLength > 0 && !ENABLE_INSPECTION_PANEL && (
             <ToolbarButton
               icon="SlidersHorizontal"
               label="Controls"
