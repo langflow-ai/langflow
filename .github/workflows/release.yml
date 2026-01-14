@@ -129,7 +129,7 @@ jobs:
 
       - name: Check if release_tag matches a version in pyproject.toml
         run: |
-          if '${{ inputs.release_tag }}' !== '${{ steps.version.outputs.version }}'; then
+          if ${{ inputs.release_tag }} != ${{ steps.version.outputs.version }}; then
             echo "❌ release_tag '${{ inputs.release_tag }}' does not match pyproject.toml version '${{ steps.version.outputs.version }}'"
             exit 1
           fi
