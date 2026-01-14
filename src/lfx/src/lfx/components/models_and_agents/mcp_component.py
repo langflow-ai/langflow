@@ -20,7 +20,7 @@ from lfx.io.schema import flatten_schema, schema_to_langflow_inputs
 from lfx.log.logger import logger
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
-from lfx.services.deps import get_settings_service, get_storage_service, session_scope
+from lfx.services.deps import get_storage_service
 
 
 def resolve_mcp_config(
@@ -185,6 +185,12 @@ class MCPToolsComponent(ComponentWithCache):
             return schema_inputs
 
     async def update_tool_list(self, mcp_server_value=None):
+        # Import at function level to avoid scoping issues
+        from langflow.services.auth import utils as auth_utils
+        from langflow.services.database.models.variable.model import Variable
+        from langflow.services.deps import get_settings_service, session_scope
+        from sqlmodel import select
+
         # Accepts mcp_server_value as dict {name, config} or uses self.mcp_server
         mcp_server = mcp_server_value if mcp_server_value is not None else getattr(self, "mcp_server", None)
         server_name = None
@@ -294,12 +300,44 @@ class MCPToolsComponent(ComponentWithCache):
                         existing_headers = existing_dict
                     merged_headers = {**existing_headers, **component_headers_dict}
                     server_config["headers"] = merged_headers
+            # Get request_variables from graph context for global variable resolution
+            request_variables = None
+            if hasattr(self, "graph") and self.graph and hasattr(self.graph, "context"):
+                request_variables = self.graph.context.get("request_variables")
+
+            # If no request_variables from HTTP headers, load from database
+            if not request_variables:
+                try:
+                    settings_service = get_settings_service()
+
+                    async with session_scope() as db:
+                        result = await db.execute(select(Variable).where(Variable.user_id == self.user_id))
+                        variables = result.scalars().all()
+
+                        request_variables = {}
+                        for var in variables:
+                            # Decrypt both GENERIC and CREDENTIAL types
+                            if var.name and var.value:
+                                try:
+                                    decrypted_value = auth_utils.decrypt_api_key(
+                                        var.value, settings_service=settings_service
+                                    )
+                                    request_variables[var.name] = decrypted_value
+                                except Exception as decrypt_error:  # noqa: BLE001
+                                    # If decryption fails, try using the value as-is (might be plaintext)
+                                    await logger.adebug(
+                                        f"Decryption failed for variable '{var.name}': {decrypt_error}. Using as-is."
+                                    )
+                                    request_variables[var.name] = var.value
+                except Exception as e:  # noqa: BLE001
+                    await logger.awarning(f"Failed to load global variables for MCP component: {e}")
 
             _, tool_list, tool_cache = await update_tools(
                 server_name=server_name,
                 server_config=server_config,
                 mcp_stdio_client=self.stdio_client,
                 mcp_streamable_http_client=self.streamable_http_client,
+                request_variables=request_variables,
             )
 
             self.tool_names = [tool.name for tool in tool_list if hasattr(tool, "name")]
