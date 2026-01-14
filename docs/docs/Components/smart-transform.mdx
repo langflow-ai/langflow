@@ -12,9 +12,9 @@ import PartialDevModeWindows from '@site/docs/_partial-dev-mode-windows.mdx';
 This component has been renamed multiple times.
 Its previous names include **Lambda Filter** and **Smart Function**.
 
-The **Smart Transform** component uses an LLM to generate a Lambda function to filter or transform structured data or messages based on natural language instructions.
+The **Smart Transform** component uses an LLM and natural language instructions to generate a Lambda function that can filter or transform [`Data`](/data-types#data), [`DataFrame`](/data-types#dataframe), or [`Message`](/data-types#message) input.
 You must connect this component to a [language model component](/components-models), which is used to generate a function based on the natural language instructions you provide in the **Instructions** parameter.
-The LLM runs the function against the data or message input, and then outputs the results as [`Data`](/data-types#data), [`DataFrame`](/data-types#dataframe), or [`Message`](/data-types#message).
+The LLM runs the function against the input, and then outputs the results as [`Data`](/data-types#data), [`DataFrame`](/data-types#dataframe), or [`Message`](/data-types#message).
 
 :::tip
 Provide brief, clear instructions, focusing on the desired outcome or specific actions, such as `Filter the data to only include items where the 'status' is 'active'`.
@@ -35,7 +35,7 @@ From there, the LLM generates a filter function that extracts email addresses fr
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data | Data | Input parameter. The structured data or messages to filter or transform using a Lambda function. Accepts [`Data`](/data-types#data), [`DataFrame`](/data-types#dataframe), or [`Message`](/data-types#message) types. |
+| data | Data | Input parameter. The [`Data`](/data-types#data), [`DataFrame`](/data-types#dataframe), or [`Message`](/data-types#message) input to filter or transform using the generated Lambda function. |
 | model | Language Model | Input parameter. Connect [`LanguageModel`](/data-types#languagemodel) output from a **Language Model** component. |
 | filter_instruction | Instructions | Input parameter. The natural language instructions for how to filter or transform the data. The LLM uses these instructions to create a Lambda function. |
 | sample_size | Sample Size | Input parameter. For large datasets, the number of characters to sample from the dataset head and tail. Only applied if the dataset meets or exceeds `max_size`. Default: `1000`. |
