@@ -34,7 +34,7 @@ from lfx.graph.graph.utils import (
 )
 from lfx.graph.schema import InterfaceComponentTypes, RunOutputs
 from lfx.graph.utils import log_vertex_build
-from lfx.graph.vertex.base import Vertex, VertexStates
+from lfx.graph.vertex.base import Vertex, VertexStates, generate_reference_slug
 from lfx.graph.vertex.schema import NodeData, NodeTypeEnum
 from lfx.graph.vertex.vertex_types import ComponentVertex, InterfaceVertex, StateVertex
 from lfx.log.logger import LogConfig, configure, logger
@@ -1372,6 +1372,51 @@ class Graph:
         except KeyError as e:
             msg = f"Vertex {vertex_id} not found"
             raise ValueError(msg) from e
+
+    def get_vertex_by_slug(self, slug: str) -> Vertex | None:
+        """Get a vertex by its reference slug.
+
+        Args:
+            slug: The reference slug (e.g., "HTTPRequest_1")
+
+        Returns:
+            The vertex with that slug, or None if not found
+        """
+        if not hasattr(self, "_slug_to_vertex"):
+            self._build_slug_index()
+
+        return self._slug_to_vertex.get(slug)
+
+    def _build_slug_index(self) -> None:
+        """Build the slug -> vertex index.
+
+        Note: This index is built lazily on first call to get_vertex_by_slug()
+        and is NOT automatically invalidated when vertices are added or removed.
+        This is intentional because:
+        1. Slugs are primarily used during graph execution, after graph preparation
+        2. The graph structure is stable during execution
+        3. Rebuilding on every change would be inefficient
+
+        If you need fresh slugs after modifying the graph structure, call this
+        method directly or delete the _slug_to_vertex attribute.
+        """
+        self._slug_to_vertex: dict[str, Vertex] = {}
+        slug_counts: dict[str, int] = {}
+
+        for vertex in self.vertices:
+            display_name = vertex.display_name or "Node"
+            base_slug = generate_reference_slug(display_name)
+
+            # Handle duplicates by adding suffix
+            if base_slug in slug_counts:
+                slug_counts[base_slug] += 1
+                slug = f"{base_slug}_{slug_counts[base_slug]}"
+            else:
+                slug_counts[base_slug] = 0
+                slug = base_slug
+
+            vertex.reference_slug = slug
+            self._slug_to_vertex[slug] = vertex
 
     def get_root_of_group_node(self, vertex_id: str) -> Vertex:
         """Returns the root of a group node."""
