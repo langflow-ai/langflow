@@ -20,7 +20,7 @@ from lfx.io.schema import flatten_schema, schema_to_langflow_inputs
 from lfx.log.logger import logger
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
-from lfx.services.deps import get_storage_service
+from lfx.services.deps import get_storage_service, session_scope
 
 
 def resolve_mcp_config(
@@ -188,7 +188,7 @@ class MCPToolsComponent(ComponentWithCache):
         # Import at function level to avoid scoping issues
         from langflow.services.auth import utils as auth_utils
         from langflow.services.database.models.variable.model import Variable
-        from langflow.services.deps import get_settings_service, session_scope
+        from langflow.services.deps import get_settings_service
         from sqlmodel import select
 
         # Accepts mcp_server_value as dict {name, config} or uses self.mcp_server
