@@ -131,9 +131,9 @@ export default function GlobalVariableModal({
     } else {
       // Check if this is a model provider variable based on the original variable name
       // The backend validates based on the existing variable name, not the new name
-      const isModelProviderVariable = Object.values(PROVIDER_VARIABLE_MAPPING).includes(
-        initialData.name,
-      );
+      const isModelProviderVariable = Object.values(
+        PROVIDER_VARIABLE_MAPPING,
+      ).includes(initialData.name);
 
       updateVariable(
         {
