@@ -28,9 +28,9 @@ export default function InspectionPanelHeader({
   });
 
   const hasCode = useMemo(
-      () => Object.keys(data.node!.template).includes("code"),
-      [data.node],
-    );
+    () => Object.keys(data.node!.template).includes("code"),
+    [data.node],
+  );
 
   const handleOpenCode = useCallback(() => {
     if (hasCode) {
@@ -49,12 +49,12 @@ export default function InspectionPanelHeader({
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
 
   const isCustomComponent = useMemo(() => {
-      const isCustom = data.type === "CustomComponent" && !data.node?.edited;
-      if (isCustom) {
-        data.node.edited = true;
-      }
-      return isCustom;
-    }, [data.type, data.node]);
+    const isCustom = data.type === "CustomComponent" && !data.node?.edited;
+    if (isCustom) {
+      data.node.edited = true;
+    }
+    return isCustom;
+  }, [data.type, data.node]);
 
   return (
     <>
@@ -78,15 +78,15 @@ export default function InspectionPanelHeader({
           {hasCode && (
             <ShadTooltip content="View Code" side="left">
               <ToolbarButton
-              className={isCustomComponent? "animate-pulse-pink" : ""}
-              icon="Code"
-              label="Code"
-              onClick={handleOpenCode}
-              shortcut={shortcuts.find((s) =>
-                s.name.toLowerCase().startsWith("code"),
-              )}
-              dataTestId="code-button-modal"
-            />
+                className={isCustomComponent ? "animate-pulse-pink" : ""}
+                icon="Code"
+                label="Code"
+                onClick={handleOpenCode}
+                shortcut={shortcuts.find((s) =>
+                  s.name.toLowerCase().startsWith("code"),
+                )}
+                dataTestId="code-button-modal"
+              />
             </ShadTooltip>
           )}
           {onClose && (
