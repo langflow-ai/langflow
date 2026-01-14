@@ -2,7 +2,7 @@
 <html lang="en" dir="ltr" class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-API-Reference/api-reference-api-examples" data-has-hydrated="false">
 <head>
 <meta charset="UTF-8">
-<meta name="generator" content="Docusaurus v3.8.1">
+<meta name="generator" content="Docusaurus v3.9.2">
 <title data-rh="true">Get started with the Langflow API | Langflow Documentation</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://docs.langflow.org/api-reference-api-examples"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="Get started with the Langflow API | Langflow Documentation"><meta data-rh="true" name="description" content="You can use the Langflow API for programmatic interactions with Langflow, such as the following:"><meta data-rh="true" property="og:description" content="You can use the Langflow API for programmatic interactions with Langflow, such as the following:"><link data-rh="true" rel="icon" href="/img/favicon.ico"><link data-rh="true" rel="canonical" href="https://docs.langflow.org/api-reference-api-examples"><link data-rh="true" rel="alternate" href="https://docs.langflow.org/api-reference-api-examples" hreflang="en"><link data-rh="true" rel="alternate" href="https://docs.langflow.org/api-reference-api-examples" hreflang="x-default"><link data-rh="true" rel="preconnect" href="https://UZK6BDPCVY-dsn.algolia.net" crossorigin="anonymous"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Get started with the Langflow API","item":"https://docs.langflow.org/api-reference-api-examples"}]}</script><link rel="preconnect" href="https://www.google-analytics.com">
 <link rel="preconnect" href="https://www.googletagmanager.com">
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-SLQFLQ3KPT"></script>
@@ -23,15 +23,15 @@
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>function gtag(){dataLayer.push(arguments)}window.dataLayer=window.dataLayer||[],gtag("consent","default",{ad_storage:"denied",ad_user_data:"denied",ad_personalization:"denied",analytics_storage:"denied"})</script>
-<script>!function(){function e(){if(void 0!==window.truste&&window.truste.cma){var e=window.truste.cma.callApi("getConsent",window.location.href)||{},n=1===e[2],t=1===e[3];gtag("consent","update",{ad_storage:n?"granted":"denied",ad_user_data:n?"granted":"denied",ad_personalization:n?"granted":"denied",analytics_storage:t?"granted":"denied"})}}window.addEventListener&&(window.addEventListener("cm_data_subject_consent_changed",e),window.addEventListener("cm_consent_preferences_set",e)),"complete"===document.readyState?e():window.addEventListener("load",e)}()</script><link rel="stylesheet" href="/assets/css/styles.5b49702d.css">
-<script src="/assets/js/runtime~main.2a97c5f6.js" defer="defer"></script>
-<script src="/assets/js/main.e03e853e.js" defer="defer"></script>
+<script>!function(){function e(){if(void 0!==window.truste&&window.truste.cma){var e=window.truste.cma.callApi("getConsent",window.location.href)||{},n=1===e[2],t=1===e[3];gtag("consent","update",{ad_storage:n?"granted":"denied",ad_user_data:n?"granted":"denied",ad_personalization:n?"granted":"denied",analytics_storage:t?"granted":"denied"})}}window.addEventListener&&(window.addEventListener("cm_data_subject_consent_changed",e),window.addEventListener("cm_consent_preferences_set",e)),"complete"===document.readyState?e():window.addEventListener("load",e)}()</script><link rel="stylesheet" href="/assets/css/styles.403c62aa.css">
+<script src="/assets/js/runtime~main.a683cc49.js" defer="defer"></script>
+<script src="/assets/js/main.d08ead96.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
-<svg xmlns="http://www.w3.org/2000/svg" style="display: none;"><defs>
+<svg style="display: none;"><defs>
 <symbol id="theme-svg-external-link" viewBox="0 0 24 24"><path fill="currentColor" d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
 </defs></svg>
-<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{const c=new URLSearchParams(window.location.search).entries();for(var[t,e]of c)if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id="__docusaurus"><div role="region" aria-label="Skip to main content"><a class="skipToContent_fXgn" href="#__docusaurus_skipToContent_fallback">Skip to main content</a></div><nav aria-label="Main" class="theme-layout-navbar navbar navbar--fixed-top navbarHideable_m1mJ"><div class="navbar__inner"><div class="theme-layout-navbar-left navbar__items"><button aria-label="Toggle navigation bar" aria-expanded="false" class="navbar__toggle clean-btn" type="button"><svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><path stroke="currentColor" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2" d="M4 7h22M4 15h22M4 23h22"></path></svg></button><a class="navbar__brand" href="/"><div class="navbar__logo"><img src="/img/lf-docs-light.svg" alt="Langflow" class="themedComponent_mlkZ themedComponent--light_NVdE"><img src="/img/lf-docs-dark.svg" alt="Langflow" class="themedComponent_mlkZ themedComponent--dark_xIcU"></div></a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><a href="https://github.com/langflow-ai/langflow" target="_blank" class="navbar__item navbar__link header-github-link" data-event="UI Interaction" data-action="clicked" data-channel="docs" data-element-id="social-github" data-namespace="header" data-platform-title="Langflow"></a><a href="https://twitter.com/langflow_ai" target="_blank" class="navbar__item navbar__link header-twitter-link" data-event="UI Interaction" data-action="clicked" data-channel="docs" data-element-id="social-twitter" data-namespace="header" data-platform-title="Langflow"></a><a href="https://discord.gg/EqksyE2EX9" target="_blank" class="navbar__item navbar__link header-discord-link" data-event="UI Interaction" data-action="clicked" data-channel="docs" data-element-id="social-discord" data-namespace="header" data-platform-title="Langflow"></a><div class="toggle_vylO colorModeToggle_DEke"><button class="clean-btn toggleButton_gllP toggleButtonDisabled_aARS" type="button" disabled="" title="system mode" aria-label="Switch between dark and light mode (currently system mode)"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" class="toggleIcon_g3eP lightToggleIcon_pyhR"><path fill="currentColor" d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"></path></svg><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" class="toggleIcon_g3eP darkToggleIcon_wfgR"><path fill="currentColor" d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"></path></svg><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" class="toggleIcon_g3eP systemToggleIcon_QzmC"><path fill="currentColor" d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"></path></svg></button></div><div class="navbarSearchContainer_Bca1"><button type="button" class="DocSearch DocSearch-Button" aria-label="Search (Command+K)"><span class="DocSearch-Button-Container"><svg width="20" height="20" class="DocSearch-Search-Icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M14.386 14.386l4.0877 4.0877-4.0877-4.0877c-2.9418 2.9419-7.7115 2.9419-10.6533 0-2.9419-2.9418-2.9419-7.7115 0-10.6533 2.9418-2.9419 7.7115-2.9419 10.6533 0 2.9419 2.9418 2.9419 7.7115 0 10.6533z" stroke="currentColor" fill="none" fill-rule="evenodd" stroke-linecap="round" stroke-linejoin="round"></path></svg><span class="DocSearch-Button-Placeholder">Search</span></span><span class="DocSearch-Button-Keys"></span></button></div></div></div><div role="presentation" class="navbar-sidebar__backdrop"></div></nav><div id="__docusaurus_skipToContent_fallback" class="theme-layout-main main-wrapper mainWrapper_z2l0"><div class="docsWrapper_hBAB"><button aria-label="Scroll back to top" class="clean-btn theme-back-to-top-button backToTopButton_sjWU" type="button"></button><div class="docRoot_UBD9"><aside class="theme-doc-sidebar-container docSidebarContainer_YfHR"><div class="sidebarViewport_aRkj"><div class="sidebar_njMd sidebarWithHideableNavbar_wUlq"><a tabindex="-1" class="sidebarLogo_isFc" href="/"><img src="/img/lf-docs-light.svg" alt="Langflow" class="themedComponent_mlkZ themedComponent--light_NVdE"><img src="/img/lf-docs-dark.svg" alt="Langflow" class="themedComponent_mlkZ themedComponent--dark_xIcU"></a><nav aria-label="Docs sidebar" class="menu thin-scrollbar menu_SIkG"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/">Get started</a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/concepts-overview">Flows</a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/agents">Agents</a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/mcp-client">Model Context Protocol (MCP)</a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/api-keys-and-authentication">Develop</a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/deployment-overview">Deploy</a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/concepts-components">Components reference</a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class="menu__list-item-collapsible"><a class="menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role="button" aria-expanded="true" href="/api-reference-api-examples">API reference</a></div><ul class="menu__list"><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current="page" tabindex="0" href="/api-reference-api-examples">Get started with the Langflow API</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/typescript-client">Use the TypeScript client</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/api-flows-run">Flow trigger endpoints</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/api-openai-responses">OpenAI Responses endpoints</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/api-flows">Flow management endpoints</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/api-files">Files endpoints</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/api-projects">Projects endpoints</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/api-logs">Logs endpoints</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/api-monitor">Monitor endpoints</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/api-build">Build endpoints</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/api-users">Users endpoints</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/api">Langflow API specification</a></li></ul></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/contributing-community">Contribute</a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/troubleshoot">Support</a></div></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 sidebar-ad">
+<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{const c=new URLSearchParams(window.location.search).entries();for(var[t,e]of c)if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id="__docusaurus"><div role="region" aria-label="Skip to main content"><a class="skipToContent_fXgn" href="#__docusaurus_skipToContent_fallback">Skip to main content</a></div><nav aria-label="Main" class="theme-layout-navbar navbar navbar--fixed-top navbarHideable_m1mJ"><div class="navbar__inner"><div class="theme-layout-navbar-left navbar__items"><button aria-label="Toggle navigation bar" aria-expanded="false" class="navbar__toggle clean-btn" type="button"><svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><path stroke="currentColor" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2" d="M4 7h22M4 15h22M4 23h22"></path></svg></button><a class="navbar__brand" href="/"><div class="navbar__logo"><img src="/img/lf-docs-light.svg" alt="Langflow" class="themedComponent_mlkZ themedComponent--light_NVdE"><img src="/img/lf-docs-dark.svg" alt="Langflow" class="themedComponent_mlkZ themedComponent--dark_xIcU"></div></a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><a href="https://github.com/langflow-ai/langflow" target="_blank" class="navbar__item navbar__link header-github-link" data-event="UI Interaction" data-action="clicked" data-channel="docs" data-element-id="social-github" data-namespace="header" data-platform-title="Langflow"></a><a href="https://twitter.com/langflow_ai" target="_blank" class="navbar__item navbar__link header-twitter-link" data-event="UI Interaction" data-action="clicked" data-channel="docs" data-element-id="social-twitter" data-namespace="header" data-platform-title="Langflow"></a><a href="https://discord.gg/EqksyE2EX9" target="_blank" class="navbar__item navbar__link header-discord-link" data-event="UI Interaction" data-action="clicked" data-channel="docs" data-element-id="social-discord" data-namespace="header" data-platform-title="Langflow"></a><div class="toggle_vylO colorModeToggle_DEke"><button class="clean-btn toggleButton_gllP toggleButtonDisabled_aARS" type="button" disabled="" title="system mode" aria-label="Switch between dark and light mode (currently system mode)"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" class="toggleIcon_g3eP lightToggleIcon_pyhR"><path fill="currentColor" d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"></path></svg><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" class="toggleIcon_g3eP darkToggleIcon_wfgR"><path fill="currentColor" d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"></path></svg><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" class="toggleIcon_g3eP systemToggleIcon_QzmC"><path fill="currentColor" d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"></path></svg></button></div><div class="navbarSearchContainer_Bca1"><button type="button" class="DocSearch DocSearch-Button" aria-label="Search (Meta+k)" aria-keyshortcuts="Meta+k"><span class="DocSearch-Button-Container"><svg width="20" height="20" class="DocSearch-Search-Icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8" stroke="currentColor" fill="none" stroke-width="1.4"></circle><path d="m21 21-4.3-4.3" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg><span class="DocSearch-Button-Placeholder">Search</span></span><span class="DocSearch-Button-Keys"></span></button></div></div></div><div role="presentation" class="navbar-sidebar__backdrop"></div></nav><div id="__docusaurus_skipToContent_fallback" class="theme-layout-main main-wrapper mainWrapper_z2l0"><div class="docsWrapper_hBAB"><button aria-label="Scroll back to top" class="clean-btn theme-back-to-top-button backToTopButton_sjWU" type="button"></button><div class="docRoot_UBD9"><aside class="theme-doc-sidebar-container docSidebarContainer_YfHR"><div class="sidebarViewport_aRkj"><div class="sidebar_njMd sidebarWithHideableNavbar_wUlq"><a tabindex="-1" class="sidebarLogo_isFc" href="/"><img src="/img/lf-docs-light.svg" alt="Langflow" class="themedComponent_mlkZ themedComponent--light_NVdE"><img src="/img/lf-docs-dark.svg" alt="Langflow" class="themedComponent_mlkZ themedComponent--dark_xIcU"></a><nav aria-label="Docs sidebar" class="menu thin-scrollbar menu_SIkG"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/"><span title="Get started" class="categoryLinkLabel_W154">Get started</span></a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/concepts-overview"><span title="Flows" class="categoryLinkLabel_W154">Flows</span></a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/agents"><span title="Agents" class="categoryLinkLabel_W154">Agents</span></a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/mcp-client"><span title="Model Context Protocol (MCP)" class="categoryLinkLabel_W154">Model Context Protocol (MCP)</span></a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/api-keys-and-authentication"><span title="Develop" class="categoryLinkLabel_W154">Develop</span></a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/deployment-overview"><span title="Deploy" class="categoryLinkLabel_W154">Deploy</span></a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/concepts-components"><span title="Components reference" class="categoryLinkLabel_W154">Components reference</span></a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role="button" aria-expanded="true" href="/api-reference-api-examples"><span title="API reference" class="categoryLinkLabel_W154">API reference</span></a></div><ul class="menu__list"><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current="page" tabindex="0" href="/api-reference-api-examples"><span title="Get started with the Langflow API" class="linkLabel_WmDU">Get started with the Langflow API</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/typescript-client"><span title="Use the TypeScript client" class="linkLabel_WmDU">Use the TypeScript client</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/api-flows-run"><span title="Flow trigger endpoints" class="linkLabel_WmDU">Flow trigger endpoints</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/api-openai-responses"><span title="OpenAI Responses endpoints" class="linkLabel_WmDU">OpenAI Responses endpoints</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/api-flows"><span title="Flow management endpoints" class="linkLabel_WmDU">Flow management endpoints</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/api-files"><span title="Files endpoints" class="linkLabel_WmDU">Files endpoints</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/api-projects"><span title="Projects endpoints" class="linkLabel_WmDU">Projects endpoints</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/api-logs"><span title="Logs endpoints" class="linkLabel_WmDU">Logs endpoints</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/api-monitor"><span title="Monitor endpoints" class="linkLabel_WmDU">Monitor endpoints</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/api-build"><span title="Build endpoints" class="linkLabel_WmDU">Build endpoints</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/api-users"><span title="Users endpoints" class="linkLabel_WmDU">Users endpoints</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/api"><span title="Langflow API specification" class="linkLabel_WmDU">Langflow API specification</span></a></li></ul></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/contributing-community"><span title="Contribute" class="categoryLinkLabel_W154">Contribute</span></a></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/troubleshoot"><span title="Support" class="categoryLinkLabel_W154">Support</span></a></div></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 sidebar-ad">
         <a href="https://www.langflow.org/desktop" target="_blank" class="menu__link">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <g clip-path="url(#clip0_1645_37)">
@@ -52,310 +52,310 @@
 <!-- -->
 <p>You can use the Langflow API for programmatic interactions with Langflow, such as the following:</p>
 <ul>
-<li>Create and edit flows, including file management for flows.</li>
-<li>Develop applications that use your flows.</li>
-<li>Develop custom components.</li>
-<li>Build Langflow as a dependency of a larger application, codebase, or service.</li>
-<li>Contribute to the overall Langflow codebase.</li>
+<li class="">Create and edit flows, including file management for flows.</li>
+<li class="">Develop applications that use your flows.</li>
+<li class="">Develop custom components.</li>
+<li class="">Build Langflow as a dependency of a larger application, codebase, or service.</li>
+<li class="">Contribute to the overall Langflow codebase.</li>
 </ul>
 <p>To view and test all available endpoints, you can access the Langflow API&#x27;s OpenAPI specification at your Langflow deployment&#x27;s <code>/docs</code> endpoint, such as <code>http://localhost:7860/docs</code>.</p>
-<div class="theme-admonition theme-admonition-tip admonition_xJq3 alert alert--success"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 12 16"><path fill-rule="evenodd" d="M6.5 0C3.48 0 1 2.19 1 5c0 .92.55 2.25 1 3 1.34 2.25 1.78 2.78 2 4v1h5v-1c.22-1.22.66-1.75 2-4 .45-.75 1-2.08 1-3 0-2.81-2.48-5-5.5-5zm3.64 7.48c-.25.44-.47.8-.67 1.11-.86 1.41-1.25 2.06-1.45 3.23-.02.05-.02.11-.02.17H5c0-.06 0-.13-.02-.17-.2-1.17-.59-1.83-1.45-3.23-.2-.31-.42-.67-.67-1.11C2.44 6.78 2 5.65 2 5c0-2.2 2.02-4 4.5-4 1.22 0 2.36.42 3.22 1.19C10.55 2.94 11 3.94 11 5c0 .66-.44 1.78-.86 2.48zM4 14h5c-.23 1.14-1.3 2-2.5 2s-2.27-.86-2.5-2z"></path></svg></span>Try it</div><div class="admonitionContent_BuS1"><p>For an example of the Langflow API in a script, see the <a href="/get-started-quickstart">Langflow quickstart</a>.</p><p>The quickstart demonstrates how to get automatically generated code snippets for your flows, use a script to run a flow, and extract data from the Langfow API response.</p></div></div>
-<h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="form-langflow-api-requests">Form Langflow API requests<a href="#form-langflow-api-requests" class="hash-link" aria-label="Direct link to Form Langflow API requests" title="Direct link to Form Langflow API requests">​</a></h2>
+<div class="theme-admonition theme-admonition-tip admonition_xJq3 alert alert--success"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 12 16"><path fill-rule="evenodd" d="M6.5 0C3.48 0 1 2.19 1 5c0 .92.55 2.25 1 3 1.34 2.25 1.78 2.78 2 4v1h5v-1c.22-1.22.66-1.75 2-4 .45-.75 1-2.08 1-3 0-2.81-2.48-5-5.5-5zm3.64 7.48c-.25.44-.47.8-.67 1.11-.86 1.41-1.25 2.06-1.45 3.23-.02.05-.02.11-.02.17H5c0-.06 0-.13-.02-.17-.2-1.17-.59-1.83-1.45-3.23-.2-.31-.42-.67-.67-1.11C2.44 6.78 2 5.65 2 5c0-2.2 2.02-4 4.5-4 1.22 0 2.36.42 3.22 1.19C10.55 2.94 11 3.94 11 5c0 .66-.44 1.78-.86 2.48zM4 14h5c-.23 1.14-1.3 2-2.5 2s-2.27-.86-2.5-2z"></path></svg></span>Try it</div><div class="admonitionContent_BuS1"><p>For an example of the Langflow API in a script, see the <a class="" href="/get-started-quickstart">Langflow quickstart</a>.</p><p>The quickstart demonstrates how to get automatically generated code snippets for your flows, use a script to run a flow, and extract data from the Langfow API response.</p></div></div>
+<h2 class="anchor anchorTargetHideOnScrollNavbar_vjPI" id="form-langflow-api-requests">Form Langflow API requests<a href="#form-langflow-api-requests" class="hash-link" aria-label="Direct link to Form Langflow API requests" title="Direct link to Form Langflow API requests" translate="no">​</a></h2>
 <p>While individual options vary by endpoint, all Langflow API requests share some commonalities, like a URL, method, parameters, and authentication.</p>
 <p>As an example of a Langflow API request, the following curl command calls the <code>/v1/run</code> endpoint, and it passes a runtime override (<code>tweaks</code>) to the flow&#x27;s <strong>Chat Output</strong> component:</p>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->14</span><div style="display:inline-block;margin-left:16px"><span>curl --request POST \</span></div></div><div><span class="ch-code-line-number">_<!-- -->14</span><div style="display:inline-block;margin-left:16px"><span>  --url &quot;$LANGFLOW_SERVER_URL/api/v1/run/$FLOW_ID?stream=false&quot; \</span></div></div><div><span class="ch-code-line-number">_<!-- -->14</span><div style="display:inline-block;margin-left:16px"><span>  --header &quot;Content-Type: application/json&quot; \</span></div></div><div><span class="ch-code-line-number">_<!-- -->14</span><div style="display:inline-block;margin-left:16px"><span>  --header &quot;x-api-key: $LANGFLOW_API_KEY&quot; \</span></div></div><div><span class="ch-code-line-number">_<!-- -->14</span><div style="display:inline-block;margin-left:16px"><span>  --data &#x27;{</span></div></div><div><span class="ch-code-line-number">_<!-- -->14</span><div style="display:inline-block;margin-left:16px"><span>  &quot;input_value&quot;: &quot;hello world!&quot;,</span></div></div><div><span class="ch-code-line-number">_<!-- -->14</span><div style="display:inline-block;margin-left:16px"><span>  &quot;output_type&quot;: &quot;chat&quot;,</span></div></div><div><span class="ch-code-line-number">_<!-- -->14</span><div style="display:inline-block;margin-left:16px"><span>  &quot;input_type&quot;: &quot;chat&quot;,</span></div></div><div><span class="ch-code-line-number">_<!-- -->14</span><div style="display:inline-block;margin-left:16px"><span>  &quot;tweaks&quot;: {</span></div></div><div><span class="ch-code-line-number">_<!-- -->14</span><div style="display:inline-block;margin-left:16px"><span>    &quot;ChatOutput-6zcZt&quot;: {</span></div></div><div><span class="ch-code-line-number">_<!-- -->14</span><div style="display:inline-block;margin-left:16px"><span>      &quot;should_store_message&quot;: true</span></div></div><div><span class="ch-code-line-number">_<!-- -->14</span><div style="display:inline-block;margin-left:16px"><span>    }</span></div></div><div><span class="ch-code-line-number">_<!-- -->14</span><div style="display:inline-block;margin-left:16px"><span>  }</span></div></div><div><span class="ch-code-line-number">_<!-- -->14</span><div style="display:inline-block;margin-left:16px"><span>}&#x27;</span></div></div><br></code></div></div>
-<h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="base-url">Base URL<a href="#base-url" class="hash-link" aria-label="Direct link to Base URL" title="Direct link to Base URL">​</a></h3>
+<h3 class="anchor anchorTargetHideOnScrollNavbar_vjPI" id="base-url">Base URL<a href="#base-url" class="hash-link" aria-label="Direct link to Base URL" title="Direct link to Base URL" translate="no">​</a></h3>
 <p>By default, local deployments serve the Langflow API at <code>http://localhost:7860/api</code>.</p>
 <p>Remotely hosted Langflow deployments are available at the domain set by the hosting service, such as <code>http://IP_OR_DNS/api</code> or <code>http://IP_OR_DNS:LANGFLOW_PORT/api</code>.</p>
-<p>You can configure the Langflow port number in the <code>LANGFLOW_PORT</code> <a href="/environment-variables">environment variable</a>.</p>
+<p>You can configure the Langflow port number in the <code>LANGFLOW_PORT</code> <a class="" href="/environment-variables">environment variable</a>.</p>
 <ul>
-<li><code>https://UUID.ngrok.app/api</code></li>
-<li><code>http://IP_OR_DNS/api</code></li>
-<li><code>http://IP_OR_DNS:LANGFLOW_PORT/api</code></li>
+<li class=""><code>https://UUID.ngrok.app/api</code></li>
+<li class=""><code>http://IP_OR_DNS/api</code></li>
+<li class=""><code>http://IP_OR_DNS:LANGFLOW_PORT/api</code></li>
 </ul>
-<h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="authentication">Authentication<a href="#authentication" class="hash-link" aria-label="Direct link to Authentication" title="Direct link to Authentication">​</a></h3>
+<h3 class="anchor anchorTargetHideOnScrollNavbar_vjPI" id="authentication">Authentication<a href="#authentication" class="hash-link" aria-label="Direct link to Authentication" title="Direct link to Authentication" translate="no">​</a></h3>
 <p>In Langflow versions 1.5 and later, most API endpoints require authentication with a Langflow API key in either an <code>x-api-key</code> header or query parameter.
-For more information, see <a href="/api-keys-and-authentication">API keys and authentication</a>.</p>
+For more information, see <a class="" href="/api-keys-and-authentication">API keys and authentication</a>.</p>
 <p>As with any API, follow industry best practices for storing and referencing sensitive credentials.
-For example, you can <a href="#set-environment-variables">set environment variables</a> for your API keys, and then reference those environment variables in your API requests.</p>
-<h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="methods-paths-and-parameters">Methods, paths, and parameters<a href="#methods-paths-and-parameters" class="hash-link" aria-label="Direct link to Methods, paths, and parameters" title="Direct link to Methods, paths, and parameters">​</a></h3>
+For example, you can <a href="#set-environment-variables" class="">set environment variables</a> for your API keys, and then reference those environment variables in your API requests.</p>
+<h3 class="anchor anchorTargetHideOnScrollNavbar_vjPI" id="methods-paths-and-parameters">Methods, paths, and parameters<a href="#methods-paths-and-parameters" class="hash-link" aria-label="Direct link to Methods, paths, and parameters" title="Direct link to Methods, paths, and parameters" translate="no">​</a></h3>
 <p>Langflow API requests use various methods, paths, path parameters, query parameters, and body parameters.
 The specific requirements and options depend on the endpoint that you want to call.</p>
 <p>For example, to create a flow, you pass a JSON-formatted flow definition to <code>POST /v1/flows</code>.
 Then, to run your flow, you call <code>POST /v1/run/$FLOW_ID</code> with optional run parameters in the request body.</p>
-<h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="api-versions">API versions<a href="#api-versions" class="hash-link" aria-label="Direct link to API versions" title="Direct link to API versions">​</a></h3>
+<h3 class="anchor anchorTargetHideOnScrollNavbar_vjPI" id="api-versions">API versions<a href="#api-versions" class="hash-link" aria-label="Direct link to API versions" title="Direct link to API versions" translate="no">​</a></h3>
 <p>The Langflow API serves <code>/v1</code> and <code>/v2</code> endpoints.</p>
 <p>Some endpoints only exist under a single version and some exist under both the <code>/v1</code> and <code>/v2</code> versions.</p>
 <p>If a request fails or has an unexpected result, make sure your endpoint path has the correct version.</p>
-<h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="set-environment-variables">Set environment variables<a href="#set-environment-variables" class="hash-link" aria-label="Direct link to Set environment variables" title="Direct link to Set environment variables">​</a></h2>
+<h2 class="anchor anchorTargetHideOnScrollNavbar_vjPI" id="set-environment-variables">Set environment variables<a href="#set-environment-variables" class="hash-link" aria-label="Direct link to Set environment variables" title="Direct link to Set environment variables" translate="no">​</a></h2>
 <p>You can store commonly used values in environment variables to facilitate reuse, simplify token rotation, and securely reference sensitive values.</p>
 <p>You can use any method you prefer to set environment variables, such as <code>export</code>, <code>.env</code>, <code>zshrc</code>, or <code>.curlrc</code>.
 Then, reference those environment variables in your API requests.
 For example:</p>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->22</span><div style="display:inline-block;margin-left:16px"><span># Set environment variables</span></div></div><div><span class="ch-code-line-number">_<!-- -->22</span><div style="display:inline-block;margin-left:16px"><span>export LANGFLOW_API_KEY=&quot;sk...&quot;</span></div></div><div><span class="ch-code-line-number">_<!-- -->22</span><div style="display:inline-block;margin-left:16px"><span>export LANGFLOW_SERVER_URL=&quot;https://localhost:7860&quot;</span></div></div><div><span class="ch-code-line-number">_<!-- -->22</span><div style="display:inline-block;margin-left:16px"><span>export FLOW_ID=&quot;359cd752-07ea-46f2-9d3b-a4407ef618da&quot;</span></div></div><div><span class="ch-code-line-number">_<!-- -->22</span><div style="display:inline-block;margin-left:16px"><span>export PROJECT_ID=&quot;1415de42-8f01-4f36-bf34-539f23e47466&quot;</span></div></div><div><span class="ch-code-line-number">_<!-- -->22</span><div style="display:inline-block;margin-left:16px"><span>export LANGFLOW_API_KEY=&quot;sk-...&quot;</span></div></div><div><span class="ch-code-line-number">_<!-- -->22</span><div style="display:inline-block;margin-left:16px"><span></span></div></div><div><span class="ch-code-line-number">_<!-- -->22</span><div style="display:inline-block;margin-left:16px"><span># Use environment variables in API requests</span></div></div><div><span class="ch-code-line-number">_<!-- -->22</span><div style="display:inline-block;margin-left:16px"><span>curl --request POST \</span></div></div><div><span class="ch-code-line-number">_<!-- -->22</span><div style="display:inline-block;margin-left:16px"><span>  --url &quot;$LANGFLOW_SERVER_URL/api/v1/run/$FLOW_ID$?stream=false&quot; \</span></div></div><div><span class="ch-code-line-number">_<!-- -->22</span><div style="display:inline-block;margin-left:16px"><span>  --header &quot;Content-Type: application/json&quot; \</span></div></div><div><span class="ch-code-line-number">_<!-- -->22</span><div style="display:inline-block;margin-left:16px"><span>  --header &quot;x-api-key: $LANGFLOW_API_KEY&quot; \</span></div></div><div><span class="ch-code-line-number">_<!-- -->22</span><div style="display:inline-block;margin-left:16px"><span>  --data &#x27;{</span></div></div><div><span class="ch-code-line-number">_<!-- -->22</span><div style="display:inline-block;margin-left:16px"><span>  &quot;input_value&quot;: &quot;hello world!&quot;,</span></div></div><div><span class="ch-code-line-number">_<!-- -->22</span><div style="display:inline-block;margin-left:16px"><span>  &quot;output_type&quot;: &quot;chat&quot;,</span></div></div><div><span class="ch-code-line-number">_<!-- -->22</span><div style="display:inline-block;margin-left:16px"><span>  &quot;input_type&quot;: &quot;chat&quot;,</span></div></div><div><span class="ch-code-line-number">_<!-- -->22</span><div style="display:inline-block;margin-left:16px"><span>  &quot;tweaks&quot;: {</span></div></div><div><span class="ch-code-line-number">_<!-- -->22</span><div style="display:inline-block;margin-left:16px"><span>    &quot;ChatOutput-6zcZt&quot;: {</span></div></div><div><span class="ch-code-line-number">_<!-- -->22</span><div style="display:inline-block;margin-left:16px"><span>      &quot;should_store_message&quot;: true</span></div></div><div><span class="ch-code-line-number">_<!-- -->22</span><div style="display:inline-block;margin-left:16px"><span>    }</span></div></div><div><span class="ch-code-line-number">_<!-- -->22</span><div style="display:inline-block;margin-left:16px"><span>  }</span></div></div><div><span class="ch-code-line-number">_<!-- -->22</span><div style="display:inline-block;margin-left:16px"><span>}&#x27;</span></div></div><br></code></div></div>
-<p>Commonly used values in Langflow API requests include your <a href="#base-url">Langflow server URL</a>, <a href="#authentication">Langflow API keys</a>, flow IDs, and <a href="/api-projects#read-projects">project IDs</a>.</p>
-<p>You can retrieve flow IDs from the <a href="/concepts-publish#api-access"><strong>API access</strong> pane</a>, in a flow&#x27;s URL, and with <a href="/api-flows#read-flows"><code>GET /flows</code></a>.</p>
-<h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="try-some-langflow-api-requests">Try some Langflow API requests<a href="#try-some-langflow-api-requests" class="hash-link" aria-label="Direct link to Try some Langflow API requests" title="Direct link to Try some Langflow API requests">​</a></h2>
+<p>Commonly used values in Langflow API requests include your <a href="#base-url" class="">Langflow server URL</a>, <a href="#authentication" class="">Langflow API keys</a>, flow IDs, and <a class="" href="/api-projects#read-projects">project IDs</a>.</p>
+<p>You can retrieve flow IDs from the <a class="" href="/concepts-publish#api-access"><strong>API access</strong> pane</a>, in a flow&#x27;s URL, and with <a class="" href="/api-flows#read-flows"><code>GET /flows</code></a>.</p>
+<h2 class="anchor anchorTargetHideOnScrollNavbar_vjPI" id="try-some-langflow-api-requests">Try some Langflow API requests<a href="#try-some-langflow-api-requests" class="hash-link" aria-label="Direct link to Try some Langflow API requests" title="Direct link to Try some Langflow API requests" translate="no">​</a></h2>
 <p>Once you have your Langflow server URL, try calling these endpoints that return Langflow metadata.</p>
-<h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="health-check">Health check<a href="#health-check" class="hash-link" aria-label="Direct link to Health check" title="Direct link to Health check">​</a></h3>
+<h3 class="anchor anchorTargetHideOnScrollNavbar_vjPI" id="health-check">Health check<a href="#health-check" class="hash-link" aria-label="Direct link to Health check" title="Direct link to Health check" translate="no">​</a></h3>
 <p>Returns the health status of the Langflow database and chat services:</p>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>curl -X GET \</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>  &quot;$LANGFLOW_SERVER_URL/health_check&quot; \</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>  -H &quot;accept: application/json&quot;</span></div></div><br></code></div></div>
 <details class="details_lb9f alert alert--info details_b_Ee" data-collapsed="true"><summary>Result</summary><div><div class="collapsibleContent_i85q"><div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>{</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>  &quot;status&quot;: &quot;ok&quot;,</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>  &quot;chat&quot;: &quot;ok&quot;,</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>  &quot;db&quot;: &quot;ok&quot;</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>}</span></div></div><br></code></div></div></div></div></details>
 <p>Langflow provides an additional <code>GET /health</code> endpoint.
 This endpoint is served by uvicorn before Langflow is fully initialized, so it&#x27;s not reliable for checking Langflow service health.</p>
-<h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="get-version">Get version<a href="#get-version" class="hash-link" aria-label="Direct link to Get version" title="Direct link to Get version">​</a></h3>
+<h3 class="anchor anchorTargetHideOnScrollNavbar_vjPI" id="get-version">Get version<a href="#get-version" class="hash-link" aria-label="Direct link to Get version" title="Direct link to Get version" translate="no">​</a></h3>
 <p>Returns the current Langflow API version:</p>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>curl -X GET \</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>  &quot;$LANGFLOW_SERVER_URL/api/v1/version&quot; \</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>  -H &quot;accept: application/json&quot;</span></div></div><br></code></div></div>
 <details class="details_lb9f alert alert--info details_b_Ee" data-collapsed="true"><summary>Result</summary><div><div class="collapsibleContent_i85q"><div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>{</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>    &quot;version&quot;: &quot;1.6.0&quot;,</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>    &quot;main_version&quot;: &quot;1.6.0&quot;,</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>    &quot;package&quot;: &quot;Langflow&quot;</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>}</span></div></div><br></code></div></div></div></div></details>
-<h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="get-configuration">Get configuration<a href="#get-configuration" class="hash-link" aria-label="Direct link to Get configuration" title="Direct link to Get configuration">​</a></h3>
+<h3 class="anchor anchorTargetHideOnScrollNavbar_vjPI" id="get-configuration">Get configuration<a href="#get-configuration" class="hash-link" aria-label="Direct link to Get configuration" title="Direct link to Get configuration" translate="no">​</a></h3>
 <p>Returns configuration details for your Langflow deployment.
-Requires a <a href="/api-keys-and-authentication">Langflow API key</a>.</p>
+Requires a <a class="" href="/api-keys-and-authentication">Langflow API key</a>.</p>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>curl -X GET \</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>  &quot;$LANGFLOW_SERVER_URL/api/v1/config&quot; \</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>  -H &quot;accept: application/json&quot; \</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>  -H &quot;x-api-key: $LANGFLOW_API_KEY&quot;</span></div></div><br></code></div></div>
 <details class="details_lb9f alert alert--info details_b_Ee" data-collapsed="true"><summary>Result</summary><div><div class="collapsibleContent_i85q"><div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->20</span><div style="display:inline-block;margin-left:16px"><span>{</span></div></div><div><span class="ch-code-line-number">_<!-- -->20</span><div style="display:inline-block;margin-left:16px"><span>  &quot;feature_flags&quot;: {</span></div></div><div><span class="ch-code-line-number">_<!-- -->20</span><div style="display:inline-block;margin-left:16px"><span>    &quot;mvp_components&quot;: false</span></div></div><div><span class="ch-code-line-number">_<!-- -->20</span><div style="display:inline-block;margin-left:16px"><span>  },</span></div></div><div><span class="ch-code-line-number">_<!-- -->20</span><div style="display:inline-block;margin-left:16px"><span>  &quot;serialization_max_items_length&quot;: 1000,</span></div></div><div><span class="ch-code-line-number">_<!-- -->20</span><div style="display:inline-block;margin-left:16px"><span>  &quot;serialization_max_text_length&quot;: 6000,</span></div></div><div><span class="ch-code-line-number">_<!-- -->20</span><div style="display:inline-block;margin-left:16px"><span>  &quot;frontend_timeout&quot;: 0,</span></div></div><div><span class="ch-code-line-number">_<!-- -->20</span><div style="display:inline-block;margin-left:16px"><span>  &quot;auto_saving&quot;: true,</span></div></div><div><span class="ch-code-line-number">_<!-- -->20</span><div style="display:inline-block;margin-left:16px"><span>  &quot;auto_saving_interval&quot;: 1000,</span></div></div><div><span class="ch-code-line-number">_<!-- -->20</span><div style="display:inline-block;margin-left:16px"><span>  &quot;health_check_max_retries&quot;: 5,</span></div></div><div><span class="ch-code-line-number">_<!-- -->20</span><div style="display:inline-block;margin-left:16px"><span>  &quot;max_file_size_upload&quot;: 1024,</span></div></div><div><span class="ch-code-line-number">_<!-- -->20</span><div style="display:inline-block;margin-left:16px"><span>  &quot;webhook_polling_interval&quot;: 5000,</span></div></div><div><span class="ch-code-line-number">_<!-- -->20</span><div style="display:inline-block;margin-left:16px"><span>  &quot;public_flow_cleanup_interval&quot;: 3600,</span></div></div><div><span class="ch-code-line-number">_<!-- -->20</span><div style="display:inline-block;margin-left:16px"><span>  &quot;public_flow_expiration&quot;: 86400,</span></div></div><div><span class="ch-code-line-number">_<!-- -->20</span><div style="display:inline-block;margin-left:16px"><span>  &quot;event_delivery&quot;: &quot;streaming&quot;,</span></div></div><div><span class="ch-code-line-number">_<!-- -->20</span><div style="display:inline-block;margin-left:16px"><span>  &quot;webhook_auth_enable&quot;: false,</span></div></div><div><span class="ch-code-line-number">_<!-- -->20</span><div style="display:inline-block;margin-left:16px"><span>  &quot;voice_mode_available&quot;: false,</span></div></div><div><span class="ch-code-line-number">_<!-- -->20</span><div style="display:inline-block;margin-left:16px"><span>  &quot;default_folder_name&quot;: &quot;Starter Project&quot;,</span></div></div><div><span class="ch-code-line-number">_<!-- -->20</span><div style="display:inline-block;margin-left:16px"><span>  &quot;hide_getting_started_progress&quot;: false</span></div></div><div><span class="ch-code-line-number">_<!-- -->20</span><div style="display:inline-block;margin-left:16px"><span>}</span></div></div><br></code></div></div></div></div></details>
-<h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="get-all-components">Get all components<a href="#get-all-components" class="hash-link" aria-label="Direct link to Get all components" title="Direct link to Get all components">​</a></h3>
+<h3 class="anchor anchorTargetHideOnScrollNavbar_vjPI" id="get-all-components">Get all components<a href="#get-all-components" class="hash-link" aria-label="Direct link to Get all components" title="Direct link to Get all components" translate="no">​</a></h3>
 <p>Returns a dictionary of all Langflow components.
-Requires a <a href="/api-keys-and-authentication">Langflow API key</a>.</p>
+Requires a <a class="" href="/api-keys-and-authentication">Langflow API key</a>.</p>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>curl -X GET \</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>  &quot;$LANGFLOW_SERVER_URL/api/v1/all&quot; \</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>  -H &quot;accept: application/json&quot; \</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>  -H &quot;x-api-key: $LANGFLOW_API_KEY&quot;</span></div></div><br></code></div></div>
-<h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="available-endpoints">Available endpoints<a href="#available-endpoints" class="hash-link" aria-label="Direct link to Available endpoints" title="Direct link to Available endpoints">​</a></h2>
+<h2 class="anchor anchorTargetHideOnScrollNavbar_vjPI" id="available-endpoints">Available endpoints<a href="#available-endpoints" class="hash-link" aria-label="Direct link to Available endpoints" title="Direct link to Available endpoints" translate="no">​</a></h2>
 <p>Because you can run Langflow as either an IDE (frontend and backend) or a runtime (headless, backend-only), it serves endpoints that support frontend and backend operations.
 Many endpoints are for orchestration between the frontend and backend, reading and writing to the Langflow database, or enabling frontend functionality, like the <strong>Playground</strong>.
 Unless you are contributing to the Langflow codebase, you won&#x27;t directly call most of the Langflow endpoints.</p>
-<p>For application development, the most commonly used endpoints are the <code>/run</code> and <code>/webhook</code> <a href="/api-flows-run">flow trigger endpoints</a>.
+<p>For application development, the most commonly used endpoints are the <code>/run</code> and <code>/webhook</code> <a class="" href="/api-flows-run">flow trigger endpoints</a>.
 For some use cases, you might use some other endpoints, such as the <code>/files</code> endpoints to use files in flows.</p>
 <p>To help you explore the available endpoints, the following lists are sorted by primary use case, although some endpoints might support multiple use cases.</p>
-<div class="tabs-container tabList__CuJ"><ul role="tablist" aria-orientation="horizontal" class="tabs"><li role="tab" tabindex="0" aria-selected="true" class="tabs__item tabItem_LNqP tabs__item--active">Application development</li><li role="tab" tabindex="-1" aria-selected="false" class="tabs__item tabItem_LNqP">Codebase development</li><li role="tab" tabindex="-1" aria-selected="false" class="tabs__item tabItem_LNqP">Deprecated</li></ul><div class="margin-top--md"><div role="tabpanel" class="tabItem_Ymn6"><p>The following endpoints are useful for developing applications with Langflow and administering Langflow deployments with one or more users.
+<div class="theme-tabs-container tabs-container tabList__CuJ"><ul role="tablist" aria-orientation="horizontal" class="tabs"><li role="tab" tabindex="0" aria-selected="true" class="tabs__item tabItem_LNqP tabs__item--active">Application development</li><li role="tab" tabindex="-1" aria-selected="false" class="tabs__item tabItem_LNqP">Codebase development</li><li role="tab" tabindex="-1" aria-selected="false" class="tabs__item tabItem_LNqP">Deprecated</li></ul><div class="margin-top--md"><div role="tabpanel" class="tabItem_Ymn6"><p>The following endpoints are useful for developing applications with Langflow and administering Langflow deployments with one or more users.
 You will most often use the flow trigger endpoints.
 Other endpoints are helpful for specific use cases, such as administration and flow management in runtime deployments that don&#x27;t have a visual editor.</p><ul>
-<li>
-<p><a href="/api-flows-run">Flow trigger endpoints</a>:</p>
+<li class="">
+<p><a class="" href="/api-flows-run">Flow trigger endpoints</a>:</p>
 <ul>
-<li>POST <code>/v1/run/{flow_id_or_name}</code>: Run a flow.</li>
-<li>POST <code>/v1/run/advanced/{flow_id}</code>: Advanced run with explicit <code>inputs</code>, <code>outputs</code>, <code>tweaks</code>, and optional <code>session_id</code>.</li>
-<li>POST <code>/v1/webhook/{flow_id_or_name}</code>: Trigger a flow via webhook payload.</li>
+<li class="">POST <code>/v1/run/{flow_id_or_name}</code>: Run a flow.</li>
+<li class="">POST <code>/v1/run/advanced/{flow_id}</code>: Advanced run with explicit <code>inputs</code>, <code>outputs</code>, <code>tweaks</code>, and optional <code>session_id</code>.</li>
+<li class="">POST <code>/v1/webhook/{flow_id_or_name}</code>: Trigger a flow via webhook payload.</li>
 </ul>
 </li>
-<li>
-<p><a href="/api-openai-responses">OpenAI Responses API</a>:</p>
+<li class="">
+<p><a class="" href="/api-openai-responses">OpenAI Responses API</a>:</p>
 <ul>
-<li>POST <code>/v1/responses</code>: Execute flows using an OpenAI-compatible request format.</li>
+<li class="">POST <code>/v1/responses</code>: Execute flows using an OpenAI-compatible request format.</li>
 </ul>
 </li>
-<li>
+<li class="">
 <p>Deployment details:</p>
 <ul>
-<li>GET <code>/v1/version</code>: Return Langflow version. See <a href="/api-reference-api-examples#get-version">Get version</a>.</li>
-<li>GET <code>/v1/config</code>: Return deployment configuration. See <a href="/api-reference-api-examples#get-configuration">Get configuration</a>.</li>
-<li>GET <code>/health_check</code>: Health check endpoint that validates database and chat service connectivity. Returns 500 status if any service is unavailable.</li>
+<li class="">GET <code>/v1/version</code>: Return Langflow version. See <a class="" href="/api-reference-api-examples#get-version">Get version</a>.</li>
+<li class="">GET <code>/v1/config</code>: Return deployment configuration. See <a class="" href="/api-reference-api-examples#get-configuration">Get configuration</a>.</li>
+<li class="">GET <code>/health_check</code>: Health check endpoint that validates database and chat service connectivity. Returns 500 status if any service is unavailable.</li>
 </ul>
 </li>
-<li>
-<p><a href="/api-projects">Projects endpoints</a>:</p>
+<li class="">
+<p><a class="" href="/api-projects">Projects endpoints</a>:</p>
 <ul>
-<li>POST <code>/v1/projects/</code>: Create a project.</li>
-<li>GET <code>/v1/projects/</code>: List projects.</li>
-<li>GET <code>/v1/projects/{project_id}</code>: Read a project (with paginated flows support).</li>
-<li>PATCH <code>/v1/projects/{project_id}</code>: Update project info and membership.</li>
-<li>DELETE <code>/v1/projects/{project_id}</code>: Delete a project.</li>
-<li>GET <code>/v1/projects/download/{project_id}</code>: Export all flows in a project as ZIP.</li>
-<li>POST <code>/v1/projects/upload/</code>: Import a project ZIP (creates project and flows).</li>
-<li>GET <code>/v1/starter-projects/</code>: Return a list of templates.</li>
+<li class="">POST <code>/v1/projects/</code>: Create a project.</li>
+<li class="">GET <code>/v1/projects/</code>: List projects.</li>
+<li class="">GET <code>/v1/projects/{project_id}</code>: Read a project (with paginated flows support).</li>
+<li class="">PATCH <code>/v1/projects/{project_id}</code>: Update project info and membership.</li>
+<li class="">DELETE <code>/v1/projects/{project_id}</code>: Delete a project.</li>
+<li class="">GET <code>/v1/projects/download/{project_id}</code>: Export all flows in a project as ZIP.</li>
+<li class="">POST <code>/v1/projects/upload/</code>: Import a project ZIP (creates project and flows).</li>
+<li class="">GET <code>/v1/starter-projects/</code>: Return a list of templates.</li>
 </ul>
 </li>
-<li>
-<p><a href="/api-files">Files endpoints</a>:</p>
+<li class="">
+<p><a class="" href="/api-files">Files endpoints</a>:</p>
 <ul>
-<li>Files (v1)<!-- -->
+<li class="">Files (v1)<!-- -->
 <ul>
-<li>POST <code>/v1/files/upload/{flow_id}</code>: Upload a file to a specific flow.</li>
-<li>GET <code>/v1/files/download/{flow_id}/{file_name}</code>: Download a file from a flow.</li>
-<li>GET <code>/v1/files/images/{flow_id}/{file_name}</code>: Stream an image from a flow.</li>
-<li>GET <code>/v1/files/profile_pictures/{folder_name}/{file_name}</code>: Get a profile picture asset.</li>
-<li>GET <code>/v1/files/profile_pictures/list</code>: List available profile picture assets.</li>
-<li>GET <code>/v1/files/list/{flow_id}</code>: List files for a flow.</li>
-<li>DELETE <code>/v1/files/delete/{flow_id}/{file_name}</code>: Delete a file from a flow.</li>
+<li class="">POST <code>/v1/files/upload/{flow_id}</code>: Upload a file to a specific flow.</li>
+<li class="">GET <code>/v1/files/download/{flow_id}/{file_name}</code>: Download a file from a flow.</li>
+<li class="">GET <code>/v1/files/images/{flow_id}/{file_name}</code>: Stream an image from a flow.</li>
+<li class="">GET <code>/v1/files/profile_pictures/{folder_name}/{file_name}</code>: Get a profile picture asset.</li>
+<li class="">GET <code>/v1/files/profile_pictures/list</code>: List available profile picture assets.</li>
+<li class="">GET <code>/v1/files/list/{flow_id}</code>: List files for a flow.</li>
+<li class="">DELETE <code>/v1/files/delete/{flow_id}/{file_name}</code>: Delete a file from a flow.</li>
 </ul>
 </li>
-<li>Files (v2)<!-- -->
+<li class="">Files (v2)<!-- -->
 <ul>
-<li>POST <code>/v2/files</code> (alias <code>/v2/files/</code>): Upload a file owned by the current user.</li>
-<li>GET <code>/v2/files</code> (alias <code>/v2/files/</code>): List files owned by the current user.</li>
-<li>DELETE <code>/v2/files/batch/</code>: Delete multiple files by IDs.</li>
-<li>POST <code>/v2/files/batch/</code>: Download multiple files as a ZIP by IDs.</li>
-<li>GET <code>/v2/files/{file_id}</code>: Download a file by ID (or return raw content internally).</li>
-<li>PUT <code>/v2/files/{file_id}</code>: Edit a file name by ID.</li>
-<li>DELETE <code>/v2/files/{file_id}</code>: Delete a file by ID.</li>
-<li>DELETE <code>/v2/files</code> (alias <code>/v2/files/</code>): Delete all files for the current user.</li>
+<li class="">POST <code>/v2/files</code> (alias <code>/v2/files/</code>): Upload a file owned by the current user.</li>
+<li class="">GET <code>/v2/files</code> (alias <code>/v2/files/</code>): List files owned by the current user.</li>
+<li class="">DELETE <code>/v2/files/batch/</code>: Delete multiple files by IDs.</li>
+<li class="">POST <code>/v2/files/batch/</code>: Download multiple files as a ZIP by IDs.</li>
+<li class="">GET <code>/v2/files/{file_id}</code>: Download a file by ID (or return raw content internally).</li>
+<li class="">PUT <code>/v2/files/{file_id}</code>: Edit a file name by ID.</li>
+<li class="">DELETE <code>/v2/files/{file_id}</code>: Delete a file by ID.</li>
+<li class="">DELETE <code>/v2/files</code> (alias <code>/v2/files/</code>): Delete all files for the current user.</li>
 </ul>
 </li>
 </ul>
 </li>
-<li>
-<p><a href="/api-keys-and-authentication">API keys and authentication</a>:</p>
+<li class="">
+<p><a class="" href="/api-keys-and-authentication">API keys and authentication</a>:</p>
 <ul>
-<li>GET <code>/v1/api_key/</code>: List API keys for the current user.</li>
-<li>POST <code>/v1/api_key/</code>: Create a new API key.</li>
-<li>DELETE <code>/v1/api_key/{api_key_id}</code>: Delete an API key.</li>
-<li>POST <code>/v1/api_key/store</code>: Save an encrypted Store API key (cookie set).</li>
+<li class="">GET <code>/v1/api_key/</code>: List API keys for the current user.</li>
+<li class="">POST <code>/v1/api_key/</code>: Create a new API key.</li>
+<li class="">DELETE <code>/v1/api_key/{api_key_id}</code>: Delete an API key.</li>
+<li class="">POST <code>/v1/api_key/store</code>: Save an encrypted Store API key (cookie set).</li>
 </ul>
 </li>
-<li>
-<p><a href="/api-flows">Flow management endpoints</a>:</p>
+<li class="">
+<p><a class="" href="/api-flows">Flow management endpoints</a>:</p>
 <ul>
-<li>POST <code>/v1/flows/</code>: Create a flow.</li>
-<li>GET <code>/v1/flows/</code>: List flows (supports pagination and filters).</li>
-<li>GET <code>/v1/flows/{flow_id}</code>: Read a flow by ID.</li>
-<li>GET <code>/v1/flows/public_flow/{flow_id}</code>: Read a public flow by ID.</li>
-<li>PATCH <code>/v1/flows/{flow_id}</code>: Update a flow.</li>
-<li>DELETE <code>/v1/flows/{flow_id}</code>: Delete a flow.</li>
-<li>POST <code>/v1/flows/batch/</code>: Create multiple flows.</li>
-<li>POST <code>/v1/flows/upload/</code>: Import flows from a JSON file.</li>
-<li>DELETE <code>/v1/flows/</code>: Delete multiple flows by IDs.</li>
-<li>POST <code>/v1/flows/download/</code>: Export flows to a ZIP file.</li>
-<li>GET <code>/v1/flows/basic_examples/</code>: List basic example flows.</li>
+<li class="">POST <code>/v1/flows/</code>: Create a flow.</li>
+<li class="">GET <code>/v1/flows/</code>: List flows (supports pagination and filters).</li>
+<li class="">GET <code>/v1/flows/{flow_id}</code>: Read a flow by ID.</li>
+<li class="">GET <code>/v1/flows/public_flow/{flow_id}</code>: Read a public flow by ID.</li>
+<li class="">PATCH <code>/v1/flows/{flow_id}</code>: Update a flow.</li>
+<li class="">DELETE <code>/v1/flows/{flow_id}</code>: Delete a flow.</li>
+<li class="">POST <code>/v1/flows/batch/</code>: Create multiple flows.</li>
+<li class="">POST <code>/v1/flows/upload/</code>: Import flows from a JSON file.</li>
+<li class="">DELETE <code>/v1/flows/</code>: Delete multiple flows by IDs.</li>
+<li class="">POST <code>/v1/flows/download/</code>: Export flows to a ZIP file.</li>
+<li class="">GET <code>/v1/flows/basic_examples/</code>: List basic example flows.</li>
 </ul>
 </li>
-<li>
-<p><a href="/api-users">Users endpoints</a>:</p>
+<li class="">
+<p><a class="" href="/api-users">Users endpoints</a>:</p>
 <ul>
-<li>POST <code>/v1/users/</code>: Add a user (superuser required when auth enabled).</li>
-<li>GET <code>/v1/users/whoami</code>: Return the current authenticated user.</li>
-<li>GET <code>/v1/users/</code>: List all users (superuser required).</li>
-<li>PATCH <code>/v1/users/{user_id}</code>: Update a user (with role checks).</li>
-<li>PATCH <code>/v1/users/{user_id}/reset-password</code>: Reset own password.</li>
-<li>DELETE <code>/v1/users/{user_id}</code>: Delete a user (cannot delete yourself).</li>
+<li class="">POST <code>/v1/users/</code>: Add a user (superuser required when auth enabled).</li>
+<li class="">GET <code>/v1/users/whoami</code>: Return the current authenticated user.</li>
+<li class="">GET <code>/v1/users/</code>: List all users (superuser required).</li>
+<li class="">PATCH <code>/v1/users/{user_id}</code>: Update a user (with role checks).</li>
+<li class="">PATCH <code>/v1/users/{user_id}/reset-password</code>: Reset own password.</li>
+<li class="">DELETE <code>/v1/users/{user_id}</code>: Delete a user (cannot delete yourself).</li>
 </ul>
 </li>
-<li>
+<li class="">
 <p>Custom components: You might use these endpoints when developing custom Langflow components for your own use or to share with the Langflow community:</p>
 <ul>
-<li>GET <code>/v1/all</code>: Return all available Langflow component types. See <a href="/api-reference-api-examples#get-all-components">Get all components</a>.</li>
-<li>POST <code>/v1/custom_component</code>: Build a custom component from code and return its node.</li>
-<li>POST <code>/v1/custom_component/update</code>: Update an existing custom component&#x27;s build config and outputs.</li>
-<li>POST <code>/v1/validate/code</code>: Validate a Python code snippet for a custom component.</li>
-<li>POST <code>/v1/validate/prompt</code>: Validate a prompt payload.</li>
+<li class="">GET <code>/v1/all</code>: Return all available Langflow component types. See <a class="" href="/api-reference-api-examples#get-all-components">Get all components</a>.</li>
+<li class="">POST <code>/v1/custom_component</code>: Build a custom component from code and return its node.</li>
+<li class="">POST <code>/v1/custom_component/update</code>: Update an existing custom component&#x27;s build config and outputs.</li>
+<li class="">POST <code>/v1/validate/code</code>: Validate a Python code snippet for a custom component.</li>
+<li class="">POST <code>/v1/validate/prompt</code>: Validate a prompt payload.</li>
 </ul>
 </li>
 </ul></div><div role="tabpanel" class="tabItem_Ymn6" hidden=""><p>The following endpoints are most often used when contributing to the Langflow codebase, and you need to understand or call endpoints that support frontend-to-backend orchestration or other internal functionality.</p><ul>
-<li>
+<li class="">
 <p>Base (metadata):</p>
 <ul>
-<li>GET <code>/v1/all</code>: Return all available Langflow component types. See <a href="/api-reference-api-examples#get-all-components">Get all components</a>.</li>
-<li>GET <code>/v1/version</code>: Return Langflow version. See <a href="/api-reference-api-examples#get-version">Get version</a>.</li>
-<li>GET <code>/v1/config</code>: Return deployment configuration. See <a href="/api-reference-api-examples#get-configuration">Get configuration</a>.</li>
-<li>GET <code>/v1/starter-projects/</code>: Return a list of templates.</li>
+<li class="">GET <code>/v1/all</code>: Return all available Langflow component types. See <a class="" href="/api-reference-api-examples#get-all-components">Get all components</a>.</li>
+<li class="">GET <code>/v1/version</code>: Return Langflow version. See <a class="" href="/api-reference-api-examples#get-version">Get version</a>.</li>
+<li class="">GET <code>/v1/config</code>: Return deployment configuration. See <a class="" href="/api-reference-api-examples#get-configuration">Get configuration</a>.</li>
+<li class="">GET <code>/v1/starter-projects/</code>: Return a list of templates.</li>
 </ul>
 </li>
-<li>
-<p><a href="/api-build">Build endpoints</a> (internal editor support):</p>
+<li class="">
+<p><a class="" href="/api-build">Build endpoints</a> (internal editor support):</p>
 <ul>
-<li>POST <code>/v1/build/{flow_id}/flow</code>: Start a flow build and return a job ID.</li>
-<li>GET <code>/v1/build/{job_id}/events</code>: Stream or fetch build events.</li>
-<li>POST <code>/v1/build/{job_id}/cancel</code>: Cancel a build job.</li>
-<li>POST <code>/v1/build_public_tmp/{flow_id}/flow</code>: Build a public flow without auth.</li>
-<li>POST <code>/v1/validate/prompt</code>: Validate a prompt payload.</li>
+<li class="">POST <code>/v1/build/{flow_id}/flow</code>: Start a flow build and return a job ID.</li>
+<li class="">GET <code>/v1/build/{job_id}/events</code>: Stream or fetch build events.</li>
+<li class="">POST <code>/v1/build/{job_id}/cancel</code>: Cancel a build job.</li>
+<li class="">POST <code>/v1/build_public_tmp/{flow_id}/flow</code>: Build a public flow without auth.</li>
+<li class="">POST <code>/v1/validate/prompt</code>: Validate a prompt payload.</li>
 </ul>
 </li>
-<li>
-<p><a href="/api-keys-and-authentication">API keys and authentication</a>:</p>
+<li class="">
+<p><a class="" href="/api-keys-and-authentication">API keys and authentication</a>:</p>
 <ul>
-<li>POST <code>/v1/login</code>: Login and set tokens as cookies.</li>
-<li>GET <code>/v1/auto_login</code>: Auto-login (if enabled) and set tokens.</li>
-<li>POST <code>/v1/refresh</code>: Refresh tokens using refresh cookie.</li>
-<li>POST <code>/v1/logout</code>: Logout and clear cookies.</li>
+<li class="">POST <code>/v1/login</code>: Login and set tokens as cookies.</li>
+<li class="">GET <code>/v1/auto_login</code>: Auto-login (if enabled) and set tokens.</li>
+<li class="">POST <code>/v1/refresh</code>: Refresh tokens using refresh cookie.</li>
+<li class="">POST <code>/v1/logout</code>: Logout and clear cookies.</li>
 </ul>
 </li>
-<li>
-<p><a href="/api-monitor">Monitor endpoints</a>:</p>
+<li class="">
+<p><a class="" href="/api-monitor">Monitor endpoints</a>:</p>
 <ul>
-<li>GET <code>/v1/monitor/builds</code>: Get vertex builds for a flow.</li>
-<li>DELETE <code>/v1/monitor/builds</code>: Delete vertex builds for a flow.</li>
-<li>GET <code>/v1/monitor/messages/sessions</code>: List message session IDs (auth required).</li>
-<li>GET <code>/v1/monitor/messages</code>: List messages with optional filters.</li>
-<li>DELETE <code>/v1/monitor/messages</code>: Delete messages by IDs (auth required).</li>
-<li>PUT <code>/v1/monitor/messages/{message_id}</code>: Update a message.</li>
-<li>PATCH <code>/v1/monitor/messages/session/{old_session_id}</code>: Change a session ID for all messages in that session.</li>
-<li>DELETE <code>/v1/monitor/messages/session/{session_id}</code>: Delete messages by session.</li>
-<li>GET <code>/v1/monitor/transactions</code>: List transactions for a flow (paginated).</li>
+<li class="">GET <code>/v1/monitor/builds</code>: Get vertex builds for a flow.</li>
+<li class="">DELETE <code>/v1/monitor/builds</code>: Delete vertex builds for a flow.</li>
+<li class="">GET <code>/v1/monitor/messages/sessions</code>: List message session IDs (auth required).</li>
+<li class="">GET <code>/v1/monitor/messages</code>: List messages with optional filters.</li>
+<li class="">DELETE <code>/v1/monitor/messages</code>: Delete messages by IDs (auth required).</li>
+<li class="">PUT <code>/v1/monitor/messages/{message_id}</code>: Update a message.</li>
+<li class="">PATCH <code>/v1/monitor/messages/session/{old_session_id}</code>: Change a session ID for all messages in that session.</li>
+<li class="">DELETE <code>/v1/monitor/messages/session/{session_id}</code>: Delete messages by session.</li>
+<li class="">GET <code>/v1/monitor/transactions</code>: List transactions for a flow (paginated).</li>
 </ul>
 </li>
-<li>
+<li class="">
 <p>Variables:</p>
 <ul>
-<li>POST <code>/v1/variables/</code>: Create a variable, such as an API key, for the user.</li>
-<li>GET <code>/v1/variables/</code>: List variables for the user.</li>
-<li>PATCH <code>/v1/variables/{variable_id}</code>: Update a variable.</li>
-<li>DELETE <code>/v1/variables/{variable_id}</code>: Delete a variable.</li>
+<li class="">POST <code>/v1/variables/</code>: Create a variable, such as an API key, for the user.</li>
+<li class="">GET <code>/v1/variables/</code>: List variables for the user.</li>
+<li class="">PATCH <code>/v1/variables/{variable_id}</code>: Update a variable.</li>
+<li class="">DELETE <code>/v1/variables/{variable_id}</code>: Delete a variable.</li>
 </ul>
 </li>
-<li>
-<p><a href="/concepts-voice-mode">Use voice mode</a>:</p>
+<li class="">
+<p><a class="" href="/concepts-voice-mode">Use voice mode</a>:</p>
 <ul>
-<li>WS <code>/v1/voice/ws/flow_as_tool/{flow_id}</code>: Bi-directional voice session exposing the flow as a tool.</li>
-<li>WS <code>/v1/voice/ws/flow_as_tool/{flow_id}/{session_id}</code>: Same as above with explicit session ID.</li>
-<li>WS <code>/v1/voice/ws/flow_tts/{flow_id}</code>: Voice-to-text session that runs a flow and returns TTS.</li>
-<li>WS <code>/v1/voice/ws/flow_tts/{flow_id}/{session_id}</code>: Same as above with explicit session ID.</li>
-<li>GET <code>/v1/voice/elevenlabs/voice_ids</code>: List available ElevenLabs voice IDs for the user.</li>
+<li class="">WS <code>/v1/voice/ws/flow_as_tool/{flow_id}</code>: Bi-directional voice session exposing the flow as a tool.</li>
+<li class="">WS <code>/v1/voice/ws/flow_as_tool/{flow_id}/{session_id}</code>: Same as above with explicit session ID.</li>
+<li class="">WS <code>/v1/voice/ws/flow_tts/{flow_id}</code>: Voice-to-text session that runs a flow and returns TTS.</li>
+<li class="">WS <code>/v1/voice/ws/flow_tts/{flow_id}/{session_id}</code>: Same as above with explicit session ID.</li>
+<li class="">GET <code>/v1/voice/elevenlabs/voice_ids</code>: List available ElevenLabs voice IDs for the user.</li>
 </ul>
 </li>
-<li>
+<li class="">
 <p>MCP servers: The following endpoints are for managing Langflow MCP servers and MCP server connections.
 They aren&#x27;t typically called directly; instead, they are used to drive internal functionality in the Langflow frontend and when running flows that call MCP servers.
 Langflow MCP servers support both streamable HTTP and SSE transport.</p>
 <ul>
-<li>HEAD <code>/v1/mcp/streamable</code>: Health check for streamable HTTP MCP.</li>
-<li>GET <code>/v1/mcp/streamable</code>: Open streamable HTTP connection for MCP server.</li>
-<li>POST <code>/v1/mcp/streamable</code>: Post messages to the MCP server via streamable HTTP.</li>
-<li>DELETE <code>/v1/mcp/streamable</code>: Close streamable HTTP connection.</li>
-<li>HEAD <code>/v1/mcp/sse</code> (LEGACY): Health check for MCP SSE.</li>
-<li>GET <code>/v1/mcp/sse</code> (LEGACY): Open SSE stream for MCP server events.</li>
-<li>POST <code>/v1/mcp/</code> (LEGACY): Post messages to the MCP server.</li>
-<li>GET <code>/v1/mcp/project/{project_id}</code>: List MCP-enabled tools and project auth settings.</li>
-<li>HEAD <code>/v1/mcp/project/{project_id}/streamable</code>: Health check for project streamable HTTP MCP.</li>
-<li>GET <code>/v1/mcp/project/{project_id}/streamable</code>: Open project-scoped streamable HTTP connection.</li>
-<li>POST <code>/v1/mcp/project/{project_id}/streamable</code>: Post messages to project MCP server via streamable HTTP.</li>
-<li>DELETE <code>/v1/mcp/project/{project_id}/streamable</code>: Close project streamable HTTP connection.</li>
-<li>HEAD <code>/v1/mcp/project/{project_id}/sse</code> (LEGACY): Health check for project SSE.</li>
-<li>GET <code>/v1/mcp/project/{project_id}/sse</code> (LEGACY): Open project-scoped MCP SSE.</li>
-<li>POST <code>/v1/mcp/project/{project_id}</code> (LEGACY): Post messages to project MCP server.</li>
-<li>PATCH <code>/v1/mcp/project/{project_id}</code>: Update MCP settings for flows and project auth settings.</li>
-<li>POST <code>/v1/mcp/project/{project_id}/install</code>: Install MCP client config for Cursor/Windsurf/Claude (local only).</li>
-<li>GET <code>/v1/mcp/project/{project_id}/installed</code>: Check which clients have MCP config installed.</li>
+<li class="">HEAD <code>/v1/mcp/streamable</code>: Health check for streamable HTTP MCP.</li>
+<li class="">GET <code>/v1/mcp/streamable</code>: Open streamable HTTP connection for MCP server.</li>
+<li class="">POST <code>/v1/mcp/streamable</code>: Post messages to the MCP server via streamable HTTP.</li>
+<li class="">DELETE <code>/v1/mcp/streamable</code>: Close streamable HTTP connection.</li>
+<li class="">HEAD <code>/v1/mcp/sse</code> (LEGACY): Health check for MCP SSE.</li>
+<li class="">GET <code>/v1/mcp/sse</code> (LEGACY): Open SSE stream for MCP server events.</li>
+<li class="">POST <code>/v1/mcp/</code> (LEGACY): Post messages to the MCP server.</li>
+<li class="">GET <code>/v1/mcp/project/{project_id}</code>: List MCP-enabled tools and project auth settings.</li>
+<li class="">HEAD <code>/v1/mcp/project/{project_id}/streamable</code>: Health check for project streamable HTTP MCP.</li>
+<li class="">GET <code>/v1/mcp/project/{project_id}/streamable</code>: Open project-scoped streamable HTTP connection.</li>
+<li class="">POST <code>/v1/mcp/project/{project_id}/streamable</code>: Post messages to project MCP server via streamable HTTP.</li>
+<li class="">DELETE <code>/v1/mcp/project/{project_id}/streamable</code>: Close project streamable HTTP connection.</li>
+<li class="">HEAD <code>/v1/mcp/project/{project_id}/sse</code> (LEGACY): Health check for project SSE.</li>
+<li class="">GET <code>/v1/mcp/project/{project_id}/sse</code> (LEGACY): Open project-scoped MCP SSE.</li>
+<li class="">POST <code>/v1/mcp/project/{project_id}</code> (LEGACY): Post messages to project MCP server.</li>
+<li class="">PATCH <code>/v1/mcp/project/{project_id}</code>: Update MCP settings for flows and project auth settings.</li>
+<li class="">POST <code>/v1/mcp/project/{project_id}/install</code>: Install MCP client config for Cursor/Windsurf/Claude (local only).</li>
+<li class="">GET <code>/v1/mcp/project/{project_id}/installed</code>: Check which clients have MCP config installed.</li>
 </ul>
 </li>
-<li>
+<li class="">
 <p>Custom components: You might use these endpoints when developing custom Langflow components for your own use or to share with the Langflow community:</p>
 <ul>
-<li>GET <code>/v1/all</code>: Return all available Langflow component types. See <a href="/api-reference-api-examples#get-all-components">Get all components</a>.</li>
-<li>POST <code>/v1/custom_component</code>: Build a custom component from code and return its node.</li>
-<li>POST <code>/v1/custom_component/update</code>: Update an existing custom component&#x27;s build config and outputs.</li>
-<li>POST <code>/v1/validate/code</code>: Validate a Python code snippet for a custom component.</li>
-<li>POST <code>/v1/validate/prompt</code>: Validate a prompt payload.</li>
+<li class="">GET <code>/v1/all</code>: Return all available Langflow component types. See <a class="" href="/api-reference-api-examples#get-all-components">Get all components</a>.</li>
+<li class="">POST <code>/v1/custom_component</code>: Build a custom component from code and return its node.</li>
+<li class="">POST <code>/v1/custom_component/update</code>: Update an existing custom component&#x27;s build config and outputs.</li>
+<li class="">POST <code>/v1/validate/code</code>: Validate a Python code snippet for a custom component.</li>
+<li class="">POST <code>/v1/validate/prompt</code>: Validate a prompt payload.</li>
 </ul>
 </li>
 </ul></div><div role="tabpanel" class="tabItem_Ymn6" hidden=""><p>The following endpoints are deprecated:</p><ul>
-<li>POST <code>/v1/predict/{flow_id}</code>: Use <a href="/api-flows-run"><code>/v1/run/{flow_id}</code></a> instead.</li>
-<li>POST <code>/v1/process/{flow_id}</code>: Use <a href="/api-flows-run"><code>/v1/run/{flow_id}</code></a> instead.</li>
-<li>GET <code>/v1/task/{task_id}</code>: Deprecated functionality.</li>
-<li>POST <code>/v1/upload/{flow_id}</code>: Use <a href="/api-files"><code>/files</code></a> instead.</li>
-<li>POST <code>/v1/build/{flow_id}/vertices</code>: Replaced by <a href="/api-monitor"><code>/monitor/builds</code></a>.</li>
-<li>POST <code>/v1/build/{flow_id}/vertices/{vertex_id}</code>: Replaced by <a href="/api-monitor"><code>/monitor/builds</code></a>.</li>
-<li>GET <code>/v1/build/{flow_id}/{vertex_id}/stream</code>: Replaced by <a href="/api-monitor"><code>/monitor/builds</code></a>.</li>
-<li>GET <code>/v1/store/check/</code>: Return whether the Store feature is enabled.</li>
-<li>GET <code>/v1/store/check/api_key</code>: Check if a Store API key exists and is valid.</li>
-<li>POST <code>/v1/store/components/</code>: Share a component to the Store.</li>
-<li>PATCH <code>/v1/store/components/{component_id}</code>: Update a shared component.</li>
-<li>GET <code>/v1/store/components/</code>: List available Store components (filters supported).</li>
-<li>GET <code>/v1/store/components/{component_id}</code>: Download a component from the Store.</li>
-<li>GET <code>/v1/store/tags</code>: List Store tags.</li>
-<li>GET <code>/v1/store/users/likes</code>: List components liked by the current user.</li>
-<li>POST <code>/v1/store/users/likes/{component_id}</code>: Like a component.</li>
+<li class="">POST <code>/v1/predict/{flow_id}</code>: Use <a class="" href="/api-flows-run"><code>/v1/run/{flow_id}</code></a> instead.</li>
+<li class="">POST <code>/v1/process/{flow_id}</code>: Use <a class="" href="/api-flows-run"><code>/v1/run/{flow_id}</code></a> instead.</li>
+<li class="">GET <code>/v1/task/{task_id}</code>: Deprecated functionality.</li>
+<li class="">POST <code>/v1/upload/{flow_id}</code>: Use <a class="" href="/api-files"><code>/files</code></a> instead.</li>
+<li class="">POST <code>/v1/build/{flow_id}/vertices</code>: Replaced by <a class="" href="/api-monitor"><code>/monitor/builds</code></a>.</li>
+<li class="">POST <code>/v1/build/{flow_id}/vertices/{vertex_id}</code>: Replaced by <a class="" href="/api-monitor"><code>/monitor/builds</code></a>.</li>
+<li class="">GET <code>/v1/build/{flow_id}/{vertex_id}/stream</code>: Replaced by <a class="" href="/api-monitor"><code>/monitor/builds</code></a>.</li>
+<li class="">GET <code>/v1/store/check/</code>: Return whether the Store feature is enabled.</li>
+<li class="">GET <code>/v1/store/check/api_key</code>: Check if a Store API key exists and is valid.</li>
+<li class="">POST <code>/v1/store/components/</code>: Share a component to the Store.</li>
+<li class="">PATCH <code>/v1/store/components/{component_id}</code>: Update a shared component.</li>
+<li class="">GET <code>/v1/store/components/</code>: List available Store components (filters supported).</li>
+<li class="">GET <code>/v1/store/components/{component_id}</code>: Download a component from the Store.</li>
+<li class="">GET <code>/v1/store/tags</code>: List Store tags.</li>
+<li class="">GET <code>/v1/store/users/likes</code>: List components liked by the current user.</li>
+<li class="">POST <code>/v1/store/users/likes/{component_id}</code>: Like a component.</li>
 </ul></div></div></div>
-<h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="next-steps">Next steps<a href="#next-steps" class="hash-link" aria-label="Direct link to Next steps" title="Direct link to Next steps">​</a></h2>
+<h2 class="anchor anchorTargetHideOnScrollNavbar_vjPI" id="next-steps">Next steps<a href="#next-steps" class="hash-link" aria-label="Direct link to Next steps" title="Direct link to Next steps" translate="no">​</a></h2>
 <ul>
-<li>Use the Langflow API to <a href="/api-flows-run">run a flow</a>.</li>
-<li>Use the Langflow API to <a href="/api-files">upload files</a>.</li>
-<li>Use the Langflow API to <a href="/api-logs">get flow logs</a>.</li>
-<li>Explore all endpoints in the <a href="/api">Langflow API specification</a>.</li>
+<li class="">Use the Langflow API to <a class="" href="/api-flows-run">run a flow</a>.</li>
+<li class="">Use the Langflow API to <a class="" href="/api-files">upload files</a>.</li>
+<li class="">Use the Langflow API to <a class="" href="/api-logs">get flow logs</a>.</li>
+<li class="">Explore all endpoints in the <a class="" href="/api">Langflow API specification</a>.</li>
 </ul></div></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/components-custom-components"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">Create custom Python components</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/typescript-client"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Use the TypeScript client</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#form-langflow-api-requests" class="table-of-contents__link toc-highlight">Form Langflow API requests</a><ul><li><a href="#base-url" class="table-of-contents__link toc-highlight">Base URL</a></li><li><a href="#authentication" class="table-of-contents__link toc-highlight">Authentication</a></li><li><a href="#methods-paths-and-parameters" class="table-of-contents__link toc-highlight">Methods, paths, and parameters</a></li><li><a href="#api-versions" class="table-of-contents__link toc-highlight">API versions</a></li></ul></li><li><a href="#set-environment-variables" class="table-of-contents__link toc-highlight">Set environment variables</a></li><li><a href="#try-some-langflow-api-requests" class="table-of-contents__link toc-highlight">Try some Langflow API requests</a><ul><li><a href="#health-check" class="table-of-contents__link toc-highlight">Health check</a></li><li><a href="#get-version" class="table-of-contents__link toc-highlight">Get version</a></li><li><a href="#get-configuration" class="table-of-contents__link toc-highlight">Get configuration</a></li><li><a href="#get-all-components" class="table-of-contents__link toc-highlight">Get all components</a></li></ul></li><li><a href="#available-endpoints" class="table-of-contents__link toc-highlight">Available endpoints</a></li><li><a href="#next-steps" class="table-of-contents__link toc-highlight">Next steps</a></li></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title"></div><ul class="footer__items clean-list"><li class="footer__item"><div class="footer-links">
                   <span>© 2026 Langflow</span>
                   <span id="preferenceCenterContainer"> ·&nbsp; <a href="#" onclick='return"undefined"!=typeof window&&window.truste&&window.truste.eu&&window.truste.eu.clickListener&&window.truste.eu.clickListener(),!1' style="cursor: pointer;">Manage Privacy Choices</a></span>
