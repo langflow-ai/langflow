@@ -5,6 +5,7 @@ import json
 import re
 import zipfile
 from datetime import datetime, timezone
+from pathlib import Path as StdlibPath
 from typing import Annotated
 from uuid import UUID
 
@@ -36,27 +37,122 @@ from langflow.services.database.models.flow.model import (
 from langflow.services.database.models.flow.utils import get_webhook_component_in_flow
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
-from langflow.services.deps import get_settings_service
+from langflow.services.deps import get_settings_service, get_storage_service
+from langflow.services.storage.service import StorageService
 from langflow.utils.compression import compress_response
 
 # build router
 router = APIRouter(prefix="/flows", tags=["Flows"])
 
 
-async def _verify_fs_path(path: str | None) -> None:
-    if path:
-        path_ = Path(path)
-        if not await path_.exists():
-            await path_.touch()
+def _get_safe_flow_path(fs_path: str, user_id: UUID, storage_service: StorageService) -> Path:
+    """Get a safe filesystem path for flow storage, restricted to user's flows directory.
 
+    Allows both absolute and relative paths, but ensures they're within the user's flows directory.
+    """
+    if not fs_path:
+        raise HTTPException(status_code=400, detail="fs_path cannot be empty")
 
-async def _save_flow_to_fs(flow: Flow) -> None:
-    if flow.fs_path:
-        async with async_open(flow.fs_path, "w") as f:
+    # Normalize path separators first (before security checks to prevent backslash bypass)
+    normalized_path = fs_path.replace("\\", "/")
+
+    # Reject directory traversal and null bytes (check normalized path)
+    if ".." in normalized_path:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid fs_path: directory traversal (..) is not allowed",
+        )
+    if "\x00" in normalized_path:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid fs_path: null bytes are not allowed",
+        )
+
+    # Build the safe base directory path
+    base_dir = storage_service.data_dir / "flows" / str(user_id)
+    base_dir_str = str(base_dir)
+
+    # Normalize base directory path (resolve to absolute, handle symlinks)
+    # resolve() doesn't require the path to exist, it just resolves symlinks
+    try:
+        base_dir_stdlib = StdlibPath(base_dir_str).resolve()
+        base_dir_resolved = str(base_dir_stdlib)
+    except (OSError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=f"Invalid base directory: {e}") from e
+
+    # Determine if path is absolute (Unix or Windows style)
+    is_absolute = normalized_path.startswith("/") or (len(normalized_path) > 1 and normalized_path[1] == ":")
+
+    if is_absolute:
+        # Absolute path - resolve and validate it's within base directory
+        try:
+            requested_path = StdlibPath(normalized_path).resolve()
+            requested_resolved = str(requested_path)
             try:
-                await f.write(flow.model_dump_json())
-            except OSError:
-                await logger.aexception("Failed to write flow %s to path %s", flow.name, flow.fs_path)
+                # Ensure it's a subpath of the base directory
+                requested_path.relative_to(base_dir_stdlib)
+            except ValueError:
+                raise HTTPException(
+                    status_code=400,
+                    detail=(f"Absolute path must be within your flows directory: {base_dir_resolved}"),
+                ) from None
+            return Path(requested_resolved)
+        except (OSError, ValueError) as e:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Invalid file save path: {e}. "
+                    f"Verify that the path is within your flows directory: {base_dir_resolved}"
+                ),
+            ) from e
+    else:
+        # Relative path - validate that it's within the base directory
+        relative_part = normalized_path.lstrip("/")
+        safe_path = base_dir / relative_part if relative_part else base_dir
+        safe_path_stdlib = base_dir_stdlib / relative_part if relative_part else base_dir_stdlib
+        try:
+            final_resolved_str = str(safe_path_stdlib.resolve())
+
+            # Ensure resolved path stays within base (prevent symlink attacks)
+            if not final_resolved_str.startswith(base_dir_resolved):
+                raise HTTPException(
+                    status_code=400,
+                    detail="Invalid path: resolves outside allowed directory",
+                )
+        except (OSError, ValueError) as e:
+            raise HTTPException(status_code=400, detail=f"Invalid path: {e}") from e
+
+        return safe_path
+
+
+async def _verify_fs_path(path: str | None, user_id: UUID, storage_service: StorageService) -> None:
+    """Verify and prepare the filesystem path for flow storage."""
+    if path is not None:
+        # Empty strings should be rejected (None is allowed, empty string is not)
+        if path == "":
+            raise HTTPException(status_code=400, detail="fs_path cannot be empty")
+        safe_path = _get_safe_flow_path(path, user_id, storage_service)
+        await safe_path.parent.mkdir(parents=True, exist_ok=True)
+        if not await safe_path.exists():
+            await safe_path.touch()
+
+
+async def _save_flow_to_fs(flow: Flow, user_id: UUID, storage_service: StorageService) -> None:
+    """Save flow data to the filesystem at the validated path."""
+    if not flow.fs_path:
+        return
+
+    try:
+        safe_path = _get_safe_flow_path(flow.fs_path, user_id, storage_service)
+        await safe_path.parent.mkdir(parents=True, exist_ok=True)
+        # async_open expects a string path, not a Path object
+        async with async_open(str(safe_path), "w") as f:
+            await f.write(flow.model_dump_json())
+    except HTTPException:
+        raise
+    except OSError as e:
+        await logger.aexception("Failed to write flow %s to path %s", flow.name, flow.fs_path)
+        raise HTTPException(status_code=500, detail=f"Failed to write flow to filesystem: {e}") from e
 
 
 async def _new_flow(
@@ -64,9 +160,11 @@ async def _new_flow(
     session: AsyncSession,
     flow: FlowCreate,
     user_id: UUID,
+    storage_service: StorageService,
 ):
     try:
-        await _verify_fs_path(flow.fs_path)
+        # Validate fs_path if provided (will raise HTTPException if invalid)
+        await _verify_fs_path(flow.fs_path, user_id, storage_service)
 
         """Create a new flow."""
         if flow.user_id is None:
@@ -158,12 +256,13 @@ async def create_flow(
     session: DbSession,
     flow: FlowCreate,
     current_user: CurrentActiveUser,
+    storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     try:
-        db_flow = await _new_flow(session=session, flow=flow, user_id=current_user.id)
+        db_flow = await _new_flow(session=session, flow=flow, user_id=current_user.id, storage_service=storage_service)
         await session.flush()
         await session.refresh(db_flow)
-        await _save_flow_to_fs(db_flow)
+        await _save_flow_to_fs(db_flow, current_user.id, storage_service)
 
         # Convert to FlowRead while session is still active to avoid detached instance errors
         flow_read = FlowRead.model_validate(db_flow, from_attributes=True)
@@ -325,6 +424,7 @@ async def update_flow(
     flow_id: UUID,
     flow: FlowUpdate,
     current_user: CurrentActiveUser,
+    storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     """Update a flow."""
     settings_service = get_settings_service()
@@ -350,7 +450,9 @@ async def update_flow(
         for key, value in update_data.items():
             setattr(db_flow, key, value)
 
-        await _verify_fs_path(db_flow.fs_path)
+        # Validate fs_path if it was changed (will raise HTTPException if invalid)
+        if "fs_path" in update_data:
+            await _verify_fs_path(db_flow.fs_path, current_user.id, storage_service)
 
         webhook_component = get_webhook_component_in_flow(db_flow.data)
         db_flow.webhook = webhook_component is not None
@@ -364,7 +466,7 @@ async def update_flow(
         session.add(db_flow)
         await session.flush()
         await session.refresh(db_flow)
-        await _save_flow_to_fs(db_flow)
+        await _save_flow_to_fs(db_flow, current_user.id, storage_service)
 
         # Convert to FlowRead while session is still active to avoid detached instance errors
         flow_read = FlowRead.model_validate(db_flow, from_attributes=True)
@@ -436,6 +538,7 @@ async def upload_file(
     file: Annotated[UploadFile, File(...)],
     current_user: CurrentActiveUser,
     folder_id: UUID | None = None,
+    storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     """Upload flows from a file."""
     contents = await file.read()
@@ -447,14 +550,14 @@ async def upload_file(
         flow.user_id = current_user.id
         if folder_id:
             flow.folder_id = folder_id
-        response = await _new_flow(session=session, flow=flow, user_id=current_user.id)
+        response = await _new_flow(session=session, flow=flow, user_id=current_user.id, storage_service=storage_service)
         response_list.append(response)
 
     try:
         await session.flush()
         for db_flow in response_list:
             await session.refresh(db_flow)
-            await _save_flow_to_fs(db_flow)
+            await _save_flow_to_fs(db_flow, current_user.id, storage_service)
 
         # Convert to FlowRead while session is still active to avoid detached instance errors
         flow_reads = [FlowRead.model_validate(db_flow, from_attributes=True) for db_flow in response_list]

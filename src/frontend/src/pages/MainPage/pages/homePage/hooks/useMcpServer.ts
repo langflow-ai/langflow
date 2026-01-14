@@ -6,7 +6,10 @@ import {
 } from "@/controllers/API/queries/mcp";
 import { useGetProjectComposerUrl } from "@/controllers/API/queries/mcp/use-get-composer-url";
 import { useGetInstalledMCP } from "@/controllers/API/queries/mcp/use-get-installed-mcp";
-import { usePatchInstallMCP } from "@/controllers/API/queries/mcp/use-patch-install-mcp";
+import {
+  type MCPTransport,
+  usePatchInstallMCP,
+} from "@/controllers/API/queries/mcp/use-patch-install-mcp";
 import { ENABLE_MCP_COMPOSER } from "@/customization/feature-flags";
 import { customGetMCPUrl } from "@/customization/utils/custom-mcp-url";
 import useAlertStore from "@/stores/alertStore";
@@ -40,10 +43,12 @@ export const useMcpServer = ({
   projectId,
   folderName,
   selectedPlatform,
+  selectedTransport = "streamablehttp",
 }: {
   projectId: string;
   folderName?: string;
   selectedPlatform?: string;
+  selectedTransport?: MCPTransport;
 }) => {
   const setSuccessData = useAlertStore((s) => s.setSuccessData);
   const setErrorData = useAlertStore((s) => s.setErrorData);
@@ -107,16 +112,24 @@ export const useMcpServer = ({
     [installedMCPData],
   );
 
+  const composerConnection = useMemo(() => {
+    const streamableUrl =
+      composerUrlData?.streamable_http_url ??
+      composerUrlData?.sse_url ??
+      composerUrlData?.legacy_sse_url;
+    const legacyUrl =
+      composerUrlData?.legacy_sse_url ?? composerUrlData?.sse_url;
+    return {
+      useComposer:
+        isOAuthProject && composerUrlData?.uses_composer && !!streamableUrl,
+      streamableHttpUrl: streamableUrl,
+      legacySseUrl: legacyUrl,
+    };
+  }, [composerUrlData, isOAuthProject]);
+
   const apiUrl = useMemo(
-    () =>
-      customGetMCPUrl(
-        projectId,
-        isOAuthProject &&
-          !!composerUrlData?.sse_url &&
-          composerUrlData?.uses_composer,
-        composerUrlData?.sse_url,
-      ),
-    [projectId, isOAuthProject, composerUrlData],
+    () => customGetMCPUrl(projectId, composerConnection, selectedTransport),
+    [projectId, composerConnection, selectedTransport],
   );
 
   const generateApiKey = useCallback(async () => {
@@ -149,10 +162,10 @@ export const useMcpServer = ({
   }, []);
 
   const installClient = useCallback(
-    (clientName: string, clientTitle?: string) => {
+    (clientName: string, clientTitle?: string, transport?: MCPTransport) => {
       setS((p) => ({ ...p, loadingMCP: [...p.loadingMCP, clientName] }));
       patchInstallMCP(
-        { client: clientName },
+        { client: clientName, transport },
         {
           onSuccess: () => {
             setSuccessData({
@@ -236,9 +249,9 @@ export const useMcpServer = ({
         enableComposer: ENABLE_MCP_COMPOSER,
         authType,
         isAutoLogin: !!isAutoLoginFromStore,
-        apiKey: apiKeyFromStore ?? s.apiKey,
+        apiKey: apiKeyFromStore || s.apiKey,
       }),
-    [authType, isAutoLoginFromStore, apiKeyFromStore],
+    [authType, isAutoLoginFromStore, apiKeyFromStore, s.apiKey],
   );
 
   const composerError = composerUrlData?.error_message ?? null;
@@ -250,6 +263,7 @@ export const useMcpServer = ({
       apiUrl,
       isOAuthProject,
       authHeadersFragment,
+      transport: selectedTransport,
       maxNameLength: MAX_MCP_SERVER_NAME_LENGTH,
     });
   }, [
@@ -258,6 +272,7 @@ export const useMcpServer = ({
     apiUrl,
     isOAuthProject,
     authHeadersFragment,
+    selectedTransport,
   ]);
 
   const availableMap = useMemo(() => {
@@ -309,7 +324,7 @@ export const useMcpServer = ({
     availableMap,
     isInstalling,
     // api key & ui
-    apiKey: apiKeyFromStore ?? s.apiKey,
+    apiKey: apiKeyFromStore || s.apiKey,
     isGeneratingApiKey: s.isGeneratingApiKey,
     generateApiKey,
     isCopied: s.isCopied,
