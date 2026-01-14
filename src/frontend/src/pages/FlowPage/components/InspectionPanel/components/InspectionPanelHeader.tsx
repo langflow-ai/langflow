@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { NodeIcon } from "@/CustomNodes/GenericNode/components/nodeIcon";
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
@@ -7,6 +7,8 @@ import CodeAreaModal from "@/modals/codeAreaModal";
 import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
 import useHandleOnNewValue from "@/CustomNodes/hooks/use-handle-new-value";
 import type { NodeDataType } from "@/types/flow";
+import { ToolbarButton } from "../../nodeToolbarComponent/components/toolbar-button";
+import { useShortcutsStore } from "@/stores/shortcuts";
 
 interface InspectionPanelHeaderProps {
   data: NodeDataType;
@@ -25,7 +27,10 @@ export default function InspectionPanelHeader({
     name: "code",
   });
 
-  const hasCode = data.node?.template?.code !== undefined;
+  const hasCode = useMemo(
+      () => Object.keys(data.node!.template).includes("code"),
+      [data.node],
+    );
 
   const handleOpenCode = useCallback(() => {
     if (hasCode) {
@@ -40,6 +45,16 @@ export default function InspectionPanelHeader({
     },
     [handleOnNewValue],
   );
+
+  const shortcuts = useShortcutsStore((state) => state.shortcuts);
+
+  const isCustomComponent = useMemo(() => {
+      const isCustom = data.type === "CustomComponent" && !data.node?.edited;
+      if (isCustom) {
+        data.node.edited = true;
+      }
+      return isCustom;
+    }, [data.type, data.node]);
 
   return (
     <>
@@ -59,21 +74,23 @@ export default function InspectionPanelHeader({
             </span>
           </div>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
           {hasCode && (
             <ShadTooltip content="View Code" side="left">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={handleOpenCode}
-              >
-                <IconComponent name="Code" className="h-4 w-4" />
-              </Button>
+              <ToolbarButton
+              className={isCustomComponent? "animate-pulse-pink" : ""}
+              icon="Code"
+              label="Code"
+              onClick={handleOpenCode}
+              shortcut={shortcuts.find((s) =>
+                s.name.toLowerCase().startsWith("code"),
+              )}
+              dataTestId="code-button-modal"
+            />
             </ShadTooltip>
           )}
           {onClose && (
-            <ShadTooltip content="Close" side="left">
+            <ShadTooltip content="Close" side="top">
               <Button
                 variant="ghost"
                 size="icon"
