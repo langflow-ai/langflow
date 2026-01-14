@@ -212,18 +212,20 @@ export function StrRenderComponent({
           value={(value as string) ?? ""}
           onChange={handleReferenceInputChange}
         >
-          {({ value: inputValue, onChange }) => (
-            <InputGlobalComponent
-              {...baseInputProps}
-              value={inputValue}
-              handleOnNewValue={handleInputGlobalNewValue(onChange)}
-              password={templateData.password}
-              load_from_db={templateData.load_from_db}
-              placeholder={placeholder}
-              display_name={display_name}
-              id={`input-${name}`}
-              isToolMode={isToolMode}
-            />
+          {({ value: inputValue, onChange, onKeyDown }) => (
+            <div onKeyDown={onKeyDown}>
+              <InputGlobalComponent
+                {...baseInputProps}
+                value={inputValue}
+                handleOnNewValue={handleInputGlobalNewValue(onChange)}
+                password={templateData.password}
+                load_from_db={templateData.load_from_db}
+                placeholder={placeholder}
+                display_name={display_name}
+                id={`input-${name}`}
+                isToolMode={isToolMode}
+              />
+            </div>
           )}
         </ReferenceInput>
       );
