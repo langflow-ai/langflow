@@ -6136,7 +6136,7 @@ requires-dist = [
     { name = "prometheus-client", specifier = ">=0.20.0,<1.0.0" },
     { name = "pydantic", specifier = "~=2.11.0" },
     { name = "pydantic-settings", specifier = ">=2.2.0,<3.0.0" },
-    { name = "pyjwt", specifier = ">=2.8.0,<3.0.0" },
+    { name = "pyjwt", specifier = ">=2.10.1" },
     { name = "pypdf", specifier = "~=5.1.0" },
     { name = "pyperclip", specifier = ">=1.8.2,<2.0.0" },
     { name = "python-docx", specifier = ">=1.1.0,<2.0.0" },
