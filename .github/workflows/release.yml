@@ -48,6 +48,11 @@ on:
         required: false
         type: boolean
         default: true
+      overwrite_previous_image:
+        description: "Allow release to overwrite the previously released image - If this is set to true and the image already exists, it will be overwritten"
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   echo-inputs:
@@ -107,6 +112,34 @@ jobs:
           fi
 
           echo "✅ Release dependencies validated successfully."
+
+  prevent-image-overwrite:
+    name: Prevent Image Overwrite
+    runs-on: ubuntu-latest
+    if: ${{ !inputs.overwrite_previous_image }}
+    needs: [validate-tag, validate-dependencies]
+    steps:
+      - name: Check if image tag exists in ghcr.io
+        uses: tyriis/docker-image-tag-exists@v2.1.0
+        with:
+          registry: ghcr.io
+          repository: langflow-ai/langflow
+          tag: ${{ inputs.release_tag }}
+
+      - name: Check if image tag exists in ghcr.io
+        uses: tyriis/docker-image-tag-exists@v2.1.0
+        with:
+          registry: docker.io
+          repository: langflowai/langflow
+          tag: ${{ inputs.release_tag }}
+
+      - name: Check if package version already exists on PyPI
+        run: |
+          if pip index versions langflow | grep -q '${{ inputs.release_tag }}'"; then
+            echo "❌ Version '${{ inputs.release_tag }}' already exists on PyPI."
+          else
+            echo "✅ Version '${{ inputs.release_tag }}' does not exist on PyPI."
+          fi
 
   ci:
     name: CI
