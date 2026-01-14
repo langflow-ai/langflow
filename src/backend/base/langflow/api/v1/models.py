@@ -229,7 +229,7 @@ async def get_enabled_providers(
         # VariableRead sets value=None for CREDENTIAL_TYPE (via validator), but _validate_and_get_enabled_providers
         # needs the encrypted value to decrypt and validate. So we create simple objects with the encrypted value.
         credential_variables = {}
-        
+
         for var_name in credential_variable_names:
             if var_name in provider_variable_map.values():
                 try:
@@ -243,7 +243,7 @@ async def get_enabled_providers(
                         class VarWithValue:
                             def __init__(self, value):
                                 self.value = value
-                        
+
                         credential_variables[var_name] = VarWithValue(variable_obj.value)
                 except (ValueError, Exception):  # noqa: BLE001
                     # Variable not found or error accessing it - skip

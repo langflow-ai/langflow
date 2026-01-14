@@ -98,8 +98,6 @@ async def _cleanup_provider_models(
     await _cleanup_model_list_variable(variable_service, user_id, ENABLED_MODELS_VAR, provider_models, session)
 
 
-
-
 @router.post("/", response_model=VariableRead, status_code=201)
 async def create_variable(
     *,
@@ -179,20 +177,22 @@ async def read_variables(
         # Build dict of credential variables for validation
         credential_variables = {var.name: var for var in filtered_variables if var.type == CREDENTIAL_TYPE}
         provider_variable_map = get_model_provider_variable_mapping()
-        
+
         # Create reverse mapping: variable_name -> provider
         var_to_provider = {var_name: provider for provider, var_name in provider_variable_map.items()}
-        
+
         # Validate each provider credential once and capture both enabled status and error messages
-        validation_results: dict[str, tuple[bool, str | None, list[str] | None]] = {}  # var_name -> (is_valid, error, default_fields)
-        
+        validation_results: dict[
+            str, tuple[bool, str | None, list[str] | None]
+        ] = {}  # var_name -> (is_valid, error, default_fields)
+
         for provider, var_name in provider_variable_map.items():
             if var_name in credential_variables:
                 credential_var = credential_variables[var_name]
                 is_valid = False
                 error_message = None
                 variable_obj = None
-                
+
                 try:
                     # Get the raw Variable object to access the encrypted value
                     variable_obj = await variable_service.get_variable_object(
@@ -201,6 +201,7 @@ async def read_variables(
                     if variable_obj and variable_obj.value:
                         # Decrypt the API key value
                         from langflow.services.deps import get_settings_service
+
                         settings_service = get_settings_service()
                         decrypted_value = auth_utils.decrypt_api_key(
                             variable_obj.value, settings_service=settings_service
@@ -219,8 +220,8 @@ async def read_variables(
                     # Validation failed - get the error message
                     error_message = str(e)
                 except Exception as e:  # noqa: BLE001
-                    error_message = f"Validation error: {str(e)}"
-                
+                    error_message = f"Validation error: {e!s}"
+
                 # Update default_fields based on validation result
                 updated_default_fields = None
                 if variable_obj and variable_obj.id:
@@ -257,9 +258,9 @@ async def read_variables(
                         # Log but don't fail if we can't update
                         # Use current default_fields if update failed
                         updated_default_fields = variable_obj.default_fields if variable_obj else None
-                
+
                 validation_results[var_name] = (is_valid, error_message, updated_default_fields)
-        
+
         # Set validation status on each variable and update default_fields in response
         for var in filtered_variables:
             if var.name in model_provider_variable_mapping.values() and var.type == CREDENTIAL_TYPE:
