@@ -83,6 +83,7 @@ import {
 } from "./MemoizedComponents";
 import getRandomName from "./utils/get-random-name";
 import isWrappedWithClass from "./utils/is-wrapped-with-class";
+import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 
 const nodeTypes = {
   genericNode: GenericNode,
@@ -780,11 +781,13 @@ export default function Page({
                   shadowBoxHeight={shadowBoxHeight}
                 />
                 <FlowToolbar />
-                <InspectionPanel
-                  selectedNode={selectedNode}
-                  isVisible={showInspectionPanel}
-                  onClose={handleCloseInspectionPanel}
-                />
+                {ENABLE_INSPECTION_PANEL && (
+                  <InspectionPanel
+                    selectedNode={selectedNode}
+                    isVisible={showInspectionPanel}
+                    onClose={handleCloseInspectionPanel}
+                  />
+                )}
               </>
             )}
             <MemoizedSidebarTrigger />
