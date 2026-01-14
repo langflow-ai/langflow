@@ -119,28 +119,40 @@ jobs:
     if: ${{ !inputs.overwrite_previous_image }}
     needs: [validate-tag, validate-dependencies]
     steps:
+      - name: Check if package version already exists on pypi
+        run: |
+          if pip index versions langflow | grep -q '${{ inputs.release_tag }}'"; then
+            echo "❌ Package version '${{ inputs.release_tag }}' already exists in pypi."
+            exit 1
+          fi
+
       - name: Check if image tag exists in ghcr.io
+        id: check-ghcr
         uses: tyriis/docker-image-tag-exists@v2.1.0
         with:
           registry: ghcr.io
           repository: langflow-ai/langflow
           tag: ${{ inputs.release_tag }}
 
-      - name: Check if image tag exists in ghcr.io
+      - name: Fail if image exists in ghcr.io
+        if: steps.check-ghcr.outputs.exists == 'true'
+        run: |
+          echo "❌ Image tag '${{ inputs.release_tag }}' already exists in ghcr.io"
+          exit 1
+
+      - name: Check if image tag exists in docker.io
+        id: check-dockerhub
         uses: tyriis/docker-image-tag-exists@v2.1.0
         with:
           registry: docker.io
           repository: langflowai/langflow
           tag: ${{ inputs.release_tag }}
 
-      - name: Check if package version already exists on PyPI
+      - name: Fail if image exists in docker.io
+        if: steps.check-dockerhub.outputs.exists == 'true'
         run: |
-          if pip index versions langflow | grep -q '${{ inputs.release_tag }}'"; then
-            echo "❌ Version '${{ inputs.release_tag }}' already exists on PyPI."
-          else
-            echo "✅ Version '${{ inputs.release_tag }}' does not exist on PyPI."
-          fi
-
+          echo "❌ Image tag '${{ inputs.release_tag }}' already exists in docker.io"
+          exit 1
   ci:
     name: CI
     needs: [validate-tag, validate-dependencies]
