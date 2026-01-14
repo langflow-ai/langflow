@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import langflowLogo from "@/assets/LangflowLogoColor.svg";
 import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
@@ -8,6 +8,8 @@ import useAssistantManagerStore from "@/stores/assistantManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import { targetHandleType } from "@/types/flow";
 import ForwardedIconComponent from "../genericIconComponent";
+import { AssistantNudges } from "./assistantNudgeBar";
+import "./assistantButton.css";
 
 interface AssistantButtonProps {
   type: "field" | "flow" | "project" | "header";
@@ -28,6 +30,9 @@ export const AssistantButton: React.FC<AssistantButtonProps> = ({
   const { folderId } = useParams();
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const projectId = folderId ?? myCollectionId ?? "";
+  const [nudgesOpen, setNudgesOpen] = useState(false);
+  const popoverRef = useRef(null);
+  const triggerRef = useRef(null);
 
   // timer
   const [elapsedTime, setElapsedTime] = useState(0);
@@ -39,6 +44,24 @@ export const AssistantButton: React.FC<AssistantButtonProps> = ({
     fieldName: compData?.fieldName,
     inputValue,
   });
+
+  // TODO handle click not on popover
+  // useEffect(() => {
+  //   const handleClickOutside = (event) => {
+  //     if (
+  //       popoverRef.current &&
+  //       !popoverRef.current.contains(event.target) &&
+  //       !triggerRef.current.contains(event.target)
+  //     ) {
+  //       setNudgesOpen(false); // Close the popover if clicked outside
+  //     }
+  //   };
+
+  //   document.addEventListener("mousedown", handleClickOutside);
+  //   return () => {
+  //     document.removeEventListener("mousedown", handleClickOutside);
+  //   };
+  // }, []);
 
   function getButtonClassName() {
     let className;
@@ -58,6 +81,7 @@ export const AssistantButton: React.FC<AssistantButtonProps> = ({
           focus-visible:ring-offset-1
           focus-visible:ring-offset-background
           ${isFetching ? "opacity-70 cursor-not-allowed" : ""}
+          popover-trigger
         `;
         break;
       case "header":
@@ -118,14 +142,8 @@ export const AssistantButton: React.FC<AssistantButtonProps> = ({
     switch (type) {
       case "field": {
         setSelectedCompData(compData);
+        setNudgesOpen(!nudgesOpen);
         setClicked(true);
-        // we use result instead of data because data is undefined on first call
-        const result = await refetch();
-        handleOnNewValue({
-          value:
-            result.data?.data?.outputs[0]?.outputs[0]?.outputs?.message
-              ?.message,
-        });
         break;
       }
       case "header":
@@ -137,8 +155,12 @@ export const AssistantButton: React.FC<AssistantButtonProps> = ({
   };
 
   return (
-    <div className="relative flex items-center">
+    <div className="relative flex items-center popover-container">
       <button
+        ref={triggerRef}
+        aria-haspopup="true"
+        aria-expanded={nudgesOpen}
+        aria-controls="popover-content"
         onClick={onButtonClick}
         title="Langflow assistant"
         className={getButtonClassName()}
@@ -158,8 +180,23 @@ export const AssistantButton: React.FC<AssistantButtonProps> = ({
           />
         )}
       </button>
-      {clicked && type === "field" && (
+      {/* {clicked && type === "field" && (
         <span className="text-xs text-muted-foreground">{elapsedTime}s</span>
+      )} */}
+      {nudgesOpen && (
+        <div
+          id="popover-content"
+          ref={popoverRef}
+          className="popover-content"
+          role="dialog"
+          aria-modal="true"
+        >
+          <AssistantNudges
+            type="field"
+            handleOnNewValue={handleOnNewValue}
+            setNudgesOpen={setNudgesOpen}
+          ></AssistantNudges>
+        </div>
       )}
     </div>
   );

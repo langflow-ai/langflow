@@ -143,7 +143,11 @@ minversion = "6.0"
 #addopts = "-ra"
 testpaths = ["tests", "integration"]
 console_output_style = "progress"
-filterwarnings = ["ignore::DeprecationWarning"]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore:WARNING\\: SQL-parsed foreign key constraint.*could not be located in PRAGMA foreign_keys:sqlalchemy.exc.SAWarning",
+    "ignore:Invalid value type.*for input:UserWarning",
+]
 log_cli = true
 markers = ["async_test"]
 asyncio_mode = "auto"

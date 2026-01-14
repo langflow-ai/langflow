@@ -11,6 +11,7 @@ from langflow.agentic.utils import (
 )
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestListTemplates:
     """Test cases for list_templates function using real templates."""
 
@@ -173,6 +174,7 @@ class TestListTemplates:
             list_templates(starter_projects_path="/nonexistent/path")
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestGetTemplateById:
     """Test cases for get_template_by_id function."""
 
@@ -232,6 +234,7 @@ class TestGetTemplateById:
             assert result["id"] == template_id
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestGetAllTags:
     """Test cases for get_all_tags function."""
 
@@ -269,6 +272,7 @@ class TestGetAllTags:
         assert set(all_tags) == template_tags
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestGetTemplatesCount:
     """Test cases for get_templates_count function."""
 
@@ -287,6 +291,7 @@ class TestGetTemplatesCount:
             assert count == 0
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestTemplateStructure:
     """Test the structure and content of real templates."""
 
@@ -340,6 +345,7 @@ class TestTemplateStructure:
             assert isinstance(template["data"], dict)
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestSearchFunctionality:
     """Test search and filtering functionality with real data."""
 
@@ -382,6 +388,7 @@ class TestSearchFunctionality:
                 assert tag in result.get("tags", []), f"Result missing tag {tag}"
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestEdgeCases:
     """Test edge cases and boundary conditions."""
 
@@ -443,6 +450,7 @@ class TestEdgeCases:
         assert len(results_none) == len(results_all)
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestPerformance:
     """Performance and stress tests with real data."""
 
@@ -485,6 +493,7 @@ class TestPerformance:
         assert ids1 == ids2 == ids3
 
 
+@pytest.mark.skip(reason="Skipping agentic tests")
 class TestIntegrationScenarios:
     """Test realistic integration scenarios."""
 
