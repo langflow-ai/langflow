@@ -309,7 +309,7 @@ class Settings(BaseSettings):
     """Version constraint for mcp-composer when using uvx. Uses PEP 440 syntax."""
 
     # Agentic Experience
-    agentic_experience: bool = True
+    agentic_experience: bool = False
     """If set to True, Langflow will start the agentic MCP server that provides tools for
     flow/component operations, template search, and graph visualization."""
 
