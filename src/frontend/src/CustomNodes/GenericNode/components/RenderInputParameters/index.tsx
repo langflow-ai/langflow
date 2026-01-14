@@ -31,23 +31,11 @@ const RenderInputParameters = ({
   const shownTemplateFields = useMemo(() => {
     return templateFields.filter((templateField) => {
       const template = data.node?.template[templateField];
-
-      // Basic visibility check
-      if (
-        !template?.show ||
-        template?.advanced ||
-        (template?.tool_mode && isToolMode)
-      ) {
-        return false;
-      }
-
-      // Only show fields that have handles (input_types)
-      const hasHandle = template.input_types && template.input_types.length > 0;
-      if (!hasHandle) {
-        return false;
-      }
-
-      return true;
+      return (
+        template?.show &&
+        !template?.advanced &&
+        !(template?.tool_mode && isToolMode)
+      );
     });
   }, [templateFields, data.node?.template, isToolMode]);
 
