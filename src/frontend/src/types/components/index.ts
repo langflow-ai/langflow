@@ -20,6 +20,7 @@ export type InputComponentType = {
   name?: string;
   autoFocus?: boolean;
   onBlur?: (event: React.FocusEvent<HTMLInputElement>) => void;
+  onKeyDown?: (event: React.KeyboardEvent<HTMLInputElement>) => void;
   value?: string;
   disabled?: boolean;
   onChange?: (value: string, snapshot?: boolean) => void;
@@ -689,6 +690,7 @@ export type textModalPropsType = {
   open?: boolean;
   setOpen?: (open: boolean) => void;
   onCloseModal?: () => void;
+  nodeId?: string;
 };
 
 export interface ToolsModalProps {

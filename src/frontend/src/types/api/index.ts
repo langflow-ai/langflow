@@ -94,6 +94,7 @@ export type InputFieldType = {
   text?: string;
   temp_file?: boolean;
   separator?: string;
+  has_references?: boolean;
 };
 
 export type OutputFieldProxyType = {

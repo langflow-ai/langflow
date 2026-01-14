@@ -233,6 +233,36 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     if (flow?.id) {
       useTweaksStore.getState().initialSetup(nodes, flow?.id);
     }
+
+    // Generate reference slugs for all nodes
+    const newSlugs: Record<string, string> = {};
+    const slugCounts: Record<string, number> = {};
+    const existingSlugs: string[] = [];
+
+    for (const node of nodes) {
+      const nodeData = node.data as NodeDataType;
+      const displayName = nodeData?.node?.display_name || "Node";
+      // Remove non-alphanumeric, capitalize words
+      const baseSlug =
+        displayName
+          .split(/\s+/)
+          .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+          .join("")
+          .replace(/[^a-zA-Z0-9]/g, "") || "Node";
+
+      // Check for duplicates and assign appropriate slug
+      let slug = baseSlug;
+      if (slugCounts[baseSlug] !== undefined || existingSlugs.includes(slug)) {
+        slugCounts[baseSlug] = (slugCounts[baseSlug] || 0) + 1;
+        slug = `${baseSlug}_${slugCounts[baseSlug]}`;
+      } else {
+        slugCounts[baseSlug] = 0;
+      }
+
+      newSlugs[node.id] = slug;
+      existingSlugs.push(slug);
+    }
+
     set({
       nodes,
       edges: newEdges,
@@ -245,6 +275,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       currentFlow: flow,
       positionDictionary: {},
       rightClickedNodeId: null,
+      nodeReferenceSlugs: newSlugs,
     });
   },
   setIsBuilding: (isBuilding) => {
@@ -279,6 +310,60 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     const { edges: newEdges } = cleanEdges(newChange, get().edges);
     const { inputs, outputs } = getInputsAndOutputs(newChange);
     get().updateComponentsToUpdate(newChange);
+
+    // Generate slugs for new nodes that don't have one
+    const currentSlugs = get().nodeReferenceSlugs;
+    const newSlugs = { ...currentSlugs };
+    const existingSlugs = Object.values(newSlugs);
+    const slugCounts: Record<string, number> = {};
+
+    // Count existing slug bases for proper numbering
+    for (const slug of existingSlugs) {
+      const match = slug.match(/^(.+?)(?:_(\d+))?$/);
+      if (match) {
+        const base = match[1];
+        const num = match[2] ? parseInt(match[2], 10) : 0;
+        slugCounts[base] = Math.max(slugCounts[base] || 0, num);
+      }
+    }
+
+    for (const node of newChange) {
+      if (!newSlugs[node.id]) {
+        const nodeData = node.data as NodeDataType;
+        const displayName = nodeData?.node?.display_name || "Node";
+        // Remove non-alphanumeric, capitalize words
+        const baseSlug =
+          displayName
+            .split(/\s+/)
+            .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+            .join("")
+            .replace(/[^a-zA-Z0-9]/g, "") || "Node";
+
+        // Check for duplicates and assign appropriate slug
+        let slug = baseSlug;
+        if (
+          slugCounts[baseSlug] !== undefined ||
+          existingSlugs.includes(slug)
+        ) {
+          slugCounts[baseSlug] = (slugCounts[baseSlug] || 0) + 1;
+          slug = `${baseSlug}_${slugCounts[baseSlug]}`;
+        } else {
+          slugCounts[baseSlug] = 0;
+        }
+
+        newSlugs[node.id] = slug;
+        existingSlugs.push(slug);
+      }
+    }
+
+    // Remove slugs for nodes that no longer exist
+    const nodeIds = new Set(newChange.map((n) => n.id));
+    for (const nodeId of Object.keys(newSlugs)) {
+      if (!nodeIds.has(nodeId)) {
+        delete newSlugs[nodeId];
+      }
+    }
+
     set({
       edges: newEdges,
       nodes: newChange,
@@ -286,6 +371,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       inputs,
       outputs,
       hasIO: inputs.length > 0 || outputs.length > 0,
+      nodeReferenceSlugs: newSlugs,
     });
     get().updateCurrentFlow({ nodes: newChange, edges: newEdges });
     if (get().autoSaveFlow) {
@@ -1121,6 +1207,45 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   stopNodeId: undefined,
   setStopNodeId: (nodeId: string | undefined) => {
     set({ stopNodeId: nodeId });
+  },
+  // Reference slug state for inline variable references
+  nodeReferenceSlugs: {},
+  setNodeReferenceSlug: (nodeId, slug) => {
+    set((state) => ({
+      nodeReferenceSlugs: {
+        ...state.nodeReferenceSlugs,
+        [nodeId]: slug,
+      },
+    }));
+  },
+  generateSlugForNode: (nodeId) => {
+    const state = get();
+    const node = state.nodes.find((n) => n.id === nodeId);
+    if (!node) return "Node";
+
+    const nodeData = node.data as NodeDataType;
+    const displayName = nodeData?.node?.display_name || "Node";
+    // Remove non-alphanumeric, capitalize words
+    const baseSlug = displayName
+      .split(/\s+/)
+      .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join("")
+      .replace(/[^a-zA-Z0-9]/g, "");
+
+    // Check for duplicates
+    const existingSlugs = Object.values(state.nodeReferenceSlugs);
+    let slug = baseSlug || "Node";
+    let counter = 1;
+
+    while (
+      existingSlugs.includes(slug) &&
+      state.nodeReferenceSlugs[nodeId] !== slug
+    ) {
+      slug = `${baseSlug}_${counter}`;
+      counter++;
+    }
+
+    return slug;
   },
 }));
 

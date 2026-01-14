@@ -27,33 +27,17 @@ const MCP_SSE_VALUE = "MCP_SSE";
 const { protocol, host } = customGetHostProtocol();
 const URL_MCP_SSE = `${protocol}//${host}/api/v1/mcp/sse`;
 
+function getGradientClass(
+  disabled: boolean,
+  editNode: boolean,
+  password: boolean,
+): string {
+  if (disabled || password) return "";
+  if (editNode) return "gradient-fade-input-edit-node";
+  return "gradient-fade-input";
+}
+
 const externalLinkIconClasses = {
-  gradient: ({
-    disabled,
-    editNode,
-    password,
-  }: {
-    disabled: boolean;
-    editNode: boolean;
-    password: boolean;
-  }) =>
-    disabled || password
-      ? ""
-      : editNode
-        ? "gradient-fade-input-edit-node"
-        : "gradient-fade-input",
-  background: ({
-    disabled,
-    editNode,
-  }: {
-    disabled: boolean;
-    editNode: boolean;
-  }) =>
-    disabled
-      ? ""
-      : editNode
-        ? "background-fade-input-edit-node"
-        : "background-fade-input",
   icon: "icons-parameters-comp absolute right-3 h-4 w-4 shrink-0",
   editNodeTop: "top-[-1.4rem] h-5",
   normalTop: "top-[-2.1rem] h-7",
@@ -71,7 +55,11 @@ export default function TextAreaComponent({
   placeholder,
   isToolMode = false,
   nodeInformationMetadata,
-}: InputProps<string, TextAreaComponentType>): JSX.Element {
+  nodeId,
+  onKeyDown,
+}: InputProps<string, TextAreaComponentType> & {
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+}): JSX.Element {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isFocused, setIsFocused] = useState(false);
   const [passwordVisible, setPasswordVisible] = useState(false);
@@ -80,11 +68,6 @@ export default function TextAreaComponent({
 
   const isWebhook = useMemo(
     () => nodeInformationMetadata?.nodeType === "webhook",
-    [nodeInformationMetadata?.nodeType],
-  );
-
-  const _isMCPSSE = useMemo(
-    () => nodeInformationMetadata?.nodeType === "mcp_sse",
     [nodeInformationMetadata?.nodeType],
   );
 
@@ -127,8 +110,10 @@ export default function TextAreaComponent({
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setCursor(e.target.selectionStart);
-    handleOnNewValue({ value: e.target.value });
+    const cursorPosition = e.target.selectionStart;
+    setCursor(cursorPosition);
+    // Pass cursor position along with value for reference input support
+    handleOnNewValue({ value: e.target.value, cursorPosition });
   };
 
   const changeWebhookFormat = (format: "multiline" | "singleline") => {
@@ -148,22 +133,14 @@ export default function TextAreaComponent({
       {!disabled && !isFocused && (
         <div
           className={cn(
-            externalLinkIconClasses.gradient({
-              disabled,
-              editNode,
-              password: password!,
-            }),
+            getGradientClass(disabled, editNode, password!),
             editNode
               ? externalLinkIconClasses.editNodeTop
               : externalLinkIconClasses.normalTop,
           )}
           style={{
             pointerEvents: "none",
-            background: isFocused
-              ? undefined
-              : disabled
-                ? "bg-background"
-                : GRADIENT_CLASS,
+            background: disabled ? "bg-background" : GRADIENT_CLASS,
           }}
           aria-hidden="true"
         />
@@ -195,6 +172,7 @@ export default function TextAreaComponent({
         data-testid={id}
         value={disabled ? "" : value}
         onChange={handleInputChange}
+        onKeyDown={onKeyDown}
         disabled={disabled}
         className={getInputClassName()}
         placeholder={getPlaceholder(disabled, placeholder)}
@@ -210,6 +188,7 @@ export default function TextAreaComponent({
         setValue={(newValue) => handleOnNewValue({ value: newValue })}
         disabled={disabled}
         onCloseModal={() => changeWebhookFormat("singleline")}
+        nodeId={nodeId}
       >
         <div
           onClick={() => changeWebhookFormat("multiline")}

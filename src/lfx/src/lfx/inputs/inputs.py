@@ -26,6 +26,7 @@ from .input_mixin import (
     MultilineMixin,
     QueryMixin,
     RangeMixin,
+    ReferenceMixin,
     SerializableFieldTypes,
     SliderMixin,
     SortableListMixin,
@@ -116,7 +117,7 @@ class DataFrameInput(HandleInput, InputTraceMixin, ListableInputMixin, ToolModeM
     input_types: list[str] = ["DataFrame"]
 
 
-class PromptInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMixin):
+class PromptInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMixin, ReferenceMixin):
     field_type: SerializableFieldTypes = FieldTypes.PROMPT
 
 
@@ -248,6 +249,7 @@ class StrInput(
     DatabaseLoadMixin,
     MetadataTraceMixin,
     ToolModeMixin,
+    ReferenceMixin,
 ):
     field_type: SerializableFieldTypes = FieldTypes.TEXT
     load_from_db: CoalesceBool = False
@@ -778,7 +780,12 @@ DEFAULT_PROMPT_INTUT_TYPES = ["Message"]
 from lfx.template.field.base import Input  # noqa: E402
 
 
-class DefaultPromptField(Input):
+class DefaultPromptField(Input, ReferenceMixin):
+    """Field type for prompt template variables like {a}, {b}.
+
+    Supports inline references like @NodeSlug.output via ReferenceMixin.
+    """
+
     name: str
     display_name: str | None = None
     field_type: str = "str"

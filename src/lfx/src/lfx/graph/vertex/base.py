@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import inspect
+import re
 import traceback
 import types
 from collections.abc import AsyncIterator, Callable, Iterator, Mapping
@@ -36,6 +37,27 @@ if TYPE_CHECKING:
 
     # Simple log type for tracing
     Log = dict
+
+
+def generate_reference_slug(display_name: str) -> str:
+    """Generate a reference slug from a display name.
+
+    Converts "HTTP Request" to "HttpRequest", removing spaces and special chars.
+    Note: Uses title case normalization, so acronyms become title-cased.
+
+    Args:
+        display_name: The display name to convert
+
+    Returns:
+        A valid slug for use in @references
+    """
+    if not display_name:
+        return "Node"
+
+    # Remove all non-alphanumeric characters and capitalize each word
+    slug = re.sub(r"[^a-zA-Z0-9]", "", display_name.title().replace(" ", ""))
+
+    return slug if slug else "Node"
 
 
 class VertexStates(str, Enum):
@@ -79,6 +101,7 @@ class Vertex:
         self.base_type: str | None = base_type
         self.outputs: list[dict] = []
         self.parse_data()
+        self.reference_slug: str | None = None
         self.built_object: Any = UnbuiltObject()
         self.built_result: Any = None
         self.built = False
@@ -223,6 +246,17 @@ class Vertex:
     @property
     def successors_ids(self) -> list[str]:
         return self.graph.successor_map.get(self.id, [])
+
+    @property
+    def outputs_map(self) -> dict[str, Any]:
+        """Get the outputs map from the custom component.
+
+        Returns:
+            A dictionary mapping output names to their values.
+        """
+        if self.custom_component is None:
+            return {}
+        return self.custom_component.get_outputs_map()
 
     def __getstate__(self):
         state = self.__dict__.copy()

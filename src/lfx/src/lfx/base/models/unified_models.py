@@ -1089,7 +1089,7 @@ def update_model_options_in_build_config(
                                 parsed_value = json.loads(var.value)
                                 if isinstance(parsed_value, dict):
                                     return parsed_value.get("model_name"), parsed_value.get("provider")
-                        except (ValueError, json.JSONDecodeError, TypeError):
+                        except (ValueError, TypeError):  # json.JSONDecodeError is a subclass of ValueError
                             # Variable not found or invalid format
                             logger.info("Variable not found or invalid format", exc_info=True)
                         return None, None

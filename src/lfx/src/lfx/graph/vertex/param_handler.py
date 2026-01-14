@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 
+from lfx.graph.reference import ReferenceResolutionError, resolve_references
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.services.deps import get_storage_service
@@ -190,6 +191,15 @@ class ParameterHandler:
         else:
             params = self._handle_other_direct_types(field_name, field, val, params)
 
+        # Resolve @references if the field has them
+        if self._should_resolve_references(field) and field_name in params:
+            param_value = params[field_name]
+            if isinstance(param_value, str):
+                try:
+                    params[field_name] = resolve_references(param_value, self.vertex.graph)
+                except ReferenceResolutionError as e:
+                    logger.warning("Failed to resolve references in field %s: %s", field_name, e)
+
         if field.get("load_from_db"):
             load_from_db_fields.append(field_name)
 
@@ -314,3 +324,35 @@ class ParameterHandler:
                     params[field_name] = val
 
         return params
+
+    def _should_resolve_references(self, field: dict) -> bool:
+        """Check if a field should have its references resolved.
+
+        Args:
+            field: The field definition dict
+
+        Returns:
+            True if has_references is explicitly True
+        """
+        return field.get("has_references", False) is True
+
+    def _resolve_field_references(self, value: str, field: dict) -> str:
+        """Resolve @references in a field value.
+
+        Args:
+            value: The field value containing references
+            field: The field definition
+
+        Returns:
+            The value with references resolved
+
+        Raises:
+            ReferenceResolutionError: If resolution fails
+        """
+        if not self._should_resolve_references(field):
+            return value
+
+        if not isinstance(value, str):
+            return value
+
+        return resolve_references(value, self.vertex.graph)
