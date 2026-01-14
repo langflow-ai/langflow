@@ -139,6 +139,7 @@ class TestParseFlatInputs:
             }
         }
         assert session_id is None
+
     def test_parse_flat_inputs_malformed_key_no_dot(self):
         """Test handling of non-dict value without dot notation (edge case)."""
         # Non-dict values without dots are ignored (not valid component.param format)
@@ -175,29 +176,12 @@ class TestParseFlatInputs:
 
     def test_parse_flat_inputs_deeply_nested_dict(self):
         """Test handling of deeply nested dict structures (backward compatibility)."""
-        inputs = {
-            "Component-abc": {
-                "level1": {
-                    "level2": {
-                        "level3": {"value": "deeply nested"}
-                    }
-                }
-            }
-        }
+        inputs = {"Component-abc": {"level1": {"level2": {"level3": {"value": "deeply nested"}}}}}
         tweaks, session_id = parse_flat_inputs(inputs)
 
         # Deeply nested dicts should be preserved as-is
-        assert tweaks == {
-            "Component-abc": {
-                "level1": {
-                    "level2": {
-                        "level3": {"value": "deeply nested"}
-                    }
-                }
-            }
-        }
+        assert tweaks == {"Component-abc": {"level1": {"level2": {"level3": {"value": "deeply nested"}}}}}
         assert session_id is None
-
 
 
 class TestExtractNestedValue:
@@ -266,6 +250,7 @@ class TestExtractNestedValue:
         # OutputValue structure from lfx.schema.schema
         data = {"message": {"text": "Hello World"}, "type": "message"}
         _extract_nested_value(data, "message", "text")
+
     def test_extract_from_pinecone_output(self):
         """Test extracting from Pinecone vector store output structure."""
         # Pinecone vector store typical output
@@ -434,6 +419,7 @@ class TestExtractTextFromMessage:
         content = {"message": {"message": 123, "text": ["list", "of", "items"]}}
         result = _extract_text_from_message(content)
         assert result is None
+
     def test_extract_text_circular_reference(self):
         """Test handling of circular references (should not cause infinite loop)."""
         # Create a circular reference structure
@@ -448,11 +434,23 @@ class TestExtractTextFromMessage:
     def test_extract_text_extremely_nested(self):
         """Test handling of extremely nested structures (10+ levels)."""
         # Build a 12-level deep nested structure
-        content: dict[str, Any] = {"level1": {"level2": {"level3": {"level4": {
-            "level5": {"level6": {"level7": {"level8": {
-                "level9": {"level10": {"level11": {"level12": "deep value"}}}
-            }}}}
-        }}}}}
+        content: dict[str, Any] = {
+            "level1": {
+                "level2": {
+                    "level3": {
+                        "level4": {
+                            "level5": {
+                                "level6": {
+                                    "level7": {
+                                        "level8": {"level9": {"level10": {"level11": {"level12": "deep value"}}}}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         # Should return None as it doesn't match expected patterns
         result = _extract_text_from_message(content)
@@ -461,9 +459,7 @@ class TestExtractTextFromMessage:
     def test_extract_text_mixed_types_in_path(self):
         """Test handling of mixed types (list, dict, string) in extraction path."""
         # Message contains a list instead of expected dict
-        content = {
-            "message": ["item1", "item2", "item3"]
-        }
+        content = {"message": ["item1", "item2", "item3"]}
         result = _extract_text_from_message(content)
         assert result is None
 
@@ -476,14 +472,12 @@ class TestExtractTextFromMessage:
         content = {"message": {"message": ["not", "a", "string"]}}
         result = _extract_text_from_message(content)
         assert result is None
+
     def test_extract_from_embedding_output(self):
         """Test extracting from embedding component output structure."""
         # OpenAI/Cohere embeddings typically return vectors, not text
         # But may have metadata with text
-        content = {
-            "embeddings": [[0.1, 0.2, 0.3]],
-            "text": "Text that was embedded"
-        }
+        content = {"embeddings": [[0.1, 0.2, 0.3]], "text": "Text that was embedded"}
         result = _extract_text_from_message(content)
         assert result == "Text that was embedded"
 
@@ -494,13 +488,11 @@ class TestExtractTextFromMessage:
             "message": {
                 "message": "Tool executed successfully: result data",
                 "tool_name": "calculator",
-                "tool_input": {"operation": "add", "numbers": [1, 2]}
+                "tool_input": {"operation": "add", "numbers": [1, 2]},
             }
         }
         result = _extract_text_from_message(content)
         assert result == "Tool executed successfully: result data"
-
-
 
 
 class TestExtractModelSource:
@@ -562,9 +554,7 @@ class TestExtractFilePath:
 
     def test_extract_file_path_valid(self):
         """Test extracting file path from SaveToFile component."""
-        raw_content = {
-            "message": {"message": "File saved successfully to /path/to/file.txt"}
-        }
+        raw_content = {"message": {"message": "File saved successfully to /path/to/file.txt"}}
         result = _extract_file_path(raw_content, "SaveToFile")
         assert result == "File saved successfully to /path/to/file.txt"
 
@@ -576,9 +566,7 @@ class TestExtractFilePath:
 
     def test_extract_file_path_wrong_component_type(self):
         """Test that non-SaveToFile components return None."""
-        raw_content = {
-            "message": {"message": "File saved successfully to /path/to/file.txt"}
-        }
+        raw_content = {"message": {"message": "File saved successfully to /path/to/file.txt"}}
         result = _extract_file_path(raw_content, "ChatOutput")
         assert result is None
 
@@ -708,12 +696,8 @@ class TestBuildMetadataForNonOutput:
 
     def test_build_metadata_llm_component(self):
         """Test building metadata for LLM component."""
-        raw_content = {
-            "model_output": {"message": {"model_name": "gpt-4", "text": "response"}}
-        }
-        metadata = _build_metadata_for_non_output(
-            raw_content, "llm-123", "OpenAI LLM", "OpenAIModel", "message"
-        )
+        raw_content = {"model_output": {"message": {"model_name": "gpt-4", "text": "response"}}}
+        metadata = _build_metadata_for_non_output(raw_content, "llm-123", "OpenAI LLM", "OpenAIModel", "message")
 
         assert "source" in metadata
         assert metadata["source"]["source"] == "gpt-4"
@@ -721,12 +705,9 @@ class TestBuildMetadataForNonOutput:
 
     def test_build_metadata_save_to_file(self):
         """Test building metadata for SaveToFile component."""
-        raw_content = {
-            "message": {"message": "File saved successfully to /path/to/file.txt"}
-        }
-        _build_metadata_for_non_output(
-            raw_content, "save-123", "Save File", "SaveToFile", "message"
-        )
+        raw_content = {"message": {"message": "File saved successfully to /path/to/file.txt"}}
+        _build_metadata_for_non_output(raw_content, "save-123", "Save File", "SaveToFile", "message")
+
     def test_build_metadata_vector_store(self):
         """Test building metadata for vector store components."""
         # Pinecone vector store with index info
@@ -735,7 +716,7 @@ class TestBuildMetadataForNonOutput:
                 "message": "Stored 5 vectors in index 'documents'",
                 "index_name": "documents",
                 "dimension": 1536,
-                "metric": "cosine"
+                "metric": "cosine",
             }
         }
         metadata = _build_metadata_for_non_output(
@@ -750,12 +731,7 @@ class TestBuildMetadataForNonOutput:
         """Test building metadata for retriever components."""
         # Retriever with search metadata
         raw_content = {
-            "message": {
-                "message": "Retrieved 3 documents",
-                "query": "search term",
-                "top_k": 3,
-                "avg_score": 0.85
-            }
+            "message": {"message": "Retrieved 3 documents", "query": "search term", "top_k": 3, "avg_score": 0.85}
         }
         metadata = _build_metadata_for_non_output(
             raw_content, "retriever-123", "Document Retriever", "VectorStoreRetriever", "message"
@@ -770,9 +746,7 @@ class TestBuildMetadataForNonOutput:
             "model_output": {"message": {"model_name": "gpt-4"}},
             "message": {"message": "File saved successfully to /path/file.txt"},
         }
-        metadata = _build_metadata_for_non_output(
-            raw_content, "save-123", "Save File", "SaveToFile", "message"
-        )
+        metadata = _build_metadata_for_non_output(raw_content, "save-123", "Save File", "SaveToFile", "message")
 
         assert "source" in metadata
         assert "file_path" in metadata
@@ -780,23 +754,17 @@ class TestBuildMetadataForNonOutput:
     def test_build_metadata_non_message_type(self):
         """Test that non-message types return empty metadata."""
         raw_content = {"data": "some data"}
-        metadata = _build_metadata_for_non_output(
-            raw_content, "comp-123", "Component", "DataProcessor", "data"
-        )
+        metadata = _build_metadata_for_non_output(raw_content, "comp-123", "Component", "DataProcessor", "data")
         assert metadata == {}
 
     def test_build_metadata_non_dict_content(self):
         """Test that non-dict or empty content returns empty metadata."""
         # Non-dict content
-        metadata = _build_metadata_for_non_output(
-            "string content", "comp-123", "Component", "TextProcessor", "message"
-        )
+        metadata = _build_metadata_for_non_output("string content", "comp-123", "Component", "TextProcessor", "message")
         assert metadata == {}
 
         # Empty dict
-        metadata = _build_metadata_for_non_output(
-            {}, "comp-123", "Component", "Processor", "message"
-        )
+        metadata = _build_metadata_for_non_output({}, "comp-123", "Component", "Processor", "message")
         assert metadata == {}
 
 
@@ -893,9 +861,7 @@ class TestRunResponseToWorkflowResponse:
         request = WorkflowExecutionRequest(flow_id="flow-123", inputs={"test": "input"})
 
         # Convert
-        response = run_response_to_workflow_response(
-            run_response, "flow-123", "job-456", request, graph
-        )
+        response = run_response_to_workflow_response(run_response, "flow-123", "job-456", request, graph)
 
         assert isinstance(response, WorkflowExecutionResponse)
         assert response.flow_id == "flow-123"
@@ -922,9 +888,7 @@ class TestRunResponseToWorkflowResponse:
         run_response = Mock()
         result_data = Mock()
         result_data.component_id = "llm-123"
-        result_data.outputs = {
-            "model_output": {"message": {"model_name": "gpt-4", "text": "response"}}
-        }
+        result_data.outputs = {"model_output": {"message": {"model_name": "gpt-4", "text": "response"}}}
         result_data.metadata = {}
 
         run_output = Mock()
@@ -933,9 +897,7 @@ class TestRunResponseToWorkflowResponse:
 
         request = WorkflowExecutionRequest(flow_id="flow-1", inputs={})
 
-        response = run_response_to_workflow_response(
-            run_response, "flow-1", "job-1", request, graph
-        )
+        response = run_response_to_workflow_response(run_response, "flow-1", "job-1", request, graph)
 
         assert "LLM" in response.outputs
         output = response.outputs["LLM"]
@@ -969,9 +931,7 @@ class TestRunResponseToWorkflowResponse:
 
         request = WorkflowExecutionRequest(flow_id="flow-1", inputs={})
 
-        response = run_response_to_workflow_response(
-            run_response, "flow-1", "job-1", request, graph
-        )
+        response = run_response_to_workflow_response(run_response, "flow-1", "job-1", request, graph)
 
         # Should use IDs instead of duplicate display names
         assert "output-1" in response.outputs
@@ -1006,9 +966,7 @@ class TestRunResponseToWorkflowResponse:
 
         request = WorkflowExecutionRequest(flow_id="flow-1", inputs={})
 
-        response = run_response_to_workflow_response(
-            run_response, "flow-1", "job-1", request, graph
-        )
+        response = run_response_to_workflow_response(run_response, "flow-1", "job-1", request, graph)
 
         # Data type non-output nodes should show content
         assert response.outputs["DataNode"].content == {"result": "42"}
@@ -1033,9 +991,7 @@ class TestRunResponseToWorkflowResponse:
 
         request = WorkflowExecutionRequest(flow_id="flow-1", inputs={})
 
-        response = run_response_to_workflow_response(
-            run_response, "flow-1", "job-1", request, graph
-        )
+        response = run_response_to_workflow_response(run_response, "flow-1", "job-1", request, graph)
 
         assert "Output" in response.outputs
 
@@ -1067,16 +1023,7 @@ class TestRunResponseToWorkflowResponse:
         run_response = Mock()
         result_data = Mock()
         result_data.component_id = "pinecone-123"
-        result_data.outputs = {
-            "result": {
-                "message": {
-                    "result": {
-                        "ids": ["vec1", "vec2"],
-                        "stored_count": 2
-                    }
-                }
-            }
-        }
+        result_data.outputs = {"result": {"message": {"result": {"ids": ["vec1", "vec2"], "stored_count": 2}}}}
         result_data.metadata = {"index_name": "documents"}
 
         run_output = Mock()
@@ -1085,9 +1032,7 @@ class TestRunResponseToWorkflowResponse:
 
         request = WorkflowExecutionRequest(flow_id="flow-1", inputs={})
 
-        response = run_response_to_workflow_response(
-            run_response, "flow-1", "job-1", request, graph
-        )
+        response = run_response_to_workflow_response(run_response, "flow-1", "job-1", request, graph)
 
         # Data type non-output nodes should show content
         assert "Vector Store" in response.outputs
@@ -1111,14 +1056,7 @@ class TestRunResponseToWorkflowResponse:
         result_data = Mock()
         result_data.component_id = "retriever-456"
         result_data.outputs = {
-            "result": {
-                "message": {
-                    "result": {
-                        "documents": ["doc1", "doc2", "doc3"],
-                        "scores": [0.95, 0.87, 0.82]
-                    }
-                }
-            }
+            "result": {"message": {"result": {"documents": ["doc1", "doc2", "doc3"], "scores": [0.95, 0.87, 0.82]}}}
         }
         result_data.metadata = {"query": "search term", "top_k": 3}
 
@@ -1128,9 +1066,7 @@ class TestRunResponseToWorkflowResponse:
 
         request = WorkflowExecutionRequest(flow_id="flow-1", inputs={})
 
-        response = run_response_to_workflow_response(
-            run_response, "flow-1", "job-1", request, graph
-        )
+        response = run_response_to_workflow_response(run_response, "flow-1", "job-1", request, graph)
 
         # Should include content and metadata
         assert "Retriever" in response.outputs
@@ -1153,9 +1089,7 @@ class TestRunResponseToWorkflowResponse:
 
         request = WorkflowExecutionRequest(flow_id="flow-1", inputs={})
 
-        response = run_response_to_workflow_response(
-            run_response, "flow-1", "job-1", request, graph
-        )
+        response = run_response_to_workflow_response(run_response, "flow-1", "job-1", request, graph)
 
         assert response.outputs == {}
         assert response.status == JobStatus.COMPLETED
@@ -1181,9 +1115,7 @@ class TestRunResponseToWorkflowResponse:
         request = WorkflowExecutionRequest(flow_id="flow-1", inputs={})
 
         # Should handle gracefully without crashing
-        response = run_response_to_workflow_response(
-            run_response, "flow-1", "job-1", request, graph
-        )
+        response = run_response_to_workflow_response(run_response, "flow-1", "job-1", request, graph)
 
         # Should use ID as fallback when display_name is None
         assert "corrupted-123" in response.outputs
@@ -1216,9 +1148,7 @@ class TestRunResponseToWorkflowResponse:
         request = WorkflowExecutionRequest(flow_id="flow-1", inputs={})
 
         # Should handle gracefully - vertex won't match result_data
-        response = run_response_to_workflow_response(
-            run_response, "flow-1", "job-1", request, graph
-        )
+        response = run_response_to_workflow_response(run_response, "flow-1", "job-1", request, graph)
 
         # Output should exist but with no content (no matching result_data)
         assert "Output" in response.outputs

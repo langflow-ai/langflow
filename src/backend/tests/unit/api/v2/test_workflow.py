@@ -807,12 +807,7 @@ class TestWorkflowSyncExecution:
             # Mock successful execution with ChatOutput
             mock_result_data = MagicMock()
             mock_result_data.component_id = "ChatOutput-xyz789"
-            mock_result_data.outputs = {
-                "message": {
-                    "message": "I'm doing well, thank you for asking!",
-                    "type": "text"
-                }
-            }
+            mock_result_data.outputs = {"message": {"message": "I'm doing well, thank you for asking!", "type": "text"}}
             mock_result_data.metadata = {}
 
             mock_run_output = MagicMock()
@@ -886,7 +881,7 @@ class TestWorkflowSyncExecution:
                     "message": {
                         "message": "Quantum computing uses quantum mechanics...",
                         "model_name": "gpt-4",
-                        "type": "text"
+                        "type": "text",
                     }
                 }
             }
@@ -947,10 +942,7 @@ class TestWorkflowSyncExecution:
             mock_result_data = MagicMock()
             mock_result_data.component_id = "SaveToFile-xyz"
             mock_result_data.outputs = {
-                "message": {
-                    "message": "File saved successfully to /tmp/output.txt",
-                    "type": "text"
-                }
+                "message": {"message": "File saved successfully to /tmp/output.txt", "type": "text"}
             }
             mock_result_data.metadata = {"bytes_written": 1024}
 
@@ -1014,7 +1006,7 @@ class TestWorkflowSyncExecution:
             with patch("langflow.api.v2.workflow.run_graph_internal") as mock_run:
                 mock_run.return_value = (
                     {"ChatOutput-aaa": mock_chat_output, "SaveToFile-bbb": mock_file_output},
-                    "session-202"
+                    "session-202",
                 )
 
                 headers = {"x-api-key": created_api_key.api_key}
