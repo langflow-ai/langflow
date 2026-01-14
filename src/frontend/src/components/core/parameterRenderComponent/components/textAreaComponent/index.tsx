@@ -71,7 +71,11 @@ export default function TextAreaComponent({
   placeholder,
   isToolMode = false,
   nodeInformationMetadata,
-}: InputProps<string, TextAreaComponentType>): JSX.Element {
+  nodeId,
+  onKeyDown,
+}: InputProps<string, TextAreaComponentType> & {
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+}): JSX.Element {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isFocused, setIsFocused] = useState(false);
   const [passwordVisible, setPasswordVisible] = useState(false);
@@ -127,8 +131,10 @@ export default function TextAreaComponent({
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setCursor(e.target.selectionStart);
-    handleOnNewValue({ value: e.target.value });
+    const cursorPosition = e.target.selectionStart;
+    setCursor(cursorPosition);
+    // Pass cursor position along with value for reference input support
+    handleOnNewValue({ value: e.target.value, cursorPosition });
   };
 
   const changeWebhookFormat = (format: "multiline" | "singleline") => {
@@ -195,6 +201,7 @@ export default function TextAreaComponent({
         data-testid={id}
         value={disabled ? "" : value}
         onChange={handleInputChange}
+        onKeyDown={onKeyDown}
         disabled={disabled}
         className={getInputClassName()}
         placeholder={getPlaceholder(disabled, placeholder)}
@@ -210,6 +217,7 @@ export default function TextAreaComponent({
         setValue={(newValue) => handleOnNewValue({ value: newValue })}
         disabled={disabled}
         onCloseModal={() => changeWebhookFormat("singleline")}
+        nodeId={nodeId}
       >
         <div
           onClick={() => changeWebhookFormat("multiline")}

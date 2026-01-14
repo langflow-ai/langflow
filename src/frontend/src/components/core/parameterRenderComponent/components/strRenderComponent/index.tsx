@@ -1,3 +1,6 @@
+import { useCallback } from "react";
+import { ReferenceInput } from "@/components/core/referenceInput";
+import { parseReferences } from "@/utils/referenceParser";
 import type { InputProps, StrRenderComponentType } from "../../types";
 import CopyFieldAreaComponent from "../copyFieldAreaComponent";
 import DropdownComponent from "../dropdownComponent";
@@ -15,7 +18,7 @@ export function StrRenderComponent({
   handleNodeClass,
   ...baseInputProps
 }: InputProps<string, StrRenderComponentType>) {
-  const { handleOnNewValue, id, isToolMode, nodeInformationMetadata } =
+  const { handleOnNewValue, id, isToolMode, nodeInformationMetadata, value } =
     baseInputProps;
 
   const noOptions = !templateData.options;
@@ -24,22 +27,206 @@ export function StrRenderComponent({
   const hasOptions = !!templateData.options;
   const isWebhook = nodeInformationMetadata?.nodeType === "webhook";
 
+  // Check if this field supports references (has_references is defined, not undefined)
+  const supportsReferences = templateData.has_references !== undefined;
+
+  // Wrap handleOnNewValue to also update has_references when value changes
+  const handleOnNewValueWithReferences = useCallback(
+    (newValue: any, options?: { skipSnapshot?: boolean }) => {
+      // If this field supports references, check if the new value has any
+      if (supportsReferences && typeof newValue === "string") {
+        const refs = parseReferences(newValue);
+        const hasRefs = refs.length > 0;
+
+        // If has_references changed, update the nodeClass template
+        if (templateData.has_references !== hasRefs && handleNodeClass) {
+          handleNodeClass({
+            ...nodeClass,
+            template: {
+              ...nodeClass.template,
+              [name]: {
+                ...templateData,
+                has_references: hasRefs,
+              },
+            },
+          });
+        }
+      }
+
+      // Also handle the case where newValue is an object with a value property
+      if (
+        supportsReferences &&
+        typeof newValue === "object" &&
+        newValue !== null &&
+        "value" in newValue &&
+        typeof newValue.value === "string"
+      ) {
+        const refs = parseReferences(newValue.value);
+        const hasRefs = refs.length > 0;
+
+        if (templateData.has_references !== hasRefs && handleNodeClass) {
+          handleNodeClass({
+            ...nodeClass,
+            template: {
+              ...nodeClass.template,
+              [name]: {
+                ...templateData,
+                has_references: hasRefs,
+              },
+            },
+          });
+        }
+      }
+
+      // Call the original handler
+      handleOnNewValue(newValue, options);
+    },
+    [
+      supportsReferences,
+      templateData,
+      handleNodeClass,
+      nodeClass,
+      name,
+      handleOnNewValue,
+    ],
+  );
+
+  // Callback for ReferenceInput onChange
+  const handleReferenceInputChange = useCallback(
+    (newValue: string, hasRefs: boolean) => {
+      // Update has_references if it changed
+      if (templateData.has_references !== hasRefs && handleNodeClass) {
+        handleNodeClass({
+          ...nodeClass,
+          template: {
+            ...nodeClass.template,
+            [name]: {
+              ...templateData,
+              has_references: hasRefs,
+            },
+          },
+        });
+      }
+      handleOnNewValue({ value: newValue, has_references: hasRefs });
+    },
+    [templateData, handleNodeClass, nodeClass, name, handleOnNewValue],
+  );
+
+  // Callback for InputGlobalComponent inside ReferenceInput
+  const handleInputGlobalNewValue = useCallback(
+    (
+      onChange: (
+        e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+      ) => void,
+    ) => {
+      return (newValue: any, _options?: { skipSnapshot?: boolean }) => {
+        // Handle both string and object values
+        if (typeof newValue === "string") {
+          // Simulate a change event for ReferenceInput
+          const syntheticEvent = {
+            target: { value: newValue, selectionStart: newValue.length },
+          } as React.ChangeEvent<HTMLInputElement>;
+          onChange(syntheticEvent);
+        } else if (
+          typeof newValue === "object" &&
+          newValue !== null &&
+          "value" in newValue
+        ) {
+          const valueStr = newValue.value as string;
+          const syntheticEvent = {
+            target: {
+              value: valueStr,
+              selectionStart: valueStr.length,
+            },
+          } as React.ChangeEvent<HTMLInputElement>;
+          onChange(syntheticEvent);
+        }
+      };
+    },
+    [],
+  );
+
+  // Create modified baseInputProps with the wrapped handler
+  const modifiedBaseInputProps = supportsReferences
+    ? { ...baseInputProps, handleOnNewValue: handleOnNewValueWithReferences }
+    : baseInputProps;
+
   if (noOptions) {
     if (isMultiline) {
       if (isWebhook) {
-        return <WebhookFieldComponent {...baseInputProps} />;
+        return <WebhookFieldComponent {...modifiedBaseInputProps} />;
       }
 
       if (copyField) {
-        return <CopyFieldAreaComponent {...baseInputProps} />;
+        return <CopyFieldAreaComponent {...modifiedBaseInputProps} />;
+      }
+
+      // For multiline input with reference support, wrap with ReferenceInput
+      if (supportsReferences && nodeId) {
+        return (
+          <ReferenceInput
+            nodeId={nodeId}
+            value={(value as string) ?? ""}
+            onChange={handleReferenceInputChange}
+          >
+            {({
+              value: inputValue,
+              actualValue: storedValue,
+              onChange,
+              onKeyDown,
+            }) => (
+              <TextAreaComponent
+                {...baseInputProps}
+                value={inputValue}
+                nodeId={nodeId}
+                onKeyDown={onKeyDown}
+                handleOnNewValue={(newVal: any) => {
+                  // Extract the actual value and cursor position
+                  const extractedValue =
+                    typeof newVal === "object" &&
+                    newVal !== null &&
+                    "value" in newVal
+                      ? newVal.value
+                      : newVal;
+                  const cursorPosition =
+                    typeof newVal === "object" &&
+                    newVal !== null &&
+                    "cursorPosition" in newVal
+                      ? newVal.cursorPosition
+                      : (extractedValue as string).length;
+                  // Simulate a change event for ReferenceInput
+                  // Include tagName for proper element detection
+                  const syntheticEvent = {
+                    target: {
+                      value: extractedValue as string,
+                      selectionStart: cursorPosition,
+                      tagName: "TEXTAREA",
+                    },
+                  } as React.ChangeEvent<HTMLTextAreaElement>;
+                  onChange(syntheticEvent);
+                }}
+                updateVisibility={() => {
+                  if (templateData.password !== undefined) {
+                    handleOnNewValueWithReferences(
+                      { password: !templateData.password },
+                      { skipSnapshot: true },
+                    );
+                  }
+                }}
+                id={`textarea_${id}`}
+                isToolMode={isToolMode}
+              />
+            )}
+          </ReferenceInput>
+        );
       }
 
       return (
         <TextAreaComponent
-          {...baseInputProps}
+          {...modifiedBaseInputProps}
           updateVisibility={() => {
             if (templateData.password !== undefined) {
-              handleOnNewValue(
+              handleOnNewValueWithReferences(
                 { password: !templateData.password },
                 { skipSnapshot: true },
               );
@@ -51,9 +238,34 @@ export function StrRenderComponent({
       );
     }
 
+    // For single-line input with reference support, wrap with ReferenceInput
+    if (supportsReferences && nodeId) {
+      return (
+        <ReferenceInput
+          nodeId={nodeId}
+          value={(value as string) ?? ""}
+          onChange={handleReferenceInputChange}
+        >
+          {({ value: inputValue, onChange }) => (
+            <InputGlobalComponent
+              {...baseInputProps}
+              value={inputValue}
+              handleOnNewValue={handleInputGlobalNewValue(onChange)}
+              password={templateData.password}
+              load_from_db={templateData.load_from_db}
+              placeholder={placeholder}
+              display_name={display_name}
+              id={`input-${name}`}
+              isToolMode={isToolMode}
+            />
+          )}
+        </ReferenceInput>
+      );
+    }
+
     return (
       <InputGlobalComponent
-        {...baseInputProps}
+        {...modifiedBaseInputProps}
         password={templateData.password}
         load_from_db={templateData.load_from_db}
         placeholder={placeholder}
@@ -67,7 +279,7 @@ export function StrRenderComponent({
   if (hasOptions) {
     return (
       <DropdownComponent
-        {...baseInputProps}
+        {...modifiedBaseInputProps}
         dialogInputs={templateData.dialog_inputs}
         externalOptions={templateData.external_options}
         options={templateData.options ?? []}

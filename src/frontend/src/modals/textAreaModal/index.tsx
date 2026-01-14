@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import IconComponent from "../../components/common/genericIconComponent";
+import { ReferenceInput } from "../../components/core/referenceInput";
 import { Button } from "../../components/ui/button";
 import { Textarea } from "../../components/ui/textarea";
 import {
@@ -20,6 +21,7 @@ export default function ComponentTextModal({
   password,
   changeVisibility,
   onCloseModal,
+  nodeId,
 }: textModalPropsType): JSX.Element {
   const [modalOpen, setModalOpen] = useState(false);
   const [inputValue, setInputValue] = useState(value);
@@ -34,6 +36,40 @@ export default function ComponentTextModal({
       onCloseModal?.();
     }
   }, [modalOpen]);
+
+  const handleReferenceInputChange = (newValue: string) => {
+    setInputValue(newValue);
+  };
+
+  const renderTextarea = (props?: {
+    value: string;
+    onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
+    onKeyDown: (e: React.KeyboardEvent) => void;
+    ref: React.RefObject<HTMLTextAreaElement>;
+  }) => (
+    <Textarea
+      password={password}
+      ref={props?.ref || textRef}
+      className="form-input h-full w-full resize-none overflow-auto rounded-lg focus-visible:ring-1"
+      value={props?.value ?? inputValue}
+      onChange={
+        props?.onChange ||
+        ((event) => {
+          setInputValue(event.target.value);
+        })
+      }
+      placeholder={EDIT_TEXT_PLACEHOLDER}
+      onKeyDown={
+        props?.onKeyDown ||
+        ((e) => {
+          handleKeyDown(e, value, "");
+        })
+      }
+      readOnly={readonly}
+      id={"text-area-modal"}
+      data-testid={"text-area-modal"}
+    />
+  );
 
   return (
     <BaseModal
@@ -75,22 +111,28 @@ export default function ComponentTextModal({
       </BaseModal.Header>
       <BaseModal.Content overflowHidden>
         <div className={classNames("flex h-full w-full rounded-lg border")}>
-          <Textarea
-            password={password}
-            ref={textRef}
-            className="form-input h-full w-full resize-none overflow-auto rounded-lg focus-visible:ring-1"
-            value={inputValue}
-            onChange={(event) => {
-              setInputValue(event.target.value);
-            }}
-            placeholder={EDIT_TEXT_PLACEHOLDER}
-            onKeyDown={(e) => {
-              handleKeyDown(e, value, "");
-            }}
-            readOnly={readonly}
-            id={"text-area-modal"}
-            data-testid={"text-area-modal"}
-          />
+          {nodeId ? (
+            <ReferenceInput
+              nodeId={nodeId}
+              value={inputValue}
+              onChange={handleReferenceInputChange}
+              usePortal={true}
+              className="h-full w-full"
+            >
+              {({ value: refValue, onChange, onKeyDown, ref }) =>
+                renderTextarea({
+                  value: refValue,
+                  onChange: onChange as (
+                    e: React.ChangeEvent<HTMLTextAreaElement>,
+                  ) => void,
+                  onKeyDown,
+                  ref: ref as React.RefObject<HTMLTextAreaElement>,
+                })
+              }
+            </ReferenceInput>
+          ) : (
+            renderTextarea()
+          )}
         </div>
       </BaseModal.Content>
       <BaseModal.Footer>
