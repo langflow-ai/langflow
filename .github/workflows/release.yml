@@ -166,19 +166,19 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.TEMP_GHCR_TOKEN}}
 
-      - name: Check if image tag exists in ghcr.io
-        id: check-ghcr
-        uses: tyriis/docker-image-tag-exists@v2.1.0
-        with:
-          registry: ghcr.io
-          repository: langflow-ai/langflow
-          tag: ${{ inputs.release_tag }}
+      # - name: Check if image tag exists in ghcr.io
+      #   id: check-ghcr
+      #   uses: tyriis/docker-image-tag-exists@v2.1.0
+      #   with:
+      #     registry: ghcr.io
+      #     repository: langflow-ai/langflow
+      #     tag: ${{ inputs.release_tag }}
 
-      - name: Fail if image exists in ghcr.io
-        if: steps.check-ghcr.outputs.tag == 'found'
-        run: |
-          echo "❌ Image tag '${{ inputs.release_tag }}' already exists in ghcr.io"
-          exit 1
+      # - name: Fail if image exists in ghcr.io
+      #   if: steps.check-ghcr.outputs.tag == 'found'
+      #   run: |
+      #     echo "❌ Image tag '${{ inputs.release_tag }}' already exists in ghcr.io"
+      #     exit 1
 
       - name: Check if image tag exists in docker.io
         id: check-dockerhub
