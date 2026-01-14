@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+import weakref
 from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
@@ -87,7 +88,7 @@ class CustomComponent(BaseComponent):
         self.field_order: list[str] | None = None
         self.frozen: bool = False
         self.build_parameters: dict | None = None
-        self._vertex: Vertex | None = None
+        self._vertex_ref: weakref.ReferenceType[Vertex] | None = None
         self.function: Callable | None = None
         self.repr_value: Any = ""
         self.status: Any | None = None
@@ -113,6 +114,15 @@ class CustomComponent(BaseComponent):
     def set_parameters(self, parameters: dict) -> None:
         self._parameters = parameters
         self.set_attributes(self._parameters)
+
+    @property
+    def _vertex(self) -> Vertex | None:
+        """Access Vertex via weak reference."""
+        return self._vertex_ref() if self._vertex_ref else None
+
+    @_vertex.setter
+    def _vertex(self, vertex: Vertex | None) -> None:
+        self._vertex_ref = weakref.ref(vertex) if vertex else None
 
     def get_vertex(self):
         return self._vertex

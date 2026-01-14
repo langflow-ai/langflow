@@ -654,8 +654,55 @@ class Graph:
                 session_id=self.session_id,
             )
 
+    async def cleanup_async_tasks(self) -> None:
+        """Ensure all async tasks complete before cleanup."""
+        logger.info(f"Cleaning up async tasks for run_id: {self._run_id}")
+        if self._end_trace_tasks:
+            logger.info(f"Waiting for {len(self._end_trace_tasks)} trace tasks to complete")
+            try:
+                await asyncio.wait_for(asyncio.gather(*self._end_trace_tasks, return_exceptions=True), timeout=30.0)
+            except asyncio.TimeoutError:
+                logger.warning("Some trace tasks did not complete within timeout")
+            finally:
+                self._end_trace_tasks.clear()
+
+    def __del__(self):
+        """Cleanup when graph is destroyed."""
+        if self._end_trace_tasks:
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    cleanup_task = loop.create_task(self.cleanup_async_tasks())
+
+                    def _log_cleanup(t: asyncio.Task) -> None:
+                        try:
+                            exc = t.exception()
+                        except Exception:  # noqa: BLE001
+                            logger.exception("Cleanup task inspection failed")
+                            return
+                        if exc:
+                            logger.warning("Cleanup task failed during __del__", exc_info=exc)
+                        else:
+                            logger.info("Cleanup task completed cleanly")
+
+                    cleanup_task.add_done_callback(_log_cleanup)
+                elif loop.is_closed():
+                    for task in list(self._end_trace_tasks):
+                        task.cancel()
+                    self._end_trace_tasks.clear()
+                else:
+                    loop.run_until_complete(self.cleanup_async_tasks())
+            except Exception:  # noqa: BLE001
+                logger.exception("Error cleaning up async tasks")
+
     def _end_all_traces_async(self, outputs: dict[str, Any] | None = None, error: Exception | None = None) -> None:
-        task = asyncio.create_task(self.end_all_traces(outputs, error))
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            run_until_complete(self.end_all_traces(outputs, error))
+            return
+
+        task = loop.create_task(self.end_all_traces(outputs, error))
         self._end_trace_tasks.add(task)
         task.add_done_callback(self._end_trace_tasks.discard)
 
