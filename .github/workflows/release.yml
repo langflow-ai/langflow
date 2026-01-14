@@ -121,7 +121,7 @@ jobs:
     steps:
       - name: Check if package version already exists on pypi
         run: |
-          if pip index versions langflow | grep -q '${{ inputs.release_tag }}'"; then
+          if pip index versions langflow | grep -q '${{ inputs.release_tag }}'; then
             echo "❌ Package version '${{ inputs.release_tag }}' already exists in pypi."
             exit 1
           fi
@@ -155,7 +155,7 @@ jobs:
           exit 1
   ci:
     name: CI
-    needs: [validate-tag, validate-dependencies]
+    needs: [validate-tag, validate-dependencies, prevent-image-overwrite]
     uses: ./.github/workflows/ci.yml
     with:
       ref: ${{ inputs.release_tag }}
