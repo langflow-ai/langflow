@@ -68,8 +68,8 @@ export type FlowPoolObjectType = {
   // list of chat outputs or list of chat inputs
   messages: Array<ChatOutputType | ChatInputType> | [];
   data: {
-    artifacts: Record<string, unknown>;
-    results: unknown | ChatOutputType | ChatInputType;
+    artifacts: Record<string, JSONValue>;
+    results: JSONValue | ChatOutputType | ChatInputType;
   };
   id: string;
 };
@@ -107,7 +107,7 @@ export interface MediaContent extends BaseContent {
 
 export interface JSONContent extends BaseContent {
   type: "json";
-  data: Record<string, unknown>;
+  data: Record<string, JSONValue>;
 }
 
 export interface CodeContent extends BaseContent {
@@ -120,9 +120,9 @@ export interface CodeContent extends BaseContent {
 export interface ToolContent extends BaseContent {
   type: "tool_use";
   name?: string;
-  tool_input: Record<string, unknown>;
-  output?: unknown;
-  error?: unknown;
+  tool_input: Record<string, JSONValue>;
+  output?: JSONValue;
+  error?: JSONValue | string;
 }
 
 // Union type for all content types
@@ -162,5 +162,14 @@ export interface PlaygroundEvent {
   edit?: boolean;
 }
 
+// JSON-serializable value type
+export type JSONValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JSONValue[]
+  | { [key: string]: JSONValue };
+
 // Generic JSON object helper
-export type JSONObject = Record<string, unknown>;
+export type JSONObject = Record<string, JSONValue>;

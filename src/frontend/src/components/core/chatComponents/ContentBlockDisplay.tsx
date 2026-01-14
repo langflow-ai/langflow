@@ -1,15 +1,21 @@
 "use client";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Markdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax/browser";
 import remarkGfm from "remark-gfm";
 import { BorderTrail } from "@/components/core/border-trail";
+import { useToolDurations } from "@/components/core/playgroundComponent/chat-view/chat-messages/hooks/use-tool-durations";
 import type { ContentBlock } from "@/types/chat";
 import { cn } from "@/utils/utils";
 import ForwardedIconComponent from "../../common/genericIconComponent";
-import { Separator } from "../../ui/separator";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "../../ui/accordion";
 import ContentDisplay from "./ContentDisplay";
 import DurationDisplay from "./DurationDisplay";
 
@@ -31,80 +37,12 @@ export function ContentBlockDisplay({
   hideHeader = false,
 }: ContentBlockDisplayProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [openTools, setOpenTools] = useState<Record<string, boolean>>({});
-  const [toolStartTimes, setToolStartTimes] = useState<Record<string, number>>(
-    {},
+
+  // Use shared hook for tool duration tracking
+  const { toolElapsedTimes, toolItems } = useToolDurations(
+    contentBlocks,
+    isLoading ?? false,
   );
-  const [elapsedTimes, setElapsedTimes] = useState<Record<string, number>>({});
-
-  const toolItems = contentBlocks.flatMap((block, blockIndex) =>
-    block.contents
-      .filter((content) => content.type === "tool_use")
-      .map((content, contentIndex) => ({
-        content,
-        blockIndex,
-        contentIndex,
-      })),
-  );
-
-  // Track tool start times and update elapsed times in real-time
-  useEffect(() => {
-    const newStartTimes: Record<string, number> = {};
-    const newElapsedTimes: Record<string, number> = {};
-
-    toolItems.forEach(({ content, blockIndex, contentIndex }) => {
-      const toolKey = `${blockIndex}-${contentIndex}`;
-      const toolDuration = content.duration || 0;
-
-      // If tool has no duration and is loading, track its start time
-      if (isLoading && toolDuration === 0) {
-        if (!toolStartTimes[toolKey]) {
-          // Tool just started
-          newStartTimes[toolKey] = Date.now();
-        } else {
-          // Tool already started, calculate elapsed time
-          newElapsedTimes[toolKey] = Date.now() - toolStartTimes[toolKey];
-        }
-      } else if (toolDuration > 0) {
-        // Tool has finished, use its duration
-        newElapsedTimes[toolKey] = toolDuration;
-      }
-    });
-
-    if (Object.keys(newStartTimes).length > 0) {
-      setToolStartTimes((prev) => ({ ...prev, ...newStartTimes }));
-    }
-  }, [toolItems, isLoading, toolStartTimes]);
-
-  // Update elapsed times in real-time for active tools
-  useEffect(() => {
-    if (!isLoading) return;
-
-    const interval = setInterval(() => {
-      setElapsedTimes((prev) => {
-        const updated: Record<string, number> = { ...prev };
-        let hasChanges = false;
-
-        toolItems.forEach(({ content, blockIndex, contentIndex }) => {
-          const toolKey = `${blockIndex}-${contentIndex}`;
-          const toolDuration = content.duration || 0;
-
-          // Only update if tool is active (no duration yet)
-          if (toolDuration === 0 && toolStartTimes[toolKey]) {
-            const elapsed = Date.now() - toolStartTimes[toolKey];
-            if (updated[toolKey] !== elapsed) {
-              updated[toolKey] = elapsed;
-              hasChanges = true;
-            }
-          }
-        });
-
-        return hasChanges ? updated : prev;
-      });
-    }, 100);
-
-    return () => clearInterval(interval);
-  }, [isLoading, toolItems, toolStartTimes]);
 
   if (!toolItems.length) {
     return null;
@@ -112,9 +50,8 @@ export function ContentBlockDisplay({
 
   const totalDuration = isLoading
     ? undefined
-    : toolItems.reduce((acc, { content, blockIndex, contentIndex }) => {
-        const toolKey = `${blockIndex}-${contentIndex}`;
-        const toolDuration = elapsedTimes[toolKey] ?? content.duration ?? 0;
+    : toolItems.reduce((acc, { content, toolKey }) => {
+        const toolDuration = toolElapsedTimes[toolKey] ?? content.duration ?? 0;
         return acc + toolDuration;
       }, 0);
 
@@ -122,7 +59,10 @@ export function ContentBlockDisplay({
     return null;
   }
 
-  const formatTime = (ms: number) => {
+  const formatTime = (ms: number, showMsOnly: boolean = false) => {
+    if (showMsOnly) {
+      return `${Math.round(ms)}ms`;
+    }
     if (ms < 1000) return `${Math.round(ms)}ms`;
     const seconds = ms / 1000;
     if (seconds < 60) return `${seconds.toFixed(1)}s`;
@@ -145,10 +85,7 @@ export function ContentBlockDisplay({
           duration: 0.2,
           ease: "easeOut",
         }}
-        className={cn(
-          "relative rounded-lg border border-border bg-background",
-          "overflow-hidden",
-        )}
+        className={cn("relative rounded-lg bg-transparent", "overflow-hidden")}
       >
         {isLoading && (
           <BorderTrail
@@ -195,32 +132,14 @@ export function ContentBlockDisplay({
           </div>
         )}
 
-        <AnimatePresence initial={false}>
-          {(hideHeader || isExpanded) && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{
-                height: "auto",
-                opacity: 1,
-                transition: {
-                  height: { duration: 0.2 },
-                  opacity: { duration: 0.1, delay: 0.1 },
-                },
-              }}
-              exit={{
-                height: 0,
-                opacity: 0,
-                transition: {
-                  height: { duration: 0.2 },
-                  opacity: { duration: 0.1 },
-                },
-              }}
-              className="relative"
+        {(hideHeader || isExpanded) && (
+          <div className="flex flex-col gap-2">
+            <Accordion
+              type="multiple"
+              className="w-full bg-transparent flex flex-col gap-2"
             >
               {toolItems.map(
-                ({ content, blockIndex, contentIndex }, flatIdx) => {
-                  const toolKey = `${blockIndex}-${contentIndex}`;
-                  const isToolOpen = openTools[toolKey] ?? false;
+                ({ content, toolKey, blockIndex, contentIndex }, flatIdx) => {
                   const rawTitle =
                     content.header?.title ||
                     content.name ||
@@ -237,85 +156,49 @@ export function ContentBlockDisplay({
                       : rawTitle;
                   // Use elapsed time if tool is active, otherwise use duration
                   const toolDuration =
-                    elapsedTimes[toolKey] ?? content.duration ?? 0;
+                    toolElapsedTimes[toolKey] ?? content.duration ?? 0;
 
                   return (
-                    <motion.div
+                    <AccordionItem
                       key={toolKey}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ duration: 0.2, delay: 0.05 }}
-                      className="relative "
+                      value={toolKey}
+                      className="border border-border rounded-lg overflow-hidden bg-background"
                     >
-                      <div
-                        className="flex cursor-pointer items-center justify-between px-1 py-1.5 rounded-sm muted text-muted-foreground w-full"
-                        onClick={() =>
-                          setOpenTools((prev) => ({
-                            ...prev,
-                            [toolKey]: !(prev[toolKey] ?? false),
-                          }))
-                        }
-                      >
-                        <div className="flex items-center gap-1 text-sm font-normal min-w-0 flex-1 overflow-hidden">
-                          <motion.div
-                            animate={{ rotate: isToolOpen ? 90 : 0 }}
-                            transition={{ duration: 0.2, ease: "easeInOut" }}
-                            className="flex-shrink-0"
-                          >
-                            <ChevronRight className="h-4 w-4" />
-                          </motion.div>
-                          <div className="text-muted-foreground whitespace-nowrap flex-shrink-0">
-                            Called tool{" "}
+                      <AccordionTrigger className="hover:bg-muted hover:no-underline px-1 py-1.5">
+                        <div className="flex items-center justify-between w-full pr-2">
+                          <div className="flex items-center gap-1 text-sm font-normal min-w-0 flex-1 overflow-hidden">
+                            <div className="text-muted-foreground whitespace-nowrap flex-shrink-0">
+                              Called tool{" "}
+                            </div>
+                            <div className="truncate flex-1 muted-foreground bg-muted py-1 px-1.5 rounded-sm text-xs max-w-fit">
+                              <p className="truncate font-normal font-mono">
+                                {toolTitle}
+                              </p>
+                            </div>
                           </div>
-                          <div className="truncate flex-1 muted-foreground bg-muted py-1 px-1.5 rounded-sm text-xs max-w-fit">
-                            <p className="truncate font-normal font-mono">
-                              {toolTitle}
-                            </p>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-emerald-500">
+                              {formatTime(toolDuration, true)}
+                            </span>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-emerald-500">
-                            {formatTime(toolDuration)}
-                          </span>
+                      </AccordionTrigger>
+                      <AccordionContent className="pt-0">
+                        <div className="text-sm text-muted-foreground px-4 pb-4 max-h-96 overflow-auto">
+                          <ContentDisplay
+                            playgroundPage={playgroundPage}
+                            content={content}
+                            chatId={`${chatId}-${blockIndex}-${contentIndex}`}
+                          />
                         </div>
-                      </div>
-                      <AnimatePresence>
-                        {isToolOpen && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{
-                              height: "auto",
-                              opacity: 1,
-                              transition: {
-                                height: { duration: 0.2 },
-                                opacity: { duration: 0.1, delay: 0.1 },
-                              },
-                            }}
-                            exit={{
-                              height: 0,
-                              opacity: 0,
-                              transition: {
-                                height: { duration: 0.2 },
-                                opacity: { duration: 0.1 },
-                              },
-                            }}
-                            className="text-sm text-muted-foreground px-4 pb-4 max-h-96 overflow-auto"
-                          >
-                            <ContentDisplay
-                              playgroundPage={playgroundPage}
-                              content={content}
-                              chatId={`${chatId}-${blockIndex}-${contentIndex}`}
-                            />
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </motion.div>
+                      </AccordionContent>
+                    </AccordionItem>
                   );
                 },
               )}
-            </motion.div>
-          )}
-        </AnimatePresence>
+            </Accordion>
+          </div>
+        )}
       </motion.div>
     </div>
   );
