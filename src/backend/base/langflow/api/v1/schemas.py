@@ -486,7 +486,7 @@ class MCPInstallRequest(BaseModel):
 
 
 class PublishFlowCreate(BaseModel):
-    publish_tag: str | None = Field(None, description="Optional tag for the published flow version.")
+    pass
 
 
 class PublishedFlowRead(PublishedFlowMetadata):
@@ -522,7 +522,6 @@ class ProjectFlowVersion(BaseModel):
         )
 
 class PublishProjectCreate(BaseModel):
-    publish_tag: str | None = Field(None, description="Optional tag for the published project version.")
     flows: list[ProjectFlowVersion] = Field(..., description="List of flows to include in the project.")
 
     def flows_to_tuple(self):

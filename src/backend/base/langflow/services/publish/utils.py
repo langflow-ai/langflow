@@ -42,13 +42,12 @@ def to_alnum_string(s: str | None):
     return ALNUM_PATTERN.sub("", s) if s else None
 
 
-KEY_VAL_PATTERN = re.compile(r"([^/]+)=([^/]+)")
+VERSION_PATTERN = re.compile(r"versions/([^/]+)\.json$")
 def parse_blob_key(key: str, last_modified: datetime | None, cls) -> Any:
-    """Matches key-value pairs in an s3 object key to return a metadata object."""
-    data = dict(KEY_VAL_PATTERN.findall(key))
-    data["version_id"] = data["id"]
-    data["last_modified"] = last_modified
-    return cls(**data)
+    """Extracts the version ID from the S3 object key to return a metadata object."""
+    match = VERSION_PATTERN.search(key)
+    version_id = match.group(1) if match else key # fallback to the full key if no match
+    return cls(version_id=version_id, last_modified=last_modified)
 
 
 ########################################################
@@ -287,7 +286,7 @@ def handle_s3_error(e: Exception, resource_name: str = "flow", op: str = "get"):
             )
         if error_code in ("PreconditionFailed", "412"):
             if op == "put":
-                msg = f"The {resource_name} already exists. Please update its contents or retry with a new tag."
+                msg = f"The {resource_name} already exists. Please update its contents to generate a new version."
             elif op == "delete":
                 msg = f"The {resource_name} could not be deleted because it has changed or no longer exists."
             else:

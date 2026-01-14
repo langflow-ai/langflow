@@ -40,7 +40,12 @@ from langflow.api.v1.schemas import (
 from langflow.events.event_manager import create_stream_tokens_event_manager
 from langflow.exceptions.api import APIException, InvalidChatInputError
 from langflow.exceptions.serialization import SerializationError
-from langflow.helpers.flow import get_flow_by_id_or_endpoint_name, get_published_flow
+from langflow.helpers.flow import (
+    get_deployed_flow,
+    get_deployed_flow_for_webhook,
+    get_deployed_flow_session,
+    get_flow_by_id_or_endpoint_name,
+)
 from langflow.interface.initialize.loading import update_params_with_load_from_db_fields
 from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.schema.graph import Tweaks
@@ -982,10 +987,10 @@ async def get_config() -> ConfigResponse:
 
 
 @router.post("/run/{flow_id}/versions/{version_id}", response_model=None, response_model_exclude_none=True)
-async def run_published_flow(
+async def simplified_run_deployed_flow(
     *,
     background_tasks: BackgroundTasks,
-    flow: Annotated[FlowRead, Depends(get_published_flow)],
+    flow: Annotated[FlowRead, Depends(get_deployed_flow)],
     input_request: SimplifiedAPIRequest | None = None,
     stream: bool = False,
     api_key_user: Annotated[UserRead, Depends(api_key_security)],
@@ -993,6 +998,150 @@ async def run_published_flow(
     http_request: Request,
 ):
     """Executes a specific published version of a flow."""
+    return await _run_flow_internal(
+        background_tasks=background_tasks,
+        flow=flow,
+        input_request=input_request,
+        stream=stream,
+        api_key_user=api_key_user,
+        context=context,
+        http_request=http_request,
+    )
+
+
+@router.post("/webhook/{flow_id}/versions/{version_id}", response_model=dict, status_code=HTTPStatus.ACCEPTED)
+async def webhook_run_deployed_flow(
+    data: Annotated[tuple[FlowRead, UserRead], Depends(get_deployed_flow_for_webhook)],
+    request: Request,
+    background_tasks: BackgroundTasks,
+):
+    """Run a deployed flow version using a webhook request."""
+    flow, webhook_user = data
+    telemetry_service = get_telemetry_service()
+    start_time = time.perf_counter()
+
+    try:
+        body_data = await request.body()
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    if not body_data:
+        raise HTTPException(status_code=400, detail="Request body is empty.")
+
+    try:
+        # get all webhook components in the flow
+        webhook_components = get_all_webhook_components_in_flow(flow.data)
+        tweaks = {}
+
+        for component in webhook_components:
+            tweaks[component["id"]] = {"data": body_data.decode() if isinstance(body_data, bytes) else body_data}
+        input_request = SimplifiedAPIRequest(
+            input_value="",
+            input_type="chat",
+            output_type="chat",
+            tweaks=tweaks,
+            session_id=None,
+        )
+
+        await logger.adebug("Starting background task")
+        run_id = str(uuid4())
+        background_tasks.add_task(
+            simple_run_flow_task,
+            flow=flow,
+            input_request=input_request,
+            api_key_user=webhook_user,
+            telemetry_service=telemetry_service,
+            start_time=start_time,
+            run_id=run_id,
+        )
+    except Exception as exc:
+        error_msg = str(exc)
+        raise HTTPException(status_code=500, detail=error_msg) from exc
+
+    return {"message": "Task started in the background", "status": "in progress"}
+
+
+@router.post(
+    "/run/advanced/{flow_id}/versions/{version_id}",
+    response_model=RunResponse,
+    response_model_exclude_none=True,
+)
+async def advanced_run_deployed_flow(
+    *,
+    flow: Annotated[FlowRead, Depends(get_deployed_flow)],
+    inputs: list[InputValueRequest] | None = None,
+    outputs: list[str] | None = None,
+    tweaks: Annotated[Tweaks | None, Body(embed=True)] = None,
+    stream: Annotated[bool, Body(embed=True)] = False,
+    session_id: Annotated[None | str, Body(embed=True)] = None,
+    api_key_user: Annotated[UserRead, Depends(api_key_security)],
+) -> RunResponse:
+    """Executes a specific published version of a flow with advanced options."""
+    # Get the flow from the id or name
+    await check_flow_user_permission(flow=flow, api_key_user=api_key_user)
+
+    session_service = get_session_service()
+    flow_id_str = str(flow.id)
+    if outputs is None:
+        outputs = []
+    if inputs is None:
+        inputs = [InputValueRequest(components=[], input_value="")]
+
+    if session_id:
+        try:
+            session_data = await session_service.load_session(session_id, flow_id=flow_id_str)
+        except Exception as exc:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+        graph, _artifacts = session_data or (None, None)
+        if graph is None:
+            msg = f"Session {session_id} not found"
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=msg)
+    else:
+        # Flow is already loaded via get_deployed_flow
+        if flow.data is None:
+            msg = f"Flow {flow_id_str} has no data"
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=msg)
+        try:
+            graph_data = flow.data
+            graph_data = process_tweaks(graph_data, tweaks or {})
+            graph = Graph.from_payload(graph_data, flow_id=flow_id_str)
+        except Exception as exc:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+
+    try:
+        task_result, session_id = await run_graph_internal(
+            graph=graph,
+            flow_id=flow_id_str,
+            session_id=session_id,
+            inputs=inputs,
+            outputs=outputs,
+            stream=stream,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+
+    return RunResponse(outputs=task_result, session_id=session_id)
+
+
+@router.post("/run/session/{flow_id}/versions/{version_id}", response_model=None, response_model_exclude_none=True)
+async def simplified_run_deployed_flow_session(
+    *,
+    background_tasks: BackgroundTasks,
+    flow: Annotated[FlowRead, Depends(get_deployed_flow_session)],
+    input_request: SimplifiedAPIRequest | None = None,
+    stream: bool = False,
+    api_key_user: CurrentActiveUser,
+    context: dict | None = None,
+    http_request: Request,
+):
+    """Executes a specific published version of a flow (session auth)."""
+    # Feature flag: Only allow access if agentic_experience is enabled
+    if not get_settings_service().settings.agentic_experience:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="This endpoint is not available",
+        )
+
     return await _run_flow_internal(
         background_tasks=background_tasks,
         flow=flow,

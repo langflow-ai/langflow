@@ -723,7 +723,6 @@ async def publish_project(
             user_id=current_user.id,
             project_id=project_id,
             project_blob=project_blob,
-            publish_tag=project_data.publish_tag,
             )
     except HTTPException:
         raise
@@ -756,7 +755,6 @@ async def deploy_project(
             user_id=current_user.id,
             project_id=project_id,
             project_blob=orjson.loads(project_blob),
-            publish_tag=body.version_id,
             stage=ReleaseStage.DEPLOY,
             )
     except HTTPException:

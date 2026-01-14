@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Annotated, Any, cast
 from uuid import UUID
 
 import orjson
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, Request
 from lfx.log.logger import logger
 from lfx.services.deps import get_service
 from pydantic.v1 import BaseModel, Field, create_model
@@ -12,11 +12,11 @@ from sqlalchemy.orm import aliased
 from sqlmodel import asc, desc, select
 
 from langflow.schema.schema import INPUT_FIELD_NAME
-from langflow.services.auth.utils import api_key_security
+from langflow.services.auth.utils import api_key_security, get_current_active_user, get_webhook_user
 from langflow.services.database.models.flow.model import Flow, FlowRead
-from langflow.services.database.models.user.model import UserRead  # noqa: TC001
+from langflow.services.database.models.user.model import User, UserRead  # noqa: TC001
 from langflow.services.deps import get_settings_service, session_scope
-from langflow.services.publish.schema import PublishedFlowMetadata
+from langflow.services.publish.schema import PublishedFlowMetadata, ReleaseStage
 from langflow.services.schema import ServiceType
 
 if TYPE_CHECKING:
@@ -488,7 +488,7 @@ def json_schema_from_flow(flow: Flow) -> dict:
     return {"type": "object", "properties": properties, "required": required}
 
 
-async def get_published_flow(
+async def get_deployed_flow(
     flow_id: UUID,
     version_id: str,
     api_key_user: Annotated[UserRead, Depends(api_key_security)],
@@ -503,7 +503,8 @@ async def get_published_flow(
         flow_data_str = await publish_service.get_flow(
             user_id=api_key_user.id,
             flow_id=flow_id,
-            metadata=metadata
+            metadata=metadata,
+            stage=ReleaseStage.DEPLOY,
         )
 
         if not flow_data_str:
@@ -518,9 +519,88 @@ async def get_published_flow(
             name=flow_data.get("name"),
             description=flow_data.get("description"),
             data=flow_data,
-            folder_id=None, # published flows don't really have a folder context (yet?)
+            folder_id=None,
+            # published flows don't really have a folder context (yet?)
         )
+    except HTTPException:
+        raise
     except Exception as exc:
-        if isinstance(exc, HTTPException):
-            raise exc from exc
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+async def get_deployed_flow_for_webhook(
+    flow_id: UUID,
+    version_id: str,
+    request: Request,
+) -> tuple[FlowRead, UserRead]:
+    """Retrieves a published flow and user for webhook execution."""
+    try:
+        # Authenticate using webhook rules (API Key or Flow Owner)
+        # We need to cast UUID to str for get_webhook_user
+        user = await get_webhook_user(str(flow_id), request)
+
+        publish_service: PublishService = get_service(ServiceType.PUBLISH_SERVICE)
+        metadata = PublishedFlowMetadata(version_id=version_id)
+
+        flow_data_str = await publish_service.get_flow(
+            user_id=user.id,
+            flow_id=flow_id,
+            metadata=metadata,
+            stage=ReleaseStage.DEPLOY,
+        )
+
+        if not flow_data_str:
+            raise HTTPException(status_code=404, detail="Flow data not found")
+
+        flow_data = orjson.loads(flow_data_str)
+
+        flow_read = FlowRead(
+            id=flow_id,
+            user_id=user.id,
+            name=flow_data.get("name"),
+            description=flow_data.get("description"),
+            data=flow_data,
+            folder_id=None,
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    return flow_read, user
+
+
+async def get_deployed_flow_session(
+    flow_id: UUID,
+    version_id: str,
+    user: Annotated[User, Depends(get_current_active_user)],
+) -> FlowRead:
+    """Dependency to retrieve a published flow for a session user."""
+    try:
+        publish_service: PublishService = get_service(ServiceType.PUBLISH_SERVICE)
+        metadata = PublishedFlowMetadata(version_id=version_id)
+
+        flow_data_str = await publish_service.get_flow(
+            user_id=user.id,
+            flow_id=flow_id,
+            metadata=metadata,
+            stage=ReleaseStage.DEPLOY,
+        )
+
+        if not flow_data_str:
+            raise HTTPException(status_code=404, detail="Flow data not found")
+
+        flow_data = orjson.loads(flow_data_str)
+
+        return FlowRead(
+            id=flow_id,
+            user_id=user.id,
+            name=flow_data.get("name"),
+            description=flow_data.get("description"),
+            data=flow_data,
+            folder_id=None,
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc

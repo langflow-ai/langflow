@@ -18,7 +18,6 @@ from langflow.services.publish.utils import (
     require_all_ids,
     require_valid_flow,
     require_valid_project,
-    to_alnum_string,
     validate_all,
 )
 
@@ -77,7 +76,6 @@ class S3PublishService(PublishService):
         user_id: IDType,
         flow_id: IDType,
         flow_blob: dict,
-        publish_tag: str | None,
         stage: ReleaseStage = ReleaseStage.PUBLISH,
         ) -> PublishedFlowMetadata:
         validate_all(
@@ -88,7 +86,7 @@ class S3PublishService(PublishService):
             )
         require_valid_flow(flow_blob)
 
-        version_id = to_alnum_string(publish_tag) or compute_flow_hash(flow_blob)
+        version_id = compute_flow_hash(flow_blob)
 
         key = self._flow_key(
             user_id=user_id,
@@ -210,7 +208,6 @@ class S3PublishService(PublishService):
         user_id: IDType,
         project_id: IDType,
         project_blob: dict,
-        publish_tag: str | None,
         stage: ReleaseStage = ReleaseStage.PUBLISH,
         ) -> PublishedProjectMetadata:
         validate_all(
@@ -221,7 +218,7 @@ class S3PublishService(PublishService):
             )
         require_valid_project(project_blob)
 
-        version_id = to_alnum_string(publish_tag) or compute_project_hash(project_blob)
+        version_id = compute_project_hash(project_blob)
 
         key = self._project_key(
             user_id=user_id,
@@ -316,7 +313,7 @@ class S3PublishService(PublishService):
         ) -> str:
         return (
             f"{self._flow_versions_prefix(user_id, flow_id, stage=stage)}"
-            f"/id={version_id}"
+            f"/{version_id}.json"
             )
 
     def _flow_key_validate_owner(
@@ -339,7 +336,7 @@ class S3PublishService(PublishService):
         ) -> str:
         """Return the versions key prefix used for publishing flows (without trailing slash)."""
         base_prefix = self.deploy_prefix if stage == ReleaseStage.DEPLOY else self.prefix
-        return f"{base_prefix}{user_id!s}/flows/{flow_id!s}/versions"
+        return f"{base_prefix}users/{user_id!s}/flows/{flow_id!s}/versions"
 
     def _project_key(
         self,
@@ -350,7 +347,7 @@ class S3PublishService(PublishService):
         ) -> str:
         return (
             f"{self._project_versions_prefix(user_id, project_id, stage=stage)}"
-            f"/id={version_id}"
+            f"/{version_id}.json"
             )
 
     def _project_key_validate_owner(
@@ -373,4 +370,4 @@ class S3PublishService(PublishService):
         stage: ReleaseStage = ReleaseStage.PUBLISH,
         ) -> str:
         base_prefix = self.deploy_prefix if stage == ReleaseStage.DEPLOY else self.prefix
-        return f"{base_prefix}{user_id!s}/projects/{project_id!s}/versions"
+        return f"{base_prefix}users/{user_id!s}/projects/{project_id!s}/versions"

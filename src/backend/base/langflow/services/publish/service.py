@@ -47,7 +47,6 @@ class PublishService(Service):
         user_id: IDType,
         flow_id: IDType,
         flow_blob: dict,
-        publish_tag: str | None,
         stage: ReleaseStage = ReleaseStage.PUBLISH,
     ) -> PublishedFlowMetadata:
         """Publishes a flow to the storage provider."""
@@ -94,7 +93,6 @@ class PublishService(Service):
         user_id: IDType,
         project_id: IDType,
         project_blob: dict,
-        publish_tag: str | None,
         stage: ReleaseStage = ReleaseStage.PUBLISH,
     ) -> PublishedProjectMetadata:
         """Publishes a project to the storage provider."""

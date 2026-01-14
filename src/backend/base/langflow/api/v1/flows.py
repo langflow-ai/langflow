@@ -715,11 +715,10 @@ async def publish_flow(
     session: DbSession,
     current_user: CurrentActiveUser,
     flow_id: UUID,
-    body: PublishFlowCreate | None = None,
+    _body: PublishFlowCreate | None = None,
 ):
     """Publish the flow to a Langflow-supported storage service."""
     require_all_ids(current_user.id, flow_id, "flow")
-    publish_tag = body.publish_tag if body else None
 
     try:
         db_flow: Flow = await _read_flow_for_publish(session, flow_id, current_user.id)
@@ -730,7 +729,6 @@ async def publish_flow(
             user_id=current_user.id,
             flow_id=db_flow.id,
             flow_blob=flow_blob,
-            publish_tag=publish_tag
         )
     except HTTPException:
         raise
@@ -770,7 +768,6 @@ async def deploy_flow(
             user_id=current_user.id,
             flow_id=flow_id,
             flow_blob=orjson.loads(flow_blob),
-            publish_tag=body.version_id, # Use existing version ID as tag to preserve it
             stage=ReleaseStage.DEPLOY,
         )
 
@@ -844,7 +841,6 @@ async def delete_published_flow(
     ):
     """Delete a specific published flow version."""
     require_all_ids(current_user.id, flow_id, "flow")
-
     try:
         metadata = PublishedFlowMetadata(version_id=version_id)
         publish_service: PublishService = get_service(ServiceType.PUBLISH_SERVICE)
