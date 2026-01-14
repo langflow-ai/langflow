@@ -4,11 +4,11 @@ Langflow follows a **release-when-ready** cadence, with each cycle typically las
 
 ## Goals
 
-- Keep `main` fast-moving for everyday work while ensuring stable release builds when features mature.
-- Provide an isolated branch for QA and last-minute fixes (the release candidate, RC).
-- Preserve a linear, readable history wherever possible.
-- Ensure released code is extensively tested before publication.
-- Minimize time to resolution of critical bugs.
+* Keep `main` fast-moving for everyday work while ensuring stable release builds when features mature.
+* Provide an isolated branch for QA and last-minute fixes (the release candidate, RC).
+* Preserve a linear, readable history wherever possible.
+* Ensure released code is extensively tested before publication.
+* Minimize time to resolution of critical bugs.
 
 ## Process Overview
 
@@ -17,9 +17,9 @@ Langflow follows a **release-when-ready** cadence, with each cycle typically las
 Create an OSS release candidate (RC) branch containing `langflow` and any associated PyPI packages (e.g. `lfx`).
 During this period:
 
-- QA is performed manually.
-- Bug fixes are merged into the RC branch.
-- New features continue development on `main`.
+* QA is performed manually.
+* Bug fixes are merged into the RC branch.
+* New features continue development on `main`.
 
 This step usually lasts about a week.
 
@@ -27,10 +27,10 @@ This step usually lasts about a week.
 
 Once OSS QA and bugfixing are complete, create a Desktop release candidate.
 
-- The Desktop RC is based on the final OSS RC.
-- Manual QA is performed.
-- Bug fixes are merged into the Desktop RC.
-- New features continue on `main`.
+* The Desktop RC is based on the final OSS RC.
+* Manual QA is performed.
+* Bug fixes are merged into the Desktop RC.
+* New features continue on `main`.
 
 This step also usually lasts about a week.
 
@@ -38,9 +38,9 @@ This step also usually lasts about a week.
 
 After QA and bugfixing are complete for both OSS and Desktop:
 
-- Final releases are cut from their respective RC branches.
-- Release timing is coordinated with Langflow’s DevRel team.
-- For at least 24 hours after release, Discord, GitHub, and other support channels should be monitored for critical bug reports.
+* Final releases are cut from their respective RC branches.
+* Release timing is coordinated with Langflow’s DevRel team.
+* For at least 24 hours after release, Discord, GitHub, and other support channels should be monitored for critical bug reports.
 
 ## Branch Model
 
@@ -93,14 +93,14 @@ git merge --ff-only release-X.Y.Z      # Fast-forward main to include RC changes
    git rebase origin/main
    ```
 
-   _This resolves conflicts early while keeping history linear._
+   *This resolves conflicts early while keeping history linear.*
 
 3. Final merge back must be fast-forward only. If not possible, rebase the RC onto `main` before merging.
 
 ## Versioning & Tags
 
-- Follows [Semantic Versioning](https://semver.org): `MAJOR.MINOR.PATCH`.
-- RC tags use `-rc.N`, e.g. `v1.8.0-rc.1`.
+* Follows [Semantic Versioning](https://semver.org): `MAJOR.MINOR.PATCH`.
+* RC tags use `-rc.N`, e.g. `v1.8.0-rc.1`.
 
 ## Roles
 
