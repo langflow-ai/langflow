@@ -119,12 +119,27 @@ jobs:
     if: ${{ !inputs.overwrite_previous_image }}
     needs: [validate-tag, validate-dependencies]
     steps:
-      # - name: Check if package version already exists on pypi
-      #   run: |
-      #     if pip index versions langflow | grep -q '${{ inputs.release_tag }}'; then
-      #       echo "❌ Package version '${{ inputs.release_tag }}' already exists in pypi."
-      #       exit 1
-      #     fi
+      - name: Get version
+        id: version
+        run: |
+          echo "Extracting main version from pyproject.toml"
+          version=$(uv tree 2>/dev/null | grep '^langflow' | grep -v '^langflow-base' | cut -d' ' -f2 | sed 's/^v//')
+          echo "Using version: $version"
+          echo version=$version >> $GITHUB_OUTPUT
+
+      - name: Check if release_tag matches a version in pyproject.toml
+        run: |
+          if '${{ inputs.release_tag }}' !== '${{ steps.version.outputs.version }}'; then
+            echo "❌ release_tag '${{ inputs.release_tag }}' does not match pyproject.toml version '${{ steps.version.outputs.version }}'"
+            exit 1
+          fi
+
+      - name: Check if package version already exists on pypi
+        run: |
+          if pip index versions langflow | grep -q '${{ inputs.release_tag }}'; then
+            echo "❌ Package version '${{ inputs.release_tag }}' already exists in pypi."
+            exit 1
+          fi
 
       - name: Check if image tag exists in ghcr.io
         id: check-ghcr
