@@ -99,11 +99,11 @@ To resolve this error, do the following:
 3. Delete the `venv` or `python_env` folder.
 4. Restart Langflow Desktop.
 
-If the issue persists, ensure Python version >=3.10 is installed and accessible, or reinstall Langflow Desktop from [langflow.org/desktop](https://langflow.org/desktop).
+If the issue persists, ensure you have installed Python version 3.10 or later, and it is accessible by your Langflow installation. If the Python version is correct, try reinstalling Langflow Desktop from [langflow.org/desktop](https://langflow.org/desktop).
 
 ### Langflow OSS health check failed
 
-Desktop installed Langflow OSS but the OSS backend isn't responding to health checks. You may see the error message: `Langflow Health Check Error: Timeout after 80 attempts - Langflow did not become ready` or other `Langflow Health Check Error:` messages.
+Desktop installed Langflow OSS but the OSS backend isn't responding to health checks. You can get health check error messages like `Langflow Health Check Error: Timeout after 80 attempts - Langflow did not become ready`.
 
 To resolve this error, do the following:
 
@@ -112,11 +112,14 @@ To resolve this error, do the following:
     * On macOS or Linux, run `lsof -i :7860`.
 2. If another process is using the port, stop that process or [configure Langflow Desktop to use a different port](/environment-variables#set-environment-variables-for-langflow-desktop).
 
-### Failed to install uv: Unable to find uv executable
+### Failed to install uv or unable to find uv
 
-This error can also appear as: `Unable to find uv executable for Python virtual environment setup`. You may see the error messages: `UV Installation Error: UV installation failed - binary not found after installation` or `Python Environment Error: UV binary not found at:` followed by a file path.
+The following error messages mean that Langflow Desktop can't locate the `uv` executable on your system, even though it may be installed:
 
-Langflow Desktop can't locate the `uv` executable on your system, even though it may be installed.
+* `Failed to install uv: Unable to find uv executable`
+* `Unable to find uv executable for Python virtual environment setup`
+* `UV Installation Error: UV installation failed - binary not found after installation`
+* `Python Environment Error: UV binary not found at`
 
 To resolve this error, do the following:
 
@@ -153,9 +156,9 @@ Desktop created the Python virtual environment but couldn't verify that Python i
 
 To resolve this error, see [Failed to create Python virtual environment](#failed-to-create-python-virtual-environment).
 
-### [macOS] Failed to install Langflow OSS: Xcode Command Line Tools are not installed
+### Failed to install Langflow OSS: Xcode Command Line Tools are not installed
 
-Langflow Desktop requires [Xcode Command Line Tools](https://mac.install.guide/commandlinetools/) to install Langflow OSS on macOS. You may see the error message: `Langflow Installation Error: error_xcode` or a detailed message with the title "Xcode Command Line Tools required!".
+Langflow Desktop requires [Xcode Command Line Tools](https://mac.install.guide/commandlinetools/) to install Langflow OSS on macOS. You may see the error message: `Langflow Installation Error: error_xcode` or a detailed message with the title `Xcode Command Line Tools required!`.
 
 To install XCode Command Line Tools manually, do the following:
 
@@ -175,7 +178,7 @@ If you receive a `C++ Build Tools Required!` error, see the error message `Langf
 
 ### [Windows] All automatic installation strategies failed
 
-Desktop tried multiple methods to automatically install `uv` but all attempts failed. Desktop requires `uv` to manage Python packages and virtual environments. You may see the error message: `UV Installation Error: uv-manual-install-required` or a detailed manual installation message.
+Langflow Desktop tried multiple methods to automatically install `uv` but all attempts failed. Desktop requires `uv` to manage Python packages and virtual environments. You may see the error message: `UV Installation Error: uv-manual-install-required` or a detailed manual installation message.
 
 To resolve this error, do the following:
 
