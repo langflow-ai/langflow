@@ -231,7 +231,7 @@ async def get_enabled_providers(
         credential_variables = {}
         
         for var_name in credential_variable_names:
-            if var_name in provider_variable_map.values():
+            if var_name and var_name in provider_variable_map.values():
                 try:
                     # Get the raw Variable object to access the encrypted value
                     variable_obj = await variable_service.get_variable_object(

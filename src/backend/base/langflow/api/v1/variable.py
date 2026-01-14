@@ -262,7 +262,7 @@ async def read_variables(
         
         # Set validation status on each variable and update default_fields in response
         for var in filtered_variables:
-            if var.name in model_provider_variable_mapping.values() and var.type == CREDENTIAL_TYPE:
+            if var.name and var.name in model_provider_variable_mapping.values() and var.type == CREDENTIAL_TYPE:
                 result = validation_results.get(var.name)
                 if result:
                     is_valid, error_message, updated_default_fields = result
