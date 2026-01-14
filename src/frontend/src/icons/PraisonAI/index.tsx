@@ -3,8 +3,8 @@ import { forwardRef } from "react";
 import SvgPraisonAiIcon from "./PraisonAiIcon";
 
 export const PraisonAiIcon = forwardRef<
-    SVGSVGElement,
-    React.PropsWithChildren<{}>
+  SVGSVGElement,
+  React.PropsWithChildren<{}>
 >((props, ref) => {
-    return <SvgPraisonAiIcon ref={ref} {...props} />;
+  return <SvgPraisonAiIcon ref={ref} {...props} />;
 });

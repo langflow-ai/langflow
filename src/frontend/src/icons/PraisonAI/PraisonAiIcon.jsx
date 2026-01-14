@@ -1,15 +1,20 @@
 const SvgPraisonAiIcon = (props) => (
-    <svg
-        version="1.0"
-        xmlns="http://www.w3.org/2000/svg"
-        width="32"
-        height="32"
-        viewBox="0 0 512 512"
-        preserveAspectRatio="xMidYMid meet"
-        {...props}
+  <svg
+    version="1.0"
+    xmlns="http://www.w3.org/2000/svg"
+    width="32"
+    height="32"
+    viewBox="0 0 512 512"
+    preserveAspectRatio="xMidYMid meet"
+    {...props}
+  >
+    <g
+      transform="translate(0,512) scale(0.1,-0.1)"
+      fill="currentColor"
+      stroke="none"
     >
-        <g transform="translate(0,512) scale(0.1,-0.1)" fill="currentColor" stroke="none">
-            <path d="M0 2560 l0 -2560 2560 0 2560 0 0 2560 0 2560 -2560 0 -2560 0 0
+      <path
+        d="M0 2560 l0 -2560 2560 0 2560 0 0 2560 0 2560 -2560 0 -2560 0 0
 -2560z m2720 1680 c380 -30 677 -148 880 -351 183 -182 263 -384 262 -660 0
 -308 -111 -569 -340 -802 -211 -214 -443 -307 -766 -307 -220 0 -344 29 -411
 95 -41 42 -55 103 -31 139 19 30 45 38 220 71 76 14 173 37 216 51 176 55 310
@@ -19,8 +24,9 @@ const SvgPraisonAiIcon = (props) => (
 -19 12 -91 12 -160 1 -211 -30 -428 -138 -942 -88 -422 -89 -435 -116 -926
 -22 -416 -25 -457 -45 -498 -39 -80 -146 -133 -310 -153 -175 -22 -255 -9
 -285 49 -42 82 -46 510 -6 770 74 481 247 1078 419 1442 67 143 158 280 234
-355 78 76 130 105 183 101 36 -3 41 -7 52 -38z"/>
-        </g>
-    </svg>
+355 78 76 130 105 183 101 36 -3 41 -7 52 -38z"
+      />
+    </g>
+  </svg>
 );
 export default SvgPraisonAiIcon;
