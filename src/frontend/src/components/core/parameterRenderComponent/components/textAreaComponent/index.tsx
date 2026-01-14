@@ -37,12 +37,6 @@ function getGradientClass(
   return "gradient-fade-input";
 }
 
-function getBackgroundClass(disabled: boolean, editNode: boolean): string {
-  if (disabled) return "";
-  if (editNode) return "background-fade-input-edit-node";
-  return "background-fade-input";
-}
-
 const externalLinkIconClasses = {
   icon: "icons-parameters-comp absolute right-3 h-4 w-4 shrink-0",
   editNodeTop: "top-[-1.4rem] h-5",
