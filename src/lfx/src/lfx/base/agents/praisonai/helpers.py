@@ -38,9 +38,11 @@ def convert_tools(tools: list | None) -> list[Callable] | None:
         # LangChain StructuredTool or similar with .run method
         elif hasattr(tool, "run") and callable(tool.run):
             converted.append(tool.run)
-        # LangChain tool with _run method
-        elif hasattr(tool, "_run") and callable(tool._run):
-            converted.append(tool._run)
+        # LangChain tool with _run method (internal convention)
+        elif hasattr(tool, "_run"):
+            run_method = tool._run  # noqa: SLF001
+            if callable(run_method):
+                converted.append(run_method)
         # Fallback: if it's callable, use it directly
         elif callable(tool):
             converted.append(tool)
@@ -91,6 +93,7 @@ def convert_llm(llm: Any) -> str | None:
 
 
 def build_memory_config(
+    *,
     memory: bool | dict | None,
     memory_provider: str | None = None,
     memory_config_dict: dict | None = None,

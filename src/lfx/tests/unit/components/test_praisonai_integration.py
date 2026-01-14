@@ -16,17 +16,17 @@ class TestAgentComponentIntegration:
     @pytest.fixture
     def mock_agent_class(self):
         """Create a mock Agent class."""
-        mock_agent = MagicMock()
-        mock_agent.start.return_value = "Hello! I'm a helpful assistant."
+        mock_agent_instance = MagicMock()
+        mock_agent_instance.start.return_value = "Hello! I'm a helpful assistant."
 
-        mock_class = MagicMock(return_value=mock_agent)
-        return mock_class, mock_agent
+        mock_class = MagicMock(return_value=mock_agent_instance)
+        return mock_class, mock_agent_instance
 
     def test_build_agent_creates_agent_correctly(self, mock_agent_class):
         """Test build_agent creates Agent with correct parameters."""
         from lfx.components.praisonai.agent import PraisonAIAgentComponent
 
-        mock_class, mock_agent = mock_agent_class
+        mock_class, _mock_agent = mock_agent_class
 
         component = PraisonAIAgentComponent()
         component.name = "TestAgent"
@@ -55,7 +55,7 @@ class TestAgentComponentIntegration:
         component.max_iter = 20
 
         with patch.object(component, "_import_agent", return_value=mock_class):
-            agent = component.build_agent()
+            component.build_agent()
 
         # Verify Agent was called with correct kwargs
         mock_class.assert_called_once()
@@ -66,7 +66,8 @@ class TestAgentComponentIntegration:
         assert call_kwargs["goal"] == "Test things"
         assert call_kwargs["instructions"] == "You are a test agent."
         assert call_kwargs["llm"] == "openai/gpt-4o-mini"
-        assert call_kwargs["verbose"] is True
+        # Note: verbose is now passed via output= config, not directly
+        assert "output" in call_kwargs
 
     def test_build_response_returns_message(self, mock_agent_class):
         """Test build_response returns proper Message."""
@@ -112,7 +113,6 @@ class TestAgentComponentIntegration:
     def test_build_response_handles_message_input(self, mock_agent_class):
         """Test build_response handles Message input correctly."""
         from lfx.components.praisonai.agent import PraisonAIAgentComponent
-        from lfx.schema.message import Message
 
         mock_class, mock_agent = mock_agent_class
 
@@ -148,7 +148,7 @@ class TestAgentComponentIntegration:
         component.input_value = input_message
 
         with patch.object(component, "_import_agent", return_value=mock_class):
-            result = component.build_response()
+            _result = component.build_response()
 
         mock_agent.start.assert_called_once_with("What is 2+2?")
 
@@ -180,7 +180,7 @@ class TestAgentComponentIntegration:
         """Test handoffs are passed to Agent correctly."""
         from lfx.components.praisonai.agent import PraisonAIAgentComponent
 
-        mock_class, mock_agent = mock_agent_class
+        mock_class, _mock_agent = mock_agent_class
 
         # Mock another agent for handoff
         other_agent = MagicMock()
@@ -253,16 +253,14 @@ class TestAgentsComponentIntegration:
 
         with patch.object(
             component, "_import_agents", return_value=MagicMock()
-        ):
-            with pytest.raises(ValueError) as exc_info:
-                component.build_agents()
-            assert "At least one agent is required" in str(exc_info.value)
+        ), pytest.raises(ValueError, match="At least one agent is required"):
+            component.build_agents()
 
     def test_build_agents_creates_agents_correctly(self, mock_agents_class):
         """Test build_agents creates Agents with correct parameters."""
         from lfx.components.praisonai.agents import PraisonAIAgentsComponent
 
-        mock_class, mock_agents = mock_agents_class
+        mock_class, _mock_agents = mock_agents_class
 
         agent1 = MagicMock()
         agent2 = MagicMock()
@@ -312,7 +310,7 @@ class TestTaskComponentIntegration:
         """Test build_task creates Task with correct parameters."""
         from lfx.components.praisonai.task import PraisonAITaskComponent
 
-        mock_class, mock_task = mock_task_class
+        mock_class, _mock_task = mock_task_class
 
         mock_agent = MagicMock()
 
@@ -379,7 +377,7 @@ class TestTaskComponentIntegration:
         """Test decision task with conditions."""
         from lfx.components.praisonai.task import PraisonAITaskComponent
 
-        mock_class, mock_task = mock_task_class
+        mock_class, _mock_task = mock_task_class
 
         component = PraisonAITaskComponent()
         component.name = "ApprovalTask"
