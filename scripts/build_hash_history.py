@@ -1,17 +1,9 @@
-import ast
-import re
-import hashlib
 import argparse
-from lfx.interface import components
-import orjson
-from packaging.version import Version
 import asyncio
-import pkgutil
-import importlib
-import os
-import sys
 from pathlib import Path
 
+import orjson
+from packaging.version import Version
 
 STABLE_HISTORY_FILE = "stable_hash_history.json"
 NIGHTLY_HISTORY_FILE = "nightly_hash_history.json"
@@ -20,6 +12,7 @@ NIGHTLY_HISTORY_FILE = "nightly_hash_history.json"
 def get_lfx_version():
     """Get the installed lfx version."""
     from importlib.metadata import version
+
     return version("lfx")
 
 
@@ -35,7 +28,6 @@ def save_hash_history(file_path: Path, history: dict):
     file_path.write_text(orjson.dumps(history, option=orjson.OPT_INDENT_2).decode("utf-8"), encoding="utf-8")
 
 
-
 def _import_components() -> tuple[dict, int]:
     """Import all lfx components using the async import function.
 
@@ -45,12 +37,9 @@ def _import_components() -> tuple[dict, int]:
     Raises:
         RuntimeError: If component import fails
     """
-    import asyncio
-
     from lfx.interface.components import import_langflow_components
 
     try:
-        # Run the async function
         components_result = asyncio.run(import_langflow_components())
         modules_dict = components_result.get("components", {})
         components_count = sum(len(v) for v in modules_dict.values())
@@ -62,115 +51,26 @@ def _import_components() -> tuple[dict, int]:
         return modules_dict, components_count
 
 
-def _import_components_direct(root_path: Path | None = None) -> dict:
-    """Imports components by directly reading and parsing their source files using AST."""
-    if root_path is None:
-        root_path = Path("src/lfx/src/lfx/components")
-
-    components = {}
-    component_files = list(root_path.glob("**/*.py"))
-
-    for file_path in component_files:
-        if file_path.name == "__init__.py" or "deactivated" in str(file_path):
-            continue
-
-        try:
-            content = file_path.read_text()
-            tree = ast.parse(content)
-            category = file_path.parent.name
-
-            for node in ast.walk(tree):
-                if isinstance(node, ast.ClassDef):
-                    # Check if it's a Component subclass
-                    is_component = False
-                    for base in node.bases:
-                        if isinstance(base, ast.Name) and "Component" in base.id:
-                            is_component = True
-                            break
-                        elif isinstance(base, ast.Attribute) and "Component" in base.attr:
-                            is_component = True
-                            break
-                    if not is_component:
-                        # Also check for decorators
-                        for decorator in node.decorator_list:
-                            if isinstance(decorator, ast.Name) and "component" in decorator.id.lower():
-                                is_component = True
-                                break
-                    
-                    if not is_component:
-                        continue
-                        
-                    component_id = None
-                    for item in node.body:
-                        if isinstance(item, ast.AnnAssign) and isinstance(item.target, ast.Name) and item.target.id == "component_id":
-                            if isinstance(item.value, ast.Constant):
-                                component_id = item.value.value
-                                break
-                        elif isinstance(item, ast.Assign):
-                            for target in item.targets:
-                                if isinstance(target, ast.Name) and target.id == "component_id":
-                                    if isinstance(item.value, ast.Constant):
-                                        component_id = item.value.value
-                                        break
-                            if component_id:
-                                break
-
-                    if component_id:
-                        class_source = ast.get_source_segment(content, node)
-                        code_hash = hashlib.sha256(class_source.encode("utf-8")).hexdigest()
-                        
-                        components[component_id] = {
-                            "name": node.name,
-                            "category": category,
-                            "code_hash": code_hash,
-                        }
-                    # else:
-                    #     print(f"Warning: Component ID not found in {file_path} for class {node.name}")
-
-        except Exception as e:
-            print(f"Error processing file {file_path}: {e}")
-    
-    print(f"Discovered {len(components)} components by direct file parsing.")
-    return components
-
-def update_history(history: dict, component_name: str, component_info: dict, current_version: str) -> dict:
-    """Updates the hash history for a single component."""
+def update_history(history: dict, component_id: str, component_name: str, code_hash: str, current_version: str) -> dict:
+    """Updates the hash history for a single component with the new simple schema."""
     current_version_parsed = Version(current_version)
-    minor_version = f"{current_version_parsed.major}.{current_version_parsed.minor}"
-
-    component_id = component_info["metadata"]["component_id"]
-    code_hash = component_info["metadata"]["code_hash"]
+    version_key = f"{current_version_parsed.major}.{current_version_parsed.minor}.{current_version_parsed.micro}"
 
     if component_id not in history:
-        history[component_id] = {
-            "name": component_name,
-            "versions": {},
-        }
-
-    # Close "current" ranges in other minor versions if this is a new minor version
-    for mv in history[component_id]["versions"]:
-        if mv != minor_version:
-            for hash_key, ranges in history[component_id]["versions"][mv].items():
-                for i, version_range in enumerate(ranges):
-                    if version_range[1] == "current":
-                        history[component_id]["versions"][mv][hash_key][i][1] = current_version
-
-    if minor_version not in history[component_id]["versions"]:
-        history[component_id]["versions"][minor_version] = {}
-
-    if code_hash not in history[component_id]["versions"][minor_version]:
-        history[component_id]["versions"][minor_version][code_hash] = [[current_version, "current"]]
+        print(f"Component {component_name} with id {component_id} not found in history. Adding...")
+        print(f"WARNING - Ensure that Component {component_name} is a NEW Component. If not, this is an error and will lose hash history for this component.")
+        history[component_id] = {}
+        history[component_id]["name"] = component_name
+        history[component_id]["versions"] = {version_key: code_hash}
     else:
-        last_range = history[component_id]["versions"][minor_version][code_hash][-1]
-        if last_range[1] != "current":
-            history[component_id]["versions"][minor_version][code_hash].append([current_version, "current"])
-
-    # Close "current" ranges for other hashes of the same minor version
-    for hash_key, ranges in history[component_id]["versions"][minor_version].items():
-        if hash_key != code_hash:
-            for i, version_range in enumerate(ranges):
-                if version_range[1] == "current":
-                    history[component_id]["versions"][minor_version][hash_key][i][1] = current_version
+        # Ensure that we aren't ovewriting a previous version
+        for v in history[component_id]["versions"]:
+            parsed_version = Version(v)
+            if parsed_version > current_version_parsed:
+                # If this happens, we are overwriting a previous version.
+                msg = f"ERROR - Component {component_name} with id {component_id} already has a version {v} that is greater than the current version {current_version}."
+                raise ValueError(msg)
+        history[component_id]["versions"][version_key] = code_hash
 
     return history
 
@@ -191,24 +91,31 @@ def main(argv=None):
     current_version = get_lfx_version()
     print(f"Current LFX version: {current_version}")
 
-    (modules_dict, components_count) = _import_components()
-    print(f"Found {components_count} components across {len(modules_dict)} categories.")
-
+    modules_dict, components_count = _import_components()
+    print(f"Found {components_count} components.")
+    if not components_count:
+        print("No components found. Exiting.")
+        return
 
     history = load_hash_history(Path(history_file))
 
-    for _, components_dict in modules_dict.items():
-        for component_name, component_template in components_dict.items():
-            component_id = component_template["metadata"]["component_id"]
-            if not component_id:
-                print(f"Warning: Component {component_name} has no component_id. Skipping.")
+    for category_name, components_dict in modules_dict.items():
+        for comp_name, comp_details in components_dict.items():
+            if "metadata" not in comp_details or not comp_details["metadata"].get("component_id"):
+                print(f"Warning: Component {comp_name} in category {category_name} is missing component_id. Skipping.")
                 continue
 
-            history = update_history(history, component_name, component_template, current_version)
+            comp_id = comp_details["metadata"]["component_id"]
+            code_hash = comp_details["metadata"].get("code_hash")
+
+            if not code_hash:
+                print(f"Warning: Component {comp_name} in category {category_name} is missing code_hash. Skipping.")
+                continue
+
+            history = update_history(history, comp_id, comp_name, code_hash, current_version)
 
     save_hash_history(Path(history_file), history)
     print(f"Successfully updated {history_file}")
-
 
 
 if __name__ == "__main__":
