@@ -55,7 +55,7 @@ const ListComponent = ({
       setSelected(!selected);
     } else {
       if (!isComponent) {
-        navigate(editFlowLink);
+        navigate(editFlowLink, { state: { autoSave: true } });
       }
     }
   };

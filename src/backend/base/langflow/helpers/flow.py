@@ -7,7 +7,7 @@ from fastapi import HTTPException
 from lfx.log.logger import logger
 from pydantic.v1 import BaseModel, Field, create_model
 from sqlalchemy.orm import aliased
-from sqlmodel import asc, desc, select
+from sqlmodel import asc, desc, select, update
 
 from langflow.schema.schema import INPUT_FIELD_NAME
 from langflow.services.database.models.flow.model import Flow, FlowRead
@@ -31,6 +31,32 @@ SORT_DISPATCHER = {
     "asc": asc,
     "desc": desc,
 }
+
+
+async def save_flow_data(
+    *,
+    user_id: str | UUID | None,
+    flow_id: str | UUID | None,
+    flow_data: dict | None,
+):
+    if not (user_id and flow_id):
+        msg = "Failed to save flow: user id and flow id are required"
+        raise ValueError(msg)
+    if not flow_data:
+        msg = "Failed to save flow: flow data is missing or empty"
+        raise ValueError(msg)
+
+    user_uuid = UUID(user_id) if isinstance(user_id, str) else user_id
+    flow_uuid = UUID(flow_id) if isinstance(flow_id, str) else flow_id
+
+    try:
+        async with session_scope as session:
+            session.exec(
+                update(Flow).where(Flow.user_id == user_uuid).where(Flow.id == flow_uuid).values(data=flow_data)
+            )
+    except Exception as e:
+        msg = f"Failed to save flow: {e}"
+        raise ValueError(msg) from e
 
 
 async def list_flows(*, user_id: str | None = None) -> list[Data]:

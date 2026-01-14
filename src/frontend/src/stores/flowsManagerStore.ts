@@ -24,7 +24,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
   healthCheckMaxRetries: 5,
   setHealthCheckMaxRetries: (healthCheckMaxRetries: number) =>
     set({ healthCheckMaxRetries }),
-  autoSaving: true,
+  autoSaving: false,
   setAutoSaving: (autoSaving: boolean) => set({ autoSaving }),
   autoSavingInterval: SAVE_DEBOUNCE_TIME,
   setAutoSavingInterval: (autoSavingInterval: number) =>

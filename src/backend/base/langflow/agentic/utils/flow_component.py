@@ -7,7 +7,7 @@ from lfx.graph.graph.base import Graph
 from lfx.log.logger import logger
 
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
-from langflow.services.database.models.flow.model import Flow
+from langflow.helpers.flow_version import save_flow_checkpoint
 from langflow.services.deps import session_scope
 
 
@@ -265,19 +265,10 @@ async def update_component_field_value(
 
         # Update the flow in the database
         async with session_scope() as session:
-            # Get the database flow object
-            db_flow = await session.get(Flow, UUID(flow_id_str))
+            db_flow = await save_flow_checkpoint(
+                session=session, user_id=user_id, flow_id=flow_id_str, update_data={"data": flow_data}
+            )
 
-            if not db_flow:
-                return {"error": f"Flow {flow_id_str} not found in database", "success": False}
-
-            # Verify user has permission
-            if str(db_flow.user_id) != str(user_id):
-                return {"error": "User does not have permission to update this flow", "success": False}
-
-            # Update the flow data
-            db_flow.data = flow_data
-            session.add(db_flow)
             await session.commit()
             await session.refresh(db_flow)
 

@@ -12,7 +12,7 @@ from fastapi import HTTPException, status
 from lfx.log.logger import logger
 from pydantic import BaseModel, ValidationInfo, field_serializer, field_validator
 from sqlalchemy import Enum as SQLEnum
-from sqlalchemy import Text, UniqueConstraint, text
+from sqlalchemy import Integer, Text, UniqueConstraint, text
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 from langflow.schema.data import Data
@@ -65,6 +65,17 @@ class FlowBase(SQLModel):
             nullable=False,
             server_default=text("'PRIVATE'"),
         ),
+    )
+    latest_version: int | None = Field(
+        sa_column=Column(
+            Integer,
+            name="latest_version",
+            default=0,
+            nullable=False,
+            server_default=text("0"),
+        ),
+        default=0,
+        description="The latest version number of the flow",
     )
 
     @field_validator("endpoint_name")

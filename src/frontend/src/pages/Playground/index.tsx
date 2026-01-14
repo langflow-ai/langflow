@@ -36,12 +36,15 @@ export default function PlaygroundPage() {
     }
   }
 
+  const setAutoSaving = useFlowsManagerStore((state) => state.setAutoSaving);
+
   useEffect(() => {
     const initializeFlow = async () => {
       setIsLoading(true);
       if (currentFlowId === "") {
         const flow = await getFlowData();
         if (flow) {
+          setAutoSaving(false);
           setCurrentFlow(flow);
         } else {
           navigate("/");

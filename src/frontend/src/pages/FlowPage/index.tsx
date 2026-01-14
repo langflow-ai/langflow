@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useBlocker, useParams } from "react-router-dom";
+import { useBlocker, useLocation, useParams } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { useGetTypes } from "@/controllers/API/queries/flows/use-get-types";
@@ -32,6 +32,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const [isLoading, setIsLoading] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const changesNotSaved =
     customStringify(currentFlow) !== customStringify(currentSavedFlow) &&
@@ -42,6 +43,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
 
   const setOnFlowPage = useFlowStore((state) => state.setOnFlowPage);
   const { id } = useParams();
+  const location = useLocation();
   const navigate = useCustomNavigate();
   const saveFlow = useSaveFlow();
 
@@ -54,6 +56,14 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
 
   const { mutateAsync: getFlow } = useGetFlow();
   const { refreshAllModelInputs } = useRefreshModelInputs();
+
+  const setAutoSaving = useFlowsManagerStore((state) => state.setAutoSaving);
+
+  useEffect(() => {
+    if (isInitialized && changesNotSaved && !autoSaving) {
+      setAutoSaving(true);
+    }
+  }, [changesNotSaved, autoSaving, setAutoSaving, isInitialized]);
 
   const handleSave = () => {
     let saving = true;
@@ -73,6 +83,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
         setSuccessData({
           title: "Flow saved successfully!",
         });
+        if (!autoSaving) setAutoSaving(true);
       }
       proceed = true;
     });
@@ -156,8 +167,21 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
 
   const getFlowToAddToCanvas = async (id: string) => {
     const flow = await getFlow({ id });
+    const shouldAutoSave = location.state?.autoSave ?? false;
+    setAutoSaving(shouldAutoSave);
     setCurrentFlow(flow);
-    refreshAllModelInputs({ silent: true });
+    await refreshAllModelInputs({ silent: true });
+    // If the flow was updated during the refresh, update the current flow in the flows manager store
+    // to prevent the changesNotSaved to be true
+    // We add a timeout to allow the flow to settle before checking for changes
+    // This is to prevent auto-save from triggering immediately after load due to internal state changes
+    setTimeout(() => {
+      const currentFlow = useFlowStore.getState().currentFlow;
+      if (currentFlow) {
+        useFlowsManagerStore.setState({ currentFlow: currentFlow });
+      }
+      setIsInitialized(true);
+    }, 1000);
   };
 
   const isMobile = useIsMobile();
