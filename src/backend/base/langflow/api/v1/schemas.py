@@ -16,6 +16,7 @@ from pydantic import (
     field_validator,
     model_serializer,
 )
+from sqlalchemy import String, Uuid, column
 
 from langflow.schema.dotdict import dotdict
 from langflow.schema.graph import Tweaks
@@ -25,6 +26,7 @@ from langflow.services.database.models.api_key.model import ApiKeyRead
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow.model import FlowCreate, FlowRead
 from langflow.services.database.models.user.model import UserRead
+from langflow.services.publish.schema import PublishedFlowMetadata, PublishedProjectMetadata
 from langflow.services.tracing.schema import Log
 
 
@@ -481,3 +483,60 @@ class ComposerUrlResponse(BaseModel):
 class MCPInstallRequest(BaseModel):
     client: str
     transport: Literal["sse", "streamablehttp"] | None = None
+
+
+class PublishFlowCreate(BaseModel):
+    pass
+
+
+class PublishedFlowRead(PublishedFlowMetadata):
+    """Schema for reading a published flow, includes the composite key fields."""
+
+    model_config = ConfigDict(extra="ignore")
+
+
+class DeployFlowCreate(BaseModel):
+    version_id: str = Field(..., description="The ID of the published version to deploy.")
+
+
+class DeployProjectCreate(BaseModel):
+    version_id: str = Field(..., description="The ID of the published version to deploy.")
+
+
+class ProjectFlowVersion(BaseModel):
+    flow_id: UUID
+    published_flow_version_id: str | None = Field(
+        None, description="If provided, links to this published version. If null, includes latest flow data."
+    )
+
+    def to_tuple(self):
+        return (
+            self.flow_id,
+            self.published_flow_version_id,
+        )
+
+    @classmethod
+    def column_def(cls):
+        return (
+            column("flow_id", Uuid),
+            column("published_flow_version_id", String),
+        )
+
+
+class PublishProjectCreate(BaseModel):
+    flows: list[ProjectFlowVersion] = Field(..., description="List of flows to include in the project.")
+
+    def flows_to_tuple(self):
+        return [flow.to_tuple() for flow in self.flows]
+
+
+class PublishedProjectRead(PublishedProjectMetadata):
+    """Schema for reading a published project, includes the composite key fields."""
+
+    model_config = ConfigDict(extra="ignore")
+
+
+class MessageResponse(BaseModel):
+    """Simple response schema for generic messages."""
+
+    message: str
