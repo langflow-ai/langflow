@@ -24,7 +24,6 @@ export default function PromptAreaComponent({
   editNode = false,
   id = "",
   readonly = false,
-  nodeId,
 }: InputProps<string, PromptAreaComponentType>): JSX.Element {
   const coloredContent = (typeof value === "string" ? value : "")
     // escape HTML first
