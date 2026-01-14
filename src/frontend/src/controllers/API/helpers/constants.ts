@@ -36,8 +36,6 @@ export const URLs = {
   RUN: `run`,
   RUN_SESSION: `run/session`,
   REGISTRATION: `registration`,
-  GENERATE_COMPONENT_PROMPT: `agentic/generate-component`,
-  GENERATE_COMPONENT_CHECK_CONFIG: `agentic/check-config`,
 } as const;
 
 // IMPORTANT: FOLDERS endpoint now points to 'projects' for backward compatibility
