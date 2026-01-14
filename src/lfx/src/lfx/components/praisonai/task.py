@@ -6,7 +6,7 @@ guardrails, and workflow support.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from lfx.base.agents.praisonai import convert_tools
 from lfx.custom.custom_component.component import Component
@@ -20,9 +20,6 @@ from lfx.io import (
     MultilineInput,
     Output,
 )
-
-if TYPE_CHECKING:
-    from praisonaiagents import Task
 
 
 class PraisonAITaskComponent(Component):
@@ -233,13 +230,14 @@ class PraisonAITaskComponent(Component):
         """Import Task class with proper error handling."""
         try:
             from praisonaiagents import Task
-            return Task
         except ImportError as e:
             msg = (
                 "PraisonAI Agents is not installed. "
                 "Install with: pip install praisonaiagents"
             )
             raise ImportError(msg) from e
+        else:
+            return Task
 
     def _parse_output_json(self):
         """Parse JSON schema string into a Pydantic model if provided."""
@@ -248,8 +246,9 @@ class PraisonAITaskComponent(Component):
 
         try:
             import json
-            from pydantic import BaseModel, create_model
             from typing import Any
+
+            from pydantic import create_model
 
             schema = json.loads(self.output_json)
 
@@ -282,15 +281,15 @@ class PraisonAITaskComponent(Component):
                 if field_definitions:
                     return create_model("TaskOutputModel", **field_definitions)
 
-        except (json.JSONDecodeError, Exception):
+        except json.JSONDecodeError:
             # If parsing fails, return None and let task use default
-            pass
+            return None
 
         return None
 
     def build_task(self) -> Any:
         """Build and return the PraisonAI Task instance."""
-        Task = self._import_task()
+        task_class = self._import_task()
 
         # Convert tools if provided
         tools = convert_tools(self.tools) if self.tools else None
@@ -365,7 +364,7 @@ class PraisonAITaskComponent(Component):
             kwargs["variables"] = self.variables
 
         # Build task
-        task = Task(**kwargs)
+        task = task_class(**kwargs)
 
         self.status = f"Task '{self.name}' created"
         return task

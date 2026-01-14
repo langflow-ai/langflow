@@ -7,7 +7,7 @@ knowledge, and guardrails support.
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from lfx.base.agents.praisonai import build_memory_config, convert_llm, convert_tools
 from lfx.custom.custom_component.component import Component
@@ -23,9 +23,6 @@ from lfx.io import (
     SecretStrInput,
 )
 from lfx.schema.message import Message
-
-if TYPE_CHECKING:
-    from praisonaiagents import Agent
 
 
 class PraisonAIAgentComponent(Component):
@@ -274,13 +271,14 @@ class PraisonAIAgentComponent(Component):
         """Import Agent class with proper error handling."""
         try:
             from praisonaiagents import Agent
-            return Agent
         except ImportError as e:
             msg = (
                 "PraisonAI Agents is not installed. "
                 "Install with: pip install praisonaiagents"
             )
             raise ImportError(msg) from e
+        else:
+            return Agent
 
     def _build_knowledge_config(self) -> list | bool | None:
         """Build knowledge configuration from file and URL inputs."""
@@ -304,7 +302,7 @@ class PraisonAIAgentComponent(Component):
 
     def build_agent(self) -> Any:
         """Build and return the PraisonAI Agent instance."""
-        Agent = self._import_agent()
+        agent_class = self._import_agent()
 
         # Convert tools if provided
         tools = convert_tools(self.tools) if self.tools else None
@@ -371,11 +369,12 @@ class PraisonAIAgentComponent(Component):
             kwargs["code_execution_mode"] = self.code_execution_mode
 
         # Add execution config (replaces max_iter)
-        if self.max_iter and self.max_iter != 20:
+        default_max_iter = 20
+        if self.max_iter and self.max_iter != default_max_iter:
             kwargs["execution"] = {"max_iter": self.max_iter}
 
         # Build agent
-        agent = Agent(**kwargs)
+        agent = agent_class(**kwargs)
 
         self.status = f"Agent '{self.name}' created"
         return agent

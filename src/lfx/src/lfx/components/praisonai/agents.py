@@ -7,7 +7,7 @@ with full memory, planning, guardrails, and workflow support.
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from lfx.custom.custom_component.component import Component
 from lfx.io import (
@@ -19,9 +19,6 @@ from lfx.io import (
     Output,
 )
 from lfx.schema.message import Message
-
-if TYPE_CHECKING:
-    from praisonaiagents import Agents
 
 
 class PraisonAIAgentsComponent(Component):
@@ -190,17 +187,18 @@ class PraisonAIAgentsComponent(Component):
         """Import Agents class with proper error handling."""
         try:
             from praisonaiagents import Agents
-            return Agents
         except ImportError as e:
             msg = (
                 "PraisonAI Agents is not installed. "
                 "Install with: pip install praisonaiagents"
             )
             raise ImportError(msg) from e
+        else:
+            return Agents
 
     def build_agents(self) -> Any:
         """Build and return the PraisonAI Agents instance."""
-        Agents = self._import_agents()
+        agents_class = self._import_agents()
 
         # Filter out None values
         agents = [a for a in (self.agents or []) if a is not None]
@@ -257,7 +255,7 @@ class PraisonAIAgentsComponent(Component):
             kwargs["caching"] = True
 
         # Build Agents
-        agents_instance = Agents(**kwargs)
+        agents_instance = agents_class(**kwargs)
 
         self.status = f"Agents orchestrator '{self.name}' created with {len(agents)} agents"
         return agents_instance
@@ -277,11 +275,7 @@ class PraisonAIAgentsComponent(Component):
         result = agents_instance.start(str(input_value))
 
         # Convert to Langflow Message
-        if isinstance(result, dict):
-            # Full output mode returns dict
-            output_text = result.get("final_output", str(result))
-        else:
-            output_text = str(result)
+        output_text = result.get("final_output", str(result)) if isinstance(result, dict) else str(result)
 
         return Message(text=output_text)
 
