@@ -148,8 +148,8 @@ jobs:
 
       - name: Check if package version already exists on pypi
         run: |
-          if pip index versions langflow | grep -q '${{ inputs.release_tag }}'; then
-            echo "❌ Package version '${{ inputs.release_tag }}' already exists in pypi."
+          if pip index versions langflow | grep -q '${{ steps.version.outputs.version }}'; then
+            echo "❌ Package version '${{ steps.version.outputs.version }}' already exists in pypi."
             exit 1
           fi
 
@@ -172,12 +172,12 @@ jobs:
         with:
           registry: ghcr.io
           repository: langflow-ai/langflow
-          tag: ${{ inputs.release_tag }}
+          tag: ${{ steps.version.outputs.version }}
 
       - name: Fail if image exists in ghcr.io
         if: steps.check-ghcr.outputs.tag == 'found'
         run: |
-          echo "❌ Image tag '${{ inputs.release_tag }}' already exists in ghcr.io"
+          echo "❌ Image tag '${{ steps.version.outputs.version }}' already exists in ghcr.io"
           exit 1
 
       - name: Check if image tag exists in docker.io
@@ -186,12 +186,12 @@ jobs:
         with:
           registry: docker.io
           repository: langflowai/langflow
-          tag: ${{ inputs.release_tag }}
+          tag: ${{ steps.version.outputs.version }}
 
       - name: Fail if image exists in docker.io
         if: steps.check-dockerhub.outputs.tag == 'found'
         run: |
-          echo "❌ Image tag '${{ inputs.release_tag }}' already exists in docker.io"
+          echo "❌ Image tag '${{ steps.version.outputs.version }}' already exists in docker.io"
           exit 1
 
   ci:

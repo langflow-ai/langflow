@@ -100,7 +100,7 @@ git merge --ff-only release-X.Y.Z      # Fast-forward main to include RC changes
 ## Versioning & Tags
 
 - Follows [Semantic Versioning](https://semver.org): `MAJOR.MINOR.PATCH`.
-- RC tags use `-rc.N`, e.g. `1.8.0-rc.1`.
+- RC tags use `-rc.N`, e.g. `v1.8.0-rc.1`.
 
 ## Roles
 
