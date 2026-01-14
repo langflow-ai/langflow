@@ -231,10 +231,7 @@ class PraisonAITaskComponent(Component):
         try:
             from praisonaiagents import Task
         except ImportError as e:
-            msg = (
-                "PraisonAI Agents is not installed. "
-                "Install with: pip install praisonaiagents"
-            )
+            msg = "PraisonAI Agents is not installed. Install with: pip install praisonaiagents"
             raise ImportError(msg) from e
         else:
             return Task

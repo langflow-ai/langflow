@@ -251,9 +251,10 @@ class TestAgentsComponentIntegration:
         component.reflection = False
         component.caching = False
 
-        with patch.object(
-            component, "_import_agents", return_value=MagicMock()
-        ), pytest.raises(ValueError, match="At least one agent is required"):
+        with (
+            patch.object(component, "_import_agents", return_value=MagicMock()),
+            pytest.raises(ValueError, match="At least one agent is required"),
+        ):
             component.build_agents()
 
     def test_build_agents_creates_agents_correctly(self, mock_agents_class):

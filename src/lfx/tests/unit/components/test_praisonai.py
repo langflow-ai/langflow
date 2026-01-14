@@ -73,9 +73,7 @@ class TestPraisonAIAgentComponent:
         input_names = [inp.name for inp in PraisonAIAgentComponent.inputs]
         assert "handoffs" in input_names
 
-        handoffs_input = next(
-            inp for inp in PraisonAIAgentComponent.inputs if inp.name == "handoffs"
-        )
+        handoffs_input = next(inp for inp in PraisonAIAgentComponent.inputs if inp.name == "handoffs")
         assert handoffs_input.is_list is True
         assert "Agent" in handoffs_input.input_types
 
@@ -125,9 +123,7 @@ class TestPraisonAIAgentComponent:
         """Test LLM dropdown has options from multiple providers."""
         from lfx.components.praisonai.agent import PraisonAIAgentComponent
 
-        llm_input = next(
-            inp for inp in PraisonAIAgentComponent.inputs if inp.name == "llm"
-        )
+        llm_input = next(inp for inp in PraisonAIAgentComponent.inputs if inp.name == "llm")
 
         providers = set()
         for option in llm_input.options:
@@ -145,10 +141,14 @@ class TestPraisonAIAgentComponent:
 
         component = PraisonAIAgentComponent()
 
-        with patch.object(
-            component, "_import_agent",
-            side_effect=ImportError("PraisonAI Agents is not installed. Install with: pip install praisonaiagents"),
-        ), pytest.raises(ImportError, match="praisonaiagents"):
+        with (
+            patch.object(
+                component,
+                "_import_agent",
+                side_effect=ImportError("PraisonAI Agents is not installed. Install with: pip install praisonaiagents"),
+            ),
+            pytest.raises(ImportError, match="praisonaiagents"),
+        ):
             component.build_agent()
 
 
@@ -205,9 +205,7 @@ class TestPraisonAIAgentsComponent:
         """Test process dropdown has correct options."""
         from lfx.components.praisonai.agents import PraisonAIAgentsComponent
 
-        process_input = next(
-            inp for inp in PraisonAIAgentsComponent.inputs if inp.name == "process"
-        )
+        process_input = next(inp for inp in PraisonAIAgentsComponent.inputs if inp.name == "process")
         assert "sequential" in process_input.options
         assert "hierarchical" in process_input.options
         assert "workflow" in process_input.options
@@ -280,9 +278,7 @@ class TestPraisonAITaskComponent:
         """Test task_type dropdown has correct options."""
         from lfx.components.praisonai.task import PraisonAITaskComponent
 
-        task_type_input = next(
-            inp for inp in PraisonAITaskComponent.inputs if inp.name == "task_type"
-        )
+        task_type_input = next(inp for inp in PraisonAITaskComponent.inputs if inp.name == "task_type")
         assert "task" in task_type_input.options
         assert "decision" in task_type_input.options
         assert "loop" in task_type_input.options

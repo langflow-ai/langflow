@@ -188,10 +188,7 @@ class PraisonAIAgentsComponent(Component):
         try:
             from praisonaiagents import Agents
         except ImportError as e:
-            msg = (
-                "PraisonAI Agents is not installed. "
-                "Install with: pip install praisonaiagents"
-            )
+            msg = "PraisonAI Agents is not installed. Install with: pip install praisonaiagents"
             raise ImportError(msg) from e
         else:
             return Agents
