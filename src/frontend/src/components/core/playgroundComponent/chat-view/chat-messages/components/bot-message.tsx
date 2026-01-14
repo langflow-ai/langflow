@@ -221,7 +221,7 @@ export const BotMessage = memo(
               <div className="flex w-full items-start gap-3">
                 {(thinkingActive || displayTime > 0 || chatMessage !== "") && (
                   <div
-                    className="relative hidden h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded bg-white text-2xl @[45rem]/chat-panel:!flex"
+                    className="relative hidden h-6 w-6 flex-shrink-0 items-center justify-center overflow-hidden rounded bg-white text-2xl @[45rem]/chat-panel:!flex border-0"
                     style={
                       chat.properties?.background_color
                         ? { backgroundColor: chat.properties.background_color }
