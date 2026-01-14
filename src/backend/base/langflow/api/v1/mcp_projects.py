@@ -46,6 +46,7 @@ from langflow.api.utils.mcp import (
 from langflow.api.v1.auth_helpers import handle_auth_settings_update
 from langflow.api.v1.mcp import ResponseNoOp
 from langflow.api.v1.mcp_utils import (
+    current_deployed_project_version_ctx,
     current_request_variables_ctx,
     current_user_ctx,
     handle_call_tool,
@@ -73,6 +74,7 @@ from langflow.services.deps import get_service
 
 # Constants
 ALL_INTERFACES_HOST = "0.0.0.0"  # noqa: S104
+DEPLOYED_PROJECT_VERSION_HEADER = "x-langflow-deployed-project-version"
 
 router = APIRouter(prefix="/mcp/project", tags=["mcp_projects"])
 
@@ -153,12 +155,11 @@ async def verify_project_auth_conditional(
     - MCP Composer enabled + API key auth: Only allow API keys
     - All other cases: Use standard MCP auth (JWT + API keys)
     """
-    async with session_scope() as session:
-        # Get project to check auth settings
-        project = (await session.exec(select(Folder).where(Folder.id == project_id))).first()
+    deployed_version_id = request.headers.get(DEPLOYED_PROJECT_VERSION_HEADER)
 
-        if not project:
-            raise HTTPException(status_code=404, detail="Project not found")
+    async with session_scope() as session:
+        # Get project to check auth settings (when present)
+        project = (await session.exec(select(Folder).where(Folder.id == project_id))).first()
 
         # Extract token
         token: str | None = None
@@ -170,25 +171,67 @@ async def verify_project_auth_conditional(
         api_key_query_value = request.query_params.get("x-api-key")
         api_key_header_value = request.headers.get("x-api-key")
 
-        # Check if this project requires API key only authentication
-        if get_settings_service().settings.mcp_composer_enabled:
-            return await verify_project_auth(session, project_id, api_key_query_value, api_key_header_value)
+        # If the project exists in DB, keep current behavior
+        if project:
+            if get_settings_service().settings.mcp_composer_enabled:
+                return await verify_project_auth(session, project_id, api_key_query_value, api_key_header_value)
 
-        # For all other cases, use standard MCP authentication (allows JWT + API keys)
-        # Call the MCP auth function directly
-        from langflow.services.auth.utils import get_current_user_mcp
+            from langflow.services.auth.utils import get_current_user_mcp
 
-        user = await get_current_user_mcp(
-            token=token or "", query_param=api_key_query_value, header_param=api_key_header_value, db=session
-        )
+            user = await get_current_user_mcp(
+                token=token or "", query_param=api_key_query_value, header_param=api_key_header_value, db=session
+            )
 
-        # Verify project access
-        project_access = (
-            await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == user.id))
-        ).first()
+            # Verify project access
+            project_access = (
+                await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == user.id))
+            ).first()
 
-        if not project_access:
+            if not project_access:
+                raise HTTPException(status_code=404, detail="Project not found")
+
+            return user
+
+        # Orphaned deployments: allow auth via publish service if a deployed version is explicitly requested.
+        if not deployed_version_id:
             raise HTTPException(status_code=404, detail="Project not found")
+
+        # Authenticate user
+        settings_service = get_settings_service()
+        if settings_service.settings.mcp_composer_enabled:
+            # When MCP Composer is enabled, JWT tokens are not accepted for MCP endpoints.
+            api_key = api_key_query_value or api_key_header_value
+            if not api_key:
+                raise HTTPException(
+                    status_code=401,
+                    detail="API key required for deployed project. Provide x-api-key header or query parameter.",
+                )
+            user = await check_key(session, api_key)
+            if not user:
+                raise HTTPException(status_code=401, detail="Invalid API key")
+        else:
+            from langflow.services.auth.utils import get_current_user_mcp
+
+            user = await get_current_user_mcp(
+                token=token or "", query_param=api_key_query_value, header_param=api_key_header_value, db=session
+            )
+
+        # Verify deployed artifact exists for this user/project/version
+        try:
+            from langflow.services.publish.schema import PublishedProjectMetadata, ReleaseStage
+            from langflow.services.schema import ServiceType as LangflowServiceType
+
+            publish_service = get_service(LangflowServiceType.PUBLISH_SERVICE)
+            await publish_service.get_project(
+                user_id=user.id,
+                project_id=project_id,
+                metadata=PublishedProjectMetadata(version_id=deployed_version_id),
+                stage=ReleaseStage.DEPLOY,
+            )
+        except HTTPException:
+            raise
+        except Exception:  # noqa: BLE001
+            raise HTTPException(status_code=404, detail="Deployed project not found") from None
 
         return user
 
@@ -330,12 +373,15 @@ async def handle_project_sse(
     current_user: Annotated[User, Depends(verify_project_auth_conditional)],
 ):
     """Handle SSE connections for a specific project."""
+    deployed_version_id = request.headers.get(DEPLOYED_PROJECT_VERSION_HEADER)
     async with session_scope() as session:
         project = (
             await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))
         ).first()
 
-    if not project:
+    # For orphaned deployments, allow SSE connections as long as the deployed version header is provided.
+    # Auth is already handled by verify_project_auth_conditional (which verifies the deployed artifact exists).
+    if not project and not deployed_version_id:
         raise HTTPException(status_code=404, detail="Project not found")
 
     sse = get_project_sse(project_id)
@@ -344,6 +390,9 @@ async def handle_project_sse(
 
     user_token = current_user_ctx.set(current_user)
     project_token = current_project_ctx.set(project_id)
+    deployed_version_token = current_deployed_project_version_ctx.set(
+        request.headers.get(DEPLOYED_PROJECT_VERSION_HEADER)
+    )
     variables = extract_global_variables_from_headers(request.headers)
     req_vars_token = current_request_variables_ctx.set(variables or None)
 
@@ -372,6 +421,7 @@ async def handle_project_sse(
     finally:
         current_user_ctx.reset(user_token)
         current_project_ctx.reset(project_token)
+        current_deployed_project_version_ctx.reset(deployed_version_token)
         current_request_variables_ctx.reset(req_vars_token)
 
     return ResponseNoOp(status_code=200)
@@ -385,6 +435,9 @@ async def _handle_project_sse_messages(
     """Handle POST messages for a project-specific MCP server using SSE transport."""
     user_token = current_user_ctx.set(current_user)
     project_token = current_project_ctx.set(project_id)
+    deployed_version_token = current_deployed_project_version_ctx.set(
+        request.headers.get(DEPLOYED_PROJECT_VERSION_HEADER)
+    )
     variables = extract_global_variables_from_headers(request.headers)
     req_vars_token = current_request_variables_ctx.set(variables or None)
 
@@ -397,6 +450,7 @@ async def _handle_project_sse_messages(
     finally:
         current_user_ctx.reset(user_token)
         current_project_ctx.reset(project_token)
+        current_deployed_project_version_ctx.reset(deployed_version_token)
         current_request_variables_ctx.reset(req_vars_token)
 
 
@@ -434,6 +488,9 @@ async def _dispatch_project_streamable_http(
 
     user_token = current_user_ctx.set(current_user)
     project_token = current_project_ctx.set(project_id)
+    deployed_version_token = current_deployed_project_version_ctx.set(
+        request.headers.get(DEPLOYED_PROJECT_VERSION_HEADER)
+    )
     variables = extract_global_variables_from_headers(request.headers)
     request_vars_token = current_request_variables_ctx.set(variables or None)
 
@@ -448,6 +505,7 @@ async def _dispatch_project_streamable_http(
         current_request_variables_ctx.reset(request_vars_token)
         current_project_ctx.reset(project_token)
         current_user_ctx.reset(user_token)
+        current_deployed_project_version_ctx.reset(deployed_version_token)
 
     return ResponseNoOp(status_code=200)
 

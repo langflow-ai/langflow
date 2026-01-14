@@ -977,3 +977,279 @@ async def test_mcp_longterm_token_fails_without_superuser():
     async with session_scope() as session:
         with pytest.raises(HTTPException, match="Auto login required to create a long-term token"):
             await create_user_longterm_token(session)
+
+
+async def test_deployed_project_header_lists_tools():
+    """When x-langflow-deployed-project-version is set, tool listing should come from PublishService."""
+    from types import SimpleNamespace
+    from uuid import uuid4
+
+    from langflow.api.v1 import mcp_utils
+
+    # Arrange context
+    user_id = uuid4()
+    project_id = uuid4()
+    version_id = "deploy-v1"
+    user = SimpleNamespace(id=user_id)
+
+    user_token = mcp_utils.current_user_ctx.set(user)
+    version_token = mcp_utils.current_deployed_project_version_ctx.set(version_id)
+
+    # Mock PublishService
+    flow1_id = uuid4()
+    flow2_id = uuid4()
+
+    deployed_project_blob = {
+        "name": "proj",
+        "flows": [
+            {
+                "id": str(flow1_id),
+                "database_flow": {"data": {}, "name": "Same", "description": "d1"},
+            },
+            {
+                "id": str(flow2_id),
+                "published_version": {"version_id": "flow-v2"},
+            },
+        ],
+    }
+    deployed_flow2_blob = {"name": "Same", "description": "d2", "data": {}}
+
+    class DummyPublishService:
+        async def get_project(self, *, user_id, project_id, metadata, stage):  # noqa: ARG002
+            return json.dumps(deployed_project_blob)
+
+        async def get_flow(self, *, user_id, flow_id, metadata, stage):  # noqa: ARG002
+            assert str(flow_id) == str(flow2_id)
+            return json.dumps(deployed_flow2_blob)
+
+    from unittest.mock import patch
+
+    with (
+        patch("langflow.api.v1.mcp_utils.get_service", return_value=DummyPublishService()),
+        patch(
+            "langflow.api.v1.mcp_utils.json_schema_from_flow",
+            side_effect=lambda _flow: {"type": "object", "properties": {}},
+        ),
+    ):
+        try:
+            tools = await mcp_utils.handle_list_tools(project_id=project_id, mcp_enabled_only=True)
+            tool_names = [t.name for t in tools]
+            # Deterministic collision handling: Same -> same, same_1
+            assert tool_names == ["same", "same_1"]
+        finally:
+            mcp_utils.current_deployed_project_version_ctx.reset(version_token)
+            mcp_utils.current_user_ctx.reset(user_token)
+
+
+async def test_deployed_project_header_call_tool_uses_resolved_flow(monkeypatch):
+    """When x-langflow-deployed-project-version is set, call_tool should run the resolved deployed flow."""
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+    from uuid import uuid4
+
+    from langflow.api.v1 import mcp_utils
+
+    # Arrange context
+    user_id = uuid4()
+    project_id = uuid4()
+    version_id = "deploy-v1"
+    user = SimpleNamespace(id=user_id)
+
+    user_token = mcp_utils.current_user_ctx.set(user)
+    version_token = mcp_utils.current_deployed_project_version_ctx.set(version_id)
+
+    # Mock settings so progress notifications are disabled (avoid needing MCP session plumbing)
+    monkeypatch.setattr(
+        mcp_utils,
+        "get_settings_service",
+        lambda: SimpleNamespace(settings=SimpleNamespace(mcp_server_enable_progress_notifications=False)),
+    )
+
+    # Mock PublishService resolution
+    flow1_id = uuid4()
+    flow2_id = uuid4()
+
+    deployed_project_blob = {
+        "name": "proj",
+        "flows": [
+            {
+                "id": str(flow1_id),
+                "database_flow": {"data": {}, "name": "Same", "description": "d1"},
+            },
+            {
+                "id": str(flow2_id),
+                "published_version": {"version_id": "flow-v2"},
+            },
+        ],
+    }
+    deployed_flow2_blob = {"name": "Same", "description": "d2", "data": {}}
+
+    class DummyPublishService:
+        async def get_project(self, *, user_id, project_id, metadata, stage):  # noqa: ARG002
+            return json.dumps(deployed_project_blob)
+
+        async def get_flow(self, *, user_id, flow_id, metadata, stage):  # noqa: ARG002
+            assert str(flow_id) == str(flow2_id)
+            return json.dumps(deployed_flow2_blob)
+
+    from unittest.mock import patch
+
+    # Patch execution to verify which Flow is executed
+    simple_run_flow = AsyncMock()
+
+    # Minimal RunResponse-like structure consumed by handle_call_tool
+    result_obj = SimpleNamespace(
+        outputs=[
+            SimpleNamespace(
+                outputs=[
+                    SimpleNamespace(
+                        messages=[SimpleNamespace(message="ok")],
+                        results={},
+                    )
+                ]
+            )
+        ]
+    )
+    simple_run_flow.return_value = result_obj
+    with (
+        patch("langflow.api.v1.mcp_utils.get_service", return_value=DummyPublishService()),
+        patch("langflow.api.v1.mcp_utils.simple_run_flow", new=simple_run_flow),
+    ):
+        # Minimal server stub
+        server = SimpleNamespace(
+            request_context=SimpleNamespace(meta=SimpleNamespace(progressToken=None), session=SimpleNamespace())
+        )
+
+        try:
+            # 'Same' resolves to 'same' and 'same_1' -> second one should execute flow2_id
+            out = await mcp_utils.handle_call_tool(
+                name="same_1", arguments={"input_value": "hi"}, server=server, project_id=project_id, is_action=True
+            )
+            assert [c.text for c in out] == ["ok"]
+            assert simple_run_flow.await_count == 1
+            called_flow = simple_run_flow.await_args.kwargs["flow"]
+            assert str(called_flow.id) == str(flow2_id)
+        finally:
+            mcp_utils.current_deployed_project_version_ctx.reset(version_token)
+            mcp_utils.current_user_ctx.reset(user_token)
+
+
+async def test_orphan_deployed_project_post_allows_with_header_and_apikey(
+    client: AsyncClient,
+    active_user,
+    monkeypatch,
+):
+    """Integration-ish: orphaned deployed project should be allowed via POST when header is set and publish exists.
+
+    This exercises:
+    - FastAPI dependency `verify_project_auth_conditional` orphan branch
+    - publish-service existence check
+    - transport handler invoked (mocked)
+    """
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock, MagicMock, patch
+    from uuid import uuid4
+
+    orphan_project_id = uuid4()
+    version_id = "deploy-v1"
+
+    # Force composer-enabled to require API key (avoids JWT path)
+    monkeypatch.setattr(
+        "langflow.api.v1.mcp_projects.get_settings_service",
+        lambda: SimpleNamespace(settings=SimpleNamespace(mcp_composer_enabled=True), auth_settings=SimpleNamespace()),
+    )
+    monkeypatch.setattr(
+        "langflow.api.v1.mcp_projects.check_key",
+        AsyncMock(return_value=active_user),
+    )
+
+    class DummyPublishService:
+        async def get_project(self, *, user_id, project_id, metadata, stage):  # noqa: ARG002
+            return "{}"  # any non-empty string counts as "exists"
+
+    mock_transport = MagicMock()
+    mock_transport.handle_post_message = AsyncMock()
+
+    headers = {
+        "x-api-key": "test-key",
+        "x-langflow-deployed-project-version": version_id,
+    }
+
+    with (
+        patch("langflow.api.v1.mcp_projects.get_service", return_value=DummyPublishService()),
+        patch("langflow.api.v1.mcp_projects.get_project_sse", return_value=mock_transport),
+    ):
+        resp = await client.post(f"/api/v1/mcp/project/{orphan_project_id}", json={"type": "test"}, headers=headers)
+
+    assert resp.status_code == 200
+    assert mock_transport.handle_post_message.await_count == 1
+
+
+async def test_orphan_deployed_project_sse_get_skips_db_check_when_header_present(
+    client: AsyncClient,
+    active_user,
+    monkeypatch,
+):
+    """Integration-ish: SSE GET should not 404 on missing DB project when deployed header is present."""
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock, MagicMock, patch
+    from uuid import uuid4
+
+    from fastapi import Response
+
+    orphan_project_id = uuid4()
+    version_id = "deploy-v1"
+
+    # Force composer-enabled to require API key (avoids JWT path)
+    monkeypatch.setattr(
+        "langflow.api.v1.mcp_projects.get_settings_service",
+        lambda: SimpleNamespace(settings=SimpleNamespace(mcp_composer_enabled=True), auth_settings=SimpleNamespace()),
+    )
+    monkeypatch.setattr(
+        "langflow.api.v1.mcp_projects.check_key",
+        AsyncMock(return_value=active_user),
+    )
+
+    class DummyPublishService:
+        async def get_project(self, *, user_id, project_id, metadata, stage):  # noqa: ARG002
+            return "{}"
+
+    # Provide a minimal SSE transport that "connects" successfully.
+    class DummySse:
+        class _CM:
+            async def __aenter__(self):
+                return (MagicMock(), MagicMock())
+
+            async def __aexit__(self, exc_type, exc, tb):
+                return False
+
+        def connect_sse(self, *args, **kwargs):  # noqa: ARG002
+            return self._CM()
+
+    headers = {
+        "x-api-key": "test-key",
+        "x-langflow-deployed-project-version": version_id,
+    }
+
+    # Ensure server.run exits gracefully so the handler returns 200.
+    from anyio import BrokenResourceError
+
+    project_server = MagicMock()
+    project_server.server = MagicMock()
+    project_server.server.name = "test-server"
+    project_server.server.create_initialization_options = MagicMock()
+    project_server.server.run = AsyncMock(side_effect=BrokenResourceError())
+
+    with (
+        patch("langflow.api.v1.mcp_projects.get_service", return_value=DummyPublishService()),
+        patch("langflow.api.v1.mcp_projects.get_project_sse", return_value=DummySse()),
+        patch("langflow.api.v1.mcp_projects.get_project_mcp_server", return_value=project_server),
+        # In production, the SSE transport writes the HTTP response directly to the ASGI send channel,
+        # so the handler returns ResponseNoOp. Our DummySse does not write a response, so patch ResponseNoOp
+        # to a real Response so the TestClient receives a response.
+        patch("langflow.api.v1.mcp_projects.ResponseNoOp", new=Response),
+    ):
+        resp = await client.get(f"/api/v1/mcp/project/{orphan_project_id}/sse", headers=headers)
+
+    # If we had still enforced DB existence, we'd get 404.
+    assert resp.status_code == 200

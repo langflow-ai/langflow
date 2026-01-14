@@ -13,6 +13,7 @@ from typing import Any, ParamSpec, TypeVar
 from urllib.parse import quote, unquote, urlparse
 from uuid import uuid4
 
+import orjson
 from lfx.base.mcp.constants import MAX_MCP_TOOL_NAME_LENGTH
 from lfx.base.mcp.util import get_flow_snake_case, get_unique_name, sanitize_mcp_name
 from lfx.log.logger import logger
@@ -27,7 +28,10 @@ from langflow.schema.message import Message
 from langflow.services.database.models import Flow
 from langflow.services.database.models.file.model import File as UserFile
 from langflow.services.database.models.user.model import User
-from langflow.services.deps import get_settings_service, get_storage_service, session_scope
+from langflow.services.deps import get_service, get_settings_service, get_storage_service, session_scope
+from langflow.services.publish.schema import PublishedFlowMetadata, PublishedProjectMetadata, ReleaseStage
+from langflow.services.publish.service import PublishService
+from langflow.services.schema import ServiceType
 
 T = TypeVar("T")
 P = ParamSpec("P")
@@ -39,6 +43,10 @@ current_user_ctx: ContextVar[User] = ContextVar("current_user_ctx")
 # Carries per-request variables injected via HTTP headers (e.g., X-Langflow-Global-Var-*)
 current_request_variables_ctx: ContextVar[dict[str, str] | None] = ContextVar(
     "current_request_variables_ctx", default=None
+)
+# When set, project MCP handlers should use a deployed project version loaded from PublishService.
+current_deployed_project_version_ctx: ContextVar[str | None] = ContextVar(
+    "current_deployed_project_version_ctx", default=None
 )
 
 
@@ -75,6 +83,63 @@ class MCPConfig:
 
 def get_mcp_config():
     return MCPConfig()
+
+
+async def _load_deployed_project_flows(*, project_id, version_id: str, user_id) -> list[Flow]:
+    """Resolve flows for a deployed project version.
+
+    Deployed project blob entries can include:
+    - `database_flow`: embedded flow graph data + metadata at publish time
+    - `published_version.version_id`: pointer to a deployed flow version
+    """
+    publish_service: PublishService = get_service(ServiceType.PUBLISH_SERVICE)
+    project_blob = await publish_service.get_project(
+        user_id=user_id,
+        project_id=project_id,
+        metadata=PublishedProjectMetadata(version_id=version_id),
+        stage=ReleaseStage.DEPLOY,
+    )
+    if not project_blob:
+        msg = "Deployed project data not found"
+        raise ValueError(msg)
+    project_blob = orjson.loads(project_blob)
+    flow_entries: list[dict] = project_blob.get("flows", [])
+    flows: list[Flow] = []
+    invalid_flow_entry_msg = "Invalid flow entry: {entry}"
+
+    for entry in flow_entries:
+        if not (flow_id := entry.get("id")):
+            raise ValueError(invalid_flow_entry_msg.format(entry=entry))
+
+        flow_obj: dict = {}
+
+        if "database_flow" in entry:
+            flow_obj = entry.get("database_flow")
+        elif "published_version" in entry:
+            flow_version_id = entry.get("published_version", {}).get("version_id")
+            flow_blob = await publish_service.get_flow(
+                user_id=user_id,
+                flow_id=flow_id,
+                metadata=PublishedFlowMetadata(version_id=flow_version_id),
+                stage=ReleaseStage.PUBLISH, # it doesnt have to be deployed individually
+            )
+            flow_obj = orjson.loads(flow_blob)
+        else:
+            raise ValueError(invalid_flow_entry_msg.format(entry=entry))
+        flows.append(
+            Flow(
+                id=flow_id,
+                name=flow_obj.get("name"),
+                description=flow_obj.get("description"),
+                data=flow_obj.get("data", flow_obj),
+                user_id=user_id,
+                folder_id=project_id,
+                # Deployed project MCP is explicitly requested via header.
+                mcp_enabled=True,
+            )
+        )
+
+    return flows
 
 
 async def handle_list_resources(project_id=None):
@@ -216,31 +281,15 @@ async def handle_call_tool(
     request_variables = current_request_variables_ctx.get()
     exec_context = {"request_variables": request_variables} if request_variables else None
 
-    async def execute_tool(session):
-        # Get flow id from name
-        flow = await get_flow_snake_case(name, current_user.id, session, is_action=is_action)
-        if not flow:
-            msg = f"Flow with name '{name}' not found"
-            raise ValueError(msg)
+    async def _run_flow_as_tool(flow: Flow) -> list[types.TextContent]:
+        """Run a Flow and convert outputs to MCP TextContent results.
 
-        # If project_id is provided, verify the flow belongs to the project
-        if project_id and flow.folder_id != project_id:
-            msg = f"Flow '{name}' not found in project {project_id}"
-            raise ValueError(msg)
-
-        # Process inputs
-        processed_inputs = dict(arguments)
-
-        # Initial progress notification
-        if mcp_config.enable_progress_notifications and (progress_token := server.request_context.meta.progressToken):
-            await server.request_context.session.send_progress_notification(
-                progress_token=progress_token, progress=0.0, total=1.0
-            )
-
-        conversation_id = str(uuid4())
-        input_request = SimplifiedAPIRequest(
-            input_value=processed_inputs.get("input_value", ""), session_id=conversation_id
-        )
+        This is shared by both DB-backed and deployed-project execution paths.
+        """
+        # NOTE: This intentionally preserves the original behavior of handle_call_tool:
+        # - progress updates are sent in a background task and finalized (progress=1.0) when cancelled
+        # - failures inside simple_run_flow are converted to a text error result (no exception raised)
+        # - unexpected exceptions still propagate after attempting to finalize progress
 
         async def send_progress_updates(progress_token):
             try:
@@ -258,7 +307,21 @@ async def handle_call_tool(
                     )
                 raise
 
-        collected_results = []
+        # Process inputs
+        processed_inputs = dict(arguments)
+
+        # Initial progress notification
+        if mcp_config.enable_progress_notifications and (progress_token := server.request_context.meta.progressToken):
+            await server.request_context.session.send_progress_notification(
+                progress_token=progress_token, progress=0.0, total=1.0
+            )
+
+        conversation_id = str(uuid4())
+        input_request = SimplifiedAPIRequest(
+            input_value=processed_inputs.get("input_value", ""), session_id=conversation_id
+        )
+
+        collected_results: list[types.TextContent] = []
         try:
             progress_task = None
             if mcp_config.enable_progress_notifications and server.request_context.meta.progressToken:
@@ -301,7 +364,6 @@ async def handle_call_tool(
                 if progress_task:
                     progress_task.cancel()
                     await asyncio.gather(progress_task, return_exceptions=True)
-
         except Exception:
             if mcp_config.enable_progress_notifications and (
                 progress_token := server.request_context.meta.progressToken
@@ -310,6 +372,48 @@ async def handle_call_tool(
                     progress_token=progress_token, progress=1.0, total=1.0
                 )
             raise
+
+    deployed_version_id = current_deployed_project_version_ctx.get()
+    if project_id and deployed_version_id:
+        flows = await _load_deployed_project_flows(
+            project_id=project_id, version_id=deployed_version_id, user_id=current_user.id
+        )
+
+        # Deterministically generate tool names to map tool name -> resolved flow.
+        existing_names: set[str] = set()
+        selected_flow: Flow | None = None
+        for flow in flows:
+            base_name = (
+                sanitize_mcp_name(flow.action_name)
+                if (is_action and flow.action_name)
+                else sanitize_mcp_name(flow.name)
+            )
+            tool_name = get_unique_name(base_name, MAX_MCP_TOOL_NAME_LENGTH, existing_names)
+            existing_names.add(tool_name)
+            if tool_name == name:
+                selected_flow = flow
+                break
+
+        if not selected_flow:
+            msg = (
+                f"Flow with name '{name}' not found in deployed project {project_id} "
+                f"(version {deployed_version_id})"
+            )
+            raise ValueError(msg)
+        return await _run_flow_as_tool(selected_flow)
+
+    async def execute_tool(session):
+        # Get flow id from name
+        flow = await get_flow_snake_case(name, current_user.id, session, is_action=is_action)
+        if not flow:
+            msg = f"Flow with name '{name}' not found"
+            raise ValueError(msg)
+
+        # If project_id is provided, verify the flow belongs to the project
+        if project_id and flow.folder_id != project_id:
+            msg = f"Flow '{name}' not found in project {project_id}"
+            raise ValueError(msg)
+        return await _run_flow_as_tool(flow)
 
     try:
         return await with_db_session(execute_tool)
@@ -328,6 +432,28 @@ async def handle_list_tools(project_id=None, *, mcp_enabled_only=False):
     """
     tools = []
     try:
+        deployed_version_id = current_deployed_project_version_ctx.get()
+        if project_id and deployed_version_id:
+            current_user = current_user_ctx.get()
+            flows = await _load_deployed_project_flows(
+                project_id=project_id, version_id=deployed_version_id, user_id=current_user.id
+            )
+            existing_names: set[str] = set()
+            for flow in flows:
+                base_name = sanitize_mcp_name(flow.action_name) if flow.action_name else sanitize_mcp_name(flow.name)
+                name = get_unique_name(base_name, MAX_MCP_TOOL_NAME_LENGTH, existing_names)
+                description = flow.action_description or (
+                    flow.description if flow.description else f"Tool generated from flow: {name}"
+                )
+                tool = types.Tool(
+                    name=name,
+                    description=description,
+                    inputSchema=json_schema_from_flow(flow),
+                )
+                tools.append(tool)
+                existing_names.add(name)
+            return tools
+
         async with session_scope() as session:
             # Build query based on parameters
             if project_id:

@@ -910,17 +910,20 @@ async def _create_project_blob(
     # flow data at the time of project publish.
     flow_blobs = []
     for db_flow in db_flows:
-        flow_entry = {
-            "id": str(db_flow.id),
-            "name": db_flow.name, # current flow name
-        }
+        flow_entry = {"id": str(db_flow.id)}
         if db_flow.published_flow_version_id:
             flow_entry["published_version"] = {
                 "version_id": db_flow.published_flow_version_id,
                 }
         else:
             # latest flow data at the time of project publish
-            flow_entry["database_flow_data"] = db_flow.data
+            if not (db_flow.data and "nodes" in db_flow.data and "edges" in db_flow.data):
+                raise HTTPException(status_code=400, detail="Flow data is not valid")
+            flow_entry["database_flow"] = {
+                "name": db_flow.name,
+                "description": db_flow.description,
+                **db_flow.data,
+                }
 
         flow_blobs.append(flow_entry)
 
