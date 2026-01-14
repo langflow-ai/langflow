@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { UpstreamOutput } from "@/types/references";
 import { cn } from "@/utils/utils";
@@ -104,19 +104,19 @@ export function ReferenceAutocomplete({
 
   if (!isOpen || filteredOptions.length === 0) return null;
 
-  // Determine positioning style
-  const getPositionStyle = () => {
+  // Determine positioning style based on rendering mode
+  function getPositionStyle(): React.CSSProperties {
+    // Portal mode: use fixed positioning with calculated coordinates
     if (anchorRef) {
-      // Portal mode: use fixed positioning with calculated coordinates
       return { top: portalPosition.top, left: portalPosition.left };
     }
+    // Textarea: position at caret location
     if (isTextarea) {
-      // Textarea: position at caret location
       return { top: position.top, left: position.left };
     }
     // Input: position below the container
     return { top: "100%", left: 0, marginTop: 4 };
-  };
+  }
 
   const dropdown = (
     <div

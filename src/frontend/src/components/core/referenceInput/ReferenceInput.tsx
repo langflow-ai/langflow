@@ -1,17 +1,18 @@
 import {
-  useState,
-  useRef,
+  type ReactNode,
   useCallback,
   useEffect,
-  type ReactNode,
+  useMemo,
+  useRef,
+  useState,
 } from "react";
-import { ReferenceAutocomplete } from "./ReferenceAutocomplete";
-import { parseReferences } from "@/utils/referenceParser";
-import { getUpstreamOutputs } from "@/utils/getUpstreamOutputs";
-import { getCaretCoordinates } from "@/utils/getCaretCoordinates";
-import type { UpstreamOutput } from "@/types/references";
 import useFlowStore from "@/stores/flowStore";
+import type { UpstreamOutput } from "@/types/references";
+import { getCaretCoordinates } from "@/utils/getCaretCoordinates";
+import { getUpstreamOutputs } from "@/utils/getUpstreamOutputs";
+import { parseReferences } from "@/utils/referenceParser";
 import { cn } from "@/utils/utils";
+import { ReferenceAutocomplete } from "./ReferenceAutocomplete";
 
 interface ReferenceInputProps {
   nodeId: string;
@@ -27,7 +28,9 @@ interface ReferenceInputProps {
     onChange: (
       e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
     ) => void;
-    onKeyDown: (e: React.KeyboardEvent) => void;
+    onKeyDown: (
+      e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>,
+    ) => void;
     ref: React.RefObject<HTMLInputElement | HTMLTextAreaElement>;
   }) => ReactNode;
 }
@@ -199,7 +202,7 @@ export function ReferenceInput({
   }, []);
 
   // Calculate the display value with preview
-  const displayValue = (() => {
+  const displayValue = useMemo(() => {
     if (!isAutocompleteOpen || !previewOption || triggerIndex === null) {
       return value;
     }
@@ -209,7 +212,13 @@ export function ReferenceInput({
     const after = value.slice(cursorPos);
     const preview = `@${previewOption.nodeSlug}.${previewOption.outputName}`;
     return before + preview + after;
-  })();
+  }, [
+    isAutocompleteOpen,
+    previewOption,
+    triggerIndex,
+    value,
+    autocompleteFilter,
+  ]);
 
   return (
     <div ref={containerRef} className={cn("relative", className)}>

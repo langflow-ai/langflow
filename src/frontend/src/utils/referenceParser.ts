@@ -43,19 +43,18 @@ export function parseReferences(text: string): ParsedReference[] {
     const nodeSlug = match[1];
     const outputName = match[2];
     const dotPathRaw = match[3];
-    // Remove leading dot if present, but keep leading bracket for array access
-    const dotPath = dotPathRaw
-      ? dotPathRaw.startsWith(".")
-        ? dotPathRaw.slice(1)
-        : dotPathRaw
-      : undefined;
-
     const fullPath = match[0];
+
+    // Remove leading dot if present, but keep leading bracket for array access
+    let dotPath: string | undefined;
+    if (dotPathRaw) {
+      dotPath = dotPathRaw.startsWith(".") ? dotPathRaw.slice(1) : dotPathRaw;
+    }
 
     references.push({
       nodeSlug,
       outputName,
-      dotPath: dotPath || undefined,
+      dotPath,
       fullPath,
       startIndex: match.index,
       endIndex: match.index + fullPath.length,

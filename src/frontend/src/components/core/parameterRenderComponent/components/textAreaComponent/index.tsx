@@ -27,33 +27,23 @@ const MCP_SSE_VALUE = "MCP_SSE";
 const { protocol, host } = customGetHostProtocol();
 const URL_MCP_SSE = `${protocol}//${host}/api/v1/mcp/sse`;
 
+function getGradientClass(
+  disabled: boolean,
+  editNode: boolean,
+  password: boolean,
+): string {
+  if (disabled || password) return "";
+  if (editNode) return "gradient-fade-input-edit-node";
+  return "gradient-fade-input";
+}
+
+function getBackgroundClass(disabled: boolean, editNode: boolean): string {
+  if (disabled) return "";
+  if (editNode) return "background-fade-input-edit-node";
+  return "background-fade-input";
+}
+
 const externalLinkIconClasses = {
-  gradient: ({
-    disabled,
-    editNode,
-    password,
-  }: {
-    disabled: boolean;
-    editNode: boolean;
-    password: boolean;
-  }) =>
-    disabled || password
-      ? ""
-      : editNode
-        ? "gradient-fade-input-edit-node"
-        : "gradient-fade-input",
-  background: ({
-    disabled,
-    editNode,
-  }: {
-    disabled: boolean;
-    editNode: boolean;
-  }) =>
-    disabled
-      ? ""
-      : editNode
-        ? "background-fade-input-edit-node"
-        : "background-fade-input",
   icon: "icons-parameters-comp absolute right-3 h-4 w-4 shrink-0",
   editNodeTop: "top-[-1.4rem] h-5",
   normalTop: "top-[-2.1rem] h-7",
@@ -84,11 +74,6 @@ export default function TextAreaComponent({
 
   const isWebhook = useMemo(
     () => nodeInformationMetadata?.nodeType === "webhook",
-    [nodeInformationMetadata?.nodeType],
-  );
-
-  const _isMCPSSE = useMemo(
-    () => nodeInformationMetadata?.nodeType === "mcp_sse",
     [nodeInformationMetadata?.nodeType],
   );
 
@@ -154,22 +139,14 @@ export default function TextAreaComponent({
       {!disabled && !isFocused && (
         <div
           className={cn(
-            externalLinkIconClasses.gradient({
-              disabled,
-              editNode,
-              password: password!,
-            }),
+            getGradientClass(disabled, editNode, password!),
             editNode
               ? externalLinkIconClasses.editNodeTop
               : externalLinkIconClasses.normalTop,
           )}
           style={{
             pointerEvents: "none",
-            background: isFocused
-              ? undefined
-              : disabled
-                ? "bg-background"
-                : GRADIENT_CLASS,
+            background: disabled ? "bg-background" : GRADIENT_CLASS,
           }}
           aria-hidden="true"
         />

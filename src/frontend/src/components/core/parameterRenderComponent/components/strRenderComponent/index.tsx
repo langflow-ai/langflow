@@ -30,71 +30,23 @@ export function StrRenderComponent({
   // Check if this field supports references (has_references is defined, not undefined)
   const supportsReferences = templateData.has_references !== undefined;
 
-  // Wrap handleOnNewValue to also update has_references when value changes
-  const handleOnNewValueWithReferences = useCallback(
-    (newValue: any, options?: { skipSnapshot?: boolean }) => {
-      // If this field supports references, check if the new value has any
-      if (supportsReferences && typeof newValue === "string") {
-        const refs = parseReferences(newValue);
-        const hasRefs = refs.length > 0;
+  // Helper to extract string value from various input formats
+  const extractStringValue = useCallback((newValue: unknown): string | null => {
+    if (typeof newValue === "string") return newValue;
+    if (
+      typeof newValue === "object" &&
+      newValue !== null &&
+      "value" in newValue &&
+      typeof (newValue as { value: unknown }).value === "string"
+    ) {
+      return (newValue as { value: string }).value;
+    }
+    return null;
+  }, []);
 
-        // If has_references changed, update the nodeClass template
-        if (templateData.has_references !== hasRefs && handleNodeClass) {
-          handleNodeClass({
-            ...nodeClass,
-            template: {
-              ...nodeClass.template,
-              [name]: {
-                ...templateData,
-                has_references: hasRefs,
-              },
-            },
-          });
-        }
-      }
-
-      // Also handle the case where newValue is an object with a value property
-      if (
-        supportsReferences &&
-        typeof newValue === "object" &&
-        newValue !== null &&
-        "value" in newValue &&
-        typeof newValue.value === "string"
-      ) {
-        const refs = parseReferences(newValue.value);
-        const hasRefs = refs.length > 0;
-
-        if (templateData.has_references !== hasRefs && handleNodeClass) {
-          handleNodeClass({
-            ...nodeClass,
-            template: {
-              ...nodeClass.template,
-              [name]: {
-                ...templateData,
-                has_references: hasRefs,
-              },
-            },
-          });
-        }
-      }
-
-      // Call the original handler
-      handleOnNewValue(newValue, options);
-    },
-    [
-      supportsReferences,
-      templateData,
-      handleNodeClass,
-      nodeClass,
-      name,
-      handleOnNewValue,
-    ],
-  );
-
-  // Callback for ReferenceInput onChange
-  const handleReferenceInputChange = useCallback(
-    (newValue: string, hasRefs: boolean) => {
-      // Update has_references if it changed
+  // Helper to update has_references in nodeClass template
+  const updateHasReferences = useCallback(
+    (hasRefs: boolean) => {
       if (templateData.has_references !== hasRefs && handleNodeClass) {
         handleNodeClass({
           ...nodeClass,
@@ -107,9 +59,37 @@ export function StrRenderComponent({
           },
         });
       }
+    },
+    [templateData, handleNodeClass, nodeClass, name],
+  );
+
+  // Wrap handleOnNewValue to also update has_references when value changes
+  const handleOnNewValueWithReferences = useCallback(
+    (newValue: any, options?: { skipSnapshot?: boolean }) => {
+      if (supportsReferences) {
+        const stringValue = extractStringValue(newValue);
+        if (stringValue !== null) {
+          const refs = parseReferences(stringValue);
+          updateHasReferences(refs.length > 0);
+        }
+      }
+      handleOnNewValue(newValue, options);
+    },
+    [
+      supportsReferences,
+      extractStringValue,
+      updateHasReferences,
+      handleOnNewValue,
+    ],
+  );
+
+  // Callback for ReferenceInput onChange
+  const handleReferenceInputChange = useCallback(
+    (newValue: string, hasRefs: boolean) => {
+      updateHasReferences(hasRefs);
       handleOnNewValue({ value: newValue, has_references: hasRefs });
     },
-    [templateData, handleNodeClass, nodeClass, name, handleOnNewValue],
+    [updateHasReferences, handleOnNewValue],
   );
 
   // Callback for InputGlobalComponent inside ReferenceInput
@@ -119,31 +99,17 @@ export function StrRenderComponent({
         e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
       ) => void,
     ) => {
-      return (newValue: any, _options?: { skipSnapshot?: boolean }) => {
-        // Handle both string and object values
-        if (typeof newValue === "string") {
-          // Simulate a change event for ReferenceInput
-          const syntheticEvent = {
-            target: { value: newValue, selectionStart: newValue.length },
-          } as React.ChangeEvent<HTMLInputElement>;
-          onChange(syntheticEvent);
-        } else if (
-          typeof newValue === "object" &&
-          newValue !== null &&
-          "value" in newValue
-        ) {
-          const valueStr = newValue.value as string;
-          const syntheticEvent = {
-            target: {
-              value: valueStr,
-              selectionStart: valueStr.length,
-            },
-          } as React.ChangeEvent<HTMLInputElement>;
-          onChange(syntheticEvent);
-        }
+      return (newValue: unknown, _options?: { skipSnapshot?: boolean }) => {
+        const valueStr = extractStringValue(newValue);
+        if (valueStr === null) return;
+
+        const syntheticEvent = {
+          target: { value: valueStr, selectionStart: valueStr.length },
+        } as React.ChangeEvent<HTMLInputElement>;
+        onChange(syntheticEvent);
       };
     },
-    [],
+    [extractStringValue],
   );
 
   // Create modified baseInputProps with the wrapped handler
