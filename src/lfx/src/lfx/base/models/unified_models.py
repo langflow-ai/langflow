@@ -319,9 +319,18 @@ def validate_model_provider_key(variable_name: str, api_key: str) -> None:
             llm = ChatGoogleGenerativeAI(google_api_key=api_key, model=first_model, max_tokens=1)
             llm.invoke("test")
         elif provider == "IBM WatsonX":
-            # WatsonX validation would require additional parameters
-            # Skip for now as it needs project_id, url, etc.
-            return
+            from langchain_ibm import ChatWatsonx
+
+            default_url = "https://us-south.ml.cloud.ibm.com"
+            llm = ChatWatsonx(
+                apikey=api_key,
+                url=default_url,
+                model_id=first_model,
+                project_id="dummy_project_for_validation",  # Dummy project_id for validation
+                params={"max_new_tokens": 1},
+            )
+            llm.invoke("test")
+
         elif provider == "Ollama":
             # Ollama is local, just verify the URL is accessible
             import requests
