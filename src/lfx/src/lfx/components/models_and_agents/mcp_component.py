@@ -305,8 +305,10 @@ class MCPToolsComponent(ComponentWithCache):
             if hasattr(self, "graph") and self.graph and hasattr(self.graph, "context"):
                 request_variables = self.graph.context.get("request_variables")
 
-            # If no request_variables from HTTP headers, load from database
-            if not request_variables:
+            # Only load global variables from database if we have headers that might use them
+            # This avoids unnecessary database queries when headers are empty
+            has_headers = server_config.get("headers") and len(server_config.get("headers", {})) > 0
+            if not request_variables and has_headers:
                 try:
                     settings_service = get_settings_service()
 
