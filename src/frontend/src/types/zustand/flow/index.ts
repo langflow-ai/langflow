@@ -297,4 +297,8 @@ export type FlowStoreType = {
   setNewChatOnPlayground: (newChat: boolean) => void;
   stopNodeId: string | undefined;
   setStopNodeId: (nodeId: string | undefined) => void;
+  // Reference slug state for inline variable references
+  nodeReferenceSlugs: Record<string, string>;
+  setNodeReferenceSlug: (nodeId: string, slug: string) => void;
+  generateSlugForNode: (nodeId: string) => string;
 };

@@ -689,6 +689,7 @@ export type textModalPropsType = {
   open?: boolean;
   setOpen?: (open: boolean) => void;
   onCloseModal?: () => void;
+  nodeId?: string;
 };
 
 export interface ToolsModalProps {
