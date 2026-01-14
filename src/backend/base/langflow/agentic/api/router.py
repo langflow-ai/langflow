@@ -1,4 +1,10 @@
-"""Agentic API router for executing arbitrary flows."""
+"""Langflow Assistant API router.
+
+This module provides the API endpoints for the Langflow Assistant, an AI-powered
+assistant that helps users with Langflow-related questions, guidance, and component
+creation. The assistant uses Claude Sonnet 4.5 to understand user requests and
+provide appropriate responses.
+"""
 
 import os
 import re
@@ -18,12 +24,12 @@ from langflow.services.variable.service import VariableService
 
 # Constants
 MAX_VALIDATION_RETRIES = 3
-COMPONENT_CREATION_FLOW = "ComponentCreation.json"
+LANGFLOW_ASSISTANT_FLOW = "LangflowAssistant.json"
 ANTHROPIC_API_KEY_NAME = "ANTHROPIC_API_KEY"
 
 
-class FlowExecutionRequest(BaseModel):
-    """Request model for flow execution."""
+class AssistantRequest(BaseModel):
+    """Request model for assistant interactions."""
 
     flow_id: str
     component_id: str | None = None
@@ -116,7 +122,7 @@ def validate_component_code(code: str) -> ValidationResult:
         )
 
 
-router = APIRouter(prefix="/generate-component", tags=["Generate Component"])
+router = APIRouter(prefix="/agentic", tags=["Agentic"])
 
 # Base path for flow JSON files
 FLOWS_BASE_PATH = Path(__file__).parent.parent / "flows"
@@ -185,7 +191,7 @@ async def execute_flow_file(
 @router.post("/execute/{flow_name}")
 async def execute_named_flow(
     flow_name: str,
-    request: FlowExecutionRequest,
+    request: AssistantRequest,
     current_user: CurrentActiveUser,
     session: DbSession,
 ) -> dict:
@@ -362,11 +368,11 @@ async def check_anthropic_api_key(
 
 
 @router.get("/check-config")
-async def check_generate_component_config(
+async def check_assistant_config(
     current_user: CurrentActiveUser,
     session: DbSession,
 ) -> dict:
-    """Check if Generate Component is properly configured.
+    """Check if the Langflow Assistant is properly configured.
 
     Returns whether the ANTHROPIC_API_KEY is available for using Claude Sonnet 4.5.
     """
@@ -379,19 +385,26 @@ async def check_generate_component_config(
     }
 
 
-@router.post("/prompt")
-async def run_prompt_flow(
-    request: FlowExecutionRequest,
+@router.post("/assist")
+async def assist(
+    request: AssistantRequest,
     current_user: CurrentActiveUser,
     session: DbSession,
 ) -> dict:
-    """Execute the component creation flow with validation.
+    """Chat with the Langflow Assistant.
 
-    This endpoint executes the ComponentCreation.json flow which uses
-    Claude Sonnet 4.5 to help create Langflow components based on user input.
+    This endpoint executes the LangflowAssistant.json flow which uses
+    Claude Sonnet 4.5 to help users with Langflow-related questions,
+    guidance, and component creation.
+
+    The assistant can:
+    - Answer questions about Langflow concepts and features
+    - Provide guidance on building flows
+    - Help create custom components (with automatic validation)
+    - Assist with troubleshooting and best practices
 
     If the response contains component code, it validates the code and
-    retries with error feedback if validation fails (up to MAX_VALIDATION_RETRIES times).
+    retries with error feedback if validation fails.
     """
     variable_service = get_variable_service()
     user_id = current_user.id
@@ -403,7 +416,7 @@ async def run_prompt_flow(
         raise HTTPException(
             status_code=400,
             detail=(
-                f"{ANTHROPIC_API_KEY_NAME} is required for Generate Component. "
+                f"{ANTHROPIC_API_KEY_NAME} is required for the Langflow Assistant. "
                 "Please configure it in your environment or global variables."
             ),
         )
@@ -416,12 +429,12 @@ async def run_prompt_flow(
     }
 
     input_preview = request.input_value[:50] if request.input_value else "None"
-    logger.debug(f"Executing {COMPONENT_CREATION_FLOW} with input: {input_preview}...")
+    logger.debug(f"Executing {LANGFLOW_ASSISTANT_FLOW} with input: {input_preview}...")
 
-    # Execute flow with validation loop
+    # Execute flow with validation loop (validates component code if present)
     max_retries = request.max_retries if request.max_retries is not None else MAX_VALIDATION_RETRIES
     return await execute_flow_with_validation(
-        flow_filename=COMPONENT_CREATION_FLOW,
+        flow_filename=LANGFLOW_ASSISTANT_FLOW,
         input_value=request.input_value or "",
         global_variables=global_vars,
         max_retries=max_retries,
