@@ -309,9 +309,13 @@ class Settings(BaseSettings):
     """Version constraint for mcp-composer when using uvx. Uses PEP 440 syntax."""
 
     # Agentic Experience
-    agentic_experience: bool = False
+    agentic_experience: bool = True
     """If set to True, Langflow will start the agentic MCP server that provides tools for
     flow/component operations, template search, and graph visualization."""
+
+    # Developer API
+    developer_api_enabled: bool = False
+    """If set to True, Langflow will enable developer API endpoints for advanced debugging and introspection."""
 
     # Public Flow Settings
     public_flow_cleanup_interval: int = Field(default=3600, gt=600)

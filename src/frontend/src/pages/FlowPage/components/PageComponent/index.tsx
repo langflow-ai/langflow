@@ -22,8 +22,11 @@ import { useShallow } from "zustand/react/shallow";
 import { DefaultEdge } from "@/CustomEdges";
 import NoteNode from "@/CustomNodes/NoteNode";
 import FlowToolbar from "@/components/core/flowToolbarComponent";
+import GenerateComponent from "@/components/core/generateComponent";
+import { LANGFLOW_AGENTIC_EXPERIENCE } from "@/customization/feature-flags";
 import {
   COLOR_OPTIONS,
+  DEFAULT_NOTE_SIZE,
   NOTE_NODE_MIN_HEIGHT,
   NOTE_NODE_MIN_WIDTH,
 } from "@/constants/constants";
@@ -161,8 +164,8 @@ export default function Page({
   const addComponent = useAddComponent();
 
   const zoomLevel = reactFlowInstance?.getZoom();
-  const shadowBoxWidth = NOTE_NODE_MIN_WIDTH * (zoomLevel || 1);
-  const shadowBoxHeight = NOTE_NODE_MIN_HEIGHT * (zoomLevel || 1);
+  const shadowBoxWidth = DEFAULT_NOTE_SIZE * (zoomLevel || 1);
+  const shadowBoxHeight = DEFAULT_NOTE_SIZE * (zoomLevel || 1);
   const shadowBoxBackgroundColor = COLOR_OPTIONS[Object.keys(COLOR_OPTIONS)[0]];
 
   const handleGroupNode = useCallback(() => {
@@ -656,6 +659,8 @@ export default function Page({
           id: newId,
           type: "noteNode",
           position: position || { x: 0, y: 0 },
+          width: DEFAULT_NOTE_SIZE,
+          height: DEFAULT_NOTE_SIZE,
           data: {
             ...data,
             id: newId,
@@ -755,6 +760,7 @@ export default function Page({
                   shadowBoxHeight={shadowBoxHeight}
                 />
                 <FlowToolbar />
+                {LANGFLOW_AGENTIC_EXPERIENCE && <GenerateComponent />}
               </>
             )}
             <MemoizedSidebarTrigger />
