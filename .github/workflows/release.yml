@@ -124,6 +124,14 @@ jobs:
         with:
           ref: ${{ inputs.release_tag }}
 
+      - name: Setup Environment
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.13"
+          prune-cache: false
+
       - name: Get version
         id: version
         run: |
@@ -133,11 +141,10 @@ jobs:
           echo version=$version >> $GITHUB_OUTPUT
 
       - name: Check if release_tag matches a version in pyproject.toml
+        if: ${{ !contains(inputs.release_tag, steps.version.outputs.version) }}
         run: |
-          if [ "${{ inputs.release_tag }}" != "${{ steps.version.outputs.version }}" ]; then
-            echo "❌ release_tag '${{ inputs.release_tag }}' does not match pyproject.toml version '${{ steps.version.outputs.version }}'"
-            exit 1
-          fi
+          echo "❌ release_tag '${{ inputs.release_tag }}' not found in pyproject.toml version '${{ steps.version.outputs.version }}'"
+          exit 1
 
       - name: Check if package version already exists on pypi
         run: |
