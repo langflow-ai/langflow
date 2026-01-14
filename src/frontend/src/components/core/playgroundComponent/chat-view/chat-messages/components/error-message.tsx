@@ -100,10 +100,9 @@ export const ErrorView = ({
                             {content.reason && (
                               <span className="">
                                 <Markdown
-                                  linkTarget="_blank"
                                   remarkPlugins={[remarkGfm]}
                                   components={{
-                                    a: ({ node, ...props }) => (
+                                    a: ({ ...props }) => (
                                       <a
                                         href={props.href}
                                         target="_blank"
@@ -113,7 +112,7 @@ export const ErrorView = ({
                                         {props.children}
                                       </a>
                                     ),
-                                    p({ node, ...props }) {
+                                    p: ({ ...props }) => {
                                       return (
                                         <span className="inline-block w-fit max-w-full">
                                           {props.children}
@@ -121,7 +120,6 @@ export const ErrorView = ({
                                       );
                                     },
                                     code: ({
-                                      node,
                                       inline,
                                       className,
                                       children,
