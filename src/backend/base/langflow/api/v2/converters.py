@@ -3,6 +3,21 @@
 This module provides conversion functions between the new V2 workflow schemas
 and the existing V1 schemas, enabling reuse of existing execution logic while
 presenting a new API interface.
+
+Key Functions:
+    - parse_flat_inputs: Converts flat input format to tweaks structure
+    - run_response_to_workflow_response: Converts V1 RunResponse to V2 WorkflowExecutionResponse
+    - create_error_response: Creates standardized error responses
+    - create_job_response: Creates background job responses
+
+Internal Helpers:
+    - _extract_nested_value: Safely extracts nested values from dict/object structures
+    - _extract_text_from_message: Extracts plain text from various message formats
+    - _simplify_output_content: Simplifies output content based on type
+    - _get_raw_content: Extracts raw content from vertex output data
+    - _extract_model_source: Extracts model information from LLM outputs
+    - _extract_file_path: Extracts file path from SaveToFile outputs
+    - _build_metadata_for_non_output: Builds metadata for non-output terminal nodes
 """
 
 from __future__ import annotations
@@ -25,7 +40,9 @@ if TYPE_CHECKING:
     from langflow.api.v1.schemas import RunResponse
 
 
-def parse_flat_inputs(inputs: dict[str, Any]) -> tuple[dict[str, dict[str, Any]], str | None]:
+def parse_flat_inputs(
+    inputs: dict[str, Any]
+) -> tuple[dict[str, dict[str, Any]], str | None]:
     """Parse flat inputs structure into tweaks and session_id.
 
     Format: {"component_id.param": value}
@@ -57,24 +74,31 @@ def parse_flat_inputs(inputs: dict[str, Any]) -> tuple[dict[str, dict[str, Any]]
     tweaks: dict[str, dict[str, Any]] = {}
     session_id: str | None = None
 
+    # Group inputs by component_id
+    component_inputs: dict[str, dict[str, Any]] = {}
+
     for key, value in inputs.items():
         if "." in key:
             # Split component_id.param
             component_id, param_name = key.split(".", 1)
 
-            # Extract session_id if present (use first one found)
-            if param_name == "session_id":
-                if session_id is None:
-                    session_id = value
-            else:
-                # Build tweaks for all parameters except session_id
-                if component_id not in tweaks:
-                    tweaks[component_id] = {}
-                tweaks[component_id][param_name] = value
-        # No dot - treat as component-level dict (for backward compatibility)
+            if component_id not in component_inputs:
+                component_inputs[component_id] = {}
+            component_inputs[component_id][param_name] = value
         # No dot - treat as component-level dict (for backward compatibility)
         elif isinstance(value, dict):
             tweaks[key] = value
+
+    # Process component inputs
+    for component_id, params in component_inputs.items():
+        # Extract session_id if present (use first one found)
+        if "session_id" in params and session_id is None:
+            session_id = params["session_id"]
+
+        # Build tweaks for all parameters except session_id
+        tweak_params = {k: v for k, v in params.items() if k != "session_id"}
+        if tweak_params:
+            tweaks[component_id] = tweak_params
 
     return tweaks, session_id
 
@@ -121,25 +145,34 @@ def _extract_text_from_message(content: dict) -> str | None:
         Extracted text string or None
     """
     # Try message.message (nested structure)
-    message = content.get("message")
-    if isinstance(message, dict):
-        text = message.get("message")
-        if isinstance(text, str):
-            return text
-        text = message.get("text")
-        if isinstance(text, str):
-            return text
-    elif isinstance(message, str):
-        return message
+    text = _extract_nested_value(content, "message", "message")
+    if isinstance(text, str):
+        return text
 
-    # Try text.text for rare structure
-    text_val = content.get("text")
-    if isinstance(text_val, dict):
-        text = text_val.get("text")
-        if isinstance(text, str):
-            return text
-    elif isinstance(text_val, str):
-        return text_val
+    # Try message.text
+    text = _extract_nested_value(content, "text", "message")
+    if isinstance(text, str):
+        return text
+
+    # Try message.text
+    text = _extract_nested_value(content, "message", "text")
+    if isinstance(text, str):
+        return text
+
+    # Try direct message
+    text = content.get("message")
+    if isinstance(text, str):
+        return text
+
+    # Try text.text
+    text = _extract_nested_value(content, "text", "text")
+    if isinstance(text, str):
+        return text
+
+    # Try direct text
+    text = content.get("text")
+    if isinstance(text, str):
+        return text
 
     return None
 
@@ -157,7 +190,11 @@ def _extract_model_source(raw_content: dict, vertex_id: str, vertex_display_name
     """
     model_name = _extract_nested_value(raw_content, "model_output", "message", "model_name")
     if model_name:
-        return {"id": vertex_id, "display_name": vertex_display_name, "source": model_name}
+        return {
+            "id": vertex_id,
+            "display_name": vertex_display_name,
+            "source": model_name
+        }
     return None
 
 
@@ -207,7 +244,7 @@ def _simplify_output_content(content: Any, output_type: str) -> Any:
     """Simplify output content for output nodes.
 
     For message types, extracts plain text from nested structures.
-    For data types, extracts the actual data value.
+    For data/dataframe types, extracts the actual data value.
     For other types, returns content as-is.
 
     Args:
@@ -220,22 +257,39 @@ def _simplify_output_content(content: Any, output_type: str) -> Any:
     if not isinstance(content, dict):
         return content
 
-    if output_type == "message":
+    if output_type in {"message", "text"}:
         text = _extract_text_from_message(content)
         return text if text is not None else content
 
     if output_type == "data":
-        # For data types, extract from result.message structure
+        # For data types, extract from result.message structure (singular)
         # Example: {'result': {'message': {'result': '4'}, 'type': 'object'}}
         result_data = _extract_nested_value(content, "result", "message")
         if result_data is not None:
             return result_data
+    # TODO: Future scope - Add dataframe-specific extraction logic
+    # The following code is commented out pending further requirements analysis:
+    # if output_type == "dataframe":
+    #     # For dataframe types, try results.message structure first (plural)
+    #     results_data = _extract_nested_value(content, "results", "message")
+    #     if results_data is not None:
+    #         return results_data
+    #
+    #     # SQL component specific fallback: Try run_sql_query.message
+    #     sql_result = _extract_nested_value(content, "run_sql_query", "message")
+    #     if sql_result is not None:
+    #         return sql_result
+
 
     return content
 
 
 def _build_metadata_for_non_output(
-    raw_content: Any, vertex_id: str, vertex_display_name: str, vertex_type: str, output_type: str
+    raw_content: Any,
+    vertex_id: str,
+    vertex_display_name: str,
+    vertex_type: str,
+    output_type: str
 ) -> dict[str, Any]:
     """Build metadata for non-output terminal nodes.
 
@@ -253,27 +307,20 @@ def _build_metadata_for_non_output(
     Returns:
         Metadata dict
     """
-    if output_type != "message" or not isinstance(raw_content, dict):
-        return {}
-
     metadata = {}
 
+    if output_type != "message" or not isinstance(raw_content, dict):
+        return metadata
+
     # Extract model source for LLM components
-    model_output = raw_content.get("model_output")
-    if isinstance(model_output, dict):
-        message = model_output.get("message")
-        if isinstance(message, dict):
-            model_name = message.get("model_name")
-            if model_name:
-                metadata["source"] = {"id": vertex_id, "display_name": vertex_display_name, "source": model_name}
+    source_info = _extract_model_source(raw_content, vertex_id, vertex_display_name)
+    if source_info:
+        metadata["source"] = source_info
 
     # Extract file path for SaveToFile components
-    if vertex_type == "SaveToFile":
-        message_dict = raw_content.get("message")
-        if isinstance(message_dict, dict):
-            file_msg = message_dict.get("message")
-            if isinstance(file_msg, str) and "saved successfully" in file_msg.lower():
-                metadata["file_path"] = file_msg
+    file_path = _extract_file_path(raw_content, vertex_type)
+    if file_path:
+        metadata["file_path"] = file_path
 
     return metadata
 
@@ -285,35 +332,47 @@ def run_response_to_workflow_response(
     workflow_request: WorkflowExecutionRequest,
     graph: Graph,
 ) -> WorkflowExecutionResponse:
-    """Convert RunResponse to WorkflowExecutionResponse.
+    """Convert V1 RunResponse to V2 WorkflowExecutionResponse.
 
-    This function transforms the V1 response to the new V2 schema with the following logic:
-    - All terminal nodes (vertices with no successors) are included in outputs
-    - Only vertices with is_output=True get actual content populated
-    - Other terminal nodes get content=null with metadata
-    - Uses vertex.display_name as the output key (component alias)
+    This function transforms the V1 execution response to the new V2 schema format.
+    It intelligently handles different node types and determines what content to expose.
+
+    Terminal Node Processing Logic:
+        1. Identifies all terminal nodes (vertices with no successors)
+        2. For each terminal node:
+           - Output nodes (is_output=True): Full content is exposed
+           - Data/DataFrame nodes: Content is exposed regardless of is_output flag
+           - Message nodes (non-output): Only metadata is exposed (source, file_path)
+
+    Output Key Selection:
+        - Uses vertex.display_name as the primary key for outputs
+        - Falls back to vertex.id if duplicate display_names are detected
+        - Stores original display_name in metadata when using id as key
 
     Args:
-        run_response: The response from simple_run_flow
-        flow_id: The flow ID
-        job_id: The generated job ID for tracking
-        workflow_request: Original workflow request for input echo
-        graph: The Graph instance for terminal node detection
+        run_response: The V1 response from simple_run_flow containing execution results
+        flow_id: The flow identifier
+        job_id: The generated job ID for tracking this execution
+        workflow_request: Original workflow request (inputs are echoed back in response)
+        graph: The Graph instance used for terminal node detection and vertex metadata
 
     Returns:
-        WorkflowExecutionResponse with new V2 schema
+        WorkflowExecutionResponse: V2 schema response with structured outputs
 
     Example:
-        Terminal nodes: ["ChatOutput-abc", "SQLNode-xyz"]
-        - ChatOutput-abc: is_output=True → gets content
-        - SQLNode-xyz: is_output=False → gets content=null with metadata
+        Terminal nodes: ["ChatOutput-abc", "LLM-xyz", "DataNode-123"]
+        - ChatOutput-abc (is_output=True, type=message): Full content exposed
+        - LLM-xyz (is_output=False, type=message): Only metadata (model source)
+        - DataNode-123 (is_output=False, type=data): Full content exposed
     """
     # Get terminal nodes (vertices with no successors)
     try:
         terminal_node_ids = graph.get_terminal_nodes()
     except AttributeError:
         # Fallback: manually check successor_map
-        terminal_node_ids = [vertex.id for vertex in graph.vertices if not graph.successor_map.get(vertex.id, [])]
+        terminal_node_ids = [
+            vertex.id for vertex in graph.vertices if not graph.successor_map.get(vertex.id, [])
+        ]
 
     # Build output data map from run_response using component_id as key
     # This ensures unique keys even when components have duplicate display_names
@@ -366,7 +425,8 @@ def run_response_to_workflow_response(
                 # Non-output nodes:
                 # - For data types: extract and show content
                 # - For message types: extract metadata only (source, file_path)
-                if output_type == "data":
+                # TODO: Future scope - Add support for "dataframe" output type
+                if output_type in ["data"]:
                     # Show data content for non-output data nodes
                     content = _simplify_output_content(raw_content, output_type)
                 else:
@@ -376,7 +436,7 @@ def run_response_to_workflow_response(
                         vertex.id,
                         vertex.display_name or vertex.vertex_type,
                         vertex.vertex_type,
-                        output_type,
+                        output_type
                     )
                     metadata.update(extra_metadata)
 
@@ -459,7 +519,9 @@ def create_error_response(
         WorkflowExecutionResponse with error details
     """
     error_detail = ErrorDetail(
-        error=str(error), code="EXECUTION_ERROR", details={"flow_id": flow_id, "error_type": type(error).__name__}
+        error=str(error),
+        code="EXECUTION_ERROR",
+        details={"flow_id": flow_id, "error_type": type(error).__name__}
     )
 
     return WorkflowExecutionResponse(
