@@ -171,7 +171,7 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         out_dir = self.work_dir / STEP2
         llm = LangchainModelWrapper(self.build_model())
         gen_result = await generate_guards_from_specs(
-            tools=self.in_tools, tool_specs=specs, work_dir=out_dir, llm=llm, app_name=to_snake_case(self.self.project)
+            tools=self.in_tools, tool_specs=specs, work_dir=out_dir, llm=llm, app_name=to_snake_case(self.project)
         )
         logger.info("🔒️ToolGuard: Step 2 Done")
         return gen_result
