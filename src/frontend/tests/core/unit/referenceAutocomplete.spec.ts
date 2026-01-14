@@ -36,9 +36,12 @@ async function setupFlowWithConnection(page: any) {
   // Add Prompt Template component (has text input with reference support)
   await page.getByTestId("sidebar-search-input").fill("");
   await page.getByTestId("sidebar-search-input").fill("prompt");
-  await page.waitForSelector('[data-testid="models_and_agentsPrompt Template"]', {
-    timeout: 3000,
-  });
+  await page.waitForSelector(
+    '[data-testid="models_and_agentsPrompt Template"]',
+    {
+      timeout: 3000,
+    },
+  );
   await page
     .getByTestId("models_and_agentsPrompt Template")
     .dragTo(page.locator('//*[@id="react-flow-id"]'), {
@@ -56,7 +59,9 @@ async function setupFlowWithConnection(page: any) {
 
   // Click on the prompt template input handle (template input)
   // Try to find and click a suitable input handle
-  const promptHandles = page.locator('[data-testid*="handle-prompt template"][data-testid*="left"]');
+  const promptHandles = page.locator(
+    '[data-testid*="handle-prompt template"][data-testid*="left"]',
+  );
   const handleCount = await promptHandles.count();
   if (handleCount > 0) {
     await promptHandles.first().click();
@@ -85,9 +90,12 @@ async function setupFlowWithoutUpstream(page: any) {
   // Add only Prompt Template component (no upstream)
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("prompt");
-  await page.waitForSelector('[data-testid="models_and_agentsPrompt Template"]', {
-    timeout: 3000,
-  });
+  await page.waitForSelector(
+    '[data-testid="models_and_agentsPrompt Template"]',
+    {
+      timeout: 3000,
+    },
+  );
   await page
     .getByTestId("models_and_agentsPrompt Template")
     .dragTo(page.locator('//*[@id="react-flow-id"]'), {
@@ -139,7 +147,9 @@ test(
       } else {
         // If autocomplete doesn't show, it means references aren't supported for this field yet
         // This is acceptable - the feature may not be fully integrated
-        console.log("Autocomplete not visible - references may not be enabled for this field");
+        console.log(
+          "Autocomplete not visible - references may not be enabled for this field",
+        );
       }
     }
   },
