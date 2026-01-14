@@ -17,7 +17,7 @@
 # The "replace" behavior you observe is GCP's auto-healing/recreation mechanism,
 # not a persistent VM being reused.
 
-name: 🧪 test invoke ephemeral runner (Step 1) 
+name: 🧪 test invoke ephemeral runner (Step 1)  
 on:
   push: 
     branches: [test-ephemeral-runner]
