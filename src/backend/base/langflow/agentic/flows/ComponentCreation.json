@@ -217,7 +217,7 @@
                 "title_case": false,
                 "track_in_telemetry": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": "ANTHROPIC_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -543,15 +543,16 @@
                 "type": "model",
                 "value": [
                   {
-                    "icon": "OpenAI",
+                    "category": "Anthropic",
+                    "icon": "Anthropic",
                     "metadata": {
                       "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
+                      "context_length": 200000,
+                      "model_class": "ChatAnthropic",
                       "model_name_param": "model"
                     },
-                    "name": "gpt-4o-mini",
-                    "provider": "OpenAI"
+                    "name": "claude-sonnet-4-5-20250929",
+                    "provider": "Anthropic"
                   }
                 ]
               },

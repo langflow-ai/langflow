@@ -15,6 +15,7 @@ import type { SubmitResult, TerminalMessage, GenerateComponentTerminalProps } fr
 const TERMINAL_MIN_HEIGHT = 200;
 const TERMINAL_MAX_HEIGHT = 600;
 const TERMINAL_DEFAULT_HEIGHT = 300;
+const TERMINAL_CONFIG_HEIGHT = 280;
 const RESIZE_HANDLE_HEIGHT = 8;
 const HISTORY_STORAGE_KEY = "generate-component-terminal-history";
 const MAX_HISTORY_SIZE = 50;
@@ -96,9 +97,13 @@ const parseCommand = (input: string, context: CommandContext): CommandResult => 
 const TerminalHeader = ({
   onClose,
   onClear,
+  isConfigured,
+  onConfigureClick,
 }: {
   onClose: () => void;
   onClear: () => void;
+  isConfigured?: boolean;
+  onConfigureClick?: () => void;
 }) => (
   <div className="flex items-center justify-between border-b border-zinc-700 bg-zinc-900 px-4 py-2">
     <div className="flex items-center gap-3">
@@ -118,6 +123,22 @@ const TerminalHeader = ({
       </span>
     </div>
     <div className="flex items-center gap-1">
+      {onConfigureClick && (
+        <Button
+          variant="ghost"
+          size="iconSm"
+          onClick={onConfigureClick}
+          className={cn(
+            "hover:bg-zinc-800",
+            isConfigured === false
+              ? "text-amber-400 hover:text-amber-300"
+              : "text-zinc-400 hover:text-zinc-200"
+          )}
+          title="Open Model Providers"
+        >
+          <ForwardedIconComponent name="Settings" className="h-3.5 w-3.5" />
+        </Button>
+      )}
       <Button
         variant="ghost"
         size="iconSm"
@@ -403,6 +424,69 @@ const LoadingIndicator = () => (
   </div>
 );
 
+const ConfigLoading = () => (
+  <div className="flex flex-col items-center justify-center h-full py-4">
+    <div className="flex flex-col items-center gap-3">
+      <ForwardedIconComponent
+        name="Loader2"
+        className="h-8 w-8 text-zinc-400 animate-spin"
+      />
+      <span className="text-sm text-zinc-400">Checking configuration...</span>
+    </div>
+  </div>
+);
+
+const ConfigurationRequired = ({
+  onConfigureClick,
+}: {
+  onConfigureClick?: () => void;
+}) => (
+  <div className="flex flex-col items-center justify-center h-full py-4">
+    <div className="flex flex-col items-center gap-3 max-w-sm text-center">
+      <div className="flex items-center justify-center w-10 h-10 rounded-full bg-amber-500/10 border border-amber-500/20">
+        <ForwardedIconComponent
+          name="Key"
+          className="h-5 w-5 text-amber-400"
+        />
+      </div>
+      <div className="flex flex-col gap-1">
+        <h3 className="text-sm font-medium text-zinc-200">
+          Anthropic API Key Required
+        </h3>
+        <p className="text-xs text-zinc-400">
+          Configure your API Key to generate components:
+        </p>
+      </div>
+      <div className="flex flex-col gap-1.5 w-full text-left bg-zinc-800/50 rounded-lg p-3 border border-zinc-700">
+        <div className="flex items-center gap-2">
+          <span className="flex items-center justify-center w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-medium shrink-0">
+            1
+          </span>
+          <span className="text-xs text-zinc-300">Settings → Model Providers → Anthropic</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="flex items-center justify-center w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-medium shrink-0">
+            2
+          </span>
+          <code className="text-xs text-zinc-400">
+            ANTHROPIC_API_KEY in .env
+          </code>
+        </div>
+      </div>
+      {onConfigureClick && (
+        <Button
+          size="sm"
+          onClick={onConfigureClick}
+          className="bg-emerald-600 hover:bg-emerald-500 text-white gap-1.5 h-8"
+        >
+          <ForwardedIconComponent name="Settings" className="h-3.5 w-3.5" />
+          Open Model Providers
+        </Button>
+      )}
+    </div>
+  </div>
+);
+
 const GenerateComponentTerminal = ({
   isOpen,
   onClose,
@@ -412,6 +496,9 @@ const GenerateComponentTerminal = ({
   isLoading = false,
   maxRetries,
   onMaxRetriesChange,
+  isConfigured,
+  isConfigLoading,
+  onConfigureClick,
 }: GenerateComponentTerminalProps) => {
   const getWelcomeMessages = useCallback(
     (): TerminalMessage[] => [
@@ -564,10 +651,35 @@ const GenerateComponentTerminal = ({
       } else {
         addMessage("output", response.content);
       }
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "An error occurred";
-      addMessage("error", errorMessage);
+    } catch (error: unknown) {
+      // Extract error message from axios response or error object
+      let errorMessage = "An error occurred";
+
+      // Check for axios error with response data
+      const axiosError = error as { response?: { data?: { detail?: string }; status?: number } };
+      if (axiosError?.response?.data?.detail) {
+        errorMessage = axiosError.response.data.detail;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
+      // Check if it's an API key related error
+      const isApiKeyError =
+        errorMessage.toLowerCase().includes("anthropic_api_key") ||
+        errorMessage.toLowerCase().includes("api key") ||
+        errorMessage.toLowerCase().includes("authentication") ||
+        errorMessage.toLowerCase().includes("unauthorized") ||
+        (axiosError?.response?.status === 400 && errorMessage.toLowerCase().includes("required"));
+
+      if (isApiKeyError) {
+        addMessage("error", "Anthropic API Key issue detected.");
+        addMessage("system", "Please check your Anthropic API Key configuration:");
+        addMessage("system", "  1. Go to Settings → Model Providers → Anthropic");
+        addMessage("system", "  2. Or set ANTHROPIC_API_KEY in your .env file");
+        addMessage("system", "Click the ⚙ icon above to open Model Providers settings.");
+      } else {
+        addMessage("error", errorMessage);
+      }
     }
   }, [inputValue, isLoading, onSubmit, addMessage, addMessageWithMetadata, maxRetries, onMaxRetriesChange, handleClear]);
 
@@ -637,82 +749,99 @@ const GenerateComponentTerminal = ({
 
   if (!isOpen) return null;
 
+  const terminalHeight = isConfigured === false ? TERMINAL_CONFIG_HEIGHT : height;
+
   return (
     <div
       ref={terminalRef}
       className="absolute bottom-0 left-0 right-0 z-40 flex flex-col overflow-hidden rounded-t-lg border border-b-0 border-zinc-700 bg-zinc-900 shadow-2xl"
-      style={{ height }}
+      style={{ height: terminalHeight }}
     >
-      <div
-        role="separator"
-        aria-orientation="horizontal"
-        aria-valuenow={height}
-        aria-valuemin={TERMINAL_MIN_HEIGHT}
-        aria-valuemax={TERMINAL_MAX_HEIGHT}
-        tabIndex={0}
-        className={cn(
-          "absolute -top-1 left-0 right-0 cursor-ns-resize",
-          "flex items-center justify-center",
-          "hover:bg-zinc-700/50 transition-colors",
-        )}
-        style={{ height: RESIZE_HANDLE_HEIGHT }}
-        onMouseDown={handleResizeStart}
-      >
-        <div className="h-1 w-12 rounded-full bg-zinc-600" />
-      </div>
-
-      <TerminalHeader onClose={onClose} onClear={handleClear} />
-
-      <div
-        ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto px-4 py-3"
-      >
-        <div className="flex flex-col gap-1">
-          {messages.map((message) => (
-            <MessageLine
-              key={message.id}
-              message={message}
-              onAddToCanvas={onAddToCanvas}
-              onSaveToSidebar={onSaveToSidebar}
-            />
-          ))}
-          {isLoading && <LoadingIndicator />}
+      {isConfigured !== false && (
+        <div
+          role="separator"
+          aria-orientation="horizontal"
+          aria-valuenow={height}
+          aria-valuemin={TERMINAL_MIN_HEIGHT}
+          aria-valuemax={TERMINAL_MAX_HEIGHT}
+          tabIndex={0}
+          className={cn(
+            "absolute -top-1 left-0 right-0 cursor-ns-resize",
+            "flex items-center justify-center",
+            "hover:bg-zinc-700/50 transition-colors",
+          )}
+          style={{ height: RESIZE_HANDLE_HEIGHT }}
+          onMouseDown={handleResizeStart}
+        >
+          <div className="h-1 w-12 rounded-full bg-zinc-600" />
         </div>
-      </div>
+      )}
 
-      <div className="border-t border-zinc-700 bg-zinc-900/80 px-4 py-3">
-        <div className="flex items-start gap-2">
-          <span className="font-mono text-sm text-emerald-400 select-none pt-0.5">
-            &gt;
-          </span>
-          <textarea
-            ref={textareaRef}
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={isLoading}
-            placeholder="Type your prompt..."
-            rows={1}
-            className={cn(
-              "flex-1 bg-transparent font-mono text-sm text-zinc-200 resize-none",
-              "placeholder:text-zinc-600 focus:outline-none",
-              "disabled:cursor-not-allowed disabled:opacity-50",
-            )}
-          />
-          <Button
-            variant="ghost"
-            size="iconSm"
-            onClick={handleSubmit}
-            disabled={!inputValue.trim() || isLoading}
-            className="text-emerald-400 hover:bg-zinc-800 hover:text-emerald-300 disabled:opacity-30"
+      <TerminalHeader
+        onClose={onClose}
+        onClear={handleClear}
+        isConfigured={isConfigured}
+        onConfigureClick={onConfigureClick}
+      />
+
+      {isConfigLoading ? (
+        <ConfigLoading />
+      ) : isConfigured === false ? (
+        <ConfigurationRequired onConfigureClick={onConfigureClick} />
+      ) : (
+        <>
+          <div
+            ref={messagesContainerRef}
+            className="flex-1 overflow-y-auto px-4 py-3"
           >
-            <ForwardedIconComponent
-              name={isLoading ? "Loader2" : "Send"}
-              className={cn("h-4 w-4", isLoading && "animate-spin")}
-            />
-          </Button>
-        </div>
-      </div>
+            <div className="flex flex-col gap-1">
+              {messages.map((message) => (
+                <MessageLine
+                  key={message.id}
+                  message={message}
+                  onAddToCanvas={onAddToCanvas}
+                  onSaveToSidebar={onSaveToSidebar}
+                />
+              ))}
+              {isLoading && <LoadingIndicator />}
+            </div>
+          </div>
+
+          <div className="border-t border-zinc-700 bg-zinc-900/80 px-4 py-3">
+            <div className="flex items-start gap-2">
+              <span className="font-mono text-sm text-emerald-400 select-none pt-0.5">
+                &gt;
+              </span>
+              <textarea
+                ref={textareaRef}
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                disabled={isLoading}
+                placeholder="Type your prompt..."
+                rows={1}
+                className={cn(
+                  "flex-1 bg-transparent font-mono text-sm text-zinc-200 resize-none",
+                  "placeholder:text-zinc-600 focus:outline-none",
+                  "disabled:cursor-not-allowed disabled:opacity-50",
+                )}
+              />
+              <Button
+                variant="ghost"
+                size="iconSm"
+                onClick={handleSubmit}
+                disabled={!inputValue.trim() || isLoading}
+                className="text-emerald-400 hover:bg-zinc-800 hover:text-emerald-300 disabled:opacity-30"
+              >
+                <ForwardedIconComponent
+                  name={isLoading ? "Loader2" : "Send"}
+                  className={cn("h-4 w-4", isLoading && "animate-spin")}
+                />
+              </Button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };

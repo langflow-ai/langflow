@@ -9,9 +9,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { useGetGenerateComponentConfig } from "@/controllers/API/queries/generate-component";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
-import useAlertStore from "@/stores/alertStore";
 import { useGenerateComponentStore } from "@/stores/generateComponentStore";
 import { SIDEBAR_BUNDLES } from "@/utils/styleUtils";
 import type { CategoryGroupProps } from "../types";
@@ -32,24 +30,6 @@ export const CategoryGroup = memo(function CategoryGroup({
   setShowConfig,
 }: CategoryGroupProps) {
   const toggleTerminal = useGenerateComponentStore((state) => state.toggleTerminal);
-  const { data: generateComponentConfigData } = useGetGenerateComponentConfig();
-  const setErrorData = useAlertStore((state) => state.setErrorData);
-
-  const isGenerateComponentConfigured = generateComponentConfigData?.configured ?? false;
-
-  const handleGenerateComponentClick = () => {
-    if (!isGenerateComponentConfigured) {
-      setErrorData({
-        title: "Generate component requires configuration",
-        list: [
-          "ANTHROPIC_API_KEY is required to use Generate component.",
-          "Please add it to your environment variables or configure it in Settings > Global Variables.",
-        ],
-      });
-      return;
-    }
-    toggleTerminal();
-  };
 
   return (
     <SidebarGroup className="p-2">
@@ -66,16 +46,16 @@ export const CategoryGroup = memo(function CategoryGroup({
         <SidebarMenu>
           {/* Generate Component - First Item */}
           <SidebarMenuItem>
-            <SidebarMenuButton asChild className="!overflow-visible">
+            <SidebarMenuButton asChild className="w-fit">
               <div
                 data-testid="sidebar-generate-component-button"
                 role="button"
                 tabIndex={0}
-                onClick={handleGenerateComponentClick}
+                onClick={toggleTerminal}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
-                    handleGenerateComponentClick();
+                    toggleTerminal();
                   }
                 }}
                 className="user-select-none flex cursor-pointer items-center gap-2"
@@ -84,11 +64,11 @@ export const CategoryGroup = memo(function CategoryGroup({
                   name="Sparkles"
                   className="h-4 w-4"
                 />
-                <span className="whitespace-nowrap pr-1">
+                <span className="whitespace-nowrap">
                   Generate component
                 </span>
                 <Badge
-                  className="ml-auto shrink-0 bg-accent-pink hover:bg-accent-pink text-white border-0 rounded-md px-1.5 py-0 text-[10px] font-medium"
+                  className="shrink-0 bg-accent-pink hover:bg-accent-pink text-white border-0 rounded-md px-1.5 py-0 text-[10px] font-medium"
                 >
                   New
                 </Badge>

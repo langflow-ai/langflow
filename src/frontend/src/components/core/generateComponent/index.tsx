@@ -1,6 +1,7 @@
-import { memo, useCallback } from "react";
-import { usePostGenerateComponentPrompt } from "@/controllers/API/queries/generate-component";
+import { memo, useCallback, useEffect } from "react";
+import { useGetGenerateComponentConfig, usePostGenerateComponentPrompt } from "@/controllers/API/queries/generate-component";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAddFlow from "@/hooks/flows/use-add-flow";
 import { useAddComponent } from "@/hooks/use-add-component";
 import useAlertStore from "@/stores/alertStore";
@@ -55,12 +56,27 @@ const GenerateComponent = memo(function GenerateComponent() {
   const version = useDarkStore((state) => state.version);
   const { mutateAsync: executePrompt, isPending } = usePostGenerateComponentPrompt();
   const { mutateAsync: validateComponentCode } = usePostValidateComponentCode();
+  const { data: configData, refetch: refetchConfig, isRefetching: isConfigLoading } = useGetGenerateComponentConfig();
+  const navigate = useCustomNavigate();
   const addComponent = useAddComponent();
   const addFlow = useAddFlow();
+
+  const isConfigured = configData?.configured ?? false;
+
+  // Refetch config every time terminal opens
+  useEffect(() => {
+    if (isTerminalOpen) {
+      refetchConfig();
+    }
+  }, [isTerminalOpen, refetchConfig]);
 
   const handleCloseTerminal = useCallback(() => {
     setTerminalOpen(false);
   }, [setTerminalOpen]);
+
+  const handleConfigureClick = useCallback(() => {
+    navigate("/settings/model-providers");
+  }, [navigate]);
 
   const handleSubmit = useCallback(
     async (input: string): Promise<SubmitResult> => {
@@ -123,6 +139,9 @@ const GenerateComponent = memo(function GenerateComponent() {
       isLoading={isPending}
       maxRetries={maxRetries}
       onMaxRetriesChange={setMaxRetries}
+      isConfigured={isConfigured}
+      isConfigLoading={isConfigLoading}
+      onConfigureClick={handleConfigureClick}
     />
   );
 });

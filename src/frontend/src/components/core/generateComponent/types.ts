@@ -29,6 +29,9 @@ export type GenerateComponentTerminalProps = {
   isLoading?: boolean;
   maxRetries: number;
   onMaxRetriesChange: (value: number) => void;
+  isConfigured?: boolean;
+  isConfigLoading?: boolean;
+  onConfigureClick?: () => void;
 };
 
 export type GenerateComponentPromptResponse = {
