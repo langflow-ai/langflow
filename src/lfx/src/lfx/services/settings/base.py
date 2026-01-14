@@ -207,7 +207,7 @@ class Settings(BaseSettings):
     # Publish Configuration
     publish_backend: str | None = None
     """The backend to use for publishing flows (e.g., 's3')."""
-    publish_backend_bucket_name: str | None = "langflow-bucket" # should this be in a different bucket?
+    publish_backend_bucket_name: str | None = "langflow-bucket"  # should this be in a different bucket?
     """The bucket name for the publish backend."""
     publish_backend_prefix: str | None = "publish"
     """The prefix used by the publish backend to publish flows and projects."""

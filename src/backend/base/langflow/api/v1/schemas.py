@@ -491,6 +491,7 @@ class PublishFlowCreate(BaseModel):
 
 class PublishedFlowRead(PublishedFlowMetadata):
     """Schema for reading a published flow, includes the composite key fields."""
+
     model_config = ConfigDict(extra="ignore")
 
 
@@ -512,7 +513,7 @@ class ProjectFlowVersion(BaseModel):
         return (
             self.flow_id,
             self.published_flow_version_id,
-            )
+        )
 
     @classmethod
     def column_def(cls):
@@ -521,17 +522,21 @@ class ProjectFlowVersion(BaseModel):
             column("published_flow_version_id", String),
         )
 
+
 class PublishProjectCreate(BaseModel):
     flows: list[ProjectFlowVersion] = Field(..., description="List of flows to include in the project.")
 
     def flows_to_tuple(self):
         return [flow.to_tuple() for flow in self.flows]
 
+
 class PublishedProjectRead(PublishedProjectMetadata):
     """Schema for reading a published project, includes the composite key fields."""
+
     model_config = ConfigDict(extra="ignore")
 
 
 class MessageResponse(BaseModel):
     """Simple response schema for generic messages."""
+
     message: str
