@@ -249,18 +249,19 @@ export default function CodeAreaModal({
               </div>
             </div>
           </div>
-          <div className="flex h-fit w-full justify-end">
-            <Button
-              className="mt-3"
-              onClick={processCode}
-              type="submit"
-              id="checkAndSaveBtn"
-              disabled={readonly}
-              data-testid="checkAndSaveBtn"
-            >
-              Check & Save
-            </Button>
-          </div>
+          {!readonly && (
+            <div className="flex h-fit w-full justify-end">
+              <Button
+                className="mt-3"
+                onClick={processCode}
+                type="submit"
+                id="checkAndSaveBtn"
+                data-testid="checkAndSaveBtn"
+              >
+                Check & Save
+              </Button>
+            </div>
+          )}
         </div>
         <ConfirmationModal
           onClose={() => {

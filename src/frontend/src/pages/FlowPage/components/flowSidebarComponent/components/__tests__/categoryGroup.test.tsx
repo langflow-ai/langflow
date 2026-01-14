@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import React from "react";
+import { createTestWrapper } from "@/pages/MainPage/pages/filesPage/components/__tests__/test-utils";
 import { CategoryGroup } from "../categoryGroup";
 
 // Mock the UI components
@@ -111,7 +112,9 @@ describe("CategoryGroup", () => {
 
   describe("Basic Rendering", () => {
     it("should render sidebar group with correct structure", () => {
-      render(<CategoryGroup {...defaultProps} />);
+      render(<CategoryGroup {...defaultProps} />, {
+        wrapper: createTestWrapper(),
+      });
 
       expect(screen.getByTestId("sidebar-group")).toBeInTheDocument();
       expect(screen.getByTestId("sidebar-group-content")).toBeInTheDocument();
@@ -119,7 +122,9 @@ describe("CategoryGroup", () => {
     });
 
     it("should render CategoryDisclosure for each valid category", () => {
-      render(<CategoryGroup {...defaultProps} />);
+      render(<CategoryGroup {...defaultProps} />, {
+        wrapper: createTestWrapper(),
+      });
 
       expect(
         screen.getByTestId("category-disclosure-category1"),
@@ -130,7 +135,9 @@ describe("CategoryGroup", () => {
     });
 
     it("should display correct category names", () => {
-      render(<CategoryGroup {...defaultProps} />);
+      render(<CategoryGroup {...defaultProps} />, {
+        wrapper: createTestWrapper(),
+      });
 
       expect(
         screen.getByText("CategoryDisclosure for Category 1 - Open: false"),
@@ -141,7 +148,9 @@ describe("CategoryGroup", () => {
     });
 
     it("should render SearchConfigTrigger with correct props", () => {
-      render(<CategoryGroup {...defaultProps} />);
+      render(<CategoryGroup {...defaultProps} />, {
+        wrapper: createTestWrapper(),
+      });
 
       expect(screen.getByTestId("search-config-trigger")).toBeInTheDocument();
       expect(screen.getByText("Config Toggle: false")).toBeInTheDocument();
@@ -153,7 +162,9 @@ describe("CategoryGroup", () => {
         showConfig: true,
       };
 
-      render(<CategoryGroup {...propsWithShowConfig} />);
+      render(<CategoryGroup {...propsWithShowConfig} />, {
+        wrapper: createTestWrapper(),
+      });
 
       expect(screen.getByTestId("search-config-trigger")).toBeInTheDocument();
       expect(screen.getByText("Config Toggle: true")).toBeInTheDocument();
@@ -162,7 +173,9 @@ describe("CategoryGroup", () => {
 
   describe("Category Filtering", () => {
     it("should exclude bundle categories", () => {
-      render(<CategoryGroup {...defaultProps} />);
+      render(<CategoryGroup {...defaultProps} />, {
+        wrapper: createTestWrapper(),
+      });
 
       expect(
         screen.queryByTestId("category-disclosure-bundle1"),
@@ -170,7 +183,9 @@ describe("CategoryGroup", () => {
     });
 
     it("should exclude custom_component category", () => {
-      render(<CategoryGroup {...defaultProps} />);
+      render(<CategoryGroup {...defaultProps} />, {
+        wrapper: createTestWrapper(),
+      });
 
       expect(
         screen.queryByTestId("category-disclosure-custom_component"),
@@ -194,7 +209,9 @@ describe("CategoryGroup", () => {
         ],
       };
 
-      render(<CategoryGroup {...propsWithEmptyCategory} />);
+      render(<CategoryGroup {...propsWithEmptyCategory} />, {
+        wrapper: createTestWrapper(),
+      });
 
       expect(
         screen.queryByTestId("category-disclosure-emptyCategory"),
@@ -202,7 +219,9 @@ describe("CategoryGroup", () => {
     });
 
     it("should include categories with items", () => {
-      render(<CategoryGroup {...defaultProps} />);
+      render(<CategoryGroup {...defaultProps} />, {
+        wrapper: createTestWrapper(),
+      });
 
       expect(
         screen.getByTestId("category-disclosure-category1"),
@@ -223,7 +242,9 @@ describe("CategoryGroup", () => {
         ],
       };
 
-      render(<CategoryGroup {...propsWithReorderedCategories} />);
+      render(<CategoryGroup {...propsWithReorderedCategories} />, {
+        wrapper: createTestWrapper(),
+      });
 
       const disclosures = screen.getAllByTestId(/category-disclosure-/);
       expect(disclosures[0]).toHaveAttribute(
@@ -243,7 +264,9 @@ describe("CategoryGroup", () => {
         sortedCategories: ["category1", "category2"],
       };
 
-      render(<CategoryGroup {...propsWithSearch} />);
+      render(<CategoryGroup {...propsWithSearch} />, {
+        wrapper: createTestWrapper(),
+      });
 
       const disclosures = screen.getAllByTestId(/category-disclosure-/);
       expect(disclosures[0]).toHaveAttribute(
@@ -267,7 +290,9 @@ describe("CategoryGroup", () => {
         },
       };
 
-      render(<CategoryGroup {...propsWithUnknownCategory} />);
+      render(<CategoryGroup {...propsWithUnknownCategory} />, {
+        wrapper: createTestWrapper(),
+      });
 
       expect(
         screen.getByTestId("category-disclosure-unknownCategory"),
@@ -287,7 +312,9 @@ describe("CategoryGroup", () => {
         openCategories: ["category1"],
       };
 
-      render(<CategoryGroup {...propsWithOpenCategories} />);
+      render(<CategoryGroup {...propsWithOpenCategories} />, {
+        wrapper: createTestWrapper(),
+      });
 
       expect(
         screen.getByText("CategoryDisclosure for Category 1 - Open: true"),
@@ -303,7 +330,9 @@ describe("CategoryGroup", () => {
         openCategories: ["category1", "category2"],
       };
 
-      render(<CategoryGroup {...propsWithMultipleOpen} />);
+      render(<CategoryGroup {...propsWithMultipleOpen} />, {
+        wrapper: createTestWrapper(),
+      });
 
       expect(
         screen.getByText("CategoryDisclosure for Category 1 - Open: true"),
@@ -316,7 +345,9 @@ describe("CategoryGroup", () => {
 
   describe("Props Passing", () => {
     it("should pass all required props to CategoryDisclosure", () => {
-      const { rerender } = render(<CategoryGroup {...defaultProps} />);
+      const { rerender } = render(<CategoryGroup {...defaultProps} />, {
+        wrapper: createTestWrapper(),
+      });
 
       // Verify components are rendered (props are passed correctly)
       expect(
@@ -351,7 +382,9 @@ describe("CategoryGroup", () => {
         },
       };
 
-      render(<CategoryGroup {...propsWithNoValidCategories} />);
+      render(<CategoryGroup {...propsWithNoValidCategories} />, {
+        wrapper: createTestWrapper(),
+      });
 
       expect(
         screen.queryByTestId(/category-disclosure-/),
@@ -364,7 +397,9 @@ describe("CategoryGroup", () => {
         dataFilter: {},
       };
 
-      render(<CategoryGroup {...propsWithEmptyDataFilter} />);
+      render(<CategoryGroup {...propsWithEmptyDataFilter} />, {
+        wrapper: createTestWrapper(),
+      });
 
       expect(
         screen.queryByTestId(/category-disclosure-/),
@@ -382,7 +417,9 @@ describe("CategoryGroup", () => {
         },
       };
 
-      render(<CategoryGroup {...propsWithMissingCategories} />);
+      render(<CategoryGroup {...propsWithMissingCategories} />, {
+        wrapper: createTestWrapper(),
+      });
 
       expect(
         screen.getByTestId("category-disclosure-randomCategory"),
@@ -396,7 +433,9 @@ describe("CategoryGroup", () => {
     });
 
     it("should not re-render when props haven't changed", () => {
-      const { rerender } = render(<CategoryGroup {...defaultProps} />);
+      const { rerender } = render(<CategoryGroup {...defaultProps} />, {
+        wrapper: createTestWrapper(),
+      });
 
       const initialElement = screen.getByTestId("sidebar-group");
 
@@ -429,7 +468,9 @@ describe("CategoryGroup", () => {
         dataFilter: complexDataFilter,
       };
 
-      render(<CategoryGroup {...propsWithComplexData} />);
+      render(<CategoryGroup {...propsWithComplexData} />, {
+        wrapper: createTestWrapper(),
+      });
 
       // Should render only categories, not bundles or custom_component
       expect(
@@ -453,7 +494,9 @@ describe("CategoryGroup", () => {
         sortedCategories: ["category2", "category1"],
       };
 
-      render(<CategoryGroup {...propsWithSearchAndSort} />);
+      render(<CategoryGroup {...propsWithSearchAndSort} />, {
+        wrapper: createTestWrapper(),
+      });
 
       const disclosures = screen.getAllByTestId(/category-disclosure-/);
       expect(disclosures).toHaveLength(2);
