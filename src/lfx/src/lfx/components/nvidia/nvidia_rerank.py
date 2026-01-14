@@ -9,6 +9,7 @@ from lfx.template.field.base import Output
 
 
 class NvidiaRerankComponent(LCCompressorComponent):
+    component_id: str = "aaf7c533-02d1-4ccb-8d22-3bd70478fd92"
     display_name = "NVIDIA Rerank"
     description = "Rerank documents using the NVIDIA API."
     icon = "NVIDIA"

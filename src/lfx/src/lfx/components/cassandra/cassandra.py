@@ -14,6 +14,7 @@ from lfx.schema.data import Data
 
 
 class CassandraVectorStoreComponent(LCVectorStoreComponent):
+    component_id: str = "87b689f3-95be-4cc1-95cd-9fd6ab48b213"
     display_name = "Cassandra"
     description = "Cassandra Vector Store with search capabilities"
     documentation = "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/cassandra"

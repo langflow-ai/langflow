@@ -43,6 +43,7 @@ def _get_storage_location_options():
 
 
 class FileComponent(BaseFileComponent):
+    component_id: str = "a341821e-9171-491c-81cf-a01e928f90a4"
     """File component with optional Docling processing (isolated in a subprocess)."""
 
     display_name = "Read File"

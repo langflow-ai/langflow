@@ -10,6 +10,7 @@ from lfx.schema.dataframe import DataFrame
 
 
 class SearchComponent(Component):
+    component_id: str = "1fe99036-4f55-4ed6-96e3-e4464e7fa661"
     display_name: str = "SearchApi"
     description: str = "Calls the SearchApi API with result limiting. Supports Google, Bing and DuckDuckGo."
     documentation: str = "https://www.searchapi.io/docs/google"

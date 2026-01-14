@@ -10,6 +10,7 @@ from lfx.schema.data import Data
 
 
 class WikipediaAPIComponent(LCToolComponent):
+    component_id: str = "52d65ff8-ac1a-42c4-be80-155c6f975800"
     display_name = "Wikipedia API"
     description = "Call Wikipedia API."
     name = "WikipediaAPI"

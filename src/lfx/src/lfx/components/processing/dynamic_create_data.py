@@ -16,6 +16,7 @@ from lfx.schema.message import Message
 
 
 class DynamicCreateDataComponent(Component):
+    component_id: str = "1879458c-7b82-481e-872c-0ddf8ceb02f9"
     display_name: str = "Dynamic Create Data"
     description: str = "Dynamically create a Data with a specified number of fields."
     name: str = "DynamicCreateData"

@@ -14,6 +14,7 @@ from lfx.schema.data import Data
 
 
 class AstraDBGraphVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
+    component_id: str = "90bce7c2-6d69-4a3d-8040-d202a3a73ccc"
     display_name: str = "Astra DB Graph"
     description: str = "Implementation of Graph Vector Store using Astra DB"
     name = "AstraDBGraph"

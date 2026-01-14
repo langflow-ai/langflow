@@ -14,6 +14,7 @@ from lfx.schema.data import Data
 
 
 class QdrantVectorStoreComponent(LCVectorStoreComponent):
+    component_id: str = "93b75d76-4d87-4c77-bfe9-a1472c0501e5"
     display_name = "Qdrant"
     description = "Qdrant Vector Store with search capabilities"
     icon = "Qdrant"

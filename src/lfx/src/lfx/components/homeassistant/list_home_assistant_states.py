@@ -12,6 +12,7 @@ from lfx.schema.data import Data
 
 
 class ListHomeAssistantStates(LCToolComponent):
+    component_id: str = "ab0a7fe1-8e17-46ae-a870-1277a189e850"
     display_name: str = "List Home Assistant States"
     description: str = (
         "Retrieve states from Home Assistant. "

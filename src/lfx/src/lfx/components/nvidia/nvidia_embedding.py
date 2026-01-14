@@ -8,6 +8,7 @@ from lfx.schema.dotdict import dotdict
 
 
 class NVIDIAEmbeddingsComponent(LCEmbeddingsModel):
+    component_id: str = "db5ffb7e-3ea8-4f5d-89c9-ef553a3f33e3"
     display_name: str = "NVIDIA Embeddings"
     description: str = "Generate embeddings using NVIDIA models."
     icon = "NVIDIA"

@@ -11,6 +11,7 @@ from lfx.template.field.base import Output
 
 
 class YouTubeCommentsComponent(Component):
+    component_id: str = "000968a9-7ba2-4fd4-a7b9-83305b886d66"
     """A component that retrieves comments from YouTube videos."""
 
     display_name: str = "YouTube Comments"

@@ -7,6 +7,7 @@ from lfx.inputs.inputs import DropdownInput, FloatInput, IntInput, SecretStrInpu
 
 
 class MaritalkModelComponent(LCModelComponent):
+    component_id: str = "80c326f1-e8ce-4673-aa86-0337c042338d"
     display_name = "MariTalk"
     description = "Generates text using MariTalk LLMs."
     icon = "Maritalk"

@@ -8,6 +8,7 @@ from lfx.utils.util import unescape_string
 
 
 class RecursiveCharacterTextSplitterComponent(LCTextSplitterComponent):
+    component_id: str = "15bac280-6aed-4ba0-a396-21616df21eb4"
     display_name: str = "Recursive Character Text Splitter"
     description: str = "Split text trying to keep all related text together."
     documentation: str = "https://docs.langflow.org/components-processing"

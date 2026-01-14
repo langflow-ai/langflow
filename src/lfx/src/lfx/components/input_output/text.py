@@ -4,6 +4,7 @@ from lfx.schema.message import Message
 
 
 class TextInputComponent(TextComponent):
+    component_id: str = "bfb803a8-ef6f-4341-8e6b-314b6f8bcf9e"
     display_name = "Text Input"
     description = "Get user text inputs."
     documentation: str = "https://docs.langflow.org/text-input-and-output"

@@ -18,6 +18,7 @@ from lfx.schema.data import Data
 
 
 class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
+    component_id: str = "7f3ac804-15f6-4cea-b21a-2f708ef8245a"
     """Elasticsearch Vector Store with with advanced, customizable search capabilities."""
 
     display_name: str = "Elasticsearch"

@@ -37,6 +37,7 @@ def set_advanced_true(component_input):
 
 
 class AgentComponent(ToolCallingAgentComponent):
+    component_id: str = "70d307a1-99e2-4c34-870f-ddb9ef7a7529"
     display_name: str = "Agent"
     description: str = "Define the agent's instructions, then enter a task to complete using tools."
     documentation: str = "https://docs.langflow.org/agents"

@@ -27,6 +27,7 @@ class QuerySchema(BaseModel):
 
 
 class GoogleSerperAPIComponent(LCToolComponent):
+    component_id: str = "647aff8c-8a6d-425d-8416-a0a01df9e96f"
     display_name = "Google Serper API [DEPRECATED]"
     description = "Call the Serper.dev Google Search API."
     name = "GoogleSerperAPI"

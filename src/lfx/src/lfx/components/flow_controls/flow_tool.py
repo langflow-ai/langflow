@@ -14,6 +14,7 @@ from lfx.schema.dotdict import dotdict
 
 
 class FlowToolComponent(LCToolComponent):
+    component_id: str = "df53e118-b665-484d-a106-76f6ecf003c7"
     display_name = "Flow as Tool"
     description = "Construct a Tool from a function that runs the loaded Flow."
     field_order = ["flow_name", "name", "description", "return_direct"]

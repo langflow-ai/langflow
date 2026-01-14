@@ -11,6 +11,7 @@ DEEPSEEK_MODELS = ["deepseek-chat"]
 
 
 class DeepSeekModelComponent(LCModelComponent):
+    component_id: str = "a1befb27-5b86-42e2-bbc1-677405988d2a"
     display_name = "DeepSeek"
     description = "Generate text using DeepSeek LLMs."
     icon = "DeepSeek"

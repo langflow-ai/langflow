@@ -15,6 +15,7 @@ from lfx.schema.data import Data
 
 
 class SpiderTool(Component):
+    component_id: str = "89e9bd2e-88cd-47bd-8894-d352c0774e19"
     display_name: str = "Spider Web Crawler & Scraper"
     description: str = "Spider API for web crawling and scraping."
     output_types: list[str] = ["Document"]

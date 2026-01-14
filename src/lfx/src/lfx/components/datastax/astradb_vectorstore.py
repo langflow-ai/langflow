@@ -13,6 +13,7 @@ from lfx.utils.version import get_version_info
 
 @vector_store_connection
 class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
+    component_id: str = "efe014fd-6870-48df-ac06-25c2929f5320"
     display_name: str = "Astra DB"
     description: str = "Ingest and search documents in Astra DB"
     documentation: str = "https://docs.langflow.org/bundles-datastax"

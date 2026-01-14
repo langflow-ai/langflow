@@ -7,6 +7,7 @@ from lfx.io import DropdownInput, IntInput, MessageTextInput, Output, SecretStrI
 
 
 class MistralAIEmbeddingsComponent(LCModelComponent):
+    component_id: str = "db121f1c-419c-4813-ab45-745687415702"
     display_name = "MistralAI Embeddings"
     description = "Generate embeddings using MistralAI models."
     icon = "MistralAI"

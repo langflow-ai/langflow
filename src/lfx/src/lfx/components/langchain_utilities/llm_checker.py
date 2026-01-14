@@ -6,6 +6,7 @@ from lfx.schema import Message
 
 
 class LLMCheckerChainComponent(LCChainComponent):
+    component_id: str = "1ee63b90-92f4-47b6-a9de-f85ad0b33ebe"
     display_name = "LLMCheckerChain"
     description = "Chain for question-answering with self-verification."
     documentation = "https://python.langchain.com/docs/modules/chains/additional/llm_checker"

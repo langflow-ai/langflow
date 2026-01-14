@@ -11,6 +11,7 @@ from lfx.schema.dataframe import DataFrame
 
 
 class ArXivComponent(Component):
+    component_id: str = "abd8cd44-fd8a-49c9-92e0-80ee3d1a2622"
     display_name = "arXiv"
     description = "Search and retrieve papers from arXiv.org"
     icon = "arXiv"

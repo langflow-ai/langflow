@@ -72,6 +72,8 @@ class CustomComponent(BaseComponent):
     priority: int | None = None
     """The priority of the component in the category. Lower priority means it will be displayed first. Defaults to None.
     """
+    component_id: str | None = None
+    """The unique and static id of the component. Defaults to None."""
 
     def __init__(self, **data) -> None:
         """Initializes a new instance of the CustomComponent class.

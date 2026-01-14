@@ -34,6 +34,7 @@ def get_parent_agent_inputs():
 
 
 class ALTKAgentComponent(ALTKBaseAgentComponent):
+    component_id: str = "729f3178-e39d-4b78-9956-78d9b2f22e75"
     """ALTK Agent with both pre-tool validation and post-tool processing capabilities.
 
     This agent combines the functionality of both ALTKAgent and AgentReflection components,

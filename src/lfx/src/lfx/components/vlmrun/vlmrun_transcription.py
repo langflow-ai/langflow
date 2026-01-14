@@ -15,6 +15,7 @@ from loguru import logger
 
 
 class VLMRunTranscription(Component):
+    component_id: str = "1e576ffe-aa80-44f5-9ad8-c40a3d9d6393"
     display_name = "VLM Run Transcription"
     description = "Extract structured data from audio and video using [VLM Run AI](https://app.vlm.run)"
     documentation = "https://docs.vlm.run"

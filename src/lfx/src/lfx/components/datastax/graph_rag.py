@@ -24,6 +24,7 @@ def traversal_strategies() -> list[str]:
 
 
 class GraphRAGComponent(LCVectorStoreComponent):
+    component_id: str = "db0ce97c-7024-4572-8ab4-95445ccb681f"
     """GraphRAGComponent is a component for performing Graph RAG traversal in a vector store.
 
     Attributes:

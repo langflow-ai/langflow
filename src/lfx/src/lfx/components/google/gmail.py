@@ -21,6 +21,7 @@ from lfx.template.field.base import Output
 
 
 class GmailLoaderComponent(Component):
+    component_id: str = "fc104307-caef-485c-ab8a-3eb938845f8f"
     display_name = "Gmail Loader"
     description = "Loads emails from Gmail using provided credentials."
     icon = "Google"

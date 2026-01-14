@@ -6,6 +6,7 @@ from lfx.schema.data import Data
 
 
 class SelectDataComponent(Component):
+    component_id: str = "d7c744ca-be8a-4f85-86fd-95568603ec4e"
     display_name: str = "Select Data"
     description: str = "Select a single data from a list of data."
     name: str = "SelectData"

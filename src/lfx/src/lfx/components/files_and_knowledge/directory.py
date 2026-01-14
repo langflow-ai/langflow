@@ -7,6 +7,7 @@ from lfx.template.field.base import Output
 
 
 class DirectoryComponent(Component):
+    component_id: str = "23de4076-93ad-44e6-82b6-9f3606afe264"
     display_name = "Directory"
     description = "Recursively load files from a directory."
     documentation: str = "https://docs.langflow.org/directory"

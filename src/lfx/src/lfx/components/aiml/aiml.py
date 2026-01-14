@@ -17,6 +17,7 @@ from lfx.inputs.inputs import (
 
 
 class AIMLModelComponent(LCModelComponent):
+    component_id: str = "06ab4530-ad00-4e16-8078-6f71693b96e3"
     display_name = "AI/ML API"
     description = "Generates text using AI/ML API LLMs."
     icon = "AIML"

@@ -50,6 +50,7 @@ MODEL_PROVIDERS_LIST = ["OpenAI"]
 
 
 class CugaComponent(ToolCallingAgentComponent):
+    component_id: str = "9f2542cd-de0b-4de3-a255-86b8cc4930e5"
     """Cuga Agent Component for advanced AI task execution.
 
     The Cuga component is an advanced AI agent that can execute complex tasks using

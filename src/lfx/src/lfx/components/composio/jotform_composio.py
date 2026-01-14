@@ -2,6 +2,7 @@ from lfx.base.composio.composio_base import ComposioBaseComponent
 
 
 class ComposioJotformAPIComponent(ComposioBaseComponent):
+    component_id: str = "6a81ee5a-877c-4793-8743-72d1958d6ee3"
     display_name: str = "Jotform"
     icon = "Jotform"
     documentation: str = "https://docs.composio.dev"

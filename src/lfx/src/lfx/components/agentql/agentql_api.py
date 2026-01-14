@@ -8,6 +8,7 @@ from lfx.schema.data import Data
 
 
 class AgentQL(Component):
+    component_id: str = "ea17070d-4368-4e87-91e5-aa7efe6b0331"
     display_name = "Extract Web Data"
     description = "Extracts structured data from a web page using an AgentQL query or a Natural Language description."
     documentation: str = "https://docs.agentql.com/rest-api/api-reference"

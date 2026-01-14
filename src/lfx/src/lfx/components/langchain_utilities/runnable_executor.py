@@ -7,6 +7,7 @@ from lfx.template.field.base import Output
 
 
 class RunnableExecComponent(Component):
+    component_id: str = "81273788-1339-4010-84f9-b27a1e1b38c4"
     description = "Execute a runnable. It will try to guess the input and output keys."
     display_name = "Runnable Executor"
     name = "RunnableExecutor"

@@ -24,6 +24,7 @@ from lfx.schema.table import EditMode
 
 
 class StructuredOutputComponent(Component):
+    component_id: str = "2b2c717d-2b5c-4769-b6e4-140fd9e8c68c"
     display_name = "Structured Output"
     description = "Uses an LLM to generate structured data. Ideal for extraction and consistency."
     documentation: str = "https://docs.langflow.org/structured-output"

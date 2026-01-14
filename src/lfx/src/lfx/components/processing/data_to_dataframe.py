@@ -5,6 +5,7 @@ from lfx.schema.dataframe import DataFrame
 
 
 class DataToDataFrameComponent(Component):
+    component_id: str = "901dcacf-8ca4-47fc-b005-bc6d6de41e9e"
     display_name = "Data → DataFrame"
     description = (
         "Converts one or multiple Data objects into a DataFrame. "

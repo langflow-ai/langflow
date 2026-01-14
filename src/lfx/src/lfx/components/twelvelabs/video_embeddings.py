@@ -79,6 +79,7 @@ class TwelveLabsVideoEmbeddings(Embeddings):
 
 
 class TwelveLabsVideoEmbeddingsComponent(LCEmbeddingsModel):
+    component_id: str = "ffd3e9ea-1b83-45e8-8ad5-6fa2c7341d71"
     display_name = "TwelveLabs Video Embeddings"
     description = "Generate embeddings from videos using TwelveLabs video embedding models."
     name = "TwelveLabsVideoEmbeddings"

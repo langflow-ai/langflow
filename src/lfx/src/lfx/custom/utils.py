@@ -522,6 +522,11 @@ def build_component_metadata(
     except Exception as exc:  # noqa: BLE001
         logger.debug(f"Error generating code hash for {custom_component.__class__.__name__}", exc_info=exc)
 
+    if hasattr(custom_component, "component_id"):
+        frontend_node.metadata["component_id"] = custom_component.component_id
+    else:
+        logger.error(f"No component_id found on custom_component {ctype_name}.")
+
     # Analyze component dependencies
     try:
         dependency_info = analyze_component_dependencies(custom_component._code)

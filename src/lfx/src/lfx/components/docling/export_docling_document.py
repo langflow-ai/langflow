@@ -9,6 +9,7 @@ from lfx.schema import Data, DataFrame
 
 
 class ExportDoclingDocumentComponent(Component):
+    component_id: str = "85443112-2507-4d15-b6dc-342674cbea3a"
     display_name: str = "Export DoclingDocument"
     description: str = "Export DoclingDocument to markdown, html or other formats."
     documentation = "https://docling-project.github.io/docling/"

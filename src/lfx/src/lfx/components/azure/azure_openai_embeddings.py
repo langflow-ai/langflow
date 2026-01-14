@@ -7,6 +7,7 @@ from lfx.io import DropdownInput, IntInput, MessageTextInput, Output, SecretStrI
 
 
 class AzureOpenAIEmbeddingsComponent(LCModelComponent):
+    component_id: str = "f760e561-ad6c-4f0e-ba08-e8d8f695e8ab"
     display_name: str = "Azure OpenAI Embeddings"
     description: str = "Generate embeddings using Azure OpenAI models."
     documentation: str = "https://python.langchain.com/docs/integrations/text_embedding/azureopenai"

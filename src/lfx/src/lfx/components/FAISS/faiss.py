@@ -15,6 +15,7 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
     description: str = "FAISS Vector Store with search capabilities"
     name = "FAISS"
     icon = "FAISS"
+    component_id: str = "3eb32354-63f6-4fb8-a499-43e79cf38225"
 
     inputs = [
         StrInput(

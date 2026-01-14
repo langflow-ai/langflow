@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 
 
 class TextEmbedderComponent(Component):
+    component_id: str = "cb5c5a9d-f8ce-42e6-a36d-c6a8a4c47084"
     display_name: str = "Text Embedder"
     description: str = "Generate embeddings for a given message using the specified embedding model."
     icon = "binary"

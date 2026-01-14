@@ -15,6 +15,7 @@ from lfx.template.field.base import Output
 
 
 class LLMSelectorComponent(Component):
+    component_id: str = "b11b4c46-c43f-4245-b67e-d601a6e9cb8a"
     display_name = "LLM Selector"
     description = "Routes the input to the most appropriate LLM based on OpenRouter model specifications"
     documentation: str = "https://docs.langflow.org/llm-selector"

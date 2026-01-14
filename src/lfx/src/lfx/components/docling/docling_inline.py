@@ -9,6 +9,7 @@ from lfx.schema import Data
 
 
 class DoclingInlineComponent(BaseFileComponent):
+    component_id: str = "b5c5fdd4-7bbb-4269-938f-fd7d5d7caa9f"
     display_name = "Docling"
     description = "Uses Docling to process input documents running the Docling models locally."
     documentation = "https://docling-project.github.io/docling/"

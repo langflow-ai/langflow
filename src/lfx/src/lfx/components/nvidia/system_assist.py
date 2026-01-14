@@ -9,6 +9,7 @@ RISE_INITIALIZED_KEY = "rise_initialized"
 
 
 class NvidiaSystemAssistComponent(ComponentWithCache):
+    component_id: str = "6f00ccaa-dbd0-41d9-bfb5-a77444447c7b"
     display_name = "NVIDIA System-Assist"
     description = (
         "(Windows only) Prompts NVIDIA System-Assist to interact with the NVIDIA GPU Driver. "

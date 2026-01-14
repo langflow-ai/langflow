@@ -18,6 +18,7 @@ from lfx.schema.dotdict import dotdict
 
 
 class AnthropicModelComponent(LCModelComponent):
+    component_id: str = "be520b23-9f3f-42e0-b1e7-824db077a8a3"
     display_name = "Anthropic"
     description = "Generate text using Anthropic's Messages API and models."
     icon = "Anthropic"

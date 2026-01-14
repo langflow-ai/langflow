@@ -22,6 +22,7 @@ from lfx.io import (
 
 
 class EmbeddingModelComponent(LCEmbeddingsModel):
+    component_id: str = "4fa53921-a268-47dd-9cf6-82a90a69e755"
     display_name = "Embedding Model"
     description = "Generate embeddings using a specified provider."
     documentation: str = "https://docs.langflow.org/components-embedding-models"

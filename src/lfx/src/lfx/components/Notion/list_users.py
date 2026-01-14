@@ -9,6 +9,7 @@ from lfx.schema.data import Data
 
 
 class NotionUserList(LCToolComponent):
+    component_id: str = "f9214d5b-2d26-43aa-85fa-f736862bd781"
     display_name = "List Users "
     description = "Retrieve users from Notion."
     documentation = "https://docs.langflow.org/bundles-notion"

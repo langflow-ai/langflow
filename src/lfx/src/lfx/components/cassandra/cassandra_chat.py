@@ -4,6 +4,7 @@ from lfx.inputs.inputs import DictInput, MessageTextInput, SecretStrInput
 
 
 class CassandraChatMemory(LCChatMemoryComponent):
+    component_id: str = "ea652b65-a776-41f9-8b26-6bc307ee029d"
     display_name = "Cassandra Chat Memory"
     description = "Retrieves and store chat messages from Apache Cassandra."
     name = "CassandraChatMemory"

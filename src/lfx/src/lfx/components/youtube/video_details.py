@@ -12,6 +12,7 @@ from lfx.template.field.base import Output
 
 
 class YouTubeVideoDetailsComponent(Component):
+    component_id: str = "72bb0a0e-aa95-4885-b900-9d3a4131c92c"
     """A component that retrieves detailed information about YouTube videos."""
 
     display_name: str = "YouTube Video Details"

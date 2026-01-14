@@ -9,6 +9,7 @@ from lfx.schema.message import Message
 
 
 class SelfQueryRetrieverComponent(Component):
+    component_id: str = "ae11e60d-e424-4db6-a1a8-8518d329e62f"
     display_name = "Self Query Retriever"
     description = "Retriever that uses a vector store and an LLM to generate the vector store queries."
     name = "SelfQueryRetriever"

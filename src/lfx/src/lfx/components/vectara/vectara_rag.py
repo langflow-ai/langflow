@@ -5,6 +5,7 @@ from lfx.schema.message import Message
 
 
 class VectaraRagComponent(Component):
+    component_id: str = "5d82855d-e43a-4281-a68b-1af2ef4c15ab"
     display_name = "Vectara RAG"
     description = "Vectara's full end to end RAG"
     documentation = "https://docs.vectara.com/docs"

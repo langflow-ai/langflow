@@ -13,6 +13,7 @@ from lfx.utils.mustache_security import validate_mustache_template
 
 
 class PromptComponent(Component):
+    component_id: str = "391fabad-5fc7-4671-9c2b-a907607afdbf"
     display_name: str = "Prompt Template"
     description: str = "Create a prompt template with dynamic variables."
     documentation: str = "https://docs.langflow.org/components-prompts"

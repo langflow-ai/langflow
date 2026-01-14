@@ -13,6 +13,7 @@ from lfx.schema.data import Data
 
 
 class UpstashVectorStoreComponent(LCVectorStoreComponent):
+    component_id: str = "53c95fa4-ee35-46d7-82d1-beccb01a4ca4"
     display_name = "Upstash"
     description = "Upstash Vector Store with search capabilities"
     name = "Upstash"

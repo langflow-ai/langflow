@@ -17,6 +17,7 @@ from lfx.schema.dotdict import dotdict
 
 
 class PythonCodeStructuredTool(LCToolComponent):
+    component_id: str = "52f516fd-3a56-430b-9a5d-6ef71657ad1e"
     DEFAULT_KEYS = [
         "code",
         "_type",

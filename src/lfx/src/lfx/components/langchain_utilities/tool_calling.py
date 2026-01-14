@@ -18,6 +18,7 @@ from lfx.schema.data import Data
 
 
 class ToolCallingAgentComponent(LCToolsAgentComponent):
+    component_id: str = "06d101c8-6d09-45b6-ba67-505a804dd604"
     display_name: str = "Tool Calling Agent"
     description: str = "An agent designed to utilize various tools seamlessly within workflows."
     icon = "LangChain"

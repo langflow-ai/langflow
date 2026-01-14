@@ -10,6 +10,7 @@ from lfx.io import (
 
 
 class SQLDatabaseComponent(Component):
+    component_id: str = "c7fdf786-fd34-4cbc-bde8-a2499adb6325"
     display_name = "SQLDatabase"
     description = "SQL Database"
     name = "SQLDatabase"

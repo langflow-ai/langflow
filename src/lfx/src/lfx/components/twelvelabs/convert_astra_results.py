@@ -7,6 +7,7 @@ from lfx.schema.message import Message
 
 
 class ConvertAstraToTwelveLabs(Component):
+    component_id: str = "a54ceb7f-42c3-4f73-a77b-6fcdcd1f46c1"
     """Convert Astra DB search results to TwelveLabs Pegasus inputs."""
 
     display_name = "Convert Astra DB to Pegasus Input"

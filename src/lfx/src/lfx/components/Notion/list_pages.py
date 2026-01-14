@@ -13,6 +13,7 @@ from lfx.schema.data import Data
 
 
 class NotionListPages(LCToolComponent):
+    component_id: str = "ee63d012-fa79-4e5a-b55a-677e128343e9"
     display_name: str = "List Pages "
     description: str = (
         "Query a Notion database with filtering and sorting. "

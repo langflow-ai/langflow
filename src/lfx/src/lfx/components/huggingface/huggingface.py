@@ -16,6 +16,7 @@ DEFAULT_MODEL = "meta-llama/Llama-3.3-70B-Instruct"
 
 
 class HuggingFaceEndpointsComponent(LCModelComponent):
+    component_id: str = "f7d9d792-7e04-473e-a419-7d100b0e6b32"
     display_name: str = "Hugging Face"
     description: str = "Generate text using Hugging Face Inference APIs."
     icon = "HuggingFace"

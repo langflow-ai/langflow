@@ -9,6 +9,7 @@ from lfx.schema import DataFrame
 
 
 class RSSReaderComponent(Component):
+    component_id: str = "886695e2-2d4c-47da-86e1-618fe5c1f256"
     display_name = "RSS Reader"
     description = "Fetches and parses an RSS feed."
     documentation: str = "https://docs.langflow.org/web-search"

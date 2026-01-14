@@ -13,6 +13,7 @@ disable_component_in_astra_cloud_msg = (
 
 
 class VideoFileComponent(BaseFileComponent):
+    component_id: str = "6e047d96-058d-4b62-9050-721244e2dd80"
     """Handles loading and processing of video files.
 
     This component supports processing video files in common video formats.

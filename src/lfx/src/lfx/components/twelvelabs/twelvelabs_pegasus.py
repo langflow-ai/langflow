@@ -35,6 +35,7 @@ class VideoValidationError(Exception):
 
 
 class TwelveLabsPegasus(Component):
+    component_id: str = "88c3b235-f4af-4b2d-9eb2-d1e6c017bab2"
     display_name = "TwelveLabs Pegasus"
     description = "Chat with videos using TwelveLabs Pegasus API."
     icon = "TwelveLabs"

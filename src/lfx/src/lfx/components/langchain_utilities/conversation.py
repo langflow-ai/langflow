@@ -4,6 +4,7 @@ from lfx.schema.message import Message
 
 
 class ConversationChainComponent(LCChainComponent):
+    component_id: str = "3beb3c2c-b052-43d2-819c-a46803b75956"
     display_name = "ConversationChain"
     description = "Chain to have a conversation and load context from memory."
     name = "ConversationChain"

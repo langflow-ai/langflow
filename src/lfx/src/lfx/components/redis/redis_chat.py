@@ -8,6 +8,7 @@ from lfx.inputs.inputs import IntInput, MessageTextInput, SecretStrInput, StrInp
 
 
 class RedisIndexChatMemory(LCChatMemoryComponent):
+    component_id: str = "2d8a383b-77b7-49d6-aae2-c5a0231a6b63"
     display_name = "Redis Chat Memory"
     description = "Retrieves and store chat messages from Redis."
     name = "RedisChatMemory"

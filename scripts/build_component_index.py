@@ -63,10 +63,6 @@ def _strip_dynamic_fields(obj):
         return [_strip_dynamic_fields(item) for item in obj]
     return obj
 
-
-
-
-
 def _import_components() -> tuple[dict, int]:
     """Import all lfx components using the async import function.
 
@@ -120,6 +116,9 @@ def build_component_index() -> dict:
             # Make defensive copies to avoid mutating the original component object
             component = dict(components_dict[comp_name])
             component["metadata"] = dict(component.get("metadata", {}))
+            component["metadata"]["component_id"] = component.get("component_id", "")
+            if not component["metadata"]["component_id"]:
+                print(f"Warning: Component {comp_name} has no component_id.")
 
             sorted_components[comp_name] = component
 

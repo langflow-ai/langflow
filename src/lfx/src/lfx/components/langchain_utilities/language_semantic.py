@@ -14,6 +14,7 @@ from lfx.schema.data import Data
 
 
 class SemanticTextSplitterComponent(LCTextSplitterComponent):
+    component_id: str = "b3ef147d-cb6c-402e-b8bc-410eb140325d"
     """Split text into semantically meaningful chunks using semantic similarity."""
 
     display_name: str = "Semantic Text Splitter"

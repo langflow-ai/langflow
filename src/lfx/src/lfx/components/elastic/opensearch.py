@@ -15,6 +15,7 @@ from lfx.schema.data import Data
 
 @vector_store_connection
 class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
+    component_id: str = "98414983-3378-48a6-a1ea-3f3d00df85ca"
     """OpenSearch Vector Store Component with Hybrid Search Capabilities.
 
     This component provides vector storage and retrieval using OpenSearch, combining semantic

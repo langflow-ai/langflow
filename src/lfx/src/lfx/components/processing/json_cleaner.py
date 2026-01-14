@@ -8,6 +8,7 @@ from lfx.template.field.base import Output
 
 
 class JSONCleaner(Component):
+    component_id: str = "97dd1c74-fa27-44ec-ac71-c5d6ec08524d"
     icon = "braces"
     display_name = "JSON Cleaner"
     description = (

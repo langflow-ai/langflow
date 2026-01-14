@@ -6,6 +6,7 @@ from lfx.schema.message import Message
 
 
 class ConditionalRouterComponent(Component):
+    component_id: str = "ee37b079-e7ec-4ed8-8edf-30f162ec4018"
     display_name = "If-Else"
     description = "Routes an input message to a corresponding output based on text comparison."
     documentation: str = "https://docs.langflow.org/if-else"

@@ -4,6 +4,7 @@ from lfx.schema.data import Data
 
 
 class JigsawStackTextToSQLComponent(Component):
+    component_id: str = "be5af8dd-bc3c-46e6-90da-c54f9cb86f11"
     display_name = "Text to SQL"
     description = "Convert natural language to SQL queries using JigsawStack AI"
     documentation = "https://jigsawstack.com/docs/api-reference/ai/text-to-sql"

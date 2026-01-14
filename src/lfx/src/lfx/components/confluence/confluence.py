@@ -7,6 +7,7 @@ from lfx.schema.data import Data
 
 
 class ConfluenceComponent(Component):
+    component_id: str = "fb4f43e6-c5f3-420b-b369-70f385b277fd"
     display_name = "Confluence"
     description = "Confluence wiki collaboration platform"
     documentation = "https://python.langchain.com/v0.2/docs/integrations/document_loaders/confluence/"

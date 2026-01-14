@@ -12,6 +12,7 @@ from lfx.inputs.inputs import BoolInput, FileInput, HandleInput
 
 
 class OpenAPIAgentComponent(LCAgentComponent):
+    component_id: str = "08c38e5c-025c-4cd5-96ca-0b86beb9095f"
     display_name = "OpenAPI Agent"
     description = "Agent to interact with OpenAPI API."
     name = "OpenAPIAgent"

@@ -12,6 +12,7 @@ from lfx.schema.data import Data
 
 
 class GoogleOAuthToken(Component):
+    component_id: str = "ab4eaee1-bf73-4725-ad83-1b16193696ae"
     display_name = "Google OAuth Token"
     description = "Generates a JSON string with your Google OAuth token."
     documentation: str = "https://developers.google.com/identity/protocols/oauth2/web-server?hl=pt-br#python_1"

@@ -17,6 +17,7 @@ MIN_ROWS_IN_TABLE = 3
 
 
 class AddContentToPage(LCToolComponent):
+    component_id: str = "46e61167-f184-4de5-88ab-1b58a5f410c8"
     display_name: str = "Add Content to Page "
     description: str = "Convert markdown text to Notion blocks and append them to a Notion page."
     documentation: str = "https://developers.notion.com/reference/patch-block-children"

@@ -4,6 +4,7 @@ from lfx.schema.message import Message
 
 
 class SequentialCrewComponent(BaseCrewComponent):
+    component_id: str = "bfd102df-77a0-4418-a8a4-c3641b65c2d9"
     display_name: str = "Sequential Crew"
     description: str = "Represents a group of agents with tasks that are executed sequentially."
     documentation: str = "https://docs.crewai.com/how-to/Sequential/"

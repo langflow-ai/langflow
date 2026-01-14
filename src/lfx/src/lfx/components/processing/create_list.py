@@ -6,6 +6,7 @@ from lfx.template.field.base import Output
 
 
 class CreateListComponent(Component):
+    component_id: str = "41d259a6-75f8-4ce1-8dd5-e5c7a044640b"
     display_name = "Create List"
     description = "Creates a list of texts."
     icon = "list"

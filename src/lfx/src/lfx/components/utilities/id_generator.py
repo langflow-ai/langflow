@@ -10,6 +10,7 @@ from lfx.schema.message import Message
 
 
 class IDGeneratorComponent(Component):
+    component_id: str = "42bf83a9-c921-453f-943b-f568c1e424ac"
     display_name = "ID Generator"
     description = "Generates a unique ID."
     icon = "fingerprint"

@@ -9,6 +9,7 @@ from lfx.schema.dotdict import dotdict
 
 
 class NVIDIAModelComponent(LCModelComponent):
+    component_id: str = "71c1b520-67fc-4659-a54b-58aeacd79e66"
     display_name = "NVIDIA"
     description = "Generates text using NVIDIA LLMs."
     icon = "NVIDIA"

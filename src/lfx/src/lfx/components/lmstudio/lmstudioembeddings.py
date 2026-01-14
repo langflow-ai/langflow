@@ -10,6 +10,7 @@ from lfx.io import FloatInput, MessageTextInput
 
 
 class LMStudioEmbeddingsComponent(LCEmbeddingsModel):
+    component_id: str = "358b6625-0977-4652-8998-0e3de33e1524"
     display_name: str = "LM Studio Embeddings"
     description: str = "Generate embeddings using LM Studio."
     icon = "LMStudio"

@@ -7,6 +7,7 @@ from lfx.schema.message import Message
 
 
 class GoogleSerperAPICore(Component):
+    component_id: str = "b290bf8e-1add-48b6-ad2e-4d0cc17caa31"
     display_name = "Google Serper API"
     description = "Call the Serper.dev Google Search API."
     icon = "Serper"

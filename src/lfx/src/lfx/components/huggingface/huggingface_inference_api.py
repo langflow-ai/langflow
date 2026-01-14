@@ -13,6 +13,7 @@ from lfx.io import MessageTextInput, Output, SecretStrInput
 
 
 class HuggingFaceInferenceAPIEmbeddingsComponent(LCEmbeddingsModel):
+    component_id: str = "b836120a-73f4-427d-be3d-073987475e69"
     display_name = "Hugging Face Embeddings Inference"
     description = "Generate embeddings using Hugging Face Text Embeddings Inference (TEI)"
     documentation = "https://huggingface.co/docs/text-embeddings-inference/index"

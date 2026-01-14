@@ -4,6 +4,7 @@ from lfx.schema.data import Data
 
 
 class JigsawStackImageGenerationComponent(Component):
+    component_id: str = "04ea6972-a74a-41f6-989c-36f0d488552b"
     display_name = "Image Generation"
     description = "Generate an image based on the given text by employing AI models like Flux, \
         Stable Diffusion, and other top models."

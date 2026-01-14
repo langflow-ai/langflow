@@ -6,6 +6,7 @@ from lfx.io import DropdownInput, MessageTextInput, Output
 
 
 class AmazonBedrockEmbeddingsComponent(LCModelComponent):
+    component_id: str = "923740dc-ffdc-4c49-838c-2818277f51ed"
     display_name: str = "Amazon Bedrock Embeddings"
     description: str = "Generate embeddings using Amazon Bedrock models."
     icon = "Amazon"

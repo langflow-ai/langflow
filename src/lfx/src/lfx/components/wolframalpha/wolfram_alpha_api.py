@@ -9,6 +9,7 @@ from lfx.schema.dataframe import DataFrame
 
 
 class WolframAlphaAPIComponent(LCToolComponent):
+    component_id: str = "76273a85-af5d-4d57-b596-d98dcdd24d24"
     display_name = "WolframAlpha API"
     description = """Enables queries to WolframAlpha for computational data, facts, and calculations across various \
 topics, delivering structured responses."""

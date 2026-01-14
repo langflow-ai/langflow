@@ -99,6 +99,7 @@ class GleanAPIWrapper(BaseModel):
 
 
 class GleanSearchAPIComponent(LCToolComponent):
+    component_id: str = "4e4ede22-ac78-42a6-b24e-fc01dedb0f1a"
     display_name: str = "Glean Search API"
     description: str = "Search using Glean's API."
     documentation: str = "https://docs.langflow.org/bundles-glean"

@@ -7,6 +7,7 @@ from lfx.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, Me
 
 
 class OpenAIEmbeddingsComponent(LCEmbeddingsModel):
+    component_id: str = "17b74d18-0359-41d7-97e7-e7a7664213df"
     display_name = "OpenAI Embeddings"
     description = "Generate embeddings using OpenAI models."
     icon = "OpenAI"

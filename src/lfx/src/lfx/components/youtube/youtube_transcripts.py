@@ -12,6 +12,7 @@ from lfx.template.field.base import Output
 
 
 class YouTubeTranscriptsComponent(Component):
+    component_id: str = "adcc2064-330b-4edc-9deb-f3fda8aab4d9"
     """A component that extracts spoken content from YouTube videos as transcripts."""
 
     display_name: str = "YouTube Transcripts"

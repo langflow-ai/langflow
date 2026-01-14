@@ -19,6 +19,7 @@ from lfx.inputs.inputs import (
 
 
 class NovitaModelComponent(LCModelComponent):
+    component_id: str = "7bee4cf2-9f0f-46a9-8ad5-bee4775b0500"
     display_name = "Novita AI"
     description = "Generates text using Novita AI LLMs (OpenAI compatible)."
     icon = "Novita"

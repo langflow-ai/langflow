@@ -5,6 +5,7 @@ from lfx.template.field.base import Output
 
 
 class AssistantsListAssistants(ComponentWithCache):
+    component_id: str = "833ee08f-dbde-4b77-9c25-907c3dbe2c0f"
     display_name = "List Assistants"
     description = "Returns a list of assistant id's"
     icon = "AstraDB"

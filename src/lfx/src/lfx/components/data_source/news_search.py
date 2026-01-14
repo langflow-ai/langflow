@@ -10,6 +10,7 @@ from lfx.schema import DataFrame
 
 
 class NewsSearchComponent(Component):
+    component_id: str = "062ea7fd-6d47-4683-a4bb-4d6f6e8b1f7c"
     display_name = "News Search"
     description = "Searches Google News via RSS. Returns clean article data."
     documentation: str = "https://docs.langflow.org/web-search"

@@ -14,6 +14,7 @@ from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI, MESSA
 
 
 class MemoryComponent(Component):
+    component_id: str = "99d3c760-71c6-43bf-b5f6-30a41d96fa1d"
     display_name = "Message History"
     description = "Stores or retrieves stored chat messages from Langflow tables or an external memory."
     documentation: str = "https://docs.langflow.org/message-history"

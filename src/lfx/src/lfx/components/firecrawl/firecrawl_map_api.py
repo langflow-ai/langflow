@@ -9,6 +9,7 @@ from lfx.schema.data import Data
 
 
 class FirecrawlMapApi(Component):
+    component_id: str = "d65cebf3-0834-4ec6-9295-5dbc2e33286f"
     display_name: str = "Firecrawl Map API"
     description: str = "Maps a URL and returns the results."
     name = "FirecrawlMapApi"

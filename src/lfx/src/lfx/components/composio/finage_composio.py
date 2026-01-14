@@ -2,6 +2,7 @@ from lfx.base.composio.composio_base import ComposioBaseComponent
 
 
 class ComposioFinageAPIComponent(ComposioBaseComponent):
+    component_id: str = "53d1de1e-c45d-4c91-800b-acf46f694318"
     display_name: str = "Finage"
     icon = "Finage"
     documentation: str = "https://docs.composio.dev"

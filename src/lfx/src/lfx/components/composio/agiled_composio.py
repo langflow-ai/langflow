@@ -2,6 +2,7 @@ from lfx.base.composio.composio_base import ComposioBaseComponent
 
 
 class ComposioAgiledAPIComponent(ComposioBaseComponent):
+    component_id: str = "db4cbdfb-b5de-4c7e-a616-369b87e52a8b"
     display_name: str = "Agiled"
     icon = "Agiled"
     documentation: str = "https://docs.composio.dev"

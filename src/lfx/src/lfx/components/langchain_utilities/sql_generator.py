@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 
 
 class SQLGeneratorComponent(LCChainComponent):
+    component_id: str = "7641cdff-cb3e-4909-b7a3-870d09c94b60"
     display_name = "Natural Language to SQL"
     description = "Generate SQL from natural language."
     name = "SQLGenerator"

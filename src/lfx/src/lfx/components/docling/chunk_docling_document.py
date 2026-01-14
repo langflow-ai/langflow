@@ -11,6 +11,7 @@ from lfx.schema import Data, DataFrame
 
 
 class ChunkDoclingDocumentComponent(Component):
+    component_id: str = "40b0b177-4189-4e1f-8e16-a540a4b80be8"
     display_name: str = "Chunk DoclingDocument"
     description: str = "Use the DocumentDocument chunkers to split the document into chunks."
     documentation = "https://docling-project.github.io/docling/concepts/chunking/"

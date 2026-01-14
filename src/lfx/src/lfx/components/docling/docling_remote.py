@@ -16,6 +16,7 @@ from lfx.utils.util import transform_localhost_url
 
 
 class DoclingRemoteComponent(BaseFileComponent):
+    component_id: str = "89bd9521-b4e4-4ce2-b733-37c7f88939f9"
     display_name = "Docling Serve"
     description = "Uses Docling to process input documents connecting to your instance of Docling Serve."
     documentation = "https://docling-project.github.io/docling/"

@@ -69,6 +69,7 @@ def _get_knowledge_bases_root_path() -> Path:
 
 
 class KnowledgeIngestionComponent(Component):
+    component_id: str = "2fbe9547-5ef7-462d-8aa0-b9928062b0fd"
     """Create or append to Langflow Knowledge from a DataFrame."""
 
     # ------ UI metadata ---------------------------------------------------

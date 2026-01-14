@@ -9,6 +9,7 @@ from lfx.template.field.base import Output
 
 
 class Dotenv(Component):
+    component_id: str = "f609ed8d-828f-428b-b6f4-113fd05a4b99"
     display_name = "Dotenv"
     description = "Load .env file into env vars"
     icon = "AstraDB"

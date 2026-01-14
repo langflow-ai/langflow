@@ -49,6 +49,7 @@ def resolve_mcp_config(
 
 
 class MCPToolsComponent(ComponentWithCache):
+    component_id: str = "f7a8e819-311d-4625-b44c-d8c24b42e701"
     schema_inputs: list = []
     tools: list[StructuredTool] = []
     _not_load_actions: bool = False

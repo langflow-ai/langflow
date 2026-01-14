@@ -2,6 +2,7 @@ from lfx.base.composio.composio_base import ComposioBaseComponent
 
 
 class ComposioMiroAPIComponent(ComposioBaseComponent):
+    component_id: str = "e86ee23f-f825-48b5-bfbc-a8c4615fe170"
     display_name: str = "Miro"
     icon = "Miro"
     documentation: str = "https://docs.composio.dev"

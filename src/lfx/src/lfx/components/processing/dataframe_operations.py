@@ -8,6 +8,7 @@ from lfx.schema.dataframe import DataFrame
 
 
 class DataFrameOperationsComponent(Component):
+    component_id: str = "d700ef1e-08ab-4bd1-9df5-a628a5d4bf78"
     display_name = "DataFrame Operations"
     description = "Perform various operations on a DataFrame."
     documentation: str = "https://docs.langflow.org/dataframe-operations"

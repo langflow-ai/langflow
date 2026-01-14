@@ -13,6 +13,7 @@ from lfx.schema.data import Data
 
 
 class PythonREPLToolComponent(LCToolComponent):
+    component_id: str = "9609dce8-adc8-441e-9053-039457fd9062"
     display_name = "Python REPL"
     description = "A tool for running Python code in a REPL environment."
     name = "PythonREPLTool"

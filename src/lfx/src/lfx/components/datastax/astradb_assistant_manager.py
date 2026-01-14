@@ -26,6 +26,7 @@ if TYPE_CHECKING:
 
 
 class AstraAssistantManager(ComponentWithCache):
+    component_id: str = "a34fdb11-7f0b-489b-aa6b-bb68b2a3af06"
     display_name = "Astra Assistant Agent"
     name = "Astra Assistant Agent"
     description = "Manages Assistant Interactions"

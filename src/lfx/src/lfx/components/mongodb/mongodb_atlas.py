@@ -13,6 +13,7 @@ from lfx.schema.data import Data
 
 
 class MongoVectorStoreComponent(LCVectorStoreComponent):
+    component_id: str = "48a282c1-85d2-45e9-bd75-571db12ec90f"
     display_name = "MongoDB Atlas"
     description = "MongoDB Atlas Vector Store with search capabilities"
     name = "MongoDBAtlasVector"

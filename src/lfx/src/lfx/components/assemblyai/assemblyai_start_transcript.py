@@ -9,6 +9,7 @@ from lfx.schema.data import Data
 
 
 class AssemblyAITranscriptionJobCreator(Component):
+    component_id: str = "c620da8d-5870-439c-a1ef-23e3f57e4a18"
     display_name = "AssemblyAI Start Transcript"
     description = "Create a transcription job for an audio file using AssemblyAI with advanced options"
     documentation = "https://www.assemblyai.com/docs"

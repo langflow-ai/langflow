@@ -23,6 +23,7 @@ from lfx.schema.dotdict import dotdict
 
 
 class LangWatchComponent(Component):
+    component_id: str = "2eb99ee5-bd5a-46bb-885d-4b1c823376f2"
     display_name: str = "LangWatch Evaluator"
     description: str = "Evaluates various aspects of language models using LangWatch's evaluation endpoints."
     documentation: str = "https://docs.langwatch.ai/langevals/documentation/introduction"

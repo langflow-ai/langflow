@@ -13,6 +13,7 @@ from lfx.schema.data import Data
 
 
 class GitLoaderComponent(Component):
+    component_id: str = "58685ffa-ab2c-4c41-ba6a-09f9fcd3952e"
     display_name = "Git"
     description = (
         "Load and filter documents from a local or remote Git repository. "

@@ -6,6 +6,7 @@ from lfx.schema.message import Message
 
 
 class ParseDataComponent(Component):
+    component_id: str = "c8953ea9-8a85-4e35-bd9c-bf6ec6035b98"
     display_name = "Data to Message"
     description = "Convert Data objects into Messages using any {field_name} from input data."
     icon = "message-square"

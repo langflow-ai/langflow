@@ -55,6 +55,7 @@ def get_embedding_field_name(model_name: str) -> str:
 
 @vector_store_connection
 class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreComponent):
+    component_id: str = "1d0e4ba7-54e1-4eaf-9b25-778d15035cda"
     """OpenSearch Vector Store Component with Multi-Model Hybrid Search Capabilities.
 
     This component provides vector storage and retrieval using OpenSearch, combining semantic

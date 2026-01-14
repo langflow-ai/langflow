@@ -7,6 +7,7 @@ from lfx.inputs.inputs import DataInput, DropdownInput, IntInput
 
 
 class LanguageRecursiveTextSplitterComponent(LCTextSplitterComponent):
+    component_id: str = "e0b57d4d-d07a-42c8-96b0-1ea73dea12a3"
     display_name: str = "Language Recursive Text Splitter"
     description: str = "Split text into chunks of a specified length based on language."
     documentation: str = "https://docs.langflow.org/bundles-langchain"

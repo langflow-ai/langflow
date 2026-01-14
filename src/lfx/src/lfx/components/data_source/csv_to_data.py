@@ -10,6 +10,7 @@ from lfx.utils.async_helpers import run_until_complete
 
 
 class CSVToDataComponent(Component):
+    component_id: str = "e212aa62-aead-4b78-9949-6cf514961a1c"
     display_name = "Load CSV"
     description = "Load a CSV file, CSV from a file path, or a valid CSV string and convert it to a list of Data"
     icon = "file-spreadsheet"

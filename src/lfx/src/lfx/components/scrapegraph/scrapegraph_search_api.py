@@ -8,6 +8,7 @@ from lfx.schema.data import Data
 
 
 class ScrapeGraphSearchApi(Component):
+    component_id: str = "7ac47d61-3779-4282-b4c9-42c1dead9e4b"
     display_name: str = "ScrapeGraph Search API"
     description: str = "Given a search prompt, it will return search results using ScrapeGraph's search functionality."
     name = "ScrapeGraphSearchApi"

@@ -16,6 +16,7 @@ MAX_CHUNKS_PER_SOURCE = 3
 
 
 class TavilySearchDepth(Enum):
+    component_id: str = "1fc63fba-7a75-4fd2-98da-4a0e7b6517d6"
     BASIC = "basic"
     ADVANCED = "advanced"
 
@@ -71,6 +72,7 @@ class TavilySearchSchema(BaseModel):
 
 
 class TavilySearchToolComponent(LCToolComponent):
+    component_id: str = "be7eaaee-c7ee-4a37-b72a-0adc2b7c3c08"
     display_name = "Tavily Search API"
     description = """**Tavily Search API** is a search engine optimized for LLMs and RAG, \
         aimed at efficient, quick, and persistent search results. It can be used independently or as an agent tool.

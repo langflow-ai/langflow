@@ -7,6 +7,7 @@ from lfx.io import BoolInput, IntInput, Output, SecretStrInput
 
 
 class ExaSearchToolkit(Component):
+    component_id: str = "ebc879ad-475c-45f7-92b5-d4286e9df75e"
     display_name = "Exa Search"
     description = "Exa Search toolkit for search and content retrieval"
     documentation = "https://python.langchain.com/docs/integrations/tools/metaphor_search"

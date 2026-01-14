@@ -11,6 +11,7 @@ from lfx.utils.async_helpers import run_until_complete
 
 
 class JSONToDataComponent(Component):
+    component_id: str = "5662e36c-5d48-4cab-9d19-8709259ca164"
     display_name = "Load JSON"
     description = (
         "Convert a JSON file, JSON from a file path, or a JSON string to a Data object or a list of Data objects"

@@ -4,6 +4,7 @@ from lfx.schema.data import Data
 
 
 class JigsawStackObjectDetectionComponent(Component):
+    component_id: str = "6a20374c-bc44-4596-ac0d-a1e771f8c5e1"
     display_name = "Object Detection"
     description = "Perform object detection on images using JigsawStack's Object Detection Model, \
         capable of image grounding, segmentation and computer use."

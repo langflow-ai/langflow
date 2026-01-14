@@ -8,6 +8,7 @@ from lfx.schema import Message
 
 
 class RetrievalQAComponent(LCChainComponent):
+    component_id: str = "28f70f12-ba80-4a8c-afc3-29d831a5f241"
     display_name = "Retrieval QA"
     description = "Chain for question-answering querying sources from a retriever."
     name = "RetrievalQA"

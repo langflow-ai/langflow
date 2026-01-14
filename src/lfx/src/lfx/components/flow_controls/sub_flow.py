@@ -12,6 +12,7 @@ from lfx.schema.dotdict import dotdict
 
 
 class SubFlowComponent(Component):
+    component_id: str = "385c229e-69ea-412d-8af9-78f4dccdeaeb"
     display_name = "Sub Flow"
     description = "Generates a Component from a Flow, with all of its inputs, and "
     name = "SubFlow"

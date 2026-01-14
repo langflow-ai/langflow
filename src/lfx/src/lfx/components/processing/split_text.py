@@ -9,6 +9,7 @@ from lfx.utils.util import unescape_string
 
 
 class SplitTextComponent(Component):
+    component_id: str = "8b92e78a-af64-4786-a86a-adc6ba248f22"
     display_name: str = "Split Text"
     description: str = "Split text into chunks based on specified criteria."
     documentation: str = "https://docs.langflow.org/split-text"

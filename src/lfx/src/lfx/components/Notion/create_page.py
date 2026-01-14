@@ -12,6 +12,7 @@ from lfx.schema.data import Data
 
 
 class NotionPageCreator(LCToolComponent):
+    component_id: str = "0990bfd0-5d9f-4f65-8ae2-5c71036574e5"
     display_name: str = "Create Page "
     description: str = "A component for creating Notion pages."
     documentation: str = "https://docs.langflow.org/bundles-notion"

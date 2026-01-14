@@ -11,6 +11,7 @@ from lfx.log.logger import logger
 
 
 class VllmComponent(LCModelComponent):
+    component_id: str = "0743bc93-3af7-4a31-b212-e5f7099cdd47"
     display_name = "vLLM"
     description = "Generates text using vLLM models via OpenAI-compatible API."
     icon = "vLLM"

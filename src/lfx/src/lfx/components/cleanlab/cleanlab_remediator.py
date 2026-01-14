@@ -5,6 +5,7 @@ from lfx.schema.message import Message
 
 
 class CleanlabRemediator(Component):
+    component_id: str = "959847a1-53f0-4ab5-b724-fccdb1d546f2"
     """Remediates potentially untrustworthy LLM responses based on trust scores computed by the Cleanlab Evaluator.
 
     This component takes a response and its associated trust score,

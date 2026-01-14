@@ -8,6 +8,7 @@ from lfx.io import SecretStrInput, SliderInput
 
 
 class CohereComponent(LCModelComponent):
+    component_id: str = "6518ef5f-c7e9-4117-aa5d-16f3aa610ff5"
     display_name = "Cohere Language Models"
     description = "Generate text using Cohere LLMs."
     documentation = "https://python.langchain.com/docs/integrations/llms/cohere/"

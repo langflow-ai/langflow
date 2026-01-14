@@ -9,6 +9,7 @@ from lfx.schema.data import Data
 
 
 class OlivyaComponent(Component):
+    component_id: str = "1a63e19a-f1cd-4665-a476-456c5904b68a"
     display_name = "Place Call"
     description = "A component to create an outbound call request from Olivya's platform."
     documentation: str = "https://docs.olivya.io"

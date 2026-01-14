@@ -14,6 +14,7 @@ from lfx.schema.data import Data
 
 
 class MilvusVectorStoreComponent(LCVectorStoreComponent):
+    component_id: str = "a76cb768-62ac-4f1c-83fa-9fa0f3f65e10"
     """Milvus vector store with search capabilities."""
 
     display_name: str = "Milvus"

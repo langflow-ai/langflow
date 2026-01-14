@@ -10,6 +10,7 @@ from lfx.schema.data import Data
 
 
 class RedisVectorStoreComponent(LCVectorStoreComponent):
+    component_id: str = "d1c5c6a3-c5a0-4957-ba1d-1ff12e7b0795"
     """A custom component for implementing a Vector Store using Redis."""
 
     display_name: str = "Redis"

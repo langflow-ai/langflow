@@ -34,6 +34,7 @@ class TwelveLabsTextEmbeddings(Embeddings):
 
 
 class TwelveLabsTextEmbeddingsComponent(LCEmbeddingsModel):
+    component_id: str = "784e7d7f-6b02-483b-be3a-2092d74331b6"
     display_name = "TwelveLabs Text Embeddings"
     description = "Generate embeddings using TwelveLabs text embedding models."
     icon = "TwelveLabs"

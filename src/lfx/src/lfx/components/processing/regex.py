@@ -7,6 +7,7 @@ from lfx.schema.message import Message
 
 
 class RegexExtractorComponent(Component):
+    component_id: str = "842d0bd4-4b4b-45f7-b770-303848bf1459"
     display_name = "Regex Extractor"
     description = "Extract patterns from text using regular expressions."
     icon = "regex"

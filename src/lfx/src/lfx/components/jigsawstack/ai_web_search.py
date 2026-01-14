@@ -5,6 +5,7 @@ from lfx.schema.message import Message
 
 
 class JigsawStackAIWebSearchComponent(Component):
+    component_id: str = "15214867-13cc-4b51-9e73-6adff8d2ef68"
     display_name = "AI Web Search"
     description = "Effortlessly search the Web and get access to high-quality results powered with AI."
     documentation = "https://jigsawstack.com/docs/api-reference/web/ai-search"

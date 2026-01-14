@@ -4,6 +4,7 @@ from lfx.schema.data import Data
 
 
 class JigsawStackNSFWComponent(Component):
+    component_id: str = "68b71e17-5c03-4471-95ab-4997f3ab480c"
     display_name = "NSFW Detection"
     description = "Detect if image/video contains NSFW content"
     documentation = "https://jigsawstack.com/docs/api-reference/ai/nsfw"

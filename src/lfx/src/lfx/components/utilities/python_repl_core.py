@@ -8,6 +8,7 @@ from lfx.schema.data import Data
 
 
 class PythonREPLComponent(Component):
+    component_id: str = "ffed5403-fdd6-40d5-9567-b2bdedc20b5d"
     display_name = "Python Interpreter"
     description = "Run Python code with optional imports. Use print() to see the output."
     documentation: str = "https://docs.langflow.org/python-interpreter"

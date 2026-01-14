@@ -36,6 +36,7 @@ else:
 
 
 class URLComponent(Component):
+    component_id: str = "e0525cce-94a5-4ce3-b565-02bdac4f5007"
     """A component that loads and parses content from web pages recursively.
 
     This component allows fetching content from one or more URLs, with options to:

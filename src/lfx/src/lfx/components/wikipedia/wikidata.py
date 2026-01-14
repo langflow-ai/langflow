@@ -10,6 +10,7 @@ from lfx.template.field.base import Output
 
 
 class WikidataComponent(Component):
+    component_id: str = "216a9876-ff77-4fb0-9b4b-9351e3b4474c"
     display_name = "Wikidata"
     description = "Performs a search using the Wikidata API."
     icon = "Wikipedia"

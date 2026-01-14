@@ -17,6 +17,7 @@ from lfx.utils.constants import (
 
 
 class ChatInput(ChatComponent):
+    component_id: str = "e2622436-e8d4-4700-92d6-13de4868e311"
     display_name = "Chat Input"
     description = "Get chat inputs from the Playground."
     documentation: str = "https://docs.langflow.org/chat-input-and-output"

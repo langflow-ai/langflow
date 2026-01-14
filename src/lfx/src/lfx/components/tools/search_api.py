@@ -11,6 +11,7 @@ from lfx.schema.data import Data
 
 
 class SearchAPIComponent(LCToolComponent):
+    component_id: str = "7473a8b8-22f3-435b-9530-a4dcad5e8db6"
     display_name: str = "Search API"
     description: str = "Call the searchapi.io API with result limiting"
     name = "SearchAPI"

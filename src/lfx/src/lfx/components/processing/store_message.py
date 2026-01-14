@@ -10,6 +10,7 @@ from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI
 
 
 class MessageStoreComponent(Component):
+    component_id: str = "f373b688-e26e-4c32-b205-2c834a31405b"
     display_name = "Message Store"
     description = "Stores a chat message or text into Langflow tables or an external memory."
     icon = "message-square-text"

@@ -6,6 +6,7 @@ from lfx.io import DictInput, DropdownInput
 
 
 class AmazonBedrockComponent(LCModelComponent):
+    component_id: str = "9ed88e5a-0a9c-4ef4-9330-6184e4661cbe"
     display_name: str = "Amazon Bedrock"
     description: str = (
         "Generate text using Amazon Bedrock LLMs with the legacy ChatBedrock API. "

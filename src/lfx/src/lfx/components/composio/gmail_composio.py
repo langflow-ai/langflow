@@ -2,6 +2,7 @@ from lfx.base.composio.composio_base import ComposioBaseComponent
 
 
 class ComposioGmailAPIComponent(ComposioBaseComponent):
+    component_id: str = "e233fe25-02c6-4bd2-94b9-c05fc676a99d"
     display_name: str = "Gmail"
     icon = "Gmail"
     documentation: str = "https://docs.composio.dev"

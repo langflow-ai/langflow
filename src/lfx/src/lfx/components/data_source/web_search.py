@@ -19,6 +19,7 @@ from lfx.utils.request_utils import get_user_agent
 
 
 class WebSearchComponent(Component):
+    component_id: str = "63c4cafe-7b20-454c-b7f0-ee1046d1750c"
     display_name = "Web Search"
     description = "Search the web, news, or RSS feeds."
     documentation: str = "https://docs.langflow.org/web-search"

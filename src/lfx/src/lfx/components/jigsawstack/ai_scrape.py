@@ -6,6 +6,7 @@ MAX_ELEMENT_PROMPTS = 5
 
 
 class JigsawStackAIScraperComponent(Component):
+    component_id: str = "92e2b1ee-1627-4abe-b098-f718dc71c032"
     display_name = "AI Scraper"
     description = "Scrape any website instantly and get consistent structured data \
         in seconds without writing any css selector code"
