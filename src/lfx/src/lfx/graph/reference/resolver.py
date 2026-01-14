@@ -33,7 +33,14 @@ def _extract_text_value(value: Any) -> str:
 
     # Handle Message objects - extract the text content
     if isinstance(value, Message):
-        return value.text or ""
+        text = value.text
+        if text is None:
+            return ""
+        if isinstance(text, str):
+            return text
+        # If text is an iterator (async or sync), it hasn't been consumed yet
+        # Return empty string as we can't resolve iterators synchronously
+        return ""
 
     # Handle Data objects - JSON stringify the data property
     if isinstance(value, Data):
