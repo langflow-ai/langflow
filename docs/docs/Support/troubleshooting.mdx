@@ -149,37 +149,15 @@ To manage dependencies in Langflow Desktop, see [Install custom dependencies in 
 
 ### An API key must be passed as query or header
 
-After upgrading to Langflow 1.7.1+, users attempting to sign up receive an error: "An API key must be passed as query or header."
+The following error can occur when attempting to sign up on the Langflow sign in page: `An API key must be passed as query or header`.
 
-When attempting to sign up for a new account with `LANGFLOW_AUTO_LOGIN=false` set in the `.env`, users attempting to sign up on the Langflow login page receive the following errors:
+This means that `LANGFLOW_AUTO_LOGIN` is set to `false`, and since only superusers can create and activate non-superuser accounts, you are locked out of Langflow.
 
-    * UI: `An API key must be passed as query or header`
-    * Server logs: `Client error during session scope: 403: An API key must be passed as query or header`
+If you aren't an administrator, then a superuser must create and activate a non-superuser account before you can sign in.
 
-In Langflow versions prior to 1.7.1, sign-up would succeed and a Langflow administrator would activate the account.
-This allowed anyone to create user accounts with the public sign-up endpoint.
-User accounts were inactive by default, but this created security vulnerabilities.
+If you are the administrator, sign in with a superuser account, or restart Langflow with `LANGFLOW_AUTO_LOGIN=true`.
 
-The 1.7.1 change ensures only authenticated superusers can create accounts.
-It is a known issue that the "Sign Up" button remains visible in the UI when `LANGFLOW_AUTO_LOGIN=false`, which is misleading.
-
-The solution to this issue depends on your Langflow environment.
-
-For development environments where authentication is not needed, remove the `LANGFLOW_AUTO_LOGIN=false` environment variable or set it to `true`.
-
-For production environments where authentication is required, do the following:
-
-1. Configure Langflow with authentication enabled.
-    ```bash
-    LANGFLOW_AUTO_LOGIN=false
-    ```
-
-2. Create user accounts with the Langflow superuser account.
-    Only superusers can create new user accounts.
-
-3. Sign in user accounts on the Langflow login page with credentials provided by superuser.
-
-For more information, see [Start Langflow Server with Authentication](/api-keys-and-authentication).
+For more information, see [Start Langflow Server with authentication enabled](/api-keys-and-authentication).
 
 ## Langflow upgrade issues
 
