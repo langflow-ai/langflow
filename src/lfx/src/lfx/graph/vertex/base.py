@@ -42,7 +42,8 @@ if TYPE_CHECKING:
 def generate_reference_slug(display_name: str) -> str:
     """Generate a reference slug from a display name.
 
-    Converts "HTTP Request" to "HTTPRequest", removing spaces and special chars.
+    Converts "HTTP Request" to "HttpRequest", removing spaces and special chars.
+    Note: Uses title case normalization, so acronyms become title-cased.
 
     Args:
         display_name: The display name to convert
