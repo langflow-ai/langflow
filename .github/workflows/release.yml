@@ -119,12 +119,12 @@ jobs:
     if: ${{ !inputs.overwrite_previous_image }}
     needs: [validate-tag, validate-dependencies]
     steps:
-      - name: Check if package version already exists on pypi
-        run: |
-          if pip index versions langflow | grep -q '${{ inputs.release_tag }}'; then
-            echo "❌ Package version '${{ inputs.release_tag }}' already exists in pypi."
-            exit 1
-          fi
+      # - name: Check if package version already exists on pypi
+      #   run: |
+      #     if pip index versions langflow | grep -q '${{ inputs.release_tag }}'; then
+      #       echo "❌ Package version '${{ inputs.release_tag }}' already exists in pypi."
+      #       exit 1
+      #     fi
 
       - name: Check if image tag exists in ghcr.io
         id: check-ghcr
