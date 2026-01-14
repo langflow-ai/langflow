@@ -192,12 +192,15 @@ def _get_raw_content(vertex_output_data: Any) -> Any:
     Returns:
         Raw content or None
     """
-    if hasattr(vertex_output_data, "outputs") and vertex_output_data.outputs:
-        return vertex_output_data.outputs
-    if hasattr(vertex_output_data, "results") and vertex_output_data.results:
-        return vertex_output_data.results
-    if hasattr(vertex_output_data, "messages") and vertex_output_data.messages:
-        return vertex_output_data.messages
+    outputs = getattr(vertex_output_data, "outputs", None)
+    if outputs:
+        return outputs
+    results = getattr(vertex_output_data, "results", None)
+    if results:
+        return results
+    messages = getattr(vertex_output_data, "messages", None)
+    if messages:
+        return messages
     if isinstance(vertex_output_data, dict):
         return vertex_output_data.get("results") or vertex_output_data.get("content")
     return vertex_output_data
@@ -227,9 +230,12 @@ def _simplify_output_content(content: Any, output_type: str) -> Any:
     if output_type == "data":
         # For data types, extract from result.message structure
         # Example: {'result': {'message': {'result': '4'}, 'type': 'object'}}
-        result_data = _extract_nested_value(content, "result", "message")
-        if result_data is not None:
-            return result_data
+        # Content is already confirmed to be a dict, so directly access nested dicts.
+        result = content.get("result")
+        if isinstance(result, dict):
+            message_val = result.get("message")
+            if message_val is not None:
+                return message_val
 
     return content
 
@@ -309,9 +315,11 @@ def run_response_to_workflow_response(
         - SQLNode-xyz: is_output=False → gets content=null with metadata
     """
     # Get terminal nodes (vertices with no successors)
-    try:
-        terminal_node_ids = graph.get_terminal_nodes()
-    except AttributeError:
+    get_term = getattr(graph, "get_terminal_nodes", None)
+    if callable(get_term):
+        terminal_node_ids = get_term()
+    else:
+        # Fallback: manually check successor_map
         # Fallback: manually check successor_map
         terminal_node_ids = [vertex.id for vertex in graph.vertices if not graph.successor_map.get(vertex.id, [])]
 
@@ -320,17 +328,18 @@ def run_response_to_workflow_response(
     output_data_map: dict[str, Any] = {}
     if run_response.outputs:
         for run_output in run_response.outputs:
-            if hasattr(run_output, "outputs") and run_output.outputs:
-                for result_data in run_output.outputs:
+            outputs_attr = getattr(run_output, "outputs", None)
+            if outputs_attr:
+                for result_data in outputs_attr:
                     if not result_data:
                         continue
-                    # Use component_id as key to ensure uniqueness
-                    component_id = result_data.component_id if hasattr(result_data, "component_id") else None
+                    component_id = getattr(result_data, "component_id", None)
                     if component_id:
                         output_data_map[component_id] = result_data
 
     # First pass: collect all terminal vertices and check for duplicate display_names
-    terminal_vertices = [v for v in graph.vertices if v.id in terminal_node_ids]
+    terminal_set = set(terminal_node_ids)
+    terminal_vertices = [v for v in graph.vertices if v.id in terminal_set]
     display_name_counts: dict[str, int] = {}
     for vertex in terminal_vertices:
         display_name = vertex.display_name or vertex.id
@@ -345,7 +354,8 @@ def run_response_to_workflow_response(
         # Determine output type from vertex
         output_type = "unknown"
         if vertex.outputs and len(vertex.outputs) > 0:
-            types = vertex.outputs[0].get("types", [])
+            first_output = vertex.outputs[0]
+            types = first_output.get("types", []) if isinstance(first_output, dict) else []
             if types:
                 output_type = types[0].lower()
         if output_type == "unknown" and vertex.vertex_type:
@@ -381,8 +391,9 @@ def run_response_to_workflow_response(
                     metadata.update(extra_metadata)
 
             # Add any additional metadata from result data
-            if hasattr(vertex_output_data, "metadata") and vertex_output_data.metadata:
-                metadata.update(vertex_output_data.metadata)
+            result_meta = getattr(vertex_output_data, "metadata", None)
+            if isinstance(result_meta, dict) and result_meta:
+                metadata.update(result_meta)
             elif isinstance(vertex_output_data, dict) and "metadata" in vertex_output_data:
                 result_metadata = vertex_output_data.get("metadata")
                 if isinstance(result_metadata, dict):
