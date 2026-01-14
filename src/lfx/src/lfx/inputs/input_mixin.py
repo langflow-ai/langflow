@@ -203,6 +203,19 @@ class MetadataTraceMixin(BaseModel):
     trace_as_metadata: bool = True
 
 
+class ReferenceMixin(BaseModel):
+    """Mixin for inputs that support inline variable references.
+
+    When has_references is True, the field value contains @NodeSlug.output
+    references that need to be resolved at execution time.
+    """
+
+    has_references: bool = Field(
+        default=False,
+        description="Whether this field contains inline variable references",
+    )
+
+
 # Mixin for input fields that can be listable
 class ListableInputMixin(BaseModel):
     is_list: bool = Field(default=False, alias="list")
