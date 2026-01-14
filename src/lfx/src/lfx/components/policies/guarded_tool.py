@@ -50,6 +50,8 @@ class GuardedTool(Tool):
     def run(self, tool_input: str | dict | ToolCall, config=None, **kwargs):
         args = self.parse_input(tool_input)
         # print(f"tool={self.name}, args={args}, config={config}, kwargs={kwargs}")
+        print(f'running toolguard for {self.name} with arguments {args}')
+
         with load_toolguards(self._tg_dir) as toolguard:
             try:
                 toolguard.check_toolcall(self.name, args=args, delegate=self._tool_invoker)
@@ -64,6 +66,8 @@ class GuardedTool(Tool):
     async def arun(self, tool_input: str | dict | ToolCall, config=None, **kwargs):
         args = self.parse_input(tool_input)
         # print(f"tool={self.name}, args={args}, config={config}, kwargs={kwargs}")
+        print(f'running toolguard for {self.name} with arguments {args}')
+
         with load_toolguards(self._tg_dir) as toolguard:
             try:
                 toolguard.check_toolcall(self.name, args=args, delegate=self._tool_invoker)
@@ -89,6 +93,8 @@ class ToolInvoker(IToolInvoker):
             res = tool.invoke(input=arguments)
 
             res_dict = res.structuredContent["result"] if isinstance(res, CallToolResult) else res["value"]
+            if isinstance(res_dict, BaseModel):
+                res_dict = res_dict.model_dump()
 
             if issubclass(return_type, BaseModel):
                 return return_type.model_validate(res_dict)
