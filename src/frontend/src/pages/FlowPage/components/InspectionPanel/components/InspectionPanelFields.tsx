@@ -50,7 +50,7 @@ export default function InspectionPanelFields({
   }
 
   return (
-    <div className="space-y-2 p-3">
+    <div className="space-y-2 p-2">
       {allFields.map((templateField: string) => {
         const template = data.node?.template[templateField];
 

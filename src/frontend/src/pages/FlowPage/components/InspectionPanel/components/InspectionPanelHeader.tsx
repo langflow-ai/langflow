@@ -58,7 +58,7 @@ export default function InspectionPanelHeader({
 
   return (
     <>
-      <div className="flex items-center justify-between border-b p-4">
+      <div className="flex items-center justify-between border-b p-2 px-3 pl-4">
         <div className="flex items-center gap-3">
           <NodeIcon
             dataType={data.type}

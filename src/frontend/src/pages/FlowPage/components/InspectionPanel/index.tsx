@@ -24,7 +24,7 @@ const InspectionPanel = memo(function InspectionPanel({
           position="top-right"
           className={cn(
             "!top-[3rem] !-right-2 !bottom-10",
-            "w-[400px]",
+            "w-[320px]",
             "overflow-hidden",
           )}
         >
