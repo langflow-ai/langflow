@@ -30,11 +30,6 @@ export default function EditMessageField({
       <Textarea
         ref={textareaRef}
         className="max-h-[400px] w-full resize-none rounded-none border-0 bg-muted shadow-none focus:ring-0"
-        // onBlur={() => {
-        //   if (!isButtonClicked) {
-        //     onCancel();
-        //   }
-        // }}
         value={message}
         autoFocus={true}
         onChange={(e) => setMessage(e.target.value)}

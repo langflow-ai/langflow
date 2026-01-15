@@ -6,10 +6,6 @@ import { ChatMessageType } from "@/types/chat";
 import { cn } from "@/utils/utils";
 import ChatMessage from "./components/chat-message";
 import { useChatHistory } from "./hooks/use-chat-history";
-import {
-  useThinkingDurationStore,
-  useTrackThinkingDuration,
-} from "./hooks/use-thinking-duration";
 
 interface MessagesProps {
   visibleSession: string | null;
@@ -37,11 +33,7 @@ export const Messages = ({
 }: MessagesProps) => {
   const chatHistory = useChatHistory(visibleSession);
   const isBuilding = useFlowStore((state) => state.isBuilding);
-  const duration = useThinkingDurationStore((state) => state.duration);
   const isPlaygroundOpen = usePlaygroundStore((state) => state.isOpen);
-
-  // Track thinking duration at this level so it persists even when ThinkingMessage unmounts
-  useTrackThinkingDuration(isBuilding);
 
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
@@ -55,17 +47,14 @@ export const Messages = ({
       {chatHistory && (isBuilding || chatHistory.length > 0) && (
         <>
           {chatHistory.map((chat, index) => {
-            const isLastMessage = chatHistory.length - 1 === index;
             return (
               <MemoizedChatMessage
                 key={`${chat.id}-${index}`}
                 chat={chat}
-                lastMessage={isLastMessage}
+                lastMessage={chatHistory.length - 1 === index}
                 updateChat={updateChat ?? (() => {})}
                 closeChat={closeChat}
                 playgroundPage={playgroundPage}
-                isThinking={isBuilding}
-                thinkingDuration={duration}
               />
             );
           })}

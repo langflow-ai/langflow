@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { useThinkingDurationStore } from "../hooks/use-thinking-duration";
+import { formatTime } from "../utils/format";
 
 const TIMER_UPDATE_INTERVAL_MS = 100;
 
@@ -33,15 +34,6 @@ export default function ThinkingMessage({
 
     return () => clearInterval(interval);
   }, [isThinking, startTime]);
-
-  const formatTime = (ms: number) => {
-    if (ms < 1000) return `${Math.round(ms)}ms`;
-    const seconds = ms / 1000;
-    if (seconds < 60) return `${seconds.toFixed(1)}s`;
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}m ${remainingSeconds.toFixed(0)}s`;
-  };
 
   const displayTime = isThinking ? elapsedTime : duration || 0;
 
