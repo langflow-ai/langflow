@@ -229,7 +229,13 @@ class TestWorkflowDeveloperAPIProtection:
             # The execution will complete successfully with no outputs
             assert response.status_code == 200
             result = response.json()
-            assert "outputs" in result or "error" in result  # Either outputs or error in response body
+            
+            # Verify response contains expected fields with proper structure
+            assert "outputs" in result or "errors" in result
+            if "outputs" in result:
+                assert isinstance(result["outputs"], dict)
+            if "errors" in result:
+                assert isinstance(result["errors"], list)
 
         finally:
             # Clean up the flow following established pattern
@@ -713,7 +719,13 @@ class TestWorkflowSyncExecution:
             assert "flow_id" in result
             assert result["flow_id"] == str(flow_id)
             assert "job_id" in result
+            
+            # Verify outputs or errors are present with actual content
             assert "outputs" in result or "errors" in result
+            if "outputs" in result:
+                assert isinstance(result["outputs"], dict)
+            if "errors" in result:
+                assert isinstance(result["errors"], list)
             # session_id is only present if provided in inputs
 
         finally:
@@ -810,11 +822,13 @@ class TestWorkflowSyncExecution:
             mock_result_data.outputs = {"message": {"message": "I'm doing well, thank you for asking!", "type": "text"}}
             mock_result_data.metadata = {}
 
+            # Wrap ResultData in RunOutputs
             mock_run_output = MagicMock()
             mock_run_output.outputs = [mock_result_data]
 
             with patch("langflow.api.v2.workflow.run_graph_internal") as mock_run:
-                mock_run.return_value = ({"ChatOutput-xyz789": mock_result_data}, "session-456")
+                # run_graph_internal returns tuple[list[RunOutputs], str]
+                mock_run.return_value = ([mock_run_output], "session-456")
 
                 headers = {"x-api-key": created_api_key.api_key}
                 response = await client.post("api/v2/workflow", json=request_data, headers=headers)
@@ -824,8 +838,10 @@ class TestWorkflowSyncExecution:
 
                 # Verify response structure
                 assert result["flow_id"] == str(flow_id)
-                assert "outputs" in result
                 assert "job_id" in result
+                assert "outputs" in result
+                # Note: Detailed content validation requires proper graph/vertex mocking
+                # which is beyond the scope of unit tests. Integration tests should validate content.
 
                 # Verify inputs were echoed back
                 assert "inputs" in result
@@ -887,8 +903,13 @@ class TestWorkflowSyncExecution:
             }
             mock_result_data.metadata = {"tokens_used": 150}
 
+            # Wrap ResultData in RunOutputs
+            mock_run_output = MagicMock()
+            mock_run_output.outputs = [mock_result_data]
+
             with patch("langflow.api.v2.workflow.run_graph_internal") as mock_run:
-                mock_run.return_value = ({"OpenAIModel-def": mock_result_data}, "session-789")
+                # run_graph_internal returns tuple[list[RunOutputs], str]
+                mock_run.return_value = ([mock_run_output], "session-789")
 
                 headers = {"x-api-key": created_api_key.api_key}
                 response = await client.post("api/v2/workflow", json=request_data, headers=headers)
@@ -897,8 +918,10 @@ class TestWorkflowSyncExecution:
                 result = response.json()
 
                 assert result["flow_id"] == str(flow_id)
-                assert "outputs" in result
                 assert "job_id" in result
+                assert "outputs" in result
+                assert "metadata" in result
+                # Note: Detailed content validation requires proper graph/vertex mocking
 
         finally:
             async with session_scope() as session:
@@ -946,8 +969,13 @@ class TestWorkflowSyncExecution:
             }
             mock_result_data.metadata = {"bytes_written": 1024}
 
+            # Wrap ResultData in RunOutputs
+            mock_run_output = MagicMock()
+            mock_run_output.outputs = [mock_result_data]
+
             with patch("langflow.api.v2.workflow.run_graph_internal") as mock_run:
-                mock_run.return_value = ({"SaveToFile-xyz": mock_result_data}, "session-101")
+                # run_graph_internal returns tuple[list[RunOutputs], str]
+                mock_run.return_value = ([mock_run_output], "session-101")
 
                 headers = {"x-api-key": created_api_key.api_key}
                 response = await client.post("api/v2/workflow", json=request_data, headers=headers)
@@ -956,8 +984,10 @@ class TestWorkflowSyncExecution:
                 result = response.json()
 
                 assert result["flow_id"] == str(flow_id)
-                assert "outputs" in result
                 assert "job_id" in result
+                assert "outputs" in result
+                assert "metadata" in result
+                # Note: Detailed content validation requires proper graph/vertex mocking
 
         finally:
             async with session_scope() as session:
@@ -1004,10 +1034,8 @@ class TestWorkflowSyncExecution:
             mock_file_output.outputs = {"message": {"message": "File saved successfully", "type": "text"}}
 
             with patch("langflow.api.v2.workflow.run_graph_internal") as mock_run:
-                mock_run.return_value = (
-                    {"ChatOutput-aaa": mock_chat_output, "SaveToFile-bbb": mock_file_output},
-                    "session-202",
-                )
+                # run_graph_internal returns tuple[list[RunOutputs], str]
+                mock_run.return_value = ([mock_chat_output, mock_file_output], "session-202")
 
                 headers = {"x-api-key": created_api_key.api_key}
                 response = await client.post("api/v2/workflow", json=request_data, headers=headers)
@@ -1016,8 +1044,9 @@ class TestWorkflowSyncExecution:
                 result = response.json()
 
                 assert result["flow_id"] == str(flow_id)
-                assert "outputs" in result
                 assert "job_id" in result
+                assert "outputs" in result
+                # Note: Detailed content validation requires proper graph/vertex mocking
 
         finally:
             async with session_scope() as session:

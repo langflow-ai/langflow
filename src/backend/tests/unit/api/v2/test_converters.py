@@ -183,6 +183,55 @@ class TestParseFlatInputs:
         assert tweaks == {"Component-abc": {"level1": {"level2": {"level3": {"value": "deeply nested"}}}}}
         assert session_id is None
 
+    def test_parse_flat_inputs_empty_collections(self):
+        """Test handling of empty lists and dicts as values."""
+        inputs = {
+            "Component-1.list_param": [],
+            "Component-2.dict_param": {},
+            "Component-3.string_param": "",
+        }
+        tweaks, session_id = parse_flat_inputs(inputs)
+
+        assert tweaks == {
+            "Component-1": {"list_param": []},
+            "Component-2": {"dict_param": {}},
+            "Component-3": {"string_param": ""},
+        }
+        assert session_id is None
+
+    def test_parse_flat_inputs_explicit_none_values(self):
+        """Test explicit None checks - None should be preserved, not treated as missing."""
+        inputs = {
+            "Component-1.optional_param": None,
+            "Component-2.required_param": "value",
+            "Component-3.another_none": None,
+        }
+        tweaks, session_id = parse_flat_inputs(inputs)
+
+        # None values should be explicitly preserved
+        assert tweaks == {
+            "Component-1": {"optional_param": None},
+            "Component-2": {"required_param": "value"},
+            "Component-3": {"another_none": None},
+        }
+        assert session_id is None
+
+    def test_parse_flat_inputs_special_characters_in_keys(self):
+        """Test handling of special characters (dashes, underscores) in component IDs and parameter names."""
+        inputs = {
+            "Component-with-dashes.param_with_underscores": "value1",
+            "Component_123.param-456": "value2",
+            "Component_With_Underscores.param_name": "value3",
+        }
+        tweaks, session_id = parse_flat_inputs(inputs)
+
+        assert tweaks == {
+            "Component-with-dashes": {"param_with_underscores": "value1"},
+            "Component_123": {"param-456": "value2"},
+            "Component_With_Underscores": {"param_name": "value3"},
+        }
+        assert session_id is None
+
 
 class TestExtractNestedValue:
     """Test suite for _extract_nested_value helper function with realistic payload structures."""
@@ -249,7 +298,8 @@ class TestExtractNestedValue:
         """Test extracting from OutputValue structure."""
         # OutputValue structure from lfx.schema.schema
         data = {"message": {"text": "Hello World"}, "type": "message"}
-        _extract_nested_value(data, "message", "text")
+        result = _extract_nested_value(data, "message", "text")
+        assert result == "Hello World"
 
     def test_extract_from_pinecone_output(self):
         """Test extracting from Pinecone vector store output structure."""
@@ -706,7 +756,9 @@ class TestBuildMetadataForNonOutput:
     def test_build_metadata_save_to_file(self):
         """Test building metadata for SaveToFile component."""
         raw_content = {"message": {"message": "File saved successfully to /path/to/file.txt"}}
-        _build_metadata_for_non_output(raw_content, "save-123", "Save File", "SaveToFile", "message")
+        metadata = _build_metadata_for_non_output(raw_content, "save-123", "Save File", "SaveToFile", "message")
+        assert "file_path" in metadata
+        assert metadata["file_path"] == "File saved successfully to /path/to/file.txt"
 
     def test_build_metadata_vector_store(self):
         """Test building metadata for vector store components."""
@@ -1005,7 +1057,10 @@ class TestRunResponseToWorkflowResponse:
         run_response.outputs = []
 
         inputs = {"component.param": "value"}
-        WorkflowExecutionRequest(flow_id="flow-1", inputs=inputs)
+        request = WorkflowExecutionRequest(flow_id="flow-1", inputs=inputs)
+        
+        response = run_response_to_workflow_response(run_response, "flow-1", "job-1", request, graph)
+        assert response.inputs == inputs
 
     def test_run_response_vector_store_terminal(self):
         """Test vector store as terminal node."""

@@ -38,6 +38,8 @@ from lfx.schema.workflow import (
     WorkflowStopResponse,
 )
 from lfx.services.deps import get_settings_service
+from pydantic_core import ValidationError as PydanticValidationError
+from sqlalchemy.exc import OperationalError
 
 from langflow.api.v1.schemas import RunResponse
 from langflow.api.v2.converters import (
@@ -127,9 +129,6 @@ async def execute_workflow(
             - 504: Execution timeout exceeded
     """
     # Validate flow exists and user has permission
-    from pydantic_core import ValidationError as PydanticValidationError
-    from sqlalchemy.exc import OperationalError
-
     try:
         flow = await get_flow_by_id_or_endpoint_name(workflow_request.flow_id, api_key_user.id)
     except HTTPException as e:
@@ -175,41 +174,7 @@ async def execute_workflow(
     # Generate job_id for tracking
     job_id = str(uuid4())
 
-    # Phase 1: Sync mode only (stream=false, background=false)
-    if not workflow_request.stream and not workflow_request.background:
-        try:
-            return await execute_sync_workflow_with_timeout(
-                workflow_request=workflow_request,
-                flow=flow,
-                job_id=job_id,
-                api_key_user=api_key_user,
-                background_tasks=background_tasks,
-            )
-        except WorkflowTimeoutError:
-            raise HTTPException(
-                status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-                detail={
-                    "error": "Execution timeout",
-                    "code": "EXECUTION_TIMEOUT",
-                    "message": f"Workflow execution exceeded {EXECUTION_TIMEOUT} seconds",
-                    "job_id": job_id,
-                    "flow_id": workflow_request.flow_id,
-                    "timeout_seconds": EXECUTION_TIMEOUT,
-                },
-            ) from None
-        except WorkflowValidationError as e:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail={
-                    "error": "Workflow validation error",
-                    "code": "INVALID_FLOW_DATA",
-                    "message": str(e),
-                    "job_id": job_id,
-                    "flow_id": workflow_request.flow_id,
-                },
-            ) from e
-
-    # Phase 2: Background mode (to be implemented)
+    # Phase 1: Background mode (to be implemented)
     if workflow_request.background:
         raise HTTPException(
             status_code=status.HTTP_501_NOT_IMPLEMENTED,
@@ -220,15 +185,49 @@ async def execute_workflow(
             },
         )
 
-    # Phase 3: Streaming mode (to be implemented)
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail={
-            "error": "Not implemented",
-            "code": "NOT_IMPLEMENTED",
-            "message": "Streaming execution not yet implemented",
-        },
-    )
+    # Phase 2: Streaming mode (to be implemented)
+    if workflow_request.stream:
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail={
+                "error": "Not implemented",
+                "code": "NOT_IMPLEMENTED",
+                "message": "Streaming execution not yet implemented",
+            },
+        )
+
+    # Phase 3: Synchronous execution (default)
+    try:
+        return await execute_sync_workflow_with_timeout(
+            workflow_request=workflow_request,
+            flow=flow,
+            job_id=job_id,
+            api_key_user=api_key_user,
+            background_tasks=background_tasks,
+        )
+    except WorkflowTimeoutError:
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail={
+                "error": "Execution timeout",
+                "code": "EXECUTION_TIMEOUT",
+                "message": f"Workflow execution exceeded {EXECUTION_TIMEOUT} seconds",
+                "job_id": job_id,
+                "flow_id": workflow_request.flow_id,
+                "timeout_seconds": EXECUTION_TIMEOUT,
+            },
+        ) from None
+    except WorkflowValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "error": "Workflow validation error",
+                "code": "INVALID_FLOW_DATA",
+                "message": str(e),
+                "job_id": job_id,
+                "flow_id": workflow_request.flow_id,
+            },
+        ) from e
 
 
 async def execute_sync_workflow_with_timeout(
