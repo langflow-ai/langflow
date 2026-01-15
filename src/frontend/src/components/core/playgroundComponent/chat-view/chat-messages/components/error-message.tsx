@@ -132,52 +132,44 @@ function ErrorAccordion({
   };
 
   return (
-    <div className="pt-[6px]">
-      <Accordion type="single" collapsible className="w-full p-0">
-        <AccordionItem value="error-details" className="border-0">
-          <AccordionTrigger className="hover:no-underline [&>svg]:hidden p-0">
-            <div className="flex flex-col gap-2 w-full">
-              <div className="flex items-center justify-between gap-2 w-full">
-                <div className="flex items-center gap-2">
-                  <ForwardedIconComponent
-                    className="h-[6px] w-[6px] text-destructive"
-                    name="Indicator"
-                  />
-                  <span className="text-muted-foreground text-xs">
-                    An error occurred
-                  </span>
-                </div>
+    <Accordion type="single" collapsible className="w-full p-0">
+      <AccordionItem value="error-details" className="border-0">
+        <AccordionTrigger className="hover:no-underline [&>svg]:hidden p-0">
+          <div className="flex flex-col gap-2 w-full">
+            <div className="flex items-center justify-between gap-2 w-full">
+              <div className="flex items-center gap-2">
                 <ForwardedIconComponent
-                  className="h-4 w-4 text-muted-foreground"
-                  name="ChevronsUpDown"
+                  className="h-[6px] w-[6px] text-destructive"
+                  name="Indicator"
                 />
+                <span className="text-muted-foreground text-xs">
+                  An error occurred
+                </span>
               </div>
-              {content.component && (
-                <p
-                  className={cn(
-                    closeChat ? "cursor-pointer underline text-xs" : "text-xs",
-                  )}
-                  onClick={closeChat ? handleComponentClick : undefined}
-                >
-                  {errorMessage}
-                </p>
-              )}
+              <ForwardedIconComponent
+                className="h-4 w-4 text-muted-foreground"
+                name="ChevronsUpDown"
+              />
             </div>
-          </AccordionTrigger>
-          <AccordionContent className="pt-2">
-            <div>
-              <h3 className="pb-3 text-xs">Error details:</h3>
-              {content.field && (
-                <p className="pb-1 text-xs">Field: {content.field}</p>
-              )}
-              {content.reason && (
-                <span className="text-xs text-normal">{content.reason}</span>
-              )}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
-    </div>
+          </div>
+        </AccordionTrigger>
+        <AccordionContent className="pt-2">
+          <div>
+            {content.field && <p className="text-xs">Field: {content.field}</p>}
+            {content.component && (
+              <p
+                className={cn(
+                  closeChat ? "cursor-pointer underline text-xs" : "text-xs",
+                )}
+                onClick={closeChat ? handleComponentClick : undefined}
+              >
+                {errorMessage}
+              </p>
+            )}
+          </div>
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
   );
 }
 
@@ -202,7 +194,7 @@ export const ErrorView = ({
         blocks.map((block, blockIndex) => (
           <div
             key={blockIndex}
-            className="w-full rounded-md border border-border pt-[6px] pr-[6px] pb-[12px] pl-[8px] text-sm text-foreground"
+            className="w-full rounded-md border border-border pt-[6px] pr-[6px] pb-[6px] pl-[8px] text-sm text-foreground"
           >
             {block.contents.map((content, contentIndex) => {
               if (content.type === "error") {
