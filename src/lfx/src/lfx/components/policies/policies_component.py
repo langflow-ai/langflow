@@ -86,15 +86,15 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         #     #advanced=True,
         #     input_types=["DataFrame"],
         # ),
-        StrInput(
+        MultilineInput(
             name="policies",
             display_name="Policies",
-            info="Enter one or more clear, well-defined and self-contained business policies, Using the '+' button.",
-            is_list=True,
-            tool_mode=True,
-            placeholder="Add business policy...",
-            list_add_label="Add Policy",
-            input_types=[],
+            info="A well-defined and self-contained business policy document.",
+            # is_list=True,
+            # tool_mode=True,
+            placeholder="Business policy...",
+            # list_add_label="Add Policy",
+            # input_types=[],
         ),
         StrInput(
             name="project",
@@ -160,7 +160,19 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         ),
     ]
     outputs = [
-        Output(display_name="Guarded Tools", type_=Tool, name="guard_code", method="build_guards"),
+        Output(
+            display_name="Guarded Tools",
+            type_=Tool,
+            name="guard_code",
+            method="build_guards",
+            group_outputs=True,
+        ),
+        # Output(
+        #     display_name="Review",
+        #     name="review",
+        #     method="review_link",
+        #     group_outputs=True,
+        # ),
     ]
 
     async def _build_guard_specs(self) ->List[ToolGuardSpec]:
@@ -171,7 +183,7 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         toolguard_step1_dir = join(self.guard_code_path, STEP1)
         policy_text = "\n".join(self.policies)
         specs = await generate_guard_specs(
-            policy_text=policy_text, tools=self.in_tools, llm=llm, work_dir=toolguard_step1_dir, short=True
+            policy_text=policy_text, tools=self.in_tools, llm=llm, work_dir=out_dir, short=True
         )
         logger.info("🔒️ToolGuard: Step 1 Done")
         return specs
@@ -179,9 +191,11 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
     async def _build_guards(self, specs: list[ToolGuardSpec]) -> ToolGuardsCodeGenerationResult:
         logger.info("🔒️ToolGuard: Starting step 2")
         out_dir = self.work_dir / STEP2
+        if out_dir.exists():
+            shutil.rmtree(out_dir)
         llm = LangchainModelWrapper(self.build_model())
         gen_result = await generate_guards_from_specs(
-            tools=self.in_tools, tool_specs=specs, work_dir=out_dir, llm=llm, app_name=to_snake_case(self.self.project)
+            tools=self.in_tools, tool_specs=specs, work_dir=out_dir, llm=llm, app_name=to_snake_case(self.project)
         )
         logger.info("🔒️ToolGuard: Step 2 Done")
         return gen_result
