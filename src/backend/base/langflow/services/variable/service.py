@@ -200,6 +200,35 @@ class DatabaseVariableService(VariableService, Service):
             variables_read.append(variable_read)
         return variables_read
 
+    async def get_all_decrypted_variables(
+        self,
+        user_id: UUID | str,
+        session: AsyncSession,
+    ) -> dict[str, str]:
+        """Get all variables for a user with decrypted values.
+
+        Args:
+            user_id: The user ID to get variables for
+            session: Database session
+
+        Returns:
+            Dictionary mapping variable names to decrypted values
+        """
+        stmt = select(Variable).where(Variable.user_id == user_id)
+        variables = (await session.exec(stmt)).all()
+
+        result = {}
+        for var in variables:
+            if var.name and var.value:
+                try:
+                    decrypted_value = auth_utils.decrypt_api_key(var.value, settings_service=self.settings_service)
+                    result[var.name] = decrypted_value
+                except Exception as e:  # noqa: BLE001
+                    await logger.adebug(f"Decryption failed for variable '{var.name}': {e}. Using value as-is.")
+                    result[var.name] = var.value
+
+        return result
+
     async def get_variable_by_id(
         self,
         user_id: UUID | str,

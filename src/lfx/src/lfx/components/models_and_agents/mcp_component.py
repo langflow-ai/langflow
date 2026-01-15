@@ -185,12 +185,6 @@ class MCPToolsComponent(ComponentWithCache):
             return schema_inputs
 
     async def update_tool_list(self, mcp_server_value=None):
-        # Import at function level to avoid scoping issues
-        from langflow.services.auth import utils as auth_utils
-        from langflow.services.database.models.variable.model import Variable
-        from langflow.services.deps import get_settings_service
-        from sqlmodel import select
-
         # Accepts mcp_server_value as dict {name, config} or uses self.mcp_server
         mcp_server = mcp_server_value if mcp_server_value is not None else getattr(self, "mcp_server", None)
         server_name = None
@@ -237,6 +231,8 @@ class MCPToolsComponent(ComponentWithCache):
             try:
                 from langflow.api.v2.mcp import get_server
                 from langflow.services.database.models.user.crud import get_user_by_id
+
+                from lfx.services.deps import get_settings_service
             except ImportError as e:
                 msg = (
                     "Langflow MCP server functionality is not available. "
@@ -310,27 +306,14 @@ class MCPToolsComponent(ComponentWithCache):
             has_headers = server_config.get("headers") and len(server_config.get("headers", {})) > 0
             if not request_variables and has_headers:
                 try:
-                    settings_service = get_settings_service()
+                    from lfx.services.deps import get_variable_service
 
-                    async with session_scope() as db:
-                        result = await db.execute(select(Variable).where(Variable.user_id == self.user_id))
-                        variables = result.scalars().all()
-
-                        request_variables = {}
-                        for var in variables:
-                            # Decrypt both GENERIC and CREDENTIAL types
-                            if var.name and var.value:
-                                try:
-                                    decrypted_value = auth_utils.decrypt_api_key(
-                                        var.value, settings_service=settings_service
-                                    )
-                                    request_variables[var.name] = decrypted_value
-                                except Exception as decrypt_error:  # noqa: BLE001
-                                    # If decryption fails, try using the value as-is (might be plaintext)
-                                    await logger.adebug(
-                                        f"Decryption failed for variable '{var.name}': {decrypt_error}. Using as-is."
-                                    )
-                                    request_variables[var.name] = var.value
+                    variable_service = get_variable_service()
+                    if variable_service:
+                        async with session_scope() as db:
+                            request_variables = await variable_service.get_all_decrypted_variables(
+                                user_id=self.user_id, session=db
+                            )
                 except Exception as e:  # noqa: BLE001
                     await logger.awarning(f"Failed to load global variables for MCP component: {e}")
 
