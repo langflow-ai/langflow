@@ -17,7 +17,6 @@ import typer
 from dotenv import load_dotenv
 from fastapi import HTTPException
 from httpx import HTTPError
-from jwt import InvalidTokenError
 from lfx.log.logger import configure, logger
 from lfx.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
 from multiprocess import cpu_count
