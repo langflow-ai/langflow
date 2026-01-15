@@ -111,10 +111,11 @@ def is_encrypted(value: str) -> bool:
 
     settings_service = get_settings_service()
     try:
-        # Try to decrypt - if it succeeds, it's encrypted
-        auth_utils.decrypt_api_key(value, settings_service)
+        # Try to decrypt - if it succeeds and returns non-empty, it's encrypted
+        decrypted = auth_utils.decrypt_api_key(value, settings_service)
+        # If decryption returns empty string, it failed (not encrypted)
+        # If it returns the same value, it's plaintext (not encrypted)
+        return bool(decrypted) and decrypted != value
     except (ValueError, TypeError, KeyError, InvalidToken):
         # If decryption fails, it's not encrypted
         return False
-    else:
-        return True
