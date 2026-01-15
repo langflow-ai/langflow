@@ -440,6 +440,16 @@ const SidebarRail = React.forwardRef<
   const { toggleSidebar, setWidth, open, setIsResizing } = useSidebar();
 
   const isResizingInternal = React.useRef(false);
+  const cleanupRef = React.useRef<(() => void) | null>(null);
+
+  React.useEffect(() => {
+    return () => {
+      if (cleanupRef.current) {
+        cleanupRef.current();
+        cleanupRef.current = null;
+      }
+    };
+  }, []);
 
   const onMouseDown = React.useCallback(
     (event: React.MouseEvent) => {
@@ -457,8 +467,12 @@ const SidebarRail = React.forwardRef<
 
       const startX = event.clientX;
       const sidebarElement = event.currentTarget.parentElement;
+      const wrapper = event.currentTarget.closest(
+        ".group\\/sidebar-wrapper",
+      ) as HTMLElement;
       if (!sidebarElement) return;
       const startWidth = sidebarElement.getBoundingClientRect().width;
+      let finalWidth = startWidth;
 
       isResizingInternal.current = true;
       setIsResizing(true);
@@ -480,20 +494,25 @@ const SidebarRail = React.forwardRef<
         if (newWidth < MIN_SIDEBAR_WIDTH) newWidth = MIN_SIDEBAR_WIDTH;
         if (newWidth > MAX_SIDEBAR_WIDTH) newWidth = MAX_SIDEBAR_WIDTH;
 
-        setWidth(`${newWidth}px`);
+        finalWidth = newWidth;
+        wrapper.style.setProperty("--sidebar-width", `${newWidth}px`);
       };
 
       const onMouseUp = () => {
         isResizingInternal.current = false;
         setIsResizing(false);
 
+        setWidth(`${finalWidth}px`);
+
         document.body.style.cursor = "";
         document.body.style.userSelect = "";
         overlay.remove();
         globalThis.removeEventListener("mousemove", onMouseMove);
         globalThis.removeEventListener("mouseup", onMouseUp);
+        cleanupRef.current = null;
       };
 
+      cleanupRef.current = onMouseUp;
       globalThis.addEventListener("mousemove", onMouseMove);
       globalThis.addEventListener("mouseup", onMouseUp);
     },
