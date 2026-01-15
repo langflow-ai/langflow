@@ -43,37 +43,35 @@ def mock_modules_dict():
 def test_update_history_scenarios():
     """Test various scenarios for the update_history function."""
     history = {}
-    component_id = "1234-5678-9012-3456"
     component_name = "MyComponent"
     code_hash_v1 = "hash_v1"
     code_hash_v2 = "hash_v2"
 
     # Scenario 1: Initial version
-    history = update_history(history, component_id, component_name, code_hash_v1, "0.3.0")
-    assert history[component_id]["name"] == component_name
-    assert history[component_id]["versions"]["0.3.0"] == code_hash_v1
+    history = update_history(history, component_name, code_hash_v1, "0.3.0")
+    assert history[component_name]["versions"]["0.3.0"] == code_hash_v1
 
     # Scenario 2: New patch version, same hash
-    history = update_history(history, component_id, component_name, code_hash_v1, "0.3.1")
-    assert history[component_id]["versions"]["0.3.1"] == code_hash_v1
+    history = update_history(history, component_name, code_hash_v1, "0.3.1")
+    assert history[component_name]["versions"]["0.3.1"] == code_hash_v1
 
     # Scenario 3: New patch version, new hash
-    history = update_history(history, component_id, component_name, code_hash_v2, "0.3.2")
-    assert history[component_id]["versions"]["0.3.2"] == code_hash_v2
+    history = update_history(history, component_name, code_hash_v2, "0.3.2")
+    assert history[component_name]["versions"]["0.3.2"] == code_hash_v2
     
     # Scenario 4: New minor version, same hash as an old version
-    history = update_history(history, component_id, component_name, code_hash_v1, "0.4.0")
-    assert history[component_id]["versions"]["0.4.0"] == code_hash_v1
+    history = update_history(history, component_name, code_hash_v1, "0.4.0")
+    assert history[component_name]["versions"]["0.4.0"] == code_hash_v1
 
     # Scenario 5: Update hash for the same version
-    history = update_history(history, component_id, component_name, code_hash_v2, "0.5.0")
-    assert history[component_id]["versions"]["0.5.0"] == code_hash_v2
-    history = update_history(history, component_id, component_name, code_hash_v1, "0.5.0")
-    assert history[component_id]["versions"]["0.5.0"] == code_hash_v1
+    history = update_history(history, component_name, code_hash_v2, "0.5.0")
+    assert history[component_name]["versions"]["0.5.0"] == code_hash_v2
+    history = update_history(history, component_name, code_hash_v1, "0.5.0")
+    assert history[component_name]["versions"]["0.5.0"] == code_hash_v1
 
     # Scenario 6: Overwriting a newer version with an older one should raise an error
     with pytest.raises(ValueError):
-        update_history(history, component_id, component_name, code_hash_v1, "0.4.0")
+        update_history(history, component_name, code_hash_v1, "0.4.0")
 
 
 def test_main_function(tmp_path, mock_modules_dict):
@@ -98,24 +96,20 @@ def test_main_function(tmp_path, mock_modules_dict):
         saved_history = mock_save.call_args[0][1]
         
         assert len(saved_history) == 3
-        assert "1234-5678-9012-3456" in saved_history
-        assert saved_history["1234-5678-9012-3456"]["name"] == "MyComponent"
-        assert saved_history["1234-5678-9012-3456"]["versions"]["0.1.0"] == "hash_v1"
-        assert "2345-6789-0123-4567" in saved_history
-        assert saved_history["2345-6789-0123-4567"]["name"] == "AnotherComponent"
-        assert saved_history["2345-6789-0123-4567"]["versions"]["0.1.0"] == "hash_v2"
-        assert "3456-7890-1234-5678" in saved_history
-        assert saved_history["3456-7890-1234-5678"]["name"] == "ThirdComponent"
-        assert saved_history["3456-7890-1234-5678"]["versions"]["0.1.0"] == "hash_v3"
+        assert "MyComponent" in saved_history
+        assert saved_history["MyComponent"]["versions"]["0.1.0"] == "hash_v1"
+        assert "AnotherComponent" in saved_history
+        assert saved_history["AnotherComponent"]["versions"]["0.1.0"] == "hash_v2"
+        assert "ThirdComponent" in saved_history
+        assert saved_history["ThirdComponent"]["versions"]["0.1.0"] == "hash_v3"
 
-def test_all_real_component_ids_are_unique():
-    """Test that all real component IDs loaded via _import_components are unique."""
+def test_all_real_component_names_are_unique():
+    """Test that all real component names loaded via _import_components are unique."""
     modules_dict, _ = _import_components() # Load real components
 
-    component_ids = []
+    component_names = []
     for _, components_dict in modules_dict.items():
-        for _, comp_details in components_dict.items():
-            if "metadata" in comp_details and comp_details["metadata"].get("component_id"):
-                component_ids.append(comp_details["metadata"]["component_id"])
+        for component_name in components_dict.keys():
+            component_names.append(component_name)
     
-    assert len(component_ids) == len(set(component_ids))
+    assert len(component_names) == len(set(component_names))
