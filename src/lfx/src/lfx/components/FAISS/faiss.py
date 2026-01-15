@@ -24,7 +24,7 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
             value="langflow_index",
         ),
         StrInput(
-            name="persist_directory2",
+            name="persist_directory",
             display_name="Persist Directory",
             info="Path to save the FAISS index. It will be relative to where Langflow is running.",
         ),

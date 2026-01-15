@@ -72,7 +72,7 @@ class TavilySearchSchema(BaseModel):
 
 
 class TavilySearchToolComponent(LCToolComponent):
-    component_id: str = "be7eaaee-c7ee-4a37-b72a-0adc2b7c3c08"
+    component_id: str = "6c2a4d2c-5f58-4b2f-9c4b-7b7d2c9d8f4a"
     display_name = "Tavily Search API"
     description = """**Tavily Search API** is a search engine optimized for LLMs and RAG, \
         aimed at efficient, quick, and persistent search results. It can be used independently or as an agent tool.

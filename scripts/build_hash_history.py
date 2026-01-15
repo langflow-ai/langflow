@@ -5,8 +5,8 @@ from pathlib import Path
 import orjson
 from packaging.version import Version
 
-STABLE_HISTORY_FILE = "stable_hash_history.json"
-NIGHTLY_HISTORY_FILE = "nightly_hash_history.json"
+STABLE_HISTORY_FILE = "src/lfx/src/lfx/_assets/stable_hash_history.json"
+NIGHTLY_HISTORY_FILE = "src/lfx/src/lfx/_assets/nightly_hash_history.json"
 
 
 def get_lfx_version():
@@ -81,15 +81,19 @@ def main(argv=None):
     parser.add_argument("--nightly", action="store_true", help="Update the nightly hash history.")
     args = parser.parse_args(argv)
 
+    current_version = get_lfx_version()
+    print(f"Current LFX version: {current_version}")
+
     if args.nightly:
+        if "dev" not in str(current_version):
+            raise ValueError("Cannot update nightly hash history for a non-dev version.")
         history_file = NIGHTLY_HISTORY_FILE
         print("Updating nightly hash history...")
     else:
+        if "dev" in str(current_version):
+            raise ValueError("Cannot update stable hash history for a dev version.")
         history_file = STABLE_HISTORY_FILE
         print("Updating stable hash history...")
-
-    current_version = get_lfx_version()
-    print(f"Current LFX version: {current_version}")
 
     modules_dict, components_count = _import_components()
     print(f"Found {components_count} components.")
