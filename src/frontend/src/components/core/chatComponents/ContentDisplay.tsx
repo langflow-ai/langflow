@@ -128,7 +128,6 @@ export default function ContentDisplay({
 
     case "tool_use": {
       const formatToolOutput = (output: JSONValue) => {
-
         if (output === null || output === undefined) return "";
 
         // If it's a string, render as markdown
