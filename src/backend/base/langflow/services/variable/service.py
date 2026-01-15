@@ -12,7 +12,7 @@ from langflow.services.auth import utils as auth_utils
 from langflow.services.base import Service
 from langflow.services.database.models.variable.model import Variable, VariableCreate, VariableRead, VariableUpdate
 from langflow.services.variable.base import VariableService
-from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
+from langflow.services.variable.constants import CREDENTIAL_TYPE
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -187,19 +187,13 @@ class DatabaseVariableService(VariableService, Service):
         variables = list((await session.exec(stmt)).all())
         # For variables of type 'Generic', attempt to decrypt the value.
         # If decryption fails, assume the value is already plaintext.
+        # For CREDENTIAL type, return the encrypted value as-is (don't decrypt for API response)
         variables_read = []
         for variable in variables:
-            value = None
-            if variable.type == GENERIC_TYPE:
-                try:
-                    value = auth_utils.decrypt_api_key(variable.value, settings_service=self.settings_service)
-                except Exception as e:  # noqa: BLE001
-                    await logger.adebug(
-                        f"Decryption of {variable.type} failed for variable '{variable.name}': {e}. Assuming plaintext."
-                    )
-                    value = variable.value
+            # Both GENERIC and CREDENTIAL variables: return stored value as-is
+            # GENERIC: stored as plaintext, CREDENTIAL: stored encrypted
             variable_read = VariableRead.model_validate(variable, from_attributes=True)
-            variable_read.value = value
+            variable_read.value = variable.value
             variables_read.append(variable_read)
         return variables_read
 
