@@ -1,8 +1,9 @@
 import Markdown from "react-markdown";
-import rehypeMathjax from "rehype-mathjax";
+import rehypeMathjax from "rehype-mathjax/browser";
 import rehypeRaw from "rehype-raw";
 import remarkGfm from "remark-gfm";
 import { EMPTY_OUTPUT_SEND_MESSAGE } from "@/constants/constants";
+import { extractLanguage, isCodeBlock } from "@/utils/codeBlockUtils";
 import { preprocessChatMessage } from "@/utils/markdownUtils";
 import { cn } from "@/utils/utils";
 import CodeTabsComponent from "../../../../../../components/core/codeTabsComponent";
@@ -29,7 +30,6 @@ export const MarkdownField = ({
     <div className="w-full items-baseline gap-2">
       <Markdown
         remarkPlugins={[remarkGfm as any]}
-        linkTarget="_blank"
         rehypePlugins={[rehypeMathjax, rehypeRaw]}
         className={cn(
           "markdown prose flex w-full max-w-full flex-col items-baseline text-sm font-normal word-break-break-word dark:prose-invert",
@@ -67,7 +67,7 @@ export const MarkdownField = ({
               </div>
             );
           },
-          code: ({ node, inline, className, children, ...props }) => {
+          code: ({ node, className, children, ...props }) => {
             let content = children as string;
             if (
               Array.isArray(children) &&
@@ -88,14 +88,16 @@ export const MarkdownField = ({
                 }
               }
 
-              const match = /language-(\w+)/.exec(className || "");
+              if (isCodeBlock(className, props, content)) {
+                return (
+                  <CodeTabsComponent
+                    language={extractLanguage(className)}
+                    code={String(content).replace(/\n$/, "")}
+                  />
+                );
+              }
 
-              return !inline ? (
-                <CodeTabsComponent
-                  language={(match && match[1]) || ""}
-                  code={String(content).replace(/\n$/, "")}
-                />
-              ) : (
+              return (
                 <code className={className} {...props}>
                   {content}
                 </code>

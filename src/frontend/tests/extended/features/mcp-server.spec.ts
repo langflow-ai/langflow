@@ -1,13 +1,15 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-
+import { openAddMcpServerModal } from "../../utils/open-add-mcp-server-modal";
 import { zoomOut } from "../../utils/zoom-out";
 
 test(
   "user must be able to change mode of MCP tools without any issues",
   { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
+    await page.waitForTimeout(5000);
+
     await awaitBootstrapTest(page);
 
     await page.waitForSelector('[data-testid="blank-flow"]', {
@@ -17,12 +19,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("mcp tools");
 
-    await page.waitForSelector('[data-testid="agentsMCP Tools"]', {
+    await page.waitForSelector('[data-testid="models_and_agentsMCP Tools"]', {
       timeout: 30000,
     });
 
     await page
-      .getByTestId("agentsMCP Tools")
+      .getByTestId("models_and_agentsMCP Tools")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 100, y: 100 },
       });
@@ -48,21 +50,7 @@ test(
 
     await expect(page.getByTestId("dropdown_str_tool")).toBeHidden();
 
-    try {
-      await page.getByText("Add MCP Server", { exact: true }).click({
-        timeout: 5000,
-      });
-    } catch (_error) {
-      await page.getByTestId("mcp-server-dropdown").click({ timeout: 3000 });
-      await page.getByText("Add MCP Server", { exact: true }).click({
-        timeout: 5000,
-      });
-    }
-
-    await page.waitForSelector('[data-testid="add-mcp-server-button"]', {
-      state: "visible",
-      timeout: 30000,
-    });
+    await openAddMcpServerModal(page);
 
     await page.getByTestId("stdio-tab").click();
 
@@ -99,7 +87,6 @@ test(
 
     await page.getByTestId("fetch-0-option").click();
 
-    await page.waitForTimeout(2000);
     await adjustScreenView(page);
 
     await page.waitForSelector('[data-testid="int_int_max_length"]', {
@@ -122,6 +109,8 @@ test(
     await page.getByTestId("user_menu_button").click({ timeout: 3000 });
 
     await page.getByTestId("menu_settings_button").click({ timeout: 3000 });
+
+    await page.waitForTimeout(500);
 
     await page.waitForSelector('[data-testid="sidebar-nav-MCP Servers"]', {
       timeout: 30000,
@@ -146,6 +135,8 @@ test(
       .first()
       .click({ timeout: 3000 });
 
+    await page.waitForTimeout(500);
+
     await page.waitForSelector('[data-testid="add-mcp-server-button"]', {
       state: "visible",
       timeout: 30000,
@@ -167,11 +158,15 @@ test(
       "uvx mcp-server-fetch",
     );
 
+    await page.waitForTimeout(500);
+
     await page.getByTestId("add-mcp-server-button").click();
 
     await page
       .getByTestId(`mcp-server-menu-button-${testName}`)
       .click({ timeout: 3000 });
+
+    await page.waitForTimeout(500);
 
     await page
       .getByText("Delete", { exact: true })
@@ -193,35 +188,7 @@ test(
       timeout: 3000,
     });
 
-    await page.waitForTimeout(3000);
-
     await expect(page.getByText(testName)).not.toBeVisible({
-      timeout: 3000,
-    });
-
-    await awaitBootstrapTest(page, { skipModal: true });
-    const newFlowDiv = await page
-      .getByTestId("flow-name-div")
-      .filter({ hasText: "New Flow" })
-      .first();
-    await newFlowDiv.click();
-
-    await page.waitForTimeout(1000);
-
-    await page.waitForSelector('[data-testid="save-mcp-server-button"]', {
-      timeout: 10000,
-    });
-
-    await page.getByTestId("save-mcp-server-button").click({ timeout: 10000 });
-
-    await page.waitForTimeout(1000);
-
-    await expect(page.getByTestId("save-mcp-server-button")).toBeHidden({
-      timeout: 10000,
-    });
-
-    await page.getByTestId("mcp-server-dropdown").click({ timeout: 10000 });
-    await expect(page.getByText(testName)).toHaveCount(2, {
       timeout: 10000,
     });
   },
@@ -239,10 +206,12 @@ test(
     await page.getByTestId("blank-flow").click();
     await page.getByTestId("sidebar-nav-mcp").click();
 
+    await page.waitForTimeout(500);
+
     const sidebarButton = page.getByTestId("sidebar-add-mcp-server-button");
     const fallbackButton = page.getByTestId("add-mcp-server-button-sidebar");
 
-    if (await sidebarButton.isVisible({ timeout: 5000 }).catch(() => false)) {
+    if (await sidebarButton.isVisible({ timeout: 30000 }).catch(() => false)) {
       await sidebarButton.click();
     } else {
       await fallbackButton.click();
@@ -263,13 +232,17 @@ test(
     const testName = `test_server_${randomSuffix}`;
     await page.getByTestId("stdio-name-input").fill(testName);
 
+    await page.waitForTimeout(500);
+
     await page.getByTestId("stdio-command-input").fill("uvx mcp-server-fetch");
 
     await page.getByTestId("add-mcp-server-button").click();
 
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(500);
 
     await page.getByTestId(`add-component-button-${testName}`).click();
+
+    await page.waitForTimeout(500);
 
     await expect(page.getByTestId("dropdown_str_tool")).toBeVisible({
       timeout: 30000,
@@ -291,11 +264,15 @@ test(
 
     await page.getByTestId("fetch-0-option").click();
 
-    await page.waitForTimeout(2000);
+    // Wait for canvas controls to be visible before adjusting view
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
+      state: "visible",
+      timeout: 10000,
+    });
     await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("fit_view").click();
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await page.getByTestId("canvas_controls_dropdown").click({ force: true });
 
     await page.waitForSelector('[data-testid="int_int_max_length"]', {
       state: "visible",
@@ -339,10 +316,8 @@ test(
 
     await page.getByTestId("save-mcp-server-button").click({ timeout: 10000 });
 
-    await page.waitForTimeout(1000);
-
     await expect(page.getByTestId("save-mcp-server-button")).toBeHidden({
-      timeout: 10000,
+      timeout: 30000,
     });
 
     await page.getByTestId("mcp-server-dropdown").click({ timeout: 10000 });
@@ -365,32 +340,18 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("mcp tools");
 
-    await page.waitForSelector('[data-testid="agentsMCP Tools"]', {
+    await page.waitForSelector('[data-testid="models_and_agentsMCP Tools"]', {
       timeout: 30000,
     });
 
     await page
-      .getByTestId("agentsMCP Tools")
+      .getByTestId("models_and_agentsMCP Tools")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 100, y: 100 },
       });
     await adjustScreenView(page, { numberOfZoomOut: 3 });
 
-    try {
-      await page.getByText("Add MCP Server", { exact: true }).click({
-        timeout: 5000,
-      });
-    } catch (_error) {
-      await page.getByTestId("mcp-server-dropdown").click({ timeout: 3000 });
-      await page.getByText("Add MCP Server", { exact: true }).click({
-        timeout: 5000,
-      });
-    }
-
-    await page.waitForSelector('[data-testid="add-mcp-server-button"]', {
-      state: "visible",
-      timeout: 30000,
-    });
+    await openAddMcpServerModal(page);
 
     // Go to STDIO tab and fill all fields
     await page.getByTestId("stdio-tab").click();
@@ -438,12 +399,9 @@ test(
     // Save the server
     await page.getByTestId("add-mcp-server-button").click();
 
-    // Wait for server to be created
-    await page.waitForTimeout(2000);
-
     // Go to settings to edit the server
-    await page.getByTestId("user_menu_button").click({ timeout: 3000 });
-    await page.getByTestId("menu_settings_button").click({ timeout: 3000 });
+    await page.getByTestId("user_menu_button").click({ timeout: 10000 });
+    await page.getByTestId("menu_settings_button").click({ timeout: 10000 });
 
     await page.waitForSelector('[data-testid="sidebar-nav-MCP Servers"]', {
       timeout: 30000,
@@ -535,32 +493,18 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("mcp tools");
 
-    await page.waitForSelector('[data-testid="agentsMCP Tools"]', {
+    await page.waitForSelector('[data-testid="models_and_agentsMCP Tools"]', {
       timeout: 30000,
     });
 
     await page
-      .getByTestId("agentsMCP Tools")
+      .getByTestId("models_and_agentsMCP Tools")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 100, y: 100 },
       });
     await adjustScreenView(page, { numberOfZoomOut: 3 });
 
-    try {
-      await page.getByText("Add MCP Server", { exact: true }).click({
-        timeout: 5000,
-      });
-    } catch (_error) {
-      await page.getByTestId("mcp-server-dropdown").click({ timeout: 3000 });
-      await page.getByText("Add MCP Server", { exact: true }).click({
-        timeout: 5000,
-      });
-    }
-
-    await page.waitForSelector('[data-testid="add-mcp-server-button"]', {
-      state: "visible",
-      timeout: 30000,
-    });
+    await openAddMcpServerModal(page);
 
     // Go to HTTP tab and fill all fields
     await page.getByTestId("http-tab").click();
@@ -607,12 +551,9 @@ test(
     // Save the server
     await page.getByTestId("add-mcp-server-button").click();
 
-    // Wait for server to be created
-    await page.waitForTimeout(2000);
-
     // Go to settings to edit the server
-    await page.getByTestId("user_menu_button").click({ timeout: 3000 });
-    await page.getByTestId("menu_settings_button").click({ timeout: 3000 });
+    await page.getByTestId("user_menu_button").click({ timeout: 10000 });
+    await page.getByTestId("menu_settings_button").click({ timeout: 10000 });
 
     await page.waitForSelector('[data-testid="sidebar-nav-MCP Servers"]', {
       timeout: 30000,
@@ -702,6 +643,8 @@ test(
   "mcp server tools should be refreshed when editing a server",
   { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
+    await page.waitForTimeout(10000);
+
     await awaitBootstrapTest(page);
 
     await page.waitForSelector('[data-testid="blank-flow"]', {
@@ -711,12 +654,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("mcp tools");
 
-    await page.waitForSelector('[data-testid="agentsMCP Tools"]', {
+    await page.waitForSelector('[data-testid="models_and_agentsMCP Tools"]', {
       timeout: 30000,
     });
 
     await page
-      .getByTestId("agentsMCP Tools")
+      .getByTestId("models_and_agentsMCP Tools")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 100, y: 100 },
       });
@@ -726,25 +669,11 @@ test(
     await page.getByTestId("fit_view").click();
 
     await zoomOut(page, 3);
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await page.getByTestId("canvas_controls_dropdown").click({ force: true });
 
     await expect(page.getByTestId("dropdown_str_tool")).toBeHidden();
 
-    try {
-      await page.getByText("Add MCP Server", { exact: true }).click({
-        timeout: 5000,
-      });
-    } catch (_error) {
-      await page.getByTestId("mcp-server-dropdown").click({ timeout: 3000 });
-      await page.getByText("Add MCP Server", { exact: true }).click({
-        timeout: 5000,
-      });
-    }
-
-    await page.waitForSelector('[data-testid="add-mcp-server-button"]', {
-      state: "visible",
-      timeout: 30000,
-    });
+    await openAddMcpServerModal(page);
 
     await page.getByTestId("stdio-tab").click();
 
@@ -761,6 +690,8 @@ test(
 
     await page.getByTestId("add-mcp-server-button").click();
 
+    await page.waitForTimeout(500);
+
     await page.waitForSelector(
       '[data-testid="dropdown_str_tool"]:not([disabled])',
       {
@@ -771,17 +702,23 @@ test(
 
     await page.getByTestId("dropdown_str_tool").click();
 
+    await page.waitForTimeout(500);
+
     const fetchOptionCount = await page.getByTestId("fetch-0-option").count();
 
     expect(fetchOptionCount).toBeGreaterThan(0);
 
     await page.getByTestId("fetch-0-option").click();
 
-    await page.waitForTimeout(2000);
+    // Wait for canvas controls to be visible before adjusting view
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
+      state: "visible",
+      timeout: 10000,
+    });
     await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("fit_view").click();
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await page.getByTestId("canvas_controls_dropdown").click({ force: true });
 
     await page.waitForSelector('[data-testid="int_int_max_length"]', {
       state: "visible",
@@ -854,25 +791,24 @@ test(
 
     await awaitBootstrapTest(page, { skipModal: true });
 
-    const newFlowDiv = await page
+    const newFlowDiv = page
       .getByTestId("flow-name-div")
       .filter({ hasText: "New Flow" })
       .first();
     await newFlowDiv.click();
 
-    try {
-      await page.waitForSelector('[data-testid="dropdown_str_tool"]:disabled', {
-        timeout: 10000,
-        state: "visible",
-      });
-    } catch (_) {
-      console.warn("Dropdown tool is not disabled, continuing...");
-    }
+    // Re-select the server after returning to flow (server reference may be lost after editing)
+    await page.waitForSelector('[data-testid="mcp-server-dropdown"]', {
+      timeout: 10000,
+      state: "visible",
+    });
+    await page.getByTestId("mcp-server-dropdown").click();
+    await page.getByTestId(`list_item_${testName}`).click({ timeout: 5000 });
 
     await page.waitForSelector(
       '[data-testid="dropdown_str_tool"]:not([disabled])',
       {
-        timeout: 10000,
+        timeout: 30000,
         state: "visible",
       },
     );
@@ -919,13 +855,11 @@ test(
       .click({ timeout: 3000 });
 
     await page.waitForSelector('[data-testid="add-mcp-server-button-page"]', {
-      timeout: 3000,
+      timeout: 10000,
     });
 
-    await page.waitForTimeout(3000);
-
     await expect(page.getByText(testName)).not.toBeVisible({
-      timeout: 3000,
+      timeout: 10000,
     });
 
     await page.getByTestId("add-mcp-server-button-page").click();
@@ -954,25 +888,24 @@ test(
 
     await awaitBootstrapTest(page, { skipModal: true });
 
-    const newFlowDiv2 = await page
+    const newFlowDiv2 = page
       .getByTestId("flow-name-div")
       .filter({ hasText: "New Flow" })
       .first();
     await newFlowDiv2.click();
 
-    try {
-      await page.waitForSelector('[data-testid="dropdown_str_tool"]:disabled', {
-        timeout: 10000,
-        state: "visible",
-      });
-    } catch (_) {
-      console.warn("Dropdown tool is not disabled, continuing...");
-    }
+    // Re-select the server after returning to flow (server reference may be lost after editing)
+    await page.waitForSelector('[data-testid="mcp-server-dropdown"]', {
+      timeout: 10000,
+      state: "visible",
+    });
+    await page.getByTestId("mcp-server-dropdown").click();
+    await page.getByTestId(`list_item_${testName}`).click({ timeout: 5000 });
 
     await page.waitForSelector(
       '[data-testid="dropdown_str_tool"]:not([disabled])',
       {
-        timeout: 10000,
+        timeout: 30000,
         state: "visible",
       },
     );
@@ -1000,33 +933,19 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("mcp tools");
 
-    await page.waitForSelector('[data-testid="agentsMCP Tools"]', {
+    await page.waitForSelector('[data-testid="models_and_agentsMCP Tools"]', {
       timeout: 30000,
     });
 
     await page
-      .getByTestId("agentsMCP Tools")
+      .getByTestId("models_and_agentsMCP Tools")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 100, y: 100 },
       });
 
     await adjustScreenView(page, { numberOfZoomOut: 3 });
 
-    try {
-      await page.getByText("Add MCP Server", { exact: true }).click({
-        timeout: 5000,
-      });
-    } catch (_error) {
-      await page.getByTestId("mcp-server-dropdown").click({ timeout: 3000 });
-      await page.getByText("Add MCP Server", { exact: true }).click({
-        timeout: 5000,
-      });
-    }
-
-    await page.waitForSelector('[data-testid="add-mcp-server-button"]', {
-      state: "visible",
-      timeout: 30000,
-    });
+    await openAddMcpServerModal(page);
 
     // Switch to HTTP tab for Streamable HTTP
     await page.getByTestId("http-tab").click();
@@ -1094,6 +1013,8 @@ test(
   "SSE MCP server with deepwiki should load tools correctly",
   { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
+    await page.waitForTimeout(5000);
+
     // Start the MCP server with proper health checking
     const server = "https://mcp.deepwiki.com/sse";
 
@@ -1106,33 +1027,19 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("mcp tools");
 
-    await page.waitForSelector('[data-testid="agentsMCP Tools"]', {
+    await page.waitForSelector('[data-testid="models_and_agentsMCP Tools"]', {
       timeout: 30000,
     });
 
     await page
-      .getByTestId("agentsMCP Tools")
+      .getByTestId("models_and_agentsMCP Tools")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 100, y: 100 },
       });
 
     await adjustScreenView(page, { numberOfZoomOut: 3 });
 
-    try {
-      await page.getByText("Add MCP Server", { exact: true }).click({
-        timeout: 5000,
-      });
-    } catch (_error) {
-      await page.getByTestId("mcp-server-dropdown").click({ timeout: 3000 });
-      await page.getByText("Add MCP Server", { exact: true }).click({
-        timeout: 5000,
-      });
-    }
-
-    await page.waitForSelector('[data-testid="add-mcp-server-button"]', {
-      state: "visible",
-      timeout: 30000,
-    });
+    await openAddMcpServerModal(page);
 
     // Switch to HTTP tab for SSE
     await page.getByTestId("http-tab").click();

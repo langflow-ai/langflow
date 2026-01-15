@@ -12,12 +12,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("api request");
 
-    await page.waitForSelector('[data-testid="dataAPI Request"]', {
+    await page.waitForSelector('[data-testid="data_sourceAPI Request"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("dataAPI Request")
+      .getByTestId("data_sourceAPI Request")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();

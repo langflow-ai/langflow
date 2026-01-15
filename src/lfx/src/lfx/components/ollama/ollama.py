@@ -101,6 +101,7 @@ class ChatOllamaComponent(LCModelComponent):
             info="Refer to https://ollama.com/library for more models.",
             refresh_button=True,
             real_time_refresh=True,
+            required=True,
         ),
         SecretStrInput(
             name="api_key",
@@ -122,9 +123,9 @@ class ChatOllamaComponent(LCModelComponent):
             name="format",
             display_name="Format",
             info="Specify the format of the output.",
-            advanced=False,
             table_schema=TABLE_SCHEMA,
             value=default_table_row,
+            show=False,
         ),
         DictInput(name="metadata", display_name="Metadata", info="Metadata to add to the run trace.", advanced=True),
         DropdownInput(
@@ -215,6 +216,14 @@ class ChatOllamaComponent(LCModelComponent):
         MessageTextInput(
             name="template", display_name="Template", info="Template to use for generating text.", advanced=True
         ),
+        BoolInput(
+            name="enable_structured_output",
+            display_name="Enable Structured Output",
+            info="Whether to enable structured output in the model.",
+            value=False,
+            advanced=False,
+            real_time_refresh=True,
+        ),
         *LCModelComponent.get_base_inputs(),
     ]
 
@@ -254,7 +263,7 @@ class ChatOllamaComponent(LCModelComponent):
             )
 
         try:
-            output_format = self._parse_format_field(self.format)
+            output_format = self._parse_format_field(self.format) if self.enable_structured_output else None
         except Exception as e:
             msg = f"Failed to parse the format field: {e}"
             raise ValueError(msg) from e
@@ -264,7 +273,7 @@ class ChatOllamaComponent(LCModelComponent):
             "base_url": transformed_base_url,
             "model": self.model_name,
             "mirostat": mirostat_value,
-            "format": output_format,
+            "format": output_format or None,
             "metadata": self.metadata,
             "tags": self.tags.split(",") if self.tags else None,
             "mirostat_eta": mirostat_eta,
@@ -319,6 +328,9 @@ class ChatOllamaComponent(LCModelComponent):
             return False
 
     async def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None):
+        if field_name == "enable_structured_output":  # bind enable_structured_output boolean to format show value
+            build_config["format"]["show"] = field_value
+
         if field_name == "mirostat":
             if field_value == "Disabled":
                 build_config["mirostat_eta"]["advanced"] = True
@@ -338,10 +350,17 @@ class ChatOllamaComponent(LCModelComponent):
                     build_config["mirostat_tau"]["value"] = 5
 
         if field_name in {"model_name", "base_url", "tool_model_enabled"}:
-            if await self.is_valid_ollama_url(self.base_url):
+            # Use field_value if base_url is being updated, otherwise use self.base_url
+            base_url_to_check = field_value if field_name == "base_url" else self.base_url
+            # Fallback to self.base_url if field_value is None or empty
+            if not base_url_to_check and field_name == "base_url":
+                base_url_to_check = self.base_url
+            logger.warning(f"Fetching Ollama models from updated URL: {base_url_to_check}")
+
+            if base_url_to_check and await self.is_valid_ollama_url(base_url_to_check):
                 tool_model_enabled = build_config["tool_model_enabled"].get("value", False) or self.tool_model_enabled
                 build_config["model_name"]["options"] = await self.get_models(
-                    self.base_url, tool_model_enabled=tool_model_enabled
+                    base_url_to_check, tool_model_enabled=tool_model_enabled
                 )
             else:
                 build_config["model_name"]["options"] = []

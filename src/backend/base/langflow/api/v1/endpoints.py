@@ -346,28 +346,26 @@ async def check_flow_user_permission(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to run this flow")
 
 
-@router.post("/run/{flow_id_or_name}", response_model=None, response_model_exclude_none=True)
-async def simplified_run_flow(
+async def _run_flow_internal(
     *,
     background_tasks: BackgroundTasks,
-    flow: Annotated[FlowRead | None, Depends(get_flow_by_id_or_endpoint_name)],
-    input_request: SimplifiedAPIRequest | None = None,
-    stream: bool = False,
-    api_key_user: Annotated[UserRead, Depends(api_key_security)],
-    context: dict | None = None,
+    flow: FlowRead | None,
+    input_request: SimplifiedAPIRequest | None,
+    stream: bool,
+    api_key_user: User | UserRead,
+    context: dict | None,
     http_request: Request,
-):
-    """Executes a specified flow by ID with support for streaming and telemetry.
+) -> StreamingResponse | RunResponse:
+    """Internal function containing the core business logic for running a flow.
 
-    This endpoint executes a flow identified by ID or name, with options for streaming the response
-    and tracking execution metrics. It handles both streaming and non-streaming execution modes.
+    This function is shared between session-based and API key-based authentication endpoints.
 
     Args:
         background_tasks (BackgroundTasks): FastAPI background task manager
         flow (FlowRead | None): The flow to execute, loaded via dependency
         input_request (SimplifiedAPIRequest | None): Input parameters for the flow
         stream (bool): Whether to stream the response
-        api_key_user (UserRead): Authenticated user from API key
+        api_key_user (User | UserRead): Authenticated user (either from session or API key)
         context (dict | None): Optional context to pass to the flow
         http_request (Request): The incoming HTTP request for extracting global variables
 
@@ -378,18 +376,6 @@ async def simplified_run_flow(
     Raises:
         HTTPException: For flow not found (404) or invalid input (400)
         APIException: For internal execution errors (500)
-
-    Notes:
-        - Supports both streaming and non-streaming execution modes
-        - Tracks execution time and success/failure via telemetry
-        - Handles graceful client disconnection in streaming mode
-        - Provides detailed error handling with appropriate HTTP status codes
-        - Extracts global variables from HTTP headers with prefix X-LANGFLOW-GLOBAL-VAR-*
-        - Merges extracted variables with the context parameter as "request_variables"
-        - In streaming mode, uses EventManager to handle events:
-            - "add_message": New messages during execution
-            - "token": Individual tokens during streaming
-            - "end": Final execution result
     """
     await check_flow_user_permission(flow=flow, api_key_user=api_key_user)
 
@@ -496,6 +482,130 @@ async def simplified_run_flow(
         raise APIException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=exc, flow=flow) from exc
 
     return result
+
+
+@router.post("/run/{flow_id_or_name}", response_model=None, response_model_exclude_none=True)
+async def simplified_run_flow(
+    *,
+    background_tasks: BackgroundTasks,
+    flow: Annotated[FlowRead | None, Depends(get_flow_by_id_or_endpoint_name)],
+    input_request: SimplifiedAPIRequest | None = None,
+    stream: bool = False,
+    api_key_user: Annotated[UserRead, Depends(api_key_security)],
+    context: dict | None = None,
+    http_request: Request,
+):
+    """Executes a specified flow by ID with support for streaming and telemetry (API key auth).
+
+    This endpoint executes a flow identified by ID or name, with options for streaming the response
+    and tracking execution metrics. It handles both streaming and non-streaming execution modes.
+    This endpoint uses API key authentication (Bearer token).
+
+    Args:
+        background_tasks (BackgroundTasks): FastAPI background task manager
+        flow (FlowRead | None): The flow to execute, loaded via dependency
+        input_request (SimplifiedAPIRequest | None): Input parameters for the flow
+        stream (bool): Whether to stream the response
+        api_key_user (UserRead): Authenticated user from API key
+        context (dict | None): Optional context to pass to the flow
+        http_request (Request): The incoming HTTP request for extracting global variables
+
+    Returns:
+        Union[StreamingResponse, RunResponse]: Either a streaming response for real-time results
+        or a RunResponse with the complete execution results
+
+    Raises:
+        HTTPException: For flow not found (404) or invalid input (400)
+        APIException: For internal execution errors (500)
+
+    Notes:
+        - Supports both streaming and non-streaming execution modes
+        - Tracks execution time and success/failure via telemetry
+        - Handles graceful client disconnection in streaming mode
+        - Provides detailed error handling with appropriate HTTP status codes
+        - Extracts global variables from HTTP headers with prefix X-LANGFLOW-GLOBAL-VAR-*
+        - Merges extracted variables with the context parameter as "request_variables"
+        - In streaming mode, uses EventManager to handle events:
+            - "add_message": New messages during execution
+            - "token": Individual tokens during streaming
+            - "end": Final execution result
+        - Authentication: Requires API key (Bearer token)
+    """
+    return await _run_flow_internal(
+        background_tasks=background_tasks,
+        flow=flow,
+        input_request=input_request,
+        stream=stream,
+        api_key_user=api_key_user,
+        context=context,
+        http_request=http_request,
+    )
+
+
+@router.post("/run/session/{flow_id_or_name}", response_model=None, response_model_exclude_none=True)
+async def simplified_run_flow_session(
+    *,
+    background_tasks: BackgroundTasks,
+    flow: Annotated[FlowRead | None, Depends(get_flow_by_id_or_endpoint_name)],
+    input_request: SimplifiedAPIRequest | None = None,
+    stream: bool = False,
+    api_key_user: CurrentActiveUser,
+    context: dict | None = None,
+    http_request: Request,
+):
+    """Executes a specified flow by ID with support for streaming and telemetry (session auth).
+
+    This endpoint executes a flow identified by ID or name, with options for streaming the response
+    and tracking execution metrics. It handles both streaming and non-streaming execution modes.
+    This endpoint uses session-based authentication (cookies).
+
+    Args:
+        background_tasks (BackgroundTasks): FastAPI background task manager
+        flow (FlowRead | None): The flow to execute, loaded via dependency
+        input_request (SimplifiedAPIRequest | None): Input parameters for the flow
+        stream (bool): Whether to stream the response
+        api_key_user (User): Authenticated user from session
+        context (dict | None): Optional context to pass to the flow
+        http_request (Request): The incoming HTTP request for extracting global variables
+
+    Returns:
+        Union[StreamingResponse, RunResponse]: Either a streaming response for real-time results
+        or a RunResponse with the complete execution results
+
+    Raises:
+        HTTPException: For flow not found (404) or invalid input (400)
+        APIException: For internal execution errors (500)
+
+    Notes:
+        - Supports both streaming and non-streaming execution modes
+        - Tracks execution time and success/failure via telemetry
+        - Handles graceful client disconnection in streaming mode
+        - Provides detailed error handling with appropriate HTTP status codes
+        - Extracts global variables from HTTP headers with prefix X-LANGFLOW-GLOBAL-VAR-*
+        - Merges extracted variables with the context parameter as "request_variables"
+        - In streaming mode, uses EventManager to handle events:
+            - "add_message": New messages during execution
+            - "token": Individual tokens during streaming
+            - "end": Final execution result
+        - Authentication: Requires active session (cookies)
+        - Feature Flag: Only available when agentic_experience is enabled
+    """
+    # Feature flag: Only allow access if agentic_experience is enabled
+    if not get_settings_service().settings.agentic_experience:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="This endpoint is not available",
+        )
+
+    return await _run_flow_internal(
+        background_tasks=background_tasks,
+        flow=flow,
+        input_request=input_request,
+        stream=stream,
+        api_key_user=api_key_user,
+        context=context,
+        http_request=http_request,
+    )
 
 
 @router.post("/webhook/{flow_id_or_name}", response_model=dict, status_code=HTTPStatus.ACCEPTED)  # noqa: RUF100, FAST003
@@ -851,9 +961,11 @@ async def custom_component_update(
         raise SerializationError.from_exception(exc, data=component_node) from exc
 
 
-@router.get("/config")
+@router.get("/config", dependencies=[Depends(get_current_active_user)])
 async def get_config() -> ConfigResponse:
     """Retrieve the current application configuration settings.
+
+    Requires authentication to prevent exposure of sensitive configuration details.
 
     Returns:
         ConfigResponse: The configuration settings of the application.

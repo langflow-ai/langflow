@@ -106,12 +106,13 @@ import { UnstructuredIcon } from "@/icons/Unstructured";
 import { UpstashSvgIcon } from "@/icons/Upstash";
 import { VectaraIcon } from "@/icons/VectaraIcon";
 import { VertexAIIcon } from "@/icons/VertexAI";
+import { VllmIcon } from "@/icons/vLLM";
 import { VLMRunIcon } from "@/icons/VLMRun";
 import { WeaviateIcon } from "@/icons/Weaviate";
 import { WikipediaIcon } from "@/icons/Wikipedia";
 import { WolframIcon } from "@/icons/Wolfram";
 import { XAIIcon } from "@/icons/xAI";
-import { YouTubeSvgIcon as YouTubeIcon } from "@/icons/Youtube";
+import { YoutubeIcon as YouTubeIcon } from "@/icons/Youtube";
 import { ZepMemoryIcon } from "@/icons/ZepMemory";
 import { JigsawStackIcon } from "./JigsawStack";
 import { WindsurfIcon } from "./Windsurf";
@@ -227,6 +228,7 @@ export const eagerIconsMapping = {
   Upstash: UpstashSvgIcon,
   Vectara: VectaraIcon,
   VertexAI: VertexAIIcon,
+  vLLM: VllmIcon,
   WatsonxAI: WatsonxAiIcon,
   Weaviate: WeaviateIcon,
   Wikipedia: WikipediaIcon,

@@ -8,6 +8,9 @@ from collections.abc import AsyncIterator, Callable, Iterator, Mapping
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
+from ag_ui.core import StepFinishedEvent, StepStartedEvent
+
+from lfx.events.observability.lifecycle_events import observable
 from lfx.exceptions.component import ComponentBuildError
 from lfx.graph.schema import INPUT_COMPONENTS, OUTPUT_COMPONENTS, InterfaceComponentTypes, ResultData
 from lfx.graph.utils import UnbuiltObject, UnbuiltResult, log_transaction
@@ -105,7 +108,6 @@ class Vertex:
         self.use_result = False
         self.build_times: list[float] = []
         self.state = VertexStates.ACTIVE
-        self.log_transaction_tasks: set[asyncio.Task] = set()
         self.output_names: list[str] = [
             output["name"] for output in self.outputs if isinstance(output, dict) and "name" in output
         ]
@@ -180,6 +182,7 @@ class Vertex:
 
         if isinstance(self.built_result, UnbuiltResult):
             return {}
+
         return self.built_result if isinstance(self.built_result, dict) else {"result": self.built_result}
 
     def set_artifacts(self) -> None:
@@ -381,6 +384,7 @@ class Vertex:
                 vertex=self,
             )
 
+    @observable
     async def _build(
         self,
         fallback_to_env_vars,
@@ -390,7 +394,6 @@ class Vertex:
         """Initiate the build process."""
         await logger.adebug(f"Building {self.display_name}")
         await self._build_each_vertex_in_params_dict()
-
         if self.base_type is None:
             msg = f"Base type for vertex {self.display_name} not found"
             raise ValueError(msg)
@@ -531,11 +534,12 @@ class Vertex:
         self,
         flow_id: str | UUID,
         source: Vertex,
-        status,
+        status: str,
         target: Vertex | None = None,
-        error=None,
+        error: str | Exception | None = None,
+        outputs: dict[str, Any] | None = None,
     ) -> None:
-        """Log a transaction asynchronously with proper task handling and cancellation.
+        """Log a transaction asynchronously.
 
         Args:
             flow_id: The ID of the flow
@@ -543,20 +547,16 @@ class Vertex:
             status: Transaction status
             target: Optional target vertex
             error: Optional error information
+            outputs: Optional explicit outputs dict (component execution results)
         """
-        if self.log_transaction_tasks:
-            # Safely await and remove completed tasks
-            task = self.log_transaction_tasks.pop()
-            await task
-
-            # Create and track new task
-        task = asyncio.create_task(log_transaction(flow_id, source, status, target, error))
-        self.log_transaction_tasks.add(task)
-        task.add_done_callback(self.log_transaction_tasks.discard)
+        try:
+            await log_transaction(flow_id, source, status, target, error, outputs)
+        except Exception as exc:  # noqa: BLE001
+            logger.debug(f"Error logging transaction: {exc!s}")
 
     async def _get_result(
         self,
-        requester: Vertex,
+        requester: Vertex,  # noqa: ARG002
         target_handle_name: str | None = None,  # noqa: ARG002
     ) -> Any:
         """Retrieves the result of the built component.
@@ -566,17 +566,11 @@ class Vertex:
         Returns:
             The built result if use_result is True, else the built object.
         """
-        flow_id = self.graph.flow_id
         if not self.built:
-            if flow_id:
-                await self._log_transaction_async(str(flow_id), source=self, target=requester, status="error")
             msg = f"Component {self.display_name} has not been built yet"
             raise ValueError(msg)
 
-        result = self.built_result if self.use_result else self.built_object
-        if flow_id:
-            await self._log_transaction_async(str(flow_id), source=self, target=requester, status="success")
-        return result
+        return self.built_result if self.use_result else self.built_object
 
     async def _build_vertex_and_update_params(self, key, vertex: Vertex) -> None:
         """Builds a given vertex and updates the params dictionary accordingly."""
@@ -657,6 +651,12 @@ class Vertex:
         except Exception as exc:
             tb = traceback.format_exc()
             await logger.aexception(exc)
+            # Log transaction error
+            flow_id = self.graph.flow_id
+            if flow_id:
+                await self._log_transaction_async(
+                    str(flow_id), source=self, target=None, status="error", error=str(exc)
+                )
             msg = f"Error building Component {self.display_name}: \n\n{exc}"
             raise ComponentBuildError(msg, tb) from exc
 
@@ -735,7 +735,10 @@ class Vertex:
                 self.build_inactive()
                 return None
 
-            if self.frozen and self.built:
+            # Loop components should always run, even when frozen,
+            # because they need to iterate through their data
+            is_loop_component = self.display_name == "Loop" or self.is_loop
+            if self.frozen and self.built and not is_loop_component:
                 return await self.get_requester_result(requester)
             if self.built and requester is not None:
                 # This means that the vertex has already been built
@@ -768,6 +771,19 @@ class Vertex:
                     self.steps_ran.append(step)
 
             self.finalize_build()
+
+            # Log transaction after successful build
+            flow_id = self.graph.flow_id
+            if flow_id:
+                # Extract outputs from outputs_logs for transaction logging
+                outputs_dict = None
+                if self.outputs_logs:
+                    outputs_dict = {
+                        k: v.model_dump() if hasattr(v, "model_dump") else v for k, v in self.outputs_logs.items()
+                    }
+                await self._log_transaction_async(
+                    str(flow_id), source=self, target=None, status="success", outputs=outputs_dict
+                )
 
         return await self.get_requester_result(requester)
 
@@ -821,3 +837,39 @@ class Vertex:
             return
         # Apply the function to each output
         [func(output) for output in self.custom_component.get_outputs_map().values()]
+
+    # AGUI/AG UI Event Streaming Callbacks/Methods - (Optional, see Observable decorator)
+    def raw_event_metrics(self, optional_fields: dict | None) -> dict:
+        """This method is used to get the metrics of the vertex by the Observable decorator.
+
+        If the vertex has a get_metrics method, it will be called, and the metrics will be captured
+        to stream back to the user in an AGUI compliant format.
+        Additional fields/metrics to be captured can be modified in this method, or in the callback methods,
+        which are before_callback_event and after_callback_event before returning the AGUI event.
+        """
+        if optional_fields is None:
+            optional_fields = {}
+        import time
+
+        return {"timestamp": time.time(), **optional_fields}
+
+    def before_callback_event(self, *args, **kwargs) -> StepStartedEvent:  # noqa: ARG002
+        """Should be a AGUI compatible event.
+
+        VERTEX class generates a StepStartedEvent event.
+        """
+        metrics = {}
+        if hasattr(self, "raw_event_metrics"):
+            metrics = self.raw_event_metrics({"component_id": self.id})
+
+        return StepStartedEvent(step_name=self.display_name, raw_event={"langflow": metrics})
+
+    def after_callback_event(self, result, *args, **kwargs) -> StepFinishedEvent:  # noqa: ARG002
+        """Should be a AGUI compatible event.
+
+        VERTEX class generates a StepFinishedEvent event.
+        """
+        metrics = {}
+        if hasattr(self, "raw_event_metrics"):
+            metrics = self.raw_event_metrics({"component_id": self.id})
+        return StepFinishedEvent(step_name=self.display_name, raw_event={"langflow": metrics})

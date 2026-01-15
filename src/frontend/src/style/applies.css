@@ -1100,7 +1100,7 @@
   }
 
   .input-invalid {
-    @apply border-destructive focus:border-destructive focus:ring-destructive;
+    @apply border-destructive focus:border-destructive focus:ring-destructive hover:border-destructive hover:ring-destructive;
   }
 
   .fade-container {
@@ -1284,6 +1284,13 @@
 
   .helper-line.vertical {
     stroke: hsl(var(--primary));
+  }
+}
+
+@layer components {
+  /* text-sm--medium */
+  .text-sm--medium {
+    @apply font-sans not-italic text-[13px] font-medium leading-4;
   }
 }
 
