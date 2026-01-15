@@ -54,13 +54,15 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
 ### Breaking changes
 
--   `langflow-base` dependency structure refactoring**
+-   `langflow-base` dependency structure refactor
 
-    The `langflow-base` package has been refactored to use granular optional dependency groups. Many dependencies that were previously included in the base `langflow-base` installation have been moved to optional extras.
+    The `langflow-base` package has been refactored to use granular optional dependency groups. Many dependencies that were previously included in the `langflow-base` installation have been moved to optional extras.
 
-    If you installed Langflow with `uv pip install langflow`, this is not a breaking change. Installing `langflow` automatically installs `langflow-base[complete]`, which includes all optional dependencies, maintaining the same functionality as before.
+    If you installed Langflow with `uv pip install langflow`, this is not a breaking change. Installing `langflow` automatically installs `langflow-base[complete]`, which includes all optional dependencies and maintains the same functionality as before.
 
-    If you installed Langflow with `uv pip install langflow-base` without specifying extras, **this is a breaking change**. If you install `langflow-base` directly, you will now only install the [core base dependencies](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/pyproject.toml). Dependencies that were previously included by default are now available only through optional extras.
+    If you installed Langflow with `uv pip install langflow-base` without specifying extra dependencies, **this is a breaking change**.
+    Dependencies that were previously included by default are now available only through optional extras.
+    If you install `langflow-base` directly, you will now only install the [core base dependencies](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/pyproject.toml).
 
     **Migration**: If you use `langflow-base` directly and need the full set of dependencies, install it with the `complete` extra:
 
