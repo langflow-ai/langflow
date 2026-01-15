@@ -1,3 +1,4 @@
+import shutil
 from pathlib import Path
 from typing import cast
 
@@ -18,7 +19,7 @@ from lfx.components.policies.guarded_tool import GuardedTool
 from lfx.components.policies.llm_wrapper import LangchainModelWrapper
 from lfx.components.policies.models import BUILDTIME_MODELS
 from lfx.field_typing import LanguageModel, Tool
-from lfx.io import BoolInput, HandleInput, ModelInput, Output, SecretStrInput, StrInput, TabInput
+from lfx.io import BoolInput, HandleInput, ModelInput, MultilineInput, Output, SecretStrInput, StrInput, TabInput
 from lfx.log.logger import logger
 
 TOOLGUARD_WORK_DIR = Path("tmp_toolguard")
@@ -78,15 +79,15 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         #     #advanced=True,
         #     input_types=["DataFrame"],
         # ),
-        StrInput(
+        MultilineInput(
             name="policies",
             display_name="Policies",
-            info="Enter one or more clear, well-defined and self-contained business policies, Using the '+' button.",
-            is_list=True,
-            tool_mode=True,
-            placeholder="Add business policy...",
-            list_add_label="Add Policy",
-            input_types=[],
+            info="A well-defined and self-contained business policy document.",
+            # is_list=True,
+            # tool_mode=True,
+            placeholder="Business policy...",
+            # list_add_label="Add Policy",
+            # input_types=[],
         ),
         StrInput(
             name="project",
@@ -109,7 +110,6 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             info="Model Provider API key",
             required=False,
             show=True,
-            real_time_refresh=True,
             advanced=True,
         ),
         HandleInput(
@@ -122,13 +122,33 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         ),
     ]
     outputs = [
-        Output(display_name="Guarded Tools", type_=Tool, name="guard_code", method="build_guards"),
+        Output(
+            display_name="Guarded Tools",
+            type_=Tool,
+            name="guard_code",
+            method="build_guards",
+            group_outputs=True,
+        ),
+        # Output(
+        #     display_name="Review",
+        #     name="review",
+        #     method="review_link",
+        #     group_outputs=True,
+        # ),
     ]
 
     @property
     def work_dir(self) -> Path:
-        logger.info("project=" + to_snake_case(self.project))
+        # logger.info("project=" + to_snake_case(self.project))
         return TOOLGUARD_WORK_DIR / str(self.user_id) / to_snake_case(self.project)
+
+    # def review_link(self):
+    #     cur_dir = Path.cwd()
+    #     link = f"http://127.0.0.1:8080/?folder={cur_dir /self.work_dir}"
+    #     # logger.info(f"<a href=\"{link}\">Open</a>")
+    #     # self.log(f"<a href=\"{link}\">Open</a>")
+    #     self.log(link)
+    #     return link
 
     def build_model(self) -> LanguageModel:
         llm_model = get_llm(
@@ -158,10 +178,12 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         logger.info("🔒️ToolGuard: Starting step 1")
         logger.info(f"model = {self.model}")
         llm = LangchainModelWrapper(self.build_model())
-        toolguard_step1_dir = self.work_dir / STEP1
+        out_dir = self.work_dir / STEP1
+        if out_dir.exists():
+            shutil.rmtree(out_dir)
         policy_text = "\n".join(self.policies)
         specs = await generate_guard_specs(
-            policy_text=policy_text, tools=self.in_tools, llm=llm, work_dir=toolguard_step1_dir, short=True
+            policy_text=policy_text, tools=self.in_tools, llm=llm, work_dir=out_dir, short=True
         )
         logger.info("🔒️ToolGuard: Step 1 Done")
         return specs
@@ -169,9 +191,11 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
     async def _build_guards(self, specs: list[ToolGuardSpec]) -> ToolGuardsCodeGenerationResult:
         logger.info("🔒️ToolGuard: Starting step 2")
         out_dir = self.work_dir / STEP2
+        if out_dir.exists():
+            shutil.rmtree(out_dir)
         llm = LangchainModelWrapper(self.build_model())
         gen_result = await generate_guards_from_specs(
-            tools=self.in_tools, tool_specs=specs, work_dir=out_dir, llm=llm, app_name=to_snake_case(self.self.project)
+            tools=self.in_tools, tool_specs=specs, work_dir=out_dir, llm=llm, app_name=to_snake_case(self.project)
         )
         logger.info("🔒️ToolGuard: Step 2 Done")
         return gen_result
