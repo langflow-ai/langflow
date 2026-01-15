@@ -1,14 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
+import type { AssistantConfigResponse } from "@/components/core/generateComponent/types";
 
-type GenerateComponentConfigResponse = {
-  configured: boolean;
-  missing: string[];
-};
-
-async function getGenerateComponentConfig(): Promise<GenerateComponentConfigResponse> {
-  const response = await api.get<GenerateComponentConfigResponse>(
+async function getGenerateComponentConfig(): Promise<AssistantConfigResponse> {
+  const response = await api.get<AssistantConfigResponse>(
     getURL("GENERATE_COMPONENT_CHECK_CONFIG"),
   );
   return response.data;

@@ -2,15 +2,29 @@ import {
   type KeyboardEvent,
   useCallback,
   useEffect,
+  useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
 import { nanoid } from "nanoid";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import SimplifiedCodeTabComponent from "@/components/core/codeTabsComponent";
 import { Button } from "@/components/ui/button";
-import CodeAreaModal from "@/modals/codeAreaModal";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/utils/utils";
-import type { SubmitResult, TerminalMessage, GenerateComponentTerminalProps } from "./types";
+import { extractLanguage, isCodeBlock } from "@/utils/codeBlockUtils";
+import type { SubmitResult, TerminalMessage, GenerateComponentTerminalProps, AssistantConfigResponse } from "./types";
 
 const TERMINAL_MIN_HEIGHT = 200;
 const TERMINAL_MAX_HEIGHT = 600;
@@ -20,6 +34,7 @@ const RESIZE_HANDLE_HEIGHT = 8;
 const HISTORY_STORAGE_KEY = "generate-component-terminal-history";
 const MAX_HISTORY_SIZE = 50;
 const TEXTAREA_MAX_HEIGHT = 150;
+const SCROLL_BOTTOM_THRESHOLD = 10;
 
 const getHistory = (): string[] => {
   try {
@@ -38,9 +53,32 @@ const saveToHistory = (input: string) => {
   }
 };
 
-const MODEL_NAME = "Claude Sonnet 4.5";
 const MIN_RETRIES = 0;
 const MAX_RETRIES_LIMIT = 5;
+
+const RATE_LIMIT_PATTERNS = ["rate limit", "rate_limit", "429", "too many requests"];
+const PROVIDER_ERROR_PATTERNS = ["api key", "api_key", "authentication", "unauthorized", "model provider", "not configured"];
+const QUOTA_ERROR_PATTERNS = ["quota", "billing", "insufficient"];
+
+type ErrorCategory = "rate_limit" | "quota" | "provider" | "generic";
+
+const categorizeError = (errorMessage: string, statusCode?: number): ErrorCategory => {
+  const errorLower = errorMessage.toLowerCase();
+
+  if (RATE_LIMIT_PATTERNS.some(pattern => errorLower.includes(pattern))) {
+    return "rate_limit";
+  }
+  if (QUOTA_ERROR_PATTERNS.some(pattern => errorLower.includes(pattern))) {
+    return "quota";
+  }
+  if (PROVIDER_ERROR_PATTERNS.some(pattern => errorLower.includes(pattern))) {
+    return "provider";
+  }
+  if (statusCode === 400 && errorLower.includes("required")) {
+    return "provider";
+  }
+  return "generic";
+};
 
 type CommandResult = {
   handled: boolean;
@@ -55,11 +93,11 @@ type CommandContext = {
 };
 
 const HELP_TEXT = `Available commands:
-  MAX_RETRIES=<0-5>  Set validation retry attempts
+  MAX_RETRIES=<0-5>  Set component validation retry attempts (only applies when generating components)
   HELP or ?          Show this help message
   CLEAR              Clear terminal history
 
-Type any other text to generate a component.`;
+Ask questions about Langflow or describe a component to generate.`;
 
 const parseCommand = (input: string, context: CommandContext): CommandResult => {
   const trimmed = input.trim();
@@ -94,93 +132,124 @@ const parseCommand = (input: string, context: CommandContext): CommandResult => 
   return { handled: false };
 };
 
+type ModelOption = {
+  value: string;
+  label: string;
+  provider: string;
+};
+
 const TerminalHeader = ({
   onClose,
   onClear,
-  isConfigured,
-  onConfigureClick,
+  configData,
+  selectedModel,
+  onModelChange,
 }: {
   onClose: () => void;
   onClear: () => void;
-  isConfigured?: boolean;
-  onConfigureClick?: () => void;
-}) => (
-  <div className="flex items-center justify-between border-b border-zinc-700 bg-zinc-900 px-4 py-2">
-    <div className="flex items-center gap-3">
-      <div className="flex items-center gap-2">
-        <ForwardedIconComponent
-          name="Terminal"
-          className="h-4 w-4 text-emerald-400"
-        />
-        <span className="font-mono text-sm font-medium text-zinc-200">
-          Generate component
-        </span>
+  configData?: AssistantConfigResponse;
+  selectedModel: string;
+  onModelChange: (value: string) => void;
+}) => {
+  // Build model options from config data
+  const modelOptions = useMemo((): ModelOption[] => {
+    if (!configData?.providers) return [];
+
+    const options: ModelOption[] = [];
+    for (const provider of configData.providers) {
+      if (provider.configured) {
+        for (const model of provider.models) {
+          options.push({
+            value: `${provider.name}:${model.name}`,
+            label: model.display_name,
+            provider: provider.name,
+          });
+        }
+      }
+    }
+    return options;
+  }, [configData]);
+
+  const selectedOption = modelOptions.find(opt => opt.value === selectedModel);
+  const hasMultipleProviders = new Set(modelOptions.map(m => m.provider)).size > 1;
+
+  return (
+    <div className="flex items-center justify-between border-b border-border bg-background px-4 py-2">
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <ForwardedIconComponent
+            name="Sparkles"
+            className="h-4 w-4 text-accent-emerald-foreground"
+          />
+          <span className="font-mono text-sm font-medium text-foreground">
+            Assistant
+          </span>
+        </div>
       </div>
-      <span className="text-xs text-zinc-500">|</span>
-      <span className="flex items-center gap-1.5 text-xs text-zinc-400">
-        <ForwardedIconComponent name="Bot" className="h-3 w-3" />
-        {MODEL_NAME}
-      </span>
-    </div>
-    <div className="flex items-center gap-1">
-      {onConfigureClick && (
+      <div className="flex items-center gap-2">
+        <Select value={selectedModel} onValueChange={onModelChange} disabled={modelOptions.length === 0}>
+          <SelectTrigger className="h-7 w-auto min-w-[140px] border-border bg-muted text-xs text-foreground hover:bg-accent focus:ring-0 focus:ring-offset-0 disabled:opacity-50">
+            <div className="flex items-center gap-1.5">
+              <ForwardedIconComponent name="Bot" className="h-3 w-3 text-muted-foreground" />
+              <SelectValue placeholder="Select model">
+                {selectedOption ? (
+                  <span>
+                    {hasMultipleProviders && <span className="text-muted-foreground">{selectedOption.provider} / </span>}
+                    {selectedOption.label}
+                  </span>
+                ) : modelOptions.length === 0 ? (
+                  "No models"
+                ) : (
+                  "Select model"
+                )}
+              </SelectValue>
+            </div>
+          </SelectTrigger>
+          <SelectContent className="border-border bg-muted max-h-[300px]">
+            {configData?.providers && configData.providers.length > 0 ? (
+              configData.providers.map((provider) => (
+                <SelectGroup key={provider.name}>
+                  <SelectLabel className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                    {provider.name}
+                  </SelectLabel>
+                  {provider.models.map((model) => (
+                    <SelectItem
+                      key={`${provider.name}:${model.name}`}
+                      value={`${provider.name}:${model.name}`}
+                      className="text-xs text-foreground cursor-pointer"
+                    >
+                      {model.display_name}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              ))
+            ) : (
+              <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                Configure a model provider
+              </div>
+            )}
+          </SelectContent>
+        </Select>
         <Button
           variant="ghost"
           size="iconSm"
-          onClick={onConfigureClick}
-          className={cn(
-            "hover:bg-zinc-800",
-            isConfigured === false
-              ? "text-amber-400 hover:text-amber-300"
-              : "text-zinc-400 hover:text-zinc-200"
-          )}
-          title="Open Model Providers"
+          onClick={onClear}
+          className="text-muted-foreground hover:bg-muted hover:text-foreground"
         >
-          <ForwardedIconComponent name="Settings" className="h-3.5 w-3.5" />
+          <ForwardedIconComponent name="Trash2" className="h-3.5 w-3.5" />
         </Button>
-      )}
-      <Button
-        variant="ghost"
-        size="iconSm"
-        onClick={onClear}
-        className="text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
-      >
-        <ForwardedIconComponent name="Trash2" className="h-3.5 w-3.5" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="iconSm"
-        onClick={onClose}
-        className="text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
-      >
-        <ForwardedIconComponent name="X" className="h-4 w-4" />
-      </Button>
+        <Button
+          variant="ghost"
+          size="iconSm"
+          onClick={onClose}
+          className="text-muted-foreground hover:bg-muted hover:text-foreground"
+        >
+          <ForwardedIconComponent name="X" className="h-4 w-4" />
+        </Button>
+      </div>
     </div>
-  </div>
-);
-
-const ValidationBadge = ({
-  validated,
-  className,
-}: {
-  validated: boolean;
-  className?: string;
-}) => (
-  <span
-    className={cn(
-      "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
-      validated
-        ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-        : "bg-red-500/20 text-red-400 border border-red-500/30",
-    )}
-  >
-    <ForwardedIconComponent
-      name={validated ? "CheckCircle" : "XCircle"}
-      className="h-3 w-3"
-    />
-    {validated ? `Valid${className ? `: ${className}` : ""}` : "Invalid"}
-  </span>
-);
+  );
+};
 
 const downloadComponentFile = (code: string, className: string) => {
   const blob = new Blob([code], { type: "text/plain" });
@@ -197,19 +266,17 @@ const downloadComponentFile = (code: string, className: string) => {
 const ComponentResultLine = ({
   className,
   code,
-  validationAttempts,
   onAddToCanvas,
   onSaveToSidebar,
 }: {
   className: string;
   code: string;
-  validationAttempts?: number;
   onAddToCanvas: (code: string) => Promise<void>;
   onSaveToSidebar: (code: string, className: string) => Promise<void>;
 }) => {
-  const [isCodeModalOpen, setIsCodeModalOpen] = useState(false);
   const [isAddingToCanvas, setIsAddingToCanvas] = useState(false);
   const [isSavingToSidebar, setIsSavingToSidebar] = useState(false);
+  const [isCodeExpanded, setIsCodeExpanded] = useState(false);
 
   const handleDownload = () => {
     downloadComponentFile(code, className);
@@ -235,64 +302,58 @@ const ComponentResultLine = ({
 
   return (
     <div className="flex flex-col gap-2 py-2">
-      <div className="flex items-center gap-2">
-        <ValidationBadge validated={true} className={className} />
-        {validationAttempts && validationAttempts > 1 && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-xs text-amber-400 border border-amber-500/20">
-            <ForwardedIconComponent name="RotateCw" className="h-3 w-3" />
-            {validationAttempts} attempts
-          </span>
-        )}
-      </div>
-
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <span className="font-mono text-sm text-emerald-400">
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => setIsCodeExpanded(!isCodeExpanded)}
+          className="flex items-center gap-1.5 hover:text-foreground transition-colors"
+        >
+          <ForwardedIconComponent
+            name="ChevronRight"
+            className={cn(
+              "h-4 w-4 text-muted-foreground transition-transform",
+              isCodeExpanded && "rotate-90"
+            )}
+          />
+          <ForwardedIconComponent
+            name="CheckCircle"
+            className="h-4 w-4 text-accent-emerald-foreground"
+          />
+          <span className="font-mono text-sm text-accent-emerald-foreground">
             {className}.py
           </span>
+        </button>
 
-          <div className="flex items-center gap-0.5">
-            <Button
-              variant="ghost"
-              size="iconSm"
-              onClick={() => setIsCodeModalOpen(true)}
-              className="text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
-              title="View Code"
-            >
-              <ForwardedIconComponent name="Code" className="h-3.5 w-3.5" />
-            </Button>
+        <div className="flex items-center gap-0.5">
+          <Button
+            variant="ghost"
+            size="iconSm"
+            onClick={handleDownload}
+            className="text-muted-foreground hover:bg-muted hover:text-foreground"
+            title="Download"
+          >
+            <ForwardedIconComponent name="Download" className="h-3.5 w-3.5" />
+          </Button>
 
-            <Button
-              variant="ghost"
-              size="iconSm"
-              onClick={handleDownload}
-              className="text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
-              title="Download"
-            >
-              <ForwardedIconComponent name="Download" className="h-3.5 w-3.5" />
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="iconSm"
-              onClick={handleSaveToSidebar}
-              disabled={isSavingToSidebar}
-              className="text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 disabled:opacity-50"
-              title="Save to Sidebar"
-            >
-              <ForwardedIconComponent
-                name={isSavingToSidebar ? "Loader2" : "SaveAll"}
-                className={cn("h-3.5 w-3.5", isSavingToSidebar && "animate-spin")}
-              />
-            </Button>
-          </div>
+          <Button
+            variant="ghost"
+            size="iconSm"
+            onClick={handleSaveToSidebar}
+            disabled={isSavingToSidebar}
+            className="text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
+            title="Save to Sidebar"
+          >
+            <ForwardedIconComponent
+              name={isSavingToSidebar ? "Loader2" : "SaveAll"}
+              className={cn("h-3.5 w-3.5", isSavingToSidebar && "animate-spin")}
+            />
+          </Button>
         </div>
 
         <Button
           size="sm"
           onClick={handleAddToCanvas}
           disabled={isAddingToCanvas}
-          className="bg-emerald-600 hover:bg-emerald-500 text-white gap-1.5 px-3 h-7 disabled:opacity-50"
+          className="bg-accent-emerald-foreground hover:bg-accent-emerald-hover text-background gap-1.5 px-3 h-7 disabled:opacity-50"
         >
           <ForwardedIconComponent
             name={isAddingToCanvas ? "Loader2" : "Plus"}
@@ -302,20 +363,75 @@ const ComponentResultLine = ({
         </Button>
       </div>
 
-      <CodeAreaModal
-        value={code}
-        setValue={() => {}}
-        nodeClass={undefined}
-        setNodeClass={() => {}}
-        readonly={true}
-        open={isCodeModalOpen}
-        setOpen={setIsCodeModalOpen}
-      >
-        <span />
-      </CodeAreaModal>
+      {/* Collapsible code block */}
+      {isCodeExpanded && (
+        <div className="mt-1">
+          <SimplifiedCodeTabComponent language="python" code={code} />
+        </div>
+      )}
     </div>
   );
 };
+
+const MarkdownContent = ({ content }: { content: string }) => (
+  <Markdown
+    remarkPlugins={[remarkGfm]}
+    className="prose prose-sm prose-invert max-w-full text-foreground"
+    components={{
+      p({ children }) {
+        return <p className="mb-2 last:mb-0">{children}</p>;
+      },
+      a({ href, children }) {
+        return (
+          <a href={href} target="_blank" rel="noopener noreferrer" className="text-accent-emerald-foreground hover:text-accent-emerald-hover">
+            {children}
+          </a>
+        );
+      },
+      ul({ children }) {
+        return <ul className="list-disc pl-4 mb-2">{children}</ul>;
+      },
+      ol({ children }) {
+        return <ol className="list-decimal pl-4 mb-2">{children}</ol>;
+      },
+      li({ children }) {
+        return <li className="mb-1">{children}</li>;
+      },
+      pre({ children }) {
+        return <>{children}</>;
+      },
+      code({ className, children, ...props }) {
+        const content = String(children).replace(/\n$/, "");
+        if (isCodeBlock(className, props, content)) {
+          return (
+            <div className="my-2">
+              <SimplifiedCodeTabComponent
+                language={extractLanguage(className) || "python"}
+                code={content}
+              />
+            </div>
+          );
+        }
+        return (
+          <code className="bg-muted px-1.5 py-0.5 rounded text-accent-emerald-foreground text-xs" {...props}>
+            {children}
+          </code>
+        );
+      },
+      strong({ children }) {
+        return <strong className="font-semibold text-foreground">{children}</strong>;
+      },
+      em({ children }) {
+        return <em className="italic text-muted-foreground">{children}</em>;
+      },
+      blockquote({ children }) {
+        return <blockquote className="border-l-2 border-border pl-3 italic text-muted-foreground">{children}</blockquote>;
+      },
+    }}
+  >
+    {content}
+  </Markdown>
+);
 
 const MessageLine = ({
   message,
@@ -329,19 +445,19 @@ const MessageLine = ({
   const getMessageStyle = () => {
     switch (message.type) {
       case "input":
-        return "text-emerald-400";
+        return "text-accent-emerald-foreground";
       case "output":
-        return "text-zinc-300";
+        return "text-foreground";
       case "error":
-        return "text-red-400";
+        return "text-destructive";
       case "system":
-        return "text-zinc-500 italic";
+        return "text-muted-foreground italic";
       case "validated":
-        return "text-emerald-300";
+        return "text-accent-emerald-foreground";
       case "validation_error":
-        return "text-amber-400";
+        return "text-accent-amber-foreground";
       default:
-        return "text-zinc-300";
+        return "text-foreground";
     }
   };
 
@@ -349,16 +465,10 @@ const MessageLine = ({
     switch (message.type) {
       case "input":
         return "> ";
-      case "output":
-        return "";
       case "error":
         return "! ";
       case "system":
         return "# ";
-      case "validated":
-        return "";
-      case "validation_error":
-        return "";
       default:
         return "";
     }
@@ -373,65 +483,81 @@ const MessageLine = ({
       <ComponentResultLine
         className={message.metadata.className}
         code={message.metadata.componentCode}
-        validationAttempts={message.metadata.validationAttempts}
         onAddToCanvas={onAddToCanvas}
         onSaveToSidebar={onSaveToSidebar}
       />
     );
   }
 
-  const showValidationBadge =
-    message.type === "validated" || message.type === "validation_error";
+  // Use markdown rendering for output messages
+  const useMarkdown = message.type === "output";
 
   return (
     <div className="flex flex-col gap-1">
-      {showValidationBadge && (
-        <div className="flex items-center gap-2 py-1">
-          <ValidationBadge
-            validated={message.type === "validated"}
-            className={message.metadata?.className}
+      {message.type === "validation_error" && (
+        <div className="flex items-center gap-1.5 py-1">
+          <ForwardedIconComponent
+            name="XCircle"
+            className="h-4 w-4 text-destructive"
           />
-          {message.metadata?.validationAttempts &&
-            message.metadata.validationAttempts > 1 && (
-              <span className="text-xs text-zinc-500">
-                (after {message.metadata.validationAttempts} attempts)
-              </span>
-            )}
+          <span className="text-sm text-destructive">Validation failed</span>
         </div>
       )}
-      <div
-        className={cn("font-mono text-sm whitespace-pre-wrap", getMessageStyle())}
-      >
-        <span className="select-none opacity-70">{getPrefix()}</span>
-        {message.content}
-      </div>
+      {useMarkdown ? (
+        <div className="text-sm">
+          <MarkdownContent content={message.content} />
+        </div>
+      ) : (
+        <div
+          className={cn("font-mono text-sm whitespace-pre-wrap", getMessageStyle())}
+        >
+          <span className="select-none opacity-70">{getPrefix()}</span>
+          {message.content}
+        </div>
+      )}
     </div>
   );
 };
 
-const LoadingIndicator = () => (
-  <div className="flex flex-col gap-1.5 py-2">
-    <div className="flex items-center gap-2 font-mono text-sm text-zinc-400">
+type ProgressInfo = {
+  step: "generating" | "validating";
+  attempt: number;
+  maxAttempts: number;
+} | null;
+
+const LoadingIndicator = ({
+  progress,
+}: {
+  progress?: ProgressInfo;
+}) => {
+  const getStatusText = () => {
+    if (!progress) return "Generating...";
+    const { step, attempt, maxAttempts } = progress;
+    if (step === "generating") {
+      return "Generating...";
+    }
+    return `Validating... attempt ${attempt}/${maxAttempts}`;
+  };
+
+  return (
+    <div className="flex items-center gap-2 py-2 font-mono text-sm text-muted-foreground">
       <ForwardedIconComponent
         name="Loader2"
-        className="h-3.5 w-3.5 animate-spin text-emerald-400"
+        className="h-3.5 w-3.5 animate-spin"
       />
-      <span>Generating component...</span>
+      <span>{getStatusText()}</span>
     </div>
-    <div className="ml-5.5 flex items-center gap-2 font-mono text-xs text-zinc-500">
-      <span>Code will be validated automatically.</span>
-    </div>
-  </div>
-);
+  );
+};
 
 const ConfigLoading = () => (
   <div className="flex flex-col items-center justify-center h-full py-4">
     <div className="flex flex-col items-center gap-3">
       <ForwardedIconComponent
         name="Loader2"
-        className="h-8 w-8 text-zinc-400 animate-spin"
+        className="h-8 w-8 text-muted-foreground animate-spin"
       />
-      <span className="text-sm text-zinc-400">Checking configuration...</span>
+      <span className="text-sm text-muted-foreground">Checking configuration...</span>
     </div>
   </div>
 );
@@ -441,46 +567,23 @@ const ConfigurationRequired = ({
 }: {
   onConfigureClick?: () => void;
 }) => (
-  <div className="flex flex-col items-center justify-center h-full py-4">
-    <div className="flex flex-col items-center gap-3 max-w-sm text-center">
-      <div className="flex items-center justify-center w-10 h-10 rounded-full bg-amber-500/10 border border-amber-500/20">
-        <ForwardedIconComponent
-          name="Key"
-          className="h-5 w-5 text-amber-400"
-        />
-      </div>
-      <div className="flex flex-col gap-1">
-        <h3 className="text-sm font-medium text-zinc-200">
-          Anthropic API Key Required
-        </h3>
-        <p className="text-xs text-zinc-400">
-          Configure your API Key to generate components:
-        </p>
-      </div>
-      <div className="flex flex-col gap-1.5 w-full text-left bg-zinc-800/50 rounded-lg p-3 border border-zinc-700">
-        <div className="flex items-center gap-2">
-          <span className="flex items-center justify-center w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-medium shrink-0">
-            1
-          </span>
-          <span className="text-xs text-zinc-300">Settings → Model Providers → Anthropic</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="flex items-center justify-center w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-medium shrink-0">
-            2
-          </span>
-          <code className="text-xs text-zinc-400">
-            ANTHROPIC_API_KEY in .env
-          </code>
-        </div>
-      </div>
+  <div className="flex flex-col items-center justify-center h-full">
+    <div className="flex flex-col items-center gap-2 text-center">
+      <ForwardedIconComponent
+        name="Bot"
+        className="h-6 w-6 text-accent-amber-foreground"
+      />
+      <p className="text-sm text-foreground">
+        Configure a model provider to use the Assistant
+      </p>
       {onConfigureClick && (
         <Button
           size="sm"
           onClick={onConfigureClick}
-          className="bg-emerald-600 hover:bg-emerald-500 text-white gap-1.5 h-8"
+          className="bg-accent-emerald-foreground hover:bg-accent-emerald-hover text-background gap-1.5 h-7 text-xs"
         >
-          <ForwardedIconComponent name="Settings" className="h-3.5 w-3.5" />
-          Open Model Providers
+          <ForwardedIconComponent name="Settings" className="h-3 w-3" />
+          Model Providers
         </Button>
       )}
     </div>
@@ -499,19 +602,20 @@ const GenerateComponentTerminal = ({
   isConfigured,
   isConfigLoading,
   onConfigureClick,
+  configData,
 }: GenerateComponentTerminalProps) => {
   const getWelcomeMessages = useCallback(
     (): TerminalMessage[] => [
       {
         id: nanoid(),
         type: "system",
-        content: "Welcome to Generate component. Type HELP for commands.",
+        content: "Welcome to Assistant. Ask about Langflow documentation or describe a custom component to generate. Type HELP for commands.",
         timestamp: new Date(),
       },
       {
         id: nanoid(),
         type: "system",
-        content: `MAX_RETRIES=${maxRetries}`,
+        content: `MAX_RETRIES=${maxRetries} (for component generation)`,
         timestamp: new Date(),
       },
     ],
@@ -522,29 +626,113 @@ const GenerateComponentTerminal = ({
   const [inputValue, setInputValue] = useState("");
   const [height, setHeight] = useState(TERMINAL_DEFAULT_HEIGHT);
   const [historyIndex, setHistoryIndex] = useState(-1);
+  const [progress, setProgress] = useState<ProgressInfo>(null);
+
+  // Model selection state
+  const [selectedModel, setSelectedModel] = useState<string>("");
+
+  // Initialize selected model when configData loads
+  useEffect(() => {
+    if (configData?.default_provider && configData?.default_model && !selectedModel) {
+      setSelectedModel(`${configData.default_provider}:${configData.default_model}`);
+    }
+  }, [configData, selectedModel]);
+
+  // Extract provider and model name from selected value
+  const getProviderAndModel = useCallback(() => {
+    if (!selectedModel) return { provider: undefined, modelName: undefined };
+    const [provider, modelName] = selectedModel.split(":");
+    return { provider, modelName };
+  }, [selectedModel]);
 
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const terminalRef = useRef<HTMLDivElement>(null);
+  const shouldStayAtBottomRef = useRef(true);
 
   const scrollToBottom = useCallback(() => {
     const container = messagesContainerRef.current;
     if (container) {
       requestAnimationFrame(() => {
         container.scrollTop = container.scrollHeight;
+        shouldStayAtBottomRef.current = true;
       });
     }
   }, []);
 
-  useEffect(() => {
-    scrollToBottom();
+  // Track if user scrolled away from bottom
+  const handleScroll = useCallback(() => {
+    const container = messagesContainerRef.current;
+    if (container) {
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      const isAtBottom = scrollHeight - scrollTop - clientHeight < SCROLL_BOTTOM_THRESHOLD;
+      shouldStayAtBottomRef.current = isAtBottom;
+    }
+  }, []);
+
+  // Use useLayoutEffect for scroll operations to prevent visual jumps
+  useLayoutEffect(() => {
+    if (shouldStayAtBottomRef.current) {
+      scrollToBottom();
+    }
   }, [messages, isLoading, scrollToBottom]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (isOpen) {
       scrollToBottom();
       textareaRef.current?.focus();
     }
+  }, [isOpen, scrollToBottom]);
+
+  // Scroll to bottom when tab becomes visible, window gains focus, or terminal container changes
+  useEffect(() => {
+    const terminal = terminalRef.current;
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible" && isOpen && shouldStayAtBottomRef.current) {
+        requestAnimationFrame(scrollToBottom);
+      }
+    };
+
+    const handleFocus = () => {
+      if (isOpen && shouldStayAtBottomRef.current) {
+        requestAnimationFrame(scrollToBottom);
+      }
+    };
+
+    // Also handle clicks inside terminal to restore scroll
+    const handleClick = () => {
+      if (isOpen && shouldStayAtBottomRef.current) {
+        requestAnimationFrame(scrollToBottom);
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleFocus);
+    terminal?.addEventListener("click", handleClick);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleFocus);
+      terminal?.removeEventListener("click", handleClick);
+    };
+  }, [isOpen, scrollToBottom]);
+
+  // Use ResizeObserver to maintain scroll position when terminal resizes (not content changes)
+  useEffect(() => {
+    const terminal = terminalRef.current;
+    if (!terminal || !isOpen) return;
+
+    const resizeObserver = new ResizeObserver(() => {
+      if (shouldStayAtBottomRef.current) {
+        scrollToBottom();
+      }
+    });
+
+    // Only observe the terminal container resize, not content changes
+    resizeObserver.observe(terminal);
+
+    return () => resizeObserver.disconnect();
   }, [isOpen, scrollToBottom]);
 
   const adjustTextareaHeight = useCallback(() => {
@@ -601,7 +789,7 @@ const GenerateComponentTerminal = ({
       {
         id: nanoid(),
         type: "system",
-        content: `MAX_RETRIES=${maxRetries}`,
+        content: `MAX_RETRIES=${maxRetries} (for component generation)`,
         timestamp: new Date(),
       },
     ]);
@@ -631,7 +819,15 @@ const GenerateComponentTerminal = ({
     }
 
     try {
-      const response: SubmitResult = await onSubmit(trimmedInput);
+      const { provider, modelName } = getProviderAndModel();
+
+      // Pass progress callback to onSubmit
+      const handleProgress = (p: { step: "generating" | "validating"; attempt: number; maxAttempts: number }) => {
+        setProgress(p);
+      };
+
+      const response: SubmitResult = await onSubmit(trimmedInput, provider, modelName, handleProgress);
+      setProgress(null);
 
       if (response.validated === true) {
         addMessageWithMetadata("validated", response.content, {
@@ -641,21 +837,28 @@ const GenerateComponentTerminal = ({
           componentCode: response.componentCode,
         });
       } else if (response.validated === false) {
-        addMessageWithMetadata("validation_error", response.content, {
+        // Show validation failed message with the extracted code (if available)
+        const codePreview = response.componentCode
+          ? response.componentCode.split("\n").slice(0, 5).join("\n") + "..."
+          : "No code extracted";
+
+        addMessageWithMetadata("validation_error", `Component generation failed after ${response.validationAttempts || 1} attempt(s)`, {
           validated: false,
           validationAttempts: response.validationAttempts,
+          componentCode: response.componentCode,
         });
         if (response.validationError) {
           addMessage("error", `Validation error: ${response.validationError}`);
         }
+        addMessage("system", `Code preview:\n${codePreview}`);
       } else {
         addMessage("output", response.content);
       }
     } catch (error: unknown) {
+      setProgress(null);
       // Extract error message from axios response or error object
       let errorMessage = "An error occurred";
 
-      // Check for axios error with response data
       const axiosError = error as { response?: { data?: { detail?: string }; status?: number } };
       if (axiosError?.response?.data?.detail) {
         errorMessage = axiosError.response.data.detail;
@@ -663,25 +866,24 @@ const GenerateComponentTerminal = ({
         errorMessage = error.message;
       }
 
-      // Check if it's an API key related error
-      const isApiKeyError =
-        errorMessage.toLowerCase().includes("anthropic_api_key") ||
-        errorMessage.toLowerCase().includes("api key") ||
-        errorMessage.toLowerCase().includes("authentication") ||
-        errorMessage.toLowerCase().includes("unauthorized") ||
-        (axiosError?.response?.status === 400 && errorMessage.toLowerCase().includes("required"));
+      const errorCategory = categorizeError(errorMessage, axiosError?.response?.status);
 
-      if (isApiKeyError) {
-        addMessage("error", "Anthropic API Key issue detected.");
-        addMessage("system", "Please check your Anthropic API Key configuration:");
-        addMessage("system", "  1. Go to Settings → Model Providers → Anthropic");
-        addMessage("system", "  2. Or set ANTHROPIC_API_KEY in your .env file");
-        addMessage("system", "Click the ⚙ icon above to open Model Providers settings.");
-      } else {
-        addMessage("error", errorMessage);
+      switch (errorCategory) {
+        case "rate_limit":
+          addMessage("error", "Rate limit exceeded. Please wait a moment and try again.");
+          break;
+        case "quota":
+          addMessage("error", "API quota exceeded. Please check your account billing.");
+          break;
+        case "provider":
+          addMessage("error", "Model provider configuration issue.");
+          addMessage("system", "Go to Settings → Model Providers to configure.");
+          break;
+        default:
+          addMessage("error", errorMessage);
       }
     }
-  }, [inputValue, isLoading, onSubmit, addMessage, addMessageWithMetadata, maxRetries, onMaxRetriesChange, handleClear]);
+  }, [inputValue, isLoading, onSubmit, addMessage, addMessageWithMetadata, maxRetries, onMaxRetriesChange, handleClear, getProviderAndModel]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -754,7 +956,7 @@ const GenerateComponentTerminal = ({
   return (
     <div
       ref={terminalRef}
-      className="absolute bottom-0 left-0 right-0 z-40 flex flex-col overflow-hidden rounded-t-lg border border-b-0 border-zinc-700 bg-zinc-900 shadow-2xl"
+      className="absolute bottom-0 left-0 right-0 z-40 flex flex-col overflow-hidden rounded-t-lg border border-b-0 border-border bg-background shadow-2xl"
       style={{ height: terminalHeight }}
     >
       {isConfigured !== false && (
@@ -768,20 +970,21 @@ const GenerateComponentTerminal = ({
           className={cn(
             "absolute -top-1 left-0 right-0 cursor-ns-resize",
             "flex items-center justify-center",
-            "hover:bg-zinc-700/50 transition-colors",
+            "hover:bg-accent transition-colors",
           )}
           style={{ height: RESIZE_HANDLE_HEIGHT }}
           onMouseDown={handleResizeStart}
         >
-          <div className="h-1 w-12 rounded-full bg-zinc-600" />
+          <div className="h-1 w-12 rounded-full bg-muted-foreground" />
         </div>
       )}
 
       <TerminalHeader
         onClose={onClose}
         onClear={handleClear}
-        isConfigured={isConfigured}
-        onConfigureClick={onConfigureClick}
+        configData={configData}
+        selectedModel={selectedModel}
+        onModelChange={setSelectedModel}
       />
 
       {isConfigLoading ? (
@@ -792,6 +995,7 @@ const GenerateComponentTerminal = ({
         <>
           <div
             ref={messagesContainerRef}
+            onScroll={handleScroll}
             className="flex-1 overflow-y-auto px-4 py-3"
           >
             <div className="flex flex-col gap-1">
@@ -803,13 +1007,13 @@ const GenerateComponentTerminal = ({
                   onSaveToSidebar={onSaveToSidebar}
                 />
               ))}
-              {isLoading && <LoadingIndicator />}
+              {isLoading && <LoadingIndicator progress={progress} />}
             </div>
           </div>
 
-          <div className="border-t border-zinc-700 bg-zinc-900/80 px-4 py-3">
+          <div className="border-t border-border bg-background/80 px-4 py-3">
             <div className="flex items-start gap-2">
-              <span className="font-mono text-sm text-emerald-400 select-none pt-0.5">
+              <span className="font-mono text-sm text-accent-emerald-foreground select-none pt-0.5">
                 &gt;
               </span>
               <textarea
@@ -818,11 +1022,11 @@ const GenerateComponentTerminal = ({
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
                 disabled={isLoading}
-                placeholder="Type your prompt..."
+                placeholder="Ask a question or describe a component..."
                 rows={1}
                 className={cn(
-                  "flex-1 bg-transparent font-mono text-sm text-zinc-200 resize-none",
-                  "placeholder:text-zinc-600 focus:outline-none",
+                  "flex-1 bg-transparent font-mono text-sm text-foreground resize-none",
+                  "placeholder:text-muted-foreground focus:outline-none",
                   "disabled:cursor-not-allowed disabled:opacity-50",
                 )}
               />
@@ -831,7 +1035,7 @@ const GenerateComponentTerminal = ({
                 size="iconSm"
                 onClick={handleSubmit}
                 disabled={!inputValue.trim() || isLoading}
-                className="text-emerald-400 hover:bg-zinc-800 hover:text-emerald-300 disabled:opacity-30"
+                className="text-accent-emerald-foreground hover:bg-muted hover:text-accent-emerald-hover disabled:opacity-30"
               >
                 <ForwardedIconComponent
                   name={isLoading ? "Loader2" : "Send"}

@@ -1,14 +1,38 @@
+export type ModelInfo = {
+  name: string;
+  display_name: string;
+};
+
+export type ProviderInfo = {
+  name: string;
+  configured: boolean;
+  default_model: string | null;
+  models: ModelInfo[];
+};
+
+export type AssistantConfigResponse = {
+  configured: boolean;
+  configured_providers: string[];
+  providers: ProviderInfo[];
+  default_provider: string | null;
+  default_model: string | null;
+};
+
+export type TerminalMessageType = "input" | "output" | "error" | "system" | "validated" | "validation_error";
+
+export type TerminalMessageMetadata = {
+  className?: string;
+  validated?: boolean;
+  validationAttempts?: number;
+  componentCode?: string;
+};
+
 export type TerminalMessage = {
   id: string;
-  type: "input" | "output" | "error" | "system" | "validated" | "validation_error";
+  type: TerminalMessageType;
   content: string;
   timestamp: Date;
-  metadata?: {
-    className?: string;
-    validated?: boolean;
-    validationAttempts?: number;
-    componentCode?: string;
-  };
+  metadata?: TerminalMessageMetadata;
 };
 
 export type SubmitResult = {
@@ -20,10 +44,21 @@ export type SubmitResult = {
   componentCode?: string;
 };
 
+export type ProgressState = {
+  step: "generating" | "validating";
+  attempt: number;
+  maxAttempts: number;
+};
+
 export type GenerateComponentTerminalProps = {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (input: string) => Promise<SubmitResult>;
+  onSubmit: (
+    input: string,
+    provider?: string,
+    modelName?: string,
+    onProgress?: (progress: ProgressState) => void,
+  ) => Promise<SubmitResult>;
   onAddToCanvas: (code: string) => Promise<void>;
   onSaveToSidebar: (code: string, className: string) => Promise<void>;
   isLoading?: boolean;
@@ -32,6 +67,7 @@ export type GenerateComponentTerminalProps = {
   isConfigured?: boolean;
   isConfigLoading?: boolean;
   onConfigureClick?: () => void;
+  configData?: AssistantConfigResponse;
 };
 
 export type GenerateComponentPromptResponse = {

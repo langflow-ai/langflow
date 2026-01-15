@@ -1,16 +1,11 @@
 import { memo } from "react";
-import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
-import { Badge } from "@/components/ui/badge";
 import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
-import { useGenerateComponentStore } from "@/stores/generateComponentStore";
 import { SIDEBAR_BUNDLES } from "@/utils/styleUtils";
 import type { CategoryGroupProps } from "../types";
 import { CategoryDisclosure } from "./categoryDisclouse";
@@ -29,8 +24,6 @@ export const CategoryGroup = memo(function CategoryGroup({
   showConfig,
   setShowConfig,
 }: CategoryGroupProps) {
-  const toggleTerminal = useGenerateComponentStore((state) => state.toggleTerminal);
-
   return (
     <SidebarGroup className="p-2">
       {ENABLE_NEW_SIDEBAR && (
@@ -44,37 +37,6 @@ export const CategoryGroup = memo(function CategoryGroup({
       )}
       <SidebarGroupContent>
         <SidebarMenu>
-          {/* Generate Component - First Item */}
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild className="w-fit">
-              <div
-                data-testid="sidebar-generate-component-button"
-                role="button"
-                tabIndex={0}
-                onClick={toggleTerminal}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    toggleTerminal();
-                  }
-                }}
-                className="user-select-none flex cursor-pointer items-center gap-2"
-              >
-                <ForwardedIconComponent
-                  name="Sparkles"
-                  className="h-4 w-4"
-                />
-                <span className="whitespace-nowrap">
-                  Generate component
-                </span>
-                <Badge
-                  className="shrink-0 bg-accent-pink hover:bg-accent-pink text-white border-0 rounded-md px-1.5 py-0 text-[10px] font-medium"
-                >
-                  New
-                </Badge>
-              </div>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
           {Object.entries(dataFilter)
             .filter(
               ([categoryName, items]) =>

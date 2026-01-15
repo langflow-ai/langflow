@@ -1,11 +1,11 @@
-# Generate Component
+# Langflow Assistant
 
 **Feature Status:** In Development
 **Last Updated:** January 2025
 
 ## Overview
 
-Generate Component is an AI-powered feature that allows users to create Langflow components through natural language prompts. It uses Claude Sonnet 4.5 (Anthropic) to generate Python component code, validates the generated code, and allows users to add the components directly to their flow canvas.
+Langflow Assistant is an AI-powered feature that helps users with Langflow-related questions, guidance, and component creation. It supports multiple AI providers (Anthropic, OpenAI, Google Generative AI, Groq, Ollama) and allows dynamic model selection. The assistant can generate Python component code, validate it, and allow users to add components directly to their flow canvas.
 
 ## Architecture
 
@@ -17,31 +17,152 @@ src/backend/base/langflow/agentic/api/router.py
 ```
 
 **API Endpoints:**
-- `GET /api/v1/generate-component/check-config` - Checks if ANTHROPIC_API_KEY is configured
-- `POST /api/v1/generate-component/prompt` - Executes the component creation flow
+- `GET /api/v1/agentic/check-config` - Returns available providers, models, and configuration status
+- `POST /api/v1/agentic/assist` - Executes the assistant flow (non-streaming)
+- `POST /api/v1/agentic/assist/stream` - Executes with SSE streaming progress updates
+
+**Key Constants:**
+```python
+# Validation
+MAX_VALIDATION_RETRIES = 3
+VALIDATION_UI_DELAY_SECONDS = 0.3  # Delay before complete event for UI feedback
+
+# Flow configuration
+LANGFLOW_ASSISTANT_FLOW = "LangflowAssistant.json"
+
+# Preferred providers in order of priority
+PREFERRED_PROVIDERS = ["Anthropic", "OpenAI", "Google Generative AI", "Groq"]
+
+# Default models per provider
+DEFAULT_MODELS = {
+    "Anthropic": "claude-sonnet-4-5-20250514",
+    "OpenAI": "gpt-5.2",
+    "Google Generative AI": "gemini-2.0-flash",
+    "Groq": "llama-3.3-70b-versatile",
+}
+
+# Provider to LangChain model class mapping
+MODEL_CLASS_MAP = {
+    "OpenAI": "ChatOpenAI",
+    "Anthropic": "ChatAnthropic",
+    "Google Generative AI": "ChatGoogleGenerativeAI",
+    "Groq": "ChatGroq",
+    "Ollama": "ChatOllama",
+}
+
+# Code extraction patterns (regex)
+PYTHON_CODE_BLOCK_PATTERN = r"```python\s*([\s\S]*?)```"      # Closed blocks
+GENERIC_CODE_BLOCK_PATTERN = r"```\s*([\s\S]*?)```"          # Generic closed
+UNCLOSED_PYTHON_BLOCK_PATTERN = r"```python\s*([\s\S]*)$"    # Unclosed python
+UNCLOSED_GENERIC_BLOCK_PATTERN = r"```\s*([\s\S]*)$"         # Unclosed generic
+
+# Error categorization for friendly messages
+ERROR_PATTERNS = [
+    (["rate_limit", "429"], "Rate limit exceeded..."),
+    (["authentication", "api_key", "unauthorized", "401"], "Authentication failed..."),
+    (["quota", "billing", "insufficient"], "API quota exceeded..."),
+    ...
+]
+```
 
 **Key Functions:**
-- `check_anthropic_api_key()` - Validates API key from global variables or environment
-- `execute_flow_file()` - Executes a flow JSON file with user context
-- `execute_flow_with_validation()` - Executes flow with automatic code validation and retry logic
-- `validate_component_code()` - Validates generated Python code by attempting to create the class
-- `extract_python_code()` - Extracts Python code blocks from markdown responses
+
+| Function | Purpose |
+|----------|---------|
+| `inject_model_into_flow()` | Injects selected provider/model into the flow's Agent component |
+| `execute_flow_file()` | Executes a flow JSON file with user context and model injection |
+| `execute_flow_with_validation()` | Non-streaming validation loop |
+| `execute_flow_with_validation_streaming()` | Async generator yielding SSE progress events |
+| `validate_component_code()` | Validates Python code using `create_class()` from lfx |
+| `extract_python_code()` | Extracts code from markdown (handles closed and unclosed blocks) |
+| `_find_code_blocks()` | Finds all code blocks in text |
+| `_find_unclosed_code_block()` | Handles LLM responses that don't close ```python blocks |
+| `_find_component_code()` | Finds the code block containing a Component class |
+| `get_enabled_providers_for_user()` | Gets enabled providers based on user's configured API keys |
+| `check_api_key()` | Checks for API key in global variables or environment |
+| `_extract_friendly_error()` | Converts technical errors to user-friendly messages |
+| `_sse_progress()` | Formats SSE progress event |
+| `_sse_complete()` | Formats SSE complete event |
+| `_sse_error()` | Formats SSE error event |
 
 **Flow Execution:**
 The feature uses a pre-built flow located at:
 ```
-src/backend/base/langflow/agentic/flows/ComponentCreation.json
+src/backend/base/langflow/agentic/flows/LangflowAssistant.json
 ```
 
-This flow uses an Agent component with Claude Sonnet 4.5 to generate component code based on user prompts.
+### SSE Streaming Protocol
 
-**Validation Loop:**
-When the AI generates component code, the backend:
-1. Extracts Python code from the markdown response
-2. Validates the code using `create_class()` from lfx
-3. If validation fails, sends the error back to the AI for correction
-4. Retries up to 3 times (configurable via `MAX_VALIDATION_RETRIES`)
-5. Returns validation status and component code to the frontend
+The `/assist/stream` endpoint uses Server-Sent Events (SSE) for real-time progress updates.
+
+**Event Types:**
+
+```json
+// Progress event - sent during generation and validation
+{"event": "progress", "step": "generating", "attempt": 1, "max_attempts": 4}
+{"event": "progress", "step": "validating", "attempt": 1, "max_attempts": 4}
+
+// Complete event - sent when done (success or failure)
+{
+  "event": "complete",
+  "data": {
+    "result": "...",           // Full LLM response
+    "validated": true,         // Validation success
+    "class_name": "MyComponent", // Component class name
+    "component_code": "...",   // Extracted Python code
+    "validation_attempts": 1   // Number of attempts made
+  }
+}
+
+// Error event - sent on flow execution failure
+{"event": "error", "message": "Rate limit exceeded. Please wait a moment and try again."}
+```
+
+**SSE Response Format:**
+```
+data: {"event": "progress", ...}\n\n
+data: {"event": "complete", ...}\n\n
+```
+
+### Validation Loop
+
+```
+User Prompt
+    ↓
+┌─────────────────────────────────────┐
+│ For attempt 1 to max_retries + 1:   │
+│   ↓                                 │
+│   [SSE: progress/generating]        │
+│   ↓                                 │
+│   Execute LLM flow                  │
+│   ↓                                 │
+│   Extract Python code from response │
+│   ↓                                 │
+│   No code? → [SSE: complete] return │
+│   ↓                                 │
+│   [SSE: progress/validating]        │
+│   ↓                                 │
+│   Validate with create_class()      │
+│   ↓                                 │
+│   Valid? → [SSE: complete] return   │
+│   ↓                                 │
+│   Max attempts? → [SSE: complete    │
+│                    with error]      │
+│   ↓                                 │
+│   Prepare retry with error context  │
+└─────────────────────────────────────┘
+```
+
+### Code Extraction
+
+The `extract_python_code()` function handles multiple scenarios:
+
+1. **Closed Python blocks**: ` ```python ... ``` `
+2. **Closed generic blocks**: ` ``` ... ``` `
+3. **Unclosed Python blocks**: ` ```python ... ` (no closing backticks)
+4. **Unclosed generic blocks**: ` ``` ... ` (no closing backticks)
+5. **Text before code**: Apology text + code block
+6. **Multiple blocks**: Prefers block containing `class` and `Component`
 
 ### Frontend
 
@@ -49,158 +170,245 @@ When the AI generates component code, the backend:
 ```
 src/frontend/src/components/core/generateComponent/
 ├── index.tsx                       # Main component (GenerateComponent)
-├── generate-component-terminal.tsx # Terminal UI component (GenerateComponentTerminal)
+├── generate-component-terminal.tsx # Terminal UI component
 └── types.ts                        # TypeScript type definitions
-```
-
-**State Management:**
-```
-src/frontend/src/stores/generateComponentStore.ts  # Zustand store for terminal state
 ```
 
 **API Hooks:**
 ```
 src/frontend/src/controllers/API/queries/generate-component/
 ├── index.ts
-├── use-get-generate-component-config.ts   # GET /generate-component/check-config
-└── use-post-generate-component-prompt.ts  # POST /generate-component/prompt
+├── use-get-generate-component-config.ts  # GET /agentic/check-config
+└── use-post-generate-component-prompt.ts # POST /agentic/assist/stream
 ```
 
-**Additional Hooks Used:**
-- `useAddComponent` - Adds validated component to the canvas
-- `useAddFlow` - Saves component to sidebar ("Saved" section)
-- `usePostValidateComponentCode` - Validates component code before adding/saving
+**SSE Client Implementation (`use-post-generate-component-prompt.ts`):**
 
-**URL Constants:**
-Located in `src/frontend/src/controllers/API/helpers/constants.ts`:
-- `GENERATE_COMPONENT_PROMPT: "generate-component/prompt"`
-- `GENERATE_COMPONENT_CHECK_CONFIG: "generate-component/check-config"`
+```typescript
+// Key types
+type SSEEvent = {
+  event: "progress" | "complete" | "error";
+  step?: "generating" | "validating";
+  attempt?: number;
+  max_attempts?: number;
+  data?: GenerateComponentPromptResponse;
+  message?: string;
+};
+
+// Key functions
+postGenerateComponentPromptStream()  // Main streaming function
+fetchStreamingResponse()             // Fetch with SSE headers
+processSSEStream()                   // Process ReadableStream
+splitSSEEvents()                     // Split buffer on \n\n
+processSSEEvent()                    // Parse individual events
+parseSSEEvent()                      // JSON.parse with error handling
+```
+
+**Types (`types.ts`):**
+
+```typescript
+export type ProgressState = {
+  step: "generating" | "validating";
+  attempt: number;
+  maxAttempts: number;
+};
+
+export type SubmitResult = {
+  content: string;
+  validated?: boolean;
+  className?: string;
+  validationError?: string;
+  validationAttempts?: number;
+  componentCode?: string;
+};
+
+export type GenerateComponentPromptResponse = {
+  result?: string;
+  text?: string;
+  validated?: boolean;
+  class_name?: string;
+  validation_error?: string;
+  validation_attempts?: number;
+  component_code?: string;
+};
+```
+
+**URL Constants (`constants.ts`):**
+```typescript
+GENERATE_COMPONENT_PROMPT: "agentic/assist"
+GENERATE_COMPONENT_PROMPT_STREAM: "agentic/assist/stream"
+GENERATE_COMPONENT_CHECK_CONFIG: "agentic/check-config"
+```
 
 ### User Interface
-
-**Access:**
-- Button located in the sidebar footer, in first position
-- Click "Generate component" button to open the terminal
 
 **Terminal Features:**
 - Resizable terminal panel (200px - 600px height)
 - Command history with arrow key navigation (stored in sessionStorage)
 - Multi-line input with auto-resize textarea
-- Loading indicator showing model name (Claude Sonnet 4.5) during AI processing
-- Validation badges (Valid/Invalid) for generated components
-- Configurable max retries (0-5) in the terminal header
-- Model name displayed in the terminal header
+- **Real-time progress indicator:**
+  - "Generating..." during LLM generation
+  - "Validating... attempt X/Y" during code validation
+- Checkmark icon next to validated component names
+- Configurable max retries (0-5) via terminal commands
+- Dynamic model selector in the header
+- Semantic color system using project palette
 
 **Terminal Commands:**
 - `MAX_RETRIES=<0-5>` - Set validation retry attempts
-- `HELP` or `?` - Show help message with available commands
+- `HELP` or `?` - Show help message
 - `CLEAR` - Clear terminal history
 
-Any other text is treated as a prompt to generate a component.
-
 **Component Result Actions:**
-When a valid component is generated, users can:
-1. **View Code** (`<>` icon) - Opens a read-only code modal
-2. **Download** (download icon) - Downloads the component as a `.py` file
-3. **Save to Sidebar** (save icon) - Saves the component to the "Saved" section in the sidebar for reuse across flows
-4. **Add to Canvas** (`+` icon) - Validates and adds the component to the current flow
-
-## Configuration Requirements
-
-The feature requires `ANTHROPIC_API_KEY` to be configured either:
-1. In environment variables
-2. In Langflow Global Variables (Settings > Global Variables)
-
-If not configured, users see an error notification when trying to open the terminal.
+1. **View Code** (expand chevron) - Expands inline code viewer
+2. **Download** (download icon) - Downloads as `.py` file
+3. **Save to Sidebar** (save icon) - Saves to "Saved" section
+4. **Add to Canvas** (`+` button) - Adds to current flow
 
 ## Data Flow
 
 ```
 User Input (Terminal)
        ↓
-POST /generate-component/prompt
+POST /agentic/assist/stream
        ↓
-execute_flow_with_validation()
+inject_model_into_flow() - Configure Agent
        ↓
-ComponentCreation.json (Agent + Claude Sonnet 4.5)
+execute_flow_with_validation_streaming()
        ↓
-extract_python_code() → validate_component_code()
-       ↓
-[If invalid: retry with error context, up to 3 times]
-       ↓
-Response with validation status + component code
+┌──────────────────────────────────────────┐
+│ SSE Events:                              │
+│ ← progress: {generating, 1/4}            │
+│ ← progress: {validating, 1/4}            │
+│ [if retry needed]                        │
+│ ← progress: {generating, 2/4}            │
+│ ← progress: {validating, 2/4}            │
+│ ...                                      │
+│ ← complete: {validated, code, class}     │
+└──────────────────────────────────────────┘
        ↓
 Frontend displays result with action buttons
        ↓
 [User clicks action button]
        ↓
-┌─────────────────────────────────────────────────────────┐
-│  "Add to Canvas"              │  "Save to Sidebar"      │
-│         ↓                     │         ↓               │
-│  POST /custom_component/      │  POST /custom_component/│
-│        validate               │        validate         │
-│         ↓                     │         ↓               │
-│  useAddComponent() adds       │  createFlowComponent()  │
-│  node to current flow         │         ↓               │
-│                               │  useAddFlow() saves to  │
-│                               │  "Saved" sidebar section│
-└─────────────────────────────────────────────────────────┘
+POST /custom_component/validate
+       ↓
+useAddComponent() or useAddFlow()
 ```
+
+## Error Handling
+
+**Friendly Error Messages:**
+The `_extract_friendly_error()` function converts technical errors:
+
+| Pattern | Friendly Message |
+|---------|------------------|
+| `rate_limit`, `429` | "Rate limit exceeded. Please wait a moment and try again." |
+| `authentication`, `api_key`, `401` | "Authentication failed. Check your API key." |
+| `quota`, `billing` | "API quota exceeded. Please check your account billing." |
+| `timeout` | "Request timed out. Please try again." |
+| `connection`, `network` | "Connection error. Please check your network." |
+| `500`, `internal server error` | "Server error. Please try again later." |
+
+**Error Event Flow:**
+1. Flow execution catches HTTPException or specific exceptions
+2. Error message extracted and converted to friendly format
+3. SSE error event sent to frontend
+4. Frontend displays error message in terminal
+
+## Testing
+
+**Test Files:**
+```
+src/backend/tests/unit/agentic/api/
+├── __init__.py
+├── test_code_extraction.py      # 31 tests
+└── test_streaming_validation.py # 22 tests
+```
+
+**Test Coverage:**
+- `extract_python_code()` - closed/unclosed blocks, text before code
+- `validate_component_code()` - valid/invalid/incomplete code
+- `_find_code_blocks()` - all block types
+- `_find_unclosed_code_block()` - unclosed pattern matching
+- SSE event formatting
+- Streaming validation flow with retries
+- Error handling and retry behavior
+- Real-world scenarios (text + incomplete code)
+
+**Run Tests:**
+```bash
+uv run pytest src/backend/tests/unit/agentic/api/ -v
+```
+
+## Configuration Requirements
+
+The feature requires at least one model provider to be configured:
+
+| Provider | API Key Variable |
+|----------|------------------|
+| Anthropic | `ANTHROPIC_API_KEY` |
+| OpenAI | `OPENAI_API_KEY` |
+| Google Generative AI | `GOOGLE_API_KEY` |
+| Groq | `GROQ_API_KEY` |
+| Ollama | Local installation |
+
+API keys can be configured in:
+1. Environment variables
+2. Langflow Settings > Model Providers
 
 ## Technical Decisions
 
-### Why user_id is Required
-The `ComponentCreation.json` flow uses an Agent component that requires `user_id` to:
-1. Access user's global variables (like API keys)
-2. Maintain proper component context during execution
+### SSE vs WebSockets
+SSE was chosen over WebSockets because:
+- Simpler implementation for unidirectional server-to-client updates
+- HTTP/2 compatible, works through proxies
+- Auto-reconnect built into browser EventSource API
+- Sufficient for progress updates (no bidirectional communication needed)
 
-The `user_id` is passed through the chain:
-`run_prompt_flow()` → `execute_flow_with_validation()` → `execute_flow_file()` → `run_flow()` → `graph.user_id`
+### Code Extraction Strategy
+The extraction logic handles multiple edge cases:
+1. Tries closed `\`\`\`python` blocks first (most common)
+2. Falls back to generic `\`\`\`` blocks
+3. Finally tries unclosed blocks (LLM truncation/errors)
+4. Searches entire text, not just from start (handles apology text)
 
-### Security Considerations
-- API keys are passed via `global_variables`, not environment variables (to avoid global state mutation)
-- API keys are never logged (only key names are logged)
-- Error messages don't expose internal details
+### Validation Retry Template
+```python
+VALIDATION_RETRY_TEMPLATE = """The previous component code has an error. Please fix it.
 
-### Code Quality (Following DEVELOPMENT_RULE.md)
-- Strong typing with TypeScript and Python type hints
-- Constants extracted to avoid magic strings/numbers
-- Single source of truth for types (defined in `types.ts`)
-- No duplicate type definitions
-- Proper error handling with domain-relevant errors
+ERROR:
+{error}
+
+BROKEN CODE:
+\`\`\`python
+{code}
+\`\`\`
+
+Please provide a corrected version of the component code."""
+```
+
+### UI Delay for Progress Feedback
+A 0.3s delay (`VALIDATION_UI_DELAY_SECONDS`) is added before sending the complete event to ensure the "Validating..." message is visible to users, improving perceived responsiveness.
 
 ## Files Modified/Created
 
 ### Created
 - `src/frontend/src/components/core/generateComponent/` (entire folder)
 - `src/frontend/src/controllers/API/queries/generate-component/` (entire folder)
-- `src/frontend/src/stores/generateComponentStore.ts` - Zustand store for terminal state
+- `src/frontend/src/stores/generateComponentStore.ts`
+- `src/backend/tests/unit/agentic/api/test_code_extraction.py`
+- `src/backend/tests/unit/agentic/api/test_streaming_validation.py`
 
 ### Modified
-- `src/frontend/src/controllers/API/helpers/constants.ts` - Added GENERATE_COMPONENT_* URLs
-- `src/frontend/src/pages/FlowPage/components/PageComponent/index.tsx` - Import GenerateComponent
-- `src/frontend/src/pages/FlowPage/components/flowSidebarComponent/components/sidebarFooterButtons.tsx` - Added Generate component button
-- `src/frontend/src/modals/codeAreaModal/index.tsx` - Hide "Check & Save" button in readonly mode
-- `src/backend/base/langflow/agentic/api/router.py` - Router prefix, messages, function names, max_retries parameter
-- `src/lfx/src/lfx/run/base.py` - Added `user_id` parameter
+- `src/frontend/src/controllers/API/helpers/constants.ts` - Added URL constants
+- `src/frontend/src/components/ui/select.tsx` - Added hover effect
+- `src/backend/base/langflow/agentic/api/router.py` - SSE streaming, code extraction improvements
 
-## Known Issues / TODO
+## Naming Convention
 
-1. **Unit Tests Missing** - Tests should be created for:
-   - Backend: `extract_python_code()`, `validate_component_code()`, `execute_flow_with_validation()`
-   - Frontend: `GenerateComponentTerminal`, `ComponentResultLine`
-
-2. **Backend Folder Name** - The backend code is still in `/agentic/` folder. Consider renaming to `/generate-component/` for consistency.
-
-## Naming History
-
-The feature was originally named "Vibe Flow", then renamed to "Component Forge", and finally renamed to "Generate Component" to better reflect its purpose and match UI/UX guidelines.
-
-**Renamed items:**
-- VibeFlowComponent → ComponentForge → GenerateComponent
-- VibeFlowTerminal → ForgeTerminal → GenerateComponentTerminal
-- VibeFlowButton → ForgeButton → GenerateComponentButton
-- vibe-flow-terminal-history → component-forge-terminal-history → generate-component-terminal-history
-- /agentic/* → /forge/* → /generate-component/* (API routes)
-- useGetAgenticConfig → useGetForgeConfig → useGetGenerateComponentConfig
-- usePostAgenticPrompt → usePostForgePrompt → usePostGenerateComponentPrompt
+**Current naming:**
+- Component: `GenerateComponent` / `GenerateComponentTerminal`
+- Store: `generateComponentStore`
+- API route: `/agentic/assist`, `/agentic/assist/stream`
+- UI label: "Assistant"

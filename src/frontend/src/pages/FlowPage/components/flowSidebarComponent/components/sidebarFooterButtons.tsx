@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { SidebarMenuButton, useSidebar } from "@/components/ui/sidebar";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
+import { useGenerateComponentStore } from "@/stores/generateComponentStore";
 import AddMcpServerModal from "@/modals/addMcpServerModal";
 
 const SidebarMenuButtons = ({
@@ -14,6 +15,7 @@ const SidebarMenuButtons = ({
   const { activeSection } = useSidebar();
   const [addMcpOpen, setAddMcpOpen] = useState(false);
   const navigate = useCustomNavigate();
+  const toggleTerminal = useGenerateComponentStore((state) => state.toggleTerminal);
 
   const handleAddMcpServerClick = () => {
     setAddMcpOpen(true);
@@ -60,27 +62,46 @@ const SidebarMenuButtons = ({
       <AddMcpServerModal open={addMcpOpen} setOpen={setAddMcpOpen} />
     </>
   ) : (
-    <SidebarMenuButton asChild className="group">
-      <Button
-        unstyled
-        disabled={isLoading}
-        onClick={() => {
-          if (customComponent) {
-            addComponent(customComponent, "CustomComponent");
-          }
-        }}
-        data-testid="sidebar-custom-component-button"
-        className="flex items-center w-full h-full gap-3 hover:bg-muted"
-      >
-        <ForwardedIconComponent
-          name="Plus"
-          className="h-4 w-4 text-muted-foreground"
-        />
-        <span className="group-data-[state=open]/collapsible:font-semibold">
-          New Custom Component
-        </span>
-      </Button>
-    </SidebarMenuButton>
+    <>
+      <SidebarMenuButton asChild className="group">
+        <Button
+          unstyled
+          disabled={isLoading}
+          onClick={toggleTerminal}
+          data-testid="sidebar-assistant-button"
+          className="flex items-center w-full h-full gap-3 hover:bg-muted"
+        >
+          <ForwardedIconComponent
+            name="Sparkles"
+            className="h-4 w-4 text-muted-foreground"
+          />
+          <span className="group-data-[state=open]/collapsible:font-semibold">
+            Assistant
+          </span>
+        </Button>
+      </SidebarMenuButton>
+      <SidebarMenuButton asChild className="group">
+        <Button
+          unstyled
+          disabled={isLoading}
+          onClick={() => {
+            if (customComponent) {
+              addComponent(customComponent, "CustomComponent");
+            }
+          }}
+          data-testid="sidebar-custom-component-button"
+          className="flex items-center w-full h-full gap-3 hover:bg-muted"
+        >
+          <ForwardedIconComponent
+            name="Plus"
+            className="h-4 w-4 text-muted-foreground"
+          />
+          <span className="group-data-[state=open]/collapsible:font-semibold">
+            New Custom Component
+          </span>
+        </Button>
+      </SidebarMenuButton>
+    </>
   );
 };
 
