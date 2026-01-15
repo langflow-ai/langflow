@@ -423,7 +423,7 @@ class TestBuildDataPrompt(TestLambdaFilterComponent):
         result = component._build_data_prompt(data)
 
         # Assert
-        assert '"key": "value"' in result
+        assert '"key":"value"' in result or '"key": "value"' in result
         assert "Filter by value" in result
 
     def test_should_truncate_data_when_data_is_large(self, component_class):
@@ -441,6 +441,158 @@ class TestBuildDataPrompt(TestLambdaFilterComponent):
         assert "Data is too long to display" in result
         assert "First lines (head)" in result
         assert "Last lines (tail)" in result
+
+    def test_should_transform_result_key_to_results_when_result_is_list(self, component_class):
+        # Arrange
+        component = component_class()
+        component.max_size = 10000
+        component.sample_size = 100
+        component.filter_instruction = "Filter items"
+        data = {"result": [{"id": 1}, {"id": 2}]}
+
+        # Act
+        result = component._build_data_prompt(data)
+
+        # Assert
+        assert '"_results"' in result
+        assert '"result"' not in result
+
+    def test_should_not_transform_result_when_result_is_not_list(self, component_class):
+        # Arrange
+        component = component_class()
+        component.max_size = 10000
+        component.sample_size = 100
+        component.filter_instruction = "Filter items"
+        data = {"result": "string_value"}
+
+        # Act
+        result = component._build_data_prompt(data)
+
+        # Assert
+        assert '"result"' in result
+        assert '"_results"' not in result
+
+    def test_should_not_transform_data_when_result_key_is_absent(self, component_class):
+        # Arrange
+        component = component_class()
+        component.max_size = 10000
+        component.sample_size = 100
+        component.filter_instruction = "Filter items"
+        data = {"items": [{"id": 1}, {"id": 2}]}
+
+        # Act
+        result = component._build_data_prompt(data)
+
+        # Assert
+        assert '"items"' in result
+        assert '"_results"' not in result
+
+    def test_should_preserve_list_contents_when_transforming_result(self, component_class):
+        # Arrange
+        component = component_class()
+        component.max_size = 10000
+        component.sample_size = 100
+        component.filter_instruction = "Filter items"
+        data = {"result": [{"name": "test1", "value": 10}, {"name": "test2", "value": 20}]}
+
+        # Act
+        result = component._build_data_prompt(data)
+
+        # Assert
+        assert '"name":"test1"' in result or '"name": "test1"' in result
+        assert '"value":10' in result or '"value": 10' in result
+
+
+class TestParseLambdaFromResponse(TestLambdaFilterComponent):
+    """Tests for _parse_lambda_from_response method."""
+
+    def test_should_return_callable_when_response_contains_valid_lambda(self, component_class):
+        # Arrange
+        component = component_class()
+        response_text = "lambda x: x + 1"
+
+        # Act
+        result = component._parse_lambda_from_response(response_text)
+
+        # Assert
+        assert callable(result)
+        assert result(5) == 6
+
+    def test_should_extract_lambda_when_response_has_surrounding_text(self, component_class):
+        # Arrange
+        component = component_class()
+        response_text = "Here is the function:\nlambda x: x * 2\nThis will double the value."
+
+        # Act
+        result = component._parse_lambda_from_response(response_text)
+
+        # Assert
+        assert callable(result)
+        assert result(3) == 6
+
+    def test_should_raise_error_when_response_has_no_lambda(self, component_class):
+        # Arrange
+        component = component_class()
+        response_text = "def transform(x): return x + 1"
+
+        # Act & Assert
+        with pytest.raises(ValueError, match="Could not find lambda in response"):
+            component._parse_lambda_from_response(response_text)
+
+    def test_should_raise_error_when_lambda_format_is_invalid(self, component_class):
+        # Arrange
+        component = component_class()
+        response_text = "lambda"
+
+        # Act & Assert
+        with pytest.raises(ValueError, match="Could not find lambda in response"):
+            component._parse_lambda_from_response(response_text)
+
+    def test_should_extract_lambda_with_complex_expression(self, component_class):
+        # Arrange
+        component = component_class()
+        response_text = "lambda items: [item for item in items if item > 5]"
+
+        # Act
+        result = component._parse_lambda_from_response(response_text)
+
+        # Assert
+        assert callable(result)
+        assert result([1, 6, 3, 8, 2]) == [6, 8]
+
+
+class TestHandleProcessError(TestLambdaFilterComponent):
+    """Tests for _handle_process_error method."""
+
+    def test_should_raise_error_with_context_when_processing_fails(self, component_class):
+        # Arrange
+        component = component_class()
+        component.data = Data(data={"key": "value"})
+        original_error = Exception("Original error message")
+
+        # Act & Assert
+        with pytest.raises(ValueError, match="Failed to convert result to Data output"):
+            component._handle_process_error(original_error, "Data")
+
+    def test_should_include_input_type_in_error_message(self, component_class):
+        # Arrange
+        component = component_class()
+        component.data = Message(text="test")
+        original_error = Exception("Test error")
+
+        # Act & Assert
+        with pytest.raises(ValueError, match="Input type was Message"):
+            component._handle_process_error(original_error, "DataFrame")
+
+    def test_should_include_original_error_in_message(self, component_class):
+        # Arrange
+        component = component_class()
+        component.data = []
+        original_error = TypeError("Cannot convert type")
+
+        # Act & Assert
+        with pytest.raises(ValueError, match="Cannot convert type"):
+            component._handle_process_error(original_error, "Message")
 
 
 class TestConvertResultToData(TestLambdaFilterComponent):
@@ -736,3 +888,140 @@ class TestComplexDataStructure(TestLambdaFilterComponent):
         assert len(filtered_items) == 1
         assert filtered_items[0]["id"] == 3
         assert filtered_items[0]["score"] == 95
+
+
+class TestHttpApiDataTransformation(TestLambdaFilterComponent):
+    """Tests for HTTP/API data transformation (PR #11128 scenario)."""
+
+    @patch("lfx.base.models.unified_models.get_model_classes")
+    async def test_should_handle_http_api_result_structure_when_filtering(
+        self, mock_get_model_classes, component_class, model_metadata, mock_llm
+    ):
+        # Arrange
+        mock_model_class = MagicMock(return_value=mock_llm)
+        mock_get_model_classes.return_value = {"MockLanguageModel": mock_model_class}
+        http_api_data = {
+            "result": [
+                {"id": 1, "status": "active"},
+                {"id": 2, "status": "inactive"},
+                {"id": 3, "status": "active"},
+            ]
+        }
+        kwargs = {
+            "data": [Data(data=http_api_data)],
+            "model": model_metadata,
+            "api_key": "test-api-key",
+            "filter_instruction": "Filter items with active status",
+            "sample_size": 1000,
+            "max_size": 30000,
+        }
+        component = await self.component_setup(component_class, kwargs)
+        mock_llm.ainvoke.return_value.content = (
+            "lambda x: [item for item in x['result'] if item['status'] == 'active']"
+        )
+
+        # Act
+        result = await component.process_as_data()
+
+        # Assert
+        assert isinstance(result, Data)
+        assert "_results" in result.data
+        filtered_items = result.data["_results"]
+        assert len(filtered_items) == 2
+        assert all(item["status"] == "active" for item in filtered_items)
+
+    def test_should_transform_prompt_structure_for_http_api_data(self, component_class):
+        # Arrange
+        component = component_class()
+        component.max_size = 10000
+        component.sample_size = 100
+        component.filter_instruction = "Filter active items"
+        http_api_data = {"result": [{"id": 1, "status": "active"}]}
+
+        # Act
+        prompt = component._build_data_prompt(http_api_data)
+
+        # Assert
+        assert '"_results"' in prompt
+        assert '"result"' not in prompt
+        assert '"id"' in prompt
+        assert '"status"' in prompt
+
+
+class TestEdgeCases(TestLambdaFilterComponent):
+    """Tests for edge cases and boundary conditions."""
+
+    def test_should_handle_empty_dict_in_extract_structured_data(self, component_class):
+        # Arrange
+        component = component_class()
+        component.data = Data(data={})
+
+        # Act
+        result = component._extract_structured_data()
+
+        # Assert
+        assert result == {}
+
+    def test_should_handle_data_with_nested_list_content(self, component_class):
+        # Arrange
+        component = component_class()
+        component.data = Data(data={"items": [{"a": 1}, {"b": 2}]})
+
+        # Act
+        result = component._extract_structured_data()
+
+        # Assert
+        assert result == {"items": [{"a": 1}, {"b": 2}]}
+
+    def test_should_return_unknown_when_input_type_is_unexpected(self, component_class):
+        # Arrange
+        component = component_class()
+        component.data = "unexpected_string_type"
+
+        # Act
+        result = component._get_input_type_name()
+
+        # Assert
+        assert result == "unknown"
+
+    def test_should_handle_mixed_list_in_extract_structured_data(self, component_class):
+        # Arrange
+        component = component_class()
+        component.data = [
+            Data(data={"a": 1}),
+            DataFrame([{"b": 2}]),
+        ]
+
+        # Act
+        result = component._extract_structured_data()
+
+        # Assert
+        assert isinstance(result, list)
+        assert {"a": 1} in result
+        assert {"b": 2} in result
+
+    def test_should_handle_nested_empty_structures(self, component_class):
+        # Arrange
+        component = component_class()
+        test_data = {"outer": {"inner": []}}
+
+        # Act
+        result = component.get_data_structure(test_data)
+
+        # Assert
+        assert result == {"outer": {"inner": []}}
+
+    def test_should_preserve_result_with_empty_list(self, component_class):
+        # Arrange
+        component = component_class()
+        component.max_size = 10000
+        component.sample_size = 100
+        component.filter_instruction = "Filter items"
+        data = {"result": []}
+
+        # Act
+        result = component._build_data_prompt(data)
+
+        # Assert
+        assert '"_results"' in result
+        assert '"result"' not in result
