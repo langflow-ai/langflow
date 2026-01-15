@@ -882,7 +882,7 @@ async def _create_project_blob(
 ):
     """Create a blob for a published project."""
     requested_flow: CTE = (
-        values(*ProjectFlowVersion.column_def())
+        values(*ProjectFlowVersion.COLUMN_DEF)
         .data(project_data.flows_to_tuple())
         .cte("requested_flow")
     )

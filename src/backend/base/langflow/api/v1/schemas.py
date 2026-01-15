@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, ClassVar, Literal
 from uuid import UUID
 
 from lfx.graph.schema import RunOutputs
@@ -507,19 +507,18 @@ class ProjectFlowVersion(BaseModel):
     published_flow_version_id: str | None = Field(
         None, description="Reference to a published flow version id."
     )
+    # Static SQLAlchemy column definitions for values() usage.
+    COLUMN_DEF: ClassVar[tuple] = (
+        column("flow_id", Uuid),
+        column("published_flow_version_id", String),
+    )
 
     def to_tuple(self):
+        # Keep tuple order aligned with COLUMN_DEF.
         return (
             self.flow_id,
             self.published_flow_version_id,
             )
-
-    @classmethod
-    def column_def(cls):
-        return (
-            column("flow_id", Uuid),
-            column("published_flow_version_id", String),
-        )
 
 class PublishProjectCreate(BaseModel):
     flows: list[ProjectFlowVersion] = Field(..., description="List of flows to include in the project.")
