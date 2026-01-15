@@ -9,7 +9,7 @@ import {
   CustomParameterLabel,
   getCustomParameterTitle,
 } from "@/customization/components/custom-parameter";
-import { LANGFLOW_AGENTIC_EXPERIENCE } from "@/customization/feature-flags";
+import { ENABLE_INSPECTION_PANEL, LANGFLOW_AGENTIC_EXPERIENCE } from "@/customization/feature-flags";
 import { useIsAutoLogin } from "@/hooks/use-is-auto-login";
 import useAuthStore from "@/stores/authStore";
 import { cn } from "@/utils/utils";
@@ -226,7 +226,7 @@ export default function NodeInputField({
           />
         </div>
 
-        {data.node?.template[name] !== undefined && (
+        {(!ENABLE_INSPECTION_PANEL || !optionalHandle) && data.node?.template[name] !== undefined && (
           <CustomParameterComponent
             handleOnNewValue={handleOnNewValue}
             name={name}

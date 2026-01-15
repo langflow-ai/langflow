@@ -5,6 +5,7 @@ import { sortToolModeFields } from "@/CustomNodes/helpers/sort-tool-mode-field";
 import getFieldTitle from "@/CustomNodes/utils/get-field-title";
 import { scapedJSONStringfy } from "@/utils/reactflowUtils";
 import NodeInputField from "../NodeInputField";
+import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 
 const RenderInputParameters = ({
   data,
@@ -23,19 +24,39 @@ const RenderInputParameters = ({
           b,
           data.node!.template,
           data.node?.field_order ?? [],
-          isToolMode,
-        ),
+          isToolMode
+        )
       );
   }, [data.node?.template, data.node?.field_order, isToolMode]);
 
   const shownTemplateFields = useMemo(() => {
     return templateFields.filter((templateField) => {
       const template = data.node?.template[templateField];
-      return (
-        template?.show &&
-        !template?.advanced &&
-        !(template?.tool_mode && isToolMode)
-      );
+
+      if (!ENABLE_INSPECTION_PANEL) {
+        return (
+          template?.show &&
+          !template?.advanced &&
+          !(template?.tool_mode && isToolMode)
+        );
+      }
+
+      // Basic visibility check
+      if (
+        !template?.show ||
+        template?.advanced ||
+        (template?.tool_mode && isToolMode)
+      ) {
+        return false;
+      }
+
+      // Only show fields that have handles (input_types)
+      const hasHandle = template.input_types && template.input_types.length > 0;
+      if (!hasHandle) {
+        return false;
+      }
+
+      return true;
     });
   }, [templateFields, data.node?.template, isToolMode]);
 
@@ -49,12 +70,12 @@ const RenderInputParameters = ({
           colors: getNodeInputColors(
             template.input_types,
             template.type,
-            types,
+            types
           ),
           colorsName: getNodeInputColorsName(
             template.input_types,
             template.type,
-            types,
+            types
           ),
         });
       }
@@ -77,7 +98,7 @@ const RenderInputParameters = ({
             id: data.id,
             fieldName: templateField,
             proxy: template.proxy,
-          }),
+          })
         );
       }
     });
@@ -120,7 +141,7 @@ const RenderInputParameters = ({
           isToolMode={isToolMode && template.tool_mode}
         />
       );
-    },
+    }
   );
 
   return <>{renderInputParameter}</>;
