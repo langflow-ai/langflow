@@ -201,7 +201,7 @@ export const SidebarDraggableComponent = forwardRef(
                     )}
                   </div>
                   {!disabled && (
-                    <div className="absolute inset-y-0 right-0 flex items-center justify-center opacity-0 transition-all duration-500 group-hover/draggable:opacity-100">
+                    <div className="absolute inset-y-0 right-0 flex items-center justify-center">
                       <Button
                         data-testid={`add-component-button-${convertTestName(
                           display_name,
@@ -214,7 +214,7 @@ export const SidebarDraggableComponent = forwardRef(
                       >
                         <ForwardedIconComponent
                           name="Plus"
-                          className="h-4 w-4 shrink-0 transition-all"
+                          className="h-4 w-4 shrink-0 transition-all duration-500 opacity-0 group-hover/draggable:opacity-100"
                         />
                       </Button>
                     </div>
