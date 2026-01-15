@@ -3227,10 +3227,7 @@
                 "limit": 1,
                 "name": "storage_location",
                 "options": [
-                  {
-                    "icon": "hard-drive",
-                    "name": "Local"
-                  },
+
                   {
                     "icon": "Amazon",
                     "name": "AWS"
