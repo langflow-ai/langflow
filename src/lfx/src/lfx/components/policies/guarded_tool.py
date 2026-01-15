@@ -73,7 +73,16 @@ class GuardedTool(Tool):
                 toolguard.check_toolcall(self.name, args=args, delegate=self._tool_invoker)
                 return await self._orig_tool.arun(tool_input=args, config=config, **kwargs)
             except PolicyViolationException as ex:
-                return f"Error: {ex.message}"
+                #print(f'exception: {ex.message}')
+                return {
+                    "ok": False,
+                    "error": {
+                        "type": "PolicyViolationException",
+                        "code": "FAILURE",
+                        "message": ex.message,
+                        "retryable": True
+                    }
+                }
             except Exception:
                 logger.exception("Unhandled exception in class GuardedTool.arun()")
                 traceback.print_exc()
