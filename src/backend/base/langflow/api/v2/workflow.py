@@ -49,7 +49,7 @@ from langflow.exceptions.api import WorkflowTimeoutError, WorkflowValidationErro
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
 from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.services.auth.utils import api_key_security
-from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.user.model import UserRead
 
 # Configuration constants
@@ -233,7 +233,7 @@ async def execute_workflow(
 
 async def execute_sync_workflow_with_timeout(
     workflow_request: WorkflowExecutionRequest,
-    flow: Flow,
+    flow: FlowRead,
     job_id: str,
     api_key_user: UserRead,
     background_tasks: BackgroundTasks,
@@ -272,7 +272,7 @@ async def execute_sync_workflow_with_timeout(
 
 async def execute_sync_workflow(
     workflow_request: WorkflowExecutionRequest,
-    flow: Flow,
+    flow: FlowRead,
     job_id: str,
     api_key_user: UserRead,
     background_tasks: BackgroundTasks,  # noqa: ARG001
@@ -352,6 +352,10 @@ async def execute_sync_workflow(
             graph=graph,
         )
 
+    except asyncio.CancelledError:
+        # Re-raise CancelledError to allow timeout mechanism to work properly
+        # This ensures asyncio.wait_for() can properly cancel and raise TimeoutError
+        raise
     except Exception as exc:  # noqa: BLE001
         # Component execution errors - return in response body with HTTP 200
         # This allows partial results and detailed error information per component

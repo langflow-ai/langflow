@@ -36,14 +36,6 @@ class ComponentOutput(BaseModel):
     metadata: dict[str, Any] | None = None
 
 
-class GlobalInputs(BaseModel):
-    """Global inputs that apply to all input components in the workflow."""
-
-    input_value: str | None = Field(None, description="The input value to send to input components")
-    input_type: str = Field("chat", description="The type of input (chat, text, etc.)")
-    session_id: str | None = Field(None, description="Session ID for conversation continuity")
-
-
 class WorkflowExecutionRequest(BaseModel):
     """Request schema for workflow execution."""
 
@@ -51,7 +43,7 @@ class WorkflowExecutionRequest(BaseModel):
     stream: bool = False
     flow_id: str
     inputs: dict[str, Any] | None = Field(
-        None, description="Inputs with 'global' key for global inputs and component IDs for component-specific tweaks"
+        None, description="Component-specific inputs in flat format: 'component_id.param_name': value"
     )
 
     model_config = ConfigDict(
@@ -62,26 +54,28 @@ class WorkflowExecutionRequest(BaseModel):
                     "stream": False,
                     "flow_id": "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
                     "inputs": {
-                        "global": {
-                            "input_value": "Hello, how can you help me today?",
-                            "input_type": "chat",
-                            "session_id": "session-123",
-                        },
-                        "llm_component": {"temperature": 0.7, "max_tokens": 100},
-                        "opensearch_component": {"opensearch_url": "https://opensearch:9200"},
+                        "ChatInput-abc.input_value": "Hello, how can you help me today?",
+                        "ChatInput-abc.session_id": "session-123",
+                        "LLM-xyz.temperature": 0.7,
+                        "LLM-xyz.max_tokens": 100,
+                        "OpenSearch-def.opensearch_url": "https://opensearch:9200",
                     },
                 },
                 {
                     "background": True,
                     "stream": False,
                     "flow_id": "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
-                    "inputs": {"global": {"input_value": "Process this in the background", "input_type": "text"}},
+                    "inputs": {
+                        "ChatInput-abc.input_value": "Process this in the background",
+                    },
                 },
                 {
                     "background": False,
                     "stream": True,
                     "flow_id": "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
-                    "inputs": {"chat_component": {"text": "Stream this conversation"}},
+                    "inputs": {
+                        "ChatInput-abc.input_value": "Stream this conversation",
+                    },
                 },
             ]
         },
