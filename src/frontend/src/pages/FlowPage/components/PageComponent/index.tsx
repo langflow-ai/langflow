@@ -22,7 +22,7 @@ import { useShallow } from "zustand/react/shallow";
 import { DefaultEdge } from "@/CustomEdges";
 import NoteNode from "@/CustomNodes/NoteNode";
 import FlowToolbar from "@/components/core/flowToolbarComponent";
-import Assistant from "@/components/core/assistant";
+import Assistant from "@/components/core/assistant/assistant";
 import {
   COLOR_OPTIONS,
   DEFAULT_NOTE_SIZE,

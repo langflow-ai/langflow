@@ -12,7 +12,7 @@ import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useAssistantStore } from "@/stores/assistantStore";
 import { createFlowComponent, getNodeId } from "@/utils/reactflowUtils";
 import AssistantTerminal from "./assistant-terminal";
-import type { AssistantConfigResponse, AssistantPromptResponse, ProgressState, SubmitResult } from "./types";
+import type { AssistantConfigResponse, AssistantPromptResponse, ProgressState, SubmitResult } from "./assistant.types";
 
 function extractSubmitResult(response: AssistantPromptResponse): SubmitResult {
   let content: string;

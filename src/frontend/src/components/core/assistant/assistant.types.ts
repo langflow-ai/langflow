@@ -18,7 +18,13 @@ export type AssistantConfigResponse = {
   default_model: string | null;
 };
 
-export type AssistantMessageType = "input" | "output" | "error" | "system" | "validated" | "validation_error";
+export type AssistantMessageType =
+  | "input"
+  | "output"
+  | "error"
+  | "system"
+  | "validated"
+  | "validation_error";
 
 export type AssistantMessageMetadata = {
   className?: string;
@@ -48,6 +54,14 @@ export type ProgressState = {
   step: "generating" | "validating";
   attempt: number;
   maxAttempts: number;
+};
+
+export type ProgressInfo = ProgressState | null;
+
+export type ModelOption = {
+  value: string;
+  label: string;
+  provider: string;
 };
 
 export type AssistantTerminalProps = {
