@@ -53,7 +53,7 @@ def _import_components() -> tuple[dict, int]:
 
 def update_history(history: dict, component_name: str, code_hash: str, current_version: str) -> dict:
     """Updates the hash history for a single component with the new simple schema.
-    
+
     IMPORTANT: Note that the component_name acts as the unique identifier for the component, and must not be changed.
     """
     current_version_parsed = Version(current_version)
@@ -61,7 +61,9 @@ def update_history(history: dict, component_name: str, code_hash: str, current_v
 
     if component_name not in history:
         print(f"Component {component_name} not found in history. Adding...")
-        print(f"WARNING - Ensure that Component {component_name} is a NEW Component. If not, this is an error and will lose hash history for this component.")
+        print(
+            f"WARNING - Ensure that Component {component_name} is a NEW Component. If not, this is an error and will lose hash history for this component."
+        )
         history[component_name] = {}
         history[component_name]["versions"] = {version_key: code_hash}
     else:

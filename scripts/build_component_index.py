@@ -12,6 +12,7 @@ from pathlib import Path
 
 import orjson
 
+
 def _get_lfx_version():
     """Get the installed lfx version.
 
@@ -62,6 +63,7 @@ def _strip_dynamic_fields(obj):
     if isinstance(obj, list):
         return [_strip_dynamic_fields(item) for item in obj]
     return obj
+
 
 def _import_components() -> tuple[dict, int]:
     """Import all lfx components using the async import function.
@@ -154,8 +156,10 @@ def build_component_index() -> dict:
 
     return index
 
+
 # Standard location for component index
 COMPONENT_INDEX_PATH = Path(__file__).parent.parent / "src" / "lfx" / "src" / "lfx" / "_assets" / "component_index.json"
+
 
 def main():
     """Main entry point for building the component index."""
