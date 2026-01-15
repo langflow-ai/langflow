@@ -24,7 +24,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>function gtag(){dataLayer.push(arguments)}window.dataLayer=window.dataLayer||[],gtag("consent","default",{ad_storage:"denied",ad_user_data:"denied",ad_personalization:"denied",analytics_storage:"denied"})</script>
 <script>!function(){function e(){if(void 0!==window.truste&&window.truste.cma){var e=window.truste.cma.callApi("getConsent",window.location.href)||{},n=1===e[2],t=1===e[3];gtag("consent","update",{ad_storage:n?"granted":"denied",ad_user_data:n?"granted":"denied",ad_personalization:n?"granted":"denied",analytics_storage:t?"granted":"denied"})}}window.addEventListener&&(window.addEventListener("cm_data_subject_consent_changed",e),window.addEventListener("cm_consent_preferences_set",e)),"complete"===document.readyState?e():window.addEventListener("load",e)}()</script><link rel="stylesheet" href="/assets/css/styles.403c62aa.css">
-<script src="/assets/js/runtime~main.a683cc49.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.ba84ccbb.js" defer="defer"></script>
 <script src="/assets/js/main.d08ead96.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -74,7 +74,7 @@ A Langflow API key cannot be used to access resources outside of your own Langfl
 <p>In single-user environments, you are always a superuser, and your Langflow API keys always have superuser privileges.</p>
 <p>In multi-user environments, users who aren&#x27;t superusers cannot use their API keys to access other users&#x27; resources.
 Superusers can only run their own flows, and cannot run flows owned by other users.
-You must <a href="#start-a-langflow-server-with-authentication-enabled" class="">start your Langflow server with authentication enabled</a> to allow user management and creation of non-superuser accounts.</p>
+You must <a href="#start-a-langflow-server-with-authentication-enabled" class="">start your Langflow server with authentication enabled</a> to allow superusers to manage users and create non-superuser accounts.</p>
 <h3 class="anchor anchorTargetHideOnScrollNavbar_vjPI" id="create-a-langflow-api-key">Create a Langflow API key<a href="#create-a-langflow-api-key" class="hash-link" aria-label="Direct link to Create a Langflow API key" title="Direct link to Create a Langflow API key" translate="no">​</a></h3>
 <p>You can generate a Langflow API key in your Langflow <strong>Settings</strong> or with the Langflow CLI.</p>
 <p>The CLI option is required if your Langflow server is running in <code>--backend-only</code> mode.</p>
@@ -204,9 +204,9 @@ This is particularly important for multi-instance deployments like Kubernetes to
 </li>
 </ol>
 <h3 class="anchor anchorTargetHideOnScrollNavbar_vjPI" id="langflow-new-user-is-active">LANGFLOW_NEW_USER_IS_ACTIVE<a href="#langflow-new-user-is-active" class="hash-link" aria-label="Direct link to LANGFLOW_NEW_USER_IS_ACTIVE" title="Direct link to LANGFLOW_NEW_USER_IS_ACTIVE" translate="no">​</a></h3>
-<p>When <code>LANGFLOW_NEW_USER_IS_ACTIVE=False</code> (default), a superuser must explicitly activate a new user&#x27;s account before they can sign in to the visual editor.
+<p>When <code>LANGFLOW_NEW_USER_IS_ACTIVE=False</code> (default), accounts created by superusers are inactive by default and must be explicitly activated before users can sign in to the visual editor.
 The superuser can also deactivate a user&#x27;s account as needed.</p>
-<p>When <code>LANGFLOW_NEW_USER_IS_ACTIVE=True</code>, new user accounts are automatically activated.</p>
+<p>When <code>LANGFLOW_NEW_USER_IS_ACTIVE=True</code>, accounts created by superusers are automatically activated.</p>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>LANGFLOW_NEW_USER_IS_ACTIVE=False</span></div></div><br></code></div></div>
 <p>Only superusers can manage user accounts for a Langflow server, but user management only matters if your server has authentication enabled.
 For more information, see <a href="#start-a-langflow-server-with-authentication-enabled" class="">Start a Langflow server with authentication enabled</a>.</p>
@@ -336,6 +336,9 @@ If you don&#x27;t explicitly set these variables, the default values are <code>l
 <li class="">Deselect <strong>Superuser</strong> if you don&#x27;t want the user to have full administrative privileges.</li>
 <li class="">Click <strong>Save</strong>. The new user appears in the <strong>Admin Page</strong>.</li>
 </ol>
+</li>
+<li class="">
+<p>Send the credentials to the user so they can sign in to Langflow. The superuser sets the initial password when creating the account, so users must receive their login credentials from the superuser.</p>
 </li>
 <li class="">
 <p>To test the new user&#x27;s access, sign out of Langflow, and then sign in with the new user&#x27;s credentials.</p>
