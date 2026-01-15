@@ -2028,7 +2028,6 @@
                 "limit": 1,
                 "name": "storage_location",
                 "options": [
-
                   {
                     "icon": "Amazon",
                     "name": "AWS"
