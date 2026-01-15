@@ -83,7 +83,7 @@ jobs:
 
           if [ ${{inputs.pre_release}} == "true" ]; then
             last_released_version=$(curl -s "https://registry.hub.docker.com/v2/repositories/langflowai/langflow-base/tags?page_size=100" | jq -r '.results[].name' | grep -E '\.rc[0-9]+' | sort -V | tail -n 1)
-            version="$(uv run ./scripts/ci/langflow_pre_release_tag.py $version $last_released_version)"
+            version="$(uv run ./scripts/ci/langflow_pre_release_tag.py "$version" "$last_released_version")"
             echo "Latest base pre-release version: $last_released_version"
             echo "Base pre-release version to be released: $version"
           else
@@ -129,7 +129,7 @@ jobs:
 
           if [ ${{inputs.pre_release}} == "true" ]; then
             last_released_version=$(curl -s "https://registry.hub.docker.com/v2/repositories/langflowai/langflow/tags?page_size=100" | jq -r '.results[].name' | grep -E '\.rc[0-9]+' | sort -V | tail -n 1)
-            version="$(uv run ./scripts/ci/langflow_pre_release_tag.py $version $last_released_version)"
+            version="$(uv run ./scripts/ci/langflow_pre_release_tag.py "$version" "$last_released_version")"
             echo "Latest main pre-release version: $last_released_version"
             echo "Main pre-release version to be released: $version"
           else
