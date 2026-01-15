@@ -967,8 +967,7 @@ class TestHttpApiDataTransformation(TestLambdaFilterComponent):
     async def test_should_work_when_llm_uses_results_key_after_normalization(
         self, mock_get_model_classes, component_class, model_metadata, mock_llm
     ):
-        """
-        Test that the data normalization ensures consistency between prompt and data.
+        """Test that the data normalization ensures consistency between prompt and data.
 
         The prompt shows {"_results": [...]} to the LLM, so the LLM generates
         a lambda using '_results'. The actual data passed to the lambda is also
