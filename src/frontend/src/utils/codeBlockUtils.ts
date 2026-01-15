@@ -5,19 +5,25 @@
  * A code element is considered a block if any of the following conditions are met:
  * 1. It has a language class (e.g., "language-python")
  * 2. It has the "data-language" attribute (from some markdown parsers)
- * 3. The content contains newlines (multi-line code)
+ *
+ * Note: We intentionally do NOT use newlines as a criterion for detecting code blocks.
+ * During streaming, react-markdown may create multiple code elements for a single
+ * code block, and using newlines would cause each fragment to be rendered as a
+ * separate block, resulting in duplicated/broken code block rendering.
+ *
+ * @param className - CSS class name that may contain language identifier
+ * @param props - Element props that may contain data-language attribute
+ * @param _content - Unused. Kept for backward compatibility with existing call sites.
  */
 export function isCodeBlock(
   className: string | undefined,
   props: Record<string, unknown> | undefined,
-  content: string,
+  _content?: string,
 ): boolean {
-  const languageMatch = /language-(\w+)/.exec(className ?? "");
-  const hasLanguageClass = !!languageMatch;
+  const hasLanguageClass = /language-\w+/.test(className ?? "");
   const hasDataLanguage = "data-language" in (props ?? {});
-  const hasNewlines = content.includes("\n");
 
-  return hasLanguageClass || hasDataLanguage || hasNewlines;
+  return hasLanguageClass || hasDataLanguage;
 }
 
 /**
