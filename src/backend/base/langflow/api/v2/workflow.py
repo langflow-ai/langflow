@@ -197,10 +197,12 @@ async def execute_workflow(
         )
 
     # Phase 3: Synchronous execution (default)
+    # Note: flow is guaranteed to be non-None here because get_flow_by_id_or_endpoint_name
+    # raises HTTPException if flow is not found
     try:
         return await execute_sync_workflow_with_timeout(
             workflow_request=workflow_request,
-            flow=flow,
+            flow=flow,  # type: ignore[arg-type]
             job_id=job_id,
             api_key_user=api_key_user,
             background_tasks=background_tasks,

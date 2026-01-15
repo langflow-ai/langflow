@@ -301,7 +301,7 @@ def _build_metadata_for_non_output(
     Returns:
         Metadata dict
     """
-    metadata = {}
+    metadata: dict[str, Any] = {}
 
     if output_type != "message" or not isinstance(raw_content, dict):
         return metadata
@@ -403,7 +403,7 @@ def run_response_to_workflow_response(
             output_type = vertex.vertex_type.lower()
 
         # Initialize metadata with component_type
-        metadata = {"component_type": vertex.vertex_type}
+        metadata: dict[str, Any] = {"component_type": vertex.vertex_type}
 
         # Extract content
         content = None
