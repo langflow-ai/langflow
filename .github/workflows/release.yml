@@ -136,16 +136,20 @@ jobs:
         id: version
         run: |
           version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//' | head -n 2 | xargs)
+          echo "Base version from pyproject.toml: $version"
 
           if [ ${{inputs.pre_release}} == "true" ]; then
             last_released_version=$(curl -s "https://pypi.org/pypi/langflow-base/json" | jq -r '.releases | keys | .[]' | grep -E '(a|b|rc|dev|alpha|beta)' | sort -V | tail -n 1)
             version="$(uv run ./scripts/ci/langflow_pre_release_tag.py $version $last_released_version)"
+            echo "Latest base pre-release version: $last_released_version"
+            echo "Base pre-release version to be released: $version"
           else
             last_released_version=$(curl -s "https://pypi.org/pypi/langflow-base/json" | jq -r '.releases | keys | .[]' | grep -vE '(a|b|rc|dev|alpha|beta)' | sort -V | tail -n 1)
+            echo "Latest base release version: $last_released_version"
           fi
 
           if [ "$version" = "$last_released_version" ]; then
-            echo "Version $version is already released. Skipping release."
+            echo "Base pypi version $version is already released. Skipping release."
             echo skipped=true >> $GITHUB_OUTPUT
             exit 1
           else
@@ -182,16 +186,20 @@ jobs:
         id: version
         run: |
           version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//')
+          echo "Main version from pyproject.toml: $version"
 
           if [ ${{inputs.pre_release}} == "true" ]; then
             last_released_version=$(curl -s "https://pypi.org/pypi/langflow/json" | jq -r '.releases | keys | .[]' | grep -E '(a|b|rc|dev|alpha|beta)' | sort -V | tail -n 1)
             version="$(uv run ./scripts/ci/langflow_pre_release_tag.py $version $last_released_version)"
+            echo "Latest main pre-release version: $last_released_version"
+            echo "Main pre-release version to be released: $version"
           else
             last_released_version=$(curl -s "https://pypi.org/pypi/langflow/json" | jq -r '.releases | keys | .[]' | grep -vE '(a|b|rc|dev|alpha|beta)' | sort -V | tail -n 1)
+            echo "Latest main release version: $last_released_version"
           fi
 
           if [ "$version" = "$last_released_version" ]; then
-            echo "Version $version is already released. Skipping release."
+            echo "Main pypi version $version is already released. Skipping release."
             echo skipped=true >> $GITHUB_OUTPUT
             exit 1
           else
