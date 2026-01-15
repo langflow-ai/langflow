@@ -1,3 +1,4 @@
+from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
@@ -6,7 +7,9 @@ from lfx.components.flow_controls.run_flow import RunFlowComponent
 from lfx.components.input_output import ChatInput, ChatOutput, TextInputComponent, TextOutputComponent
 from lfx.graph.graph.base import Graph
 from lfx.helpers.flow import run_flow
+from lfx.schema.data import Data
 from lfx.schema.dotdict import dotdict
+from lfx.schema.message import Message
 
 
 class TestRunFlowEndToEnd:
@@ -327,6 +330,192 @@ class TestRunFlowCaching:
             assert graph2 is not None
             assert graph2.flow_name == flow_name
             assert graph1 == graph2, "Expected same graph instance from cache"
+        finally:
+            # Cleanup
+            await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+
+
+@pytest.fixture
+def run_flow_component():
+    component = RunFlowComponent()
+    component._user_id = "test_user"
+    # Mock _shared_component_cache to avoid errors
+    component._shared_component_cache = MagicMock()
+    return component
+
+
+class TestRunFlowInternalLogic:
+    """Tests for internal logic of RunFlowComponent using real objects where possible."""
+
+    def test_handle_message_data_inputs(self, run_flow_component):
+        """Test that RunFlow handles Message and Data objects as inputs."""
+        # Setup inputs with Message and Data objects
+        message_input = Message(text="Hello from Message")
+        data_input = Data(data={"text": "Hello from Data"})
+
+        # Simulate ioputs structure
+        ioputs = {
+            "node_1": {"input_value": message_input},
+            "node_2": {"input_value": data_input},
+            "node_3": {"input_value": "Plain string"},
+        }
+
+        inputs = run_flow_component._build_inputs_from_ioputs(ioputs)
+
+        # Check inputs
+        assert len(inputs) == 3
+
+        # Verify Message input conversion
+        msg_input = next(i for i in inputs if i["components"] == ["node_1"])
+        assert msg_input["input_value"] == "Hello from Message"
+
+        # Verify Data input conversion
+        data_in = next(i for i in inputs if i["components"] == ["node_2"])
+        assert data_in["input_value"] == "Hello from Data"
+
+        # Verify plain string input
+        str_in = next(i for i in inputs if i["components"] == ["node_3"])
+        assert str_in["input_value"] == "Plain string"
+
+    def test_expose_only_terminal_outputs(self, run_flow_component):
+        """Test that only output nodes without outgoing edges are exposed."""
+        # Create real components
+        comp1 = TextInputComponent()
+        comp1.display_name = "Comp1"
+        # Ensure _id is set before adding to graph
+        comp1.set_id("v1")
+
+        comp2 = TextInputComponent()
+        comp2.display_name = "Comp2"
+        comp2.set_id("v2")
+
+        comp3 = TextInputComponent()
+        comp3.display_name = "Comp3"
+        comp3.set_id("v3")
+
+        # Create a real graph
+        # Comp1 -> Comp2
+        # Comp3 (isolated)
+        # Graph init adds start/end components.
+        # Graph(start=comp1, end=comp2) initializes graph with comp1 and comp2.
+        # If we pass pre-initialized components (with IDs set), Graph uses them.
+
+        graph = Graph(start=comp1, end=comp2)
+
+        # Add edge from comp1 to comp2 to make comp1 not a terminal node
+        # We need to manually add the edge since Graph(start, end) just adds vertices
+        graph.add_component_edge(
+            source_id="v1",
+            output_input_tuple=("text", "input_value"),
+            target_id="v2"
+        )
+
+        # Add comp3
+        # Use a fresh ID for comp3 to avoid any potential conflict, though v3 should be fine.
+        # But wait, if graph init failed before, maybe we should check if Graph init actually calls set_id.
+        # Yes, Graph.add_component calls set_id.
+
+        graph.add_component(comp3, component_id="v3")
+
+        # Verify initial state of components
+        assert len(graph.vertices) == 3
+        # Note: Graph creates new Vertex instances, wrapping the components.
+        # Vertex IDs match component IDs.
+        v1 = graph.get_vertex("v1")
+        v2 = graph.get_vertex("v2")
+        v3 = graph.get_vertex("v3")
+
+        # Mark all as outputs for this test scenario
+        # We need to modify the Vertex objects, not just components
+        v1.is_output = True
+        v2.is_output = True
+        v3.is_output = True
+
+        # Call _format_flow_outputs
+        outputs = run_flow_component._format_flow_outputs(graph)
+
+        # Verify results
+        output_names = [out.name for out in outputs]
+
+        # v1 has outgoing edge to v2, so it should be skipped
+        assert not any("v1" in name for name in output_names)
+
+        # v2 is a terminal node, so it should be included
+        # v3 is isolated (terminal), so it should be included
+        assert any("v2" in name for name in output_names)
+        assert any("v3" in name for name in output_names)
+
+    @pytest.mark.asyncio
+    async def test_persist_flow_tweak_data(self, client, logged_in_headers, active_user):
+        """Test that flow tweak data is persisted to the selected subflow on execution with multiple components."""
+        # Create a flow with multiple components we can tweak
+        text_input_1 = TextInputComponent()
+        text_input_1.set_id("input_node_1")
+        text_input_1.input_value = "default_value_1"
+        text_input_1.is_output = True
+
+        text_input_2 = TextInputComponent()
+        text_input_2.set_id("input_node_2")
+        text_input_2.input_value = "default_value_2"
+        text_input_2.is_output = True
+
+        # We need a graph that can be run
+        graph = Graph(start=text_input_1, end=text_input_2)
+        graph_dict = graph.dump(name="Multi Tweakable Flow", description="Flow for multi-tweak testing")
+        flow = FlowCreate(**graph_dict)
+
+        # Create flow via API
+        response = await client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
+        assert response.status_code == 201
+        flow_data = response.json()
+        flow_id = flow_data["id"]
+        flow_name = flow_data["name"]
+
+        try:
+            # Setup component with real flow
+            component = RunFlowComponent()
+            component._user_id = str(active_user.id)
+            component.flow_name_selected = flow_name
+            component.flow_id_selected = flow_id
+            component.cache_flow = False # Disable cache to ensure fresh graph load
+
+            # Set up tweaks for both components
+            tweaks = {
+                "input_node_1~input_value": "tweaked_value_1",
+                "input_node_2~input_value": "tweaked_value_2"
+            }
+            component.flow_tweak_data = tweaks
+            component._attributes = {"flow_tweak_data": tweaks}
+
+            # We execute with the real run_flow to verify tweaks are applied during execution
+            result = await component._run_flow_with_cached_graph(user_id=str(active_user.id))
+
+            assert result is not None
+            assert len(result) > 0
+
+            # Verify the flow output reflects the tweaked value
+            run_output = result[0]
+
+            # Check output for input_node_1
+            output_1 = next((o for o in run_output.outputs if o.component_id == "input_node_1"), None)
+            assert output_1 is not None, "Did not find output for input_node_1"
+
+            message_1 = output_1.results["text"]
+            if hasattr(message_1, "text"):
+                assert message_1.text == "tweaked_value_1"
+            else:
+                assert message_1.get("text") == "tweaked_value_1"
+
+            # Check output for input_node_2
+            output_2 = next((o for o in run_output.outputs if o.component_id == "input_node_2"), None)
+            assert output_2 is not None, "Did not find output for input_node_2"
+
+            message_2 = output_2.results["text"]
+            if hasattr(message_2, "text"):
+                assert message_2.text == "tweaked_value_2"
+            else:
+                assert message_2.get("text") == "tweaked_value_2"
+
         finally:
             # Cleanup
             await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
