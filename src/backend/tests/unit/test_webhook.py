@@ -792,7 +792,6 @@ class TestWebhookEventsStreamAuth:
         from unittest.mock import AsyncMock, Mock, patch
 
         from fastapi import HTTPException
-
         from langflow.api.v1.endpoints import webhook_events_stream
 
         flow = Mock()
