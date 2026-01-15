@@ -11,8 +11,6 @@ export default function ChatMessage({
   updateChat,
   closeChat,
   playgroundPage,
-  isThinking,
-  thinkingDuration,
 }: chatMessagePropsType): JSX.Element {
   const fitViewNode = useFlowStore((state) => state.fitViewNode);
   const [showError, setShowError] = useState(false);
@@ -68,8 +66,6 @@ export default function ChatMessage({
       updateChat={updateChat}
       closeChat={closeChat}
       playgroundPage={playgroundPage}
-      isThinking={isThinking}
-      thinkingDuration={thinkingDuration}
     />
   );
 }

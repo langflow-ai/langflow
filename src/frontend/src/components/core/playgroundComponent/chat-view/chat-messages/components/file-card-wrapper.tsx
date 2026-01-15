@@ -1,7 +1,7 @@
 import { useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import CustomFileCard from "@/customization/components/custom-file-card";
-import formatFileName from "../utils/format-file-name";
+import { formatFileName } from "../utils/format";
 
 export default function FileCardWrapper({
   index,
