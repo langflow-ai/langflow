@@ -4,15 +4,19 @@ export const AnimatedConditional = ({
   children,
   isOpen,
   className,
+  width,
 }: {
   children: React.ReactNode;
   isOpen: boolean;
   className?: string;
+  width?: string | number;
 }) => {
+  const widthValue = width ?? (isOpen ? "auto" : 0);
+
   return (
     <motion.div
-      initial={{ width: isOpen ? "auto" : 0 }}
-      animate={{ width: isOpen ? "auto" : 0 }}
+      initial={{ width: isOpen ? widthValue : 0 }}
+      animate={{ width: isOpen ? widthValue : 0 }}
       exit={{ width: 0 }}
       transition={{
         duration: 0.3,
