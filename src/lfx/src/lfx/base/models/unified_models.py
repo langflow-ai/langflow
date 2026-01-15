@@ -58,26 +58,45 @@ def get_embedding_classes():
 
 @lru_cache(maxsize=1)
 def get_model_provider_metadata():
+    """Get complete provider metadata including model class, API key param, and extra params."""
     return {
         "OpenAI": {
             "icon": "OpenAI",
             "variable_name": "OPENAI_API_KEY",
+            "model_class": "ChatOpenAI",
+            "api_key_param": "api_key",
+            "model_name_param": "model",
         },
         "Anthropic": {
             "icon": "Anthropic",
             "variable_name": "ANTHROPIC_API_KEY",
+            "model_class": "ChatAnthropic",
+            "api_key_param": "api_key",
+            "model_name_param": "model",
         },
         "Google Generative AI": {
             "icon": "GoogleGenerativeAI",
             "variable_name": "GOOGLE_API_KEY",
+            "model_class": "ChatGoogleGenerativeAIFixed",
+            "api_key_param": "google_api_key",
+            "model_name_param": "model",
         },
         "Ollama": {
             "icon": "Ollama",
-            "variable_name": "OLLAMA_BASE_URL",  # Ollama is local but can have custom URL
+            "variable_name": "OLLAMA_BASE_URL",
+            "model_class": "ChatOllama",
+            "api_key_param": "base_url",
+            "model_name_param": "model",
+            "base_url_param": "base_url",
         },
         "IBM WatsonX": {
             "icon": "WatsonxAI",
             "variable_name": "WATSONX_APIKEY",
+            "model_class": "ChatWatsonx",
+            "api_key_param": "apikey",
+            "model_name_param": "model_id",
+            "url_param": "url",
+            "project_id_param": "project_id",
         },
     }
 
@@ -104,6 +123,25 @@ MODELS_DETAILED = get_models_detailed()
 @lru_cache(maxsize=1)
 def get_model_provider_variable_mapping() -> dict[str, str]:
     return {provider: meta["variable_name"] for provider, meta in model_provider_metadata.items()}
+
+
+def get_provider_config(provider: str) -> dict:
+    """Get complete provider configuration.
+
+    Args:
+        provider: Provider name (e.g., "OpenAI", "Anthropic")
+
+    Returns:
+        Dict with model_class, api_key_param, icon, variable_name, model_name_param, and extra params
+
+    Raises:
+        ValueError: If provider is unknown
+    """
+    if provider not in model_provider_metadata:
+        msg = f"Unknown provider: {provider}"
+        raise ValueError(msg)
+
+    return model_provider_metadata[provider].copy()
 
 
 def get_model_providers() -> list[str]:
