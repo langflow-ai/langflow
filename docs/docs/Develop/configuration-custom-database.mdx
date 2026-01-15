@@ -42,7 +42,13 @@ Langflow can more efficiently handle multiple users and larger workloads by usin
     LANGFLOW_DATABASE_URL="postgresql://user:password@localhost:5432/dbname"
     ```
 
-    Langflow uses [SQLAlchemy](https://www.sqlalchemy.org/) with the [psycopg](https://www.psycopg.org/) driver to pass SSL parameters directly to the PostgreSQL connection. The following SSL modes are supported:
+    Langflow uses [SQLAlchemy](https://www.sqlalchemy.org/) with the [psycopg](https://www.psycopg.org/) driver to pass SSL parameters directly to the PostgreSQL connection.
+
+    :::warning PostgreSQL driver compatibility
+    Langflow requires `psycopg2-binary` or `psycopg[binary]` as the PostgreSQL driver. The `asyncpg` driver is not compatible with Langflow's current database schema due to stricter timezone handling requirements.
+    :::
+
+    The following SSL modes are supported:
 
     - **`sslmode=require`**: Requires SSL connection but doesn't verify server certificate. This option is the least secure, but acceptable for most use cases.
         ```bash
