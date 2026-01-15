@@ -1,12 +1,13 @@
 "use client";
-import { AnimatePresence, motion } from "framer-motion";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { motion } from "framer-motion";
+import { ChevronDown } from "lucide-react";
 import { useState } from "react";
-import Markdown from "react-markdown";
-import rehypeMathjax from "rehype-mathjax/browser";
-import remarkGfm from "remark-gfm";
 import { BorderTrail } from "@/components/core/border-trail";
 import { useToolDurations } from "@/components/core/playgroundComponent/chat-view/chat-messages/hooks/use-tool-durations";
+import {
+  formatTime,
+  formatToolTitle,
+} from "@/components/core/playgroundComponent/chat-view/chat-messages/utils/format";
 import type { ContentBlock } from "@/types/chat";
 import { cn } from "@/utils/utils";
 import ForwardedIconComponent from "../../common/genericIconComponent";
@@ -59,22 +60,8 @@ export function ContentBlockDisplay({
     return null;
   }
 
-  const formatTime = (ms: number, showMsOnly: boolean = false) => {
-    if (showMsOnly) {
-      return `${Math.round(ms)}ms`;
-    }
-    if (ms < 1000) return `${Math.round(ms)}ms`;
-    const seconds = ms / 1000;
-    if (seconds < 60) return `${seconds.toFixed(1)}s`;
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}m ${remainingSeconds.toFixed(0)}s`;
-  };
-
   const headerIcon = state === "partial" ? "Bot" : "Check";
   const headerTitle = state === "partial" ? "Steps" : "Finished";
-  // No block title in flattened tool list
-  const showBlockTitle = false;
 
   return (
     <div className="relative py-3">
@@ -144,17 +131,10 @@ export function ContentBlockDisplay({
                     content.header?.title ||
                     content.name ||
                     `Tool ${flatIdx + 1}`;
-                  // Remove "Executed" from the title, replace underscores with spaces, and convert to uppercase
                   const toolTitle =
                     typeof rawTitle === "string"
-                      ? rawTitle
-                          .replace(/^Executed\s+/i, "")
-                          .replace(/_/g, " ")
-                          .replace(/\*\*/g, "")
-                          .trim()
-                          .toUpperCase()
+                      ? formatToolTitle(rawTitle)
                       : rawTitle;
-                  // Use elapsed time if tool is active, otherwise use duration
                   const toolDuration =
                     toolElapsedTimes[toolKey] ?? content.duration ?? 0;
 
