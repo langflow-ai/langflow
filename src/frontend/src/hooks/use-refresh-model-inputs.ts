@@ -5,7 +5,11 @@ import { getURL } from "@/controllers/API/helpers/constants";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import type { APIClassType, APITemplateType } from "@/types/api";
+import type {
+  APIClassType,
+  APITemplateType,
+  ModelOptionType,
+} from "@/types/api";
 import type { AllNodeType } from "@/types/flow";
 
 export interface RefreshOptions {
@@ -133,7 +137,7 @@ function validateModelValue(
 
   // Filter out disabled provider placeholders to get actual available models
   const availableOptions = options.filter(
-    (opt: any) => !opt?.metadata?.is_disabled_provider,
+    (opt: ModelOptionType) => !opt?.metadata?.is_disabled_provider,
   );
 
   // Get current model name from value
@@ -144,7 +148,9 @@ function validateModelValue(
   // Check if current model is still available
   const isCurrentModelValid =
     currentModelName &&
-    availableOptions.some((opt: any) => opt.name === currentModelName);
+    availableOptions.some(
+      (opt: ModelOptionType) => opt.name === currentModelName,
+    );
 
   if (isCurrentModelValid) {
     // Current value is valid, no changes needed
