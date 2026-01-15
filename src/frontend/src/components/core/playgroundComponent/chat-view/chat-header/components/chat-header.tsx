@@ -1,6 +1,9 @@
 import React, { useMemo } from "react";
 import { AnimatedConditional } from "@/components/ui/animated-close";
+import { useDeleteSession } from "@/controllers/API/queries/messages/use-delete-sessions";
 import { useIsMobile } from "@/hooks/use-mobile";
+import useAlertStore from "@/stores/alertStore";
+import { useMessagesStore } from "@/stores/messagesStore";
 import { cn } from "@/utils/utils";
 import { useEditSessionInfo } from "../hooks/use-edit-session-info";
 import { useRenameSession } from "../hooks/use-rename-session";
@@ -51,10 +54,40 @@ export function ChatHeader({
   const isMobile = useIsMobile();
   // Keep session actions (including logs) available in fullscreen
   const isSessionDropdownVisible = true;
+  const isDefaultSession = currentSessionId === currentFlowId;
+  const deleteSessionMutation = useDeleteSession();
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const deleteSessionFromStore = useMessagesStore(
+    (state) => state.deleteSession,
+  );
+
   const handleDeleteSessionInternal = () => {
     if (!currentSessionId) return;
     handleDelete(currentSessionId);
     onDeleteSession?.(currentSessionId);
+  };
+
+  const handleClearChat = () => {
+    if (!currentSessionId || !isDefaultSession) return;
+
+    deleteSessionMutation.mutate(
+      { sessionId: currentSessionId },
+      {
+        onSuccess: () => {
+          // Remove messages from store
+          deleteSessionFromStore(currentSessionId);
+          setSuccessData({
+            title: "Chat cleared successfully.",
+          });
+        },
+        onError: () => {
+          setErrorData({
+            title: "Error clearing chat.",
+          });
+        },
+      },
+    );
   };
 
   const { onMessageLogs } = useSessionMoreMenuHandlers({
@@ -67,8 +100,10 @@ export function ChatHeader({
       <SessionMoreMenu
         onRename={handleEditStartLogged}
         onMessageLogs={onMessageLogs}
+        onClearChat={handleClearChat}
         onDelete={handleDeleteSessionInternal}
-        showDelete={currentSessionId !== currentFlowId}
+        showClearChat={isDefaultSession}
+        showDelete={!isDefaultSession}
         side="bottom"
         align="end"
         sideOffset={4}
