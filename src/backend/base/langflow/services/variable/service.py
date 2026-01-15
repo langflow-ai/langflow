@@ -185,15 +185,11 @@ class DatabaseVariableService(VariableService, Service):
     async def get_all(self, user_id: UUID | str, session: AsyncSession) -> list[VariableRead]:
         stmt = select(Variable).where(Variable.user_id == user_id)
         variables = list((await session.exec(stmt)).all())
-        # For variables of type 'Generic', attempt to decrypt the value.
-        # If decryption fails, assume the value is already plaintext.
-        # For CREDENTIAL type, return the encrypted value as-is (don't decrypt for API response)
+        # VariableRead model validator will automatically redact CREDENTIAL_TYPE values to None
+        # GENERIC type values will be returned as-is (plaintext)
         variables_read = []
         for variable in variables:
-            # Both GENERIC and CREDENTIAL variables: return stored value as-is
-            # GENERIC: stored as plaintext, CREDENTIAL: stored encrypted
             variable_read = VariableRead.model_validate(variable, from_attributes=True)
-            variable_read.value = variable.value
             variables_read.append(variable_read)
         return variables_read
 
