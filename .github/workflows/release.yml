@@ -107,6 +107,138 @@ jobs:
           fi
 
           echo "✅ Release dependencies validated successfully."
+  determine-base-version:
+    name: Determine Base Version
+    if: ${{ inputs.release_package_base || inputs.build_docker_base }}
+    needs: [validate-tag, validate-dependencies]
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      skipped: ${{ steps.version.outputs.skipped }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.release_tag }}
+
+      - name: Setup Environment
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.13"
+          prune-cache: false
+
+      - name: Install the project
+        run: uv sync
+
+      - name: Determine version
+        id: version
+        run: |
+          version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//' | head -n 2 | xargs)
+
+          if [ ${{inputs.pre_release}} == "true" ]; then
+            last_released_version=$(curl -s "https://pypi.org/pypi/langflow-base/json" | jq -r '.releases | keys | .[]' | grep -E '(a|b|rc|dev|alpha|beta)' | sort -V | tail -n 1)
+            version="$(uv run ./scripts/ci/langflow_pre_release_tag.py $version $last_released_version)"
+          else
+            last_released_version=$(curl -s "https://pypi.org/pypi/langflow-base/json" | jq -r '.releases | keys | .[]' | grep -vE '(a|b|rc|dev|alpha|beta)' | sort -V | tail -n 1)
+          fi
+
+          if [ "$version" = "$last_released_version" ]; then
+            echo "Version $version is already released. Skipping release."
+            echo skipped=true >> $GITHUB_OUTPUT
+            exit 1
+          else
+            echo version=$version >> $GITHUB_OUTPUT
+            echo skipped=false >> $GITHUB_OUTPUT
+          fi
+
+  determine-main-version:
+    name: Determine Main Version
+    if: ${{ inputs.release_package_main || inputs.build_docker_main }}
+    needs: [validate-tag, validate-dependencies]
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      skipped: ${{ steps.version.outputs.skipped }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.release_tag }}
+
+      - name: Setup Environment
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.13"
+          prune-cache: false
+
+      - name: Install the project
+        run: uv sync
+
+      - name: Determine version
+        id: version
+        run: |
+          version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//')
+
+          if [ ${{inputs.pre_release}} == "true" ]; then
+            last_released_version=$(curl -s "https://pypi.org/pypi/langflow/json" | jq -r '.releases | keys | .[]' | grep -E '(a|b|rc|dev|alpha|beta)' | sort -V | tail -n 1)
+            version="$(uv run ./scripts/ci/langflow_pre_release_tag.py $version $last_released_version)"
+          else
+            last_released_version=$(curl -s "https://pypi.org/pypi/langflow/json" | jq -r '.releases | keys | .[]' | grep -vE '(a|b|rc|dev|alpha|beta)' | sort -V | tail -n 1)
+          fi
+
+          if [ "$version" = "$last_released_version" ]; then
+            echo "Version $version is already released. Skipping release."
+            echo skipped=true >> $GITHUB_OUTPUT
+            exit 1
+          else
+            echo version=$version >> $GITHUB_OUTPUT
+            echo skipped=false >> $GITHUB_OUTPUT
+          fi
+
+  determine-lfx-version:
+    name: Determine LFX Version
+    if: ${{ inputs.release_lfx }}
+    needs: [validate-tag, validate-dependencies]
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      skipped: ${{ steps.version.outputs.skipped }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.release_tag }}
+
+      - name: Setup Environment
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.13"
+          prune-cache: false
+
+      - name: Install LFX dependencies
+        run: uv sync --dev --package lfx
+
+      - name: Determine version
+        id: version
+        run: |
+          cd src/lfx
+          version=$(uv tree | grep 'lfx' | head -n 1 | awk '{print $2}' | sed 's/^v//')
+          last_released_version=$(curl -s "https://pypi.org/pypi/lfx/json" | jq -r '.releases | keys | .[]' | sort -V | tail -n 1)
+
+          if [ "$version" = "$last_released_version" ]; then
+            echo "Version $version is already released. Skipping release."
+            echo skipped=true >> $GITHUB_OUTPUT
+            exit 1
+          else
+            echo version=$version >> $GITHUB_OUTPUT
+            echo skipped=false >> $GITHUB_OUTPUT
+          fi
 
   ci:
     name: CI
@@ -233,12 +365,9 @@ jobs:
 
   build-base:
     name: Build Langflow Base
-    needs: [ci, ensure-lfx-published]
-    if: ${{ inputs.release_package_base }}
+    needs: [ensure-lfx-published, determine-base-version]
+    if: ${{ inputs.release_package_base && needs.determine-base-version.outputs.skipped == 'false' }}
     runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.check-version.outputs.version }}
-      skipped: ${{ steps.check-version.outputs.skipped }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -255,24 +384,34 @@ jobs:
         run: uv sync
       - name: Check for dependency incompatibility
         run: uv pip check
-      - name: Check Version
-        id: check-version
+      - name: Set version for pre-release
+        if: ${{ inputs.pre_release }}
         run: |
-          version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//' | head -n 2 | xargs)
-          last_released_version=$(curl -s "https://pypi.org/pypi/langflow-base/json" | jq -r '.releases | keys | .[]' | sort -V | tail -n 1)
-          if [ "$version" = "$last_released_version" ]; then
-            echo "Version $version is already released. Skipping release."
-            echo skipped=true >> $GITHUB_OUTPUT
-            exit 1
-          else
-            echo version=$version >> $GITHUB_OUTPUT
-            echo skipped=false >> $GITHUB_OUTPUT
-          fi
+          VERSION="${{ needs.determine-base-version.outputs.version }}"
+          echo "Setting pre-release version to: $VERSION"
+          cd src/backend/base
+
+          # Update version in pyproject.toml
+          sed -i.bak "s/^version = .*/version = \"$VERSION\"/" pyproject.toml
+
+          # Verify the change
+          echo "Updated pyproject.toml version:"
+          grep "^version" pyproject.toml
       - name: Build project for distribution
-        if: steps.check-version.outputs.skipped == 'false'
         run: make build base=true args="--wheel"
+      - name: Verify built version
+        run: |
+          EXPECTED_VERSION="${{ needs.determine-base-version.outputs.version }}"
+          WHEEL_FILE=$(ls dist/*.whl 2>/dev/null || ls src/backend/base/dist/*.whl)
+          echo "Built wheel: $WHEEL_FILE"
+
+          if [[ ! "$WHEEL_FILE" =~ $EXPECTED_VERSION ]]; then
+            echo "❌ Error: Wheel version doesn't match expected version $EXPECTED_VERSION"
+            echo "Wheel file: $WHEEL_FILE"
+            exit 1
+          fi
+          echo "✅ Version verified: $EXPECTED_VERSION"
       - name: Test CLI
-        if: steps.check-version.outputs.skipped == 'false'
         run: |
           # TODO: Unsure why the whl is not built in src/backend/base/dist
           mkdir src/backend/base/dist
@@ -296,7 +435,6 @@ jobs:
       # PyPI publishing moved to after cross-platform testing
 
       - name: Upload Artifact
-        if: steps.check-version.outputs.skipped == 'false'
         uses: actions/upload-artifact@v4
         with:
           name: dist-base
@@ -304,11 +442,9 @@ jobs:
 
   build-main:
     name: Build Langflow Main
-    if: ${{ inputs.release_package_main }}
-    needs: [build-base]
+    needs: [build-base, determine-main-version]
+    if: ${{ inputs.release_package_main && needs.determine-main-version.outputs.skipped == 'false' }}
     runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.check-version.outputs.version }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -325,38 +461,34 @@ jobs:
         run: uv sync
       - name: Check for dependency incompatibility
         run: uv pip check
+      - name: Set version for pre-release
+        if: ${{ inputs.pre_release }}
+        run: |
+          VERSION="${{ needs.determine-main-version.outputs.version }}"
+          echo "Setting pre-release version to: $VERSION"
 
-      # If pre-release is true, we need to check if  ["a", "b", "rc", "dev", "post", "qa"] is in the version string
-      # if the version string is incorrect, we need to exit the workflow
-      - name: Check if pre-release
-        if: inputs.pre_release
-        run: |
-          version="${{ inputs.release_tag }}"
-          echo "$version"
-          if [[ "${version}" =~ ^([0-9]+\.)?([0-9]+\.)?[0-9]+((a|b|rc|dev|post|qa)([0-9]+))$ ]]; then
-            echo "Pre-release version detected. Continuing with the release."
-          else
-            echo "Invalid pre-release version detected. Exiting the workflow."
-            exit 1
-          fi
-      - name: Check Version
-        id: check-version
-        run: |
-          version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//')
-          last_released_version=$(curl -s "https://pypi.org/pypi/langflow/json" | jq -r '.releases | keys | .[]' | sort -V | tail -n 1)
-          if [ "$version" = "$last_released_version" ]; then
-            echo "Version $version is already released. Skipping release."
-            echo skipped=true >> $GITHUB_OUTPUT
-            exit 1
-          else
-            echo version=$version >> $GITHUB_OUTPUT
-          fi
+          # Update version in main pyproject.toml
+          sed -i.bak "s/^version = .*/version = \"$VERSION\"/" pyproject.toml
+
+          # Verify the change
+          echo "Updated pyproject.toml version:"
+          grep "^version" pyproject.toml
       - name: Wait for PyPI Propagation
-        if: needs.build-base.outputs.skipped == 'false'
         run: sleep 300 # wait for 5 minutes to ensure PyPI propagation
-
       - name: Build project for distribution
         run: make build main=true args="--no-sources --wheel"
+      - name: Verify built version
+        run: |
+          EXPECTED_VERSION="${{ needs.determine-main-version.outputs.version }}"
+          WHEEL_FILE=$(ls dist/*.whl)
+          echo "Built wheel: $WHEEL_FILE"
+
+          if [[ ! "$WHEEL_FILE" =~ $EXPECTED_VERSION ]]; then
+            echo "❌ Error: Wheel version doesn't match expected version $EXPECTED_VERSION"
+            echo "Wheel file: $WHEEL_FILE"
+            exit 1
+          fi
+          echo "✅ Version verified: $EXPECTED_VERSION"
       - name: Test CLI
         run: |
           uv pip install dist/*.whl
@@ -385,11 +517,9 @@ jobs:
 
   build-lfx:
     name: Build LFX
-    needs: [build-base]
-    if: ${{ inputs.release_lfx }}
+    needs: [build-base, determine-lfx-version]
+    if: ${{ inputs.release_lfx && needs.determine-lfx-version.outputs.skipped == 'false' }}
     runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.check-version.outputs.version }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -404,23 +534,36 @@ jobs:
           prune-cache: false
       - name: Install LFX dependencies
         run: uv sync --dev --package lfx
-      - name: Check Version
-        id: check-version
+      - name: Set version for pre-release
+        if: ${{ inputs.pre_release }}
         run: |
+          VERSION="${{ needs.determine-lfx-version.outputs.version }}"
+          echo "Setting pre-release version to: $VERSION"
           cd src/lfx
-          version=$(uv tree | grep 'lfx' | head -n 1 | awk '{print $2}' | sed 's/^v//')
-          last_released_version=$(curl -s "https://pypi.org/pypi/lfx/json" | jq -r '.releases | keys | .[]' | sort -V | tail -n 1)
-          if [ "$version" = "$last_released_version" ]; then
-            echo "Version $version is already released. Skipping release."
-            exit 1
-          else
-            echo version=$version >> $GITHUB_OUTPUT
-          fi
+
+          # Update version in lfx pyproject.toml
+          sed -i.bak "s/^version = .*/version = \"$VERSION\"/" pyproject.toml
+
+          # Verify the change
+          echo "Updated pyproject.toml version:"
+          grep "^version" pyproject.toml
       - name: Build project for distribution
         run: |
           cd src/lfx
           rm -rf dist/
           uv build --wheel --out-dir dist
+      - name: Verify built version
+        run: |
+          EXPECTED_VERSION="${{ needs.determine-lfx-version.outputs.version }}"
+          WHEEL_FILE=$(ls src/lfx/dist/*.whl)
+          echo "Built wheel: $WHEEL_FILE"
+
+          if [[ ! "$WHEEL_FILE" =~ $EXPECTED_VERSION ]]; then
+            echo "❌ Error: Wheel version doesn't match expected version $EXPECTED_VERSION"
+            echo "Wheel file: $WHEEL_FILE"
+            exit 1
+          fi
+          echo "✅ Version verified: $EXPECTED_VERSION"
       - name: Test CLI
         run: |
           cd src/lfx
@@ -614,7 +757,7 @@ jobs:
   create_release:
     name: Create Release
     runs-on: ubuntu-latest
-    needs: [build-main, publish-main]
+    needs: [determine-main-version, build-main, publish-main]
     if: |
       always() &&
       !cancelled() &&
@@ -635,6 +778,6 @@ jobs:
           draft: false
           generateReleaseNotes: true
           prerelease: ${{ inputs.pre_release }}
-          tag: ${{ needs.build-main.outputs.version }}
+          tag: ${{ needs.determine-main-version.outputs.version }}
           allowUpdates: true
           updateOnlyUnreleased: false
