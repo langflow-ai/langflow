@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
+from uuid import UUID
 
 from lfx.log.logger import logger
 from sqlmodel import select
@@ -15,7 +16,6 @@ from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-    from uuid import UUID
 
     from lfx.services.settings.service import SettingsService
     from sqlmodel.ext.asyncio.session import AsyncSession
@@ -176,8 +176,11 @@ class DatabaseVariableService(VariableService, Service):
             )
             raise TypeError(msg)
 
-        # we decrypt the value
-        return auth_utils.decrypt_api_key(variable.value, settings_service=self.settings_service)
+        # Only decrypt CREDENTIAL type variables; GENERIC variables are stored as plain text
+        if variable.type == CREDENTIAL_TYPE:
+            return auth_utils.decrypt_api_key(variable.value, settings_service=self.settings_service)
+        # GENERIC type - return as-is
+        return variable.value
 
     async def get_all(self, user_id: UUID | str, session: AsyncSession) -> list[VariableRead]:
         stmt = select(Variable).where(Variable.user_id == user_id)
@@ -214,17 +217,24 @@ class DatabaseVariableService(VariableService, Service):
         Returns:
             Dictionary mapping variable names to decrypted values
         """
-        stmt = select(Variable).where(Variable.user_id == user_id)
+        # Convert string to UUID if needed for SQLAlchemy query
+        user_id_uuid = UUID(user_id) if isinstance(user_id, str) else user_id
+        stmt = select(Variable).where(Variable.user_id == user_id_uuid)
         variables = (await session.exec(stmt)).all()
 
         result = {}
         for var in variables:
             if var.name and var.value:
-                try:
-                    decrypted_value = auth_utils.decrypt_api_key(var.value, settings_service=self.settings_service)
-                    result[var.name] = decrypted_value
-                except Exception as e:  # noqa: BLE001
-                    await logger.adebug(f"Decryption failed for variable '{var.name}': {e}. Using value as-is.")
+                # Only decrypt CREDENTIAL type variables; GENERIC variables are stored as plain text
+                if var.type == CREDENTIAL_TYPE:
+                    try:
+                        decrypted_value = auth_utils.decrypt_api_key(var.value, settings_service=self.settings_service)
+                        result[var.name] = decrypted_value
+                    except Exception as e:  # noqa: BLE001
+                        await logger.adebug(f"Decryption failed for variable '{var.name}': {e}. Using value as-is.")
+                        result[var.name] = var.value
+                else:
+                    # GENERIC type - return as-is
                     result[var.name] = var.value
 
         return result
