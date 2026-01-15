@@ -149,19 +149,19 @@
                 "dependencies": [
                   {
                     "name": "apify_client",
-                    "version": "1.12.2"
+                    "version": null
                   },
                   {
                     "name": "langchain_community",
-                    "version": "0.3.21"
+                    "version": null
                   },
                   {
                     "name": "langchain_core",
-                    "version": "0.3.81"
+                    "version": null
                   },
                   {
                     "name": "pydantic",
-                    "version": "2.11.10"
+                    "version": null
                   },
                   {
                     "name": "lfx",
@@ -380,19 +380,19 @@
                 "dependencies": [
                   {
                     "name": "apify_client",
-                    "version": "1.12.2"
+                    "version": null
                   },
                   {
                     "name": "langchain_community",
-                    "version": "0.3.21"
+                    "version": null
                   },
                   {
                     "name": "langchain_core",
-                    "version": "0.3.81"
+                    "version": null
                   },
                   {
                     "name": "pydantic",
-                    "version": "2.11.10"
+                    "version": null
                   },
                   {
                     "name": "lfx",
@@ -976,11 +976,11 @@
                 "dependencies": [
                   {
                     "name": "orjson",
-                    "version": "3.10.15"
+                    "version": null
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.128.0"
+                    "version": null
                   },
                   {
                     "name": "lfx",
@@ -1288,7 +1288,7 @@
                 "dependencies": [
                   {
                     "name": "pydantic",
-                    "version": "2.11.10"
+                    "version": null
                   },
                   {
                     "name": "lfx",
@@ -1296,7 +1296,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "0.3.81"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 3
