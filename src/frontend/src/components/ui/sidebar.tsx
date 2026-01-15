@@ -18,10 +18,14 @@ import { TooltipProvider } from "./tooltip";
 
 const SIDEBAR_COOKIE_NAME = "sidebar:state";
 const SIDEBAR_SECTION_COOKIE_NAME = "sidebar:section";
+const SIDEBAR_WIDTH_COOKIE_NAME = "sidebar:width";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
-const SIDEBAR_WIDTH = "19rem";
+const SIDEBAR_WIDTH = "21rem";
+const MIN_SIDEBAR_WIDTH = 275;
+const MAX_SIDEBAR_WIDTH = 800;
 const SIDEBAR_WIDTH_ICON = "4rem";
 const SEGMENTED_SIDEBAR_ICON_WIDTH = "40px";
+const RESIZE_OVERLAY_Z_INDEX = "9999";
 
 export type SidebarSection =
   | "search"
@@ -73,6 +77,11 @@ type SidebarContext = {
   activeSection: SidebarSection;
   setActiveSection: (section: SidebarSection) => void;
   defaultSection: SidebarSection;
+  // Width management
+  width: string;
+  setWidth: (width: string) => void;
+  isResizing: boolean;
+  setIsResizing: (isResizing: boolean) => void;
   // Search functionality
   searchInputRef?: React.RefObject<HTMLInputElement>;
   isSearchFocused?: boolean;
@@ -143,6 +152,20 @@ const SidebarProvider = React.forwardRef<
       [setOpenProp, open],
     );
 
+    // Width state management
+    const [_width, _setWidth] = React.useState(() => {
+      const cookieValue = getCookie(SIDEBAR_WIDTH_COOKIE_NAME);
+      if (cookieValue) return cookieValue;
+      return width;
+    });
+
+    const setWidth = React.useCallback((value: string) => {
+      _setWidth(value);
+      document.cookie = `${SIDEBAR_WIDTH_COOKIE_NAME}=${value}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+    }, []);
+
+    const [isResizing, setIsResizing] = React.useState(false);
+
     // Section state management
     const [_activeSection, _setActiveSection] = React.useState<SidebarSection>(
       () => getInitialSidebarSection(defaultSection),
@@ -181,6 +204,10 @@ const SidebarProvider = React.forwardRef<
         activeSection,
         setActiveSection,
         defaultSection,
+        width: _width,
+        setWidth,
+        isResizing,
+        setIsResizing,
       }),
       [
         state,
@@ -191,6 +218,10 @@ const SidebarProvider = React.forwardRef<
         activeSection,
         setActiveSection,
         defaultSection,
+        _width,
+        setWidth,
+        isResizing,
+        setIsResizing,
       ],
     );
 
@@ -216,7 +247,7 @@ const SidebarProvider = React.forwardRef<
           <div
             style={
               {
-                "--sidebar-width": width,
+                "--sidebar-width": _width,
                 "--sidebar-width-icon": segmentedSidebar
                   ? SEGMENTED_SIDEBAR_ICON_WIDTH
                   : SIDEBAR_WIDTH_ICON,
@@ -228,6 +259,7 @@ const SidebarProvider = React.forwardRef<
               className,
             )}
             data-open={open}
+            data-resizing={isResizing}
             ref={ref}
             {...props}
           >
@@ -314,6 +346,7 @@ const Sidebar = React.forwardRef<
         <div
           className={cn(
             "relative h-full w-[--sidebar-width] bg-transparent transition-[width] duration-200 ease-linear",
+            "group-data-[resizing=true]/sidebar-wrapper:transition-none",
             "group-data-[collapsible=offcanvas]:w-0",
             "group-data-[side=right]:rotate-180",
             variant === "floating" || variant === "inset"
@@ -328,6 +361,7 @@ const Sidebar = React.forwardRef<
         <div
           className={cn(
             "absolute inset-y-0 z-50 flex h-full transition-[left,right,width] duration-200 ease-linear",
+            "group-data-[resizing=true]/sidebar-wrapper:transition-none",
             // Adjust width based on state and device
             "w-[--sidebar-width]",
             "max-sm:group-data-[state=collapsed]:w-[--sidebar-width-icon]",
@@ -403,7 +437,68 @@ const SidebarRail = React.forwardRef<
   HTMLButtonElement,
   React.ComponentProps<"button">
 >(({ className, ...props }, ref) => {
-  const { toggleSidebar } = useSidebar();
+  const { toggleSidebar, setWidth, open, setIsResizing } = useSidebar();
+
+  const isResizingInternal = React.useRef(false);
+
+  const onMouseDown = React.useCallback(
+    (event: React.MouseEvent) => {
+      // if double click, reset to default width
+      if (event.detail === 2) {
+        isResizingInternal.current = false;
+        setIsResizing(false);
+        setWidth(SIDEBAR_WIDTH);
+        return;
+      }
+
+      if (!open) return;
+      event.preventDefault();
+      event.stopPropagation();
+
+      const startX = event.clientX;
+      const sidebarElement = event.currentTarget.parentElement;
+      if (!sidebarElement) return;
+      const startWidth = sidebarElement.getBoundingClientRect().width;
+
+      isResizingInternal.current = true;
+      setIsResizing(true);
+      document.body.style.cursor = "w-resize";
+      document.body.style.userSelect = "none";
+
+      const overlay = document.createElement("div");
+      overlay.style.position = "fixed";
+      overlay.style.inset = "0";
+      overlay.style.zIndex = RESIZE_OVERLAY_Z_INDEX;
+      overlay.style.cursor = "w-resize";
+      document.body.appendChild(overlay);
+
+      const onMouseMove = (moveEvent: MouseEvent) => {
+        if (!isResizingInternal.current) return;
+
+        const deltaX = moveEvent.clientX - startX;
+        let newWidth = startWidth + deltaX;
+        if (newWidth < MIN_SIDEBAR_WIDTH) newWidth = MIN_SIDEBAR_WIDTH;
+        if (newWidth > MAX_SIDEBAR_WIDTH) newWidth = MAX_SIDEBAR_WIDTH;
+
+        setWidth(`${newWidth}px`);
+      };
+
+      const onMouseUp = () => {
+        isResizingInternal.current = false;
+        setIsResizing(false);
+
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+        overlay.remove();
+        globalThis.removeEventListener("mousemove", onMouseMove);
+        globalThis.removeEventListener("mouseup", onMouseUp);
+      };
+
+      globalThis.addEventListener("mousemove", onMouseMove);
+      globalThis.addEventListener("mouseup", onMouseUp);
+    },
+    [setWidth, open, setIsResizing],
+  );
 
   return (
     <button
@@ -411,10 +506,16 @@ const SidebarRail = React.forwardRef<
       data-sidebar="rail"
       aria-label="Toggle Sidebar"
       tabIndex={-1}
-      onClick={toggleSidebar}
+      onClick={() => {
+        if (!isResizingInternal.current) {
+          toggleSidebar();
+        }
+      }}
+      onMouseDown={onMouseDown}
       title="Toggle Sidebar"
       className={cn(
-        "absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 transition-all ease-linear after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] hover:after:bg-border group-data-[side=left]:-right-4 group-data-[side=right]:left-0 sm:flex",
+        "absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 transition-all ease-linear after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] hover:after:bg-border group-data-[side=left]:-right-4 group-data-[side=right]:left-0 sm:flex onboarding-sidebar-resize",
+        "group-data-[resizing=true]/sidebar-wrapper:transition-none",
         "[[data-side=left]_&]:cursor-w-resize [[data-side=right]_&]:cursor-e-resize",
         "[[data-side=left][data-state=collapsed]_&]:cursor-e-resize [[data-side=right][data-state=collapsed]_&]:cursor-w-resize",
         "group-data-[collapsible=offcanvas]:hover:bg group-data-[collapsible=offcanvas]:translate-x-0 group-data-[collapsible=offcanvas]:after:left-full",

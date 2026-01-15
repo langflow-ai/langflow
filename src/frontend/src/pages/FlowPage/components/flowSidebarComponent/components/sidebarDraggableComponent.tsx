@@ -177,43 +177,49 @@ export const SidebarDraggableComponent = forwardRef(
                     {display_name}
                   </span>
                 </ShadTooltip>
-                {beta && (
-                  <Badge
-                    variant="purpleStatic"
-                    size="xq"
-                    className="ml-1.5 shrink-0"
-                  >
-                    Beta
-                  </Badge>
-                )}
-                {legacy && (
-                  <Badge
-                    variant="secondaryStatic"
-                    size="xq"
-                    className="ml-1.5 shrink-0"
-                  >
-                    Legacy
-                  </Badge>
-                )}
               </div>
               <div className="flex shrink-0 items-center gap-1">
-                {!disabled && (
-                  <Button
-                    data-testid={`add-component-button-${convertTestName(
-                      display_name,
-                    )}`}
-                    variant="ghost"
-                    size="icon"
-                    tabIndex={-1}
-                    className="text-primary"
-                    onClick={() => addComponent(apiClass, itemName)}
-                  >
-                    <ForwardedIconComponent
-                      name="Plus"
-                      className="h-4 w-4 shrink-0 transition-all group-hover/draggable:opacity-100 group-focus/draggable:opacity-100 sm:opacity-0"
-                    />
-                  </Button>
-                )}
+                <div className="relative flex items-center justify-end">
+                  <div className="flex items-center gap-1.5 transition-all duration-500 group-hover/draggable:opacity-0 group-hover/draggable:pointer-events-none">
+                    {beta && (
+                      <Badge
+                        variant="purpleStatic"
+                        size="xq"
+                        className="ml-1.5 shrink-0"
+                      >
+                        Beta
+                      </Badge>
+                    )}
+                    {legacy && (
+                      <Badge
+                        variant="secondaryStatic"
+                        size="xq"
+                        className="ml-1.5 shrink-0"
+                      >
+                        Legacy
+                      </Badge>
+                    )}
+                  </div>
+                  {!disabled && (
+                    <div className="absolute inset-y-0 right-0 flex items-center justify-center opacity-0 transition-all duration-500 group-hover/draggable:opacity-100">
+                      <Button
+                        data-testid={`add-component-button-${convertTestName(
+                          display_name,
+                        )}`}
+                        variant="ghost"
+                        size="icon"
+                        tabIndex={-1}
+                        className="text-primary"
+                        onClick={() => addComponent(apiClass, itemName)}
+                      >
+                        <ForwardedIconComponent
+                          name="Plus"
+                          className="h-4 w-4 shrink-0 transition-all"
+                        />
+                      </Button>
+                    </div>
+                  )}
+                </div>
                 <div ref={popoverRef}>
                   <ForwardedIconComponent
                     name="GripVertical"

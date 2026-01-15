@@ -1,5 +1,5 @@
-import { fireEvent, render } from "@testing-library/react";
-import { SidebarProvider, useSidebar } from "../sidebar";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { Sidebar, SidebarProvider, SidebarRail, useSidebar } from "../sidebar";
 
 // Mock component to test useSidebar hook
 const TestComponent = ({ onToggle }: { onToggle?: () => void }) => {
@@ -118,5 +118,121 @@ describe("Sidebar", () => {
 
     fireEvent.click(getByTestId("toggle-btn")); // -> true
     expect(cookieStore["sidebar:state"]).toBe("true");
+  });
+});
+
+describe("SidebarRail and Resizing", () => {
+  const MIN_SIDEBAR_WIDTH = 275;
+  const MAX_SIDEBAR_WIDTH = 800;
+  const DEFAULT_WIDTH = "21rem";
+
+  it("should update width on drag and honor constraints", () => {
+    const { container } = render(
+      <SidebarProvider>
+        <Sidebar>
+          <SidebarRail data-testid="sidebar-rail" />
+        </Sidebar>
+      </SidebarProvider>,
+    );
+
+    const rail = screen.getByTestId("sidebar-rail");
+    const wrapper = container.querySelector(
+      ".group\\/sidebar-wrapper",
+    ) as HTMLElement;
+
+    // Initial width
+    expect(wrapper.style.getPropertyValue("--sidebar-width")).toBe(
+      DEFAULT_WIDTH,
+    );
+
+    // Mock parent width for calculation (21rem approx 336px)
+    const sidebarElement = rail.parentElement!;
+    jest.spyOn(sidebarElement, "getBoundingClientRect").mockReturnValue({
+      width: 336,
+    } as DOMRect);
+
+    // 1. Start drag
+    fireEvent.mouseDown(rail, { clientX: 336 });
+    expect(wrapper.getAttribute("data-resizing")).toBe("true");
+
+    // 2. Drag to 436 (+100px)
+    fireEvent.mouseMove(window, { clientX: 436 });
+    expect(wrapper.style.getPropertyValue("--sidebar-width")).toBe("436px");
+
+    // 3. Drag to MAX_SIDEBAR_WIDTH + 100
+    fireEvent.mouseMove(window, { clientX: 336 + MAX_SIDEBAR_WIDTH + 100 });
+    expect(wrapper.style.getPropertyValue("--sidebar-width")).toBe(
+      `${MAX_SIDEBAR_WIDTH}px`,
+    );
+
+    // 4. Drag to MIN_SIDEBAR_WIDTH - 100
+    fireEvent.mouseMove(window, { clientX: 336 - 200 });
+    expect(wrapper.style.getPropertyValue("--sidebar-width")).toBe(
+      `${MIN_SIDEBAR_WIDTH}px`,
+    );
+
+    // 5. Release
+    fireEvent.mouseUp(window);
+    expect(wrapper.getAttribute("data-resizing")).toBe("false");
+  });
+
+  it("should reset to default width on double click", () => {
+    const { container } = render(
+      <SidebarProvider>
+        <Sidebar>
+          <SidebarRail data-testid="sidebar-rail" />
+        </Sidebar>
+      </SidebarProvider>,
+    );
+
+    const rail = screen.getByTestId("sidebar-rail");
+    const wrapper = container.querySelector(
+      ".group\\/sidebar-wrapper",
+    ) as HTMLElement;
+
+    // Change width first
+    const sidebarElement = rail.parentElement!;
+    jest.spyOn(sidebarElement, "getBoundingClientRect").mockReturnValue({
+      width: 336,
+    } as DOMRect);
+    fireEvent.mouseDown(rail, { clientX: 336 });
+    fireEvent.mouseMove(window, { clientX: 500 });
+    fireEvent.mouseUp(window);
+    expect(wrapper.style.getPropertyValue("--sidebar-width")).toBe("500px");
+
+    // Double click to reset
+    fireEvent.mouseDown(rail, { detail: 2 });
+    expect(wrapper.style.getPropertyValue("--sidebar-width")).toBe(
+      DEFAULT_WIDTH,
+    );
+  });
+
+  it("should toggle sidebar on click when not dragging", () => {
+    const Test = () => {
+      const { open } = useSidebar();
+      return (
+        <>
+          <SidebarRail data-testid="sidebar-rail" />
+          <span>{open ? "open" : "closed"}</span>
+        </>
+      );
+    };
+
+    render(
+      <SidebarProvider>
+        <Sidebar>
+          <Test />
+        </Sidebar>
+      </SidebarProvider>,
+    );
+
+    const rail = screen.getByTestId("sidebar-rail");
+    expect(screen.getByText("open")).toBeInTheDocument();
+
+    fireEvent.click(rail);
+    expect(screen.getByText("closed")).toBeInTheDocument();
+
+    fireEvent.click(rail);
+    expect(screen.getByText("open")).toBeInTheDocument();
   });
 });
