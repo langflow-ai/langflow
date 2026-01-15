@@ -1058,7 +1058,7 @@ class TestRunResponseToWorkflowResponse:
 
         inputs = {"component.param": "value"}
         request = WorkflowExecutionRequest(flow_id="flow-1", inputs=inputs)
-        
+
         response = run_response_to_workflow_response(run_response, "flow-1", "job-1", request, graph)
         assert response.inputs == inputs
 

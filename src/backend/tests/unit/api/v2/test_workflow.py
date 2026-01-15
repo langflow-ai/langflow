@@ -229,7 +229,7 @@ class TestWorkflowDeveloperAPIProtection:
             # The execution will complete successfully with no outputs
             assert response.status_code == 200
             result = response.json()
-            
+
             # Verify response contains expected fields with proper structure
             assert "outputs" in result or "errors" in result
             if "outputs" in result:
@@ -719,7 +719,7 @@ class TestWorkflowSyncExecution:
             assert "flow_id" in result
             assert result["flow_id"] == str(flow_id)
             assert "job_id" in result
-            
+
             # Verify outputs or errors are present with actual content
             assert "outputs" in result or "errors" in result
             if "outputs" in result:
