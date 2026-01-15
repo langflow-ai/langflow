@@ -9,7 +9,10 @@ import {
   CustomParameterLabel,
   getCustomParameterTitle,
 } from "@/customization/components/custom-parameter";
-import { ENABLE_INSPECTION_PANEL, LANGFLOW_AGENTIC_EXPERIENCE } from "@/customization/feature-flags";
+import {
+  ENABLE_INSPECTION_PANEL,
+  LANGFLOW_AGENTIC_EXPERIENCE,
+} from "@/customization/feature-flags";
 import { useIsAutoLogin } from "@/hooks/use-is-auto-login";
 import useAuthStore from "@/stores/authStore";
 import { cn } from "@/utils/utils";
@@ -226,27 +229,28 @@ export default function NodeInputField({
           />
         </div>
 
-        {(!ENABLE_INSPECTION_PANEL || !optionalHandle) && data.node?.template[name] !== undefined && (
-          <CustomParameterComponent
-            handleOnNewValue={handleOnNewValue}
-            name={name}
-            nodeId={data.id}
-            inputId={id}
-            templateData={data.node?.template[name]!}
-            templateValue={data.node?.template[name].value ?? ""}
-            editNode={false}
-            handleNodeClass={handleNodeClass}
-            nodeClass={data.node!}
-            placeholder={
-              isToolMode
-                ? DEFAULT_TOOLSET_PLACEHOLDER
-                : data.node?.template[name].placeholder
-            }
-            isToolMode={isToolMode}
-            nodeInformationMetadata={nodeInformationMetadata}
-            proxy={proxy}
-          />
-        )}
+        {(!ENABLE_INSPECTION_PANEL || !optionalHandle) &&
+          data.node?.template[name] !== undefined && (
+            <CustomParameterComponent
+              handleOnNewValue={handleOnNewValue}
+              name={name}
+              nodeId={data.id}
+              inputId={id}
+              templateData={data.node?.template[name]!}
+              templateValue={data.node?.template[name].value ?? ""}
+              editNode={false}
+              handleNodeClass={handleNodeClass}
+              nodeClass={data.node!}
+              placeholder={
+                isToolMode
+                  ? DEFAULT_TOOLSET_PLACEHOLDER
+                  : data.node?.template[name].placeholder
+              }
+              isToolMode={isToolMode}
+              nodeInformationMetadata={nodeInformationMetadata}
+              proxy={proxy}
+            />
+          )}
       </div>
     </div>
   );

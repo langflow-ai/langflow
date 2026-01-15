@@ -24,8 +24,8 @@ const RenderInputParameters = ({
           b,
           data.node!.template,
           data.node?.field_order ?? [],
-          isToolMode
-        )
+          isToolMode,
+        ),
       );
   }, [data.node?.template, data.node?.field_order, isToolMode]);
 
@@ -70,12 +70,12 @@ const RenderInputParameters = ({
           colors: getNodeInputColors(
             template.input_types,
             template.type,
-            types
+            types,
           ),
           colorsName: getNodeInputColorsName(
             template.input_types,
             template.type,
-            types
+            types,
           ),
         });
       }
@@ -98,7 +98,7 @@ const RenderInputParameters = ({
             id: data.id,
             fieldName: templateField,
             proxy: template.proxy,
-          })
+          }),
         );
       }
     });
@@ -141,7 +141,7 @@ const RenderInputParameters = ({
           isToolMode={isToolMode && template.tool_mode}
         />
       );
-    }
+    },
   );
 
   return <>{renderInputParameter}</>;
