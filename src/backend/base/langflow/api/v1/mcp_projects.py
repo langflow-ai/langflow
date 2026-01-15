@@ -71,6 +71,8 @@ from langflow.services.database.models.api_key.model import ApiKey, ApiKeyCreate
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_service
+from langflow.services.publish.schema import ReleaseStage
+from langflow.services.schema import ServiceType as LangflowServiceType
 
 # Constants
 ALL_INTERFACES_HOST = "0.0.0.0"  # noqa: S104
@@ -218,14 +220,11 @@ async def verify_project_auth_conditional(
 
         # Verify deployed artifact exists for this user/project/version
         try:
-            from langflow.services.publish.schema import PublishedProjectMetadata, ReleaseStage
-            from langflow.services.schema import ServiceType as LangflowServiceType
-
             publish_service = get_service(LangflowServiceType.PUBLISH_SERVICE)
             await publish_service.get_project(
                 user_id=user.id,
                 project_id=project_id,
-                metadata=PublishedProjectMetadata(version_id=deployed_version_id),
+                version_id=deployed_version_id,
                 stage=ReleaseStage.DEPLOY,
             )
         except HTTPException:

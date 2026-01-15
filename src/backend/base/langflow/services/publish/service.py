@@ -4,11 +4,16 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING
 
 from langflow.services.base import Service
-from langflow.services.publish.schema import ReleaseStage
-from langflow.services.publish.utils import IDType, add_trailing_slash
+from langflow.services.publish.schema import IDType, ReleaseStage
+from langflow.services.publish.utils import add_trailing_slash
 
 if TYPE_CHECKING:
-    from langflow.services.publish.schema import PublishedFlowMetadata, PublishedProjectMetadata
+    from langflow.services.publish.schema import (
+        FlowBlob,
+        ProjectBlob,
+        PublishedFlowMetadata,
+        PublishedProjectMetadata,
+    )
     from langflow.services.settings.service import SettingsService
 
 
@@ -35,7 +40,7 @@ class PublishService(Service):
         self,
         user_id: IDType,
         flow_id: IDType,
-        metadata: PublishedFlowMetadata,
+        version_id: str,
         stage: ReleaseStage = ReleaseStage.PUBLISH,
     ) -> str:
         """Retrieves a published flow from the storage provider."""
@@ -46,7 +51,7 @@ class PublishService(Service):
         self,
         user_id: IDType,
         flow_id: IDType,
-        flow_blob: dict,
+        flow_blob: FlowBlob,
         stage: ReleaseStage = ReleaseStage.PUBLISH,
     ) -> PublishedFlowMetadata:
         """Publishes a flow to the storage provider."""
@@ -57,7 +62,7 @@ class PublishService(Service):
         self,
         user_id: IDType,
         flow_id: IDType,
-        metadata: PublishedFlowMetadata,
+        version_id: str,
         stage: ReleaseStage = ReleaseStage.PUBLISH,
     ) -> str | None:
         """Deletes a published flow from the storage provider."""
@@ -81,7 +86,7 @@ class PublishService(Service):
         self,
         user_id: IDType,
         project_id: IDType,
-        metadata: PublishedProjectMetadata,
+        version_id: str,
         stage: ReleaseStage = ReleaseStage.PUBLISH,
     ) -> str:
         """Retrieves a published project from the storage provider."""
@@ -92,7 +97,7 @@ class PublishService(Service):
         self,
         user_id: IDType,
         project_id: IDType,
-        project_blob: dict,
+        project_blob: ProjectBlob,
         stage: ReleaseStage = ReleaseStage.PUBLISH,
     ) -> PublishedProjectMetadata:
         """Publishes a project to the storage provider."""
@@ -103,7 +108,7 @@ class PublishService(Service):
         self,
         user_id: IDType,
         project_id: IDType,
-        metadata: PublishedProjectMetadata,
+        version_id: str,
         stage: ReleaseStage = ReleaseStage.PUBLISH,
     ) -> str | None:
         """Deletes a published project from the storage provider."""

@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Annotated, Any, cast
 from uuid import UUID
 
-import orjson
 from fastapi import Depends, HTTPException, Request
 from lfx.log.logger import logger
 from lfx.services.deps import get_service
@@ -16,7 +15,8 @@ from langflow.services.auth.utils import api_key_security, get_current_active_us
 from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.user.model import User, UserRead  # noqa: TC001
 from langflow.services.deps import get_settings_service, session_scope
-from langflow.services.publish.schema import PublishedFlowMetadata, ReleaseStage
+from langflow.services.publish.schema import ReleaseStage
+from langflow.services.publish.utils import validate_flow_blob
 from langflow.services.schema import ServiceType
 
 if TYPE_CHECKING:
@@ -497,28 +497,23 @@ async def get_deployed_flow(
     try:
         publish_service: PublishService = get_service(ServiceType.PUBLISH_SERVICE)
         # we dont need to list versions, we can just get the metadata for the version we want
-        metadata = PublishedFlowMetadata(version_id=version_id)
-
         # 2. Fetch content
         flow_data_str = await publish_service.get_flow(
             user_id=api_key_user.id,
             flow_id=flow_id,
-            metadata=metadata,
+            version_id=version_id,
             stage=ReleaseStage.DEPLOY,
         )
 
-        if not flow_data_str:
-            raise HTTPException(status_code=404, detail="Flow data not found")
-
-        flow_data = orjson.loads(flow_data_str)
+        flow_blob = validate_flow_blob(flow_data_str, detail="Invalid deployed flow data")
 
         # 3. Convert to FlowRead
         return FlowRead(
             id=flow_id,
             user_id=api_key_user.id,
-            name=flow_data.get("name"),
-            description=flow_data.get("description"),
-            data=flow_data,
+            name=flow_blob.name,
+            description=flow_blob.description,
+            data=flow_blob.model_dump(),
             folder_id=None,
             # published flows don't really have a folder context (yet?)
         )
@@ -540,26 +535,21 @@ async def get_deployed_flow_for_webhook(
         user = await get_webhook_user(str(flow_id), request)
 
         publish_service: PublishService = get_service(ServiceType.PUBLISH_SERVICE)
-        metadata = PublishedFlowMetadata(version_id=version_id)
-
         flow_data_str = await publish_service.get_flow(
             user_id=user.id,
             flow_id=flow_id,
-            metadata=metadata,
+            version_id=version_id,
             stage=ReleaseStage.DEPLOY,
         )
 
-        if not flow_data_str:
-            raise HTTPException(status_code=404, detail="Flow data not found")
-
-        flow_data = orjson.loads(flow_data_str)
+        flow_blob = validate_flow_blob(flow_data_str, detail="Invalid deployed flow data")
 
         flow_read = FlowRead(
             id=flow_id,
             user_id=user.id,
-            name=flow_data.get("name"),
-            description=flow_data.get("description"),
-            data=flow_data,
+            name=flow_blob.name,
+            description=flow_blob.description,
+            data=flow_blob.model_dump(),
             folder_id=None,
         )
     except HTTPException:
@@ -578,26 +568,21 @@ async def get_deployed_flow_session(
     """Dependency to retrieve a published flow for a session user."""
     try:
         publish_service: PublishService = get_service(ServiceType.PUBLISH_SERVICE)
-        metadata = PublishedFlowMetadata(version_id=version_id)
-
         flow_data_str = await publish_service.get_flow(
             user_id=user.id,
             flow_id=flow_id,
-            metadata=metadata,
+            version_id=version_id,
             stage=ReleaseStage.DEPLOY,
         )
 
-        if not flow_data_str:
-            raise HTTPException(status_code=404, detail="Flow data not found")
-
-        flow_data = orjson.loads(flow_data_str)
+        flow_blob = validate_flow_blob(flow_data_str, detail="Invalid deployed flow data")
 
         return FlowRead(
             id=flow_id,
             user_id=user.id,
-            name=flow_data.get("name"),
-            description=flow_data.get("description"),
-            data=flow_data,
+            name=flow_blob.name,
+            description=flow_blob.description,
+            data=flow_blob.model_dump(),
             folder_id=None,
         )
     except HTTPException:

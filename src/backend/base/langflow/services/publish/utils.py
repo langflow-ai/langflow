@@ -4,8 +4,8 @@ import re
 from copy import deepcopy
 from datetime import datetime
 from typing import Any
-from uuid import UUID
 
+import orjson
 from botocore.exceptions import (
     ClientError,
     NoCredentialsError,
@@ -15,12 +15,10 @@ from botocore.exceptions import (
 )
 from fastapi import HTTPException, status
 from lfx.log import logger
+from pydantic import ValidationError
 
 from langflow.services.database.models.base import orjson_dumps
-
-# commonly used types
-IDType = str | UUID | None
-IDTypeStrict = str | UUID
+from langflow.services.publish.schema import FlowBlob, IDType, ProjectBlob
 
 
 ########################################################
@@ -28,18 +26,6 @@ IDTypeStrict = str | UUID
 ########################################################
 def add_trailing_slash(s):
     return s + "/" if (s and not s.endswith("/")) else s
-
-
-########################################################
-# sanitization and parsing of the object key
-########################################################
-ALNUM_PATTERN = re.compile(r"[^a-zA-Z0-9_.-]+") # Allowed: a-z, A-Z, 0-9, _, ., -
-def to_alnum_string(s: str | None):
-    """Returns a new string with invalid characters removed.
-
-    Allowed characters: alphanumeric, underscore, dot, hyphen.
-    """
-    return ALNUM_PATTERN.sub("", s) if s else None
 
 
 VERSION_PATTERN = re.compile(r"versions/([^/]+)\.json$")
@@ -53,19 +39,6 @@ def parse_blob_key(key: str, last_modified: datetime | None, cls) -> Any:
 ########################################################
 # validation
 ########################################################
-INVALID_FLOW_MSG = (
-    "Invalid flow. Flow data must contain ALL of these keys:\n"
-    "- name (must be non-empty and contain at least one alphanumeric character)\n"
-    "- description (can be None or empty)\n"
-    "- nodes (can be None or empty)\n"
-    "- edges (can be None or empty)"
-)
-INVALID_PROJECT_MSG = (
-    "Invalid project. Project data must contain ALL of these keys:\n"
-    "- name (must be non-empty and contain at least one alphanumeric character)\n"
-    "- description (can be None or empty)\n"
-    "- flows (must be a nonempty list)"
-)
 MISSING_BUCKET_NAME_MSG = "Publish backend bucket name not specified"
 MISSING_ALL_ID_MSG = "user_id and {item_type}_id are required."
 MISSING_ITEM_MSG = "{item} is missing or empty."
@@ -94,55 +67,32 @@ def require_publish_key(key: str | None):
         raise ValueError(MISSING_ITEM_MSG.format(item="Publish key"))
 
 
-def require_valid_flow(flow_data: dict | None):
-    """Validates the flow data dictionary for publishing.
-
-    Raises a ValueError if the data is None, empty,
-    or does not have sufficient fields for publishing:
-    - name (must contain at least one alphanumeric character)
-    - description (can be None or empty)
-    - nodes (can be None or empty)
-    - edges (can be None or empty)
-
-    Modifies flow_data["name"] in-place to remove all non-alphanumeric characters.
-    """
-    if not flow_data:
-        raise ValueError(MISSING_ITEM_MSG.format(item="Flow data"))
-
-    flow_data["name"] = to_alnum_string(flow_data.get("name", None))
-
-    if not (
-        flow_data["name"] and
-        "description" in flow_data and
-        "nodes" in flow_data and
-        "edges" in flow_data
-        ):
-        raise ValueError(INVALID_FLOW_MSG)
+def validate_flow_blob(
+    flow_data_str: str,
+    *,
+    detail: str,
+    use_http_exception: bool = True,
+) -> FlowBlob:
+    try:
+        return FlowBlob.model_validate(orjson.loads(flow_data_str))
+    except ValidationError as exc:
+        if use_http_exception:
+            raise HTTPException(status_code=500, detail=detail) from exc
+        raise ValueError(detail) from exc
 
 
-def require_valid_project(project_data: dict | None):
-    """Validates the project data dictionary for publishing.
-
-    Raises a ValueError if the data is None, empty,
-    or does not have sufficient fields for publishing:
-    - name (must contain at least one alphanumeric character)
-    - description (can be None or empty)
-    - flows (must be a nonempty list of flows)
-
-    Modifies project_data["name"] in-place to remove all non-alphanumeric characters.
-    """
-    if not project_data:
-        raise ValueError(MISSING_ITEM_MSG.format(item="Project data"))
-
-    project_data["name"] = to_alnum_string(project_data.get("name", None))
-
-    if not (
-        project_data["name"] and
-        "description" in project_data and
-        (flows := project_data.get("flows", None)) and
-        isinstance(flows, list)
-    ):
-        raise ValueError(INVALID_PROJECT_MSG)
+def validate_project_blob(
+    project_blob_str: str,
+    *,
+    detail: str,
+    use_http_exception: bool = True,
+) -> ProjectBlob:
+    try:
+        return ProjectBlob.model_validate(orjson.loads(project_blob_str))
+    except ValidationError as exc:
+        if use_http_exception:
+            raise HTTPException(status_code=500, detail=detail) from exc
+        raise ValueError(detail) from exc
 
 
 def validate_all(
@@ -229,14 +179,14 @@ def pop_nested(d: dict, keys: tuple):
         cur.pop(keys[-1], None)
 
 
-def compute_flow_hash(graph_data: dict | None):
+def compute_flow_hash(graph_data: dict) -> str:
     """Returns the SHA256 of the normalized, key-ordered flow json."""
     graph_data = normalized_flow_data(graph_data)
     cleaned_graph_json = orjson_dumps(graph_data, sort_keys=True)
     return hashlib.sha256(cleaned_graph_json.encode("utf-8")).hexdigest()
 
 
-def compute_project_hash(project_data: dict | None):
+def compute_project_hash(project_data: dict) -> str:
     """Returns the SHA256 of the normalized, key-ordered project json."""
     cleaned_graph_json = orjson_dumps(project_data, sort_keys=True)
     return hashlib.sha256(cleaned_graph_json.encode("utf-8")).hexdigest()

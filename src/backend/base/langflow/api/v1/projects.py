@@ -53,9 +53,9 @@ from langflow.services.database.models.folder.model import (
 )
 from langflow.services.database.models.folder.pagination_model import FolderWithPaginatedFlows
 from langflow.services.deps import get_service, get_settings_service, get_storage_service
-from langflow.services.publish.schema import PublishedProjectMetadata, ReleaseStage
+from langflow.services.publish.schema import ProjectBlob, PublishedProjectMetadata, ReleaseStage
 from langflow.services.publish.service import PublishService
-from langflow.services.publish.utils import require_all_ids
+from langflow.services.publish.utils import require_all_ids, validate_project_blob
 from langflow.services.schema import ServiceType
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
@@ -716,7 +716,9 @@ async def publish_project(
 
     try:
         db_project: Folder = await _read_project_for_publish(session, project_id, current_user.id)
-        project_blob: dict = await _create_project_blob(session, db_project, project_data)
+        project_blob = ProjectBlob.model_validate(
+            await _create_project_blob(session, db_project, project_data)
+        )
 
         publish_service: PublishService = get_service(ServiceType.PUBLISH_SERVICE)
         publish_data: PublishedProjectMetadata = await publish_service.put_project(
@@ -742,19 +744,19 @@ async def deploy_project(
 
     try:
         publish_service: PublishService = get_service(ServiceType.PUBLISH_SERVICE)
-        metadata = PublishedProjectMetadata(version_id=body.version_id)
-
-        project_blob: str = await publish_service.get_project(
+        project_blob = await publish_service.get_project(
             user_id=current_user.id,
             project_id=project_id,
-            metadata=metadata,
+            version_id=body.version_id,
             stage=ReleaseStage.PUBLISH,
             )
+
+        project_blob = validate_project_blob(project_blob, detail="Invalid published project data")
 
         return await publish_service.put_project(
             user_id=current_user.id,
             project_id=project_id,
-            project_blob=orjson.loads(project_blob),
+            project_blob=project_blob,
             stage=ReleaseStage.DEPLOY,
             )
     except HTTPException:
@@ -802,12 +804,11 @@ async def read_published_project(
     """Retrieve a specific published project version."""
     require_all_ids(current_user.id, project_id, "project")
     try:
-        metadata = PublishedProjectMetadata(version_id=version_id)
         publish_service: PublishService = get_service(ServiceType.PUBLISH_SERVICE)
-        project_blob: str = await publish_service.get_project(
+        project_blob = await publish_service.get_project(
             user_id=current_user.id,
             project_id=project_id,
-            metadata=metadata,
+            version_id=version_id,
             stage=stage,
         )
     except HTTPException:
@@ -834,12 +835,11 @@ async def delete_published_project(
     require_all_ids(current_user.id, project_id, "project")
 
     try:
-        metadata = PublishedProjectMetadata(version_id=version_id)
         publish_service: PublishService = get_service(ServiceType.PUBLISH_SERVICE)
         version_id = await publish_service.delete_project(
             user_id=current_user.id,
             project_id=project_id,
-            metadata=metadata,
+            version_id=version_id,
             stage=stage,
         )
     except HTTPException:

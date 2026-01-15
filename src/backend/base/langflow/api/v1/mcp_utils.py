@@ -13,7 +13,6 @@ from typing import Any, ParamSpec, TypeVar
 from urllib.parse import quote, unquote, urlparse
 from uuid import uuid4
 
-import orjson
 from lfx.base.mcp.constants import MAX_MCP_TOOL_NAME_LENGTH
 from lfx.base.mcp.util import get_flow_snake_case, get_unique_name, sanitize_mcp_name
 from lfx.log.logger import logger
@@ -29,8 +28,9 @@ from langflow.services.database.models import Flow
 from langflow.services.database.models.file.model import File as UserFile
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_service, get_settings_service, get_storage_service, session_scope
-from langflow.services.publish.schema import PublishedFlowMetadata, PublishedProjectMetadata, ReleaseStage
+from langflow.services.publish.schema import ProjectFlowEntry, ReleaseStage
 from langflow.services.publish.service import PublishService
+from langflow.services.publish.utils import validate_flow_blob, validate_project_blob
 from langflow.services.schema import ServiceType
 
 T = TypeVar("T")
@@ -96,42 +96,45 @@ async def _load_deployed_project_flows(*, project_id, version_id: str, user_id) 
     project_blob = await publish_service.get_project(
         user_id=user_id,
         project_id=project_id,
-        metadata=PublishedProjectMetadata(version_id=version_id),
+        version_id=version_id,
         stage=ReleaseStage.DEPLOY,
     )
-    if not project_blob:
-        msg = "Deployed project data not found"
-        raise ValueError(msg)
-    project_blob = orjson.loads(project_blob)
-    flow_entries: list[dict] = project_blob.get("flows", [])
+    project_blob = validate_project_blob(
+        project_blob,
+        detail="Invalid deployed project data",
+        use_http_exception=False,
+    )
+
+    flow_entries: list[ProjectFlowEntry] = project_blob.flows
     flows: list[Flow] = []
-    invalid_flow_entry_msg = "Invalid flow entry: {entry}"
+    invalid_flow_entry_msg = "Invalid flow entry: {flow_entry}"
 
-    for entry in flow_entries:
-        if not (flow_id := entry.get("id")):
-            raise ValueError(invalid_flow_entry_msg.format(entry=entry))
+    for flow_entry in flow_entries:
+        flow_blob: dict = {}
 
-        flow_obj: dict = {}
-
-        if "database_flow" in entry:
-            flow_obj = entry.get("database_flow")
-        elif "published_version" in entry:
-            flow_version_id = entry.get("published_version", {}).get("version_id")
+        if flow_entry.database_flow:
+            flow_blob = flow_entry.database_flow.model_dump()
+        elif flow_entry.published_version:
             flow_blob = await publish_service.get_flow(
                 user_id=user_id,
-                flow_id=flow_id,
-                metadata=PublishedFlowMetadata(version_id=flow_version_id),
+                flow_id=flow_entry.id,
+                version_id=flow_entry.published_version.version_id,
                 stage=ReleaseStage.PUBLISH, # it doesnt have to be deployed individually
             )
-            flow_obj = orjson.loads(flow_blob)
+            flow_blob = validate_flow_blob(
+                flow_blob,
+                detail="Invalid deployed flow data",
+                use_http_exception=False,
+            )
+            flow_blob = flow_blob.model_dump()
         else:
-            raise ValueError(invalid_flow_entry_msg.format(entry=entry))
+            raise ValueError(invalid_flow_entry_msg.format(flow_entry=flow_entry))
         flows.append(
             Flow(
-                id=flow_id,
-                name=flow_obj.get("name"),
-                description=flow_obj.get("description"),
-                data=flow_obj.get("data", flow_obj),
+                id=flow_entry.id,
+                name=flow_blob.get("name"),
+                description=flow_blob.get("description"),
+                data=flow_blob.get("data", flow_blob),
                 user_id=user_id,
                 folder_id=project_id,
                 # Deployed project MCP is explicitly requested via header.

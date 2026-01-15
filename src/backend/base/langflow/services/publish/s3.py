@@ -5,19 +5,23 @@ from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
 
-from langflow.services.publish.schema import PublishedFlowMetadata, PublishedProjectMetadata, ReleaseStage
+from langflow.services.publish.schema import (
+    FlowBlob,
+    IDType,
+    IDTypeStrict,
+    ProjectBlob,
+    PublishedFlowMetadata,
+    PublishedProjectMetadata,
+    ReleaseStage,
+)
 from langflow.services.publish.service import PublishService
 from langflow.services.publish.utils import (
     INVALID_KEY_MSG,
-    IDType,
-    IDTypeStrict,
     compute_flow_hash,
     compute_project_hash,
     handle_s3_error,
     parse_blob_key,
     require_all_ids,
-    require_valid_flow,
-    require_valid_project,
     validate_all,
 )
 
@@ -44,9 +48,9 @@ class S3PublishService(PublishService):
         self,
         user_id: IDType,
         flow_id: IDType,
-        metadata: PublishedFlowMetadata,
+        version_id: str,
         stage: ReleaseStage = ReleaseStage.PUBLISH,
-        ) -> str | None:
+        ) -> str:
         validate_all(
             bucket_name=self.bucket_name,
             user_id=user_id,
@@ -58,7 +62,7 @@ class S3PublishService(PublishService):
         publish_key = self._flow_key(
             user_id=user_id,
             flow_id=flow_id,
-            version_id=metadata.version_id,
+            version_id=version_id,
             stage=stage,
             )
 
@@ -75,7 +79,7 @@ class S3PublishService(PublishService):
         self,
         user_id: IDType,
         flow_id: IDType,
-        flow_blob: dict,
+        flow_blob: FlowBlob,
         stage: ReleaseStage = ReleaseStage.PUBLISH,
         ) -> PublishedFlowMetadata:
         validate_all(
@@ -84,9 +88,9 @@ class S3PublishService(PublishService):
             item_id=flow_id,
             item_type="flow",
             )
-        require_valid_flow(flow_blob)
+        flow_data = flow_blob.model_dump()
 
-        version_id = compute_flow_hash(flow_blob)
+        version_id = compute_flow_hash(flow_data)
 
         key = self._flow_key(
             user_id=user_id,
@@ -100,7 +104,7 @@ class S3PublishService(PublishService):
                     IfNoneMatch="*", # prevent creating new s3 versions if the object already exists
                     Bucket=self.bucket_name,
                     Key=key,
-                    Body=json.dumps(flow_blob),
+                    Body=json.dumps(flow_data),
                     ContentType="application/json",
                     )
         except Exception as e: # noqa: BLE001
@@ -113,7 +117,7 @@ class S3PublishService(PublishService):
         self,
         user_id: IDType,
         flow_id: IDType,
-        metadata: PublishedFlowMetadata,
+        version_id: str,
         stage: ReleaseStage = ReleaseStage.PUBLISH,
         ) -> str | None:
         validate_all(
@@ -127,7 +131,7 @@ class S3PublishService(PublishService):
         publish_key = self._flow_key(
             user_id=user_id,
             flow_id=flow_id,
-            version_id=metadata.version_id,
+            version_id=version_id,
             stage=stage,
         )
 
@@ -139,7 +143,7 @@ class S3PublishService(PublishService):
             handle_s3_error(e, "flow", op="delete")
 
         logger.info(f"Deleted published flow with key s3://{self.bucket_name}/{publish_key}")
-        return metadata.version_id
+        return version_id
 
     async def list_flow_versions(
         self,
@@ -177,9 +181,9 @@ class S3PublishService(PublishService):
         self,
         user_id: IDType,
         project_id: IDType,
-        metadata: PublishedProjectMetadata,
+        version_id: str,
         stage: ReleaseStage = ReleaseStage.PUBLISH,
-        ) -> str | None:
+        ) -> str:
         validate_all(
             bucket_name=self.bucket_name,
             user_id=user_id,
@@ -190,7 +194,7 @@ class S3PublishService(PublishService):
         publish_key = self._project_key(
             user_id=user_id,
             project_id=project_id,
-            version_id=metadata.version_id,
+            version_id=version_id,
             stage=stage,
             )
 
@@ -207,7 +211,7 @@ class S3PublishService(PublishService):
         self,
         user_id: IDType,
         project_id: IDType,
-        project_blob: dict,
+        project_blob: ProjectBlob,
         stage: ReleaseStage = ReleaseStage.PUBLISH,
         ) -> PublishedProjectMetadata:
         validate_all(
@@ -216,9 +220,9 @@ class S3PublishService(PublishService):
             item_id=project_id,
             item_type="project",
             )
-        require_valid_project(project_blob)
+        project_data = project_blob.model_dump()
 
-        version_id = compute_project_hash(project_blob)
+        version_id = compute_project_hash(project_data)
 
         key = self._project_key(
             user_id=user_id,
@@ -232,7 +236,7 @@ class S3PublishService(PublishService):
                     IfNoneMatch="*",  # prevent creating new s3 versions if the object already exists
                     Bucket=self.bucket_name,
                     Key=key,
-                    Body=json.dumps(project_blob),
+                    Body=json.dumps(project_data),
                     ContentType="application/json",
                     )
         except Exception as e:  # noqa: BLE001
@@ -245,7 +249,7 @@ class S3PublishService(PublishService):
         self,
         user_id: IDType,
         project_id: IDType,
-        metadata: PublishedProjectMetadata,
+        version_id: str,
         stage: ReleaseStage = ReleaseStage.PUBLISH,
         ) -> str | None:
         validate_all(
@@ -258,7 +262,7 @@ class S3PublishService(PublishService):
         publish_key = self._project_key(
             user_id=user_id,
             project_id=project_id,
-            version_id=metadata.version_id,
+            version_id=version_id,
             stage=stage,
             )
 
@@ -270,7 +274,7 @@ class S3PublishService(PublishService):
             handle_s3_error(e, "project", op="delete")
 
         logger.info(f"Deleted published project with key s3://{self.bucket_name}/{publish_key}")
-        return metadata.version_id
+        return version_id
 
     async def list_project_versions(
         self,
