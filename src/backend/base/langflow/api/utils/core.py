@@ -6,7 +6,7 @@ from datetime import timedelta
 from enum import Enum
 from typing import TYPE_CHECKING, Annotated, Any
 
-from fastapi import Depends, HTTPException, Query
+from fastapi import Depends, HTTPException, Path, Query
 from fastapi_pagination import Params
 from lfx.graph.graph.base import Graph
 from lfx.log.logger import logger
@@ -41,6 +41,19 @@ DbSession = Annotated[AsyncSession, Depends(injectable_session_scope)]
 # DbSessionReadOnly for read-only operations (no auto-commit, reduces lock contention)
 DbSessionReadOnly = Annotated[AsyncSession, Depends(injectable_session_scope_readonly)]
 
+
+def _get_validated_file_name(file_name: str = Path()) -> str:
+    """Validate file_name path parameter to prevent path traversal attacks."""
+    if ".." in file_name or "/" in file_name or "\\" in file_name:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid file name. Use a simple file name without directory paths or '..'.",
+        )
+    return file_name
+
+
+ValidatedFileName = Annotated[str, Depends(_get_validated_file_name)]
+
 # Message to raise if we're in an Astra cloud environment and a component or endpoint is not supported
 disable_endpoint_in_astra_cloud_msg = "This endpoint is not supported in Astra cloud environment."
 
@@ -61,7 +74,7 @@ def remove_api_keys(flow: dict):
         node_data = node.get("data").get("node")
         template = node_data.get("template")
         for value in template.values():
-            if isinstance(value, dict) and has_api_terms(value["name"]) and value.get("password"):
+            if isinstance(value, dict) and "name" in value and has_api_terms(value["name"]) and value.get("password"):
                 value["value"] = None
 
     return flow

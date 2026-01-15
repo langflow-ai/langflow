@@ -104,6 +104,7 @@ export type NodeOutputFieldComponentType = {
   data: NodeDataType;
   title: string;
   id: sourceHandleType;
+  loopInputId?: sourceHandleType;
   colors: string[];
   tooltipTitle: string | undefined;
   showNode: boolean;
@@ -295,6 +296,7 @@ export type TextHighlightType = {
 
 export interface IVarHighlightType {
   name: string;
+  addCurlyBraces?: boolean;
 }
 
 export type IconComponentProps = {

@@ -1,0 +1,139 @@
+---
+title: Web Search
+slug: /web-search
+---
+
+import Icon from "@site/src/components/icon";
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialDevModeWindows from '@site/docs/_partial-dev-mode-windows.mdx';
+
+The **Web Search** component consolidates the **Web Search**, **News Search**, and **RSS Reader** components into a single component with tabs for different search modes. You can search the web using DuckDuckGo, search Google News, or read RSS feeds, all from one component.
+
+For other search APIs, see <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components).
+
+:::info
+The **Web Search** component uses web scraping that can be subject to rate limits.
+
+For production use, consider using another search component with more robust API support, such as provider-specific bundles.
+:::
+
+## Use the Web Search component in a flow
+
+The following steps demonstrate one way that you can use a **Web Search** component in a flow:
+
+1. Create a flow based on the **Basic Prompting** template.
+
+2. Add a **Web Search** component, select your desired **Search Mode** (Web, News, or RSS), and then enter a search query or RSS feed URL.
+
+3. Add a [**Type Convert** component](/type-convert), set the **Output Type** to **Message**, and then connect the **Web Search** component's output to the **Type Convert** component's input.
+
+    By default, the **Web Search** component outputs a `DataFrame`.
+    Because the **Prompt Template** component only accepts `Message` data, this conversion is required so that the flow can pass the search results to the **Prompt Template** component.
+    For more information, see [Web Search output](#web-search-output).
+
+4. In the **Prompt Template** component's **Template** field, add a variable like `{searchresults}` or `{context}`.
+
+    This adds a field to the **Prompt Template** component that you can use to pass the converted search results to the prompt.
+    For more information, see [Define variables in prompts](/components-prompts#define-variables-in-prompts).
+
+5. Connect the **Type Convert** component's output to the new variable field on the **Prompt Template** component.
+
+    ![Type convert web search output to chat](/img/component-type-convert-and-web-search.png)
+
+6. In the **Language Model** component, add your OpenAI API key, or select a different provider and model.
+
+7. Click **Playground**, and then enter your query.
+
+    The LLM processes the request, including the context passed through the **Prompt Template** component, and then prints the response in the **Playground** chat interface.
+
+    <details>
+    <summary>Result</summary>
+
+    The following is an example of a possible response.
+    Your response may vary based on the current state of the web, your specific query, the model, and other factors.
+
+    ```text
+    Here are some of the latest news articles related to the environment:
+    Ozone Pollution and Global Warming: A recent study highlights that ozone pollution is a significant global environmental concern, threatening human health and crop production while exacerbating global warming. Read more
+    ...
+    ```
+
+    </details>
+
+## Parameters
+
+<PartialParams />
+
+<Tabs>
+<TabItem value="web" label="Web Search Mode">
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| search_mode | Search Mode | Input parameter. Choose search mode: Web (DuckDuckGo), News (Google News), or RSS (Feed Reader). Default: `Web`. |
+| query | Search Query | Input parameter. Keywords to search for. |
+| timeout | Timeout | Input parameter. Timeout for the web search request in seconds. Default: `5`. |
+| results | Results | Output parameter. Returns a `DataFrame` containing `title`, `link`, `snippet`, and `content`. For more information, see [Web Search output](#web-search-output). |
+
+</TabItem>
+<TabItem value="news" label="News Search Mode">
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| search_mode | Search Mode | Input parameter. Choose search mode: Web (DuckDuckGo), News (Google News), or RSS (Feed Reader). Default: `Web`. |
+| query | Search Query | Input parameter. Search keywords for news articles. |
+| hl | Language (hl) | Input parameter. Language code, such as en-US, fr, de. Default: `en-US`. |
+| gl | Country (gl) | Input parameter. Country code, such as US, FR, DE. Default: `US`. |
+| ceid | Country:Language (ceid) | Input parameter. Language, such as US:en, FR:fr. Default: `US:en`. |
+| topic | Topic | Input parameter. One of: `WORLD`, `NATION`, `BUSINESS`, `TECHNOLOGY`, `ENTERTAINMENT`, `SCIENCE`, `SPORTS`, `HEALTH`. |
+| location | Location (Geo) | Input parameter. City, state, or country for location-based news. Leave blank for keyword search. |
+| timeout | Timeout | Input parameter. Timeout for the request in seconds. Default: `5`. |
+| results | Results | Output parameter. A `DataFrame` with the key columns `title`, `link`, `published` and `summary`. For more information, see [Web Search output](#web-search-output). |
+
+</TabItem>
+<TabItem value="rss" label="RSS Reader Mode">
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| search_mode | Search Mode | Input parameter. Choose search mode: Web (DuckDuckGo), News (Google News), or RSS (Feed Reader). Default: `Web`. |
+| query | RSS Feed URL | Input parameter. URL of the RSS feed to parse, such as `https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml`. |
+| timeout | Timeout | Input parameter. Timeout for the RSS feed request in seconds. Default: `5`. |
+| results | Results | Output parameter. A `DataFrame` containing the key columns `title`, `link`, `published` and `summary`. For more information, see [Web Search output](#web-search-output). |
+
+</TabItem>
+</Tabs>
+
+## Web Search output
+
+The **Web Search** component outputs a [`DataFrame`](/data-types#dataframe) with different columns depending on the search mode.
+
+<Tabs>
+<TabItem value="web" label="Web Search Mode">
+
+When using **Web** search mode, the component returns a `DataFrame` containing:
+- `title`: The title of the search result
+- `link`: The URL of the search result
+- `snippet`: A brief snippet from the search result
+- `content`: The full content of the page (when successfully fetched)
+
+</TabItem>
+<TabItem value="news" label="News Search Mode">
+
+When using **News** search mode, the component returns a `DataFrame` containing:
+- `title`: The title of the news article
+- `link`: The URL of the news article
+- `published`: The publication date of the article
+- `summary`: A summary or description of the article
+
+</TabItem>
+<TabItem value="rss" label="RSS Reader Mode">
+
+When using **RSS** search mode, the component returns a `DataFrame` containing:
+- `title`: The title of the RSS feed item
+- `link`: The URL of the RSS feed item
+- `published`: The publication date of the item
+- `summary`: A summary or description of the item
+
+</TabItem>
+</Tabs>
