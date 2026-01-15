@@ -11,11 +11,11 @@ from lfx.schema.data import Data
 class FaissVectorStoreComponent(LCVectorStoreComponent):
     """FAISS Vector Store with search capabilities."""
 
+    component_id: str = "3eb32354-63f6-4fb8-a499-43e79cf38225"
     display_name: str = "FAISS"
     description: str = "FAISS Vector Store with search capabilities"
     name = "FAISS"
     icon = "FAISS"
-    component_id: str = "3eb32354-63f6-4fb8-a499-43e79cf38225"
 
     inputs = [
         StrInput(
