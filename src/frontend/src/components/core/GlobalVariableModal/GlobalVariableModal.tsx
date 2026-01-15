@@ -3,6 +3,7 @@ import { ForwardedIconComponent } from "@/components/common/genericIconComponent
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs-button";
+import { PROVIDER_VARIABLE_MAPPING } from "@/constants/providerConstants";
 import { useGetTypes } from "@/controllers/API/queries/flows/use-get-types";
 import {
   useGetGlobalVariables,
@@ -128,13 +129,47 @@ export default function GlobalVariableModal({
     if (!initialData || !initialData.id) {
       handleSaveVariable();
     } else {
-      updateVariable({
-        id: initialData.id,
-        name: key,
-        value: value,
-        default_fields: fields,
-      });
-      setOpen(false);
+      // Check if this is a model provider variable based on the original variable name
+      // The backend validates based on the existing variable name, not the new name
+      const isModelProviderVariable = Object.values(
+        PROVIDER_VARIABLE_MAPPING,
+      ).includes(initialData.name);
+
+      updateVariable(
+        {
+          id: initialData.id,
+          name: key,
+          value: value,
+          default_fields: fields,
+        },
+        {
+          onSuccess: (res) => {
+            const { name } = res;
+            setKey("");
+            setValue("");
+            setType("Credential");
+            setFields([]);
+            setOpen(false);
+
+            setSuccessData({
+              title: `Variable ${name} updated successfully`,
+            });
+          },
+          onError: (error) => {
+            const responseError = error as ResponseErrorDetailAPI;
+            const errorMessage =
+              responseError?.response?.data?.detail ??
+              "An unexpected error occurred while updating the variable. Please try again.";
+
+            setErrorData({
+              title: isModelProviderVariable
+                ? "Invalid API Key"
+                : "Error updating variable",
+              list: [errorMessage],
+            });
+          },
+        },
+      );
     }
   }
 
