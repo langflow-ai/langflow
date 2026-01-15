@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from datetime import timedelta
-from typing import TYPE_CHECKING, Annotated
-from uuid import UUID
+from typing import TYPE_CHECKING, Annotated, Final
 
-from fastapi import Depends, Request, Security, WebSocket
+from fastapi import Depends, HTTPException, Request, Security, WebSocket, status
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
+from lfx.log.logger import logger
 
 from langflow.services.auth.service import (
     AUTO_LOGIN_ERROR as SERVICE_AUTO_LOGIN_ERROR,
@@ -17,7 +16,10 @@ from langflow.services.deps import get_auth_service, get_session
 
 if TYPE_CHECKING:
     from collections.abc import Coroutine
+    from datetime import timedelta
+    from uuid import UUID
 
+    from lfx.services.settings.service import SettingsService
     from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.services.database.models.user.model import User, UserRead

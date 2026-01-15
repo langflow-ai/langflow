@@ -90,7 +90,11 @@ class AuthService(AuthServiceBase):
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail=AUTO_LOGIN_ERROR,
                 )
-            result = await check_key(db, query_param or header_param)
+            # At this point, at least one of query_param or header_param is truthy
+            api_key = query_param or header_param
+            if api_key is None:  # pragma: no cover - guaranteed by the if-condition above
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid or missing API key")
+            result = await check_key(db, api_key)
 
         elif not query_param and not header_param:
             raise HTTPException(
@@ -99,7 +103,11 @@ class AuthService(AuthServiceBase):
             )
 
         else:
-            result = await check_key(db, query_param or header_param)
+            # At least one of query_param or header_param is truthy
+            api_key = query_param or header_param
+            if api_key is None:  # pragma: no cover - guaranteed by the elif-condition above
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid or missing API key")
+            result = await check_key(db, api_key)
 
         if not result:
             raise HTTPException(
@@ -191,6 +199,14 @@ class AuthService(AuthServiceBase):
 
         if isinstance(token, Coroutine):
             token = await token
+
+        # At this point token should be a string (awaited if it was a coroutine)
+        if not isinstance(token, str):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token format.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
 
         secret_key = settings_service.auth_settings.SECRET_KEY.get_secret_value()
         if secret_key is None:
@@ -556,7 +572,11 @@ class AuthService(AuthServiceBase):
                     logger.warning(AUTO_LOGIN_WARNING)
                     return result
             else:
-                result = await check_key(db, query_param or header_param)
+                # At least one of query_param or header_param is truthy
+                api_key = query_param or header_param
+                if api_key is None:  # pragma: no cover - guaranteed by the if-condition above
+                    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid or missing API key")
+                result = await check_key(db, api_key)
 
         elif not query_param and not header_param:
             raise HTTPException(
@@ -568,6 +588,9 @@ class AuthService(AuthServiceBase):
             result = await check_key(db, query_param)
 
         else:
+            # header_param must be truthy here (query_param is falsy, and we passed the not-both-None check)
+            if header_param is None:  # pragma: no cover - guaranteed by the elif chain above
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid or missing API key")
             result = await check_key(db, header_param)
 
         if not result:

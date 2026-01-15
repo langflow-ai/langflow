@@ -292,15 +292,11 @@ class DatabaseVariableService(VariableService, Service):
         session: AsyncSession,
     ):
         # Only encrypt CREDENTIAL_TYPE variables
-        encrypted_value = (
-            auth_utils.encrypt_api_key(value, settings_service=self.settings_service)
-            if type_ == CREDENTIAL_TYPE
-            else value
-        )
+        encrypted_value = auth_utils.encrypt_api_key(value) if type_ == CREDENTIAL_TYPE else value
         variable_base = VariableCreate(
             name=name,
             type=type_,
-            value=auth_utils.encrypt_api_key(value),
+            value=encrypted_value,
             default_fields=list(default_fields),
         )
         variable = Variable.model_validate(variable_base, from_attributes=True, update={"user_id": user_id})

@@ -33,10 +33,6 @@ class NoServiceRegisteredError(Exception):
     """Raised when no service or factory is registered for a service type."""
 
 
-class NoServiceRegisteredError(Exception):
-    """Raised when no service or factory is registered for a service type."""
-
-
 class ServiceManager:
     """Manages the creation of different services with pluggable discovery."""
 
@@ -463,6 +459,7 @@ class ServiceManager:
             logger.debug(f"Registered service from config: {service_key} -> {service_path}")
         except Exception as exc:  # noqa: BLE001
             logger.warning(f"Failed to register service {service_key} from {service_path}: {exc}")
+
 
 # Global variables for lazy initialization
 _service_manager: ServiceManager | None = None

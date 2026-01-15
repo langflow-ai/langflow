@@ -221,7 +221,3 @@ class LocalStorageService(StorageService, Service):
             raise
         else:
             return file_size_stat.st_size
-
-    async def teardown(self) -> None:
-        """Perform any cleanup operations when the service is being torn down."""
-        # No specific teardown actions required for local
