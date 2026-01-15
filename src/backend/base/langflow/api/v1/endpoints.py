@@ -200,6 +200,13 @@ async def simple_run_flow(
         raise ValueError(str(exc)) from exc
 
 
+def _get_vertex_ids_from_flow(flow: Flow) -> list[str]:
+    """Extract vertex IDs from flow data."""
+    if not flow.data or not flow.data.get("nodes"):
+        return []
+    return [node.get("id") for node in flow.data.get("nodes", []) if node.get("id")]
+
+
 async def simple_run_flow_task(
     flow: Flow,
     input_request: SimplifiedAPIRequest,
@@ -227,24 +234,15 @@ async def simple_run_flow_task(
         emit_events: Whether to emit events to webhook_event_manager (for UI feedback)
         flow_id: Flow ID for event emission (required if emit_events=True)
     """
-    webhook_event_mgr = webhook_event_manager if emit_events and flow_id else None
+    should_emit = emit_events and flow_id
 
     try:
-        # Emit vertices_sorted event before starting execution
-        if emit_events and webhook_event_mgr and flow_id:
-            # Get all vertex IDs from the flow
-            vertex_ids = []
-            if flow.data and flow.data.get("nodes"):
-                vertex_ids = [node.get("id") for node in flow.data.get("nodes", []) if node.get("id")]
-
-            await webhook_event_mgr.emit(
+        if should_emit:
+            vertex_ids = _get_vertex_ids_from_flow(flow)
+            await webhook_event_manager.emit(
                 flow_id,
                 "vertices_sorted",
-                {
-                    "ids": vertex_ids,
-                    "to_run": vertex_ids,
-                    "run_id": run_id,
-                },
+                {"ids": vertex_ids, "to_run": vertex_ids, "run_id": run_id},
             )
 
         result = await simple_run_flow(
@@ -256,9 +254,8 @@ async def simple_run_flow_task(
             run_id=run_id,
         )
 
-        # Emit end event if UI is listening
-        if emit_events and webhook_event_mgr and flow_id:
-            await webhook_event_mgr.emit(flow_id, "end", {"run_id": run_id, "success": True})
+        if should_emit:
+            await webhook_event_manager.emit(flow_id, "end", {"run_id": run_id, "success": True})
 
         if telemetry_service and start_time is not None:
             await telemetry_service.log_package_run(
@@ -275,9 +272,8 @@ async def simple_run_flow_task(
     except Exception as exc:  # noqa: BLE001
         await logger.aexception(f"Error running flow {flow.id} task")
 
-        # Emit error event if UI is listening
-        if emit_events and webhook_event_mgr and flow_id:
-            await webhook_event_mgr.emit(flow_id, "end", {"run_id": run_id, "success": False, "error": str(exc)})
+        if should_emit:
+            await webhook_event_manager.emit(flow_id, "end", {"run_id": run_id, "success": False, "error": str(exc)})
 
         if telemetry_service and start_time is not None:
             await telemetry_service.log_package_run(
@@ -659,7 +655,7 @@ async def simplified_run_flow_session(
 
 @router.get("/webhook-events/{flow_id_or_name}")
 async def webhook_events_stream(
-    flow_id_or_name: str,  # noqa: ARG001
+    flow_id_or_name: str,
     flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
     request: Request,
 ):
@@ -667,7 +663,13 @@ async def webhook_events_stream(
 
     When a flow is open in the UI, this endpoint provides live feedback
     of webhook execution progress, similar to clicking "Play" in the UI.
+
+    Authentication follows the same rules as the webhook POST endpoint:
+    - When WEBHOOK_AUTH_ENABLE=False (default): No authentication required
+    - When WEBHOOK_AUTH_ENABLE=True: Requires API key via query param or header
     """
+    # Validate authentication using the same rules as webhook POST
+    await get_webhook_user(flow_id_or_name, request)
 
     async def event_generator() -> AsyncGenerator[str, None]:
         """Generate SSE events from the webhook event manager."""

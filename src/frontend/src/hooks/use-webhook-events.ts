@@ -1,10 +1,11 @@
 /**
  * Hook for real-time webhook build events via Server-Sent Events (SSE).
- * Uses the same logic as the Play button flow by calling the same store functions.
+ * Provides live build feedback when webhooks are triggered externally.
  */
 
 import { useEffect, useRef } from "react";
 import { BuildStatus } from "@/constants/enums";
+import useAuthStore from "@/stores/authStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { VertexBuildTypeAPI } from "@/types/api";
@@ -20,8 +21,102 @@ const SSE_EVENTS = {
   HEARTBEAT: "heartbeat",
 } as const;
 
+function handleVerticesSorted(event: MessageEvent): void {
+  const data = JSON.parse(event.data);
+  const verticesIds = data.ids;
+  const verticesToRun = data.to_run;
+
+  const verticesLayers: VertexLayerElementType[][] = verticesIds.map(
+    (id: string) => [{ id, reference: id }],
+  );
+
+  const store = useFlowStore.getState();
+  store.updateVerticesBuild({
+    verticesLayers,
+    verticesIds,
+    verticesToRun,
+    runId: data.run_id,
+  });
+  store.updateBuildStatus(verticesIds, BuildStatus.TO_BUILD);
+  store.setIsBuilding(true);
+}
+
+function handleBuildStart(event: MessageEvent): void {
+  const data = JSON.parse(event.data);
+  const ids = [data.id];
+
+  const store = useFlowStore.getState();
+  store.updateBuildStatus(ids, BuildStatus.BUILDING);
+  store.updateEdgesRunningByNodes(ids, true);
+  store.setCurrentBuildingNodeId(ids);
+}
+
+function handleEndVertex(event: MessageEvent): void {
+  const data = JSON.parse(event.data);
+  const buildData: VertexBuildTypeAPI = data.build_data;
+  const store = useFlowStore.getState();
+
+  if (
+    buildData.inactivated_vertices &&
+    buildData.inactivated_vertices.length > 0
+  ) {
+    store.removeFromVerticesBuild(buildData.inactivated_vertices);
+    store.updateBuildStatus(buildData.inactivated_vertices, BuildStatus.INACTIVE);
+  }
+
+  store.addDataToFlowPool(
+    { ...buildData, run_id: data.run_id || "" },
+    buildData.id,
+  );
+
+  const buildStatus = buildData.valid ? BuildStatus.BUILT : BuildStatus.ERROR;
+  store.updateBuildStatus([buildData.id], buildStatus);
+  store.clearEdgesRunningByNodes();
+
+  if (buildData.next_vertices_ids && buildData.next_vertices_ids.length > 0) {
+    store.setCurrentBuildingNodeId(buildData.next_vertices_ids);
+    store.updateEdgesRunningByNodes(buildData.next_vertices_ids, true);
+    store.updateBuildStatus(buildData.next_vertices_ids, BuildStatus.TO_BUILD);
+  }
+}
+
+function handleEnd(event: MessageEvent): void {
+  const data = JSON.parse(event.data);
+  const store = useFlowStore.getState();
+
+  store.setIsBuilding(false);
+  store.clearEdgesRunningByNodes();
+  store.setCurrentBuildingNodeId([]);
+
+  if (data.success) {
+    store.setBuildInfo({ success: true });
+  } else {
+    store.setBuildInfo({
+      error: [data.error || "Build failed"],
+      success: false,
+    });
+  }
+}
+
+function handleError(eventOrError: Event): void {
+  const messageEvent = eventOrError as MessageEvent;
+  if (!messageEvent.data) {
+    return;
+  }
+
+  try {
+    JSON.parse(messageEvent.data);
+    const store = useFlowStore.getState();
+    store.setIsBuilding(false);
+    store.clearEdgesRunningByNodes();
+  } catch {
+    // SSE connection error rather than a data event - no action needed
+  }
+}
+
 export function useWebhookEvents() {
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
+  const apiKey = useAuthStore((state) => state.apiKey);
   const eventSourceRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
@@ -30,132 +125,21 @@ export function useWebhookEvents() {
     }
 
     const flowIdentifier = currentFlow.endpoint_name || currentFlow.id;
-    const sseUrl = `/api/v1/webhook-events/${flowIdentifier}`;
+    let sseUrl = `/api/v1/webhook-events/${flowIdentifier}`;
+
+    // Pass API key as query param for authentication when WEBHOOK_AUTH_ENABLE=true
+    if (apiKey) {
+      sseUrl += `?x-api-key=${encodeURIComponent(apiKey)}`;
+    }
+
     const eventSource = new EventSource(sseUrl);
     eventSourceRef.current = eventSource;
 
-    eventSource.addEventListener(SSE_EVENTS.CONNECTED, () => {
-      // Connection established
-    });
-
-    eventSource.addEventListener(SSE_EVENTS.VERTICES_SORTED, (event) => {
-      const data = JSON.parse(event.data);
-      const verticesIds = data.ids;
-      const verticesToRun = data.to_run;
-
-      const verticesLayers: VertexLayerElementType[][] = verticesIds.map(
-        (id: string) => [{ id, reference: id }],
-      );
-
-      useFlowStore.getState().updateVerticesBuild({
-        verticesLayers,
-        verticesIds,
-        verticesToRun,
-        runId: data.run_id,
-      });
-
-      useFlowStore
-        .getState()
-        .updateBuildStatus(verticesIds, BuildStatus.TO_BUILD);
-      useFlowStore.getState().setIsBuilding(true);
-    });
-
-    eventSource.addEventListener(SSE_EVENTS.BUILD_START, (event) => {
-      const data = JSON.parse(event.data);
-      const ids = [data.id];
-
-      useFlowStore.getState().updateBuildStatus(ids, BuildStatus.BUILDING);
-      useFlowStore.getState().updateEdgesRunningByNodes(ids, true);
-      useFlowStore.getState().setCurrentBuildingNodeId(ids);
-    });
-
-    eventSource.addEventListener(SSE_EVENTS.END_VERTEX, (event) => {
-      const data = JSON.parse(event.data);
-      const buildData: VertexBuildTypeAPI = data.build_data;
-
-      if (
-        buildData.inactivated_vertices &&
-        buildData.inactivated_vertices.length > 0
-      ) {
-        useFlowStore
-          .getState()
-          .removeFromVerticesBuild(buildData.inactivated_vertices);
-        useFlowStore
-          .getState()
-          .updateBuildStatus(
-            buildData.inactivated_vertices,
-            BuildStatus.INACTIVE,
-          );
-      }
-
-      useFlowStore
-        .getState()
-        .addDataToFlowPool(
-          { ...buildData, run_id: data.run_id || "" },
-          buildData.id,
-        );
-
-      if (buildData.valid) {
-        useFlowStore
-          .getState()
-          .updateBuildStatus([buildData.id], BuildStatus.BUILT);
-      } else {
-        useFlowStore
-          .getState()
-          .updateBuildStatus([buildData.id], BuildStatus.ERROR);
-      }
-
-      useFlowStore.getState().clearEdgesRunningByNodes();
-
-      if (
-        buildData.next_vertices_ids &&
-        buildData.next_vertices_ids.length > 0
-      ) {
-        useFlowStore
-          .getState()
-          .setCurrentBuildingNodeId(buildData.next_vertices_ids);
-        useFlowStore
-          .getState()
-          .updateEdgesRunningByNodes(buildData.next_vertices_ids, true);
-        useFlowStore
-          .getState()
-          .updateBuildStatus(buildData.next_vertices_ids, BuildStatus.TO_BUILD);
-      }
-    });
-
-    eventSource.addEventListener(SSE_EVENTS.END, (event) => {
-      const data = JSON.parse(event.data);
-
-      useFlowStore.getState().setIsBuilding(false);
-      useFlowStore.getState().clearEdgesRunningByNodes();
-      useFlowStore.getState().setCurrentBuildingNodeId([]);
-
-      if (data.success) {
-        useFlowStore.getState().setBuildInfo({ success: true });
-      } else {
-        useFlowStore.getState().setBuildInfo({
-          error: [data.error || "Build failed"],
-          success: false,
-        });
-      }
-    });
-
-    eventSource.addEventListener(SSE_EVENTS.ERROR, (eventOrError: Event) => {
-      const messageEvent = eventOrError as MessageEvent;
-      if (messageEvent.data) {
-        try {
-          JSON.parse(messageEvent.data);
-          useFlowStore.getState().setIsBuilding(false);
-          useFlowStore.getState().clearEdgesRunningByNodes();
-        } catch {
-          // SSE connection error, not a data event
-        }
-      }
-    });
-
-    eventSource.addEventListener(SSE_EVENTS.HEARTBEAT, () => {
-      // Keep-alive ping
-    });
+    eventSource.addEventListener(SSE_EVENTS.VERTICES_SORTED, handleVerticesSorted);
+    eventSource.addEventListener(SSE_EVENTS.BUILD_START, handleBuildStart);
+    eventSource.addEventListener(SSE_EVENTS.END_VERTEX, handleEndVertex);
+    eventSource.addEventListener(SSE_EVENTS.END, handleEnd);
+    eventSource.addEventListener(SSE_EVENTS.ERROR, handleError);
 
     return () => {
       if (eventSourceRef.current) {
@@ -163,5 +147,5 @@ export function useWebhookEvents() {
         eventSourceRef.current = null;
       }
     };
-  }, [currentFlow?.id, currentFlow?.endpoint_name]);
+  }, [currentFlow?.id, currentFlow?.endpoint_name, apiKey]);
 }

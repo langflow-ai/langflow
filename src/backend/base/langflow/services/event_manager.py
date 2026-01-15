@@ -31,12 +31,9 @@ class WebhookEventManager:
 
     def __init__(self):
         """Initialize the event manager with empty listeners."""
-        # flow_id → set of queues (one per SSE connection)
         self._listeners: dict[str, set[asyncio.Queue]] = defaultdict(set)
-        # flow_id → {vertex_id → start_time} for duration calculation
         self._vertex_start_times: dict[str, dict[str, float]] = defaultdict(dict)
         self._lock = asyncio.Lock()
-        logger.debug("WebhookEventManager initialized")
 
     def record_build_start(self, flow_id: str, vertex_id: str) -> None:
         """Record when a vertex build starts for duration calculation."""

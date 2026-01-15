@@ -8,8 +8,7 @@ import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
-const _ERROR_DISPLAY_INTERVAL = 10000;
-const _ERROR_DISPLAY_COUNT = 1;
+const MAX_ERROR_DISPLAY_COUNT = 1;
 
 interface PollingItem {
   interval: NodeJS.Timeout;
@@ -148,8 +147,7 @@ export const useGetBuildsMutation: useMutationFunctionType<
           setFlowPool(mergedFlowPool);
         }
 
-        // Check for errors only if we haven't displayed them yet
-        if (errorDisplayCountRef.current === 0) {
+        if (errorDisplayCountRef.current < MAX_ERROR_DISPLAY_COUNT) {
           Object.keys(newFlowPool).forEach((key) => {
             const nodeBuild = newFlowPool[key];
             if (nodeBuild.length > 0 && nodeBuild[0]?.valid === false) {
@@ -159,7 +157,7 @@ export const useGetBuildsMutation: useMutationFunctionType<
                   title: "Last build failed",
                   list: [errorMessage],
                 });
-                errorDisplayCountRef.current = 1;
+                errorDisplayCountRef.current = MAX_ERROR_DISPLAY_COUNT;
               }
             }
           });
