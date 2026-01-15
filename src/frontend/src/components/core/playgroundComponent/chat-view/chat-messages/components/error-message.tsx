@@ -202,7 +202,7 @@ export const ErrorView = ({
         blocks.map((block, blockIndex) => (
           <div
             key={blockIndex}
-            className="w-full rounded-xl border border-border pt-[6px] pr-[6px] pb-[12px] pl-[8px] text-sm text-foreground"
+            className="w-full rounded-md border border-border pt-[6px] pr-[6px] pb-[12px] pl-[8px] text-sm text-foreground"
           >
             {block.contents.map((content, contentIndex) => {
               if (content.type === "error") {
