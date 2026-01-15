@@ -40,10 +40,10 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
 
     inputs = [
         BoolInput(
-            name="bypass_policies",
-            display_name="Bypass",
-            info="If `true` - skip policy validation. If `false`, invokes ToolGuard code prior to tool execution.",
-            value=False,
+            name="activate_policies",
+            display_name="Activate",
+            info="If `true` - invokes ToolGuard code prior to tool execution. If `false`, skip policy validation.",
+            value=True,
         ),
         TabInput(
             name="build_mode",
@@ -54,40 +54,15 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             real_time_refresh=True,
             tool_mode=True,
         ),
-        # TableInput(
-        #     name="build_mode",
-        #     display_name="policies build mode",
-        #     info="...",
-        #     table_schema=[
-        #         {
-        #             "name": "mode",
-        #             "display_name": "policies build mode",
-        #             "type": "str",
-        #             "description": "...",
-        #         },
-        #         {
-        #             "name": "active",
-        #             "display_name": "active?",
-        #             "type": "boolean",
-        #             "edit_mode": EditMode.INLINE,
-        #             "options": ["False", "True"],
-        #             "default": "False",
-        #             "description": "...",
-        #         },
-        #     ],
-        #     value=[{"mode": "Generate", "active": "False"}, {"mode": "Use Cache", "active": "False"}],
-        #     #advanced=True,
-        #     input_types=["DataFrame"],
-        # ),
-        MultilineInput(
+        StrInput(
             name="policies",
             display_name="Policies",
-            info="A well-defined and self-contained business policy document.",
-            # is_list=True,
-            # tool_mode=True,
-            placeholder="Business policy...",
-            # list_add_label="Add Policy",
-            # input_types=[],
+            info="Enter one or more clear, well-defined and self-contained business policies, Using the '+' button.",
+            is_list=True,
+            tool_mode=True,
+            placeholder="Add business policy...",
+            list_add_label="Add Policy",
+            input_types=[],
         ),
         StrInput(
             name="project",
@@ -211,7 +186,7 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
 
         self.log("🔒️ToolGuard: please review the generated guard code at ...", name="info")
 
-        if not self.bypass_policies:
+        if self.activate_policies:
             build_mode = getattr(self, "build_mode", BUILD_MODE_GENERATE)
             if build_mode == BUILD_MODE_GENERATE:  # run buildtime steps
                 self.log("🔒️ToolGuard: execution (build) mode", name="info")
