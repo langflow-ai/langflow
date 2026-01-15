@@ -1,15 +1,73 @@
 from .model_metadata import create_model_metadata
 
-# Granite Embedding models
-WATSONX_EMBEDDING_MODELS_DETAILED = [
-    create_model_metadata(provider="IBM Watsonx", name="ibm/granite-embedding-125m-english", icon="IBMWatsonx"),
-    create_model_metadata(provider="IBM Watsonx", name="ibm/granite-embedding-278m-multilingual", icon="IBMWatsonx"),
-    create_model_metadata(provider="IBM Watsonx", name="ibm/granite-embedding-30m-english", icon="IBMWatsonx"),
-    create_model_metadata(provider="IBM Watsonx", name="ibm/granite-embedding-107m-multilingual", icon="IBMWatsonx"),
-    create_model_metadata(provider="IBM Watsonx", name="ibm/granite-embedding-30m-sparse", icon="IBMWatsonx"),
+WATSONX_DEFAULT_LLM_MODELS = [
+    create_model_metadata(
+        provider="IBM WatsonX",
+        name="ibm/granite-3-2b-instruct",
+        icon="WatsonxAI",
+        model_type="llm",
+        tool_calling=True,
+        default=True,
+    ),
+    create_model_metadata(
+        provider="IBM WatsonX",
+        name="ibm/granite-3-8b-instruct",
+        icon="WatsonxAI",
+        model_type="llm",
+        tool_calling=True,
+        default=True,
+    ),
+    create_model_metadata(
+        provider="IBM WatsonX",
+        name="ibm/granite-13b-instruct-v2",
+        icon="WatsonxAI",
+        model_type="llm",
+        tool_calling=True,
+        default=True,
+    ),
 ]
 
-WATSONX_EMBEDDING_MODEL_NAMES = [metadata["name"] for metadata in WATSONX_EMBEDDING_MODELS_DETAILED]
+WATSONX_DEFAULT_EMBEDDING_MODELS = [
+    create_model_metadata(
+        provider="IBM WatsonX",
+        name="sentence-transformers/all-minilm-l12-v2",
+        icon="WatsonxAI",
+        model_type="embeddings",
+        tool_calling=True,
+        default=True,
+    ),
+    create_model_metadata(
+        provider="IBM WatsonX",
+        name="ibm/slate-125m-english-rtrvr-v2",
+        icon="WatsonxAI",
+        model_type="embeddings",
+        tool_calling=True,
+        default=True,
+    ),
+    create_model_metadata(
+        provider="IBM WatsonX",
+        name="ibm/slate-30m-english-rtrvr-v2",
+        icon="WatsonxAI",
+        model_type="embeddings",
+        tool_calling=True,
+        default=True,
+    ),
+    create_model_metadata(
+        provider="IBM WatsonX",
+        name="intfloat/multilingual-e5-large",
+        icon="WatsonxAI",
+        model_type="embeddings",
+        tool_calling=True,
+        default=True,
+    ),
+]
+
+
+WATSONX_EMBEDDING_MODELS_DETAILED = WATSONX_DEFAULT_EMBEDDING_MODELS
+# Combined list for all watsonx models
+WATSONX_MODELS_DETAILED = WATSONX_DEFAULT_LLM_MODELS + WATSONX_DEFAULT_EMBEDDING_MODELS
+
+WATSONX_EMBEDDING_MODEL_NAMES = [metadata["name"] for metadata in WATSONX_DEFAULT_EMBEDDING_MODELS]
 
 IBM_WATSONX_URLS = [
     "https://us-south.ml.cloud.ibm.com",

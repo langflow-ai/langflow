@@ -20,13 +20,12 @@ from httpx import ASGITransport, AsyncClient
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.main import create_app
 from langflow.services.auth.utils import get_password_hash
-from langflow.services.database.models.api_key.model import ApiKey
-from langflow.services.database.models.flow.model import Flow, FlowCreate
+from langflow.services.database.models.api_key.model import ApiKey, UnmaskedApiKeyRead
+from langflow.services.database.models.flow.model import Flow, FlowCreate, FlowRead
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.user.model import User, UserCreate, UserRead
 from langflow.services.database.models.vertex_builds.crud import delete_vertex_builds_by_flow_id
-from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service, session_scope
 from lfx.components.input_output import ChatInput
 from lfx.graph import Graph
@@ -202,7 +201,10 @@ async def _delete_transactions_and_vertex_builds(session, flows: list[Flow]):
 @pytest.fixture
 async def async_client() -> AsyncGenerator:
     app = create_app()
-    async with AsyncClient(app=app, base_url="http://testserver", http2=True) as client:
+    async with (
+        LifespanManager(app, startup_timeout=None, shutdown_timeout=None) as manager,
+        AsyncClient(transport=ASGITransport(app=manager.app), base_url="http://testserver", http2=True) as client,
+    ):
         yield client
 
 
@@ -225,12 +227,15 @@ def session_fixture():
 @pytest.fixture
 async def async_session():
     engine = create_async_engine("sqlite+aiosqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
-    async with AsyncSession(engine, expire_on_commit=False) as session:
-        yield session
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.drop_all)
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(SQLModel.metadata.create_all)
+        async with AsyncSession(engine, expire_on_commit=False) as session:
+            yield session
+        async with engine.begin() as conn:
+            await conn.run_sync(SQLModel.metadata.drop_all)
+    finally:
+        await engine.dispose()
 
 
 class Config:
@@ -467,8 +472,7 @@ async def test_user(client):
 
 @pytest.fixture
 async def active_user(client):  # noqa: ARG001
-    db_manager = get_db_service()
-    async with db_manager.with_session() as session:
+    async with session_scope() as session:
         user = User(
             username="activeuser",
             password=get_password_hash("testpassword"),
@@ -480,25 +484,23 @@ async def active_user(client):  # noqa: ARG001
             user = active_user
         else:
             session.add(user)
-            await session.commit()
+            await session.flush()
             await session.refresh(user)
         user = UserRead.model_validate(user, from_attributes=True)
     yield user
     # Clean up
     # Now cleanup transactions, vertex_build
     try:
-        async with db_manager.with_session() as session:
+        async with session_scope() as session:
             user = await session.get(User, user.id, options=[selectinload(User.flows)])
             await _delete_transactions_and_vertex_builds(session, user.flows)
-            await session.commit()
     except Exception as e:
         logger.exception(f"Error deleting transactions and vertex builds for user: {e}")
 
     try:
-        async with db_manager.with_session() as session:
+        async with session_scope() as session:
             user = await session.get(User, user.id)
             await session.delete(user)
-            await session.commit()
     except Exception as e:
         logger.exception(f"Error deleting user: {e}")
 
@@ -515,8 +517,7 @@ async def logged_in_headers(client, active_user):
 
 @pytest.fixture
 async def active_super_user(client):  # noqa: ARG001
-    db_manager = get_db_service()
-    async with db_manager.with_session() as session:
+    async with session_scope() as session:
         user = User(
             username="activeuser",
             password=get_password_hash("testpassword"),
@@ -528,18 +529,16 @@ async def active_super_user(client):  # noqa: ARG001
             user = active_user
         else:
             session.add(user)
-            await session.commit()
+            await session.flush()
             await session.refresh(user)
         user = UserRead.model_validate(user, from_attributes=True)
     yield user
     # Clean up
     # Now cleanup transactions, vertex_build
-    async with db_manager.with_session() as session:
+    async with session_scope() as session:
         user = await session.get(User, user.id, options=[selectinload(User.flows)])
         await _delete_transactions_and_vertex_builds(session, user.flows)
         await session.delete(user)
-
-        await session.commit()
 
 
 @pytest.fixture
@@ -562,14 +561,18 @@ async def flow(
     flow_data = FlowCreate(name="test_flow", data=loaded_json.get("data"), user_id=active_user.id)
 
     flow = Flow.model_validate(flow_data)
-    async with session_getter(get_db_service()) as session:
+    async with session_scope() as session:
         session.add(flow)
-        await session.commit()
+        await session.flush()
         await session.refresh(flow)
-        yield flow
-        # Clean up
-        await session.delete(flow)
-        await session.commit()
+        flow = FlowRead.model_validate(flow, from_attributes=True)
+
+    yield flow
+
+    async with session_scope() as session:
+        db_flow = await session.get(Flow, flow.id)
+        if db_flow:
+            await session.delete(db_flow)
 
 
 @pytest.fixture
@@ -670,19 +673,23 @@ async def created_api_key(active_user):
         api_key="random_key",
         hashed_api_key=hashed,
     )
-    db_manager = get_db_service()
-    async with session_getter(db_manager) as session:
+    async with session_scope() as session:
         stmt = select(ApiKey).where(ApiKey.api_key == api_key.api_key)
         if existing_api_key := (await session.exec(stmt)).first():
+            existing_api_key = UnmaskedApiKeyRead.model_validate(existing_api_key, from_attributes=True)
             yield existing_api_key
             return
         session.add(api_key)
-        await session.commit()
+        await session.flush()
         await session.refresh(api_key)
-        yield api_key
-        # Clean up
-        await session.delete(api_key)
-        await session.commit()
+        api_key = UnmaskedApiKeyRead.model_validate(api_key, from_attributes=True)
+
+    yield api_key
+
+    async with session_scope() as session:
+        db_key = await session.get(ApiKey, api_key.id)
+        if db_key:
+            await session.delete(db_key)
 
 
 @pytest.fixture
@@ -705,11 +712,13 @@ async def user_two(
             is_active=True,
         )
         session.add(user)
-        await session.commit()
+        await session.flush()
         await session.refresh(user)
+        user = UserRead.model_validate(user, from_attributes=True)
 
-        yield user
+    yield user
 
+    async with session_scope() as session:
         # Cleanup related API keys first
         keys_to_delete = (await session.exec(select(ApiKey).where(ApiKey.user_id == user.id))).all()
         for key in keys_to_delete:
@@ -719,7 +728,6 @@ async def user_two(
         user_to_delete = await session.get(User, user.id)
         if user_to_delete:
             await session.delete(user_to_delete)
-            await session.commit()
 
 
 @pytest.fixture
@@ -736,14 +744,16 @@ async def created_user_two_api_key(user_two: User) -> AsyncGenerator[ApiKey, Non
 
     async with session_scope() as session:
         session.add(api_key)
-        await session.commit()
+        await session.flush()
         await session.refresh(api_key)
+        api_key = UnmaskedApiKeyRead.model_validate(api_key, from_attributes=True)
 
-        yield api_key
+    yield api_key
 
-        # Cleanup
-        await session.delete(api_key)
-        await session.commit()
+    async with session_scope() as session:
+        db_key = await session.get(ApiKey, api_key.id)
+        if db_key:
+            await session.delete(db_key)
 
 
 @pytest.fixture
@@ -799,10 +809,9 @@ async def get_starter_project(client, active_user):  # noqa: ARG001
         )
         new_flow = Flow.model_validate(new_flow_create, from_attributes=True)
         session.add(new_flow)
-        await session.commit()
+        await session.flush()
         await session.refresh(new_flow)
         new_flow_dict = new_flow.model_dump()
         yield new_flow_dict
         # Clean up
         await session.delete(new_flow)
-        await session.commit()

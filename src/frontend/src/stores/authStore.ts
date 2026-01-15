@@ -7,7 +7,7 @@ import {
   LANGFLOW_REFRESH_TOKEN,
 } from "@/constants/constants";
 import type { AuthStoreType } from "@/types/zustand/auth";
-import { getCookiesInstance } from "@/utils/cookie-manager";
+import { cookieManager, getCookiesInstance } from "@/utils/cookie-manager";
 
 const cookies = getCookiesInstance();
 const useAuthStore = create<AuthStoreType>((set, get) => ({
@@ -32,6 +32,8 @@ const useAuthStore = create<AuthStoreType>((set, get) => ({
     localStorage.removeItem(LANGFLOW_ACCESS_TOKEN);
     localStorage.removeItem(LANGFLOW_API_TOKEN);
     localStorage.removeItem(LANGFLOW_REFRESH_TOKEN);
+
+    cookieManager.clearAuthCookies();
 
     get().setIsAuthenticated(false);
     get().setIsAdmin(false);

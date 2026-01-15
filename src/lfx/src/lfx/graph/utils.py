@@ -11,7 +11,7 @@ from lfx.schema.data import Data
 from lfx.schema.message import Message
 
 # Database imports removed - lfx should be lightweight
-from lfx.services.deps import get_db_service, get_settings_service
+from lfx.services.deps import get_settings_service
 
 if TYPE_CHECKING:
     from lfx.graph.vertex.base import Vertex
@@ -108,32 +108,65 @@ def _vertex_to_primitive_dict(target: Vertex) -> dict:
 async def log_transaction(
     flow_id: str | UUID,
     source: Vertex,
-    status,
-    target: Vertex | None = None,  # noqa: ARG001
-    error=None,  # noqa: ARG001
+    status: str,
+    target: Vertex | None = None,
+    error: str | Exception | None = None,
+    outputs: dict[str, Any] | None = None,
 ) -> None:
     """Asynchronously logs a transaction record for a vertex in a flow if transaction storage is enabled.
 
-    This is a lightweight implementation that only logs if database service is available.
+    Uses the pluggable TransactionService to log transactions. When running within langflow,
+    the concrete TransactionService implementation persists to the database.
+    When running standalone (lfx only), transactions are not persisted.
+
+    Args:
+        flow_id: The flow ID
+        source: The source vertex (component being executed)
+        status: Transaction status (success/error)
+        target: Optional target vertex (for data transfer logging)
+        error: Optional error information
+        outputs: Optional explicit outputs dict (component execution results)
     """
     try:
-        settings_service = get_settings_service()
-        if not settings_service or not getattr(settings_service.settings, "transactions_storage_enabled", False):
+        # Guard against null source
+        if source is None:
             return
 
-        db_service = get_db_service()
-        if db_service is None:
-            logger.debug("Database service not available, skipping transaction logging")
+        # Get the transaction service via dependency injection
+        from lfx.services.deps import get_transaction_service
+
+        transaction_service = get_transaction_service()
+
+        # If no transaction service is available or it's disabled, skip logging
+        if transaction_service is None or not transaction_service.is_enabled():
             return
 
+        # Resolve flow_id
         if not flow_id:
             if source.graph.flow_id:
                 flow_id = source.graph.flow_id
             else:
                 return
 
-        # Log basic transaction info - concrete implementation should be in langflow
-        logger.debug(f"Transaction logged: vertex={source.id}, flow={flow_id}, status={status}")
+        # Convert UUID to string for the service interface
+        flow_id_str = str(flow_id) if isinstance(flow_id, UUID) else flow_id
+
+        # Prepare inputs and outputs
+        inputs = _vertex_to_primitive_dict(source) if source else None
+        target_outputs = _vertex_to_primitive_dict(target) if target else None
+        transaction_outputs = outputs if outputs is not None else target_outputs
+
+        # Log transaction via the service
+        await transaction_service.log_transaction(
+            flow_id=flow_id_str,
+            vertex_id=source.id,
+            inputs=inputs,
+            outputs=transaction_outputs,
+            status=status,
+            target_id=target.id if target else None,
+            error=str(error) if error else None,
+        )
+
     except Exception as exc:  # noqa: BLE001
         logger.debug(f"Error logging transaction: {exc!s}")
 
@@ -143,35 +176,81 @@ async def log_vertex_build(
     flow_id: str | UUID,
     vertex_id: str,
     valid: bool,
-    params: Any,  # noqa: ARG001
-    data: dict | Any,  # noqa: ARG001
-    artifacts: dict | None = None,  # noqa: ARG001
+    params: Any,
+    data: dict | Any,
+    artifacts: dict | None = None,
 ) -> None:
     """Asynchronously logs a vertex build record if vertex build storage is enabled.
 
     This is a lightweight implementation that only logs if database service is available.
+    When running within langflow, it will use langflow's database service to persist the build.
+    When running standalone (lfx only), it will only log debug messages.
     """
     try:
-        settings_service = get_settings_service()
-        if not settings_service or not getattr(settings_service.settings, "vertex_builds_storage_enabled", False):
-            return
-
-        db_service = get_db_service()
-        if db_service is None:
-            logger.debug("Database service not available, skipping vertex build logging")
-            return
-
+        # Try to use langflow's services if available (when running within langflow)
         try:
+            from langflow.services.deps import get_db_service as langflow_get_db_service
+            from langflow.services.deps import get_settings_service as langflow_get_settings_service
+
+            settings_service = langflow_get_settings_service()
+            if not settings_service:
+                return
+            if not getattr(settings_service.settings, "vertex_builds_storage_enabled", False):
+                return
+
             if isinstance(flow_id, str):
                 flow_id = UUID(flow_id)
-        except ValueError:
-            logger.debug(f"Invalid flow_id passed to log_vertex_build: {flow_id!r}")
-            return
 
-        # Log basic vertex build info - concrete implementation should be in langflow
-        logger.debug(f"Vertex build logged: vertex={vertex_id}, flow={flow_id}, valid={valid}")
-    except Exception:  # noqa: BLE001
-        logger.debug("Error logging vertex build")
+            from langflow.services.database.models.vertex_builds.crud import (
+                log_vertex_build as crud_log_vertex_build,
+            )
+            from langflow.services.database.models.vertex_builds.model import VertexBuildBase
+
+            # Convert data to dict if it's a pydantic model
+            data_dict = data
+            if hasattr(data, "model_dump"):
+                data_dict = data.model_dump()
+            elif hasattr(data, "dict"):
+                data_dict = data.dict()
+
+            # Convert artifacts to dict if it's a pydantic model
+            artifacts_dict = artifacts
+            if artifacts is not None:
+                if hasattr(artifacts, "model_dump"):
+                    artifacts_dict = artifacts.model_dump()
+                elif hasattr(artifacts, "dict"):
+                    artifacts_dict = artifacts.dict()
+
+            vertex_build = VertexBuildBase(
+                flow_id=flow_id,
+                id=vertex_id,
+                valid=valid,
+                params=str(params) if params else None,
+                data=data_dict,
+                artifacts=artifacts_dict,
+            )
+
+            db_service = langflow_get_db_service()
+            if db_service is None:
+                return
+
+            async with db_service._with_session() as session:  # noqa: SLF001
+                await crud_log_vertex_build(session, vertex_build)
+
+        except ImportError:
+            # Fallback for standalone lfx usage (without langflow)
+            settings_service = get_settings_service()
+            if not settings_service or not getattr(settings_service.settings, "vertex_builds_storage_enabled", False):
+                return
+
+            if isinstance(flow_id, str):
+                flow_id = UUID(flow_id)
+
+            # Log basic vertex build info - concrete implementation is in langflow
+            logger.debug(f"Vertex build logged: vertex={vertex_id}, flow={flow_id}, valid={valid}")
+
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(f"Error logging vertex build: {exc}")
 
 
 def rewrite_file_path(file_path: str):
@@ -198,3 +277,9 @@ def has_chat_output(vertices: dict[Vertex, int]):
     from lfx.graph.schema import InterfaceComponentTypes
 
     return any(InterfaceComponentTypes.ChatOutput in vertex.id for vertex in vertices)
+
+
+def has_chat_input(vertices: dict[Vertex, int]):
+    from lfx.graph.schema import InterfaceComponentTypes
+
+    return any(InterfaceComponentTypes.ChatInput in vertex.id for vertex in vertices)

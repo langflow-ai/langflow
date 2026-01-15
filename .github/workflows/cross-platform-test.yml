@@ -33,7 +33,7 @@ jobs:
       main-artifact-name: ${{ steps.set-names.outputs.main-artifact-name }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
       - name: Setup Environment
         uses: astral-sh/setup-uv@v6
         with:
@@ -92,11 +92,11 @@ jobs:
           # macOS AMD64
           - os: macos
             arch: amd64
-            runner: macos-13
+            runner: macos-latest-large
             python-version: "3.10"
           - os: macos
             arch: amd64
-            runner: macos-13
+            runner: macos-latest-large
             python-version: "3.12"
           # macOS ARM64 (Apple Silicon)
           - os: macos
@@ -144,6 +144,16 @@ jobs:
         with:
           enable-cache: false
           ignore-empty-workdir: true
+
+      - name: Install Protocol Buffers (macOS AMD64)
+        if: matrix.os == 'macos' && matrix.arch == 'amd64'
+        run: |
+          if ! command -v protoc &> /dev/null; then
+            brew install protobuf
+          else
+            echo "protoc already installed, skipping"
+          fi
+        shell: bash
 
       # Download artifacts for wheel installation
       - name: Download LFX package artifact
@@ -194,7 +204,7 @@ jobs:
           find ./base-dist -name "*.whl" -type f
           WHEEL_FILE=$(find ./base-dist -name "*.whl" -type f | head -1)
           if [ -n "$WHEEL_FILE" ]; then
-            uv pip install --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
+            uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
           else
             echo "No wheel file found in ./base-dist/"
             exit 1
@@ -236,7 +246,7 @@ jobs:
           find ./base-dist -name "*.whl" -type f
           WHEEL_FILE=$(find ./base-dist -name "*.whl" -type f | head -1)
           if [ -n "$WHEEL_FILE" ]; then
-            uv pip install --python ./test-env/bin/python "$WHEEL_FILE"
+            uv pip install --prerelease=allow --python ./test-env/bin/python "$WHEEL_FILE"
           else
             echo "No wheel file found in ./base-dist/"
             exit 1
@@ -392,17 +402,17 @@ jobs:
             arch: amd64
             runner: ubuntu-latest
             python-version: "3.13"
+          - os: windows
+            arch: amd64
+            runner: windows-latest
+            python-version: "3.13"
           - os: macos
             arch: amd64
-            runner: macos-13
+            runner: macos-latest-large
             python-version: "3.13"
           - os: macos
             arch: arm64
             runner: macos-latest
-            python-version: "3.13"
-          - os: windows
-            arch: amd64
-            runner: windows-latest
             python-version: "3.13"
 
     steps:
@@ -432,6 +442,16 @@ jobs:
         with:
           enable-cache: false
           ignore-empty-workdir: true
+
+      - name: Install Protocol Buffers (macOS AMD64)
+        if: matrix.os == 'macos' && matrix.arch == 'amd64'
+        run: |
+          if ! command -v protoc &> /dev/null; then
+            brew install protobuf
+          else
+            echo "protoc already installed, skipping"
+          fi
+        shell: bash
 
       # Download artifacts for wheel installation
       - name: Download LFX package artifact
@@ -482,7 +502,7 @@ jobs:
           find ./base-dist -name "*.whl" -type f
           WHEEL_FILE=$(find ./base-dist -name "*.whl" -type f | head -1)
           if [ -n "$WHEEL_FILE" ]; then
-            uv pip install --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
+            uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
           else
             echo "No wheel file found in ./base-dist/"
             exit 1
@@ -496,7 +516,7 @@ jobs:
           find ./main-dist -name "*.whl" -type f
           WHEEL_FILE=$(find ./main-dist -name "*.whl" -type f | head -1)
           if [ -n "$WHEEL_FILE" ]; then
-            uv pip install --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
+            uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
           else
             echo "No wheel file found in ./main-dist/"
             exit 1
@@ -524,7 +544,7 @@ jobs:
           find ./base-dist -name "*.whl" -type f
           WHEEL_FILE=$(find ./base-dist -name "*.whl" -type f | head -1)
           if [ -n "$WHEEL_FILE" ]; then
-            uv pip install --python ./test-env/bin/python "$WHEEL_FILE"
+            uv pip install --prerelease=allow --python ./test-env/bin/python "$WHEEL_FILE"
           else
             echo "No wheel file found in ./base-dist/"
             exit 1

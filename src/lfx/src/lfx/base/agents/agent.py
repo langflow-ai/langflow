@@ -71,8 +71,8 @@ class LCAgentComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Agent", name="agent", method="build_agent", hidden=True, tool_mode=False),
         Output(display_name="Response", name="response", method="message_response"),
+        Output(display_name="Agent", name="agent", method="build_agent", tool_mode=False),
     ]
 
     # Get shared callbacks for tracing and save them to self.shared_callbacks
@@ -181,8 +181,14 @@ class LCAgentComponent(Component):
         else:
             input_dict = {"input": self.input_value}
 
-        if hasattr(self, "system_prompt"):
-            input_dict["system_prompt"] = self.system_prompt
+        # Ensure input_dict is initialized
+        if "input" not in input_dict:
+            input_dict = {"input": self.input_value}
+
+        # Use enhanced prompt if available (set by IBM Granite handler), otherwise use original
+        system_prompt_to_use = getattr(self, "_effective_system_prompt", None) or self.system_prompt
+        if system_prompt_to_use and system_prompt_to_use.strip():
+            input_dict["system_prompt"] = system_prompt_to_use
 
         if hasattr(self, "chat_history") and self.chat_history:
             if isinstance(self.chat_history, Data):
@@ -196,8 +202,9 @@ class LCAgentComponent(Component):
         # Note: Agent input must be a string, so we extract text and move images to chat_history
         if lc_message is not None and hasattr(lc_message, "content") and isinstance(lc_message.content, list):
             # Extract images and text from the text content items
-            image_dicts = [item for item in lc_message.content if item.get("type") == "image"]
-            text_content = [item for item in lc_message.content if item.get("type") != "image"]
+            # Support both "image" (legacy) and "image_url" (standard) types
+            image_dicts = [item for item in lc_message.content if item.get("type") in ("image", "image_url")]
+            text_content = [item for item in lc_message.content if item.get("type") not in ("image", "image_url")]
 
             text_strings = [
                 item.get("text", "")
@@ -267,9 +274,11 @@ class LCAgentComponent(Component):
                 on_token_callback,
             )
         except ExceptionWithMessageError as e:
-            if hasattr(e, "agent_message") and hasattr(e.agent_message, "id"):
-                msg_id = e.agent_message.id
-                await delete_message(id_=msg_id)
+            # Only delete message from database if it has an ID (was stored)
+            if hasattr(e, "agent_message"):
+                msg_id = e.agent_message.get_id()
+                if msg_id:
+                    await delete_message(id_=msg_id)
             await self._send_message_event(e.agent_message, category="remove_message")
             logger.error(f"ExceptionWithMessageError: {e}")
             raise

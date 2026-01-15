@@ -1,8 +1,8 @@
 from lfx.components.crewai.sequential_crew import SequentialCrewComponent
 from lfx.components.crewai.sequential_task_agent import SequentialTaskAgentComponent
 from lfx.components.input_output import ChatOutput, TextInputComponent
+from lfx.components.models_and_agents import PromptComponent
 from lfx.components.openai.openai_chat_model import OpenAIModelComponent
-from lfx.components.processing import PromptComponent
 from lfx.components.tools import SearchAPIComponent
 from lfx.graph import Graph
 

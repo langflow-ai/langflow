@@ -2,6 +2,7 @@ import { Cookies } from "react-cookie";
 import {
   LANGFLOW_ACCESS_TOKEN,
   LANGFLOW_API_TOKEN,
+  LANGFLOW_AUTO_LOGIN_OPTION,
   LANGFLOW_REFRESH_TOKEN,
 } from "@/constants/constants";
 
@@ -71,6 +72,7 @@ class CookieManager {
     this.remove(LANGFLOW_ACCESS_TOKEN);
     this.remove(LANGFLOW_API_TOKEN);
     this.remove(LANGFLOW_REFRESH_TOKEN);
+    this.remove(LANGFLOW_AUTO_LOGIN_OPTION);
   }
 }
 

@@ -18,7 +18,7 @@ test(
     await page.getByTestId("sidebar-search-input").fill("prompt");
 
     await page
-      .getByTestId("processingPrompt Template")
+      .getByTestId("models_and_agentsPrompt Template")
       .hover()
       .then(async () => {
         await page.getByTestId("add-component-button-prompt-template").click();

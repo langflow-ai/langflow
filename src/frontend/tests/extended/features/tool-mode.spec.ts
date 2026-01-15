@@ -10,18 +10,18 @@ test(
   async ({ page }) => {
     await awaitBootstrapTest(page);
     await page.getByTestId("blank-flow").click();
-    await page.waitForSelector('[data-testid="disclosure-data"]', {
+    await page.waitForSelector('[data-testid="disclosure-data sources"]', {
       timeout: 3000,
       state: "visible",
     });
 
-    await page.getByTestId("disclosure-data").click();
-    await page.waitForSelector('[data-testid="dataURL"]', {
+    await page.getByTestId("disclosure-data sources").click();
+    await page.waitForSelector('[data-testid="data_sourceURL"]', {
       timeout: 3000,
       state: "visible",
     });
     await page
-      .getByTestId("dataURL")
+      .getByTestId("data_sourceURL")
       .hover()
       .then(async () => {
         await page.getByTestId("add-component-button-url").click();
@@ -112,18 +112,18 @@ test(
       state: "visible",
     });
 
-    await page.getByTestId("disclosure-data").click();
+    await page.getByTestId("disclosure-data sources").click();
 
-    await page.getByTestId("disclosure-agents").click();
+    await page.getByTestId("disclosure-models & agents").click();
 
     await adjustScreenView(page, { numberOfZoomOut: 4 });
 
-    await page.waitForSelector('[data-testid="agentsAgent"]', {
+    await page.waitForSelector('[data-testid="models_and_agentsAgent"]', {
       timeout: 3000,
       state: "visible",
     });
     await page
-      .getByTestId("agentsAgent")
+      .getByTestId("models_and_agentsAgent")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 50, y: 500 },
       });

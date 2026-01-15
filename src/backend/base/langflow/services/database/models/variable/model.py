@@ -48,8 +48,6 @@ class Variable(VariableBase, table=True):  # type: ignore[call-arg]
 class VariableCreate(VariableBase):
     created_at: datetime | None = Field(default_factory=utc_now, description="Creation time of the variable")
 
-    updated_at: datetime | None = Field(default_factory=utc_now, description="Creation time of the variable")
-
 
 class VariableRead(SQLModel):
     id: UUID
@@ -71,3 +69,4 @@ class VariableUpdate(SQLModel):
     name: str | None = Field(None, description="Name of the variable")
     value: str | None = Field(None, description="Encrypted value of the variable")
     default_fields: list[str] | None = Field(None, description="Default fields for the variable")
+    type: str | None = Field(None, description="Type of the variable")

@@ -1,0 +1,112 @@
+{
+    "nudges": [
+      {
+        "id": "welcomeNudge",
+        "display_text": "Welcome to Langflow Assistant!",
+        "description": "Let’s help you start building your first Langflow app.",
+        "type": "route",
+        "trigger": {
+          "action": "navigate",
+          "payload": { "path": "/onboarding" }
+        },
+        "ui": {
+          "icon": "sparkles",
+          "variant_type": "pill",
+          "variant_size": "small"
+        }
+      },
+      {
+        "id": "createFlow",
+        "display_text": "Create a New Flow",
+        "description": "Start a new Langflow project to design your agent pipeline.",
+        "type": "route",
+        "trigger": {
+          "action": "navigate",
+          "payload": { "path": "/flows/new" }
+        },
+        "ui": {
+          "icon": "plus-circle",
+          "variant_type": "pill",
+          "variant_size": "small"
+        }
+      },
+      {
+        "id": "openComponent",
+        "display_text": "Browse Components",
+        "description": "Explore and add new components to your Langflow workspace.",
+        "type": "route",
+        "trigger": {
+          "action": "navigate",
+          "payload": { "path": "/components" }
+        },
+        "ui": {
+          "icon": "puzzle",
+          "variant_type": "pill",
+          "variant_size": "small"
+        }
+      },
+      {
+        "id": "openLanguageModelComponent",
+        "display_text": "Open LanguageModelComponent",
+        "description": "Quickly view and configure the LanguageModelComponent in Langflow.",
+        "type": "route",
+        "trigger": {
+          "action": "navigate",
+          "payload": { "path": "/components/LanguageModelComponent" }
+        },
+        "ui": {
+          "icon": "brain-circuit",
+          "variant_type": "pill",
+          "variant_size": "small"
+        }
+      },
+      {
+        "id": "exploreTemplates",
+        "display_text": "Explore Templates",
+        "description": "Jumpstart your project with pre-built Langflow templates.",
+        "type": "route",
+        "trigger": {
+          "action": "navigate",
+          "payload": { "path": "/templates" }
+        },
+        "ui": {
+          "icon": "layout-template",
+          "variant_type": "pill",
+          "variant_size": "small"
+        }
+      },
+      {
+        "id": "docsNudge",
+        "display_text": "Read Langflow Docs",
+        "description": "Learn about nodes, connections, and advanced flow building.",
+        "type": "button_preview",
+        "trigger": {
+          "action": "navigate",
+          "payload": { "path": "https://docs.langflow.org" }
+        },
+        "ui": {
+          "icon": "book-open",
+          "variant_type": "pill",
+          "variant_size": "small"
+        }
+      },
+      {
+        "id": "feedbackPrompt",
+        "display_text": "Share Feedback",
+        "description": "Have ideas or issues with your Langflow experience? Let’s improve together.",
+        "type": "chat_input",
+        "trigger": {
+          "action": "send_message",
+          "payload": {
+            "text": "I’d like to share feedback about my Langflow experience."
+          }
+        },
+        "ui": {
+          "icon": "message-square",
+          "variant_type": "pill",
+          "variant_size": "small"
+        }
+      }
+    ]
+  }
+  

@@ -33,3 +33,13 @@ VARIABLES_TO_GET_FROM_ENVIRONMENT = [
     "TAVILY_API_KEY",
     "COMETAPI_KEY",
 ]
+
+# Agentic experience specific variables
+AGENTIC_VARIABLES = [
+    "FLOW_ID",
+    "COMPONENT_ID",
+    "FIELD_NAME",
+    "ASTRA_TOKEN",
+]
+
+DEFAULT_AGENTIC_VARIABLE_VALUE = ""
