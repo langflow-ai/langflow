@@ -644,11 +644,11 @@
                 "dependencies": [
                   {
                     "name": "orjson",
-                    "version": null
+                    "version": "3.10.15"
                   },
                   {
                     "name": "fastapi",
-                    "version": null
+                    "version": "0.128.0"
                   },
                   {
                     "name": "lfx",
@@ -930,7 +930,7 @@
                 "dependencies": [
                   {
                     "name": "pydantic",
-                    "version": null
+                    "version": "2.11.10"
                   },
                   {
                     "name": "lfx",
@@ -938,7 +938,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": null
+                    "version": "0.3.81"
                   }
                 ],
                 "total_dependencies": 3
@@ -1429,15 +1429,15 @@
                   },
                   {
                     "name": "bs4",
-                    "version": null
+                    "version": "4.12.3"
                   },
                   {
                     "name": "langchain_community",
-                    "version": null
+                    "version": "0.3.21"
                   },
                   {
                     "name": "markitdown",
-                    "version": null
+                    "version": "0.1.4"
                   },
                   {
                     "name": "lfx",

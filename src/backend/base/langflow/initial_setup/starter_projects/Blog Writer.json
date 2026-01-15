@@ -529,11 +529,11 @@
                 "dependencies": [
                   {
                     "name": "orjson",
-                    "version": null
+                    "version": "3.10.15"
                   },
                   {
                     "name": "fastapi",
-                    "version": null
+                    "version": "0.128.0"
                   },
                   {
                     "name": "lfx",
@@ -1027,15 +1027,15 @@
                   },
                   {
                     "name": "bs4",
-                    "version": null
+                    "version": "4.12.3"
                   },
                   {
                     "name": "langchain_community",
-                    "version": null
+                    "version": "0.3.21"
                   },
                   {
                     "name": "markitdown",
-                    "version": null
+                    "version": "0.1.4"
                   },
                   {
                     "name": "lfx",
