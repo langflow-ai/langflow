@@ -1,9 +1,11 @@
 import importlib
+import io
 import re
 
 import requests
 from bs4 import BeautifulSoup
 from langchain_community.document_loaders import RecursiveUrlLoader
+from markitdown import MarkItDown
 
 from lfx.custom.custom_component.component import Component
 from lfx.field_typing.range_spec import RangeSpec
@@ -107,8 +109,12 @@ class URLComponent(Component):
         DropdownInput(
             name="format",
             display_name="Output Format",
-            info="Output Format. Use 'Text' to extract the text from the HTML or 'HTML' for the raw HTML content.",
-            options=["Text", "HTML"],
+            info=(
+                "Output Format. Use 'Text' to extract the text from the HTML, "
+                "'Markdown' to parse the HTML into Markdown format, or 'HTML' "
+                "for the raw HTML content."
+            ),
+            options=["Text", "HTML", "Markdown"],
             value=DEFAULT_FORMAT,
             advanced=True,
         ),
@@ -182,6 +188,23 @@ class URLComponent(Component):
     ]
 
     @staticmethod
+    def _html_extractor(x: str) -> str:
+        """Extract raw HTML content."""
+        return x
+
+    @staticmethod
+    def _text_extractor(x: str) -> str:
+        """Extract clean text from HTML."""
+        return BeautifulSoup(x, "lxml").get_text()
+
+    @staticmethod
+    def _markdown_extractor(x: str) -> str:
+        """Convert HTML to Markdown format."""
+        stream = io.BytesIO(x.encode("utf-8"))
+        result = MarkItDown(enable_plugins=False).convert_stream(stream)
+        return result.markdown
+
+    @staticmethod
     def validate_url(url: str) -> bool:
         """Validates if the given string matches URL pattern.
 
@@ -225,7 +248,12 @@ class URLComponent(Component):
             RecursiveUrlLoader: Configured loader instance
         """
         headers_dict = {header["key"]: header["value"] for header in self.headers if header["value"] is not None}
-        extractor = (lambda x: x) if self.format == "HTML" else (lambda x: BeautifulSoup(x, "lxml").get_text())
+        extractors = {
+            "HTML": self._html_extractor,
+            "Markdown": self._markdown_extractor,
+            "Text": self._text_extractor,
+        }
+        extractor = extractors.get(self.format, self._text_extractor)
 
         return RecursiveUrlLoader(
             url=url,
