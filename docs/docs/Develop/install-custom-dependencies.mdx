@@ -73,13 +73,13 @@ uv pip install "langflow-base[postgresql]"
 To install multiple extras, use commas to separate each dependency group:
 
 ```bash
-uv pip install "langflow-base[postgresql,openai]"
+uv pip install "langflow-base[postgresql,audio]"
 ```
 
-To install all optional dependencies for `langflow-base`, use the `all` extra:
+To install all optional dependencies for `langflow-base`, use the `complete` extra:
 
 ```bash
-uv pip install "langflow-base[all]"
+uv pip install "langflow-base[complete]"
 ```
 
 ### Use a virtual environment to test custom dependencies
@@ -101,7 +101,7 @@ You can also install `langflow-base` with specific optional dependency groups in
 
 ```bash
 # Install langflow-base with only the dependencies you need
-uv pip install "langflow-base[openai,chroma]" matplotlib
+uv pip install "langflow-base[postgresql,audio]" matplotlib
 ```
 
 If you're working within a cloned Langflow repository, add dependencies with `uv add` to reference the existing `pyproject.toml` files:

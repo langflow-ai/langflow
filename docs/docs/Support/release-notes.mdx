@@ -52,18 +52,36 @@ To avoid the impact of potential breaking changes and test new versions, the Lan
 Highlights of this release include the following changes.
 For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases).
 
+### Breaking changes
+
+-   `langflow-base` dependency structure refactoring**
+
+    The `langflow-base` package has been refactored to use granular optional dependency groups. Many dependencies that were previously included in the base `langflow-base` installation have been moved to optional extras.
+
+    If you installed Langflow with `uv pip install langflow`, this is not a breaking change. Installing `langflow` automatically installs `langflow-base[complete]`, which includes all optional dependencies, maintaining the same functionality as before.
+
+    If you installed Langflow with `uv pip install langflow-base` without specifying extras, **this is a breaking change**. If you install `langflow-base` directly, you will now only install the [core base dependencies](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/pyproject.toml). Dependencies that were previously included by default are now available only through optional extras.
+
+    **Migration**: If you use `langflow-base` directly and need the full set of dependencies, install it with the `complete` extra:
+
+    ```bash
+    uv pip install "langflow-base[complete]"
+    ```
+
+    Alternatively, install only the specific optional dependency groups you need:
+
+    ```bash
+    uv pip install "langflow-base[postgresql,openai,chroma]"
+    ```
+
+    For more information about available optional dependency groups, see [Install optional dependency groups for `langflow-base`](/install-custom-dependencies#install-optional-dependency-groups-for-langflow-base).
+
 ### New features and enhancements
 
 - Mustache templating support for Prompt Template component
 
     The **Prompt Template** component now supports Mustache templating syntax.
     Mustache templating eliminates the need to escape curly braces when including JSON structures in your prompts. For more information, see [Prompt Template](/components-prompts#use-mustache-templating-in-prompt-templates).
-
-- Modular dependency installation for `langflow-base`
-
-    The `langflow-base` package now supports modular dependency installation.
-    Install only the dependencies you need, instead of the full dependency tree.
-    For more information, see [Install custom dependencies](/install-custom-dependencies).
 
 ## 1.7.x
 
