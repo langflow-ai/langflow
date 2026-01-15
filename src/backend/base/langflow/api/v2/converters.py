@@ -371,17 +371,18 @@ def run_response_to_workflow_response(
     output_data_map: dict[str, Any] = {}
     if run_response.outputs:
         for run_output in run_response.outputs:
-            if hasattr(run_output, "outputs") and run_output.outputs:
-                for result_data in run_output.outputs:
+            outs = getattr(run_output, "outputs", None)
+            if outs:
+                for result_data in outs:
                     if not result_data:
                         continue
-                    # Use component_id as key to ensure uniqueness
-                    component_id = result_data.component_id if hasattr(result_data, "component_id") else None
+                    component_id = getattr(result_data, "component_id", None)
                     if component_id:
                         output_data_map[component_id] = result_data
 
     # First pass: collect all terminal vertices and check for duplicate display_names
-    terminal_vertices = [v for v in graph.vertices if v.id in terminal_node_ids]
+    term_set = set(terminal_node_ids)
+    terminal_vertices = [v for v in graph.vertices if v.id in term_set]
     display_name_counts: dict[str, int] = {}
     for vertex in terminal_vertices:
         display_name = vertex.display_name or vertex.id
@@ -433,8 +434,9 @@ def run_response_to_workflow_response(
                     metadata.update(extra_metadata)
 
             # Add any additional metadata from result data
-            if hasattr(vertex_output_data, "metadata") and vertex_output_data.metadata:
-                metadata.update(vertex_output_data.metadata)
+            vm = getattr(vertex_output_data, "metadata", None)
+            if vm:
+                metadata.update(vm)
             elif isinstance(vertex_output_data, dict) and "metadata" in vertex_output_data:
                 result_metadata = vertex_output_data.get("metadata")
                 if isinstance(result_metadata, dict):
