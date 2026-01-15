@@ -442,37 +442,7 @@ class TestBuildDataPrompt(TestLambdaFilterComponent):
         assert "First lines (head)" in result
         assert "Last lines (tail)" in result
 
-    def test_should_transform_result_key_to_results_when_result_is_list(self, component_class):
-        # Arrange
-        component = component_class()
-        component.max_size = 10000
-        component.sample_size = 100
-        component.filter_instruction = "Filter items"
-        data = {"result": [{"id": 1}, {"id": 2}]}
-
-        # Act
-        result = component._build_data_prompt(data)
-
-        # Assert
-        assert '"_results"' in result
-        assert '"result"' not in result
-
-    def test_should_not_transform_result_when_result_is_not_list(self, component_class):
-        # Arrange
-        component = component_class()
-        component.max_size = 10000
-        component.sample_size = 100
-        component.filter_instruction = "Filter items"
-        data = {"result": "string_value"}
-
-        # Act
-        result = component._build_data_prompt(data)
-
-        # Assert
-        assert '"result"' in result
-        assert '"_results"' not in result
-
-    def test_should_not_transform_data_when_result_key_is_absent(self, component_class):
+    def test_should_include_data_structure_in_prompt(self, component_class):
         # Arrange
         component = component_class()
         component.max_size = 10000
@@ -485,22 +455,84 @@ class TestBuildDataPrompt(TestLambdaFilterComponent):
 
         # Assert
         assert '"items"' in result
-        assert '"_results"' not in result
+        assert "Data Structure" in result
+
+
+class TestNormalizeHttpApiData(TestLambdaFilterComponent):
+    """Tests for _normalize_http_api_data method."""
+
+    def test_should_transform_result_key_to_results_when_result_is_list(self, component_class):
+        # Arrange
+        component = component_class()
+        data = {"result": [{"id": 1}, {"id": 2}]}
+
+        # Act
+        result = component._normalize_http_api_data(data)
+
+        # Assert
+        assert "_results" in result
+        assert "result" not in result
+        assert result["_results"] == [{"id": 1}, {"id": 2}]
+
+    def test_should_not_transform_result_when_result_is_not_list(self, component_class):
+        # Arrange
+        component = component_class()
+        data = {"result": "string_value"}
+
+        # Act
+        result = component._normalize_http_api_data(data)
+
+        # Assert
+        assert "result" in result
+        assert "_results" not in result
+        assert result["result"] == "string_value"
+
+    def test_should_not_transform_data_when_result_key_is_absent(self, component_class):
+        # Arrange
+        component = component_class()
+        data = {"items": [{"id": 1}, {"id": 2}]}
+
+        # Act
+        result = component._normalize_http_api_data(data)
+
+        # Assert
+        assert "items" in result
+        assert "_results" not in result
 
     def test_should_preserve_list_contents_when_transforming_result(self, component_class):
         # Arrange
         component = component_class()
-        component.max_size = 10000
-        component.sample_size = 100
-        component.filter_instruction = "Filter items"
         data = {"result": [{"name": "test1", "value": 10}, {"name": "test2", "value": 20}]}
 
         # Act
-        result = component._build_data_prompt(data)
+        result = component._normalize_http_api_data(data)
 
         # Assert
-        assert '"name":"test1"' in result or '"name": "test1"' in result
-        assert '"value":10' in result or '"value": 10' in result
+        assert result["_results"][0]["name"] == "test1"
+        assert result["_results"][1]["value"] == 20
+
+    def test_should_return_list_unchanged(self, component_class):
+        # Arrange
+        component = component_class()
+        data = [{"id": 1}, {"id": 2}]
+
+        # Act
+        result = component._normalize_http_api_data(data)
+
+        # Assert
+        assert result == [{"id": 1}, {"id": 2}]
+
+    def test_should_handle_empty_result_list(self, component_class):
+        # Arrange
+        component = component_class()
+        data = {"result": []}
+
+        # Act
+        result = component._normalize_http_api_data(data)
+
+        # Assert
+        assert "_results" in result
+        assert result["_results"] == []
 
 
 class TestParseLambdaFromResponse(TestLambdaFilterComponent):
@@ -916,8 +948,9 @@ class TestHttpApiDataTransformation(TestLambdaFilterComponent):
             "max_size": 30000,
         }
         component = await self.component_setup(component_class, kwargs)
+        # After normalization, data has '_results' key, so lambda uses '_results'
         mock_llm.ainvoke.return_value.content = (
-            "lambda x: [item for item in x['result'] if item['status'] == 'active']"
+            "lambda x: [item for item in x['_results'] if item['status'] == 'active']"
         )
 
         # Act
@@ -930,7 +963,52 @@ class TestHttpApiDataTransformation(TestLambdaFilterComponent):
         assert len(filtered_items) == 2
         assert all(item["status"] == "active" for item in filtered_items)
 
-    def test_should_transform_prompt_structure_for_http_api_data(self, component_class):
+    @patch("lfx.base.models.unified_models.get_model_classes")
+    async def test_should_work_when_llm_uses_results_key_after_normalization(
+        self, mock_get_model_classes, component_class, model_metadata, mock_llm
+    ):
+        """
+        Test that the data normalization ensures consistency between prompt and data.
+
+        The prompt shows {"_results": [...]} to the LLM, so the LLM generates
+        a lambda using '_results'. The actual data passed to the lambda is also
+        normalized to have '_results' key, ensuring consistency.
+        """
+        # Arrange
+        mock_model_class = MagicMock(return_value=mock_llm)
+        mock_get_model_classes.return_value = {"MockLanguageModel": mock_model_class}
+        http_api_data = {
+            "result": [
+                {"id": 1, "status": "active"},
+                {"id": 2, "status": "inactive"},
+            ]
+        }
+        kwargs = {
+            "data": [Data(data=http_api_data)],
+            "model": model_metadata,
+            "api_key": "test-api-key",
+            "filter_instruction": "Filter active items",
+            "sample_size": 1000,
+            "max_size": 30000,
+        }
+        component = await self.component_setup(component_class, kwargs)
+
+        # LLM sees {"_results": [...]} in prompt, so it generates lambda with '_results'
+        mock_llm.ainvoke.return_value.content = (
+            "lambda x: [item for item in x['_results'] if item['status'] == 'active']"
+        )
+
+        # Act
+        result = await component.process_as_data()
+
+        # Assert - This should work if the data transformation is consistent
+        assert isinstance(result, Data)
+        assert "_results" in result.data
+        filtered_items = result.data["_results"]
+        assert len(filtered_items) == 1
+        assert filtered_items[0]["id"] == 1
+
+    def test_should_include_normalized_data_in_prompt_after_transformation(self, component_class):
         # Arrange
         component = component_class()
         component.max_size = 10000
@@ -938,12 +1016,14 @@ class TestHttpApiDataTransformation(TestLambdaFilterComponent):
         component.filter_instruction = "Filter active items"
         http_api_data = {"result": [{"id": 1, "status": "active"}]}
 
-        # Act
-        prompt = component._build_data_prompt(http_api_data)
+        # First normalize the data (as _execute_lambda does)
+        normalized_data = component._normalize_http_api_data(http_api_data)
+
+        # Act - build prompt with normalized data
+        prompt = component._build_data_prompt(normalized_data)
 
         # Assert
         assert '"_results"' in prompt
-        assert '"result"' not in prompt
         assert '"id"' in prompt
         assert '"status"' in prompt
 
@@ -1011,17 +1091,15 @@ class TestEdgeCases(TestLambdaFilterComponent):
         # Assert
         assert result == {"outer": {"inner": []}}
 
-    def test_should_preserve_result_with_empty_list(self, component_class):
+    def test_should_normalize_result_with_empty_list(self, component_class):
         # Arrange
         component = component_class()
-        component.max_size = 10000
-        component.sample_size = 100
-        component.filter_instruction = "Filter items"
         data = {"result": []}
 
         # Act
-        result = component._build_data_prompt(data)
+        result = component._normalize_http_api_data(data)
 
         # Assert
-        assert '"_results"' in result
-        assert '"result"' not in result
+        assert "_results" in result
+        assert "result" not in result
+        assert result["_results"] == []

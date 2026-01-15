@@ -217,10 +217,6 @@ class LambdaFilterComponent(Component):
 
     def _build_data_prompt(self, data: dict | list) -> str:
         """Build prompt for structured data transformation."""
-        # Keep only the actual payload (common for HTTP/API fetch components)
-        if isinstance(data, dict) and "result" in data and isinstance(data["result"], list):
-            data = {"_results": data["result"]}
-
         dump = json.dumps(data, separators=(",", ":"), ensure_ascii=False)
         dump_structure = json.dumps(self.get_data_structure(data))
 
@@ -252,6 +248,12 @@ class LambdaFilterComponent(Component):
 
         return eval(lambda_text)  # noqa: S307
 
+    def _normalize_http_api_data(self, data: dict | list) -> dict | list:
+        """Normalize HTTP/API response data by transforming 'result' key to '_results'."""
+        if isinstance(data, dict) and "result" in data and isinstance(data["result"], list):
+            return {"_results": data["result"]}
+        return data
+
     async def _execute_lambda(self) -> Any:
         """Generate and execute a lambda function based on input type."""
         if self._is_message_input():
@@ -259,6 +261,7 @@ class LambdaFilterComponent(Component):
             prompt = self._build_text_prompt(data)
         else:
             data = self._extract_structured_data()
+            data = self._normalize_http_api_data(data)
             prompt = self._build_data_prompt(data)
 
         llm = get_llm(model=self.model, user_id=self.user_id, api_key=self.api_key)
