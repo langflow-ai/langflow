@@ -8,7 +8,6 @@ from lfx.schema.data import Data
 
 
 class NvidiaIngestComponent(BaseFileComponent):
-    component_id: str = "3360ac2c-3373-4a30-95cf-a55c90711472"
     display_name = "NVIDIA Retriever Extraction"
     description = "Multi-modal data extraction from documents using NVIDIA's NeMo API."
     documentation: str = "https://docs.nvidia.com/nemo/retriever/extraction/overview/"

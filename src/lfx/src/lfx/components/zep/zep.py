@@ -4,7 +4,6 @@ from lfx.inputs.inputs import DropdownInput, MessageTextInput, SecretStrInput
 
 
 class ZepChatMemory(LCChatMemoryComponent):
-    component_id: str = "6c41c29d-53c4-4a4c-94ec-629351265348"
     display_name = "Zep Chat Memory"
     description = "Retrieves and store chat messages from Zep."
     name = "ZepChatMemory"

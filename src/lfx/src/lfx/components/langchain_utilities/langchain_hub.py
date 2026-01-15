@@ -9,7 +9,6 @@ from lfx.schema.message import Message
 
 
 class LangChainHubPromptComponent(Component):
-    component_id: str = "10eb2115-314e-410a-b643-3b7ead912e66"
     display_name: str = "Prompt Hub"
     description: str = "Prompt Component that uses LangChain Hub prompts"
     beta = True

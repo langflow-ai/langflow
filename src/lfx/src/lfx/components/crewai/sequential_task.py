@@ -4,7 +4,6 @@ from lfx.io import BoolInput, HandleInput, MultilineInput, Output
 
 
 class SequentialTaskComponent(Component):
-    component_id: str = "d9742fe1-86a8-4a00-a858-8a7fa88ccdce"
     display_name: str = "Sequential Task"
     description: str = "Each task must have a description, an expected output and an agent responsible for execution."
     icon = "CrewAI"

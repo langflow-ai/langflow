@@ -107,7 +107,6 @@ def build_component_index() -> dict:
     # Convert modules_dict to entries format and sort for determinism
     # Sort by category name (top_level) to ensure consistent ordering
     entries = []
-    unique_component_ids = set()
     for category_name in sorted(modules_dict.keys()):
         # Sort components within each category by component name
         components_dict = modules_dict[category_name]
@@ -117,15 +116,6 @@ def build_component_index() -> dict:
             # Make defensive copies to avoid mutating the original component object
             component = dict(components_dict[comp_name])
             component["metadata"] = dict(component.get("metadata", {}))
-            component["metadata"]["component_id"] = component["metadata"].get("component_id", "")
-            if not component["metadata"]["component_id"]:
-                msg = f"Component {comp_name} has no component_id."
-                raise ValueError(msg)
-
-            if component["metadata"]["component_id"] in unique_component_ids:
-                msg = f"Component {comp_name} has a duplicate component_id: {component['metadata']['component_id']}."
-                raise ValueError(msg)
-            unique_component_ids.add(component["metadata"]["component_id"])
 
             sorted_components[comp_name] = component
 

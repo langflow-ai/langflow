@@ -4,7 +4,6 @@ from lfx.schema.data import Data
 
 
 class ExtractDataKeyComponent(Component):
-    component_id: str = "341cb51f-2d07-4b69-99b9-3a00239ebde7"
     display_name = "Extract Key"
     description = (
         "Extract a specific key from a Data object or a list of "

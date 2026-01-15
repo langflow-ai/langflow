@@ -12,7 +12,6 @@ from lfx.schema.message import Message
 
 
 class CleanlabRAGEvaluator(Component):
-    component_id: str = "3567ab8a-dcf5-4b3f-bafe-a38e11a1eade"
     """A component that evaluates the quality of RAG (Retrieval-Augmented Generation) outputs using Cleanlab.
 
     This component takes a query, retrieved context, and generated response from a RAG pipeline,

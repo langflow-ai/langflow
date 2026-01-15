@@ -7,7 +7,6 @@ from lfx.schema.data import Data
 
 
 class AssemblyAILeMUR(Component):
-    component_id: str = "6a486164-f2a0-4a8f-a996-5f7e00a38ef5"
     display_name = "AssemblyAI LeMUR"
     description = "Apply Large Language Models to spoken data using the AssemblyAI LeMUR framework"
     documentation = "https://www.assemblyai.com/docs/lemur"

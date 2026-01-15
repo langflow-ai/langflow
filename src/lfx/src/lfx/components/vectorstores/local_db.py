@@ -22,7 +22,6 @@ disable_component_in_astra_cloud_msg = (
 
 
 class LocalDBComponent(LCVectorStoreComponent):
-    component_id: str = "3fc124cc-058c-47a6-b892-daa0eacfb720"
     """Chroma Vector Store with search capabilities."""
 
     display_name: str = "Local DB"

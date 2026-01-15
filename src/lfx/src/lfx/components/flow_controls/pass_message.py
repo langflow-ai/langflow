@@ -5,7 +5,6 @@ from lfx.template.field.base import Output
 
 
 class PassMessageComponent(Component):
-    component_id: str = "0a4a6987-7ad1-4448-8b06-13e90ca94fcb"
     display_name = "Pass"
     description = "Forwards the input message, unchanged."
     name = "Pass"

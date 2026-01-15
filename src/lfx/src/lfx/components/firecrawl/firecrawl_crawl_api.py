@@ -6,7 +6,6 @@ from lfx.schema.data import Data
 
 
 class FirecrawlCrawlApi(Component):
-    component_id: str = "303c1a0f-fa3e-4f34-a13e-fa8056b16243"
     display_name: str = "Firecrawl Crawl API"
     description: str = "Crawls a URL and returns the results."
     name = "FirecrawlCrawlApi"

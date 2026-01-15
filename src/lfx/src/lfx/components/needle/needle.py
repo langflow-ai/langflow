@@ -7,7 +7,6 @@ from lfx.utils.constants import MESSAGE_SENDER_AI
 
 
 class NeedleComponent(Component):
-    component_id: str = "774e80f9-199b-4384-bcae-3207be6fb5d1"
     display_name = "Needle Retriever"
     description = "A retriever that uses the Needle API to search collections."
     documentation = "https://docs.needle-ai.com"

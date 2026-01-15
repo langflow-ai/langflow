@@ -14,7 +14,6 @@ from lfx.schema.message import Message
 
 
 class GitExtractorComponent(Component):
-    component_id: str = "18ba504d-9972-4e3a-a0db-c07d02d054ab"
     display_name = "GitExtractor"
     description = "Analyzes a Git repository and returns file contents and complete repository information"
     icon = "GitLoader"

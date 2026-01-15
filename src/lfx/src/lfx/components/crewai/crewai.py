@@ -4,7 +4,6 @@ from lfx.io import BoolInput, DictInput, HandleInput, MultilineInput, Output
 
 
 class CrewAIAgentComponent(Component):
-    component_id: str = "c715a32c-99d1-4977-b556-9b124e92c3c6"
     """Component for creating a CrewAI agent.
 
     This component allows you to create a CrewAI agent with the specified role, goal, backstory, tools,

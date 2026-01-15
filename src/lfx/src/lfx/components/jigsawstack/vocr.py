@@ -4,7 +4,6 @@ from lfx.schema.data import Data
 
 
 class JigsawStackVOCRComponent(Component):
-    component_id: str = "3cf5ad65-32a1-47ef-a59e-f28dde08fbf6"
     display_name = "VOCR"
     description = "Extract data from any document type in a consistent structure with fine-tuned \
         vLLMs for the highest accuracy"

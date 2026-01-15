@@ -6,7 +6,6 @@ from lfx.template.field.base import Output
 
 
 class AstraVectorizeComponent(Component):
-    component_id: str = "80a94fc2-9064-4420-ba0d-ddca4fdbf828"
     display_name: str = "Astra Vectorize"
     description: str = "Configuration options for Astra Vectorize server-side embeddings. "
     documentation: str = "https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html"

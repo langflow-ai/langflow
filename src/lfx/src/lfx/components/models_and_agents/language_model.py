@@ -14,7 +14,6 @@ DEFAULT_OLLAMA_URL = "http://localhost:11434"
 
 
 class LanguageModelComponent(LCModelComponent):
-    component_id: str = "ae750738-baf3-4624-b7ca-503816ae8af6"
     display_name = "Language Model"
     description = "Runs a language model given a specified provider."
     documentation: str = "https://docs.langflow.org/components-models"

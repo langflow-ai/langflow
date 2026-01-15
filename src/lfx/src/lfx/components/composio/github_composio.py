@@ -2,7 +2,6 @@ from lfx.base.composio.composio_base import ComposioBaseComponent
 
 
 class ComposioGitHubAPIComponent(ComposioBaseComponent):
-    component_id: str = "21763832-6896-4b99-88a8-288726262e52"
     display_name: str = "GitHub"
     icon = "GithubComposio"
     documentation: str = "https://docs.composio.dev"

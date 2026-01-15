@@ -11,7 +11,6 @@ from lfx.template.field.base import Output
 
 
 class YouTubeSearchComponent(Component):
-    component_id: str = "5558c380-6789-46de-940f-6503337af690"
     """A component that searches YouTube videos."""
 
     display_name: str = "YouTube Search"

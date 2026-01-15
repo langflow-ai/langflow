@@ -10,7 +10,6 @@ from lfx.log.logger import logger
 
 
 class GroqModel(LCModelComponent):
-    component_id: str = "5f969611-1ffc-4d46-b0cb-24594d56b67f"
     display_name: str = "Groq"
     description: str = "Generate text using Groq."
     icon = "Groq"

@@ -20,7 +20,6 @@ from lfx.utils.constants import (
 
 
 class ChatOutput(ChatComponent):
-    component_id: str = "10acf3c6-b5a2-43f4-a072-74c5b5aef91a"
     display_name = "Chat Output"
     description = "Display a chat message in the Playground."
     documentation: str = "https://docs.langflow.org/chat-input-and-output"

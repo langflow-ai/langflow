@@ -15,7 +15,6 @@ if TYPE_CHECKING:
 
 
 class ChromaVectorStoreComponent(LCVectorStoreComponent):
-    component_id: str = "e726128b-2a1e-435b-98b0-2c1c53f6fda9"
     """Chroma Vector Store with search capabilities."""
 
     display_name: str = "Chroma DB"

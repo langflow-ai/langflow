@@ -37,7 +37,6 @@ OPERATORS = {
 
 
 class DataOperationsComponent(Component):
-    component_id: str = "2d7054a9-d6ed-4447-9961-371fc87514bd"
     display_name = "Data Operations"
     description = "Perform various operations on a Data object."
     icon = "file-json"

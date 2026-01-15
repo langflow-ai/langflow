@@ -30,7 +30,6 @@ class SerpAPISchema(BaseModel):
 
 
 class SerpAPIComponent(LCToolComponent):
-    component_id: str = "6d66be13-a173-4ec8-901b-73921d58d6ed"
     display_name = "Serp Search API"
     description = "Call Serp Search API with result limiting"
     name = "SerpAPI"

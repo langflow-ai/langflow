@@ -12,7 +12,6 @@ from lfx.schema.data import Data
 
 
 class HomeAssistantControl(LCToolComponent):
-    component_id: str = "1bb9e65c-1e99-4428-82e0-2a8db1cfb273"
     """This tool is used to control Home Assistant devices.
 
     A very simple tool to control Home Assistant devices.

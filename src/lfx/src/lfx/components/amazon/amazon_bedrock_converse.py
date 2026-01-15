@@ -7,7 +7,6 @@ from lfx.base.models.model import LCModelComponent
 
 
 class AmazonBedrockConverseComponent(LCModelComponent):
-    component_id: str = "93a51b2b-8d3f-4dfe-a698-cdc756681052"
     display_name: str = "Amazon Bedrock Converse"
     description: str = (
         "Generate text using Amazon Bedrock LLMs with the modern Converse API for improved conversation handling."

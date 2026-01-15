@@ -11,7 +11,6 @@ from lfx.inputs.inputs import DictInput, DropdownInput, FloatInput, IntInput, Se
 
 
 class LMStudioModelComponent(LCModelComponent):
-    component_id: str = "91932a9e-8175-469c-8c63-739182a70579"
     display_name = "LM Studio"
     description = "Generate text using LM Studio Local LLMs."
     icon = "LMStudio"

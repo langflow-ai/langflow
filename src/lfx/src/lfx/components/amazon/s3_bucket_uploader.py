@@ -13,7 +13,6 @@ from lfx.io import (
 
 
 class S3BucketUploaderComponent(Component):
-    component_id: str = "9fa2e9a4-58ec-4712-97c7-41ce015630fc"
     """S3BucketUploaderComponent is a component responsible for uploading files to an S3 bucket.
 
     It provides two strategies for file upload: "By Data" and "By File Name". The component

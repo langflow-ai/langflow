@@ -5,7 +5,6 @@ from lfx.schema.data import Data
 
 
 class MessageToDataComponent(Component):
-    component_id: str = "24d4c039-386f-4700-bfc4-2646bd6ed6ec"
     display_name = "Message to Data"
     description = "Convert a Message object to a Data object"
     icon = "message-square-share"

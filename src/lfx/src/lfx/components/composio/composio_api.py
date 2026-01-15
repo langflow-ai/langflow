@@ -29,7 +29,6 @@ disable_component_in_astra_cloud_msg = (
 
 
 class ComposioAPIComponent(LCToolComponent):
-    component_id: str = "14c630f6-26a3-40df-9d33-ab6e23723cb8"
     display_name: str = "Composio Tools"
     description: str = "Use Composio toolset to run actions with your agent"
     name = "ComposioAPI"

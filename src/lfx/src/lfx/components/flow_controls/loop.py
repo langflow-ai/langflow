@@ -8,7 +8,6 @@ from lfx.template.field.base import Output
 
 
 class LoopComponent(Component):
-    component_id: str = "7033f1d4-38c9-4b77-a3c4-fcde01c4e692"
     display_name = "Loop"
     description = (
         "Iterates over a list of Data or Message objects, outputting one item at a time and "

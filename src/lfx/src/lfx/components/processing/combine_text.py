@@ -4,7 +4,6 @@ from lfx.schema.message import Message
 
 
 class CombineTextComponent(Component):
-    component_id: str = "58f3ad56-de77-4f20-9425-66833085ddb7"
     display_name = "Combine Text"
     description = "Concatenate two text sources into a single text chunk using a specified delimiter."
     icon = "merge"

@@ -7,7 +7,6 @@ from lfx.template.field.base import Output
 
 
 class AssistantsCreateAssistant(ComponentWithCache):
-    component_id: str = "f43a8cc9-15e2-49a4-8b7d-433cb0468bda"
     icon = "AstraDB"
     display_name = "Create Assistant"
     description = "Creates an Assistant and returns it's id"

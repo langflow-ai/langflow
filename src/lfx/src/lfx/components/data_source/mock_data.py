@@ -8,7 +8,6 @@ from lfx.schema.message import Message
 
 
 class MockDataGeneratorComponent(Component):
-    component_id: str = "badcb19f-c0d9-4c34-9083-e3a8cc6653b5"
     """Mock Data Generator Component.
 
     Generates sample data for testing and development purposes. Supports three main

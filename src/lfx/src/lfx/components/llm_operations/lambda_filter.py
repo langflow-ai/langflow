@@ -40,7 +40,6 @@ DATA_TRANSFORM_PROMPT = (
 
 
 class LambdaFilterComponent(Component):
-    component_id: str = "eed700bb-3bed-4cea-88e2-37a0b37f988f"
     display_name = "Smart Transform"
     description = "Uses an LLM to generate a function for filtering or transforming structured data and messages."
     documentation: str = "https://docs.langflow.org/smart-transform"

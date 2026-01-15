@@ -16,7 +16,6 @@ from lfx.schema.data import Data
 
 
 class CassandraGraphVectorStoreComponent(LCVectorStoreComponent):
-    component_id: str = "45d787ec-568d-4256-bcc2-3964ac7cad89"
     display_name = "Cassandra Graph"
     description = "Cassandra Graph Vector Store"
     name = "CassandraGraph"

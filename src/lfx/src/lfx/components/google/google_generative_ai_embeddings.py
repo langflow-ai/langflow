@@ -18,7 +18,6 @@ MIN_DIMENSION = 1
 
 
 class GoogleGenerativeAIEmbeddingsComponent(Component):
-    component_id: str = "9cf711a6-e34b-48ca-a2a4-bcb0e53e18cc"
     display_name = "Google Generative AI Embeddings"
     description = (
         "Connect to Google's generative AI embeddings service using the GoogleGenerativeAIEmbeddings class, "

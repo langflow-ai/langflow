@@ -14,7 +14,6 @@ from lfx.schema.dotdict import dotdict
 
 
 class GoogleGenerativeAIComponent(LCModelComponent):
-    component_id: str = "64655a0c-d0fb-4d0b-b535-8d66af04e4c2"
     display_name = "Google Generative AI"
     description = "Generate text using Google Generative AI."
     icon = "GoogleGenerativeAI"

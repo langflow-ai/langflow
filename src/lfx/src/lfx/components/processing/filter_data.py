@@ -4,7 +4,6 @@ from lfx.schema.data import Data
 
 
 class FilterDataComponent(Component):
-    component_id: str = "5b2ecdb4-a87e-44b0-af74-10ad4974d460"
     display_name = "Filter Data"
     description = "Filters a Data object based on a list of keys."
     icon = "filter"

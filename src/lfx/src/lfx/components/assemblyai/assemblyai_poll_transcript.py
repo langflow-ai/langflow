@@ -8,7 +8,6 @@ from lfx.schema.data import Data
 
 
 class AssemblyAITranscriptionJobPoller(Component):
-    component_id: str = "5ec60cc3-8692-4087-bb0b-16a25638a572"
     display_name = "AssemblyAI Poll Transcript"
     description = "Poll for the status of a transcription job using AssemblyAI"
     documentation = "https://www.assemblyai.com/docs"

@@ -14,7 +14,6 @@ if TYPE_CHECKING:
 
 
 class SQLComponent(ComponentWithCache):
-    component_id: str = "ff973731-c736-4adb-a917-01d265ce0327"
     """A sql component."""
 
     display_name = "SQL Database"

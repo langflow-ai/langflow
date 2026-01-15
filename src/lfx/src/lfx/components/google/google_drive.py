@@ -14,7 +14,6 @@ from lfx.template.field.base import Output
 
 
 class GoogleDriveComponent(Component):
-    component_id: str = "175cf40c-07d4-4493-b88d-556f0a949e75"
     display_name = "Google Drive Loader"
     description = "Loads documents from Google Drive using provided credentials."
     icon = "Google"

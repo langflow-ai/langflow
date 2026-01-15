@@ -7,7 +7,6 @@ from lfx.schema.data import Data
 
 
 class AssemblyAIGetSubtitles(Component):
-    component_id: str = "b997bb08-d92c-49a4-9dc1-9573ff9b84bd"
     display_name = "AssemblyAI Get Subtitles"
     description = "Export your transcript in SRT or VTT format for subtitles and closed captions"
     documentation = "https://www.assemblyai.com/docs"

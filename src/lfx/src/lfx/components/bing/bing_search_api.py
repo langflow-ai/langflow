@@ -12,7 +12,6 @@ from lfx.template.field.base import Output
 
 
 class BingSearchAPIComponent(LCToolComponent):
-    component_id: str = "290ac1bc-bc1a-4da2-a8dc-16c13942744c"
     display_name = "Bing Search API"
     description = "Call the Bing Search API."
     name = "BingSearchAPI"

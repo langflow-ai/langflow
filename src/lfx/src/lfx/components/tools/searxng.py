@@ -15,7 +15,6 @@ from lfx.schema.dotdict import dotdict
 
 
 class SearXNGToolComponent(LCToolComponent):
-    component_id: str = "33fb892f-d935-49b0-9e6a-0e73582004a7"
     search_headers: dict = {}
     display_name = "SearXNG Search"
     description = "A component that searches for tools using SearXNG."

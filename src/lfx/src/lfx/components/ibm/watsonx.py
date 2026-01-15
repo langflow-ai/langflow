@@ -14,7 +14,6 @@ from lfx.schema.dotdict import dotdict
 
 
 class WatsonxAIComponent(LCModelComponent):
-    component_id: str = "bbf091f5-cd66-427a-b6e3-ca298c3921c0"
     display_name = "IBM watsonx.ai"
     description = "Generate text using IBM watsonx.ai foundation models."
     icon = "WatsonxAI"

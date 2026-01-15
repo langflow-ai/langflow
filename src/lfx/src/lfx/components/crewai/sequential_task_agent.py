@@ -4,7 +4,6 @@ from lfx.io import BoolInput, DictInput, HandleInput, MultilineInput, Output
 
 
 class SequentialTaskAgentComponent(Component):
-    component_id: str = "cbec446c-5e4c-4a61-98dd-b2c1bd8a0ffb"
     display_name = "Sequential Task Agent"
     description = "Creates a CrewAI Task and its associated Agent."
     documentation = "https://docs.crewai.com/how-to/LLM-Connections/"

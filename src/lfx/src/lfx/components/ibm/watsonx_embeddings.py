@@ -14,7 +14,6 @@ from lfx.schema.dotdict import dotdict
 
 
 class WatsonxEmbeddingsComponent(LCEmbeddingsModel):
-    component_id: str = "e9599879-9bd4-4cff-ae7b-aef620e51fa7"
     display_name = "IBM watsonx.ai Embeddings"
     description = "Generate embeddings using IBM watsonx.ai models."
     icon = "WatsonxAI"

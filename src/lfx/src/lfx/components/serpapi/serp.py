@@ -30,7 +30,6 @@ class SerpAPISchema(BaseModel):
 
 
 class SerpComponent(Component):
-    component_id: str = "71af68ff-d215-4f5d-8a0a-d2f60c99d873"
     display_name = "Serp Search API"
     description = "Call Serp Search API with result limiting"
     name = "Serp"

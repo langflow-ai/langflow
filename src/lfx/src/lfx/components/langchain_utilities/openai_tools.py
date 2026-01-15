@@ -11,7 +11,6 @@ from lfx.schema.data import Data
 
 
 class OpenAIToolsAgentComponent(LCToolsAgentComponent):
-    component_id: str = "3d623041-53d1-4a3b-93f8-12ccb76d8756"
     display_name: str = "OpenAI Tools Agent"
     description: str = "Agent that uses tools via openai-tools."
     icon = "LangChain"

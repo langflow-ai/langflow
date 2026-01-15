@@ -17,7 +17,6 @@ MAX_DESCRIPTION_LEN = 250
 
 
 class ApifyActorsComponent(Component):
-    component_id: str = "d94992de-5227-46dc-a973-f886c9323290"
     display_name = "Apify Actors"
     description = (
         "Use Apify Actors to extract data from hundreds of places fast. "

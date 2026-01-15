@@ -8,7 +8,6 @@ from lfx.schema.data import Data
 
 
 class ScrapeGraphMarkdownifyApi(Component):
-    component_id: str = "4689246f-42ee-4f13-a878-7bdfddb42d84"
     display_name: str = "ScrapeGraph Markdownify API"
     description: str = "Given a URL, it will return the markdownified content of the website."
     name = "ScrapeGraphMarkdownifyApi"

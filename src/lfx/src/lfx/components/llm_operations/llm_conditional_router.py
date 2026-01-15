@@ -21,7 +21,6 @@ from lfx.schema.table import EditMode
 
 
 class SmartRouterComponent(Component):
-    component_id: str = "8cc051e7-0d92-4845-a9d1-89e2d5d685e5"
     display_name = "Smart Router"
     description = "Routes an input message using LLM-based categorization."
     icon = "route"

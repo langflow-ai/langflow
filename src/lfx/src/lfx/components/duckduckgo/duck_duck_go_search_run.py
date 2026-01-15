@@ -8,7 +8,6 @@ from lfx.template.field.base import Output
 
 
 class DuckDuckGoSearchComponent(Component):
-    component_id: str = "2887a4aa-5800-4ed7-ab68-9c720f279cff"
     """Component for performing web searches using DuckDuckGo."""
 
     display_name = "DuckDuckGo Search"

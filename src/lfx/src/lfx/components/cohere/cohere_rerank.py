@@ -6,7 +6,6 @@ from lfx.template.field.base import Output
 
 
 class CohereRerankComponent(LCCompressorComponent):
-    component_id: str = "5aeea189-8141-4daf-9155-c99003aa5c02"
     display_name = "Cohere Rerank"
     description = "Rerank documents using the Cohere API."
     name = "CohereRerank"

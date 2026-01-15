@@ -6,7 +6,6 @@ from lfx.schema.data import Data
 
 
 class JigsawStackFileReadComponent(Component):
-    component_id: str = "5b57362e-77c6-4b32-b302-b6bc23fb704f"
     display_name = "File Read"
     description = "Read any previously uploaded file seamlessly from \
         JigsawStack File Storage and use it in your AI applications."

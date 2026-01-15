@@ -9,7 +9,6 @@ from lfx.schema.data import Data
 
 
 class CouchbaseVectorStoreComponent(LCVectorStoreComponent):
-    component_id: str = "68c30025-c23a-463e-bff2-9d003b212e97"
     display_name = "Couchbase"
     description = "Couchbase Vector Store with search capabilities"
     name = "Couchbase"

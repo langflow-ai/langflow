@@ -8,7 +8,6 @@ from lfx.schema.data import Data
 
 
 class PineconeVectorStoreComponent(LCVectorStoreComponent):
-    component_id: str = "7267c8bd-5823-4f70-b0eb-149de767d715"
     display_name = "Pinecone"
     description = "Pinecone Vector Store with search capabilities"
     name = "Pinecone"

@@ -11,7 +11,6 @@ from lfx.schema.data import Data
 
 
 class XMLAgentComponent(LCToolsAgentComponent):
-    component_id: str = "d149853b-efcd-4679-b3ab-d3f8a1f4850e"
     display_name: str = "XML Agent"
     description: str = "Agent that uses tools formatting instructions as xml to the Language Model."
     icon = "LangChain"

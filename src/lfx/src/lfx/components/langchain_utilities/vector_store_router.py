@@ -6,7 +6,6 @@ from lfx.inputs.inputs import HandleInput
 
 
 class VectorStoreRouterAgentComponent(LCAgentComponent):
-    component_id: str = "7db89d38-cfd4-4d03-b744-2302b565a240"
     display_name = "VectorStoreRouterAgent"
     description = "Construct an agent from a Vector Store Router."
     name = "VectorStoreRouterAgent"

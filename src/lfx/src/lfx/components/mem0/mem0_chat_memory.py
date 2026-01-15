@@ -15,7 +15,6 @@ disable_component_in_astra_cloud_msg = (
 
 
 class Mem0MemoryComponent(LCChatMemoryComponent):
-    component_id: str = "b46adf00-07fd-42f8-b066-95309aeee47e"
     display_name = "Mem0 Chat Memory"
     description = "Retrieves and stores chat messages using Mem0 memory storage."
     name = "mem0_chat_memory"

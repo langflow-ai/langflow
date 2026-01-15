@@ -12,7 +12,6 @@ from lfx.schema.dataframe import DataFrame
 
 
 class BigQueryExecutorComponent(Component):
-    component_id: str = "94229dd3-e8b7-4d21-a950-5680d3241e26"
     display_name = "BigQuery"
     description = "Execute SQL queries on Google BigQuery."
     name = "BigQueryExecutor"

@@ -8,7 +8,6 @@ from lfx.schema.data import Data
 
 
 class EmbeddingSimilarityComponent(Component):
-    component_id: str = "8c0d889f-39bf-495d-a44e-3555e3687603"
     display_name: str = "Embedding Similarity"
     description: str = "Compute selected form of similarity between two embedding vectors."
     icon = "equal"

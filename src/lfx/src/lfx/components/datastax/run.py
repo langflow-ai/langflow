@@ -11,7 +11,6 @@ from lfx.template.field.base import Output
 
 
 class AssistantsRun(ComponentWithCache):
-    component_id: str = "1a81f8e7-98a5-47d1-b132-275a226e67b3"
     display_name = "Run Assistant"
     description = "Executes an Assistant Run against a thread"
     icon = "AstraDB"

@@ -19,7 +19,6 @@ disable_component_in_astra_cloud_msg = (
 
 
 class SplitVideoComponent(Component):
-    component_id: str = "3f518f30-3a82-4cd7-930d-b3021c5f8643"
     """A component that splits a video into multiple clips of specified duration using FFmpeg."""
 
     display_name = "Split Video"

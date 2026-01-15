@@ -138,7 +138,6 @@ def _parse_csv_to_data(text: str) -> Data:
 
 
 class TypeConverterComponent(Component):
-    component_id: str = "c93c26c1-def8-4fae-bf6f-f46a66948db3"
     display_name = "Type Convert"
     description = "Convert between different types (Message, Data, DataFrame)"
     documentation: str = "https://docs.langflow.org/type-convert"

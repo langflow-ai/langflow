@@ -11,7 +11,6 @@ HTTP_STATUS_OK = 200
 
 
 class CohereEmbeddingsComponent(LCModelComponent):
-    component_id: str = "c259f5bd-e14e-4a7c-a8f2-2da9073e83ce"
     display_name = "Cohere Embeddings"
     description = "Generate embeddings using Cohere models."
     icon = "Cohere"

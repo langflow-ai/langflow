@@ -3,7 +3,6 @@ from lfx.io import HandleInput
 
 
 class HierarchicalCrewComponent(BaseCrewComponent):
-    component_id: str = "6c04b779-3a4a-4992-8d54-87114ac8fb32"
     display_name: str = "Hierarchical Crew"
     description: str = (
         "Represents a group of agents, defining how they should collaborate and the tasks they should perform."

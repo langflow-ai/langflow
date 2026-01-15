@@ -8,7 +8,6 @@ from lfx.utils.util import unescape_string
 
 
 class CharacterTextSplitterComponent(LCTextSplitterComponent):
-    component_id: str = "f59c1903-a137-408f-9bd6-9ede50dd5a20"
     display_name = "Character Text Splitter"
     description = "Split text by number of characters."
     documentation = "https://docs.langflow.org/bundles-langchain"

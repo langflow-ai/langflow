@@ -8,7 +8,6 @@ from lfx.schema.dotdict import dotdict
 
 
 class RunFlowComponent(RunFlowBaseComponent):
-    component_id: str = "4628f052-548a-4ce2-b3bb-e02d41f97192"
     display_name = "Run Flow"
     description = (
         "Executes another flow from within the same project. Can also be used as a tool for agents."

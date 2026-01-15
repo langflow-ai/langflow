@@ -8,7 +8,6 @@ from lfx.schema.data import Data
 
 
 class WeaviateVectorStoreComponent(LCVectorStoreComponent):
-    component_id: str = "7a2f5c2f-0daf-4f4c-b2da-1307a5e27077"
     display_name = "Weaviate"
     description = "Weaviate Vector Store with search capabilities"
     name = "Weaviate"

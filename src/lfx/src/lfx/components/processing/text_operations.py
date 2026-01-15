@@ -21,7 +21,6 @@ from lfx.schema.message import Message
 
 
 class TextOperations(Component):
-    component_id: str = "9fbb913c-402e-49d2-989f-9222de78a900"
     display_name = "Text Operations"
     description = "Perform various text processing operations including text-to-DataFrame conversion."
     icon = "type"

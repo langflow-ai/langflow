@@ -12,7 +12,6 @@ from lfx.template.field.base import Output
 
 
 class YouTubeChannelComponent(Component):
-    component_id: str = "0cef1162-ff2e-40da-be87-a417f9c4848c"
     """A component that retrieves detailed information about YouTube channels."""
 
     display_name: str = "YouTube Channel"

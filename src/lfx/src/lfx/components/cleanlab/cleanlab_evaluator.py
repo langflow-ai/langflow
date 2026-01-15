@@ -11,7 +11,6 @@ from lfx.schema.message import Message
 
 
 class CleanlabEvaluator(Component):
-    component_id: str = "9a295dd1-83a7-459b-a110-5e0cd3d6548c"
     """A component that evaluates the trustworthiness of LLM responses using Cleanlab.
 
     This component takes a prompt and response pair, along with optional system instructions,

@@ -48,7 +48,6 @@ class YahooFinanceSchema(BaseModel):
 
 
 class YfinanceToolComponent(LCToolComponent):
-    component_id: str = "f9ce0032-d41b-4c78-a59a-4e2a9c3b52e7"
     display_name = "Yahoo! Finance"
     description = """Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) \
 to access financial data and market information from Yahoo! Finance."""

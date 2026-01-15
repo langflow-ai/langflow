@@ -6,7 +6,6 @@ from lfx.schema.data import Data
 
 
 class NotifyComponent(Component):
-    component_id: str = "7140b15f-8265-4572-ae57-a9a2b38d3252"
     display_name = "Notify"
     description = "A component to generate a notification to Get Notified component."
     icon = "Notify"

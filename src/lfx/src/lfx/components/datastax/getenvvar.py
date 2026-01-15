@@ -7,7 +7,6 @@ from lfx.template.field.base import Output
 
 
 class GetEnvVar(Component):
-    component_id: str = "47888a3e-a67a-4ba8-9643-abf66c9fffe7"
     display_name = "Get Environment Variable"
     description = "Gets the value of an environment variable from the system."
     icon = "AstraDB"

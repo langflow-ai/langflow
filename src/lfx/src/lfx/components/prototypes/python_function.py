@@ -10,7 +10,6 @@ from lfx.schema.message import Message
 
 
 class PythonFunctionComponent(Component):
-    component_id: str = "526bf25a-4e9f-4660-9038-bedda840748d"
     display_name = "Python Function"
     description = "Define and execute a Python function that returns a Data object or a Message."
     icon = "Python"

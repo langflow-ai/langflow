@@ -14,7 +14,6 @@ from lfx.schema.table import EditMode
 
 
 class AstraDBToolComponent(AstraDBBaseComponent, LCToolComponent):
-    component_id: str = "c5280510-3d9a-41e7-ae5b-d0c23a9af939"
     display_name: str = "Astra DB Tool"
     description: str = "Tool to run hybrid vector and metadata search on DataStax Astra DB Collection"
     documentation: str = "https://docs.langflow.org/bundles-datastax"

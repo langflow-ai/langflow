@@ -6,7 +6,6 @@ from lfx.io import DropdownInput, FloatInput, MessageTextInput, SecretStrInput
 
 
 class QianfanChatEndpointComponent(LCModelComponent):
-    component_id: str = "8f9e2282-5eac-46a5-8f7a-419d3dceea64"
     display_name: str = "Qianfan"
     description: str = "Generate text using Baidu Qianfan LLMs."
     documentation: str = "https://python.langchain.com/docs/integrations/chat/baidu_qianfan_endpoint"

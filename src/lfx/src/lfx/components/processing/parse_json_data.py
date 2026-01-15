@@ -13,7 +13,6 @@ from lfx.schema.message import Message
 
 
 class ParseJSONDataComponent(Component):
-    component_id: str = "e9630fc0-174c-41f6-a0fc-63820cbd55e5"
     display_name = "Parse JSON"
     description = "Convert and extract JSON fields."
     icon = "braces"

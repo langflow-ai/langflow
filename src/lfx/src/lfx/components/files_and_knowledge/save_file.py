@@ -26,7 +26,6 @@ def _get_storage_location_options():
 
 
 class SaveToFileComponent(Component):
-    component_id: str = "e5687f55-897f-4d11-97b5-10b7e6c79a09"
     display_name = "Write File"
     description = "Save data to local file, AWS S3, or Google Drive in the selected format."
     documentation: str = "https://docs.langflow.org/write-file"

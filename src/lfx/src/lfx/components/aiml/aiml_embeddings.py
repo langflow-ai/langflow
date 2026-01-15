@@ -6,7 +6,6 @@ from lfx.io import SecretStrInput
 
 
 class AIMLEmbeddingsComponent(LCEmbeddingsModel):
-    component_id: str = "5dfd48b6-9d94-4ffc-af01-de1282b72859"
     display_name = "AI/ML API Embeddings"
     description = "Generate embeddings using the AI/ML API."
     icon = "AIML"

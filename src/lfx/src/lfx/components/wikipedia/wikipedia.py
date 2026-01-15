@@ -8,7 +8,6 @@ from lfx.schema.dataframe import DataFrame
 
 
 class WikipediaComponent(Component):
-    component_id: str = "14a6c8ab-a0f6-40d8-9a65-72344925ba92"
     display_name = "Wikipedia"
     description = "Call Wikipedia API."
     icon = "Wikipedia"

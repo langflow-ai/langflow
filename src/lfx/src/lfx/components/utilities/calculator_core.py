@@ -9,7 +9,6 @@ from lfx.schema.data import Data
 
 
 class CalculatorComponent(Component):
-    component_id: str = "beb2d82f-fd14-4af3-a7d0-244e560cae7d"
     display_name = "Calculator"
     description = "Perform basic arithmetic operations on a given expression."
     documentation: str = "https://docs.langflow.org/calculator"

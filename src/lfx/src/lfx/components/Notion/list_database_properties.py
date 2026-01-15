@@ -10,7 +10,6 @@ from lfx.schema.data import Data
 
 
 class NotionDatabaseProperties(LCToolComponent):
-    component_id: str = "91fe6239-4283-44d7-add9-adfe6d322f6c"
     display_name: str = "List Database Properties "
     description: str = "Retrieve properties of a Notion database."
     documentation: str = "https://docs.langflow.org/bundles-notion"

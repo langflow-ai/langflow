@@ -5,7 +5,6 @@ from lfx.schema.data import Data
 
 
 class CustomComponent(Component):
-    component_id: str = "5845b393-31b4-41a5-8ef9-0e09b76de985"
     display_name = "Custom Component"
     description = "Use as a template to create your own component."
     documentation: str = "https://docs.langflow.org/components-custom-components"

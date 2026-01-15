@@ -15,7 +15,6 @@ class DataOperation(str, Enum):
 
 
 class MergeDataComponent(Component):
-    component_id: str = "f5a180fd-cd1a-41ef-a32b-b8b286fb3251"
     display_name = "Combine Data"
     description = "Combines data using different operations"
     icon = "merge"

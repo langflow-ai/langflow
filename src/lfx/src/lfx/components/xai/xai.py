@@ -20,7 +20,6 @@ XAI_DEFAULT_MODELS = ["grok-2-latest"]
 
 
 class XAIModelComponent(LCModelComponent):
-    component_id: str = "d17d3961-e4f9-46c6-a712-ba4010508ec7"
     display_name = "xAI"
     description = "Generates text using xAI models like Grok."
     icon = "xAI"

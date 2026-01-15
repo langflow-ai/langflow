@@ -4,7 +4,6 @@ from lfx.schema.message import Message
 
 
 class ParseDataFrameComponent(Component):
-    component_id: str = "af492c6e-7e36-4988-ac26-9060a935d3af"
     display_name = "Parse DataFrame"
     description = (
         "Convert a DataFrame into plain text following a specified template. "

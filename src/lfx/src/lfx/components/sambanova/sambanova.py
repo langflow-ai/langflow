@@ -9,7 +9,6 @@ from lfx.io import DropdownInput, IntInput, SecretStrInput, SliderInput, StrInpu
 
 
 class SambaNovaComponent(LCModelComponent):
-    component_id: str = "da4a258d-46b0-4da2-a9b0-f1b24261a5ab"
     display_name = "SambaNova"
     description = "Generate text using Sambanova LLMs."
     documentation = "https://cloud.sambanova.ai/"

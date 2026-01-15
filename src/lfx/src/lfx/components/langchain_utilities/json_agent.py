@@ -13,7 +13,6 @@ from lfx.utils.async_helpers import run_until_complete
 
 
 class JsonAgentComponent(LCAgentComponent):
-    component_id: str = "b4571603-904a-4086-af36-b7428e197e0b"
     display_name = "JsonAgent"
     description = "Construct a json agent from an LLM and tools."
     name = "JsonAgent"

@@ -11,7 +11,6 @@ from lfx.schema.data import Data
 
 
 class NotionSearch(LCToolComponent):
-    component_id: str = "69a0756d-983b-4702-bf7d-6709f4e55125"
     display_name: str = "Search "
     description: str = "Searches all pages and databases that have been shared with an integration."
     documentation: str = "https://docs.langflow.org/bundles-notion"

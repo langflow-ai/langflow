@@ -9,7 +9,6 @@ from lfx.template.field.base import Output
 
 
 class TavilySearchComponent(Component):
-    component_id: str = "be7eaaee-c7ee-4a37-b72a-0adc2b7c3c08"
     display_name = "Tavily Search API"
     description = """**Tavily Search** is a search engine optimized for LLMs and RAG, \
         aimed at efficient, quick, and persistent search results."""

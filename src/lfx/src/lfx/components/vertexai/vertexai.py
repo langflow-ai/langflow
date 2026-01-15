@@ -7,7 +7,6 @@ from lfx.io import BoolInput, FileInput, FloatInput, IntInput, StrInput
 
 
 class ChatVertexAIComponent(LCModelComponent):
-    component_id: str = "ce3d72a6-13fe-4956-a745-5fd85fcf6658"
     display_name = "Vertex AI"
     description = "Generate text using Vertex AI LLMs."
     icon = "VertexAI"

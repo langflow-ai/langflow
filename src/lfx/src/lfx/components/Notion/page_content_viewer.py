@@ -10,7 +10,6 @@ from lfx.schema.data import Data
 
 
 class NotionPageContent(LCToolComponent):
-    component_id: str = "054e2691-03fa-4dd8-92d3-b84bda37b1f8"
     display_name = "Page Content Viewer "
     description = "Retrieve the content of a Notion page as plain text."
     documentation = "https://docs.langflow.org/bundles-notion"

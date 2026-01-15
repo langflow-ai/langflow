@@ -7,7 +7,6 @@ from lfx.io import BoolInput, DropdownInput, FloatInput, IntInput, SecretStrInpu
 
 
 class MistralAIModelComponent(LCModelComponent):
-    component_id: str = "4b106466-3d89-49c8-951e-381e36d3dfc6"
     display_name = "MistralAI"
     description = "Generates text using MistralAI LLMs."
     icon = "MistralAI"

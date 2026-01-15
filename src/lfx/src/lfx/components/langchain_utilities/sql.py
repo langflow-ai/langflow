@@ -9,7 +9,6 @@ from lfx.io import Output
 
 
 class SQLAgentComponent(LCAgentComponent):
-    component_id: str = "a2fbaa65-ef92-4c6d-a460-49785c70ba1b"
     display_name = "SQLAgent"
     description = "Construct an SQL agent from an LLM and tools."
     name = "SQLAgent"

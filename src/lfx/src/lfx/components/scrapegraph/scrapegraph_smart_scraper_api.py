@@ -8,7 +8,6 @@ from lfx.schema.data import Data
 
 
 class ScrapeGraphSmartScraperApi(Component):
-    component_id: str = "38dfec17-dfe3-48c9-b002-dffff1662996"
     display_name: str = "ScrapeGraph Smart Scraper API"
     description: str = "Given a URL, it will return the structured data of the website."
     name = "ScrapeGraphSmartScraperApi"

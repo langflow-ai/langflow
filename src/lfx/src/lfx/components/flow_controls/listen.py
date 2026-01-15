@@ -4,7 +4,6 @@ from lfx.schema.data import Data
 
 
 class ListenComponent(Component):
-    component_id: str = "f686be53-32b3-41f5-87cd-118fab912e79"
     display_name = "Listen"
     description = "A component to listen for a notification."
     name = "Listen"

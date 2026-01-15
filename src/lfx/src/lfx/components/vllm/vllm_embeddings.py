@@ -6,7 +6,6 @@ from lfx.io import BoolInput, DictInput, FloatInput, IntInput, MessageTextInput,
 
 
 class VllmEmbeddingsComponent(LCEmbeddingsModel):
-    component_id: str = "d2bdf1e8-71ce-4a8b-86b4-977472ece9db"
     display_name = "vLLM Embeddings"
     description = "Generate embeddings using vLLM models via OpenAI-compatible API."
     icon = "vLLM"

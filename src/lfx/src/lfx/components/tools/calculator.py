@@ -13,7 +13,6 @@ from lfx.schema.data import Data
 
 
 class CalculatorToolComponent(LCToolComponent):
-    component_id: str = "95a35a9b-49f3-4b59-b43b-06145858cded"
     display_name = "Calculator"
     description = "Perform basic arithmetic operations on a given expression."
     icon = "calculator"

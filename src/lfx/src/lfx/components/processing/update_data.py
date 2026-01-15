@@ -15,7 +15,6 @@ from lfx.schema.dotdict import dotdict
 
 
 class UpdateDataComponent(Component):
-    component_id: str = "7ac31b48-6d91-4588-91c8-0fb6f0a9273f"
     display_name: str = "Update Data"
     description: str = "Dynamically update or append data with the specified fields."
     name: str = "UpdateData"

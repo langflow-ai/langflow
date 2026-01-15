@@ -6,7 +6,6 @@ from lfx.template.field.base import Output
 
 
 class VectorStoreInfoComponent(Component):
-    component_id: str = "82c04a84-c93c-40de-81da-a1dbaa145de1"
     display_name = "VectorStoreInfo"
     description = "Information about a VectorStore"
     name = "VectorStoreInfo"

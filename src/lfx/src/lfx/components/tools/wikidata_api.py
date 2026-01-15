@@ -53,7 +53,6 @@ class WikidataAPIWrapper(BaseModel):
 
 
 class WikidataAPIComponent(LCToolComponent):
-    component_id: str = "281c4336-1d67-45a0-ae8d-531c0a94cc6f"
     display_name = "Wikidata API"
     description = "Performs a search using the Wikidata API."
     name = "WikidataAPI"

@@ -9,7 +9,6 @@ from lfx.inputs.inputs import DropdownInput, IntInput, SecretStrInput, SliderInp
 
 
 class OpenRouterComponent(LCModelComponent):
-    component_id: str = "be5ed81b-f36f-4c1f-854b-68ad0c7cf462"
     """OpenRouter API component for language models."""
 
     display_name = "OpenRouter"

@@ -6,7 +6,6 @@ from lfx.schema.dataframe import DataFrame
 
 
 class AlterMetadataComponent(Component):
-    component_id: str = "f1aaade4-97cc-400d-bea9-898ce2ae0af0"
     display_name = "Alter Metadata"
     description = "Adds/Removes Metadata Dictionary on inputs"
     icon = "merge"

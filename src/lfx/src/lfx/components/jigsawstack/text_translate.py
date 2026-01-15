@@ -4,7 +4,6 @@ from lfx.schema.data import Data
 
 
 class JigsawStackTextTranslateComponent(Component):
-    component_id: str = "38f6e534-af14-4cdf-ba82-e030c13e2b3d"
     display_name = "Text Translate"
     description = "Translate text from one language to another with support for multiple text formats."
     documentation = "https://jigsawstack.com/docs/api-reference/ai/translate"

@@ -51,26 +51,28 @@ def _import_components() -> tuple[dict, int]:
         return modules_dict, components_count
 
 
-def update_history(history: dict, component_id: str, component_name: str, code_hash: str, current_version: str) -> dict:
-    """Updates the hash history for a single component with the new simple schema."""
+def update_history(history: dict, component_name: str, code_hash: str, current_version: str) -> dict:
+    """Updates the hash history for a single component with the new simple schema.
+    
+    IMPORTANT: Note that the component_name acts as the unique identifier for the component, and must not be changed.
+    """
     current_version_parsed = Version(current_version)
     version_key = f"{current_version_parsed.major}.{current_version_parsed.minor}.{current_version_parsed.micro}"
 
-    if component_id not in history:
-        print(f"Component {component_name} with id {component_id} not found in history. Adding...")
+    if component_name not in history:
+        print(f"Component {component_name} not found in history. Adding...")
         print(f"WARNING - Ensure that Component {component_name} is a NEW Component. If not, this is an error and will lose hash history for this component.")
-        history[component_id] = {}
-        history[component_id]["name"] = component_name
-        history[component_id]["versions"] = {version_key: code_hash}
+        history[component_name] = {}
+        history[component_name]["versions"] = {version_key: code_hash}
     else:
         # Ensure that we aren't ovewriting a previous version
-        for v in history[component_id]["versions"]:
+        for v in history[component_name]["versions"]:
             parsed_version = Version(v)
             if parsed_version > current_version_parsed:
                 # If this happens, we are overwriting a previous version.
-                msg = f"ERROR - Component {component_name} with id {component_id} already has a version {v} that is greater than the current version {current_version}."
+                msg = f"ERROR - Component {component_name} already has a version {v} that is greater than the current version {current_version}."
                 raise ValueError(msg)
-        history[component_id]["versions"][version_key] = code_hash
+        history[component_name]["versions"][version_key] = code_hash
 
     return history
 
@@ -105,18 +107,17 @@ def main(argv=None):
 
     for category_name, components_dict in modules_dict.items():
         for comp_name, comp_details in components_dict.items():
-            if "metadata" not in comp_details or not comp_details["metadata"].get("component_id"):
-                print(f"Warning: Component {comp_name} in category {category_name} is missing component_id. Skipping.")
+            if "metadata" not in comp_details:
+                print(f"Warning: Component {comp_name} in category {category_name} is missing metadata. Skipping.")
                 continue
 
-            comp_id = comp_details["metadata"]["component_id"]
             code_hash = comp_details["metadata"].get("code_hash")
 
             if not code_hash:
                 print(f"Warning: Component {comp_name} in category {category_name} is missing code_hash. Skipping.")
                 continue
 
-            history = update_history(history, comp_id, comp_name, code_hash, current_version)
+            history = update_history(history, comp_name, code_hash, current_version)
 
     save_hash_history(Path(history_file), history)
     print(f"Successfully updated {history_file}")

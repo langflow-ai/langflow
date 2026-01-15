@@ -7,7 +7,6 @@ from lfx.schema.dotdict import dotdict
 
 
 class DataConditionalRouterComponent(Component):
-    component_id: str = "67dc100c-4333-4b9b-8bf4-8b21bb99e764"
     display_name = "Condition"
     description = "Route Data object(s) based on a condition applied to a specified key, including boolean validation."
     icon = "split"

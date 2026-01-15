@@ -6,7 +6,6 @@ from lfx.template.field.base import Output
 
 
 class AssistantsCreateThread(ComponentWithCache):
-    component_id: str = "b8ed02ac-e4f9-4408-b7f3-6a28299996ac"
     display_name = "Create Assistant Thread"
     description = "Creates a thread and returns the thread id"
     icon = "AstraDB"

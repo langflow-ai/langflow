@@ -6,7 +6,6 @@ from lfx.schema.data import Data
 
 
 class GoogleSearchAPIComponent(LCToolComponent):
-    component_id: str = "ab3e8efc-6d65-4c33-8e11-fed9bd91999d"
     display_name = "Google Search API [DEPRECATED]"
     description = "Call Google Search API."
     name = "GoogleSearchAPI"

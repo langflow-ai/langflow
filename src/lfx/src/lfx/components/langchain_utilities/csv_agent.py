@@ -19,7 +19,6 @@ from lfx.utils.async_helpers import run_until_complete
 
 
 class CSVAgentComponent(LCAgentComponent):
-    component_id: str = "ad0a7a9d-3d3e-4ad6-bb35-18b59b89630f"
     display_name = "CSV Agent"
     description = "Construct a CSV agent from a CSV and tools."
     documentation = "https://python.langchain.com/docs/modules/agents/toolkits/csv"

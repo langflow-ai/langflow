@@ -29,7 +29,6 @@ class TaskTimeoutError(TwelveLabsError):
 
 
 class PegasusIndexVideo(Component):
-    component_id: str = "d1d636b4-67de-4571-bd03-5dd752e6b21a"
     """Indexes videos using TwelveLabs Pegasus API and adds the video ID to metadata."""
 
     display_name = "TwelveLabs Pegasus Index Video"

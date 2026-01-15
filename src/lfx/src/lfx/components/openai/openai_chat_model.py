@@ -12,7 +12,6 @@ from lfx.log.logger import logger
 
 
 class OpenAIModelComponent(LCModelComponent):
-    component_id: str = "b84c1196-6f09-4502-a4c6-173fe04f1b25"
     display_name = "OpenAI"
     description = "Generates text using OpenAI LLMs."
     icon = "OpenAI"

@@ -8,7 +8,6 @@ from lfx.schema.data import Data
 
 
 class SupabaseVectorStoreComponent(LCVectorStoreComponent):
-    component_id: str = "5a06d47d-c037-4540-b9ab-36bc3cfcd9f6"
     display_name = "Supabase"
     description = "Supabase Vector Store with search capabilities"
     name = "SupabaseVectorStore"

@@ -14,7 +14,6 @@ from lfx.schema.data import Data
 
 
 class HCDVectorStoreComponent(LCVectorStoreComponent):
-    component_id: str = "0abee1a5-d3c4-483e-a6ea-5d68f8ebfe5b"
     display_name: str = "Hyper-Converged Database"
     description: str = "Implementation of Vector Store using Hyper-Converged Database (HCD) with search capabilities"
     name = "HCD"

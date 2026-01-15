@@ -15,7 +15,6 @@ HTTP_STATUS_OK = 200
 
 
 class OllamaEmbeddingsComponent(LCModelComponent):
-    component_id: str = "2b92a275-edc8-4940-a0c8-27ff9b46033d"
     display_name: str = "Ollama Embeddings"
     description: str = "Generate embeddings using Ollama models."
     documentation = "https://python.langchain.com/docs/integrations/text_embedding/ollama"

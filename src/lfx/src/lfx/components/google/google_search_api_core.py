@@ -6,7 +6,6 @@ from lfx.schema.dataframe import DataFrame
 
 
 class GoogleSearchAPICore(Component):
-    component_id: str = "56f0093c-8ff7-4b88-9c32-513896afada0"
     display_name = "Google Search API"
     description = "Call Google Search API and return results as a DataFrame."
     icon = "Google"

@@ -16,7 +16,6 @@ MAX_API_RESULTS = 50
 
 
 class YouTubeTrendingComponent(Component):
-    component_id: str = "e3b9256c-362f-4b27-93b3-eb33b0c1f01d"
     """A component that retrieves trending videos from YouTube."""
 
     display_name: str = "YouTube Trending"

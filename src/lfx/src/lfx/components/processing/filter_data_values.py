@@ -6,7 +6,6 @@ from lfx.schema.data import Data
 
 
 class DataFilterComponent(Component):
-    component_id: str = "be7df751-45a2-4336-9ddd-f5ec2d9d9e2d"
     display_name = "Filter Values"
     description = (
         "Filter a list of data items based on a specified key, filter value,"

@@ -7,7 +7,6 @@ from lfx.schema.message import Message
 
 
 class OutputParserComponent(Component):
-    component_id: str = "ce9f971f-4b1a-47af-af88-536c334c829c"
     display_name = "Output Parser"
     description = "Transforms the output of an LLM into a specified format."
     icon = "type"

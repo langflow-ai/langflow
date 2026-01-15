@@ -10,7 +10,6 @@ from lfx.schema.message import Message
 
 
 class CombinatorialReasonerComponent(Component):
-    component_id: str = "568fb88f-9993-41eb-a22f-c451c5948159"
     display_name = "Combinatorial Reasoner"
     description = "Uses Combinatorial Optimization to construct an optimal prompt with embedded reasons. Sign up here:\nhttps://forms.gle/oWNv2NKjBNaqqvCx6"
     icon = "Icosa"

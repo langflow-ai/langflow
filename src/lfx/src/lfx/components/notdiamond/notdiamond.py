@@ -43,7 +43,6 @@ ND_MODEL_MAPPING = {
 
 
 class NotDiamondComponent(Component):
-    component_id: str = "9c2bb1aa-48f9-4362-a63e-a59d9133b1af"
     display_name = "Not Diamond Router"
     description = "Call the right model at the right time with the world's most powerful AI model router."
     documentation: str = "https://docs.notdiamond.ai/"

@@ -5,7 +5,6 @@ from lfx.schema.message import Message
 
 
 class JigsawStackSentimentComponent(Component):
-    component_id: str = "09536299-1532-4a28-a194-27cb765509db"
     display_name = "Sentiment Analysis"
     description = "Analyze sentiment of text using JigsawStack AI"
     documentation = "https://jigsawstack.com/docs/api-reference/ai/sentiment"

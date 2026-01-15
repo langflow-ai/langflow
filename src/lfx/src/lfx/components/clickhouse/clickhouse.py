@@ -15,7 +15,6 @@ from lfx.schema.data import Data
 
 
 class ClickhouseVectorStoreComponent(LCVectorStoreComponent):
-    component_id: str = "b8589e3c-e77a-4306-be2d-d905904b6449"
     display_name = "ClickHouse"
     description = "ClickHouse Vector Store with search capabilities"
     name = "Clickhouse"

@@ -21,7 +21,6 @@ from lfx.inputs.inputs import (
 
 
 class CometAPIComponent(LCModelComponent):
-    component_id: str = "69bfd9ce-20fd-4ba8-b4ee-b8d153c44bfb"
     """CometAPI component for language models."""
 
     display_name = "CometAPI"

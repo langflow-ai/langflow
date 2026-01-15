@@ -7,7 +7,6 @@ from lfx.template.field.base import Output
 
 
 class LLMMathChainComponent(LCChainComponent):
-    component_id: str = "cd9f577e-a39f-4401-a3ed-7801f10fbcf3"
     display_name = "LLMMathChain"
     description = "Chain that interprets a prompt and executes python code to do math."
     documentation = "https://python.langchain.com/docs/modules/chains/additional/llm_math"

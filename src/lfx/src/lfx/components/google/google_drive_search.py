@@ -11,7 +11,6 @@ from lfx.template.field.base import Output
 
 
 class GoogleDriveSearchComponent(Component):
-    component_id: str = "e402c082-0fb6-48b1-8820-bd5c19f8ea28"
     display_name = "Google Drive Search"
     description = "Searches Google Drive files using provided credentials and query parameters."
     icon = "Google"

@@ -4,7 +4,6 @@ from lfx.io import BoolInput, FileInput, FloatInput, IntInput, MessageTextInput,
 
 
 class VertexAIEmbeddingsComponent(LCModelComponent):
-    component_id: str = "41a55e5b-32ef-42d9-9004-1d561fdc953a"
     display_name = "Vertex AI Embeddings"
     description = "Generate embeddings using Google Cloud Vertex AI models."
     icon = "VertexAI"

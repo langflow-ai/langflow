@@ -34,7 +34,6 @@ TABLE_ROW_PLACEHOLDER = {"name": "field", "description": "description of field",
 
 
 class ChatOllamaComponent(LCModelComponent):
-    component_id: str = "ea859d08-6807-44af-8343-af55d9fe6f6a"
     display_name = "Ollama"
     description = "Generate text using Ollama Local LLMs."
     icon = "Ollama"

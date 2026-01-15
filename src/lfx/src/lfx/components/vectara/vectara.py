@@ -12,7 +12,6 @@ if TYPE_CHECKING:
 
 
 class VectaraVectorStoreComponent(LCVectorStoreComponent):
-    component_id: str = "fab2f4ae-1a8c-463c-9524-9dc99449463f"
     """Vectara Vector Store with search capabilities."""
 
     display_name: str = "Vectara"

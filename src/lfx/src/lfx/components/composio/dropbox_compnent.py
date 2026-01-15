@@ -2,7 +2,6 @@ from lfx.base.composio.composio_base import ComposioBaseComponent
 
 
 class ComposioDropboxAPIComponent(ComposioBaseComponent):
-    component_id: str = "0b47bfec-743c-4069-a38c-cb0f60c7eab5"
     display_name: str = "Dropbox"
     icon = "Dropbox"
     documentation: str = "https://docs.composio.dev"

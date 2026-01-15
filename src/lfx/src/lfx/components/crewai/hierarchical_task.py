@@ -4,7 +4,6 @@ from lfx.io import HandleInput, MultilineInput, Output
 
 
 class HierarchicalTaskComponent(Component):
-    component_id: str = "817aadcb-10ae-43fd-89c5-b461b09d516c"
     display_name: str = "Hierarchical Task"
     description: str = "Each task must have a description, an expected output and an agent responsible for execution."
     icon = "CrewAI"

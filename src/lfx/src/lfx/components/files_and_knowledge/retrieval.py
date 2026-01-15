@@ -37,7 +37,6 @@ def _get_knowledge_bases_root_path() -> Path:
 
 
 class KnowledgeRetrievalComponent(Component):
-    component_id: str = "4e738378-e93c-4912-ae67-65795c8dbf2f"
     display_name = "Knowledge Retrieval"
     description = "Search and retrieve data from knowledge."
     icon = "download"

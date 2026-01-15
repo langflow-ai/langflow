@@ -6,7 +6,6 @@ from lfx.io import BoolInput, DictInput, IntInput, MessageTextInput, Output, Sec
 
 
 class CloudflareWorkersAIEmbeddingsComponent(LCModelComponent):
-    component_id: str = "bbf56dd9-95af-4464-a461-6c47df294d64"
     display_name: str = "Cloudflare Workers AI Embeddings"
     description: str = "Generate embeddings using Cloudflare Workers AI models."
     documentation: str = "https://python.langchain.com/docs/integrations/text_embedding/cloudflare_workersai/"

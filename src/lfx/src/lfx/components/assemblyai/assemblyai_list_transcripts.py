@@ -7,7 +7,6 @@ from lfx.schema.data import Data
 
 
 class AssemblyAIListTranscripts(Component):
-    component_id: str = "e6059ba2-2a00-4b66-ac9d-0b94ea0e5e73"
     display_name = "AssemblyAI List Transcripts"
     description = "Retrieve a list of transcripts from AssemblyAI with filtering options"
     documentation = "https://www.assemblyai.com/docs"

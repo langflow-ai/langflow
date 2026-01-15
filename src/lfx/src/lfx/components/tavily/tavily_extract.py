@@ -8,7 +8,6 @@ from lfx.schema.dataframe import DataFrame
 
 
 class TavilyExtractComponent(Component):
-    component_id: str = "e23cf8e0-24e0-4e26-a113-aea285591ada"
     """Separate component specifically for Tavily Extract functionality."""
 
     display_name = "Tavily Extract API"

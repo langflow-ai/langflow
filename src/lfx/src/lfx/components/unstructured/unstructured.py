@@ -6,7 +6,6 @@ from lfx.schema.data import Data
 
 
 class UnstructuredComponent(BaseFileComponent):
-    component_id: str = "10cadda7-f204-4205-9d2d-869d97605e1a"
     display_name = "Unstructured API"
     description = (
         "Uses Unstructured.io API to extract clean text from raw source documents. Supports a wide range of file types."

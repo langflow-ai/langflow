@@ -8,7 +8,6 @@ from lfx.utils.util import unescape_string
 
 
 class NaturalLanguageTextSplitterComponent(LCTextSplitterComponent):
-    component_id: str = "34e006e0-e653-4e14-8ce0-8903dc871409"
     display_name = "Natural Language Text Splitter"
     description = "Split text based on natural language boundaries, optimized for a specified language."
     documentation = (

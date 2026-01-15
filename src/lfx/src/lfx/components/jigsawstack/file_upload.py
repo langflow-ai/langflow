@@ -6,7 +6,6 @@ from lfx.schema.data import Data
 
 
 class JigsawStackFileUploadComponent(Component):
-    component_id: str = "b735b43a-132e-4bca-a12b-49d8ab623748"
     display_name = "File Upload"
     description = "Store any file seamlessly on JigsawStack File Storage and use it in your AI applications. \
         Supports various file types including images, documents, and more."
