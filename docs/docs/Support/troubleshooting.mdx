@@ -157,6 +157,19 @@ In Langflow OSS, you can follow the error message's instructions to install the 
 
 To manage dependencies in Langflow Desktop, see [Install custom dependencies in Langflow Desktop](/install-custom-dependencies#langflow-desktop).
 
+### An API key must be passed as query or header
+
+The following error can occur when attempting to sign up on the Langflow sign in page: `An API key must be passed as query or header`.
+
+This means that `LANGFLOW_AUTO_LOGIN` is set to `false`, and only superusers can create and activate non-superuser accounts.
+Therefore, you are locked out of this Langflow instance.
+
+If you aren't an administrator, then a superuser must create and activate a non-superuser account before you can sign in.
+
+If you are the administrator, sign in with a superuser account, or restart Langflow with `LANGFLOW_AUTO_LOGIN=true`.
+
+For more information, see [Start Langflow Server with authentication enabled](/api-keys-and-authentication#start-a-langflow-server-with-authentication-enabled).
+
 ## Langflow upgrade issues
 
 The following issues can occur when upgrading your Langflow version.
