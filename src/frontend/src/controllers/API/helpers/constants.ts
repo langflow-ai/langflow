@@ -36,9 +36,9 @@ export const URLs = {
   RUN: `run`,
   RUN_SESSION: `run/session`,
   REGISTRATION: `registration`,
-  GENERATE_COMPONENT_PROMPT: `agentic/assist`,
-  GENERATE_COMPONENT_PROMPT_STREAM: `agentic/assist/stream`,
-  GENERATE_COMPONENT_CHECK_CONFIG: `agentic/check-config`,
+  ASSISTANT_PROMPT: `agentic/assist`,
+  ASSISTANT_PROMPT_STREAM: `agentic/assist/stream`,
+  ASSISTANT_CHECK_CONFIG: `agentic/check-config`,
 } as const;
 
 // IMPORTANT: FOLDERS endpoint now points to 'projects' for backward compatibility

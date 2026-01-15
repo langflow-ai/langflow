@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
-import { postGenerateComponentPromptStream } from "@/controllers/API/queries/generate-component";
+import { postAssistantPromptStream } from "@/controllers/API/queries/assistant";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
@@ -9,12 +9,12 @@ import { useAddComponent } from "@/hooks/use-add-component";
 import useAlertStore from "@/stores/alertStore";
 import { useDarkStore } from "@/stores/darkStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import { useGenerateComponentStore } from "@/stores/generateComponentStore";
+import { useAssistantStore } from "@/stores/assistantStore";
 import { createFlowComponent, getNodeId } from "@/utils/reactflowUtils";
-import GenerateComponentTerminal from "./generate-component-terminal";
-import type { AssistantConfigResponse, GenerateComponentPromptResponse, ProgressState, SubmitResult } from "./types";
+import AssistantTerminal from "./assistant-terminal";
+import type { AssistantConfigResponse, AssistantPromptResponse, ProgressState, SubmitResult } from "./types";
 
-function extractSubmitResult(response: GenerateComponentPromptResponse): SubmitResult {
+function extractSubmitResult(response: AssistantPromptResponse): SubmitResult {
   let content: string;
   if (response.result) {
     content = response.result;
@@ -50,11 +50,11 @@ function extractSubmitResult(response: GenerateComponentPromptResponse): SubmitR
 // Preferred providers in order of priority
 const PREFERRED_PROVIDERS = ["Anthropic", "OpenAI", "Google Generative AI", "Groq"];
 
-const GenerateComponent = memo(function GenerateComponent() {
-  const isTerminalOpen = useGenerateComponentStore((state) => state.isTerminalOpen);
-  const setTerminalOpen = useGenerateComponentStore((state) => state.setTerminalOpen);
-  const maxRetries = useGenerateComponentStore((state) => state.maxRetries);
-  const setMaxRetries = useGenerateComponentStore((state) => state.setMaxRetries);
+const Assistant = memo(function Assistant() {
+  const isTerminalOpen = useAssistantStore((state) => state.isTerminalOpen);
+  const setTerminalOpen = useAssistantStore((state) => state.setTerminalOpen);
+  const maxRetries = useAssistantStore((state) => state.maxRetries);
+  const setMaxRetries = useAssistantStore((state) => state.setMaxRetries);
 
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
@@ -167,7 +167,7 @@ const GenerateComponent = memo(function GenerateComponent() {
 
       setIsLoading(true);
       try {
-        const response = await postGenerateComponentPromptStream({
+        const response = await postAssistantPromptStream({
           flowId: currentFlowId,
           inputValue: input,
           maxRetries,
@@ -176,7 +176,7 @@ const GenerateComponent = memo(function GenerateComponent() {
           onProgress,
         });
 
-        return extractSubmitResult(response as GenerateComponentPromptResponse);
+        return extractSubmitResult(response as AssistantPromptResponse);
       } finally {
         setIsLoading(false);
       }
@@ -219,7 +219,7 @@ const GenerateComponent = memo(function GenerateComponent() {
   );
 
   return (
-    <GenerateComponentTerminal
+    <AssistantTerminal
       isOpen={isTerminalOpen}
       onClose={handleCloseTerminal}
       onSubmit={handleSubmit}
@@ -236,4 +236,4 @@ const GenerateComponent = memo(function GenerateComponent() {
   );
 });
 
-export default GenerateComponent;
+export default Assistant;

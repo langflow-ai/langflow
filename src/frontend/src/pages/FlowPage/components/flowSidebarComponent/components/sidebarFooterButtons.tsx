@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { SidebarMenuButton, useSidebar } from "@/components/ui/sidebar";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
-import { useGenerateComponentStore } from "@/stores/generateComponentStore";
+import { useAssistantStore } from "@/stores/assistantStore";
 import AddMcpServerModal from "@/modals/addMcpServerModal";
 
 const SidebarMenuButtons = ({
@@ -15,7 +15,7 @@ const SidebarMenuButtons = ({
   const { activeSection } = useSidebar();
   const [addMcpOpen, setAddMcpOpen] = useState(false);
   const navigate = useCustomNavigate();
-  const toggleTerminal = useGenerateComponentStore((state) => state.toggleTerminal);
+  const toggleTerminal = useAssistantStore((state) => state.toggleTerminal);
 
   const handleAddMcpServerClick = () => {
     setAddMcpOpen(true);

@@ -18,21 +18,21 @@ export type AssistantConfigResponse = {
   default_model: string | null;
 };
 
-export type TerminalMessageType = "input" | "output" | "error" | "system" | "validated" | "validation_error";
+export type AssistantMessageType = "input" | "output" | "error" | "system" | "validated" | "validation_error";
 
-export type TerminalMessageMetadata = {
+export type AssistantMessageMetadata = {
   className?: string;
   validated?: boolean;
   validationAttempts?: number;
   componentCode?: string;
 };
 
-export type TerminalMessage = {
+export type AssistantMessage = {
   id: string;
-  type: TerminalMessageType;
+  type: AssistantMessageType;
   content: string;
   timestamp: Date;
-  metadata?: TerminalMessageMetadata;
+  metadata?: AssistantMessageMetadata;
 };
 
 export type SubmitResult = {
@@ -50,7 +50,7 @@ export type ProgressState = {
   maxAttempts: number;
 };
 
-export type GenerateComponentTerminalProps = {
+export type AssistantTerminalProps = {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (
@@ -70,7 +70,7 @@ export type GenerateComponentTerminalProps = {
   configData?: AssistantConfigResponse;
 };
 
-export type GenerateComponentPromptResponse = {
+export type AssistantPromptResponse = {
   result?: string;
   text?: string;
   logs?: string;

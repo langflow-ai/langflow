@@ -8,8 +8,6 @@ import {
   useState,
 } from "react";
 import { nanoid } from "nanoid";
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import SimplifiedCodeTabComponent from "@/components/core/codeTabsComponent";
 import { Button } from "@/components/ui/button";
@@ -24,14 +22,15 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/utils/utils";
 import { extractLanguage, isCodeBlock } from "@/utils/codeBlockUtils";
-import type { SubmitResult, TerminalMessage, GenerateComponentTerminalProps, AssistantConfigResponse } from "./types";
+import { useAssistantStore, type AssistantMessageData } from "@/stores/assistantStore";
+import type { SubmitResult, AssistantMessage, AssistantTerminalProps, AssistantConfigResponse } from "./types";
 
 const TERMINAL_MIN_HEIGHT = 200;
 const TERMINAL_MAX_HEIGHT = 600;
 const TERMINAL_DEFAULT_HEIGHT = 300;
 const TERMINAL_CONFIG_HEIGHT = 280;
 const RESIZE_HANDLE_HEIGHT = 8;
-const HISTORY_STORAGE_KEY = "generate-component-terminal-history";
+const HISTORY_STORAGE_KEY = "assistant-terminal-history";
 const MAX_HISTORY_SIZE = 50;
 const TEXTAREA_MAX_HEIGHT = 150;
 const SCROLL_BOTTOM_THRESHOLD = 10;
@@ -83,7 +82,7 @@ const categorizeError = (errorMessage: string, statusCode?: number): ErrorCatego
 type CommandResult = {
   handled: boolean;
   message?: string;
-  type?: TerminalMessage["type"];
+  type?: AssistantMessage["type"];
   action?: "clear";
 };
 
@@ -148,7 +147,7 @@ const TerminalHeader = ({
   onClose: () => void;
   onClear: () => void;
   configData?: AssistantConfigResponse;
-  selectedModel: string;
+  selectedModel: string | null;
   onModelChange: (value: string) => void;
 }) => {
   // Build model options from config data
@@ -187,7 +186,7 @@ const TerminalHeader = ({
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <Select value={selectedModel} onValueChange={onModelChange} disabled={modelOptions.length === 0}>
+        <Select value={selectedModel ?? ""} onValueChange={onModelChange} disabled={modelOptions.length === 0}>
           <SelectTrigger className="h-7 w-auto min-w-[140px] border-border bg-muted text-xs text-foreground hover:bg-accent focus:ring-0 focus:ring-offset-0 disabled:opacity-50">
             <div className="flex items-center gap-1.5">
               <ForwardedIconComponent name="Bot" className="h-3 w-3 text-muted-foreground" />
@@ -314,10 +313,6 @@ const ComponentResultLine = ({
               isCodeExpanded && "rotate-90"
             )}
           />
-          <ForwardedIconComponent
-            name="CheckCircle"
-            className="h-4 w-4 text-accent-emerald-foreground"
-          />
           <span className="font-mono text-sm text-accent-emerald-foreground">
             {className}.py
           </span>
@@ -347,23 +342,23 @@ const ComponentResultLine = ({
               className={cn("h-3.5 w-3.5", isSavingToSidebar && "animate-spin")}
             />
           </Button>
-        </div>
 
-        <Button
-          size="sm"
-          onClick={handleAddToCanvas}
-          disabled={isAddingToCanvas}
-          className="bg-accent-emerald-foreground hover:bg-accent-emerald-hover text-background gap-1.5 px-3 h-7 disabled:opacity-50"
-        >
-          <ForwardedIconComponent
-            name={isAddingToCanvas ? "Loader2" : "Plus"}
-            className={cn("h-3.5 w-3.5", isAddingToCanvas && "animate-spin")}
-          />
-          <span className="text-xs font-medium">Add to Canvas</span>
-        </Button>
+          <Button
+            variant="ghost"
+            size="iconSm"
+            onClick={handleAddToCanvas}
+            disabled={isAddingToCanvas}
+            className="ml-1 bg-accent-emerald-foreground/15 text-accent-emerald-foreground hover:bg-accent-emerald-foreground/25 disabled:opacity-50"
+            title="Add to Canvas"
+          >
+            <ForwardedIconComponent
+              name={isAddingToCanvas ? "Loader2" : "Plus"}
+              className={cn("h-3.5 w-3.5", isAddingToCanvas && "animate-spin")}
+            />
+          </Button>
+        </div>
       </div>
 
-      {/* Collapsible code block */}
       {isCodeExpanded && (
         <div className="mt-1">
           <SimplifiedCodeTabComponent language="python" code={code} />
@@ -373,72 +368,12 @@ const ComponentResultLine = ({
   );
 };
 
-const MarkdownContent = ({ content }: { content: string }) => (
-  <Markdown
-    remarkPlugins={[remarkGfm]}
-    className="prose prose-sm prose-invert max-w-full text-foreground"
-    components={{
-      p({ children }) {
-        return <p className="mb-2 last:mb-0">{children}</p>;
-      },
-      a({ href, children }) {
-        return (
-          <a href={href} target="_blank" rel="noopener noreferrer" className="text-accent-emerald-foreground hover:text-accent-emerald-hover">
-            {children}
-          </a>
-        );
-      },
-      ul({ children }) {
-        return <ul className="list-disc pl-4 mb-2">{children}</ul>;
-      },
-      ol({ children }) {
-        return <ol className="list-decimal pl-4 mb-2">{children}</ol>;
-      },
-      li({ children }) {
-        return <li className="mb-1">{children}</li>;
-      },
-      pre({ children }) {
-        return <>{children}</>;
-      },
-      code({ className, children, ...props }) {
-        const content = String(children).replace(/\n$/, "");
-        if (isCodeBlock(className, props, content)) {
-          return (
-            <div className="my-2">
-              <SimplifiedCodeTabComponent
-                language={extractLanguage(className) || "python"}
-                code={content}
-              />
-            </div>
-          );
-        }
-        return (
-          <code className="bg-muted px-1.5 py-0.5 rounded text-accent-emerald-foreground text-xs" {...props}>
-            {children}
-          </code>
-        );
-      },
-      strong({ children }) {
-        return <strong className="font-semibold text-foreground">{children}</strong>;
-      },
-      em({ children }) {
-        return <em className="italic text-muted-foreground">{children}</em>;
-      },
-      blockquote({ children }) {
-        return <blockquote className="border-l-2 border-border pl-3 italic text-muted-foreground">{children}</blockquote>;
-      },
-    }}
-  >
-    {content}
-  </Markdown>
-);
-
 const MessageLine = ({
   message,
   onAddToCanvas,
   onSaveToSidebar,
 }: {
-  message: TerminalMessage;
+  message: AssistantMessage;
   onAddToCanvas: (code: string) => Promise<void>;
   onSaveToSidebar: (code: string, className: string) => Promise<void>;
 }) => {
@@ -489,7 +424,6 @@ const MessageLine = ({
     );
   }
 
-  // Use markdown rendering for output messages
   const useMarkdown = message.type === "output";
 
   return (
@@ -504,8 +438,9 @@ const MessageLine = ({
         </div>
       )}
       {useMarkdown ? (
-        <div className="text-sm">
-          <MarkdownContent content={message.content} />
+        <div className="font-mono text-sm text-foreground whitespace-pre-wrap">
+          <span className="select-none text-muted-foreground">← </span>
+          {message.content}
         </div>
       ) : (
         <div
@@ -590,7 +525,7 @@ const ConfigurationRequired = ({
   </div>
 );
 
-const GenerateComponentTerminal = ({
+const AssistantTerminal = ({
   isOpen,
   onClose,
   onSubmit,
@@ -603,9 +538,14 @@ const GenerateComponentTerminal = ({
   isConfigLoading,
   onConfigureClick,
   configData,
-}: GenerateComponentTerminalProps) => {
+}: AssistantTerminalProps) => {
+  // Use messages from Zustand store for persistence across screen switches
+  const messages = useAssistantStore((state) => state.messages);
+  const setMessages = useAssistantStore((state) => state.setMessages);
+  const storeAddMessage = useAssistantStore((state) => state.addMessage);
+
   const getWelcomeMessages = useCallback(
-    (): TerminalMessage[] => [
+    (): AssistantMessageData[] => [
       {
         id: nanoid(),
         type: "system",
@@ -622,118 +562,110 @@ const GenerateComponentTerminal = ({
     [maxRetries],
   );
 
-  const [messages, setMessages] = useState<TerminalMessage[]>(getWelcomeMessages);
+  // Initialize messages with welcome messages if empty
+  useEffect(() => {
+    if (messages.length === 0) {
+      setMessages(getWelcomeMessages());
+    }
+  }, [messages.length, setMessages, getWelcomeMessages]);
   const [inputValue, setInputValue] = useState("");
   const [height, setHeight] = useState(TERMINAL_DEFAULT_HEIGHT);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [progress, setProgress] = useState<ProgressInfo>(null);
 
-  // Model selection state
-  const [selectedModel, setSelectedModel] = useState<string>("");
+  // Model selection from store (persisted in localStorage)
+  const selectedModel = useAssistantStore((state) => state.selectedModel);
+  const setSelectedModel = useAssistantStore((state) => state.setSelectedModel);
 
-  // Initialize selected model when configData loads
+  // Initialize selected model from localStorage or use default from configData
   useEffect(() => {
-    if (configData?.default_provider && configData?.default_model && !selectedModel) {
+    if (!configData?.providers?.length) return;
+
+    // If no stored model or stored model is not available, use default
+    const isStoredModelAvailable = selectedModel && configData.providers.some(
+      (p) => p.models.some((m) => `${p.name}:${m.name}` === selectedModel)
+    );
+
+    if (!isStoredModelAvailable && configData.default_provider && configData.default_model) {
       setSelectedModel(`${configData.default_provider}:${configData.default_model}`);
     }
-  }, [configData, selectedModel]);
+  }, [configData, selectedModel, setSelectedModel]);
 
   // Extract provider and model name from selected value
   const getProviderAndModel = useCallback(() => {
     if (!selectedModel) return { provider: undefined, modelName: undefined };
-    const [provider, modelName] = selectedModel.split(":");
-    return { provider, modelName };
+    const parts = selectedModel.split(":");
+    return { provider: parts[0], modelName: parts[1] };
   }, [selectedModel]);
 
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const terminalRef = useRef<HTMLDivElement>(null);
-  const shouldStayAtBottomRef = useRef(true);
+  const prevIsOpenRef = useRef<boolean>(false);
+
+  // Use store for scroll position persistence across screen changes
+  const scrollPosition = useAssistantStore((state) => state.scrollPosition);
+  const setScrollPosition = useAssistantStore((state) => state.setScrollPosition);
 
   const scrollToBottom = useCallback(() => {
     const container = messagesContainerRef.current;
     if (container) {
-      requestAnimationFrame(() => {
-        container.scrollTop = container.scrollHeight;
-        shouldStayAtBottomRef.current = true;
-      });
+      container.scrollTop = container.scrollHeight;
+      setScrollPosition(-1); // -1 means "at bottom"
     }
-  }, []);
+  }, [setScrollPosition]);
 
-  // Track if user scrolled away from bottom
+  // Track scroll position changes
   const handleScroll = useCallback(() => {
     const container = messagesContainerRef.current;
     if (container) {
       const { scrollTop, scrollHeight, clientHeight } = container;
       const isAtBottom = scrollHeight - scrollTop - clientHeight < SCROLL_BOTTOM_THRESHOLD;
-      shouldStayAtBottomRef.current = isAtBottom;
+      setScrollPosition(isAtBottom ? -1 : scrollTop);
     }
-  }, []);
+  }, [setScrollPosition]);
 
-  // Use useLayoutEffect for scroll operations to prevent visual jumps
+  // Restore scroll position when terminal opens or messages are available
   useLayoutEffect(() => {
-    if (shouldStayAtBottomRef.current) {
+    const justOpened = isOpen && !prevIsOpenRef.current;
+    prevIsOpenRef.current = isOpen;
+
+    if (!isOpen || messages.length === 0) return;
+
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const doRestore = () => {
+      if (!messagesContainerRef.current) return;
+      const target = scrollPosition === -1
+        ? messagesContainerRef.current.scrollHeight
+        : scrollPosition;
+      messagesContainerRef.current.scrollTop = target;
+    };
+
+    // If terminal just opened, restore with multiple retries
+    if (justOpened) {
+      doRestore();
+      requestAnimationFrame(doRestore);
+      setTimeout(doRestore, 10);
+      setTimeout(doRestore, 50);
+      setTimeout(doRestore, 100);
+    }
+  }, [isOpen, messages.length, scrollPosition]);
+
+  // Scroll to bottom when new messages arrive (only if was at bottom)
+  useLayoutEffect(() => {
+    if (scrollPosition === -1 && isOpen) {
       scrollToBottom();
     }
-  }, [messages, isLoading, scrollToBottom]);
+  }, [messages.length, isLoading, scrollPosition, scrollToBottom, isOpen]);
 
-  useLayoutEffect(() => {
+  // Focus textarea when opened
+  useEffect(() => {
     if (isOpen) {
-      scrollToBottom();
       textareaRef.current?.focus();
     }
-  }, [isOpen, scrollToBottom]);
-
-  // Scroll to bottom when tab becomes visible, window gains focus, or terminal container changes
-  useEffect(() => {
-    const terminal = terminalRef.current;
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible" && isOpen && shouldStayAtBottomRef.current) {
-        requestAnimationFrame(scrollToBottom);
-      }
-    };
-
-    const handleFocus = () => {
-      if (isOpen && shouldStayAtBottomRef.current) {
-        requestAnimationFrame(scrollToBottom);
-      }
-    };
-
-    // Also handle clicks inside terminal to restore scroll
-    const handleClick = () => {
-      if (isOpen && shouldStayAtBottomRef.current) {
-        requestAnimationFrame(scrollToBottom);
-      }
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    window.addEventListener("focus", handleFocus);
-    terminal?.addEventListener("click", handleClick);
-
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-      window.removeEventListener("focus", handleFocus);
-      terminal?.removeEventListener("click", handleClick);
-    };
-  }, [isOpen, scrollToBottom]);
-
-  // Use ResizeObserver to maintain scroll position when terminal resizes (not content changes)
-  useEffect(() => {
-    const terminal = terminalRef.current;
-    if (!terminal || !isOpen) return;
-
-    const resizeObserver = new ResizeObserver(() => {
-      if (shouldStayAtBottomRef.current) {
-        scrollToBottom();
-      }
-    });
-
-    // Only observe the terminal container resize, not content changes
-    resizeObserver.observe(terminal);
-
-    return () => resizeObserver.disconnect();
-  }, [isOpen, scrollToBottom]);
+  }, [isOpen]);
 
   const adjustTextareaHeight = useCallback(() => {
     const textarea = textareaRef.current;
@@ -748,34 +680,34 @@ const GenerateComponentTerminal = ({
   }, [inputValue, adjustTextareaHeight]);
 
   const addMessage = useCallback(
-    (type: TerminalMessage["type"], content: string) => {
-      const newMessage: TerminalMessage = {
+    (type: AssistantMessage["type"], content: string) => {
+      const newMessage: AssistantMessageData = {
         id: nanoid(),
         type,
         content,
         timestamp: new Date(),
       };
-      setMessages((prev) => [...prev, newMessage]);
+      storeAddMessage(newMessage);
     },
-    [],
+    [storeAddMessage],
   );
 
   const addMessageWithMetadata = useCallback(
     (
-      type: TerminalMessage["type"],
+      type: AssistantMessage["type"],
       content: string,
-      metadata?: TerminalMessage["metadata"],
+      metadata?: AssistantMessage["metadata"],
     ) => {
-      const newMessage: TerminalMessage = {
+      const newMessage: AssistantMessageData = {
         id: nanoid(),
         type,
         content,
         timestamp: new Date(),
         metadata,
       };
-      setMessages((prev) => [...prev, newMessage]);
+      storeAddMessage(newMessage);
     },
-    [],
+    [storeAddMessage],
   );
 
   const handleClear = useCallback(() => {
@@ -793,7 +725,8 @@ const GenerateComponentTerminal = ({
         timestamp: new Date(),
       },
     ]);
-  }, [maxRetries]);
+    setScrollPosition(-1);
+  }, [maxRetries, setMessages, setScrollPosition]);
 
   const handleSubmit = useCallback(async () => {
     const trimmedInput = inputValue.trim();
@@ -821,7 +754,6 @@ const GenerateComponentTerminal = ({
     try {
       const { provider, modelName } = getProviderAndModel();
 
-      // Pass progress callback to onSubmit
       const handleProgress = (p: { step: "generating" | "validating"; attempt: number; maxAttempts: number }) => {
         setProgress(p);
       };
@@ -837,7 +769,6 @@ const GenerateComponentTerminal = ({
           componentCode: response.componentCode,
         });
       } else if (response.validated === false) {
-        // Show validation failed message with the extracted code (if available)
         const codePreview = response.componentCode
           ? response.componentCode.split("\n").slice(0, 5).join("\n") + "..."
           : "No code extracted";
@@ -856,7 +787,6 @@ const GenerateComponentTerminal = ({
       }
     } catch (error: unknown) {
       setProgress(null);
-      // Extract error message from axios response or error object
       let errorMessage = "An error occurred";
 
       const axiosError = error as { response?: { data?: { detail?: string }; status?: number } };
@@ -997,6 +927,7 @@ const GenerateComponentTerminal = ({
             ref={messagesContainerRef}
             onScroll={handleScroll}
             className="flex-1 overflow-y-auto px-4 py-3"
+            style={{ overflowAnchor: "none" }}
           >
             <div className="flex flex-col gap-1">
               {messages.map((message) => (
@@ -1050,4 +981,4 @@ const GenerateComponentTerminal = ({
   );
 };
 
-export default GenerateComponentTerminal;
+export default AssistantTerminal;

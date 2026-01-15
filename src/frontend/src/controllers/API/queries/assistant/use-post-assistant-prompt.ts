@@ -1,12 +1,12 @@
 import { useMutation } from "@tanstack/react-query";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
-import type { GenerateComponentPromptResponse, ProgressState } from "@/components/core/generateComponent/types";
+import type { AssistantPromptResponse, ProgressState } from "@/components/core/assistant/types";
 
 const SSE_DATA_PREFIX = "data: ";
 const SSE_EVENT_SEPARATOR = "\n\n";
 
-type GenerateComponentPromptRequest = {
+type AssistantPromptRequest = {
   flowId: string;
   inputValue: string;
   componentId?: string;
@@ -16,7 +16,7 @@ type GenerateComponentPromptRequest = {
   modelName?: string;
 };
 
-type StreamingRequest = GenerateComponentPromptRequest & {
+type StreamingRequest = AssistantPromptRequest & {
   onProgress?: (progress: ProgressState) => void;
 };
 
@@ -25,11 +25,11 @@ type SSEEvent = {
   step?: "generating" | "validating";
   attempt?: number;
   max_attempts?: number;
-  data?: GenerateComponentPromptResponse;
+  data?: AssistantPromptResponse;
   message?: string;
 };
 
-async function postGenerateComponentPrompt({
+async function postAssistantPrompt({
   flowId,
   inputValue,
   componentId,
@@ -37,9 +37,9 @@ async function postGenerateComponentPrompt({
   maxRetries,
   provider,
   modelName,
-}: GenerateComponentPromptRequest): Promise<GenerateComponentPromptResponse> {
-  const response = await api.post<GenerateComponentPromptResponse>(
-    getURL("GENERATE_COMPONENT_PROMPT"),
+}: AssistantPromptRequest): Promise<AssistantPromptResponse> {
+  const response = await api.post<AssistantPromptResponse>(
+    getURL("ASSISTANT_PROMPT"),
     {
       flow_id: flowId,
       input_value: inputValue,
@@ -53,7 +53,7 @@ async function postGenerateComponentPrompt({
   return response.data;
 }
 
-export async function postGenerateComponentPromptStream({
+export async function postAssistantPromptStream({
   flowId,
   inputValue,
   componentId,
@@ -62,7 +62,7 @@ export async function postGenerateComponentPromptStream({
   provider,
   modelName,
   onProgress,
-}: StreamingRequest): Promise<GenerateComponentPromptResponse> {
+}: StreamingRequest): Promise<AssistantPromptResponse> {
   const response = await fetchStreamingResponse({
     flowId,
     inputValue,
@@ -82,10 +82,10 @@ export async function postGenerateComponentPromptStream({
 }
 
 async function fetchStreamingResponse(
-  request: GenerateComponentPromptRequest,
+  request: AssistantPromptRequest,
 ): Promise<Response> {
   const baseUrl = api.defaults.baseURL || "";
-  const url = `${baseUrl}${getURL("GENERATE_COMPONENT_PROMPT_STREAM")}`;
+  const url = `${baseUrl}${getURL("ASSISTANT_PROMPT_STREAM")}`;
 
   const axiosHeaders = api.defaults.headers.common as Record<string, string>;
   const authHeader = axiosHeaders?.Authorization
@@ -121,9 +121,9 @@ async function fetchStreamingResponse(
 async function processSSEStream(
   reader: ReadableStreamDefaultReader<Uint8Array>,
   onProgress?: (progress: ProgressState) => void,
-): Promise<GenerateComponentPromptResponse> {
+): Promise<AssistantPromptResponse> {
   const decoder = new TextDecoder();
-  let result: GenerateComponentPromptResponse | null = null;
+  let result: AssistantPromptResponse | null = null;
   let buffer = "";
 
   while (true) {
@@ -159,7 +159,7 @@ function splitSSEEvents(buffer: string): { events: string[]; remaining: string }
 function processSSEEvent(
   eventBlock: string,
   onProgress?: (progress: ProgressState) => void,
-): GenerateComponentPromptResponse | null {
+): AssistantPromptResponse | null {
   for (const line of eventBlock.split("\n")) {
     if (!line.startsWith(SSE_DATA_PREFIX)) continue;
 
@@ -195,9 +195,9 @@ function parseSSEEvent(jsonStr: string): SSEEvent | null {
   }
 }
 
-export function usePostGenerateComponentPrompt() {
+export function usePostAssistantPrompt() {
   return useMutation({
-    mutationFn: postGenerateComponentPrompt,
-    mutationKey: ["usePostGenerateComponentPrompt"],
+    mutationFn: postAssistantPrompt,
+    mutationKey: ["usePostAssistantPrompt"],
   });
 }
