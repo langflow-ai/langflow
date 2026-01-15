@@ -54,6 +54,10 @@ def test_parse_reference_at_end():
 
 
 def test_parse_adjacent_references():
+    # Note: The negative lookbehind (?<!\w) prevents @Node2 from matching
+    # because it's preceded by '1' (a word character). This is intentional
+    # to avoid matching emails like user@domain.com
     text = "@Node1.out1@Node2.out2"
     refs = parse_references(text)
-    assert len(refs) == 2
+    assert len(refs) == 1
+    assert refs[0].node_slug == "Node1"

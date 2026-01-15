@@ -39,6 +39,7 @@ export function parseReferences(text: string): ParsedReference[] {
   // Reset lastIndex for global regex
   REFERENCE_PATTERN.lastIndex = 0;
 
+  // biome-ignore lint/suspicious/noAssignInExpressions: standard pattern for iterating regex matches
   while ((match = REFERENCE_PATTERN.exec(text)) !== null) {
     const nodeSlug = match[1];
     const outputName = match[2];
@@ -62,4 +63,32 @@ export function parseReferences(text: string): ParsedReference[] {
   }
 
   return references;
+}
+
+/**
+ * Generate a base slug from a display name for use in @references.
+ *
+ * Converts display names to PascalCase slugs by:
+ * - Splitting on whitespace
+ * - Capitalizing the first letter of each word
+ * - Removing all non-alphanumeric characters
+ *
+ * @param displayName - The display name to convert
+ * @returns A valid slug for use in @references, or "Node" if empty
+ *
+ * @example
+ * ```ts
+ * generateBaseSlug("HTTP Request") // "HttpRequest"
+ * generateBaseSlug("Chat Input") // "ChatInput"
+ * generateBaseSlug("") // "Node"
+ * ```
+ */
+export function generateBaseSlug(displayName: string): string {
+  return (
+    displayName
+      .split(/\s+/)
+      .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join("")
+      .replace(/[^a-zA-Z0-9]/g, "") || "Node"
+  );
 }

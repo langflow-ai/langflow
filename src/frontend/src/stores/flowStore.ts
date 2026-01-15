@@ -17,6 +17,7 @@ import {
   trackDataLoaded,
   trackFlowBuild,
 } from "@/customization/utils/analytics";
+import { generateBaseSlug } from "@/utils/referenceParser";
 import { brokenEdgeMessage } from "@/utils/utils";
 import { BuildStatus, EventDeliveryType } from "../constants/enums";
 import type { LogsLogType, VertexBuildTypeAPI } from "../types/api";
@@ -242,13 +243,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     for (const node of nodes) {
       const nodeData = node.data as NodeDataType;
       const displayName = nodeData?.node?.display_name || "Node";
-      // Remove non-alphanumeric, capitalize words
-      const baseSlug =
-        displayName
-          .split(/\s+/)
-          .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
-          .join("")
-          .replace(/[^a-zA-Z0-9]/g, "") || "Node";
+      const baseSlug = generateBaseSlug(displayName);
 
       // Check for duplicates and assign appropriate slug
       let slug = baseSlug;
@@ -331,13 +326,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       if (!newSlugs[node.id]) {
         const nodeData = node.data as NodeDataType;
         const displayName = nodeData?.node?.display_name || "Node";
-        // Remove non-alphanumeric, capitalize words
-        const baseSlug =
-          displayName
-            .split(/\s+/)
-            .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
-            .join("")
-            .replace(/[^a-zA-Z0-9]/g, "") || "Node";
+        const baseSlug = generateBaseSlug(displayName);
 
         // Check for duplicates and assign appropriate slug
         let slug = baseSlug;
@@ -1225,16 +1214,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
 
     const nodeData = node.data as NodeDataType;
     const displayName = nodeData?.node?.display_name || "Node";
-    // Remove non-alphanumeric, capitalize words
-    const baseSlug = displayName
-      .split(/\s+/)
-      .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join("")
-      .replace(/[^a-zA-Z0-9]/g, "");
+    const baseSlug = generateBaseSlug(displayName);
 
     // Check for duplicates
     const existingSlugs = Object.values(state.nodeReferenceSlugs);
-    let slug = baseSlug || "Node";
+    let slug = baseSlug;
     let counter = 1;
 
     while (

@@ -1,5 +1,5 @@
 import type React from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePostValidatePrompt } from "@/controllers/API/queries/nodes/use-post-validate-prompt";
 import IconComponent from "../../components/common/genericIconComponent";
 import SanitizedHTMLWrapper from "../../components/common/sanitizedHTMLWrapper";
@@ -208,8 +208,10 @@ export default function PromptModal({
 
       // Use caretPositionFromPoint to get the closest text position. Does not work on Safari.
       if ("caretPositionFromPoint" in document) {
-        const range =
-          (document as any).caretPositionFromPoint(x, y)?.offset ?? 0;
+        const caretDoc = document as Document & {
+          caretPositionFromPoint(x: number, y: number): { offset: number } | null;
+        };
+        const range = caretDoc.caretPositionFromPoint(x, y)?.offset ?? 0;
         if (range) {
           const position = range;
           textArea.setSelectionRange(position, position);

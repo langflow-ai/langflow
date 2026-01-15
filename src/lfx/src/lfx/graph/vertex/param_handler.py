@@ -335,24 +335,3 @@ class ParameterHandler:
             True if has_references is explicitly True
         """
         return field.get("has_references", False) is True
-
-    def _resolve_field_references(self, value: str, field: dict) -> str:
-        """Resolve @references in a field value.
-
-        Args:
-            value: The field value containing references
-            field: The field definition
-
-        Returns:
-            The value with references resolved
-
-        Raises:
-            ReferenceResolutionError: If resolution fails
-        """
-        if not self._should_resolve_references(field):
-            return value
-
-        if not isinstance(value, str):
-            return value
-
-        return resolve_references(value, self.vertex.graph)

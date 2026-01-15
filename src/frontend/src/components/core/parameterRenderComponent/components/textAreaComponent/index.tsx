@@ -140,7 +140,7 @@ export default function TextAreaComponent({
           )}
           style={{
             pointerEvents: "none",
-            background: disabled ? "bg-background" : GRADIENT_CLASS,
+            background: GRADIENT_CLASS,
           }}
           aria-hidden="true"
         />
