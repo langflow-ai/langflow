@@ -505,7 +505,7 @@ class DeployProjectCreate(BaseModel):
 class ProjectFlowVersion(BaseModel):
     flow_id: UUID
     published_flow_version_id: str | None = Field(
-        None, description="If provided, links to this published version. If null, includes latest flow data."
+        None, description="Reference to a published flow version id."
     )
 
     def to_tuple(self):

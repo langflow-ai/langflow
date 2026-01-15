@@ -4,7 +4,6 @@ import io
 import json
 import re
 import zipfile
-from copy import deepcopy
 from datetime import datetime, timezone
 from pathlib import Path as StdlibPath
 from typing import Annotated
@@ -722,7 +721,7 @@ async def publish_flow(
 
     try:
         db_flow: Flow = await _read_flow_for_publish(session, flow_id, current_user.id)
-        flow_blob = FlowBlob.model_validate(_create_flow_blob_for_publish(db_flow))
+        flow_blob = _create_flow_blob_for_publish(db_flow)
 
         publish_service: PublishService = get_service(ServiceType.PUBLISH_SERVICE)
         publish_data: PublishedFlowMetadata = await publish_service.put_flow(
@@ -873,9 +872,10 @@ async def _read_flow_for_publish(
     return db_flow
 
 
-def _create_flow_blob_for_publish(db_flow: Flow) -> dict:
-    flow_blob = deepcopy(db_flow.data)
-    # name and description edits count as publishable changes
-    flow_blob["name"] = db_flow.name
-    flow_blob["description"] = db_flow.description
-    return flow_blob
+def _create_flow_blob_for_publish(db_flow: Flow) -> FlowBlob:
+    """Create a flow blob for publishing."""
+    return FlowBlob(**{
+        **(db_flow.data or {}),
+        "name": db_flow.name,
+        "description": db_flow.description,
+        })

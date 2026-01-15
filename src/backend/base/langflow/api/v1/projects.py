@@ -14,6 +14,7 @@ from fastapi_pagination import Params
 from fastapi_pagination.ext.sqlmodel import apaginate
 from lfx.log.logger import logger
 from lfx.services.mcp_composer.service import MCPComposerService
+from pydantic import ValidationError
 from sqlalchemy import CTE, or_, update
 from sqlalchemy.orm import selectinload
 from sqlmodel import select, values
@@ -53,7 +54,14 @@ from langflow.services.database.models.folder.model import (
 )
 from langflow.services.database.models.folder.pagination_model import FolderWithPaginatedFlows
 from langflow.services.deps import get_service, get_settings_service, get_storage_service
-from langflow.services.publish.schema import ProjectBlob, PublishedProjectMetadata, ReleaseStage
+from langflow.services.publish.schema import (
+    FlowBlob,
+    ProjectBlob,
+    ProjectFlowEntry,
+    PublishedFlowReference,
+    PublishedProjectMetadata,
+    ReleaseStage,
+)
 from langflow.services.publish.service import PublishService
 from langflow.services.publish.utils import require_all_ids, validate_project_blob
 from langflow.services.schema import ServiceType
@@ -871,12 +879,13 @@ async def _create_project_blob(
     session: DbSession,
     project: Folder,
     project_data: PublishProjectCreate,
-    ):
+):
     """Create a blob for a published project."""
     requested_flow: CTE = (
         values(*ProjectFlowVersion.column_def())
         .data(project_data.flows_to_tuple())
-        ).cte("requested_flow")
+        .cte("requested_flow")
+    )
     db_flows = (
         await session.exec(
             select(
@@ -888,7 +897,7 @@ async def _create_project_blob(
                 )
             .where(Flow.folder_id == project.id)
             .join(requested_flow, Flow.id == requested_flow.c.flow_id)
-            .order_by(Flow.id) # deterministic ordering
+            .order_by(Flow.id)  # deterministic ordering
             )
         ).all()
 
@@ -899,8 +908,8 @@ async def _create_project_blob(
                 "Some flows were not found. "
                 "Please ensure all flows belong to the "
                 f"requested project: {project.name} (id: {project.id})"
-                )
-            )
+            ),
+        )
     # build project blob:
     # if a flow is provided with a
     # published version id, use it
@@ -908,27 +917,32 @@ async def _create_project_blob(
     # for the published flow.
     # otherwise, include the latest
     # flow data at the time of project publish.
-    flow_blobs = []
+    flow_blobs: list[ProjectFlowEntry] = []
     for db_flow in db_flows:
-        flow_entry = {"id": str(db_flow.id)}
         if db_flow.published_flow_version_id:
-            flow_entry["published_version"] = {
-                "version_id": db_flow.published_flow_version_id,
-                }
+            flow_entry = ProjectFlowEntry(
+                id=str(db_flow.id),
+                published_version=PublishedFlowReference(
+                    version_id=db_flow.published_flow_version_id,
+                ),
+            )
         else:
-            # latest flow data at the time of project publish
-            if not (db_flow.data and "nodes" in db_flow.data and "edges" in db_flow.data):
-                raise HTTPException(status_code=400, detail="Flow data is not valid")
-            flow_entry["database_flow"] = {
-                "name": db_flow.name,
-                "description": db_flow.description,
-                **db_flow.data,
-                }
+            flow_entry = ProjectFlowEntry(
+                id=str(db_flow.id),
+                database_flow=FlowBlob(**{
+                    **(db_flow.data or {}), # FlowBlob validates presence of nodes and edges
+                    "name": db_flow.name,
+                    "description": db_flow.description,
+                }),
+            )
 
         flow_blobs.append(flow_entry)
 
-    return {
-        "name": project.name,
-        "description": project.description,
-        "flows": flow_blobs,
-        }
+    try:
+        return ProjectBlob(
+            name=project.name,
+            description=project.description,
+            flows=flow_blobs,
+        )
+    except ValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
