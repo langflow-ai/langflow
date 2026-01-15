@@ -1,0 +1,386 @@
+---
+title: Workflow API endpoints
+slug: /workflow-api
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::warning Beta Feature
+The Workflow API is currently in **Beta**.
+The API endpoints and response formats may change in future releases.
+:::
+
+The Workflow API provides programmatic access to execute Langflow workflows with support for synchronous, streaming, and background execution modes. This API is part of the Langflow v2 API and offers enhanced workflow execution capabilities compared to the v1 `/run` endpoint.
+
+## Prerequisites
+
+Before using the Workflow API, you need:
+
+* [Install and start Langflow](/get-started-installation) with the developer API enabled
+* [Create a Langflow flow](/concepts-flows) that you want to execute
+* [Create a Langflow API key](/api-keys-and-authentication) with appropriate permissions
+* [Get the flow ID](/concepts-publish#api-access) or endpoint name of the flow you want to execute
+* Enable the Langflow Developer API
+
+    The Workflow API endpoints require the `developer_api_enabled` setting to be enabled. If this setting is disabled, these endpoints will return a 404 Not Found error.
+
+    To enable the developer API endpoint, do the following:
+    1. In the Langflow `.env` file, set the environment variable to `true`:
+       ```
+       LANGFLOW_DEVELOPER_API_ENABLED=true
+       ```
+    2. Start your Langflow server with the `.env` file enabled:
+       ```
+       uv run langflow run --env-file .env
+       ```
+
+    For more information about configuring environment variables, see [Environment variables](/environment-variables).
+
+## Authentication and headers
+
+All Workflow API requests require authentication using a Langflow API key. The API key is passed in the `x-api-key` header.
+
+### Required headers
+
+| Header | Description | Example |
+|--------|-------------|---------|
+| `Content-Type` | Specifies the JSON format. | `application/json` |
+| `x-api-key` | Your Langflow API key. | `sk-...` |
+| `accept` | Optional. Specifies the response format. | `application/json` or `text/event-stream` |
+
+### Base URL
+
+By default, local deployments serve the Langflow API at `http://localhost:7860/api`.
+
+Remotely hosted Langflow deployments are available at the domain set by the hosting service, such as `https://UUID.ngrok.app/api`.
+
+## Execute workflow endpoint
+
+**Endpoint:** `POST /api/v2/workflow`
+
+**Description:** Execute a workflow with support for synchronous, streaming, or background execution modes.
+
+### Example request
+
+Execute a workflow synchronously and receive complete results immediately:
+
+```bash
+curl -X POST \
+  "$LANGFLOW_SERVER_URL/api/v2/workflow" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
+  -d '{
+    "flow_id": "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
+    "background": false,
+    "stream": false,
+    "inputs": {
+      "ChatInput-abc.input_type": "chat",
+      "ChatInput-abc.input_value": "what is 2+2",
+      "ChatInput-abc.session_id": "session-123"
+    }
+  }'
+```
+
+### Request body
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `flow_id` | `string` | Yes | - | The ID or endpoint name of the flow to execute. |
+| `flow_version` | `string` | No | - | Optional version hash to pin to a specific flow version. |
+| `background` | `boolean` | No | `false` | If `true`, starts execution in background and returns job ID immediately. Mutually exclusive with `stream`. |
+| `stream` | `boolean` | No | `false` | If `true`, returns server-sent events stream following AG-UI protocol. Mutually exclusive with `background`. |
+| `inputs` | `object` | No | `{}` | Inputs for the workflow execution. Uses component identifiers with dot notation (e.g., `ChatInput-abc.input_value`). See [Component identifiers and input structure](#component-identifiers-and-input-structure) for detailed information. |
+
+### Example response
+
+```json
+{
+  "flow_id": "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
+  "job_id": "job_id_1234567890",
+  "object": "response",
+  "created_at": 1741476542,
+  "status": "completed",
+  "errors": [],
+  "inputs": {
+    "ChatInput-abc.input_type": "chat",
+    "ChatInput-abc.input_value": "what is 2+2",
+    "ChatInput-abc.session_id": "session-123"
+  },
+  "outputs": {
+    "ChatOutput-xyz": {
+      "type": "message",
+      "component_id": "ChatOutput-xyz",
+      "status": "completed",
+      "content": "2 + 2 equals 4."
+    }
+  },
+  "metadata": {}
+}
+```
+
+### Response body
+
+The response includes an `outputs` field containing component-level results. Each output has a `type` field indicating the type of content:
+
+| Type | Description | Example |
+|------|-------------|---------|
+| `message` | Text message content. | Chat responses, summaries |
+| `image` | Image URL or data. | Generated images, processed images |
+| `sql` | SQL query results. | Database query outputs |
+| `data` | Structured data. | JSON objects, arrays |
+| `file` | File reference. | Generated documents, reports |
+
+### Background execution
+
+Start a job and receive a job ID immediately. Set `background=true`.
+
+For long-running workflows, use `background=true` to get a `job_id` immediately, and then poll the status [using the GET endpoint](#get-workflow-status-endpoint).
+
+**Example request:**
+
+```bash
+curl -X POST \
+  "$LANGFLOW_SERVER_URL/api/v2/workflow" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
+  -d '{
+    "flow_id": "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
+    "background": true,
+    "stream": false,
+    "inputs": {
+      "ChatInput-abc.input_type": "chat",
+      "ChatInput-abc.input_value": "Process this in the background",
+      "ChatInput-abc.session_id": "session-456"
+    }
+  }'
+```
+
+**Response:**
+
+```json
+{
+  "job_id": "job_id_1234567890",
+  "created_timestamp": "2025-01-15T10:30:00Z",
+  "status": "queued",
+  "errors": []
+}
+```
+
+### Streaming execution
+
+Receive server-sent events in real-time using the AG-UI protocol. Set `stream=true` and `background=false`.
+
+**Example request:**
+
+```bash
+curl -N -X POST \
+  "$LANGFLOW_SERVER_URL/api/v2/workflow" \
+  -H "Content-Type: application/json" \
+  -H "Accept: text/event-stream" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
+  -d '{
+    "flow_id": "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
+    "background": false,
+    "stream": true,
+    "inputs": {
+      "ChatInput-abc.input_type": "chat",
+      "ChatInput-abc.input_value": "Stream this conversation",
+      "ChatInput-abc.session_id": "session-789"
+    }
+  }'
+```
+
+**Example response:**
+
+The response is a stream of server-sent events following the AG-UI protocol:
+
+```text
+event: RUN_STARTED
+data: {"type": "RUN_STARTED", "run_id": "run_39284-abc-123", "timestamp": 1716301000000, "rawEvent": {"langflow": {"flow_id": "flow_uuid_555", "flow_name": "Customer Support Agent"}}}
+
+event: STEP_STARTED
+data: {"type": "STEP_STARTED", "run_id": "run_888", "step_id": "step_data_proc_1", "name": "Data Processor", "timestamp": 1716300005, "rawEvent": {"langflow": {"component_id": "DataProcessor-xyz-123", "sequence_id": 42}}}
+
+event: TEXT_MESSAGE_CONTENT
+data: {"type": "TEXT_MESSAGE_CONTENT", "run_id": "run_39284-abc-123", "message_id": "msg_uuid_999", "delta": "Hello", "timestamp": 1716301002050, "rawEvent": {"langflow": {"chunk_index": 1, "component_id": "Ollama-xyz123"}}}
+
+event: RUN_FINISHED
+data: {"type": "RUN_FINISHED", "run_id": "run_39284-abc-123", "timestamp": 1716301005000, "result": "To reset your password, go to Settings > Security...", "rawEvent": {"langflow": {"status": "success"}}}
+```
+
+Common event types include:
+* `RUN_STARTED`: Signals the start of a workflow execution
+* `RUN_FINISHED`: Signals the completion of a workflow execution
+* `STEP_STARTED`: Signals the start of a component step
+* `STEP_FINISHED`: Signals the completion of a component step
+* `TEXT_MESSAGE_CONTENT`: Represents a chunk of streaming text content
+* `TOOL_CALL_START`: Signals the start of a tool call
+* `TOOL_CALL_END`: Signals the completion of a tool call
+
+For a complete list of event types, see the [AG-UI protocol documentation](https://docs.ag-ui.com/concepts/events).
+
+:::note Reconnecting to Streams
+If a streaming connection is interrupted, you can reconnect using the GET endpoint with the `job_id` and optional `sequence_id` parameter to resume from where you left off.
+:::
+
+## Get workflow status endpoint
+
+**Endpoint:** `GET /api/v2/workflow`
+
+**Description:** Retrieve the status and results of a workflow execution by job ID. Can also be used to reconnect to a streaming execution after disconnection.
+
+### Example request
+
+```bash
+curl -X GET \
+  "$LANGFLOW_SERVER_URL/api/v2/workflow?job_id=job_id_1234567890" \
+  -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
+```
+
+### Query parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `job_id` | `string` | Yes | The job ID returned from a workflow execution. |
+| `stream` | `boolean` | No | If `true`, returns server-sent events stream. Default: `false`. |
+| `sequence_id` | `integer` | No | Optional sequence ID to resume streaming from a specific point. |
+
+### Example response
+
+```json
+{
+  "flow_id": "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
+  "job_id": "job_id_1234567890",
+  "object": "response",
+  "created_at": 1741476542,
+  "status": "completed",
+  "errors": [],
+  "outputs": {
+    "ChatOutput-xyz": {
+      "type": "message",
+      "component_id": "ChatOutput-xyz",
+      "status": "completed",
+      "content": "Processing complete..."
+    }
+  },
+  "input": [
+    {
+      "type": "text",
+      "data": "Input text prompt for the workflow execution",
+      "role": "User"
+    }
+  ],
+  "metadata": {}
+}
+```
+
+### Response body
+
+The response includes a `status` field that indicates the current state of the workflow execution:
+
+| Status | Description |
+|--------|-------------|
+| `queued` | Job is queued and waiting to start. |
+| `in_progress` | Job is currently executing. |
+| `completed` | Job completed successfully. |
+| `failed` | Job failed during execution. |
+| `error` | Job encountered an error. |
+
+### Reconnect to stream
+
+To reconnect to a streaming execution after disconnection, use the GET endpoint with `stream=true` and optional `sequence_id`:
+
+```bash
+curl -N -X GET \
+  "$LANGFLOW_SERVER_URL/api/v2/workflow?job_id=job_id_1234567890&stream=true&sequence_id=42" \
+  -H "Accept: text/event-stream" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
+```
+
+This will return all events generated so far and continue streaming new events as they are generated.
+
+## Stop workflow endpoint
+
+**Endpoint:** `POST /api/v2/workflow/stop`
+
+**Description:** Stop a running workflow execution by job ID.
+
+### Example request
+
+```bash
+curl -X POST \
+  "$LANGFLOW_SERVER_URL/api/v2/workflow/stop" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
+  -d '{
+    "job_id": "job_id_1234567890",
+    "force": false
+  }'
+```
+
+### Request body
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `job_id` | `string` | Yes | - | The job ID of the workflow to stop. |
+| `force` | `boolean` | No | `false` | If `true`, force stops the workflow. |
+
+### Example response
+
+```json
+{
+  "job_id": "job_id_1234567890",
+  "status": "stopped",
+  "message": "Workflow stopped successfully"
+}
+```
+
+## Component identifiers and input structure
+
+The Workflow API uses component identifiers with dot notation to specify inputs for individual components in your workflow. This allows you to pass values to specific components and override component parameters.
+
+Component identifiers use the format `{component_id}.{parameter_name}`.
+When making requests to the Workflow API, include component identifiers in the `inputs` object.
+For example, this demonstrates targeting multiple components and their parameters in a single request.
+
+```json
+{
+  "flow_id": "your-flow-id",
+  "inputs": {
+    "ChatInput-abc.input_type": "chat",
+    "ChatInput-abc.input_value": "what is 2+2",
+    "ChatInput-abc.session_id": "session-123",
+    "OpenSearchComponent-xyz.opensearch_url": "https://opensearch:9200",
+    "LLMComponent-123.temperature": 0.7,
+    "LLMComponent-123.max_tokens": 100
+  }
+}
+```
+
+To find the component ID in the Langflow UI, open your flow in Langflow, click the component, and then click **Controls**. The component ID is at the top of the **Controls** pane.
+
+You can override any component's parameters.
+
+## Error handling
+
+The API uses standard HTTP status codes to indicate success or failure:
+
+| Status Code | Description |
+|-------------|-------------|
+| `200 OK` | Request successful. |
+| `202 Accepted` | Background job accepted. |
+| `400 Bad Request` | Invalid request parameters. |
+| `401 Unauthorized` | Invalid or missing API key. |
+| `404 Not Found` | Flow not found or developer API disabled. |
+| `500 Internal Server Error` | Server error during execution. |
+| `501 Not Implemented` | Endpoint not yet implemented. |
+
+### Error response format
+
+```json
+{
+  "detail": "Error message describing what went wrong"
+}
+```

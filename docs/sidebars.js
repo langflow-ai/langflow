@@ -445,6 +445,11 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "API-Reference/workflow-api",
+          label: "Workflow API endpoints",
+        },
+        {
+          type: "doc",
           id: "API-Reference/api-openai-responses",
           label: "OpenAI Responses endpoints",
         },
