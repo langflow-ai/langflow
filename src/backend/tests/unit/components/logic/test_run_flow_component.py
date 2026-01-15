@@ -497,8 +497,6 @@ class TestRunFlowComponentUpdateBuildConfig:
         with patch("lfx.base.tools.run_flow.run_flow", new=AsyncMock(return_value=[])) as mock_run_flow:
             await component._run_flow_with_cached_graph(
                 user_id=component.user_id,
-                tweaks=None,
-                inputs=None,
                 output_type="any",
             )
 

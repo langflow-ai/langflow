@@ -4,6 +4,7 @@ from uuid import uuid4
 import pytest
 from lfx.base.tools.run_flow import RunFlowBaseComponent
 from lfx.graph.graph.base import Graph
+from lfx.graph.vertex.base import Vertex
 from lfx.schema.data import Data
 from lfx.schema.dotdict import dotdict
 from lfx.services.cache.utils import CacheMiss
@@ -165,6 +166,7 @@ class TestRunFlowBaseComponentFlowRetrieval:
         flow_data = Data(data={"data": {"nodes": [], "edges": []}, "description": "Test flow"})
 
         mock_graph = MagicMock(spec=Graph)
+        mock_graph.vertices = []
 
         with (
             patch.object(component, "_flow_cache_call") as mock_cache_call,
@@ -202,6 +204,7 @@ class TestRunFlowBaseComponentFlowRetrieval:
 
         fresh_graph = MagicMock(spec=Graph)
         fresh_graph.updated_at = new_updated_at
+        fresh_graph.vertices = []
 
         with (
             patch.object(component, "_flow_cache_call") as mock_cache_call,
@@ -451,8 +454,8 @@ class TestRunFlowBaseComponentInputOutputHandling:
         with pytest.raises(ValueError, match="Vertex ID and input/output name are required"):
             component._get_ioput_name("vertex_123", "")
 
-    def test_extract_tweaks_from_keyed_values(self):
-        """Test extracting tweaks from keyed values."""
+    def test_extract_ioputs_from_keyed_values(self):
+        """Test extracting ioputs from keyed values."""
         component = RunFlowBaseComponent()
 
         values = {
@@ -462,26 +465,26 @@ class TestRunFlowBaseComponentInputOutputHandling:
             "invalid_key": "should_be_ignored",
         }
 
-        tweaks = component._extract_tweaks_from_keyed_values(values)
+        ioputs = component._extract_ioputs_from_keyed_values(values)
 
-        assert "vertex1" in tweaks
-        assert tweaks["vertex1"]["param1"] == "value1"
-        assert tweaks["vertex1"]["param2"] == "value2"
-        assert "vertex2" in tweaks
-        assert tweaks["vertex2"]["param1"] == "value3"
-        assert "invalid_key" not in tweaks
+        assert "vertex1" in ioputs
+        assert ioputs["vertex1"]["param1"] == "value1"
+        assert ioputs["vertex1"]["param2"] == "value2"
+        assert "vertex2" in ioputs
+        assert ioputs["vertex2"]["param1"] == "value3"
+        assert "invalid_key" not in ioputs
 
-    def test_build_inputs_from_tweaks(self):
-        """Test building inputs from tweaks."""
+    def test_build_inputs_from_ioputs(self):
+        """Test building inputs from ioputs."""
         component = RunFlowBaseComponent()
 
-        tweaks = {
+        ioputs = {
             "vertex1": {"input_value": "test_input", "type": "chat"},
             "vertex2": {"input_value": "another_input"},
             "vertex3": {"other_param": "value"},  # Should be skipped
         }
 
-        inputs = component._build_inputs_from_tweaks(tweaks)
+        inputs = component._build_inputs_from_ioputs(ioputs)
 
         assert len(inputs) == 2
         assert inputs[0]["components"] == ["vertex1"]
@@ -489,6 +492,22 @@ class TestRunFlowBaseComponentInputOutputHandling:
         assert inputs[0]["type"] == "chat"
         assert inputs[1]["components"] == ["vertex2"]
         assert inputs[1]["input_value"] == "another_input"
+
+    def test_build_inputs_from_ioputs_handles_data_object(self):
+        """Test that _build_inputs_from_ioputs handles Data objects in input_value."""
+        component = RunFlowBaseComponent()
+        data_obj = MagicMock(spec=Data)
+        data_obj.get_text.return_value = "extracted_text"
+
+        ioputs = {
+            "vertex1": {"input_value": data_obj}
+        }
+
+        inputs = component._build_inputs_from_ioputs(ioputs)
+
+        assert len(inputs) == 1
+        assert inputs[0]["input_value"] == "extracted_text"
+        data_obj.get_text.assert_called_once()
 
     def test_format_flow_outputs_creates_output_objects(self):
         """Test that _format_flow_outputs creates Output objects from graph."""
@@ -504,6 +523,7 @@ class TestRunFlowBaseComponentInputOutputHandling:
 
         mock_graph = MagicMock(spec=Graph)
         mock_graph.vertices = [mock_vertex]
+        mock_graph.successor_map = {}
 
         outputs = component._format_flow_outputs(mock_graph)
 
@@ -514,6 +534,24 @@ class TestRunFlowBaseComponentInputOutputHandling:
         assert outputs[0].method == "_resolve_flow_output__vertex_123__output1"
         assert outputs[1].name == f"vertex_123{component.IOPUT_SEP}output2"
         assert outputs[1].method == "_resolve_flow_output__vertex_123__output2"
+
+    def test_format_flow_outputs_skips_vertices_with_successors(self):
+        """Test that _format_flow_outputs skips vertices with outgoing edges."""
+        component = RunFlowBaseComponent()
+
+        mock_vertex = MagicMock()
+        mock_vertex.id = "vertex_123"
+        mock_vertex.is_output = True
+        mock_vertex.outputs = [{"name": "output1"}]
+
+        mock_graph = MagicMock(spec=Graph)
+        mock_graph.vertices = [mock_vertex]
+        # Simulate successor map with outgoing edge
+        mock_graph.successor_map = {"vertex_123": ["some_other_vertex"]}
+
+        outputs = component._format_flow_outputs(mock_graph)
+
+        assert len(outputs) == 0
 
     def test_delete_fields_with_list(self):
         """Test deleting fields from build_config with list."""
@@ -553,54 +591,6 @@ class TestRunFlowBaseComponentInputOutputHandling:
         assert updated[2]["input_types"] == []  # Should be added as empty list
 
 
-class TestRunFlowBaseComponentPreRunSetup:
-    """Test pre-run setup methods."""
-
-    def test_pre_run_setup_resets_last_run_outputs(self):
-        """Test that _pre_run_setup resets _last_run_outputs."""
-        from types import SimpleNamespace
-
-        component = RunFlowBaseComponent()
-        component._last_run_outputs = [MagicMock()]
-        component._attributes = {}
-        component._vertex = SimpleNamespace(data={"node": {}})
-
-        component._pre_run_setup()
-
-        assert component._last_run_outputs is None
-
-    def test_pre_run_setup_builds_flow_tweak_data(self):
-        """Test that _pre_run_setup builds flow_tweak_data."""
-        from types import SimpleNamespace
-
-        component = RunFlowBaseComponent()
-        component._attributes = {
-            "vertex1~param1": "value1",
-            "vertex1~param2": "value2",
-        }
-        component._vertex = SimpleNamespace(data={"node": {}})
-
-        component._pre_run_setup()
-
-        assert hasattr(component, "flow_tweak_data")
-        assert "vertex1" in component.flow_tweak_data
-        assert component.flow_tweak_data["vertex1"]["param1"] == "value1"
-
-    def test_pre_run_setup_builds_flow_run_inputs(self):
-        """Test that _pre_run_setup builds _flow_run_inputs."""
-        from types import SimpleNamespace
-
-        component = RunFlowBaseComponent()
-        component._attributes = {
-            "vertex1~input_value": "test_input",
-        }
-        component._vertex = SimpleNamespace(data={"node": {}})
-
-        component._pre_run_setup()
-
-        assert hasattr(component, "_flow_run_inputs")
-        assert len(component._flow_run_inputs) == 1
-        assert component._flow_run_inputs[0]["components"] == ["vertex1"]
 
 
 class TestRunFlowBaseComponentOutputMethods:
@@ -646,6 +636,7 @@ class TestRunFlowBaseComponentToolGeneration:
 
         mock_graph = MagicMock(spec=Graph)
         mock_graph.description = "Test flow description"
+        mock_graph.successor_map = {}
 
         mock_vertex = MagicMock()
         mock_vertex.id = "vertex_1"
@@ -670,3 +661,134 @@ class TestRunFlowBaseComponentToolGeneration:
                 assert description == "Test flow description"
                 assert len(fields) == 1
                 assert fields[0]["name"] == "input1"
+
+class TestRunFlowBaseComponentTweakData:
+    """Test tweak data building methods."""
+
+    def test_build_flow_tweak_data_merges_tool_tweaks(self):
+        """Test that _build_flow_tweak_data merges tool tweaks correctly."""
+        component = RunFlowBaseComponent()
+
+        # Base attributes
+        component._attributes = {
+            "vertex1~param1": "value1",
+            "vertex1~param2": "value2",
+            "flow_tweak_data": {
+                "vertex1~param1": "new_value1", # Should override
+                "vertex2~param3": "value3", # Should be added
+            }
+        }
+
+        tweak_data = component._build_flow_tweak_data()
+
+        assert "vertex1" in tweak_data
+        assert tweak_data["vertex1"]["param1"] == "new_value1"
+        assert tweak_data["vertex1"]["param2"] == "value2"
+        assert "vertex2" in tweak_data
+        assert tweak_data["vertex2"]["param3"] == "value3"
+
+
+class TestRunFlowBaseComponentUpdateOutputs:
+    """Test update_outputs method."""
+
+    @pytest.mark.asyncio
+    async def test_update_outputs_with_flow_name_selected(self):
+        """Test update_outputs when flow_name_selected is changed."""
+        component = RunFlowBaseComponent()
+        frontend_node = {
+            "template": {
+                "flow_name_selected": {
+                    "selected_metadata": {
+                        "id": "flow_id",
+                        "updated_at": "timestamp"
+                    }
+                }
+            }
+        }
+        mock_graph = MagicMock(spec=Graph)
+        mock_output = MagicMock(spec=Output)
+        mock_output.model_dump.return_value = {"name": "output1"}
+
+        with (
+            patch.object(component, "get_graph", new_callable=AsyncMock) as mock_get_graph,
+            patch.object(component, "_format_flow_outputs") as mock_format_outputs,
+            patch.object(component, "_sync_flow_outputs") as mock_sync_outputs,
+        ):
+            mock_get_graph.return_value = mock_graph
+            mock_format_outputs.return_value = [mock_output]
+
+            result = await component.update_outputs(frontend_node, "flow_name_selected", "new_flow")
+
+            assert result["outputs"] == [{"name": "output1"}]
+            mock_get_graph.assert_called_once()
+            mock_format_outputs.assert_called_once_with(mock_graph)
+            mock_sync_outputs.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_update_outputs_with_tool_mode_false(self):
+        """Test update_outputs when tool_mode is set to False."""
+        component = RunFlowBaseComponent()
+        frontend_node = {
+            "template": {
+                "flow_name_selected": {
+                    "value": "test_flow",
+                    "selected_metadata": {
+                        "id": "flow_id",
+                        "updated_at": "timestamp"
+                    }
+                }
+            }
+        }
+        mock_graph = MagicMock(spec=Graph)
+        mock_output = MagicMock(spec=Output)
+        mock_output.model_dump.return_value = {"name": "output1"}
+
+        with (
+            patch.object(component, "get_graph", new_callable=AsyncMock) as mock_get_graph,
+            patch.object(component, "_format_flow_outputs") as mock_format_outputs,
+            patch.object(component, "_sync_flow_outputs"),
+        ):
+            mock_get_graph.return_value = mock_graph
+            mock_format_outputs.return_value = [mock_output]
+
+            result = await component.update_outputs(frontend_node, "tool_mode", field_value=False)
+
+            assert result["outputs"] == [{"name": "output1"}]
+            mock_get_graph.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_update_outputs_ignored_fields(self):
+        """Test update_outputs with fields that should be ignored."""
+        component = RunFlowBaseComponent()
+        frontend_node = {}
+
+        result = await component.update_outputs(frontend_node, "other_field", "value")
+
+        assert result == frontend_node
+
+
+class TestRunFlowBaseComponentTweaks:
+    """Test tweak processing methods."""
+
+    def test_process_tweaks_on_graph(self):
+        """Test _process_tweaks_on_graph applies tweaks to vertices."""
+        component = RunFlowBaseComponent()
+        graph = MagicMock(spec=Graph)
+        vertex1 = MagicMock(spec=Vertex)
+        vertex1.id = "vertex1"
+        vertex2 = MagicMock(spec=Vertex)
+        vertex2.id = "vertex2"
+        graph.vertices = [vertex1, vertex2]
+
+        tweaks = {
+            "vertex1": {"param": "value", "code": "ignored"},
+            "vertex3": {"param": "ignored"},  # Not in graph
+        }
+
+        component._process_tweaks_on_graph(graph, tweaks)
+
+        vertex1.update_raw_params.assert_called_once()
+        call_args = vertex1.update_raw_params.call_args[0][0]
+        assert call_args == {"param": "value"}
+        assert "code" not in call_args
+        vertex2.update_raw_params.assert_not_called()
