@@ -511,3 +511,304 @@ async def test_webhook_event_manager_multiple_subscribers():
     # Cleanup
     await manager.unsubscribe(flow_id, queue1)
     await manager.unsubscribe(flow_id, queue2)
+
+
+# =============================================================================
+# UNIT TESTS - PURE FUNCTIONS (NO DB, NO FIXTURES)
+# =============================================================================
+
+
+class TestGetVertexIdsFromFlow:
+    """Unit tests for _get_vertex_ids_from_flow helper function."""
+
+    def test_returns_empty_list_when_flow_data_is_none(self):
+        """Should return empty list when flow.data is None."""
+        from unittest.mock import Mock
+
+        from langflow.api.v1.endpoints import _get_vertex_ids_from_flow
+
+        flow = Mock()
+        flow.data = None
+
+        result = _get_vertex_ids_from_flow(flow)
+
+        assert result == []
+
+    def test_returns_empty_list_when_nodes_is_empty(self):
+        """Should return empty list when nodes array is empty."""
+        from unittest.mock import Mock
+
+        from langflow.api.v1.endpoints import _get_vertex_ids_from_flow
+
+        flow = Mock()
+        flow.data = {"nodes": []}
+
+        result = _get_vertex_ids_from_flow(flow)
+
+        assert result == []
+
+    def test_returns_empty_list_when_nodes_key_missing(self):
+        """Should return empty list when nodes key is missing."""
+        from unittest.mock import Mock
+
+        from langflow.api.v1.endpoints import _get_vertex_ids_from_flow
+
+        flow = Mock()
+        flow.data = {"other_key": "value"}
+
+        result = _get_vertex_ids_from_flow(flow)
+
+        assert result == []
+
+    def test_extracts_vertex_ids_from_nodes(self):
+        """Should extract all vertex IDs from nodes."""
+        from unittest.mock import Mock
+
+        from langflow.api.v1.endpoints import _get_vertex_ids_from_flow
+
+        flow = Mock()
+        flow.data = {
+            "nodes": [
+                {"id": "vertex-1", "type": "ChatInput"},
+                {"id": "vertex-2", "type": "ChatOutput"},
+                {"id": "vertex-3", "type": "LLM"},
+            ]
+        }
+
+        result = _get_vertex_ids_from_flow(flow)
+
+        assert result == ["vertex-1", "vertex-2", "vertex-3"]
+
+    def test_skips_nodes_without_id(self):
+        """Should skip nodes that don't have an id field."""
+        from unittest.mock import Mock
+
+        from langflow.api.v1.endpoints import _get_vertex_ids_from_flow
+
+        flow = Mock()
+        flow.data = {
+            "nodes": [
+                {"id": "vertex-1", "type": "ChatInput"},
+                {"type": "NoIdNode"},  # No id
+                {"id": None, "type": "NullId"},  # None id
+                {"id": "vertex-2", "type": "ChatOutput"},
+            ]
+        }
+
+        result = _get_vertex_ids_from_flow(flow)
+
+        assert result == ["vertex-1", "vertex-2"]
+
+
+# =============================================================================
+# UNIT TESTS - SIMPLE_RUN_FLOW_TASK (WITH MOCKS)
+# =============================================================================
+
+
+class TestSimpleRunFlowTask:
+    """Unit tests for simple_run_flow_task function."""
+
+    async def test_emits_vertices_sorted_event_when_emit_events_true(self):
+        """Should emit vertices_sorted event when emit_events=True and has listeners."""
+        from unittest.mock import AsyncMock, Mock, patch
+
+        from langflow.api.v1.endpoints import simple_run_flow_task
+
+        flow = Mock()
+        flow.id = "test-flow-id"
+        flow.data = {"nodes": [{"id": "v1"}, {"id": "v2"}]}
+
+        input_request = Mock()
+
+        with (
+            patch("langflow.api.v1.endpoints.simple_run_flow", new_callable=AsyncMock) as mock_run,
+            patch("langflow.api.v1.endpoints.webhook_event_manager") as mock_manager,
+        ):
+            mock_run.return_value = {"result": "success"}
+            mock_manager.emit = AsyncMock()
+
+            await simple_run_flow_task(
+                flow=flow,
+                input_request=input_request,
+                emit_events=True,
+                flow_id="test-flow-id",
+                run_id="run-123",
+            )
+
+            # Should emit vertices_sorted
+            mock_manager.emit.assert_any_call(
+                "test-flow-id",
+                "vertices_sorted",
+                {"ids": ["v1", "v2"], "to_run": ["v1", "v2"], "run_id": "run-123"},
+            )
+
+            # Should emit end with success
+            mock_manager.emit.assert_any_call(
+                "test-flow-id",
+                "end",
+                {"run_id": "run-123", "success": True},
+            )
+
+    async def test_does_not_emit_events_when_emit_events_false(self):
+        """Should not emit events when emit_events=False."""
+        from unittest.mock import AsyncMock, Mock, patch
+
+        from langflow.api.v1.endpoints import simple_run_flow_task
+
+        flow = Mock()
+        flow.id = "test-flow-id"
+        flow.data = {"nodes": [{"id": "v1"}]}
+
+        input_request = Mock()
+
+        with (
+            patch("langflow.api.v1.endpoints.simple_run_flow", new_callable=AsyncMock) as mock_run,
+            patch("langflow.api.v1.endpoints.webhook_event_manager") as mock_manager,
+        ):
+            mock_run.return_value = {"result": "success"}
+            mock_manager.emit = AsyncMock()
+
+            await simple_run_flow_task(
+                flow=flow,
+                input_request=input_request,
+                emit_events=False,
+                flow_id="test-flow-id",
+            )
+
+            # Should NOT emit any events
+            mock_manager.emit.assert_not_called()
+
+    async def test_emits_error_event_on_exception(self):
+        """Should emit end event with error when exception occurs."""
+        from unittest.mock import AsyncMock, Mock, patch
+
+        from langflow.api.v1.endpoints import simple_run_flow_task
+
+        flow = Mock()
+        flow.id = "test-flow-id"
+        flow.data = {"nodes": [{"id": "v1"}]}
+
+        input_request = Mock()
+
+        with (
+            patch("langflow.api.v1.endpoints.simple_run_flow", new_callable=AsyncMock) as mock_run,
+            patch("langflow.api.v1.endpoints.webhook_event_manager") as mock_manager,
+            patch("langflow.api.v1.endpoints.logger") as mock_logger,
+        ):
+            mock_run.side_effect = Exception("Test error")
+            mock_manager.emit = AsyncMock()
+            mock_logger.aexception = AsyncMock()
+
+            result = await simple_run_flow_task(
+                flow=flow,
+                input_request=input_request,
+                emit_events=True,
+                flow_id="test-flow-id",
+                run_id="run-456",
+            )
+
+            # Should return None on error
+            assert result is None
+
+            # Should emit end with error
+            mock_manager.emit.assert_called_with(
+                "test-flow-id",
+                "end",
+                {"run_id": "run-456", "success": False, "error": "Test error"},
+            )
+
+    async def test_logs_telemetry_on_success(self):
+        """Should log telemetry on successful execution."""
+        from unittest.mock import AsyncMock, Mock, patch
+
+        from langflow.api.v1.endpoints import simple_run_flow_task
+
+        flow = Mock()
+        flow.id = "test-flow-id"
+        flow.data = {"nodes": []}
+
+        input_request = Mock()
+        telemetry_service = Mock()
+        telemetry_service.log_package_run = AsyncMock()
+
+        with patch("langflow.api.v1.endpoints.simple_run_flow", new_callable=AsyncMock) as mock_run:
+            mock_run.return_value = {"result": "success"}
+
+            await simple_run_flow_task(
+                flow=flow,
+                input_request=input_request,
+                telemetry_service=telemetry_service,
+                start_time=0.0,
+                run_id="run-789",
+            )
+
+            # Should log telemetry
+            telemetry_service.log_package_run.assert_called_once()
+            call_args = telemetry_service.log_package_run.call_args[0][0]
+            assert call_args.run_is_webhook is True
+            assert call_args.run_success is True
+
+
+# =============================================================================
+# UNIT TESTS - WEBHOOK_EVENTS_STREAM AUTHENTICATION (WITH MOCKS)
+# =============================================================================
+
+
+class TestWebhookEventsStreamAuth:
+    """Unit tests for webhook_events_stream authentication."""
+
+    async def test_calls_get_webhook_user_for_authentication(self):
+        """Should call get_webhook_user to validate authentication."""
+        from unittest.mock import AsyncMock, Mock, patch
+
+        from langflow.api.v1.endpoints import webhook_events_stream
+
+        flow = Mock()
+        flow.id = "test-flow-id"
+        flow.name = "Test Flow"
+
+        request = Mock()
+        request.is_disconnected = AsyncMock(return_value=True)  # Disconnect immediately
+
+        with (
+            patch("langflow.api.v1.endpoints.get_webhook_user", new_callable=AsyncMock) as mock_auth,
+            patch("langflow.api.v1.endpoints.webhook_event_manager") as mock_manager,
+        ):
+            mock_auth.return_value = Mock()  # Return a user
+            mock_manager.subscribe = AsyncMock(return_value=asyncio.Queue())
+            mock_manager.unsubscribe = AsyncMock()
+
+            response = await webhook_events_stream(
+                flow_id_or_name="test-flow-id",
+                flow=flow,
+                request=request,
+            )
+
+            # Should call get_webhook_user with flow_id_or_name and request
+            mock_auth.assert_called_once_with("test-flow-id", request)
+
+    async def test_raises_403_when_auth_fails(self):
+        """Should propagate 403 error when authentication fails."""
+        from unittest.mock import AsyncMock, Mock, patch
+
+        from fastapi import HTTPException
+
+        from langflow.api.v1.endpoints import webhook_events_stream
+
+        flow = Mock()
+        flow.id = "test-flow-id"
+
+        request = Mock()
+
+        with patch("langflow.api.v1.endpoints.get_webhook_user", new_callable=AsyncMock) as mock_auth:
+            mock_auth.side_effect = HTTPException(status_code=403, detail="API key required")
+
+            with pytest.raises(HTTPException) as exc_info:
+                await webhook_events_stream(
+                    flow_id_or_name="test-flow-id",
+                    flow=flow,
+                    request=request,
+                )
+
+            assert exc_info.value.status_code == 403
+            assert "API key required" in exc_info.value.detail
