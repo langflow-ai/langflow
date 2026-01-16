@@ -76,7 +76,6 @@ dependencies = [
     "assemblyai>=0.33.0,<1.0.0",
     "fastapi-pagination>=0.13.1,<1.0.0",
     "defusedxml>=0.7.1,<1.0.0",
-    "pypdf~=5.1.0",
     "validators>=0.34.0,<1.0.0",
     "networkx>=3.4.2,<4.0.0",
     "json-repair>=0.30.3,<1.0.0",
@@ -194,7 +193,7 @@ local = [
 # Individual database providers
 couchbase = ["couchbase>=4.2.1"]
 cassandra = ["cassio>=0.1.7"]
-clickhouse = ["clickhouse-connect==0.7.19"]
+
 mongodb = ["pymongo==4.10.1"]
 supabase = ["supabase>=2.6.0,<3.0.0"]
 redis = ["redis>=5.2.1,<6.0.0"]
