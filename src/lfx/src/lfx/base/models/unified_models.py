@@ -62,22 +62,27 @@ def get_model_provider_metadata():
         "OpenAI": {
             "icon": "OpenAI",
             "variable_name": "OPENAI_API_KEY",
+            "api_docs_url": "https://platform.openai.com/docs/overview",
         },
         "Anthropic": {
             "icon": "Anthropic",
             "variable_name": "ANTHROPIC_API_KEY",
+            "api_docs_url": "https://console.anthropic.com/docs",
         },
         "Google Generative AI": {
             "icon": "GoogleGenerativeAI",
             "variable_name": "GOOGLE_API_KEY",
+            "api_docs_url": "https://aistudio.google.com/app/apikey",
         },
         "Ollama": {
             "icon": "Ollama",
-            "variable_name": "OLLAMA_BASE_URL",  # Ollama is local but can have custom URL
+            "variable_name": "OLLAMA_BASE_URL",
+            "api_docs_url": "https://ollama.com/",
         },
         "IBM WatsonX": {
-            "icon": "WatsonxAI",
+            "icon": "IBM",
             "variable_name": "WATSONX_APIKEY",
+            "api_docs_url": "https://www.ibm.com/products/watsonx",
         },
     }
 
@@ -319,9 +324,18 @@ def validate_model_provider_key(variable_name: str, api_key: str) -> None:
             llm = ChatGoogleGenerativeAI(google_api_key=api_key, model=first_model, max_tokens=1)
             llm.invoke("test")
         elif provider == "IBM WatsonX":
-            # WatsonX validation would require additional parameters
-            # Skip for now as it needs project_id, url, etc.
-            return
+            from langchain_ibm import ChatWatsonx
+
+            default_url = "https://us-south.ml.cloud.ibm.com"
+            llm = ChatWatsonx(
+                apikey=api_key,
+                url=default_url,
+                model_id=first_model,
+                project_id="dummy_project_for_validation",  # Dummy project_id for validation
+                params={"max_new_tokens": 1},
+            )
+            llm.invoke("test")
+
         elif provider == "Ollama":
             # Ollama is local, just verify the URL is accessible
             import requests
@@ -1010,6 +1024,9 @@ def update_model_options_in_build_config(
         time_since_cache = time.time() - component.cache[cache_timestamp_key]
         cache_expired = time_since_cache > cache_ttl
 
+    # Check if is_refresh flag is set in build_config (from frontend refresh request)
+    is_refresh_request = build_config.get("is_refresh", False)
+
     # Check if we need to refresh
     should_refresh = (
         field_name == "api_key"  # API key changed
@@ -1017,6 +1034,7 @@ def update_model_options_in_build_config(
         or field_name == "model"  # Model field refresh button clicked
         or cache_key not in component.cache  # Cache miss
         or cache_expired  # Cache expired
+        or is_refresh_request  # Frontend requested a refresh
     )
 
     if should_refresh:
@@ -1036,9 +1054,13 @@ def update_model_options_in_build_config(
     cached = component.cache.get(cache_key, {"options": []})
     build_config["model"]["options"] = cached["options"]
 
-    # Set default value on initial load when field is empty
-    # Fetch from user's default model setting in the database
-    if not field_value or field_value == "":
+    # Set default value on initial load when model field is empty
+    # Only set default when: initial load (field_name is None) or model field is being set and is empty
+    # Get the current model value to check if it's empty
+    current_model_value = build_config.get("model", {}).get("value")
+    model_is_empty = not current_model_value or current_model_value == "" or current_model_value == []
+    should_set_default = field_name is None or (field_name == "model" and model_is_empty)
+    if should_set_default:
         options = cached.get("options", [])
         if options:
             # Determine model type based on cache_key_prefix
