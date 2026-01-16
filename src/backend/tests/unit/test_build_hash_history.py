@@ -1,11 +1,11 @@
-import os
 import sys
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
 # Add the scripts directory to the Python path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../scripts")))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent.parent / "scripts"))
 
 # Now we can import the script
 from build_hash_history import _import_components, main, update_history
@@ -73,7 +73,7 @@ def test_update_history_scenarios():
     assert history[component_name]["versions"]["0.5.0"] == code_hash_v1
 
     # Scenario 6: Overwriting a newer version with an older one should raise an error
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="already has a version"):
         update_history(history, component_name, code_hash_v1, "0.4.0")
 
 
@@ -113,8 +113,8 @@ def test_all_real_component_names_are_unique():
     modules_dict, _ = _import_components()  # Load real components
 
     component_names = []
-    for _, components_dict in modules_dict.items():
-        for component_name in components_dict.keys():
+    for components_dict in modules_dict.values():
+        for component_name in components_dict:
             component_names.append(component_name)
 
     assert len(component_names) == len(set(component_names))

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import argparse
 import asyncio
 from pathlib import Path
@@ -61,9 +62,11 @@ def update_history(history: dict, component_name: str, code_hash: str, current_v
 
     if component_name not in history:
         print(f"Component {component_name} not found in history. Adding...")
-        print(
-            f"WARNING - Ensure that Component {component_name} is a NEW Component. If not, this is an error and will lose hash history for this component."
+        warning_msg = (
+            f"WARNING - Ensure that Component {component_name} is a NEW Component. "
+            "If not, this is an error and will lose hash history for this component."
         )
+        print(warning_msg)
         history[component_name] = {}
         history[component_name]["versions"] = {version_key: code_hash}
     else:
@@ -72,7 +75,10 @@ def update_history(history: dict, component_name: str, code_hash: str, current_v
             parsed_version = Version(v)
             if parsed_version > current_version_parsed:
                 # If this happens, we are overwriting a previous version.
-                msg = f"ERROR - Component {component_name} already has a version {v} that is greater than the current version {current_version}."
+                msg = (
+                    f"ERROR - Component {component_name} already has a version {v} that is greater than the current "
+                    f"version {current_version}."
+                )
                 raise ValueError(msg)
         history[component_name]["versions"][version_key] = code_hash
 
@@ -90,12 +96,14 @@ def main(argv=None):
 
     if args.nightly:
         if "dev" not in str(current_version):
-            raise ValueError("Cannot update nightly hash history for a non-dev version.")
+            err = "Cannot update nightly hash history for a non-dev version."
+            raise ValueError(err)
         history_file = NIGHTLY_HISTORY_FILE
         print("Updating nightly hash history...")
     else:
         if "dev" in str(current_version):
-            raise ValueError("Cannot update stable hash history for a dev version.")
+            err = "Cannot update stable hash history for a dev version."
+            raise ValueError(err)
         history_file = STABLE_HISTORY_FILE
         print("Updating stable hash history...")
 
