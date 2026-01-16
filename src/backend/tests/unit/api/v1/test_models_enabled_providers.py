@@ -98,7 +98,10 @@ async def test_enabled_providers_after_credential_creation(client: AsyncClient, 
     assert create_response.status_code == status.HTTP_201_CREATED
 
     # Check status after credential creation
-    after_response = await client.get("api/v1/models/enabled_providers", headers=logged_in_headers)
+    # Mock validation for enabled_providers endpoint as well
+    with mock.patch("lfx.base.models.unified_models.validate_model_provider_key") as mock_validate:
+        mock_validate.return_value = None
+        after_response = await client.get("api/v1/models/enabled_providers", headers=logged_in_headers)
     after_result = after_response.json()
 
     assert after_response.status_code == status.HTTP_200_OK
