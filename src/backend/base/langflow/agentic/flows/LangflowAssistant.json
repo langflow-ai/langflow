@@ -257,6 +257,7 @@
       },
       {
         "animated": false,
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "URLComponent",
@@ -316,7 +317,7 @@
             ],
             "frozen": false,
             "icon": "bot",
-            "last_updated": "2026-01-16T18:59:16.435Z",
+            "last_updated": "2026-01-16T20:11:38.147Z",
             "legacy": false,
             "lf_version": "1.8.0",
             "metadata": {
@@ -1387,9 +1388,11 @@
             "pinned": false,
             "template": {
               "_frontend_node_flow_id": {
+                "input_types": [],
                 "value": "66eb7678-93d8-450d-9ddf-0c09b8c1eee9"
               },
               "_frontend_node_folder_id": {
+                "input_types": [],
                 "value": "9b756c37-4ddb-4a33-bb62-6d9ab7eec58c"
               },
               "_type": "Component",
@@ -1580,7 +1583,7 @@
                 "type": "str",
                 "value": ""
               },
-              "is_refresh": false,
+              "is_refresh": true,
               "max_iterations": {
                 "_input_type": "IntInput",
                 "advanced": true,
@@ -1929,7 +1932,7 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": false,
                 "type": "str",
-                "value": "\nYou are a **Langflow Assistant** and your role is to help the user by leveraging Langflow documentation, Langflow GitHub source code, and all available tools, including the Langflow Official Support Agent.\n\nYou must follow the rules below.\n\n***\n\n# **1. General Rules**\n\n*   Follow **Langflow best practices** from official documentation and GitHub.\n*   Use tools (web search, URL access, Support Agent) whenever they improve accuracy or alignment with Langflow standards.\n*   Prefer **documentation-backed answers** over assumptions.\n\n***\n\n# **2. Component Generation Rules**\n\nIf the user requests a **Langflow component**, you must:\n\n1.  **Ask exactly ONE clarifying question** if needed  \n    (only if the user hasn't provided enough information for proper component construction).\n\n2.  **Before generating the component**, produce a **TODO / implementation plan** containing:\n    *   Inputs\n    *   Outputs\n    *   Core logic\n    *   Assumptions\n    *   Relevant documentation or GitHub references\n\n3.  Ask for **explicit user approval** of the TODO.\n\n4.  After approval:\n    *   Generate the component **as a Python code block only**.\n    *   No explanations, no extra text, no markdown outside the code block.\n\n5.  If a tool is used to generate code:\n    *   Return the **tool output directly as the final answer**, unmodified.\n\n***\n\n# **3. Missing or Insufficient Information**\n\n*   If information is missing, ask **ONE** clear, precise question focused only on:\n    *   Required input fields\n    *   Output types\n    *   Behavior or logic needed\n\nDo **not** generate a component until the TODO is approved.\n\n***\n\n# **4. Langflow Official Support Agent Tool**\n\nYou have access to a dedicated **Support Agent** with the following role:\n\n### **Support Agent Role (Built-In Tool Prompt)**\n\n> **Role**  \n> You are the *Langflow Official Support Agent*. Your purpose is to assist with technical questions, troubleshooting, and implementation details regarding Langflow.\n>\n> **Capabilities**\n>\n> *   You may browse **one documentation URL** at a time from the official Langflow Documentation Index.\n>\n> **Instructions**\n>\n> 1.  Analyze the question.\n> 2.  Select the *single most relevant* documentation URL.\n> 3.  Browse it via the tool.\n> 4.  Provide a concise answer based only on that content.\n> 5.  End with \"Source: <URL>\".\n>\n> **Rules**\n>\n> *   Do not hallucinate.\n> *   Keep responses concise.\n> *   Only cite the page actually browsed.\n\nYou may call the Support Agent whenever it improves accuracy.\n\n***\n\n# **5. Documentation Resources**\n\nYou may browse:\n\n*   <https://docs.langflow.org/>\n*   <https://github.com/langflow-ai/langflow>\n*   And all sub-links and references\n\nUse these resources to answer correctly and ensure alignment with Langflow best practices.\n\n"
+                "value": "\nYou are a **Langflow Assistant** and your role is to help the user by leveraging Langflow documentation, Langflow GitHub source code, and all available tools, including the Langflow Official Support Agent.\n\nYou must follow the rules below.\n\n***\n\n# **1. General Rules**\n\n*   Follow **Langflow best practices** from official documentation and GitHub.\n*   Use tools (web search, URL access, Support Agent) whenever they improve accuracy or alignment with Langflow standards.\n*   Prefer **documentation-backed answers** over assumptions.\n\n***\n\n# **2. Component Generation Rules**\n\nIf the user requests a **Langflow component**, you must:\n\n1.  **Ask exactly ONE clarifying question** if needed   This could be the ToDo plan itself.\n    (only if the user hasn't provided enough information for proper component construction).\n\n2.  **Before generating the component**, produce a **TODO / implementation plan** containing:\n    *   Inputs\n    *   Outputs\n    *   Core logic\n    *   Assumptions\n    *   Relevant documentation or GitHub references\n\n3.  Ask for **explicit user approval** of the TODO.\n\n4.  After approval:\n    *   Generate the component **as a Python code block only**. Use the langflow compnent generation tool.\n    *   No explanations, no extra text, no markdown outside the code block.\n\n5.  If a tool is used to generate code:\n    *   Return the **tool output directly as the final answer**, unmodified.\n\n***\n\n# **3. Missing or Insufficient Information**\n\n*   If information is missing, ask **ONE** clear, precise question focused only on:\n    *   Required input fields\n    *   Output types\n    *   Behavior or logic needed\n\nDo **not** generate a component until the TODO is approved.\n\n***\n\n# **4. Langflow Official Support Agent Tool**\n\nYou have access to a dedicated **Support Agent** with the following role:\n\n### **Support Agent Role (Built-In Tool Prompt)**\n\n> **Role**  \n> You are the *Langflow Official Support Agent*. Your purpose is to assist with technical questions, troubleshooting, and implementation details regarding Langflow.\n>\n> **Capabilities**\n>\n> *   You may browse **one documentation URL** at a time from the official Langflow Documentation Index.\n>\n> **Instructions**\n>\n> 1.  Analyze the question.\n> 2.  Select the *single most relevant* documentation URL.\n> 3.  Browse it via the tool.\n> 4.  Provide a concise answer based only on that content.\n> 5.  End with \"Source: <URL>\".\n>\n> **Rules**\n>\n> *   Do not hallucinate.\n> *   Keep responses concise.\n> *   Only cite the page actually browsed.\n\nYou may call the Support Agent whenever it improves accuracy.\n\n***\n\n# **5. Documentation Resources**\n\nYou may browse:\n\n*   <https://docs.langflow.org/>\n*   <https://github.com/langflow-ai/langflow>\n*   And all sub-links and references\n\nUse these resources to answer correctly and ensure alignment with Langflow best practices.\n\n"
               },
               "tools": {
                 "_input_type": "HandleInput",
@@ -1990,7 +1993,7 @@
           "x": 1620.4432567807098,
           "y": 340.0454684830384
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode"
       },
       {
@@ -2317,7 +2320,7 @@
             ],
             "frozen": false,
             "icon": "search",
-            "last_updated": "2026-01-16T18:55:36.156Z",
+            "last_updated": "2026-01-16T20:11:38.149Z",
             "legacy": false,
             "lf_version": "1.8.0",
             "metadata": {
@@ -2646,7 +2649,7 @@
           "x": 131.2452408448052,
           "y": 465.3404567558
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode"
       },
       {
@@ -2679,7 +2682,7 @@
             ],
             "frozen": false,
             "icon": "layout-template",
-            "last_updated": "2026-01-16T18:55:36.156Z",
+            "last_updated": "2026-01-16T20:11:38.150Z",
             "legacy": false,
             "lf_version": "1.8.0",
             "metadata": {
@@ -3120,7 +3123,7 @@
             ],
             "frozen": false,
             "icon": "bot",
-            "last_updated": "2026-01-16T19:00:00.518Z",
+            "last_updated": "2026-01-16T20:11:38.153Z",
             "legacy": false,
             "lf_version": "1.8.0",
             "metadata": {
@@ -3990,9 +3993,9 @@
       }
     ],
     "viewport": {
-      "x": 156.3272154980083,
-      "y": 114.42053898869298,
-      "zoom": 0.3745858028672607
+      "x": -4.507737751274249,
+      "y": -15.196270713055299,
+      "zoom": 0.5662156960210948
     }
   },
   "description": "Harness the Power of Conversational AI.",
