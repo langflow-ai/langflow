@@ -19,9 +19,6 @@ test(
     await navigateSettingsPages(page, "Settings", "MCP Servers");
 
     expect(await page.getByTestId("mcp_server_name_0").textContent()).toContain(
-      "langflow-agentic",
-    );
-    expect(await page.getByTestId("mcp_server_name_1").textContent()).toContain(
       "lf-starter_project",
     );
 
@@ -35,9 +32,6 @@ test(
     await navigateSettingsPages(page, "Settings", "MCP Servers");
 
     expect(await page.getByTestId("mcp_server_name_0").textContent()).toContain(
-      "langflow-agentic",
-    );
-    expect(await page.getByTestId("mcp_server_name_1").textContent()).toContain(
       "lf-starter_project",
     );
 
@@ -72,9 +66,6 @@ test(
     await navigateSettingsPages(page, "Settings", "MCP Servers");
 
     expect(await page.getByTestId("mcp_server_name_0").textContent()).toContain(
-      "langflow-agentic",
-    );
-    expect(await page.getByTestId("mcp_server_name_1").textContent()).toContain(
       "lf-starter_project",
     );
 
@@ -100,9 +91,6 @@ test(
     await navigateSettingsPages(page, "Settings", "MCP Servers");
 
     expect(await page.getByTestId("mcp_server_name_0").textContent()).toContain(
-      "langflow-agentic",
-    );
-    expect(await page.getByTestId("mcp_server_name_1").textContent()).toContain(
       "lf-starter_project",
     );
     expect(
