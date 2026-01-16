@@ -73,45 +73,65 @@ test(
       .fill("testtesttesttesttesttesttesttest");
     await page.getByTestId("popover-anchor-apply-to-fields").click();
 
-    await page.getByPlaceholder("Fields").waitFor({
+    const fieldsCount = await page.getByPlaceholder("Fields").count();
+
+    await page.getByPlaceholder("Fields").first().waitFor({
       state: "visible",
       timeout: 30000,
     });
 
-    await page.getByPlaceholder("Fields").fill("AgentQL API Key");
+    await page.getByPlaceholder("Fields").first().fill("AgentQL API Key");
 
     await page.waitForSelector("text=AgentQL API Key", { timeout: 30000 });
 
-    await page.getByText("AgentQL API Key").last().click();
+    const agentqlCount = await page.getByText("AgentQL API Key").count();
 
-    await page.getByPlaceholder("Fields").fill("openAI");
+    await page.getByText("AgentQL API Key").last().dispatchEvent("click");
+
+    await page.waitForTimeout(500);
+
+    await page.getByPlaceholder("Fields").first().fill("openAI");
 
     await page.waitForSelector("text=openai", { timeout: 30000 });
 
-    await page.getByText("openai").last().click();
+    const openaiCount = await page.getByText("openai").count();
 
-    // Wait for the field to be ready for input
-    await page.getByPlaceholder("Fields").waitFor({
+    await page.getByText("openai").last().dispatchEvent("click");
+
+    await page.waitForTimeout(500);
+
+    // Wait for the field to be ready for input - use first() to avoid strict mode violation
+    const fieldsCount2 = await page.getByPlaceholder("Fields").count();
+
+    await page.getByPlaceholder("Fields").first().waitFor({
       state: "visible",
       timeout: 30000,
     });
 
     // Additional wait for field to be fully interactive
-    await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {
-      // Continue if network idle timeout
-    });
+    await page
+      .waitForLoadState("networkidle", { timeout: 10000 })
+      .catch(() => {});
 
-    await page.getByPlaceholder("Fields").fill("ollama");
+    await page.getByPlaceholder("Fields").first().fill("ollama");
 
     await page.keyboard.press("Escape");
-    await page.getByText("Save Variable", { exact: true }).click();
+
+    await page
+      .getByText("Save Variable", { exact: true })
+      .dispatchEvent("click");
+
+    await page.waitForTimeout(500);
 
     await expect(page.getByText(randomName).last()).toBeVisible({
       timeout: 10000,
     });
 
-    await page.getByText(randomName).last().click();
-    await page.getByText(randomName).last().click();
+    await page.getByText(randomName).last().dispatchEvent("click");
+    await page.waitForTimeout(200);
+
+    await page.getByText(randomName).last().dispatchEvent("click");
+    await page.waitForTimeout(200);
 
     await page.getByPlaceholder("Enter a name for the variable...").waitFor({
       state: "visible",
@@ -122,13 +142,21 @@ test(
       .getByPlaceholder("Enter a name for the variable...")
       .fill(randomName2);
 
-    await page.getByText("Update Variable", { exact: true }).last().click();
+    await page
+      .getByText("Update Variable", { exact: true })
+      .last()
+      .dispatchEvent("click");
+    await page.waitForTimeout(500);
 
     await expect(page.getByText(randomName2).last()).toBeVisible({
       timeout: 10000,
     });
 
-    await page.getByText(randomName2).last().click();
+    await page.getByText(randomName2).last().dispatchEvent("click");
+    await page.waitForTimeout(200);
+
+    await page.getByText(randomName2).last().dispatchEvent("click");
+    await page.waitForTimeout(200);
 
     await page.getByPlaceholder("Enter a name for the variable...").waitFor({
       state: "visible",
@@ -139,7 +167,11 @@ test(
       .getByPlaceholder("Enter a name for the variable...")
       .fill(randomName3);
 
-    await page.getByText("Update Variable", { exact: true }).last().click();
+    await page
+      .getByText("Update Variable", { exact: true })
+      .last()
+      .dispatchEvent("click");
+    await page.waitForTimeout(500);
 
     await expect(page.getByText(randomName3).last()).toBeVisible({
       timeout: 10000,

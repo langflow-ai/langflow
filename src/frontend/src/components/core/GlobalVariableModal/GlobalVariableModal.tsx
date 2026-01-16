@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -58,6 +58,26 @@ export default function GlobalVariableModal({
   const { data: globalVariables } = useGetGlobalVariables();
   const [availableFields, setAvailableFields] = useState<string[]>([]);
   useGetTypes({ checkCache: true, enabled: !!globalVariables });
+
+  // Sync form state with initialData only when modal opens
+  // This ensures editing works correctly while not interfering with user interactions
+  useEffect(() => {
+    // Only run when modal transitions from closed to open
+    if (open) {
+      if (initialData) {
+        setKey(initialData.name ?? "");
+        setValue(initialData.value ?? "");
+        setType(initialData.type ?? "Credential");
+        setFields(initialData.default_fields ?? []);
+      } else {
+        // Reset for new variable
+        setKey("");
+        setValue("");
+        setType("Credential");
+        setFields([]);
+      }
+    }
+  }, [open]); // Only depend on 'open' - run once when modal opens
 
   useEffect(() => {
     if (globalVariables && componentFields.size > 0) {
@@ -135,41 +155,50 @@ export default function GlobalVariableModal({
         PROVIDER_VARIABLE_MAPPING,
       ).includes(initialData.name);
 
-      updateVariable(
-        {
-          id: initialData.id,
-          name: key,
-          value: value,
-          default_fields: fields,
-        },
-        {
-          onSuccess: (res) => {
-            const { name } = res;
-            setKey("");
-            setValue("");
-            setType("Credential");
-            setFields([]);
-            setOpen(false);
+      // Only include value in update if it has been changed (not empty for credentials)
+      const updateData: {
+        id: string;
+        name: string;
+        value?: string;
+        default_fields?: string[];
+      } = {
+        id: initialData.id,
+        name: key,
+        default_fields: fields,
+      };
 
-            setSuccessData({
-              title: `Variable ${name} updated successfully`,
-            });
-          },
-          onError: (error) => {
-            const responseError = error as ResponseErrorDetailAPI;
-            const errorMessage =
-              responseError?.response?.data?.detail ??
-              "An unexpected error occurred while updating the variable. Please try again.";
+      // Only include value if it's been provided (for credentials, empty means unchanged)
+      if (value) {
+        updateData.value = value;
+      }
 
-            setErrorData({
-              title: isModelProviderVariable
-                ? "Invalid API Key"
-                : "Error updating variable",
-              list: [errorMessage],
-            });
-          },
+      updateVariable(updateData, {
+        onSuccess: (res) => {
+          const { name } = res;
+          setKey("");
+          setValue("");
+          setType("Credential");
+          setFields([]);
+          setOpen(false);
+
+          setSuccessData({
+            title: `Variable ${name} updated successfully`,
+          });
         },
-      );
+        onError: (error) => {
+          const responseError = error as ResponseErrorDetailAPI;
+          const errorMessage =
+            responseError?.response?.data?.detail ??
+            "An unexpected error occurred while updating the variable. Please try again.";
+
+          setErrorData({
+            title: isModelProviderVariable
+              ? "Invalid API Key"
+              : "Error updating variable",
+            list: [errorMessage],
+          });
+        },
+      });
     }
   }
 
@@ -270,7 +299,7 @@ export default function GlobalVariableModal({
         submit={{
           label: `${initialData ? "Update" : "Save"} Variable`,
           dataTestId: "save-variable-btn",
-          disabled: !key || !value,
+          disabled: !key || (!value && !(initialData && type === "Credential")),
         }}
       />
     </BaseModal>
