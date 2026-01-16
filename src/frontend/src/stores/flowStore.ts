@@ -38,7 +38,6 @@ import {
   buildPositionDictionary,
   checkChatInput,
   cleanEdges,
-  detectBrokenEdgesEdges,
   getConnectedSubgraph,
   getHandleId,
   getNodeId,
@@ -212,14 +211,14 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   resetFlow: (flow) => {
     const nodes = flow?.data?.nodes ?? [];
     const edges = flow?.data?.edges ?? [];
-    const brokenEdges = detectBrokenEdgesEdges(nodes, edges);
+    const { edges: newEdges, brokenEdges } = cleanEdges(nodes, edges);
+
     if (brokenEdges.length > 0) {
       useAlertStore.getState().setErrorData({
         title: BROKEN_EDGES_WARNING,
         list: brokenEdges.map((edge) => brokenEdgeMessage(edge)),
       });
     }
-    const newEdges = cleanEdges(nodes, edges);
     const { inputs, outputs } = getInputsAndOutputs(nodes);
     get().updateComponentsToUpdate(nodes);
     set({
@@ -277,7 +276,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   setNodes: (change) => {
     const newChange =
       typeof change === "function" ? change(get().nodes) : change;
-    const newEdges = cleanEdges(newChange, get().edges);
+    const { edges: newEdges } = cleanEdges(newChange, get().edges);
     const { inputs, outputs } = getInputsAndOutputs(newChange);
     get().updateComponentsToUpdate(newChange);
     set({
@@ -332,7 +331,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       return node;
     });
 
-    const newEdges = cleanEdges(newNodes, get().edges);
+    const { edges: newEdges } = cleanEdges(newNodes, get().edges);
 
     set((state) => {
       if (callback) {
@@ -639,11 +638,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     const newNodes = cloneDeep(get().nodes);
     newNodes.forEach((node) => {
       node.selected = false;
-      const newEdges = cleanEdges(newNodes, get().edges);
-      set({
-        nodes: newNodes,
-        edges: newEdges,
-      });
+    });
+    const { edges: newEdges } = cleanEdges(newNodes, get().edges);
+    set({
+      nodes: newNodes,
+      edges: newEdges,
     });
   },
   pastBuildFlowParams: null,

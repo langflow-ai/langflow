@@ -1,6 +1,6 @@
 [project]
 name = "langflow-base"
-version = "0.7.1"
+version = "0.8.0"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.14"
 license = "MIT"
@@ -17,7 +17,7 @@ maintainers = [
 ]
 
 dependencies = [
-    "lfx~=0.2.1",
+    "lfx~=0.3.0", 
     "fastapi>=0.115.2,<1.0.0",
     "httpx[http2]>=0.27,<1.0.0",
     "aiofile>=3.9.0,<4.0.0",
@@ -45,7 +45,7 @@ dependencies = [
     "bcrypt==4.0.1",
     "pillow>=11.1.0,<12.0.0",
     "docstring-parser>=0.16,<1.0.0",
-    "python-jose>=3.3.0,<4.0.0",
+    "PyJWT>=2.10.1",
     "pandas==2.2.3",
     "multiprocess>=0.70.14,<1.0.0",
     "duckdb>=1.0.0,<2.0.0",
@@ -111,7 +111,6 @@ dev = [
     "pandas-stubs>=2.1.4.231227",
     "types-pillow>=10.2.0.20240213",
     "types-pyyaml>=6.0.12.8",
-    "types-python-jose>=3.3.4.8",
     "types-passlib>=1.7.7.13",
     "pytest-mock>=3.14.0",
     "pytest-xdist>=3.6.0",
