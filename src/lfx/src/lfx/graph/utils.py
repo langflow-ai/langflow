@@ -127,11 +127,25 @@ async def emit_vertex_build_event(
     params: Any,
     data_dict: dict | Any,
     artifacts_dict: dict | None = None,
+    next_vertices_ids: list[str] | None = None,
+    top_level_vertices: list[str] | None = None,
+    inactivated_vertices: list[str] | None = None,
 ) -> None:
     """Emit end_vertex event for webhook real-time feedback.
 
     This is a helper function to emit SSE events when vertices are built.
     Errors are silently ignored as SSE emission is not critical.
+
+    Args:
+        flow_id: The flow ID
+        vertex_id: The vertex ID that was built
+        valid: Whether the build was successful
+        params: Build parameters or error message
+        data_dict: Build result data
+        artifacts_dict: Build artifacts
+        next_vertices_ids: IDs of vertices to run next (for UI animation)
+        top_level_vertices: Top level vertices
+        inactivated_vertices: Vertices that were inactivated
     """
     try:
         from datetime import datetime, timezone
@@ -171,9 +185,9 @@ async def emit_vertex_build_event(
                     "artifacts": serialized_artifacts,
                     "timestamp": datetime.now(timezone.utc).isoformat(),
                     "messages": vertex_data.get("messages", []),
-                    "inactivated_vertices": None,
-                    "next_vertices_ids": [],
-                    "top_level_vertices": [],
+                    "inactivated_vertices": inactivated_vertices or [],
+                    "next_vertices_ids": next_vertices_ids or [],
+                    "top_level_vertices": top_level_vertices or [],
                 }
             },
         )
@@ -349,15 +363,9 @@ async def log_vertex_build(
             async with db_service._with_session() as session:  # noqa: SLF001
                 await crud_log_vertex_build(session, vertex_build)
 
-            # Emit end_vertex event for webhook real-time feedback
-            await emit_vertex_build_event(
-                flow_id=flow_id,
-                vertex_id=vertex_id,
-                valid=valid,
-                params=params,
-                data_dict=data_dict,
-                artifacts_dict=artifacts_dict,
-            )
+            # Note: emit_vertex_build_event is NOT called here because it needs
+            # next_vertices_ids which are only available after graph.get_next_runnable_vertices()
+            # The event is emitted separately in graph._execute_tasks() with complete data.
 
         except ImportError:
             # Fallback for standalone lfx usage (without langflow)

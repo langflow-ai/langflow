@@ -664,12 +664,9 @@ async def webhook_events_stream(
     When a flow is open in the UI, this endpoint provides live feedback
     of webhook execution progress, similar to clicking "Play" in the UI.
 
-    Authentication follows the same rules as the webhook POST endpoint:
-    - When WEBHOOK_AUTH_ENABLE=False (default): No authentication required
-    - When WEBHOOK_AUTH_ENABLE=True: Requires API key via query param or header
+    Note: Authentication is handled by get_flow_by_id_or_endpoint_name which
+    validates the user has access to the flow.
     """
-    # Validate authentication using the same rules as webhook POST
-    await get_webhook_user(flow_id_or_name, request)
 
     async def event_generator() -> AsyncGenerator[str, None]:
         """Generate SSE events from the webhook event manager."""

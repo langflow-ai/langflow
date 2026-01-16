@@ -110,7 +110,7 @@ function handleError(eventOrError: Event): void {
     store.setIsBuilding(false);
     store.clearEdgesRunningByNodes();
   } catch {
-    // SSE connection error rather than a data event - no action needed
+    // SSE connection error rather than a data event
   }
 }
 
@@ -127,7 +127,6 @@ export function useWebhookEvents() {
     const flowIdentifier = currentFlow.endpoint_name || currentFlow.id;
     let sseUrl = `/api/v1/webhook-events/${flowIdentifier}`;
 
-    // Pass API key as query param for authentication when WEBHOOK_AUTH_ENABLE=true
     if (apiKey) {
       sseUrl += `?x-api-key=${encodeURIComponent(apiKey)}`;
     }
