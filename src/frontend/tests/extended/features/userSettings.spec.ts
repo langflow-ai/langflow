@@ -68,7 +68,9 @@ test(
         await page.waitForTimeout(300);
         try {
           // [cmdk-item] targets dropdown options, not the search input
-          const optionItem = page.locator(`[cmdk-item]:has-text("${fieldName}")`);
+          const optionItem = page.locator(
+            `[cmdk-item]:has-text("${fieldName}")`,
+          );
           await optionItem.waitFor({ state: "visible", timeout: 2000 });
           await optionItem.click();
           return true;

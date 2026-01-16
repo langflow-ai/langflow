@@ -3,6 +3,7 @@ import { Switch } from "@/components/ui/switch";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 
 import { Model } from "@/modals/modelProviderModal/components/types";
+import { cn } from "@/utils/utils";
 
 export interface ModelProviderSelectionProps {
   availableModels: Model[];
@@ -32,9 +33,13 @@ const ModelRow = ({
     <div className="flex flex-row items-center gap-2">
       <ForwardedIconComponent
         name={model.metadata?.icon || "Bot"}
-        className="w-5 h-5"
+        className={cn("w-5 h-5", { grayscale: !isEnabledModel })}
       />
-      <span className="text-sm">{model.model_name}</span>
+      <span
+        className={cn("text-sm", { "text-muted-foreground": !isEnabledModel })}
+      >
+        {model.model_name}
+      </span>
     </div>
     {isEnabledModel && (
       <Switch
@@ -102,7 +107,7 @@ const ModelSelection = ({
     <div data-testid="model-provider-selection" className="flex flex-col gap-6">
       {modelType === "all" ? (
         <>
-          {renderModelSection("LLM Models", llmModels, "llm")}
+          {renderModelSection("Language Models", llmModels, "llm")}
           {renderModelSection(
             "Embedding Models",
             embeddingModels,
@@ -110,7 +115,7 @@ const ModelSelection = ({
           )}
         </>
       ) : modelType === "llm" ? (
-        renderModelSection("LLM Models", llmModels, "llm")
+        renderModelSection("Language Models", llmModels, "llm")
       ) : (
         renderModelSection("Embedding Models", embeddingModels, "embeddings")
       )}

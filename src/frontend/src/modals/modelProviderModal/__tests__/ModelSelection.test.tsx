@@ -74,7 +74,7 @@ describe("ModelSelection", () => {
       render(<ModelSelection {...defaultProps} />);
 
       expect(screen.getByTestId("llm-models-section")).toBeInTheDocument();
-      expect(screen.getByText("LLM Models")).toBeInTheDocument();
+      expect(screen.getByText("Language Models")).toBeInTheDocument();
     });
 
     it("should render Embeddings section when modelType is all", () => {
