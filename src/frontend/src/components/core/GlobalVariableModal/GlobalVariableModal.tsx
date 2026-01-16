@@ -59,25 +59,14 @@ export default function GlobalVariableModal({
   const [availableFields, setAvailableFields] = useState<string[]>([]);
   useGetTypes({ checkCache: true, enabled: !!globalVariables });
 
-  // Sync form state with initialData only when modal opens
-  // This ensures editing works correctly while not interfering with user interactions
   useEffect(() => {
-    // Only run when modal transitions from closed to open
-    if (open) {
-      if (initialData) {
-        setKey(initialData.name ?? "");
-        setValue(initialData.value ?? "");
-        setType(initialData.type ?? "Credential");
-        setFields(initialData.default_fields ?? []);
-      } else {
-        // Reset for new variable
-        setKey("");
-        setValue("");
-        setType("Credential");
-        setFields([]);
-      }
+    if (initialData) {
+      setKey(initialData.name ?? "");
+      setValue(initialData.value ?? "");
+      setType(initialData.type ?? "Credential");
+      setFields(initialData.default_fields ?? []);
     }
-  }, [open]); // Only depend on 'open' - run once when modal opens
+  }, [initialData]);
 
   useEffect(() => {
     if (globalVariables && componentFields.size > 0) {
