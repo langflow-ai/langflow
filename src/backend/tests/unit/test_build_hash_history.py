@@ -112,9 +112,10 @@ def test_all_real_component_names_are_unique():
     """Test that all real component names loaded via _import_components are unique."""
     modules_dict, _ = _import_components()  # Load real components
 
-    component_names = []
-    for components_dict in modules_dict.values():
-        for component_name in components_dict:
-            component_names.append(component_name)
+    component_names = [
+        component_name
+        for components_dict in modules_dict.values()
+        for component_name in components_dict
+    ]
 
     assert len(component_names) == len(set(component_names))
