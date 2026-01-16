@@ -12,6 +12,14 @@ class Source(BaseModel):
     )
 
 
+class Usage(BaseModel):
+    """Token usage information from LLM responses."""
+
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+    total_tokens: int | None = None
+
+
 class Properties(BaseModel):
     text_color: str | None = None
     background_color: str | None = None
@@ -22,6 +30,7 @@ class Properties(BaseModel):
     positive_feedback: bool | None = None
     state: Literal["partial", "complete"] = "complete"
     targets: list = []
+    usage: Usage | None = None
 
     @field_validator("source", mode="before")
     @classmethod

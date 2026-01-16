@@ -1687,10 +1687,15 @@ class Component(CustomComponent):
                     and message is not None
                     and isinstance(message.text, AsyncIterator | Iterator)
                 ):
-                    complete_message = await self._stream_message(message.text, stored_message)
+                    complete_message, usage_data = await self._stream_message(message.text, stored_message)
                     stored_message.text = complete_message
                     if complete_message:
                         stored_message.properties.state = "complete"
+                    # Set usage data if captured from streaming
+                    if usage_data:
+                        from lfx.schema.properties import Usage
+
+                        stored_message.properties.usage = Usage(**usage_data)
                     stored_message = await self._update_stored_message(stored_message)
                     # Note: We intentionally do NOT send a message event here with state="complete"
                     # The frontend already has all the content from streaming tokens
@@ -1777,7 +1782,12 @@ class Component(CustomComponent):
         message_table = message_tables[0]
         return await Message.create(**message_table.model_dump())
 
-    async def _stream_message(self, iterator: AsyncIterator | Iterator, message: Message) -> str:
+    async def _stream_message(self, iterator: AsyncIterator | Iterator, message: Message) -> tuple[str, dict | None]:
+        """Stream message content from an iterator and capture usage metadata.
+
+        Returns:
+            tuple: (complete_message_text, usage_data_dict_or_none)
+        """
         if not isinstance(iterator, AsyncIterator | Iterator):
             msg = "The message must be an iterator or an async iterator."
             raise TypeError(msg)
@@ -1793,25 +1803,76 @@ class Component(CustomComponent):
         try:
             complete_message = ""
             first_chunk = True
+            usage_data = None
             for chunk in iterator:
                 complete_message = await self._process_chunk(
                     chunk.content, complete_message, message_id, message, first_chunk=first_chunk
                 )
                 first_chunk = False
+                # Capture usage metadata from chunks (usually on the last chunk)
+                if hasattr(chunk, "usage_metadata") and chunk.usage_metadata:
+                    usage_data = {
+                        "input_tokens": getattr(chunk.usage_metadata, "input_tokens", None),
+                        "output_tokens": getattr(chunk.usage_metadata, "output_tokens", None),
+                        "total_tokens": getattr(chunk.usage_metadata, "total_tokens", None),
+                    }
+                elif hasattr(chunk, "response_metadata") and chunk.response_metadata:
+                    metadata = chunk.response_metadata
+                    if "token_usage" in metadata:
+                        usage_data = {
+                            "input_tokens": metadata["token_usage"].get("prompt_tokens"),
+                            "output_tokens": metadata["token_usage"].get("completion_tokens"),
+                            "total_tokens": metadata["token_usage"].get("total_tokens"),
+                        }
+                    elif "usage" in metadata:
+                        usage_data = {
+                            "input_tokens": metadata["usage"].get("input_tokens"),
+                            "output_tokens": metadata["usage"].get("output_tokens"),
+                            "total_tokens": None,
+                        }
+                        if usage_data["input_tokens"] and usage_data["output_tokens"]:
+                            usage_data["total_tokens"] = usage_data["input_tokens"] + usage_data["output_tokens"]
         except Exception as e:
             raise StreamingError(cause=e, source=message.properties.source) from e
         else:
-            return complete_message
+            return complete_message, usage_data
 
-    async def _handle_async_iterator(self, iterator: AsyncIterator, message_id: str, message: Message) -> str:
+    async def _handle_async_iterator(
+        self, iterator: AsyncIterator, message_id: str, message: Message
+    ) -> tuple[str, dict | None]:
         complete_message = ""
         first_chunk = True
+        usage_data = None
         async for chunk in iterator:
             complete_message = await self._process_chunk(
                 chunk.content, complete_message, message_id, message, first_chunk=first_chunk
             )
             first_chunk = False
-        return complete_message
+            # Capture usage metadata from chunks (usually on the last chunk)
+            if hasattr(chunk, "usage_metadata") and chunk.usage_metadata:
+                usage_data = {
+                    "input_tokens": getattr(chunk.usage_metadata, "input_tokens", None),
+                    "output_tokens": getattr(chunk.usage_metadata, "output_tokens", None),
+                    "total_tokens": getattr(chunk.usage_metadata, "total_tokens", None),
+                }
+            elif hasattr(chunk, "response_metadata") and chunk.response_metadata:
+                # Fallback to response_metadata if available
+                metadata = chunk.response_metadata
+                if "token_usage" in metadata:
+                    usage_data = {
+                        "input_tokens": metadata["token_usage"].get("prompt_tokens"),
+                        "output_tokens": metadata["token_usage"].get("completion_tokens"),
+                        "total_tokens": metadata["token_usage"].get("total_tokens"),
+                    }
+                elif "usage" in metadata:
+                    usage_data = {
+                        "input_tokens": metadata["usage"].get("input_tokens"),
+                        "output_tokens": metadata["usage"].get("output_tokens"),
+                        "total_tokens": None,
+                    }
+                    if usage_data["input_tokens"] and usage_data["output_tokens"]:
+                        usage_data["total_tokens"] = usage_data["input_tokens"] + usage_data["output_tokens"]
+        return complete_message, usage_data
 
     async def _process_chunk(
         self, chunk: str, complete_message: str, message_id: str, message: Message, *, first_chunk: bool = False
