@@ -124,12 +124,11 @@ class TestURLComponent(ComponentTestBaseWithoutClient):
         assert second_row["title"] == "Second Page"
         assert second_row["description"] == "Second Description"
 
-    def test_url_component_format_options(self, mock_recursive_loader):
-        """Test URLComponent with different format options."""
+    def test_url_component_text_format(self, mock_recursive_loader):
+        """Test URLComponent with text format."""
         component = URLComponent()
-
-        # Test with Text format
         component.set_attributes({"urls": ["https://example.com"], "format": "Text"})
+
         mock_recursive_loader.return_value = [
             Mock(
                 page_content="extracted text",
@@ -145,6 +144,10 @@ class TestURLComponent(ComponentTestBaseWithoutClient):
         data_frame = component.fetch_content()
         assert data_frame.iloc[0]["text"] == "extracted text"
         assert data_frame.iloc[0]["content_type"] == "text/html"
+
+    def test_url_component_html_format(self, mock_recursive_loader):
+        """Test URLComponent with different format options."""
+        component = URLComponent()
 
         # Test with HTML format
         component.set_attributes({"urls": ["https://example.com"], "format": "HTML"})
@@ -162,6 +165,28 @@ class TestURLComponent(ComponentTestBaseWithoutClient):
         ]
         data_frame = component.fetch_content()
         assert data_frame.iloc[0]["text"] == "<html>raw html</html>"
+        assert data_frame.iloc[0]["content_type"] == "text/html"
+
+    def test_url_component_markdown_format(self, mock_recursive_loader):
+        """Test URLComponent with Markdown format."""
+        component = URLComponent()
+
+        component.set_attributes({"urls": ["https://example.com"], "format": "Markdown"})
+        mock_recursive_loader.return_value = [
+            Mock(
+                page_content="# Header\n\nParagraph with a [link](https://link.com).\n",
+                metadata={
+                    "source": "https://example.com",
+                    "title": "Test Page",
+                    "description": "Test Description",
+                    "content_type": "text/html",
+                    "language": "en",
+                },
+            )
+        ]
+
+        data_frame = component.fetch_content()
+        assert data_frame.iloc[0]["text"] == "# Header\n\nParagraph with a [link](https://link.com).\n"
         assert data_frame.iloc[0]["content_type"] == "text/html"
 
     def test_url_component_missing_metadata(self, mock_recursive_loader):
