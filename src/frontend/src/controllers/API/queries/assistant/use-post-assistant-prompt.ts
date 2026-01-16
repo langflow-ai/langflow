@@ -1,7 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
-import type { AssistantPromptResponse, ProgressState } from "@/components/core/assistant/types";
+import type { AssistantPromptResponse, ProgressState, ProgressStep } from "@/components/core/assistant/assistant.types";
 
 const SSE_DATA_PREFIX = "data: ";
 const SSE_EVENT_SEPARATOR = "\n\n";
@@ -22,11 +22,12 @@ type StreamingRequest = AssistantPromptRequest & {
 
 type SSEEvent = {
   event: "progress" | "complete" | "error";
-  step?: "generating" | "validating";
+  step?: ProgressStep;
   attempt?: number;
   max_attempts?: number;
+  message?: string;        // Human-readable status message
+  error?: string;          // Error message (for validation_failed/retrying)
   data?: AssistantPromptResponse;
-  message?: string;
 };
 
 async function postAssistantPrompt({
@@ -176,6 +177,8 @@ function processSSEEvent(
         step: event.step,
         attempt: event.attempt,
         maxAttempts: event.max_attempts,
+        message: event.message,
+        error: event.error,
       });
     }
 

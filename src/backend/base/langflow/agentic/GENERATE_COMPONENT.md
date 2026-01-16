@@ -95,12 +95,33 @@ src/backend/base/langflow/agentic/flows/LangflowAssistant.json
 
 The `/assist/stream` endpoint uses Server-Sent Events (SSE) for real-time progress updates.
 
+**Step Types:**
+
+| Step | Description | Icon |
+|------|-------------|------|
+| `generating` | LLM is generating response | Sparkles (blue) |
+| `generation_complete` | LLM finished generating | Check (green) |
+| `extracting_code` | Extracting Python code from response | FileCode (purple) |
+| `validating` | Validating component code | Shield (yellow, spinning) |
+| `validated` | Validation succeeded | CheckCircle (green) |
+| `validation_failed` | Validation failed | XCircle (red) |
+| `retrying` | About to retry with error context | RefreshCw (orange, spinning) |
+
 **Event Types:**
 
 ```json
-// Progress event - sent during generation and validation
-{"event": "progress", "step": "generating", "attempt": 1, "max_attempts": 4}
-{"event": "progress", "step": "validating", "attempt": 1, "max_attempts": 4}
+// Progress events - sent during each step
+{"event": "progress", "step": "generating", "attempt": 1, "max_attempts": 4, "message": "Generating component code (attempt 1/4)..."}
+{"event": "progress", "step": "generation_complete", "attempt": 1, "max_attempts": 4, "message": "Code generation complete"}
+{"event": "progress", "step": "extracting_code", "attempt": 1, "max_attempts": 4, "message": "Extracting Python code from response..."}
+{"event": "progress", "step": "validating", "attempt": 1, "max_attempts": 4, "message": "Validating component code..."}
+
+// On success:
+{"event": "progress", "step": "validated", "attempt": 1, "max_attempts": 4, "message": "Component 'MyComponent' validated successfully!"}
+
+// On failure:
+{"event": "progress", "step": "validation_failed", "attempt": 1, "max_attempts": 4, "message": "Validation failed", "error": "SyntaxError: ..."}
+{"event": "progress", "step": "retrying", "attempt": 1, "max_attempts": 4, "message": "Retrying with error context (attempt 2/4)...", "error": "SyntaxError: ..."}
 
 // Complete event - sent when done (success or failure)
 {
@@ -129,28 +150,36 @@ data: {"event": "complete", ...}\n\n
 ```
 User Prompt
     ↓
-┌─────────────────────────────────────┐
-│ For attempt 1 to max_retries + 1:   │
-│   ↓                                 │
-│   [SSE: progress/generating]        │
-│   ↓                                 │
-│   Execute LLM flow                  │
-│   ↓                                 │
-│   Extract Python code from response │
-│   ↓                                 │
-│   No code? → [SSE: complete] return │
-│   ↓                                 │
-│   [SSE: progress/validating]        │
-│   ↓                                 │
-│   Validate with create_class()      │
-│   ↓                                 │
-│   Valid? → [SSE: complete] return   │
-│   ↓                                 │
-│   Max attempts? → [SSE: complete    │
-│                    with error]      │
-│   ↓                                 │
-│   Prepare retry with error context  │
-└─────────────────────────────────────┘
+┌───────────────────────────────────────────────┐
+│ For attempt 1 to max_retries + 1:              │
+│   ↓                                            │
+│   [SSE: progress/generating]                   │
+│   ↓                                            │
+│   Execute LLM flow                             │
+│   ↓                                            │
+│   [SSE: progress/generation_complete]          │
+│   ↓                                            │
+│   [SSE: progress/extracting_code]              │
+│   ↓                                            │
+│   Extract Python code from response            │
+│   ↓                                            │
+│   No code? → [SSE: complete] return            │
+│   ↓                                            │
+│   [SSE: progress/validating]                   │
+│   ↓                                            │
+│   Validate with create_class()                 │
+│   ↓                                            │
+│   Valid? → [SSE: progress/validated]           │
+│          → [SSE: complete] return              │
+│   ↓                                            │
+│   [SSE: progress/validation_failed]            │
+│   ↓                                            │
+│   Max attempts? → [SSE: complete with error]   │
+│   ↓                                            │
+│   [SSE: progress/retrying]                     │
+│   ↓                                            │
+│   Prepare retry with error context             │
+└───────────────────────────────────────────────┘
 ```
 
 ### Code Extraction

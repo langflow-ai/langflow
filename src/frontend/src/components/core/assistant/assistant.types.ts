@@ -50,10 +50,22 @@ export type SubmitResult = {
   componentCode?: string;
 };
 
+// All possible step types for progress events
+export type ProgressStep =
+  | "generating"           // LLM is generating response
+  | "generation_complete"  // LLM finished generating
+  | "extracting_code"      // Extracting Python code from response
+  | "validating"           // Validating component code
+  | "validated"            // Validation succeeded
+  | "validation_failed"    // Validation failed
+  | "retrying";            // About to retry with error context
+
 export type ProgressState = {
-  step: "generating" | "validating";
+  step: ProgressStep;
   attempt: number;
   maxAttempts: number;
+  message?: string;        // Human-readable status message
+  error?: string;          // Error message (for validation_failed/retrying)
 };
 
 export type ProgressInfo = ProgressState | null;

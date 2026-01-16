@@ -112,12 +112,28 @@ async def execute_flow_with_validation_streaming(
     model_name: str | None = None,
     api_key_var: str | None = None,
 ) -> AsyncGenerator[str, None]:
-    """Execute flow with validation, yielding SSE progress events."""
+    """Execute flow with validation, yielding SSE progress events.
+
+    SSE Event Flow:
+        1. generating (attempt X/Y) - LLM is generating code
+        2. generation_complete - LLM finished generating
+        3. extracting_code - Extracting Python code from response
+        4. validating - Validating component code with create_class()
+        5a. validated - Validation succeeded → complete event
+        5b. validation_failed - Validation failed
+        6. retrying - About to retry with error context → back to step 1
+    """
     current_input = input_value
     total_attempts = max_retries + 1
 
     for attempt in range(1, total_attempts + 1):
-        yield format_progress_event("generating", attempt, total_attempts)
+        # Step 1: Generating
+        yield format_progress_event(
+            "generating",
+            attempt,
+            total_attempts,
+            message=f"Generating component code (attempt {attempt}/{total_attempts})...",
+        )
 
         try:
             result = await execute_flow_file(
@@ -141,20 +157,53 @@ async def execute_flow_with_validation_streaming(
             yield format_error_event(friendly_msg)
             return
 
+        # Step 2: Generation complete
+        yield format_progress_event(
+            "generation_complete",
+            attempt,
+            total_attempts,
+            message="Code generation complete",
+        )
+
+        # Step 3: Extracting code
+        yield format_progress_event(
+            "extracting_code",
+            attempt,
+            total_attempts,
+            message="Extracting Python code from response...",
+        )
+        await asyncio.sleep(VALIDATION_UI_DELAY_SECONDS)
+
         response_text = extract_response_text(result)
         code = extract_python_code(response_text)
 
         if not code:
+            # No code found, return as plain text response
             yield format_complete_event(result)
             return
 
-        yield format_progress_event("validating", attempt, total_attempts)
+        # Step 4: Validating
+        yield format_progress_event(
+            "validating",
+            attempt,
+            total_attempts,
+            message="Validating component code...",
+        )
         await asyncio.sleep(VALIDATION_UI_DELAY_SECONDS)
 
         validation = validate_component_code(code)
 
         if validation.is_valid:
+            # Step 5a: Validated successfully
             logger.info(f"Component '{validation.class_name}' validated successfully")
+            yield format_progress_event(
+                "validated",
+                attempt,
+                total_attempts,
+                message=f"Component '{validation.class_name}' validated successfully!",
+            )
+            await asyncio.sleep(VALIDATION_UI_DELAY_SECONDS)
+
             yield format_complete_event({
                 **result,
                 "validated": True,
@@ -164,8 +213,19 @@ async def execute_flow_with_validation_streaming(
             })
             return
 
+        # Step 5b: Validation failed
+        logger.warning(f"Validation failed (attempt {attempt}): {validation.error}")
+        yield format_progress_event(
+            "validation_failed",
+            attempt,
+            total_attempts,
+            message="Validation failed",
+            error=validation.error,
+        )
+        await asyncio.sleep(VALIDATION_UI_DELAY_SECONDS)
+
         if attempt >= total_attempts:
-            logger.warning(f"Validation failed after {attempt} attempts: {validation.error}")
+            # Max attempts reached, return with error
             yield format_complete_event({
                 **result,
                 "validated": False,
@@ -174,5 +234,15 @@ async def execute_flow_with_validation_streaming(
                 "component_code": code,
             })
             return
+
+        # Step 6: Retrying
+        yield format_progress_event(
+            "retrying",
+            attempt,
+            total_attempts,
+            message=f"Retrying with error context (attempt {attempt + 1}/{total_attempts})...",
+            error=validation.error,
+        )
+        await asyncio.sleep(VALIDATION_UI_DELAY_SECONDS)
 
         current_input = VALIDATION_RETRY_TEMPLATE.format(error=validation.error, code=code)

@@ -2,10 +2,36 @@
 
 import json
 
+from langflow.agentic.api.schemas import StepType
 
-def format_progress_event(step: str, attempt: int, max_attempts: int) -> str:
-    """Format SSE progress event."""
-    data = {"event": "progress", "step": step, "attempt": attempt, "max_attempts": max_attempts}
+
+def format_progress_event(
+    step: StepType,
+    attempt: int,
+    max_attempts: int,
+    *,
+    message: str | None = None,
+    error: str | None = None,
+) -> str:
+    """Format SSE progress event.
+
+    Args:
+        step: The current step in the process
+        attempt: Current attempt number (1-indexed)
+        max_attempts: Maximum number of attempts
+        message: Optional human-readable message
+        error: Optional error message (for validation_failed step)
+    """
+    data: dict = {
+        "event": "progress",
+        "step": step,
+        "attempt": attempt,
+        "max_attempts": max_attempts,
+    }
+    if message:
+        data["message"] = message
+    if error:
+        data["error"] = error
     return f"data: {json.dumps(data)}\n\n"
 
 
