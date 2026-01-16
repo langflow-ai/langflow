@@ -277,7 +277,7 @@ jobs:
       - name: Setup Environment
         uses: astral-sh/setup-uv@v6
         with:
-          enable-cache: true
+          enable-cache: false
           cache-dependency-glob: "uv.lock"
           python-version: "3.13"
           prune-cache: false
