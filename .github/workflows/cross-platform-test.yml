@@ -216,7 +216,8 @@ jobs:
             exit 1
           fi
 
-          uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$BASE_FILE" "$MAIN_FILE"
+          uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$BASE_FILE"
+          uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$MAIN_FILE"
         shell: bash
 
       - name: Install LFX package from wheel (Unix)
@@ -252,21 +253,8 @@ jobs:
             exit 1
           fi
 
-          uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$BASE_FILE" "$MAIN_FILE"
-        shell: bash
-
-      - name: Install main package from wheel (Unix)
-        if: steps.install-method.outputs.method == 'wheel' && matrix.os != 'windows'
-        run: |
-          ls -la ./main-dist/
-          find ./main-dist -name "*.whl" -type f
-          WHEEL_FILE=$(find ./main-dist -name "*.whl" -type f | head -1)
-          if [ -n "$WHEEL_FILE" ]; then
-            uv pip install --prerelease=allow --python ./test-env/bin/python "$WHEEL_FILE"
-          else
-            echo "No wheel file found in ./main-dist/"
-            exit 1
-          fi
+          uv pip install --prerelease=allow --python ./test-env/bin/python.exe "$BASE_FILE"
+          uv pip install --prerelease=allow --python ./test-env/bin/python.exe "$MAIN_FILE"
         shell: bash
 
       # PyPI installation steps
@@ -516,7 +504,8 @@ jobs:
             exit 1
           fi
 
-          uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$BASE_FILE" "$MAIN_FILE"
+          uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$BASE_FILE"
+          uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$MAIN_FILE"
         shell: bash
 
       - name: Install LFX package from wheel (Unix)
@@ -533,7 +522,7 @@ jobs:
           fi
         shell: bash
 
-      - name: Install base package from wheel (Unix)
+      - name: Install base & main package from wheel (Unix)
         if: steps.install-method.outputs.method == 'wheel' && matrix.os != 'windows'
         run: |
           ls -la ./base-dist/
@@ -552,21 +541,8 @@ jobs:
             exit 1
           fi
 
-          uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$BASE_FILE" "$MAIN_FILE"
-        shell: bash
-
-      - name: Install main package from wheel (Unix)
-        if: steps.install-method.outputs.method == 'wheel' && matrix.os != 'windows'
-        run: |
-          ls -la ./main-dist/
-          find ./main-dist -name "*.whl" -type f
-          WHEEL_FILE=$(find ./main-dist -name "*.whl" -type f | head -1)
-          if [ -n "$WHEEL_FILE" ]; then
-            uv pip install --prerelease=allow --python ./test-env/bin/python "$WHEEL_FILE"
-          else
-            echo "No wheel file found in ./main-dist/"
-            exit 1
-          fi
+          uv pip install --prerelease=allow --python ./test-env/bin/python.exe "$BASE_FILE"
+          uv pip install --prerelease=allow --python ./test-env/bin/python.exe "$MAIN_FILE"
         shell: bash
 
       # PyPI installation steps
