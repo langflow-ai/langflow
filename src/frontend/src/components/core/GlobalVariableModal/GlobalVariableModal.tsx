@@ -60,6 +60,15 @@ export default function GlobalVariableModal({
   useGetTypes({ checkCache: true, enabled: !!globalVariables });
 
   useEffect(() => {
+    if (initialData) {
+      setKey(initialData.name ?? "");
+      setValue(initialData.value ?? "");
+      setType(initialData.type ?? "Credential");
+      setFields(initialData.default_fields ?? []);
+    }
+  }, [initialData]);
+
+  useEffect(() => {
     if (globalVariables && componentFields.size > 0) {
       const unavailableFields = getUnavailableFields(globalVariables);
       const fields = Array.from(componentFields).filter(

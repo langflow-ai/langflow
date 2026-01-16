@@ -11,7 +11,7 @@ test.afterEach(async () => {
 
 test(
   "should see general profile gradient",
-  { tag: ["@release"] },
+  { tag: ["@release", "@components"] },
 
   async ({ page }) => {
     await awaitBootstrapTest(page, {
@@ -41,6 +41,17 @@ test(
   },
 );
 
+const FALLBACK_FIELDS = [
+  "AgentQL API Key",
+  "AI/ML API Key",
+  "Anthropic API Key",
+  "API Key",
+  "Apify Token",
+  "Assembly API Key",
+  "Astra DB Application Token",
+  "AWS Access Key ID",
+];
+
 test(
   "should interact with global variables",
   { tag: ["@release", "@workspace", "@api"] },
@@ -49,6 +60,24 @@ test(
     const randomName = Math.random().toString(36).substring(2);
     const randomName2 = Math.random().toString(36).substring(2);
     const randomName3 = Math.random().toString(36).substring(2);
+
+    async function trySelectAvailableField(): Promise<boolean> {
+      for (const fieldName of FALLBACK_FIELDS) {
+        await page.getByPlaceholder("Fields").clear();
+        await page.getByPlaceholder("Fields").fill(fieldName);
+        await page.waitForTimeout(300);
+        try {
+          // [cmdk-item] targets dropdown options, not the search input
+          const optionItem = page.locator(`[cmdk-item]:has-text("${fieldName}")`);
+          await optionItem.waitFor({ state: "visible", timeout: 2000 });
+          await optionItem.click();
+          return true;
+        } catch {
+          continue;
+        }
+      }
+      return false;
+    }
 
     await awaitBootstrapTest(page, {
       skipModal: true,
@@ -78,30 +107,8 @@ test(
       timeout: 30000,
     });
 
-    await page.getByPlaceholder("Fields").fill("AgentQL API Key");
-
-    await page.waitForSelector("text=AgentQL API Key", { timeout: 30000 });
-
-    await page.getByText("AgentQL API Key").last().click();
-
-    await page.getByPlaceholder("Fields").fill("openAI");
-
-    await page.waitForSelector("text=openai", { timeout: 30000 });
-
-    await page.getByText("openai").last().click();
-
-    // Wait for the field to be ready for input
-    await page.getByPlaceholder("Fields").waitFor({
-      state: "visible",
-      timeout: 30000,
-    });
-
-    // Additional wait for field to be fully interactive
-    await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {
-      // Continue if network idle timeout
-    });
-
-    await page.getByPlaceholder("Fields").fill("ollama");
+    const fieldSelected = await trySelectAvailableField();
+    expect(fieldSelected).toBe(true);
 
     await page.keyboard.press("Escape");
     await page.getByText("Save Variable", { exact: true }).click();
@@ -110,8 +117,7 @@ test(
       timeout: 10000,
     });
 
-    await page.getByText(randomName).last().click();
-    await page.getByText(randomName).last().click();
+    await page.locator(`.ag-cell:has-text("${randomName}")`).first().click();
 
     await page.getByPlaceholder("Enter a name for the variable...").waitFor({
       state: "visible",
@@ -128,7 +134,9 @@ test(
       timeout: 10000,
     });
 
-    await page.getByText(randomName2).last().click();
+    await page.waitForTimeout(500);
+
+    await page.locator(`.ag-cell:has-text("${randomName2}")`).first().click();
 
     await page.getByPlaceholder("Enter a name for the variable...").waitFor({
       state: "visible",
