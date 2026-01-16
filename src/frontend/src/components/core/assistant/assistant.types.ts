@@ -24,13 +24,35 @@ export type AssistantMessageType =
   | "error"
   | "system"
   | "validated"
-  | "validation_error";
+  | "validation_error"
+  | "progress";
+
+// All possible step types for progress events
+export type ProgressStep =
+  | "generating"           // LLM is generating response
+  | "generation_complete"  // LLM finished generating
+  | "extracting_code"      // Extracting Python code from response
+  | "validating"           // Validating component code
+  | "validated"            // Validation succeeded
+  | "validation_failed"    // Validation failed
+  | "retrying";            // About to retry with error context
+
+export type ProgressMetadata = {
+  step: ProgressStep;
+  icon: string;
+  color: string;
+  spin?: boolean;
+  attempt?: number;
+  maxAttempts?: number;
+  error?: string;
+};
 
 export type AssistantMessageMetadata = {
   className?: string;
   validated?: boolean;
   validationAttempts?: number;
   componentCode?: string;
+  progress?: ProgressMetadata;
 };
 
 export type AssistantMessage = {
@@ -49,16 +71,6 @@ export type SubmitResult = {
   validationAttempts?: number;
   componentCode?: string;
 };
-
-// All possible step types for progress events
-export type ProgressStep =
-  | "generating"           // LLM is generating response
-  | "generation_complete"  // LLM finished generating
-  | "extracting_code"      // Extracting Python code from response
-  | "validating"           // Validating component code
-  | "validated"            // Validation succeeded
-  | "validation_failed"    // Validation failed
-  | "retrying";            // About to retry with error context
 
 export type ProgressState = {
   step: ProgressStep;
@@ -86,7 +98,6 @@ export type AssistantTerminalProps = {
     onProgress?: (progress: ProgressState) => void,
   ) => Promise<SubmitResult>;
   onAddToCanvas: (code: string) => Promise<void>;
-  onSaveToSidebar: (code: string, className: string) => Promise<void>;
   isLoading?: boolean;
   maxRetries: number;
   onMaxRetriesChange: (value: number) => void;

@@ -2,11 +2,11 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { cn } from "@/utils/utils";
 import type { AssistantMessage } from "../assistant.types";
 import { ComponentResultLine } from "./component-result-line";
+import { ProgressLine } from "./progress-line";
 
 type MessageLineProps = {
   message: AssistantMessage;
   onAddToCanvas: (code: string) => Promise<void>;
-  onSaveToSidebar: (code: string, className: string) => Promise<void>;
 };
 
 const getMessageStyle = (type: AssistantMessage["type"]): string => {
@@ -44,7 +44,6 @@ const getPrefix = (type: AssistantMessage["type"]): string => {
 export const MessageLine = ({
   message,
   onAddToCanvas,
-  onSaveToSidebar,
 }: MessageLineProps) => {
   if (
     message.type === "validated" &&
@@ -56,7 +55,15 @@ export const MessageLine = ({
         className={message.metadata.className}
         code={message.metadata.componentCode}
         onAddToCanvas={onAddToCanvas}
-        onSaveToSidebar={onSaveToSidebar}
+      />
+    );
+  }
+
+  if (message.type === "progress" && message.metadata?.progress) {
+    return (
+      <ProgressLine
+        content={message.content}
+        progress={message.metadata.progress}
       />
     );
   }

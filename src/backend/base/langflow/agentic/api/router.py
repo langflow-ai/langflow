@@ -4,6 +4,8 @@ This module provides the HTTP endpoints for the Langflow Assistant.
 All business logic is delegated to service modules.
 """
 
+import uuid
+
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from lfx.base.models.unified_models import (
@@ -63,11 +65,15 @@ async def execute_named_flow(
         logger.debug("OPENAI_API_KEY not configured, continuing without it")
 
     flow_filename = f"{flow_name}.json"
+    # Generate unique session_id per request to isolate memory
+    session_id = str(uuid.uuid4())
+
     return await execute_flow_file(
         flow_filename=flow_filename,
         input_value=request.input_value,
         global_variables=global_vars,
         verbose=True,
+        session_id=session_id,
     )
 
 
@@ -230,6 +236,9 @@ async def assist(
         "PROVIDER": provider,
     }
 
+    # Generate unique session_id per request to isolate memory
+    session_id = str(uuid.uuid4())
+
     input_preview = request.input_value[:50] if request.input_value else "None"
     logger.info(f"Executing {LANGFLOW_ASSISTANT_FLOW} with {provider}/{model_name}, input: {input_preview}...")
 
@@ -240,6 +249,7 @@ async def assist(
         global_variables=global_vars,
         max_retries=max_retries,
         user_id=str(user_id),
+        session_id=session_id,
         provider=provider,
         model_name=model_name,
         api_key_var=api_key_name,
@@ -314,6 +324,9 @@ async def assist_stream(
         "PROVIDER": provider,
     }
 
+    # Generate unique session_id per request to isolate memory
+    session_id = str(uuid.uuid4())
+
     max_retries = request.max_retries if request.max_retries is not None else MAX_VALIDATION_RETRIES
 
     return StreamingResponse(
@@ -323,6 +336,7 @@ async def assist_stream(
             global_variables=global_vars,
             max_retries=max_retries,
             user_id=str(user_id),
+            session_id=session_id,
             provider=provider,
             model_name=model_name,
             api_key_var=api_key_name,

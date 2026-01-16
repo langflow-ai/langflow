@@ -29,6 +29,7 @@ import type {
 import { getHistory, saveToHistory } from "./helpers/history";
 import { categorizeError } from "./helpers/error-categorizer";
 import { parseCommand } from "./helpers/command-parser";
+import { getStepConfig } from "./helpers/step-config";
 import { TerminalHeader } from "./components/terminal-header";
 import { MessageLine } from "./components/message-line";
 import { LoadingIndicator } from "./components/loading-indicator";
@@ -39,7 +40,6 @@ const AssistantTerminal = ({
   onClose,
   onSubmit,
   onAddToCanvas,
-  onSaveToSidebar,
   isLoading = false,
   maxRetries,
   onMaxRetriesChange,
@@ -262,11 +262,27 @@ const AssistantTerminal = ({
       const { provider, modelName } = getProviderAndModel();
 
       const handleProgress = (p: {
-        step: "generating" | "validating";
+        step: "generating" | "validating" | "generation_complete" | "extracting_code" | "validated" | "validation_failed" | "retrying";
         attempt: number;
         maxAttempts: number;
+        message?: string;
+        error?: string;
       }) => {
         setProgress(p);
+
+        // Add progress message to chat history
+        const config = getStepConfig(p.step, p.attempt, p.maxAttempts, p.error);
+        addMessageWithMetadata("progress", config.text, {
+          progress: {
+            step: p.step,
+            icon: config.icon,
+            color: config.color,
+            spin: false, // Don't spin for persisted messages
+            attempt: p.attempt,
+            maxAttempts: p.maxAttempts,
+            error: p.error,
+          },
+        });
       };
 
       const response = await onSubmit(
@@ -285,23 +301,8 @@ const AssistantTerminal = ({
           componentCode: response.componentCode,
         });
       } else if (response.validated === false) {
-        const codePreview = response.componentCode
-          ? response.componentCode.split("\n").slice(0, 5).join("\n") + "..."
-          : "No code extracted";
-
-        addMessageWithMetadata(
-          "validation_error",
-          `Component generation failed after ${response.validationAttempts || 1} attempt(s)`,
-          {
-            validated: false,
-            validationAttempts: response.validationAttempts,
-            componentCode: response.componentCode,
-          },
-        );
-        if (response.validationError) {
-          addMessage("error", `Validation error: ${response.validationError}`);
-        }
-        addMessage("system", `Code preview:\n${codePreview}`);
+        // Error already shown via progress steps (validation_failed)
+        // No additional message needed
       } else {
         addMessage("output", response.content);
       }
@@ -479,10 +480,9 @@ const AssistantTerminal = ({
                   key={message.id}
                   message={message}
                   onAddToCanvas={onAddToCanvas}
-                  onSaveToSidebar={onSaveToSidebar}
                 />
               ))}
-              {(isLoading || progress) && <LoadingIndicator progress={progress} />}
+              {(isLoading || progress) && <LoadingIndicator />}
             </div>
           </div>
 

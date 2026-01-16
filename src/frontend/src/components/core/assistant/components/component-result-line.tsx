@@ -9,17 +9,14 @@ type ComponentResultLineProps = {
   className: string;
   code: string;
   onAddToCanvas: (code: string) => Promise<void>;
-  onSaveToSidebar: (code: string, className: string) => Promise<void>;
 };
 
 export const ComponentResultLine = ({
   className,
   code,
   onAddToCanvas,
-  onSaveToSidebar,
 }: ComponentResultLineProps) => {
   const [isAddingToCanvas, setIsAddingToCanvas] = useState(false);
-  const [isSavingToSidebar, setIsSavingToSidebar] = useState(false);
   const [isCodeExpanded, setIsCodeExpanded] = useState(false);
 
   const handleDownload = () => {
@@ -32,15 +29,6 @@ export const ComponentResultLine = ({
       await onAddToCanvas(code);
     } finally {
       setIsAddingToCanvas(false);
-    }
-  };
-
-  const handleSaveToSidebar = async () => {
-    setIsSavingToSidebar(true);
-    try {
-      await onSaveToSidebar(code, className);
-    } finally {
-      setIsSavingToSidebar(false);
     }
   };
 
@@ -72,20 +60,6 @@ export const ComponentResultLine = ({
             title="Download"
           >
             <ForwardedIconComponent name="Download" className="h-3.5 w-3.5" />
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="iconSm"
-            onClick={handleSaveToSidebar}
-            disabled={isSavingToSidebar}
-            className="text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
-            title="Save to Sidebar"
-          >
-            <ForwardedIconComponent
-              name={isSavingToSidebar ? "Loader2" : "SaveAll"}
-              className={cn("h-3.5 w-3.5", isSavingToSidebar && "animate-spin")}
-            />
           </Button>
 
           <Button

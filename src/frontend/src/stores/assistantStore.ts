@@ -1,4 +1,10 @@
 import { create } from "zustand";
+import type {
+  AssistantMessage,
+  AssistantMessageMetadata,
+  AssistantMessageType,
+  ProgressMetadata,
+} from "@/components/core/assistant/assistant.types";
 
 const DEFAULT_MAX_RETRIES = 3;
 const STORAGE_KEY = "assistant-max-retries";
@@ -27,28 +33,11 @@ const getStoredModel = (): string | null => {
   }
 };
 
-export type AssistantMessageType =
-  | "input"
-  | "output"
-  | "error"
-  | "system"
-  | "validated"
-  | "validation_error";
+// Re-export types for consumers that import from this file
+export type { AssistantMessageType, ProgressMetadata, AssistantMessageMetadata };
 
-export type AssistantMessageMetadata = {
-  className?: string;
-  validated?: boolean;
-  validationAttempts?: number;
-  componentCode?: string;
-};
-
-export type AssistantMessageData = {
-  id: string;
-  type: AssistantMessageType;
-  content: string;
-  timestamp: Date;
-  metadata?: AssistantMessageMetadata;
-};
+// Alias for backward compatibility
+export type AssistantMessageData = AssistantMessage;
 
 type AssistantStoreType = {
   isTerminalOpen: boolean;

@@ -65,6 +65,7 @@ async def run_flow(
     timing: bool = False,
     global_variables: dict[str, str] | None = None,
     user_id: str | None = None,
+    session_id: str | None = None,
 ) -> dict:
     """Execute a Langflow graph script or JSON flow and return the result.
 
@@ -217,6 +218,12 @@ async def run_flow(
             graph.user_id = user_id
             if verbosity > 0:
                 logger.info(f"Set graph user_id: {user_id}")
+
+        # Set session_id on graph if provided (isolates memory between requests)
+        if session_id:
+            graph.session_id = session_id
+            if verbosity > 0:
+                logger.info(f"Set graph session_id: {session_id}")
 
         # Inject global variables into graph context
         if global_variables:

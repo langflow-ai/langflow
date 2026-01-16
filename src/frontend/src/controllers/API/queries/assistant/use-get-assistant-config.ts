@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
-import type { AssistantConfigResponse } from "@/components/core/assistant/types";
+import type { AssistantConfigResponse } from "@/components/core/assistant/assistant.types";
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 

@@ -78,6 +78,7 @@ async def execute_flow_file(
     *,
     verbose: bool = False,
     user_id: str | None = None,
+    session_id: str | None = None,
     provider: str | None = None,
     model_name: str | None = None,
     api_key_var: str | None = None,
@@ -90,6 +91,7 @@ async def execute_flow_file(
         global_variables: Dict of global variables to inject into the flow context
         verbose: Whether to enable verbose logging
         user_id: User ID for components that require user context
+        session_id: Unique session ID to isolate memory between requests
         provider: Model provider to inject into Agent nodes
         model_name: Model name to inject into Agent nodes
         api_key_var: API key variable name to inject into Agent nodes
@@ -119,6 +121,7 @@ async def execute_flow_file(
             verbose=verbose,
             check_variables=False,
             user_id=user_id,
+            session_id=session_id,
         )
     except Exception as e:
         logger.error(f"Flow execution error: {e}")

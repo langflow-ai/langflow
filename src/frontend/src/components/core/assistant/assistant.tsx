@@ -4,13 +4,9 @@ import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-en
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
-import useAddFlow from "@/hooks/flows/use-add-flow";
 import { useAddComponent } from "@/hooks/use-add-component";
-import useAlertStore from "@/stores/alertStore";
-import { useDarkStore } from "@/stores/darkStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useAssistantStore } from "@/stores/assistantStore";
-import { createFlowComponent, getNodeId } from "@/utils/reactflowUtils";
 import AssistantTerminal from "./assistant-terminal";
 import type { AssistantConfigResponse, AssistantPromptResponse, ProgressState, SubmitResult } from "./assistant.types";
 
@@ -57,13 +53,10 @@ const Assistant = memo(function Assistant() {
   const setMaxRetries = useAssistantStore((state) => state.setMaxRetries);
 
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
-  const setSuccessData = useAlertStore((state) => state.setSuccessData);
-  const version = useDarkStore((state) => state.version);
   const [isLoading, setIsLoading] = useState(false);
   const { mutateAsync: validateComponentCode } = usePostValidateComponentCode();
   const navigate = useCustomNavigate();
   const addComponent = useAddComponent();
-  const addFlow = useAddFlow();
 
   // Use the existing model providers hooks
   const { data: modelProviders, refetch: refetchProviders, isLoading: isProvidersLoading, isRefetching: isProvidersRefetching } = useGetModelProviders(
@@ -196,35 +189,12 @@ const Assistant = memo(function Assistant() {
     [validateComponentCode, addComponent],
   );
 
-  const handleSaveToSidebar = useCallback(
-    async (code: string, className: string) => {
-      const response = await validateComponentCode({
-        code,
-        frontend_node: undefined as never,
-      });
-
-      const nodeId = getNodeId(response.type);
-      const nodeData = {
-        node: response.data,
-        showNode: !response.data.minimized,
-        type: response.type,
-        id: nodeId,
-      };
-
-      const flowComponent = createFlowComponent(nodeData, version);
-      await addFlow({ flow: flowComponent, override: false });
-      setSuccessData({ title: `${className} saved to sidebar` });
-    },
-    [validateComponentCode, addFlow, version, setSuccessData],
-  );
-
   return (
     <AssistantTerminal
       isOpen={isTerminalOpen}
       onClose={handleCloseTerminal}
       onSubmit={handleSubmit}
       onAddToCanvas={handleAddToCanvas}
-      onSaveToSidebar={handleSaveToSidebar}
       isLoading={isLoading}
       maxRetries={maxRetries}
       onMaxRetriesChange={setMaxRetries}
