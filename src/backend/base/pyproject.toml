@@ -72,7 +72,6 @@ dependencies = [
     "filelock>=3.15.4,<4.0.0",
     "grandalf>=0.8.0,<1.0.0",
     "diskcache>=5.6.3,<6.0.0",
-    "clickhouse-connect==0.7.19",
     "assemblyai>=0.33.0,<1.0.0",
     "fastapi-pagination>=0.13.1,<1.0.0",
     "defusedxml>=0.7.1,<1.0.0",
@@ -193,6 +192,8 @@ local = [
 # Individual database providers
 couchbase = ["couchbase>=4.2.1"]
 cassandra = ["cassio>=0.1.7"]
+clickhouse = ["clickhouse-connect==0.7.19"]
+
 
 mongodb = ["pymongo==4.10.1"]
 supabase = ["supabase>=2.6.0,<3.0.0"]
