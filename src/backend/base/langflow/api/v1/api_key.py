@@ -29,9 +29,7 @@ async def get_api_keys_route(
 
         api_keys = []
         for api_key_obj in api_key_objects:
-            data = api_key_obj.model_dump()
-
-            
+            data = api_key_obj.model_dump() 
             try:
                 actual_key = auth_utils.decrypt_api_key(data["api_key"], settings_service=settings_service)
             except (ValueError, TypeError):
