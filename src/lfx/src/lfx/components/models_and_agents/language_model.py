@@ -116,8 +116,10 @@ class LanguageModelComponent(LCModelComponent):
         )
 
         # Show/hide provider-specific fields based on selected model
-        if field_name == "model" and isinstance(field_value, list) and len(field_value) > 0:
-            selected_model = field_value[0]
+        # Get current model value - from field_value if model is being changed, otherwise from build_config
+        current_model_value = field_value if field_name == "model" else build_config.get("model", {}).get("value")
+        if isinstance(current_model_value, list) and len(current_model_value) > 0:
+            selected_model = current_model_value[0]
             provider = selected_model.get("provider", "")
 
             # Show/hide watsonx fields
