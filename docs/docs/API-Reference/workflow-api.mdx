@@ -37,6 +37,26 @@ Before using the Workflow API, you need:
 
     For more information about configuring environment variables, see [Environment variables](/environment-variables).
 
+### Set environment variables
+
+All code examples in this documentation assume you have set the following environment variables:
+
+**Python:**
+```python
+import os
+
+LANGFLOW_SERVER_URL = os.getenv("LANGFLOW_SERVER_URL", "YOUR_SERVER_URL")
+LANGFLOW_API_KEY = os.getenv("LANGFLOW_API_KEY", "YOUR_API_KEY")
+```
+
+**TypeScript/JavaScript:**
+```typescript
+const LANGFLOW_SERVER_URL = process.env.LANGFLOW_SERVER_URL || 'YOUR_SERVER_URL';
+const LANGFLOW_API_KEY = process.env.LANGFLOW_API_KEY || 'YOUR_API_KEY';
+```
+
+Replace `YOUR_SERVER_URL` and `YOUR_API_KEY` with your actual Langflow server URL and API key, or set them as environment variables before running the examples.
+
 ## Authentication and headers
 
 All Workflow API requests require authentication using a Langflow API key. The API key is passed in the `x-api-key` header.
@@ -65,6 +85,72 @@ Remotely hosted Langflow deployments are available at the domain set by the host
 
 Execute a workflow synchronously and receive complete results immediately:
 
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+```python
+import requests
+
+url = f"{LANGFLOW_SERVER_URL}/api/v2/workflow"
+headers = {
+    "Content-Type": "application/json",
+    "x-api-key": LANGFLOW_API_KEY
+}
+
+payload = {
+    "flow_id": "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
+    "background": False,
+    "stream": False,
+    "inputs": {
+        "ChatInput-abc.input_type": "chat",
+        "ChatInput-abc.input_value": "what is 2+2",
+        "ChatInput-abc.session_id": "session-123"
+    }
+}
+
+response = requests.post(url, json=payload, headers=headers)
+print(response.json())
+```
+
+</TabItem>
+<TabItem value="TypeScript" label="TypeScript">
+
+```typescript
+import axios from 'axios';
+
+const url = `${LANGFLOW_SERVER_URL}/api/v2/workflow`;
+
+const payload = {
+  flow_id: "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
+  background: false,
+  stream: false,
+  inputs: {
+    "ChatInput-abc.input_type": "chat",
+    "ChatInput-abc.input_value": "what is 2+2",
+    "ChatInput-abc.session_id": "session-123"
+  }
+};
+
+const runWorkflow = async () => {
+  try {
+    const response = await axios.post(url, payload, {
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': LANGFLOW_API_KEY
+      }
+    });
+    console.log(response.data);
+  } catch (error) {
+    console.error('Error triggering workflow:', error);
+  }
+};
+
+runWorkflow();
+```
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
 ```bash
 curl -X POST \
   "$LANGFLOW_SERVER_URL/api/v2/workflow" \
@@ -81,6 +167,9 @@ curl -X POST \
     }
   }'
 ```
+
+</TabItem>
+</Tabs>
 
 ### Request body
 
@@ -139,6 +228,72 @@ For long-running workflows, use `background=true` to get a `job_id` immediately,
 
 **Example request:**
 
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+```python
+import requests
+
+url = f"{LANGFLOW_SERVER_URL}/api/v2/workflow"
+headers = {
+    "Content-Type": "application/json",
+    "x-api-key": LANGFLOW_API_KEY
+}
+
+payload = {
+    "flow_id": "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
+    "background": True,
+    "stream": False,
+    "inputs": {
+        "ChatInput-abc.input_type": "chat",
+        "ChatInput-abc.input_value": "Process this in the background",
+        "ChatInput-abc.session_id": "session-456"
+    }
+}
+
+response = requests.post(url, json=payload, headers=headers)
+print(response.json())  # Returns job_id immediately
+```
+
+</TabItem>
+<TabItem value="TypeScript" label="TypeScript">
+
+```typescript
+import axios from 'axios';
+
+const url = `${LANGFLOW_SERVER_URL}/api/v2/workflow`;
+
+const payload = {
+  flow_id: "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
+  background: true,
+  stream: false,
+  inputs: {
+    "ChatInput-abc.input_type": "chat",
+    "ChatInput-abc.input_value": "Process this in the background",
+    "ChatInput-abc.session_id": "session-456"
+  }
+};
+
+const runWorkflow = async () => {
+  try {
+    const response = await axios.post(url, payload, {
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': LANGFLOW_API_KEY
+      }
+    });
+    console.log(response.data);  // Returns job_id immediately
+  } catch (error) {
+    console.error('Error triggering workflow:', error);
+  }
+};
+
+runWorkflow();
+```
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
 ```bash
 curl -X POST \
   "$LANGFLOW_SERVER_URL/api/v2/workflow" \
@@ -155,6 +310,9 @@ curl -X POST \
     }
   }'
 ```
+
+</TabItem>
+</Tabs>
 
 **Response:**
 
@@ -173,6 +331,81 @@ Receive server-sent events in real-time using the AG-UI protocol. Set `stream=tr
 
 **Example request:**
 
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+```python
+import requests
+
+url = f"{LANGFLOW_SERVER_URL}/api/v2/workflow"
+headers = {
+    "Content-Type": "application/json",
+    "Accept": "text/event-stream",
+    "x-api-key": LANGFLOW_API_KEY
+}
+payload = {
+    "flow_id": "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
+    "background": False,
+    "stream": True,
+    "inputs": {
+        "ChatInput-abc.input_type": "chat",
+        "ChatInput-abc.input_value": "Stream this conversation",
+        "ChatInput-abc.session_id": "session-789"
+    }
+}
+
+response = requests.post(url, json=payload, headers=headers, stream=True)
+response.raise_for_status()
+
+for line in response.iter_lines():
+    if line:
+        print(line.decode('utf-8'))
+```
+
+</TabItem>
+<TabItem value="TypeScript" label="TypeScript">
+
+```typescript
+import axios from 'axios';
+
+const url = `${LANGFLOW_SERVER_URL}/api/v2/workflow`;
+
+const payload = {
+  flow_id: "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
+  background: false,
+  stream: true,
+  inputs: {
+    "ChatInput-abc.input_type": "chat",
+    "ChatInput-abc.input_value": "Stream this conversation",
+    "ChatInput-abc.session_id": "session-789"
+  }
+};
+
+const runWorkflow = async () => {
+  try {
+    const response = await axios.post(url, payload, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'text/event-stream',
+        'x-api-key': LANGFLOW_API_KEY
+      },
+      responseType: 'stream'
+    });
+
+    response.data.on('data', (chunk: Buffer) => {
+      console.log(chunk.toString());
+    });
+  } catch (error) {
+    console.error('Error triggering workflow:', error);
+  }
+};
+
+runWorkflow();
+```
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
 ```bash
 curl -N -X POST \
   "$LANGFLOW_SERVER_URL/api/v2/workflow" \
@@ -190,6 +423,9 @@ curl -N -X POST \
     }
   }'
 ```
+
+</TabItem>
+</Tabs>
 
 **Example response:**
 
@@ -232,12 +468,66 @@ If a streaming connection is interrupted, you can reconnect using the GET endpoi
 
 ### Example request
 
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+```python
+import requests
+
+url = f"{LANGFLOW_SERVER_URL}/api/v2/workflow"
+params = {
+    "job_id": "job_id_1234567890"
+}
+headers = {
+    "accept": "application/json",
+    "x-api-key": LANGFLOW_API_KEY
+}
+
+response = requests.get(url, params=params, headers=headers)
+print(response.json())
+```
+
+</TabItem>
+<TabItem value="TypeScript" label="TypeScript">
+
+```typescript
+import axios from 'axios';
+
+const jobId = 'job_id_1234567890';
+const url = `${LANGFLOW_SERVER_URL}/api/v2/workflow`;
+
+const getWorkflowStatus = async () => {
+  try {
+    const response = await axios.get(url, {
+      params: {
+        job_id: jobId
+      },
+      headers: {
+        'accept': 'application/json',
+        'x-api-key': LANGFLOW_API_KEY
+      }
+    });
+    console.log(response.data);
+  } catch (error) {
+    console.error('Error getting workflow status:', error);
+  }
+};
+
+getWorkflowStatus();
+```
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
 ```bash
 curl -X GET \
   "$LANGFLOW_SERVER_URL/api/v2/workflow?job_id=job_id_1234567890" \
   -H "accept: application/json" \
   -H "x-api-key: $LANGFLOW_API_KEY"
 ```
+
+</TabItem>
+</Tabs>
 
 ### Query parameters
 
@@ -292,12 +582,78 @@ The response includes a `status` field that indicates the current state of the w
 
 To reconnect to a streaming execution after disconnection, use the GET endpoint with `stream=true` and optional `sequence_id`:
 
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+```python
+import requests
+
+url = f"{LANGFLOW_SERVER_URL}/api/v2/workflow"
+params = {
+    "job_id": "job_id_1234567890",
+    "stream": True,
+    "sequence_id": 42
+}
+headers = {
+    "Accept": "text/event-stream",
+    "x-api-key": LANGFLOW_API_KEY
+}
+
+response = requests.get(url, params=params, headers=headers, stream=True)
+response.raise_for_status()
+
+for line in response.iter_lines():
+    if line:
+        print(line.decode('utf-8'))
+```
+
+</TabItem>
+<TabItem value="TypeScript" label="TypeScript">
+
+```typescript
+import axios from 'axios';
+
+const jobId = 'job_id_1234567890';
+const url = `${LANGFLOW_SERVER_URL}/api/v2/workflow`;
+
+const reconnectToStream = async () => {
+  try {
+    const response = await axios.get(url, {
+      params: {
+        job_id: jobId,
+        stream: true,
+        sequence_id: 42
+      },
+      headers: {
+        'Accept': 'text/event-stream',
+        'x-api-key': LANGFLOW_API_KEY
+      },
+      responseType: 'stream'
+    });
+
+    response.data.on('data', (chunk: Buffer) => {
+      console.log(chunk.toString());
+    });
+  } catch (error) {
+    console.error('Error reconnecting to stream:', error);
+  }
+};
+
+reconnectToStream();
+```
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
 ```bash
 curl -N -X GET \
   "$LANGFLOW_SERVER_URL/api/v2/workflow?job_id=job_id_1234567890&stream=true&sequence_id=42" \
   -H "Accept: text/event-stream" \
   -H "x-api-key: $LANGFLOW_API_KEY"
 ```
+
+</TabItem>
+</Tabs>
 
 This will return all events generated so far and continue streaming new events as they are generated.
 
@@ -309,6 +665,59 @@ This will return all events generated so far and continue streaming new events a
 
 ### Example request
 
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+```python
+import requests
+
+url = f"{LANGFLOW_SERVER_URL}/api/v2/workflow/stop"
+headers = {
+    "Content-Type": "application/json",
+    "x-api-key": LANGFLOW_API_KEY
+}
+payload = {
+    "job_id": "job_id_1234567890",
+    "force": False
+}
+
+response = requests.post(url, json=payload, headers=headers)
+print(response.json())
+```
+
+</TabItem>
+<TabItem value="TypeScript" label="TypeScript">
+
+```typescript
+import axios from 'axios';
+
+const url = `${LANGFLOW_SERVER_URL}/api/v2/workflow/stop`;
+
+const payload = {
+  job_id: "job_id_1234567890",
+  force: false
+};
+
+const stopWorkflow = async () => {
+  try {
+    const response = await axios.post(url, payload, {
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': LANGFLOW_API_KEY
+      }
+    });
+    console.log(response.data);
+  } catch (error) {
+    console.error('Error stopping workflow:', error);
+  }
+};
+
+stopWorkflow();
+```
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
 ```bash
 curl -X POST \
   "$LANGFLOW_SERVER_URL/api/v2/workflow/stop" \
@@ -319,6 +728,9 @@ curl -X POST \
     "force": false
   }'
 ```
+
+</TabItem>
+</Tabs>
 
 ### Request body
 
