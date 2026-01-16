@@ -28,6 +28,12 @@ export default function InspectionPanelFields({
           return false;
         }
 
+        // Filter out fields that are just handles (HandleInput type)
+        // These are fields that only serve as connection points
+        if (template._input_type === "HandleInput") {
+          return false;
+        }
+
         return true;
       })
       .sort((a, b) =>
