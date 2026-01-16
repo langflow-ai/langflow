@@ -77,7 +77,6 @@ export default function InspectionPanelHeader({
               <ToolbarButton
                 className={isCustomComponent ? "animate-pulse-pink" : ""}
                 icon="Code"
-                label="Code"
                 onClick={handleOpenCode}
                 shortcut={shortcuts.find((s) =>
                   s.name.toLowerCase().startsWith("code"),
