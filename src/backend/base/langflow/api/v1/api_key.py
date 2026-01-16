@@ -31,13 +31,11 @@ async def get_api_keys_route(
         for api_key_obj in api_key_objects:
             data = api_key_obj.model_dump()
 
-            if data.get("api_key"):
-                try:
-                    actual_key = auth_utils.decrypt_api_key(data["api_key"], settings_service=settings_service)
-                except (ValueError, TypeError):
-                    # Fallback to plain-text for legacy entries or invalid encrypted values
-                    actual_key = data.get("api_key")
-            else:
+            
+            try:
+                actual_key = auth_utils.decrypt_api_key(data["api_key"], settings_service=settings_service)
+            except (ValueError, TypeError):
+                # Fallback to plain-text for legacy entries or invalid encrypted values
                 actual_key = data.get("api_key")
 
             data["api_key"] = actual_key
