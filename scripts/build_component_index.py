@@ -19,11 +19,16 @@ except ImportError as e:
     raise ImportError(msg) from e
 
 
-def _get_langflow_version():
-    """Get the installed langflow version."""
+def _get_lfx_version():
+    """Get the installed lfx version.
+
+    Components are located in LFX, so use LFX.
+    """
     from importlib.metadata import version
 
-    return version("langflow")
+    version = version("lfx")
+    print(f"Retrieved LFX version: {version}")
+    return version
 
 
 def _normalize_for_determinism(obj):
@@ -120,7 +125,7 @@ def _find_component_in_index(index: dict, category: str, component_name: str) ->
 
     for item in index.get("entries", []):
         # Validate entry structure: must be list/tuple with exactly 2 elements
-        if not (isinstance(item, (list, tuple)) and len(item) == entry_tuple_size):
+        if not (isinstance(item, list | tuple) and len(item) == entry_tuple_size):
             msg = f"Invalid index entry format: {item}. Expected {entry_tuple_size}-element list/tuple."
             raise ValueError(msg)
 
@@ -141,8 +146,8 @@ def _find_component_in_index(index: dict, category: str, component_name: str) ->
 METADATA_KEY = "metadata"
 CODE_HASH_KEY = "code_hash"
 HASH_KEY = "hash"  # Key used in hash_history entries
-VERSION_FIRST_KEY = "version_first"
-VERSION_LAST_KEY = "version_last"
+VERSION_FIRST_KEY = "v_from"  # Hash valid from Version (inclusive)
+VERSION_LAST_KEY = "v_to"  # Hash valid to version (inclusive)
 
 
 def _get_component_hash(component: dict | None) -> str | None:
@@ -252,7 +257,7 @@ def _merge_hash_history(current_component: dict, existing_component: dict | None
     Args:
         current_component: Current component data with code_hash
         existing_component: Existing component from disk
-        current_version: Current Langflow version
+        current_version: Current lfx version
 
     Returns:
         List of hash history entries with version ranges
@@ -329,7 +334,7 @@ def _load_existing_index() -> dict:
 
 
 def _import_components() -> tuple[dict, int]:
-    """Import all Langflow components using the async import function.
+    """Import all lfx components using the async import function.
 
     Returns:
         Tuple of (modules_dict, components_count)
@@ -370,7 +375,7 @@ def build_component_index() -> dict:
 
     existing_index = _load_existing_index()
     modules_dict, components_count = _import_components()
-    current_version = _get_langflow_version()
+    current_version = _get_lfx_version()
 
     # Convert modules_dict to entries format and sort for determinism
     # Sort by category name (top_level) to ensure consistent ordering

@@ -42,6 +42,8 @@ dependencies = [
     "filelock>=3.20.0",
     "pypdf>=5.1.0",
     "cryptography>=43.0.0",
+    "ag-ui-protocol>=0.1.10",
+    "markitdown>=0.1.4,<2.0.0",
 ]
 
 [project.scripts]
