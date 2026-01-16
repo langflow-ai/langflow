@@ -150,6 +150,8 @@ This section describes the available authentication configuration variables.
 
 You can use the [`.env.example`](https://github.com/langflow-ai/langflow/blob/main/.env.example) file in the Langflow repository as a template for your own `.env` file.
 
+For JWT authentication configuration, including algorithm selection and key management, see [JWT authentication](/jwt-authentication).
+
 ### LANGFLOW_AUTO_LOGIN {#langflow-auto-login}
 
 This variable controls whether authentication is required to access your Langflow server, including the visual editor, API, and Langflow CLI:
@@ -207,8 +209,9 @@ These defaults don't apply when using the Langflow CLI command [`langflow superu
 
 ### LANGFLOW_SECRET_KEY {#langflow-secret-key}
 
-This environment variable stores a secret key used for encrypting sensitive data like API keys.
+This environment variable stores a secret key used for encrypting sensitive data like API keys and for JWT signing when using the HS256 algorithm.
 Langflow uses the [Fernet](https://pypi.org/project/cryptography/) library for secret key encryption.
+For JWT-specific configuration, see [JWT authentication](/jwt-authentication).
 
 If no secret key is provided, Langflow automatically generates one.
 
