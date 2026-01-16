@@ -15,6 +15,9 @@ from functools import partial
 from itertools import chain
 from typing import TYPE_CHECKING, Any, cast
 
+from ag_ui.core import RunFinishedEvent, RunStartedEvent
+
+from lfx.events.observability.lifecycle_events import observable
 from lfx.exceptions.component import ComponentBuildError
 from lfx.graph.edge.base import CycleEdge, Edge
 from lfx.graph.graph.constants import Finish, lazy_load_vertex_dict
@@ -728,6 +731,7 @@ class Graph:
                 raise ValueError(msg)
             vertex.update_raw_params(inputs, overwrite=True)
 
+    @observable
     async def _run(
         self,
         *,
@@ -1519,7 +1523,10 @@ class Graph:
         try:
             params = ""
             should_build = False
-            if not vertex.frozen:
+            # Loop components must always build, even when frozen,
+            # because they need to iterate through their data
+            is_loop_component = vertex.display_name == "Loop" or vertex.is_loop
+            if not vertex.frozen or is_loop_component:
                 should_build = True
             else:
                 # Check the cache for the vertex
@@ -1546,8 +1553,10 @@ class Graph:
                                 vertex.result.used_frozen_result = True
                         except Exception:  # noqa: BLE001
                             logger.debug("Error finalizing build", exc_info=True)
+                            vertex.built = False
                             should_build = True
                     except KeyError:
+                        vertex.built = False
                         should_build = True
 
             if should_build:
@@ -2129,6 +2138,17 @@ class Graph:
         """Get all vertex IDs in the graph."""
         return [vertex.id for vertex in self.vertices]
 
+    def get_terminal_nodes(self) -> list[str]:
+        """Returns vertex IDs that are terminal nodes (not source of any edge).
+
+        Terminal nodes are vertices that have no outgoing edges - they are not
+        listed as source_id in any of the graph's edges.
+
+        Returns:
+            list[str]: List of vertex IDs that are terminal nodes.
+        """
+        return [vertex.id for vertex in self.vertices if not self.successor_map.get(vertex.id, [])]
+
     def sort_vertices(
         self,
         stop_component_id: str | None = None,
@@ -2293,3 +2313,22 @@ class Graph:
             predecessors = [i.id for i in self.get_predecessors(vertex)]
             result |= {vertex_id: {"successors": sucessors, "predecessors": predecessors}}
         return result
+
+    def raw_event_metrics(self, optional_fields: dict | None = None) -> dict:
+        if optional_fields is None:
+            optional_fields = {}
+        import time
+
+        return {"timestamp": time.time(), **optional_fields}
+
+    def before_callback_event(self, *args, **kwargs) -> RunStartedEvent:  # noqa: ARG002
+        metrics = {}
+        if hasattr(self, "raw_event_metrics"):
+            metrics = self.raw_event_metrics({"total_components": len(self.vertices)})
+        return RunStartedEvent(run_id=self._run_id, thread_id=self.flow_id, raw_event=metrics)
+
+    def after_callback_event(self, result: Any = None, *args, **kwargs) -> RunFinishedEvent:  # noqa: ARG002
+        metrics = {}
+        if hasattr(self, "raw_event_metrics"):
+            metrics = self.raw_event_metrics({"total_components": len(self.vertices)})
+        return RunFinishedEvent(run_id=self._run_id, thread_id=self.flow_id, result=None, raw_event=metrics)

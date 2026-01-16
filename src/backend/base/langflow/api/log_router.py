@@ -3,9 +3,11 @@ import json
 from http import HTTPStatus
 from typing import Annotated, Any
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from lfx.log.logger import log_buffer
+
+from langflow.services.auth.utils import get_current_active_user
 
 log_router = APIRouter(tags=["Log"])
 
@@ -50,12 +52,13 @@ async def event_generator(request: Request):
         await asyncio.sleep(1)
 
 
-@log_router.get("/logs-stream")
+@log_router.get("/logs-stream", dependencies=[Depends(get_current_active_user)])
 async def stream_logs(
     request: Request,
 ):
     """HTTP/2 Server-Sent-Event (SSE) endpoint for streaming logs.
 
+    Requires authentication to prevent exposure of sensitive log data.
     It establishes a long-lived connection to the server and receives log messages in real-time.
     The client should use the header "Accept: text/event-stream".
     """
@@ -69,12 +72,16 @@ async def stream_logs(
     return StreamingResponse(event_generator(request), media_type="text/event-stream")
 
 
-@log_router.get("/logs")
+@log_router.get("/logs", dependencies=[Depends(get_current_active_user)])
 async def logs(
     lines_before: Annotated[int, Query(description="The number of logs before the timestamp or the last log")] = 0,
     lines_after: Annotated[int, Query(description="The number of logs after the timestamp")] = 0,
     timestamp: Annotated[int, Query(description="The timestamp to start getting logs from")] = 0,
 ):
+    """Retrieve application logs with authentication required.
+
+    SECURITY: Logs may contain sensitive information and require authentication.
+    """
     global log_buffer  # noqa: PLW0602
     if log_buffer.enabled() is False:
         raise HTTPException(

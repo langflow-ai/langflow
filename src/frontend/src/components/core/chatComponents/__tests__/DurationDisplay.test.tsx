@@ -1,5 +1,4 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
-import React from "react";
 import DurationDisplay from "../DurationDisplay";
 
 // Mock AnimatedNumber component
@@ -254,6 +253,275 @@ describe("DurationDisplay", () => {
       expect(animatedNumber.textContent).toBe(expected);
 
       unmount();
+    });
+  });
+
+  describe("playground remount behavior", () => {
+    it("should not reset timer when component remounts with same chatId", async () => {
+      const realDateNow = Date.now;
+      let mockTime = 1000000;
+      Date.now = jest.fn(() => mockTime);
+
+      // First mount
+      const { unmount } = render(
+        <DurationDisplay duration={undefined} chatId="playground-chat-1" />,
+      );
+
+      // Advance time by 1 second
+      mockTime += 1000;
+      act(() => {
+        jest.advanceTimersByTime(100);
+      });
+
+      await waitFor(() => {
+        const animatedNumber = screen.getByTestId("animated-number");
+        const value = parseFloat(
+          animatedNumber.getAttribute("data-value") || "0",
+        );
+        expect(value).toBeGreaterThanOrEqual(1);
+      });
+
+      // Unmount component (simulate closing playground)
+      unmount();
+
+      // Advance time by another second while unmounted
+      mockTime += 1000;
+
+      // Remount component (simulate reopening playground)
+      render(
+        <DurationDisplay duration={undefined} chatId="playground-chat-1" />,
+      );
+
+      // Trigger interval update
+      act(() => {
+        jest.advanceTimersByTime(100);
+      });
+
+      // Timer should show ~2 seconds (preserved from original start)
+      await waitFor(() => {
+        const animatedNumber = screen.getByTestId("animated-number");
+        const value = parseFloat(
+          animatedNumber.getAttribute("data-value") || "0",
+        );
+        expect(value).toBeGreaterThanOrEqual(2);
+      });
+
+      Date.now = realDateNow;
+    });
+
+    it("should preserve timer across multiple remounts", async () => {
+      const realDateNow = Date.now;
+      let mockTime = 1000000;
+      Date.now = jest.fn(() => mockTime);
+
+      // First mount
+      let component = render(
+        <DurationDisplay duration={undefined} chatId="persistent-chat" />,
+      );
+
+      // Advance 500ms
+      mockTime += 500;
+      act(() => {
+        jest.advanceTimersByTime(100);
+      });
+
+      // Unmount and remount 3 times
+      for (let i = 0; i < 3; i++) {
+        component.unmount();
+
+        // Advance time while unmounted
+        mockTime += 500;
+
+        component = render(
+          <DurationDisplay duration={undefined} chatId="persistent-chat" />,
+        );
+
+        act(() => {
+          jest.advanceTimersByTime(100);
+        });
+      }
+
+      // Total time should be ~2 seconds (500ms initial + 3 * 500ms)
+      await waitFor(() => {
+        const animatedNumber = screen.getByTestId("animated-number");
+        const value = parseFloat(
+          animatedNumber.getAttribute("data-value") || "0",
+        );
+        expect(value).toBeGreaterThanOrEqual(2);
+      });
+
+      Date.now = realDateNow;
+    });
+
+    it("should start new timer if chatId changes", async () => {
+      const realDateNow = Date.now;
+      let mockTime = 1000000;
+      Date.now = jest.fn(() => mockTime);
+
+      const { rerender } = render(
+        <DurationDisplay duration={undefined} chatId="chat-1" />,
+      );
+
+      // Advance time
+      mockTime += 2000;
+      act(() => {
+        jest.advanceTimersByTime(100);
+      });
+
+      await waitFor(() => {
+        const animatedNumber = screen.getByTestId("animated-number");
+        const value = parseFloat(
+          animatedNumber.getAttribute("data-value") || "0",
+        );
+        expect(value).toBeGreaterThanOrEqual(2);
+      });
+
+      // Reset mock time for new chat
+      mockTime = 1000000;
+
+      // Change to different chat
+      rerender(<DurationDisplay duration={undefined} chatId="chat-2" />);
+
+      // New chat should start at 0
+      act(() => {
+        jest.advanceTimersByTime(100);
+      });
+
+      const animatedNumber = screen.getByTestId("animated-number");
+      const value = parseFloat(
+        animatedNumber.getAttribute("data-value") || "0",
+      );
+      expect(value).toBeLessThan(0.5);
+
+      Date.now = realDateNow;
+    });
+
+    it("should clean up startTime when duration is finalized", async () => {
+      const realDateNow = Date.now;
+      let mockTime = 1000000;
+      Date.now = jest.fn(() => mockTime);
+
+      const { rerender } = render(
+        <DurationDisplay duration={undefined} chatId="finalizing-chat" />,
+      );
+
+      // Advance time
+      mockTime += 1500;
+      act(() => {
+        jest.advanceTimersByTime(100);
+      });
+
+      // Finalize duration
+      rerender(<DurationDisplay duration={1500} chatId="finalizing-chat" />);
+
+      const animatedNumber = screen.getByTestId("animated-number");
+      expect(animatedNumber.textContent).toBe("1.5s");
+
+      // No loading spinner should be visible
+      expect(screen.queryByTestId("loading-spinner")).not.toBeInTheDocument();
+
+      Date.now = realDateNow;
+    });
+
+    it("should handle rapid mount/unmount cycles", async () => {
+      const realDateNow = Date.now;
+      let mockTime = 1000000;
+      Date.now = jest.fn(() => mockTime);
+
+      // Rapidly mount and unmount
+      for (let i = 0; i < 5; i++) {
+        const component = render(
+          <DurationDisplay duration={undefined} chatId="rapid-chat" />,
+        );
+
+        mockTime += 100;
+        act(() => {
+          jest.advanceTimersByTime(100);
+        });
+
+        component.unmount();
+      }
+
+      // Final mount
+      render(<DurationDisplay duration={undefined} chatId="rapid-chat" />);
+
+      act(() => {
+        jest.advanceTimersByTime(100);
+      });
+
+      // Should show accumulated time (~500ms)
+      await waitFor(() => {
+        const animatedNumber = screen.getByTestId("animated-number");
+        const value = parseFloat(
+          animatedNumber.getAttribute("data-value") || "0",
+        );
+        expect(value).toBeGreaterThanOrEqual(0.5);
+      });
+
+      Date.now = realDateNow;
+    });
+
+    it("should not create duplicate intervals when remounting", () => {
+      const setIntervalSpy = jest.spyOn(global, "setInterval");
+
+      // First mount
+      const { unmount } = render(
+        <DurationDisplay duration={undefined} chatId="interval-chat" />,
+      );
+
+      const firstCallCount = setIntervalSpy.mock.calls.length;
+
+      // Unmount
+      unmount();
+
+      // Remount
+      render(<DurationDisplay duration={undefined} chatId="interval-chat" />);
+
+      const secondCallCount = setIntervalSpy.mock.calls.length;
+
+      // Should only have created one new interval on remount
+      expect(secondCallCount - firstCallCount).toBe(1);
+
+      setIntervalSpy.mockRestore();
+    });
+  });
+
+  describe("timer accuracy", () => {
+    it("should maintain accurate time even with delayed interval execution", async () => {
+      const realDateNow = Date.now;
+      let mockTime = 1000000;
+      Date.now = jest.fn(() => mockTime);
+
+      render(<DurationDisplay duration={undefined} chatId="accurate-timer" />);
+
+      // Simulate 3 seconds passing with irregular interval updates
+      mockTime += 1000;
+      act(() => {
+        jest.advanceTimersByTime(100);
+      });
+
+      // Skip some interval ticks
+      mockTime += 1500;
+      act(() => {
+        jest.advanceTimersByTime(100);
+      });
+
+      mockTime += 500;
+      act(() => {
+        jest.advanceTimersByTime(100);
+      });
+
+      // Should show accurate total time (~3 seconds) not interval-based calculation
+      await waitFor(() => {
+        const animatedNumber = screen.getByTestId("animated-number");
+        const value = parseFloat(
+          animatedNumber.getAttribute("data-value") || "0",
+        );
+        expect(value).toBeGreaterThanOrEqual(2.9);
+        expect(value).toBeLessThanOrEqual(3.1);
+      });
+
+      Date.now = realDateNow;
     });
   });
 });

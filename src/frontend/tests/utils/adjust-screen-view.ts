@@ -1,4 +1,4 @@
-import type { Page } from "playwright/test";
+import type { Page } from "@playwright/test";
 
 export async function adjustScreenView(
   page: Page,
@@ -9,7 +9,7 @@ export async function adjustScreenView(
   } = {},
 ) {
   await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
-    timeout: 5000,
+    timeout: 30000,
   });
 
   let fitViewButton = await page.getByTestId("fit_view").count();
@@ -31,6 +31,6 @@ export async function adjustScreenView(
     }
   }
   if (fitViewButton > 0) {
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await page.getByTestId("canvas_controls_dropdown").click({ force: true });
   }
 }

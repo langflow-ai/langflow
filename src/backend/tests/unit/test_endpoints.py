@@ -145,7 +145,7 @@ async def test_get_all(client: AsyncClient, logged_in_headers):
         files
     )  # Less or equal because we might have some files that don't have the dependencies installed
     assert "ChatInput" in json_response["input_output"]
-    assert "Prompt Template" in json_response["processing"]
+    assert "Prompt Template" in json_response["models_and_agents"]
     assert "ChatOutput" in json_response["input_output"]
 
 
@@ -231,18 +231,19 @@ What is a good name for a company that makes {product}?
 INVALID_PROMPT = "This is an invalid prompt without any input variable."
 
 
-async def test_valid_prompt(client: AsyncClient):
+async def test_valid_prompt(client: AsyncClient, logged_in_headers):
     PROMPT_REQUEST["template"] = VALID_PROMPT
-    response = await client.post("api/v1/validate/prompt", json=PROMPT_REQUEST)
+    response = await client.post("api/v1/validate/prompt", json=PROMPT_REQUEST, headers=logged_in_headers)
     assert response.status_code == 200
     assert response.json()["input_variables"] == ["product"]
 
 
-async def test_invalid_prompt(client: AsyncClient):
+async def test_invalid_prompt(client: AsyncClient, logged_in_headers):
     PROMPT_REQUEST["template"] = INVALID_PROMPT
     response = await client.post(
         "api/v1/validate/prompt",
         json=PROMPT_REQUEST,
+        headers=logged_in_headers,
     )
     assert response.status_code == 200
     assert response.json()["input_variables"] == []
@@ -257,9 +258,9 @@ async def test_invalid_prompt(client: AsyncClient):
         ("{a}, {b}, and {c} are variables.", ["a", "b", "c"]),
     ],
 )
-async def test_various_prompts(client, prompt, expected_input_variables):
+async def test_various_prompts(client, logged_in_headers, prompt, expected_input_variables):
     PROMPT_REQUEST["template"] = prompt
-    response = await client.post("api/v1/validate/prompt", json=PROMPT_REQUEST)
+    response = await client.post("api/v1/validate/prompt", json=PROMPT_REQUEST, headers=logged_in_headers)
     assert response.status_code == 200
     assert response.json()["input_variables"] == expected_input_variables
 

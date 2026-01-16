@@ -222,3 +222,21 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         assert isinstance(result, Message)
         expected = "John is 30 years old | Jane is 25 years old | Bob is 35 years old"
         assert result.text == expected
+
+    def test_empty_data_with_template(self, component_class):
+        # Arrange - Data with empty data dict but template expects keys
+        data = Data(text_key="text", data={}, default_value="")
+        kwargs = {
+            "input_data": data,
+            "pattern": "Text: {text}",
+            "sep": "\n",
+            "mode": "Parser",
+        }
+        component = component_class(**kwargs)
+
+        # Act
+        result = component.parse_combined_text()
+
+        # Assert - Should use default_value when key is missing
+        assert isinstance(result, Message)
+        assert result.text == "Text: "

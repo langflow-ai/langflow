@@ -199,7 +199,8 @@ class TestCommonFunctions:
             validate_script_path("/nonexistent/path.json", verbose_print)
 
     @patch("lfx.cli.common.load_flow_from_json")
-    def test_load_graph_from_path_success(self, mock_load_flow):
+    @pytest.mark.asyncio
+    async def test_load_graph_from_path_success(self, mock_load_flow):
         """Test successful graph loading."""
         mock_graph = Mock()
         mock_load_flow.return_value = mock_graph
@@ -211,12 +212,13 @@ class TestCommonFunctions:
             def verbose_print(msg):
                 pass  # Real function
 
-            graph = load_graph_from_path(Path(tmp.name), ".json", verbose_print, verbose=True)
+            graph = await load_graph_from_path(Path(tmp.name), ".json", verbose_print, verbose=True)
             assert graph == mock_graph
             mock_load_flow.assert_called_once_with(Path(tmp.name), disable_logs=False)
 
     @patch("lfx.cli.common.load_flow_from_json")
-    def test_load_graph_from_path_error(self, mock_load_flow):
+    @pytest.mark.asyncio
+    async def test_load_graph_from_path_error(self, mock_load_flow):
         """Test graph loading with error."""
         mock_load_flow.side_effect = Exception("Parse error")
 
@@ -228,7 +230,7 @@ class TestCommonFunctions:
                 pass  # Real function
 
             with pytest.raises(typer.Exit):
-                load_graph_from_path(Path(tmp.name), ".json", verbose_print, verbose=False)
+                await load_graph_from_path(Path(tmp.name), ".json", verbose_print, verbose=False)
             mock_load_flow.assert_called_once_with(Path(tmp.name), disable_logs=True)
 
 
@@ -428,7 +430,8 @@ class TestIntegration:
     """Integration tests combining multiple components."""
 
     @patch("lfx.cli.common.load_flow_from_json")
-    def test_full_app_integration(self, mock_load_flow):
+    @pytest.mark.asyncio
+    async def test_full_app_integration(self, mock_load_flow):
         """Test full app integration with realistic data."""
         # Setup real graph
         real_graph = create_real_graph()
@@ -446,7 +449,7 @@ class TestIntegration:
                 pass  # Real function
 
             mock_verbose_print = verbose_print
-            loaded_graph = load_graph_from_path(flow_path, ".json", mock_verbose_print)
+            loaded_graph = await load_graph_from_path(flow_path, ".json", mock_verbose_print)
             assert loaded_graph == real_graph
 
             # Test flow ID generation

@@ -6,10 +6,12 @@ from datetime import timedelta
 from enum import Enum
 from typing import TYPE_CHECKING, Annotated, Any
 
-from fastapi import Depends, HTTPException, Query
+from fastapi import Depends, HTTPException, Path, Query
 from fastapi_pagination import Params
 from lfx.graph.graph.base import Graph
 from lfx.log.logger import logger
+from lfx.services.deps import injectable_session_scope, injectable_session_scope_readonly, session_scope
+from lfx.utils.validate_cloud import raise_error_if_astra_cloud_disable_component
 from sqlalchemy import delete
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -19,7 +21,6 @@ from langflow.services.database.models.message.model import MessageTable
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.user.model import User
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
-from langflow.services.deps import get_session, session_scope
 from langflow.services.store.utils import get_lf_version_from_pypi
 from langflow.utils.constants import LANGFLOW_GLOBAL_VAR_HEADER_PREFIX
 
@@ -35,7 +36,26 @@ MIN_PAGE_SIZE = 1
 
 CurrentActiveUser = Annotated[User, Depends(get_current_active_user)]
 CurrentActiveMCPUser = Annotated[User, Depends(get_current_active_user_mcp)]
-DbSession = Annotated[AsyncSession, Depends(get_session)]
+# DbSession with auto-commit for write operations
+DbSession = Annotated[AsyncSession, Depends(injectable_session_scope)]
+# DbSessionReadOnly for read-only operations (no auto-commit, reduces lock contention)
+DbSessionReadOnly = Annotated[AsyncSession, Depends(injectable_session_scope_readonly)]
+
+
+def _get_validated_file_name(file_name: str = Path()) -> str:
+    """Validate file_name path parameter to prevent path traversal attacks."""
+    if ".." in file_name or "/" in file_name or "\\" in file_name:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid file name. Use a simple file name without directory paths or '..'.",
+        )
+    return file_name
+
+
+ValidatedFileName = Annotated[str, Depends(_get_validated_file_name)]
+
+# Message to raise if we're in an Astra cloud environment and a component or endpoint is not supported
+disable_endpoint_in_astra_cloud_msg = "This endpoint is not supported in Astra cloud environment."
 
 
 class EventDeliveryType(str, Enum):
@@ -54,7 +74,7 @@ def remove_api_keys(flow: dict):
         node_data = node.get("data").get("node")
         template = node_data.get("template")
         for value in template.values():
-            if isinstance(value, dict) and has_api_terms(value["name"]) and value.get("password"):
+            if isinstance(value, dict) and "name" in value and has_api_terms(value["name"]) and value.get("password"):
                 value["value"] = None
 
     return flow
@@ -409,3 +429,11 @@ def extract_global_variables_from_headers(headers) -> dict[str, str]:
         logger.exception("Failed to extract global variables from headers: %s", exc)
 
     return variables
+
+
+def raise_error_if_astra_cloud_env():
+    """Raise an error if we're in an Astra cloud environment."""
+    try:
+        raise_error_if_astra_cloud_disable_component(disable_endpoint_in_astra_cloud_msg)
+    except Exception as e:
+        raise HTTPException(status_code=403, detail=str(e)) from e
