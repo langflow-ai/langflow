@@ -202,6 +202,7 @@ class TestCheckKeyFromDb:
         mock_api_key = MagicMock()
         mock_api_key.user = mock_user
         mock_api_key.total_uses = 0
+        mock_api_key.api_key = "sk-valid-key"
 
         mock_result = MagicMock()
         mock_result.first.return_value = mock_api_key
@@ -229,6 +230,7 @@ class TestCheckKeyFromDb:
         mock_api_key = MagicMock()
         mock_api_key.user = mock_user
         mock_api_key.total_uses = 5
+        mock_api_key.api_key = "sk-valid-key"
 
         mock_result = MagicMock()
         mock_result.first.return_value = mock_api_key
@@ -482,6 +484,7 @@ class TestCheckKeyIntegration:
         mock_api_key = MagicMock()
         mock_api_key.user = mock_user
         mock_api_key.total_uses = 0
+        mock_api_key.api_key = "sk-valid-key"
 
         mock_result = MagicMock()
         mock_result.first.return_value = mock_api_key
@@ -533,6 +536,11 @@ class TestCheckKeyIntegration:
         mock_api_key = MagicMock()
         mock_api_key.user = mock_user
         mock_api_key.total_uses = 0
+
+        monkeypatch.setattr(
+            "langflow.services.database.models.api_key.crud.auth_utils.decrypt_api_key",
+            lambda v: "sk-wrong-key" if v == "sk-wrong-key" else v,
+        )
 
         mock_result = MagicMock()
         mock_result.first.return_value = mock_api_key

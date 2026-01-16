@@ -8,6 +8,7 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.api_key.model import ApiKey, ApiKeyCreate, ApiKeyRead, UnmaskedApiKeyRead
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service
@@ -26,8 +27,12 @@ async def create_api_key(session: AsyncSession, api_key_create: ApiKeyCreate, us
     # Generate a random API key with 32 bytes of randomness
     generated_api_key = f"sk-{secrets.token_urlsafe(32)}"
 
+    settings_service = get_settings_service()
+
+    stored_api_key = auth_utils.encrypt_api_key(generated_api_key, settings_service=settings_service)
+
     api_key = ApiKey(
-        api_key=generated_api_key,
+        api_key=stored_api_key,
         name=api_key_create.name,
         user_id=user_id,
         created_at=api_key_create.created_at or datetime.datetime.now(datetime.timezone.utc),
@@ -73,15 +78,29 @@ async def check_key(session: AsyncSession, api_key: str) -> User | None:
 
 async def _check_key_from_db(session: AsyncSession, api_key: str, settings_service) -> User | None:
     """Validate API key against the database."""
+    # Load all API keys and compare by decrypting stored values first.
+    # This supports storing encrypted API keys while allowing incoming
+    # plain-text keys to be validated.
     query: SelectOfScalar = select(ApiKey).options(selectinload(ApiKey.user)).where(ApiKey.api_key == api_key)
     api_key_object: ApiKey | None = (await session.exec(query)).first()
-    if api_key_object is not None:
-        if settings_service.settings.disable_track_apikey_usage is not True:
-            api_key_object.total_uses += 1
-            api_key_object.last_used_at = datetime.datetime.now(datetime.timezone.utc)
-            session.add(api_key_object)
-            await session.flush()
-        return api_key_object.user
+
+    if api_key_object is None:
+        return None
+
+    stored_value = api_key_object.api_key
+    if stored_value is not None:
+        try:
+            candidate = auth_utils.decrypt_api_key(stored_value, settings_service=settings_service)
+        except (ValueError, TypeError):
+            # Fallback to plain-text comparison for legacy entries or invalid encrypted values
+            candidate = stored_value
+        if candidate == api_key:
+            if settings_service.settings.disable_track_apikey_usage is not True:
+                api_key_object.total_uses += 1
+                api_key_object.last_used_at = datetime.datetime.now(datetime.timezone.utc)
+                session.add(api_key_object)
+                await session.flush()
+            return api_key_object.user
     return None
 
 
