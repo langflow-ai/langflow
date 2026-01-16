@@ -409,8 +409,13 @@ jobs:
           WHEEL_FILE=$(ls dist/*.whl 2>/dev/null || ls src/backend/base/dist/*.whl)
           echo "Built wheel: $WHEEL_FILE"
 
-          if [[ ! "$WHEEL_FILE" =~ $EXPECTED_VERSION ]]; then
-            echo "❌ Error: Wheel version doesn't match expected version $EXPECTED_VERSION"
+          NORMALIZED_VERSION=$(echo "$EXPECTED_VERSION" | sed 's/\.rc/rc/g; s/\.a/a/g; s/\.b/b/g; s/\.dev/dev/g')
+          echo "Expected version: $EXPECTED_VERSION"
+          echo "Normalized for wheel: $NORMALIZED_VERSION"
+
+          if [[ ! "$WHEEL_FILE" =~ $NORMALIZED_VERSION ]]; then
+            echo "❌ Error: Wheel version doesn't match expected version"
+            echo "Expected: $EXPECTED_VERSION (normalized: $NORMALIZED_VERSION)"
             echo "Wheel file: $WHEEL_FILE"
             exit 1
           fi
@@ -487,8 +492,13 @@ jobs:
           WHEEL_FILE=$(ls dist/*.whl)
           echo "Built wheel: $WHEEL_FILE"
 
-          if [[ ! "$WHEEL_FILE" =~ $EXPECTED_VERSION ]]; then
-            echo "❌ Error: Wheel version doesn't match expected version $EXPECTED_VERSION"
+          NORMALIZED_VERSION=$(echo "$EXPECTED_VERSION" | sed 's/\.rc/rc/g; s/\.a/a/g; s/\.b/b/g; s/\.dev/dev/g')
+          echo "Expected version: $EXPECTED_VERSION"
+          echo "Normalized for wheel: $NORMALIZED_VERSION"
+
+          if [[ ! "$WHEEL_FILE" =~ $NORMALIZED_VERSION ]]; then
+            echo "❌ Error: Wheel version doesn't match expected version"
+            echo "Expected: $EXPECTED_VERSION (normalized: $NORMALIZED_VERSION)"
             echo "Wheel file: $WHEEL_FILE"
             exit 1
           fi
@@ -562,8 +572,13 @@ jobs:
           WHEEL_FILE=$(ls src/lfx/dist/*.whl)
           echo "Built wheel: $WHEEL_FILE"
 
-          if [[ ! "$WHEEL_FILE" =~ $EXPECTED_VERSION ]]; then
-            echo "❌ Error: Wheel version doesn't match expected version $EXPECTED_VERSION"
+          NORMALIZED_VERSION=$(echo "$EXPECTED_VERSION" | sed 's/\.rc/rc/g; s/\.a/a/g; s/\.b/b/g; s/\.dev/dev/g')
+          echo "Expected version: $EXPECTED_VERSION"
+          echo "Normalized for wheel: $NORMALIZED_VERSION"
+
+          if [[ ! "$WHEEL_FILE" =~ $NORMALIZED_VERSION ]]; then
+            echo "❌ Error: Wheel version doesn't match expected version"
+            echo "Expected: $EXPECTED_VERSION (normalized: $NORMALIZED_VERSION)"
             echo "Wheel file: $WHEEL_FILE"
             exit 1
           fi
