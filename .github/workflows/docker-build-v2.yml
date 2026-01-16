@@ -159,6 +159,11 @@ jobs:
             runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
     runs-on: ${{ matrix.runner }}
     steps:
+      - name: Check out the code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+
       - name: Set tags
         id: tags
         run: |
@@ -224,6 +229,11 @@ jobs:
             runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
     runs-on: ${{ matrix.runner }}
     steps:
+      - name: Check out the code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+
       - name: Set tags
         id: tags
         run: |
@@ -289,6 +299,11 @@ jobs:
             runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
     runs-on: ${{ matrix.runner }}
     steps:
+      - name: Check out the code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+
       - name: Set tags
         id: tags
         run: |
@@ -358,6 +373,11 @@ jobs:
             runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
     runs-on: ${{ matrix.runner }}
     steps:
+      - name: Check out the code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+
       - name: Set tags
         id: tags
         run: |
@@ -423,6 +443,11 @@ jobs:
             runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
     runs-on: ${{ matrix.runner }}
     steps:
+      - name: Check out the code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+
       - name: Set tags
         id: tags
         run: |
@@ -488,6 +513,11 @@ jobs:
             runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
     runs-on: ${{ matrix.runner }}
     steps:
+      - name: Check out the code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+
       - name: Set tags
         id: tags
         run: |
@@ -556,6 +586,10 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ always() && inputs.push_to_registry && (needs.build-base.result == 'success' || needs.build-main.result == 'success' || needs.build-main-backend.result == 'success' || needs.build-main-frontend.result == 'success' || needs.build-main-ep.result == 'success' || needs.build-main-all.result == 'success') }}
     steps:
+      - name: Check out the code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
       - name: Set tags
         id: tags
         run: |
