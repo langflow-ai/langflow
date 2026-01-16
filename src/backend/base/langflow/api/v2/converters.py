@@ -119,6 +119,7 @@ def _extract_nested_value(data: Any, *keys: str) -> Any:
     for key in keys:
         if isinstance(current, dict):
             current = current.get(key)
+        # Only check hasattr/getattr if not a dict
         elif hasattr(current, key):
             current = getattr(current, key)
         else:
@@ -206,8 +207,12 @@ def _extract_file_path(raw_content: dict, vertex_type: str) -> str | None:
         return None
 
     file_msg = _extract_nested_value(raw_content, "message", "message")
-    if isinstance(file_msg, str) and "saved successfully" in file_msg.lower():
-        return file_msg
+    if isinstance(file_msg, str):
+        # Avoid unnecessary .lower() if it matches the usual case
+        if "saved successfully" in file_msg:
+            return file_msg
+        if "saved successfully" in file_msg.lower():
+            return file_msg
 
     return None
 
