@@ -37,9 +37,8 @@ export default function InspectionPanelLogs({
         }
       }
 
-      const flowPoolNode = flowPool[flowPoolId]?.[
-        (flowPool[flowPoolId]?.length ?? 1) - 1
-      ];
+      const flowPoolNode =
+        flowPool[flowPoolId]?.[(flowPool[flowPoolId]?.length ?? 1) - 1];
 
       if (flowPoolNode?.data?.logs?.[internalOutputName]) {
         return {

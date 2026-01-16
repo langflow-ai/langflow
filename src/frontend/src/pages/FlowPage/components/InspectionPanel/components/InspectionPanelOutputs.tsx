@@ -37,9 +37,8 @@ export default function InspectionPanelOutputs({
         }
       }
 
-      const flowPoolNode = flowPool[flowPoolId]?.[
-        (flowPool[flowPoolId]?.length ?? 1) - 1
-      ];
+      const flowPoolNode =
+        flowPool[flowPoolId]?.[(flowPool[flowPoolId]?.length ?? 1) - 1];
 
       if (flowPoolNode?.data?.outputs?.[internalOutputName]?.message) {
         return {
