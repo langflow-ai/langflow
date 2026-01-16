@@ -4,6 +4,7 @@ import secrets
 from typing import TYPE_CHECKING
 from uuid import UUID
 
+from cryptography.fernet import InvalidToken
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -81,26 +82,27 @@ async def _check_key_from_db(session: AsyncSession, api_key: str, settings_servi
     # Load all API keys and compare by decrypting stored values first.
     # This supports storing encrypted API keys while allowing incoming
     # plain-text keys to be validated.
-    query: SelectOfScalar = select(ApiKey).options(selectinload(ApiKey.user)).where(ApiKey.api_key == api_key)
-    api_key_object: ApiKey | None = (await session.exec(query)).first()
+    query: SelectOfScalar = select(ApiKey).options(selectinload(ApiKey.user))
+    api_key_objects: ApiKey | None = (await session.exec(query)).all()
 
-    if api_key_object is None:
+    if api_key_objects is None:
         return None
 
-    stored_value = api_key_object.api_key
-    if stored_value is not None:
-        try:
-            candidate = auth_utils.decrypt_api_key(stored_value, settings_service=settings_service)
-        except (ValueError, TypeError):
-            # Fallback to plain-text comparison for legacy entries or invalid encrypted values
-            candidate = stored_value
-        if candidate == api_key:
-            if settings_service.settings.disable_track_apikey_usage is not True:
-                api_key_object.total_uses += 1
-                api_key_object.last_used_at = datetime.datetime.now(datetime.timezone.utc)
-                session.add(api_key_object)
-                await session.flush()
-            return api_key_object.user
+    for api_key_object in api_key_objects:
+        stored_value = api_key_object.api_key
+        if stored_value is not None:
+            try:
+                candidate = auth_utils.decrypt_api_key(stored_value, settings_service=settings_service)
+            except (ValueError, TypeError, InvalidToken):
+                # Fallback to plain-text comparison for legacy entries or invalid values
+                candidate = stored_value
+            if candidate == api_key:
+                if settings_service.settings.disable_track_apikey_usage is not True:
+                    api_key_object.total_uses += 1
+                    api_key_object.last_used_at = datetime.datetime.now(datetime.timezone.utc)
+                    session.add(api_key_object)
+                    await session.flush()
+                return api_key_object.user
     return None
 
 
