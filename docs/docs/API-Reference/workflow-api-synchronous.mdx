@@ -1,0 +1,270 @@
+---
+title: Synchronous Workflow API endpoints
+slug: /workflow-api-synchronous
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::warning Beta Feature
+The Workflow API is currently in **Beta**.
+The API endpoints and response formats may change in future releases.
+:::
+
+The Synchronous Workflow API provides programmatic access to execute Langflow workflows synchronously, receiving complete results immediately upon completion. This API is part of the Langflow v2 API and offers enhanced workflow execution capabilities compared to the v1 `/run` endpoint.
+
+For asynchronous execution modes (background jobs and streaming), see [Asynchronous Workflow API endpoints](/workflow-api-asynchronous).
+
+## Prerequisites
+
+Before using the Synchronous Workflow API, you need:
+
+* [Install and start Langflow](/get-started-installation) with the developer API enabled
+* [Create a Langflow flow](/concepts-flows) that you want to execute
+* [Create a Langflow API key](/api-keys-and-authentication) with appropriate permissions
+* [Get the flow ID](/concepts-publish#api-access) or endpoint name of the flow you want to execute
+* Enable the Langflow Developer API
+
+    The Workflow API endpoints require the `developer_api_enabled` setting to be enabled. If this setting is disabled, these endpoints will return a 404 Not Found error.
+
+    To enable the developer API endpoint, do the following:
+    1. In the Langflow `.env` file, set the environment variable to `true`:
+       ```
+       LANGFLOW_DEVELOPER_API_ENABLED=true
+       ```
+    2. Start your Langflow server with the `.env` file enabled:
+       ```
+       uv run langflow run --env-file .env
+       ```
+
+    For more information about configuring environment variables, see [Environment variables](/environment-variables).
+
+### Set environment variables
+
+All code examples in this documentation assume you have set the following environment variables:
+
+**Python:**
+```python
+import os
+
+LANGFLOW_SERVER_URL = os.getenv("LANGFLOW_SERVER_URL", "YOUR_SERVER_URL")
+LANGFLOW_API_KEY = os.getenv("LANGFLOW_API_KEY", "YOUR_API_KEY")
+```
+
+**TypeScript/JavaScript:**
+```typescript
+const LANGFLOW_SERVER_URL = process.env.LANGFLOW_SERVER_URL || 'YOUR_SERVER_URL';
+const LANGFLOW_API_KEY = process.env.LANGFLOW_API_KEY || 'YOUR_API_KEY';
+```
+
+Replace `YOUR_SERVER_URL` and `YOUR_API_KEY` with your actual Langflow server URL and API key, or set them as environment variables before running the examples.
+
+## Authentication and headers
+
+All Workflow API requests require authentication using a Langflow API key. The API key is passed in the `x-api-key` header.
+
+### Required headers
+
+| Header | Description | Example |
+|--------|-------------|---------|
+| `Content-Type` | Specifies the JSON format. | `application/json` |
+| `x-api-key` | Your Langflow API key. | `sk-...` |
+| `accept` | Optional. Specifies the response format. | `application/json` |
+
+### Base URL
+
+By default, local deployments serve the Langflow API at `http://localhost:7860/api`.
+
+Remotely hosted Langflow deployments are available at the domain set by the hosting service, such as `https://UUID.ngrok.app/api`.
+
+## Execute workflow endpoint (synchronous)
+
+**Endpoint:** `POST /api/v2/workflow`
+
+**Description:** Execute a workflow synchronously and receive complete results immediately upon completion. Set `background=false` and `stream=false`.
+
+### Example request
+
+Execute a workflow synchronously and receive complete results immediately:
+
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+```python
+import requests
+
+url = f"{LANGFLOW_SERVER_URL}/api/v2/workflow"
+headers = {
+    "Content-Type": "application/json",
+    "x-api-key": LANGFLOW_API_KEY
+}
+
+payload = {
+    "flow_id": "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
+    "background": False,
+    "stream": False,
+    "inputs": {
+        "ChatInput-abc.input_type": "chat",
+        "ChatInput-abc.input_value": "what is 2+2",
+        "ChatInput-abc.session_id": "session-123"
+    }
+}
+
+response = requests.post(url, json=payload, headers=headers)
+print(response.json())
+```
+
+</TabItem>
+<TabItem value="TypeScript" label="TypeScript">
+
+```typescript
+import axios from 'axios';
+
+const url = `${LANGFLOW_SERVER_URL}/api/v2/workflow`;
+
+const payload = {
+  flow_id: "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
+  background: false,
+  stream: false,
+  inputs: {
+    "ChatInput-abc.input_type": "chat",
+    "ChatInput-abc.input_value": "what is 2+2",
+    "ChatInput-abc.session_id": "session-123"
+  }
+};
+
+const runWorkflow = async () => {
+  try {
+    const response = await axios.post(url, payload, {
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': LANGFLOW_API_KEY
+      }
+    });
+    console.log(response.data);
+  } catch (error) {
+    console.error('Error triggering workflow:', error);
+  }
+};
+
+runWorkflow();
+```
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+```bash
+curl -X POST \
+  "$LANGFLOW_SERVER_URL/api/v2/workflow" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
+  -d '{
+    "flow_id": "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
+    "background": false,
+    "stream": false,
+    "inputs": {
+      "ChatInput-abc.input_type": "chat",
+      "ChatInput-abc.input_value": "what is 2+2",
+      "ChatInput-abc.session_id": "session-123"
+    }
+  }'
+```
+
+</TabItem>
+</Tabs>
+
+### Request body
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `flow_id` | `string` | Yes | - | The ID or endpoint name of the flow to execute. |
+| `flow_version` | `string` | No | - | Optional version hash to pin to a specific flow version. |
+| `background` | `boolean` | No | `false` | Must be `false` for synchronous execution. |
+| `stream` | `boolean` | No | `false` | Must be `false` for synchronous execution. |
+| `inputs` | `object` | No | `{}` | Inputs for the workflow execution. Uses component identifiers with dot notation (e.g., `ChatInput-abc.input_value`). See [Component identifiers and input structure](#component-identifiers-and-input-structure) for detailed information. |
+
+### Example response
+
+```json
+{
+  "flow_id": "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
+  "job_id": "job_id_1234567890",
+  "object": "response",
+  "created_at": 1741476542,
+  "status": "completed",
+  "errors": [],
+  "inputs": {
+    "ChatInput-abc.input_type": "chat",
+    "ChatInput-abc.input_value": "what is 2+2",
+    "ChatInput-abc.session_id": "session-123"
+  },
+  "outputs": {
+    "ChatOutput-xyz": {
+      "type": "message",
+      "component_id": "ChatOutput-xyz",
+      "status": "completed",
+      "content": "2 + 2 equals 4."
+    }
+  },
+  "metadata": {}
+}
+```
+
+### Response body
+
+The response includes an `outputs` field containing component-level results. Each output has a `type` field indicating the type of content:
+
+| Type | Description | Example |
+|------|-------------|---------|
+| `message` | Text message content. | Chat responses, summaries |
+| `image` | Image URL or data. | Generated images, processed images |
+| `sql` | SQL query results. | Database query outputs |
+| `data` | Structured data. | JSON objects, arrays |
+| `file` | File reference. | Generated documents, reports |
+
+## Component identifiers and input structure
+
+The Workflow API uses component identifiers with dot notation to specify inputs for individual components in your workflow. This allows you to pass values to specific components and override component parameters.
+
+Component identifiers use the format `{component_id}.{parameter_name}`.
+When making requests to the Workflow API, include component identifiers in the `inputs` object.
+For example, this demonstrates targeting multiple components and their parameters in a single request.
+
+```json
+{
+  "flow_id": "your-flow-id",
+  "inputs": {
+    "ChatInput-abc.input_type": "chat",
+    "ChatInput-abc.input_value": "what is 2+2",
+    "ChatInput-abc.session_id": "session-123",
+    "OpenSearchComponent-xyz.opensearch_url": "https://opensearch:9200",
+    "LLMComponent-123.temperature": 0.7,
+    "LLMComponent-123.max_tokens": 100
+  }
+}
+```
+
+To find the component ID in the Langflow UI, open your flow in Langflow, click the component, and then click **Controls**. The component ID is at the top of the **Controls** pane.
+
+You can override any component's parameters.
+
+## Error handling
+
+The API uses standard HTTP status codes to indicate success or failure:
+
+| Status Code | Description |
+|-------------|-------------|
+| `200 OK` | Request successful. |
+| `400 Bad Request` | Invalid request parameters. |
+| `401 Unauthorized` | Invalid or missing API key. |
+| `404 Not Found` | Flow not found or developer API disabled. |
+| `500 Internal Server Error` | Server error during execution. |
+| `501 Not Implemented` | Endpoint not yet implemented. |
+
+### Error response format
+
+```json
+{
+  "detail": "Error message describing what went wrong"
+}
+```

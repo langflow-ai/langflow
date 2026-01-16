@@ -1,6 +1,6 @@
 ---
-title: Workflow API endpoints
-slug: /workflow-api
+title: Asynchronous Workflow API endpoints
+slug: /workflow-api-asynchronous
 ---
 
 import Tabs from '@theme/Tabs';
@@ -11,11 +11,13 @@ The Workflow API is currently in **Beta**.
 The API endpoints and response formats may change in future releases.
 :::
 
-The Workflow API provides programmatic access to execute Langflow workflows with support for synchronous, streaming, and background execution modes. This API is part of the Langflow v2 API and offers enhanced workflow execution capabilities compared to the v1 `/run` endpoint.
+The Asynchronous Workflow API provides programmatic access to execute Langflow workflows asynchronously using background jobs or streaming execution modes. This API is part of the Langflow v2 API and offers enhanced workflow execution capabilities compared to the v1 `/run` endpoint.
+
+For synchronous execution (receiving complete results immediately), see [Synchronous Workflow API endpoints](/workflow-api-synchronous).
 
 ## Prerequisites
 
-Before using the Workflow API, you need:
+Before using the Asynchronous Workflow API, you need:
 
 * [Install and start Langflow](/get-started-installation) with the developer API enabled
 * [Create a Langflow flow](/concepts-flows) that you want to execute
@@ -75,154 +77,15 @@ By default, local deployments serve the Langflow API at `http://localhost:7860/a
 
 Remotely hosted Langflow deployments are available at the domain set by the hosting service, such as `https://UUID.ngrok.app/api`.
 
-## Execute workflow endpoint
+## Execute workflow endpoint (asynchronous)
 
 **Endpoint:** `POST /api/v2/workflow`
 
-**Description:** Execute a workflow with support for synchronous, streaming, or background execution modes.
-
-### Example request
-
-Execute a workflow synchronously and receive complete results immediately:
-
-<Tabs>
-<TabItem value="Python" label="Python" default>
-
-```python
-import requests
-
-url = f"{LANGFLOW_SERVER_URL}/api/v2/workflow"
-headers = {
-    "Content-Type": "application/json",
-    "x-api-key": LANGFLOW_API_KEY
-}
-
-payload = {
-    "flow_id": "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
-    "background": False,
-    "stream": False,
-    "inputs": {
-        "ChatInput-abc.input_type": "chat",
-        "ChatInput-abc.input_value": "what is 2+2",
-        "ChatInput-abc.session_id": "session-123"
-    }
-}
-
-response = requests.post(url, json=payload, headers=headers)
-print(response.json())
-```
-
-</TabItem>
-<TabItem value="TypeScript" label="TypeScript">
-
-```typescript
-import axios from 'axios';
-
-const url = `${LANGFLOW_SERVER_URL}/api/v2/workflow`;
-
-const payload = {
-  flow_id: "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
-  background: false,
-  stream: false,
-  inputs: {
-    "ChatInput-abc.input_type": "chat",
-    "ChatInput-abc.input_value": "what is 2+2",
-    "ChatInput-abc.session_id": "session-123"
-  }
-};
-
-const runWorkflow = async () => {
-  try {
-    const response = await axios.post(url, payload, {
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': LANGFLOW_API_KEY
-      }
-    });
-    console.log(response.data);
-  } catch (error) {
-    console.error('Error triggering workflow:', error);
-  }
-};
-
-runWorkflow();
-```
-
-</TabItem>
-<TabItem value="curl" label="curl">
-
-```bash
-curl -X POST \
-  "$LANGFLOW_SERVER_URL/api/v2/workflow" \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: $LANGFLOW_API_KEY" \
-  -d '{
-    "flow_id": "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
-    "background": false,
-    "stream": false,
-    "inputs": {
-      "ChatInput-abc.input_type": "chat",
-      "ChatInput-abc.input_value": "what is 2+2",
-      "ChatInput-abc.session_id": "session-123"
-    }
-  }'
-```
-
-</TabItem>
-</Tabs>
-
-### Request body
-
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `flow_id` | `string` | Yes | - | The ID or endpoint name of the flow to execute. |
-| `flow_version` | `string` | No | - | Optional version hash to pin to a specific flow version. |
-| `background` | `boolean` | No | `false` | If `true`, starts execution in background and returns job ID immediately. Mutually exclusive with `stream`. |
-| `stream` | `boolean` | No | `false` | If `true`, returns server-sent events stream following AG-UI protocol. Mutually exclusive with `background`. |
-| `inputs` | `object` | No | `{}` | Inputs for the workflow execution. Uses component identifiers with dot notation (e.g., `ChatInput-abc.input_value`). See [Component identifiers and input structure](#component-identifiers-and-input-structure) for detailed information. |
-
-### Example response
-
-```json
-{
-  "flow_id": "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
-  "job_id": "job_id_1234567890",
-  "object": "response",
-  "created_at": 1741476542,
-  "status": "completed",
-  "errors": [],
-  "inputs": {
-    "ChatInput-abc.input_type": "chat",
-    "ChatInput-abc.input_value": "what is 2+2",
-    "ChatInput-abc.session_id": "session-123"
-  },
-  "outputs": {
-    "ChatOutput-xyz": {
-      "type": "message",
-      "component_id": "ChatOutput-xyz",
-      "status": "completed",
-      "content": "2 + 2 equals 4."
-    }
-  },
-  "metadata": {}
-}
-```
-
-### Response body
-
-The response includes an `outputs` field containing component-level results. Each output has a `type` field indicating the type of content:
-
-| Type | Description | Example |
-|------|-------------|---------|
-| `message` | Text message content. | Chat responses, summaries |
-| `image` | Image URL or data. | Generated images, processed images |
-| `sql` | SQL query results. | Database query outputs |
-| `data` | Structured data. | JSON objects, arrays |
-| `file` | File reference. | Generated documents, reports |
+**Description:** Execute a workflow asynchronously using background jobs or streaming execution modes.
 
 ### Background execution
 
-Start a job and receive a job ID immediately. Set `background=true`.
+Start a job and receive a job ID immediately. Set `background=true` and `stream=false`.
 
 For long-running workflows, use `background=true` to get a `job_id` immediately, and then poll the status [using the GET endpoint](#get-workflow-status-endpoint).
 
@@ -459,6 +322,16 @@ For a complete list of event types, see the [AG-UI protocol documentation](https
 :::note Reconnecting to Streams
 If a streaming connection is interrupted, you can reconnect using the GET endpoint with the `job_id` and optional `sequence_id` parameter to resume from where you left off.
 :::
+
+### Request body
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `flow_id` | `string` | Yes | - | The ID or endpoint name of the flow to execute. |
+| `flow_version` | `string` | No | - | Optional version hash to pin to a specific flow version. |
+| `background` | `boolean` | No | `false` | If `true`, starts execution in background and returns job ID immediately. Mutually exclusive with `stream`. |
+| `stream` | `boolean` | No | `false` | If `true`, returns server-sent events stream following AG-UI protocol. Mutually exclusive with `background`. |
+| `inputs` | `object` | No | `{}` | Inputs for the workflow execution. Uses component identifiers with dot notation (e.g., `ChatInput-abc.input_value`). See [Component identifiers and input structure](#component-identifiers-and-input-structure) for detailed information. |
 
 ## Get workflow status endpoint
 

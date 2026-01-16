@@ -444,9 +444,20 @@ module.exports = {
           label: "Flow trigger endpoints",
         },
         {
-          type: "doc",
-          id: "API-Reference/workflow-api",
-          label: "Workflow API endpoints",
+          type: "category",
+          label: "Developer API",
+          items: [
+            {
+              type: "doc",
+              id: "API-Reference/workflow-api-synchronous",
+              label: "Synchronous Workflow API endpoints",
+            },
+            {
+              type: "doc",
+              id: "API-Reference/workflow-api-asynchronous",
+              label: "Asynchronous Workflow API endpoints",
+            },
+          ],
         },
         {
           type: "doc",
