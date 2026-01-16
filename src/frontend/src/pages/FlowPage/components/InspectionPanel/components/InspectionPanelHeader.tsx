@@ -58,7 +58,7 @@ export default function InspectionPanelHeader({
 
   return (
     <>
-      <div className="flex items-center justify-between border-b p-2 px-3 pl-4">
+      <div className="flex items-center justify-between pt-2 pb-1 px-3 pl-4">
         <div className="flex items-center gap-3">
           <NodeIcon
             dataType={data.type}
@@ -68,9 +68,6 @@ export default function InspectionPanelHeader({
           <div className="flex flex-col">
             <span className="font-semibold text-sm">
               {data.node?.display_name ?? data.type}
-            </span>
-            <span className="text-xs text-muted-foreground">
-              Component Settings
             </span>
           </div>
         </div>

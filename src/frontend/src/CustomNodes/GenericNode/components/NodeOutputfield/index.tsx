@@ -38,6 +38,7 @@ import { nodeColorsName } from "../../../../utils/styleUtils";
 import HandleRenderComponent from "../handleRenderComponent";
 import OutputComponent from "../OutputComponent";
 import OutputModal from "../outputModal";
+import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 
 const _EyeIcon = memo(
   ({ hidden, className }: { hidden: boolean; className: string }) => (
@@ -46,7 +47,7 @@ const _EyeIcon = memo(
       strokeWidth={ICON_STROKE_WIDTH}
       name={hidden ? "EyeOff" : "Eye"}
     />
-  ),
+  )
 );
 const SnowflakeIcon = memo(() => (
   <IconComponent className="!w-3 !h-3 text-ice" name="Snowflake" />
@@ -74,7 +75,7 @@ const InspectButton = memo(
         onClick: () => void;
         id: string;
       },
-      ref: React.ForwardedRef<HTMLButtonElement>,
+      ref: React.ForwardedRef<HTMLButtonElement>
     ) => (
       <Button
         ref={ref}
@@ -93,14 +94,14 @@ const InspectButton = memo(
                 ? "text-background hover:text-secondary-hover"
                 : "cursor-not-allowed text-placeholder-foreground opacity-80"
               : displayOutputPreview && !unknownOutput && !disabled
-                ? "text-foreground hover:text-primary-hover"
-                : "cursor-not-allowed text-placeholder-foreground opacity-60",
-            errorOutput ? "text-destructive" : "",
+              ? "text-foreground hover:text-primary-hover"
+              : "cursor-not-allowed text-placeholder-foreground opacity-60",
+            errorOutput ? "text-destructive" : ""
           )}
         />
       </Button>
-    ),
-  ),
+    )
+  )
 );
 InspectButton.displayName = "InspectButton";
 
@@ -141,7 +142,7 @@ function NodeOutputField({
       const realOutput = getGroupOutputNodeId(
         data.node.flow,
         outputProxy.name,
-        outputProxy.id,
+        outputProxy.id
       );
       if (realOutput) {
         return {
@@ -166,24 +167,24 @@ function NodeOutputField({
       unknownOutput: logTypeIsUnknown(flowPoolNode?.data, internalOutputName),
       errorOutput: logTypeIsError(flowPoolNode?.data, internalOutputName),
     }),
-    [flowPool, flowPoolId, flowPoolNode?.data, internalOutputName],
+    [flowPool, flowPoolId, flowPoolNode?.data, internalOutputName]
   );
 
   const emptyOutput = useMemo(() => {
     return Object.keys(flowPoolNode?.data?.outputs ?? {})?.every(
-      (key) => flowPoolNode?.data?.outputs[key]?.message?.length === 0,
+      (key) => flowPoolNode?.data?.outputs[key]?.message?.length === 0
     );
   }, [flowPoolNode?.data?.outputs]);
 
   const disabledOutput = useMemo(
     () => edges.some((edge) => edge.sourceHandle === scapedJSONStringfy(id)),
-    [edges, id],
+    [edges, id]
   );
 
   const looping = useMemo(() => {
     return edges.some((edge) => {
       const targetHandleObject: targetHandleType = scapeJSONParse(
-        edge.targetHandle!,
+        edge.targetHandle!
       );
       return (
         targetHandleObject.output_types &&
@@ -213,7 +214,7 @@ function NodeOutputField({
       });
       updateNodeInternals(data.id);
     },
-    [data.id, index, setNode, updateNodeInternals],
+    [data.id, index, setNode, updateNodeInternals]
   );
 
   useEffect(() => {
@@ -241,11 +242,11 @@ function NodeOutputField({
       .toSorted((a, b) => {
         const indexA =
           data?.node?.outputs?.findIndex(
-            (output) => output.name === a.data?.sourceHandle?.name,
+            (output) => output.name === a.data?.sourceHandle?.name
           ) ?? 0;
         const indexB =
           data?.node?.outputs?.findIndex(
-            (output) => output.name === b.data?.sourceHandle?.name,
+            (output) => output.name === b.data?.sourceHandle?.name
           ) ?? 0;
         return indexA - indexB;
       });
@@ -305,7 +306,9 @@ function NodeOutputField({
           colors={colors}
           setFilterEdge={setFilterEdge}
           showNode={showNode}
-          testIdComplement={`${data?.type?.toLowerCase()}-${showNode ? "shownode" : "noshownode"}`}
+          testIdComplement={`${data?.type?.toLowerCase()}-${
+            showNode ? "shownode" : "noshownode"
+          }`}
           colorName={loopInputColorName}
         />
       );
@@ -335,7 +338,9 @@ function NodeOutputField({
         colors={colors}
         setFilterEdge={setFilterEdge}
         showNode={showNode}
-        testIdComplement={`${data?.type?.toLowerCase()}-${showNode ? "shownode" : "noshownode"}`}
+        testIdComplement={`${data?.type?.toLowerCase()}-${
+          showNode ? "shownode" : "noshownode"
+        }`}
         colorName={
           data.node?.outputs?.[index].allows_loop
             ? loopInputColorName
@@ -357,7 +362,7 @@ function NodeOutputField({
       data.node?.outputs?.[index].allows_loop,
       loopInputColorName,
       index,
-    ],
+    ]
   );
 
   const disabledInspectButton =
@@ -372,7 +377,7 @@ function NodeOutputField({
       className={cn(
         "relative flex h-11 w-full flex-wrap items-center justify-between bg-muted px-5 py-2",
         lastOutput ? "rounded-b-[0.69rem]" : "",
-        isToolMode && "bg-primary",
+        isToolMode && "bg-primary"
       )}
     >
       {LoopHandle}
@@ -412,42 +417,44 @@ function NodeOutputField({
             />
           </span>
 
-          <ShadTooltip
-            content={
-              displayOutputPreview
-                ? unknownOutput || emptyOutput
-                  ? "Output can't be displayed"
-                  : "Inspect output"
-                : "Please build the component first"
-            }
-            styleClasses="z-40"
-          >
-            <div className="flex items-center gap-2">
-              <OutputModal
-                open={openOutputModal}
-                setOpen={setOpenOutputModal}
-                disabled={disabledInspectButton}
-                nodeId={flowPoolId}
-                outputName={internalOutputName}
-              >
-                <InspectButton
+          {!ENABLE_INSPECTION_PANEL && (
+            <ShadTooltip
+              content={
+                displayOutputPreview
+                  ? unknownOutput || emptyOutput
+                    ? "Output can't be displayed"
+                    : "Inspect output"
+                  : "Please build the component first"
+              }
+              styleClasses="z-40"
+            >
+              <div className="flex items-center gap-2">
+                <OutputModal
+                  open={openOutputModal}
+                  setOpen={setOpenOutputModal}
                   disabled={disabledInspectButton}
-                  displayOutputPreview={displayOutputPreview}
-                  unknownOutput={unknownOutput ?? false}
-                  errorOutput={errorOutput ?? false}
-                  isToolMode={isToolMode}
-                  title={title}
-                  onClick={() => {}}
-                  id={data?.type}
-                />
-              </OutputModal>
-              {looping && (
-                <Badge variant="pinkStatic" size="xq" className="px-1">
-                  Looping
-                </Badge>
-              )}
-            </div>
-          </ShadTooltip>
+                  nodeId={flowPoolId}
+                  outputName={internalOutputName}
+                >
+                  <InspectButton
+                    disabled={disabledInspectButton}
+                    displayOutputPreview={displayOutputPreview}
+                    unknownOutput={unknownOutput ?? false}
+                    errorOutput={errorOutput ?? false}
+                    isToolMode={isToolMode}
+                    title={title}
+                    onClick={() => {}}
+                    id={data?.type}
+                  />
+                </OutputModal>
+                {looping && (
+                  <Badge variant="pinkStatic" size="xq" className="px-1">
+                    Looping
+                  </Badge>
+                )}
+              </div>
+            </ShadTooltip>
+          )}
         </div>
       </div>
       {Handle}
