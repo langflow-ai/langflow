@@ -236,8 +236,8 @@ async def assist(
         "PROVIDER": provider,
     }
 
-    # Generate unique session_id per request to isolate memory
-    session_id = str(uuid.uuid4())
+    # Use session_id from request if provided, otherwise generate new one
+    session_id = request.session_id or str(uuid.uuid4())
 
     input_preview = request.input_value[:50] if request.input_value else "None"
     logger.info(f"Executing {LANGFLOW_ASSISTANT_FLOW} with {provider}/{model_name}, input: {input_preview}...")
@@ -324,8 +324,8 @@ async def assist_stream(
         "PROVIDER": provider,
     }
 
-    # Generate unique session_id per request to isolate memory
-    session_id = str(uuid.uuid4())
+    # Use session_id from request if provided, otherwise generate new one
+    session_id = request.session_id or str(uuid.uuid4())
 
     max_retries = request.max_retries if request.max_retries is not None else MAX_VALIDATION_RETRIES
 

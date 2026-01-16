@@ -45,6 +45,8 @@ export type ProgressMetadata = {
   attempt?: number;
   maxAttempts?: number;
   error?: string;
+  componentName?: string;
+  componentCode?: string;
 };
 
 export type AssistantMessageMetadata = {
@@ -78,6 +80,8 @@ export type ProgressState = {
   maxAttempts: number;
   message?: string;        // Human-readable status message
   error?: string;          // Error message (for validation_failed/retrying)
+  componentName?: string;  // Component class name (for validation_failed)
+  componentCode?: string;  // Component code (for validation_failed)
 };
 
 export type ProgressInfo = ProgressState | null;

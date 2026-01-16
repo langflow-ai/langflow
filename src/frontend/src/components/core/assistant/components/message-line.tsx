@@ -2,6 +2,7 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { cn } from "@/utils/utils";
 import type { AssistantMessage } from "../assistant.types";
 import { ComponentResultLine } from "./component-result-line";
+import { FailedComponentLine } from "./failed-component-line";
 import { ProgressLine } from "./progress-line";
 
 type MessageLineProps = {
@@ -60,6 +61,17 @@ export const MessageLine = ({
   }
 
   if (message.type === "progress" && message.metadata?.progress) {
+    // Show FailedComponentLine for validation_failed step
+    if (message.metadata.progress.step === "validation_failed") {
+      return (
+        <FailedComponentLine
+          componentName={message.metadata.progress.componentName}
+          code={message.metadata.progress.componentCode}
+          error={message.metadata.progress.error}
+        />
+      );
+    }
+
     return (
       <ProgressLine
         content={message.content}

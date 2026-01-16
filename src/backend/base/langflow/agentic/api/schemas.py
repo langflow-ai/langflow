@@ -26,6 +26,7 @@ class AssistantRequest(BaseModel):
     max_retries: int | None = None
     model_name: str | None = None
     provider: str | None = None
+    session_id: str | None = None
 
 
 class ValidationResult(BaseModel):

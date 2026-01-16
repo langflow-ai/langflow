@@ -225,6 +225,8 @@ async def execute_flow_with_validation_streaming(
             total_attempts,
             message="Validation failed",
             error=validation.error,
+            class_name=validation.class_name,
+            component_code=code,
         )
         await asyncio.sleep(VALIDATION_UI_DELAY_SECONDS)
 

@@ -14,6 +14,7 @@ type AssistantPromptRequest = {
   maxRetries?: number;
   provider?: string;
   modelName?: string;
+  sessionId?: string;
 };
 
 type StreamingRequest = AssistantPromptRequest & {
@@ -27,6 +28,8 @@ type SSEEvent = {
   max_attempts?: number;
   message?: string;        // Human-readable status message
   error?: string;          // Error message (for validation_failed/retrying)
+  class_name?: string;     // Class name (for validation_failed)
+  component_code?: string; // Component code (for validation_failed)
   data?: AssistantPromptResponse;
 };
 
@@ -62,6 +65,7 @@ export async function postAssistantPromptStream({
   maxRetries,
   provider,
   modelName,
+  sessionId,
   onProgress,
 }: StreamingRequest): Promise<AssistantPromptResponse> {
   const response = await fetchStreamingResponse({
@@ -72,6 +76,7 @@ export async function postAssistantPromptStream({
     maxRetries,
     provider,
     modelName,
+    sessionId,
   });
 
   const reader = response.body?.getReader();
@@ -108,6 +113,7 @@ async function fetchStreamingResponse(
       max_retries: request.maxRetries,
       provider: request.provider,
       model_name: request.modelName,
+      session_id: request.sessionId,
     }),
   });
 
@@ -179,6 +185,8 @@ function processSSEEvent(
         maxAttempts: event.max_attempts,
         message: event.message,
         error: event.error,
+        componentName: event.class_name,
+        componentCode: event.component_code,
       });
     }
 

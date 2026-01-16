@@ -34,16 +34,17 @@ export const getStepConfig = (
         spin: false,
       };
     case "extracting_code":
+      // Skip this step in UI - no longer shown
       return {
         icon: "FileCode",
-        text: "Extracting Python code...",
+        text: "",
         color: "text-muted-foreground",
         spin: false,
       };
     case "validating":
       return {
         icon: "Shield",
-        text: `Validating component... (${attempt}/${maxAttempts})`,
+        text: "Validating component code...",
         color: "text-muted-foreground",
         spin: true,
       };
@@ -62,9 +63,12 @@ export const getStepConfig = (
         spin: false,
       };
     case "retrying":
+      // attempt = current attempt that failed (1-indexed)
+      // maxAttempts = total attempts (original + retries)
+      // So retry number = attempt, max retries = maxAttempts - 1
       return {
         icon: "RefreshCw",
-        text: `Retrying... (${attempt + 1}/${maxAttempts})`,
+        text: `Retrying... (${attempt}/${maxAttempts - 1})`,
         color: "text-muted-foreground",
         spin: true,
       };

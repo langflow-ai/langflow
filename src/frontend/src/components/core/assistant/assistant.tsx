@@ -51,6 +51,7 @@ const Assistant = memo(function Assistant() {
   const setTerminalOpen = useAssistantStore((state) => state.setTerminalOpen);
   const maxRetries = useAssistantStore((state) => state.maxRetries);
   const setMaxRetries = useAssistantStore((state) => state.setMaxRetries);
+  const sessionId = useAssistantStore((state) => state.sessionId);
 
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const [isLoading, setIsLoading] = useState(false);
@@ -166,6 +167,7 @@ const Assistant = memo(function Assistant() {
           maxRetries,
           provider,
           modelName,
+          sessionId,
           onProgress,
         });
 
@@ -174,7 +176,7 @@ const Assistant = memo(function Assistant() {
         setIsLoading(false);
       }
     },
-    [currentFlowId, maxRetries],
+    [currentFlowId, maxRetries, sessionId],
   );
 
   const handleAddToCanvas = useCallback(

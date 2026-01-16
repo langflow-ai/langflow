@@ -12,6 +12,8 @@ def format_progress_event(
     *,
     message: str | None = None,
     error: str | None = None,
+    class_name: str | None = None,
+    component_code: str | None = None,
 ) -> str:
     """Format SSE progress event.
 
@@ -21,6 +23,8 @@ def format_progress_event(
         max_attempts: Maximum number of attempts
         message: Optional human-readable message
         error: Optional error message (for validation_failed step)
+        class_name: Optional class name (for validation_failed step)
+        component_code: Optional component code (for validation_failed step)
     """
     data: dict = {
         "event": "progress",
@@ -32,6 +36,10 @@ def format_progress_event(
         data["message"] = message
     if error:
         data["error"] = error
+    if class_name:
+        data["class_name"] = class_name
+    if component_code:
+        data["component_code"] = component_code
     return f"data: {json.dumps(data)}\n\n"
 
 

@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { nanoid } from "nanoid";
 import type {
   AssistantMessage,
   AssistantMessageMetadata,
@@ -9,6 +10,8 @@ import type {
 const DEFAULT_MAX_RETRIES = 3;
 const STORAGE_KEY = "assistant-max-retries";
 const MODEL_STORAGE_KEY = "assistant-selected-model";
+
+const generateSessionId = (): string => nanoid();
 
 const getStoredMaxRetries = (): number => {
   try {
@@ -45,6 +48,7 @@ type AssistantStoreType = {
   scrollPosition: number;
   messages: AssistantMessageData[];
   selectedModel: string | null;
+  sessionId: string;
   setTerminalOpen: (open: boolean) => void;
   toggleTerminal: () => void;
   setMaxRetries: (value: number) => void;
@@ -53,6 +57,7 @@ type AssistantStoreType = {
   addMessage: (message: AssistantMessageData) => void;
   clearMessages: () => void;
   setSelectedModel: (model: string) => void;
+  resetSessionId: () => void;
 };
 
 export const useAssistantStore = create<AssistantStoreType>((set) => ({
@@ -61,6 +66,7 @@ export const useAssistantStore = create<AssistantStoreType>((set) => ({
   scrollPosition: -1, // -1 means "scroll to bottom"
   messages: [],
   selectedModel: getStoredModel(),
+  sessionId: generateSessionId(),
   setTerminalOpen: (open) => set({ isTerminalOpen: open }),
   toggleTerminal: () => set((state) => ({ isTerminalOpen: !state.isTerminalOpen })),
   setMaxRetries: (value) => {
@@ -83,4 +89,5 @@ export const useAssistantStore = create<AssistantStoreType>((set) => ({
     }
     set({ selectedModel: model });
   },
+  resetSessionId: () => set({ sessionId: generateSessionId() }),
 }));

@@ -55,6 +55,7 @@ const AssistantTerminal = ({
   const setScrollPosition = useAssistantStore((state) => state.setScrollPosition);
   const selectedModel = useAssistantStore((state) => state.selectedModel);
   const setSelectedModel = useAssistantStore((state) => state.setSelectedModel);
+  const resetSessionId = useAssistantStore((state) => state.resetSessionId);
 
   const [inputValue, setInputValue] = useState("");
   const [height, setHeight] = useState(TERMINAL_DEFAULT_HEIGHT);
@@ -75,14 +76,8 @@ const AssistantTerminal = ({
           "Welcome to Assistant. Ask about Langflow documentation or describe a custom component to generate. Type HELP for commands.",
         timestamp: new Date(),
       },
-      {
-        id: nanoid(),
-        type: "system",
-        content: `MAX_RETRIES=${maxRetries} (for component generation)`,
-        timestamp: new Date(),
-      },
     ],
-    [maxRetries],
+    [],
   );
 
   useEffect(() => {
@@ -225,15 +220,10 @@ const AssistantTerminal = ({
         content: "Terminal cleared. Type HELP for commands.",
         timestamp: new Date(),
       },
-      {
-        id: nanoid(),
-        type: "system",
-        content: `MAX_RETRIES=${maxRetries} (for component generation)`,
-        timestamp: new Date(),
-      },
     ]);
     setScrollPosition(-1);
-  }, [maxRetries, setMessages, setScrollPosition]);
+    resetSessionId();
+  }, [setMessages, setScrollPosition, resetSessionId]);
 
   const handleSubmit = useCallback(async () => {
     const trimmedInput = inputValue.trim();
@@ -267,8 +257,13 @@ const AssistantTerminal = ({
         maxAttempts: number;
         message?: string;
         error?: string;
+        componentName?: string;
+        componentCode?: string;
       }) => {
         setProgress(p);
+
+        // Skip extracting_code step - not shown in UI
+        if (p.step === "extracting_code") return;
 
         // Add progress message to chat history
         const config = getStepConfig(p.step, p.attempt, p.maxAttempts, p.error);
@@ -281,6 +276,8 @@ const AssistantTerminal = ({
             attempt: p.attempt,
             maxAttempts: p.maxAttempts,
             error: p.error,
+            componentName: p.componentName,
+            componentCode: p.componentCode,
           },
         });
       };
@@ -456,7 +453,6 @@ const AssistantTerminal = ({
 
       <TerminalHeader
         onClose={onClose}
-        onClear={handleClear}
         configData={configData}
         selectedModel={selectedModel}
         onModelChange={setSelectedModel}
@@ -468,21 +464,32 @@ const AssistantTerminal = ({
         <ConfigurationRequired onConfigureClick={onConfigureClick} />
       ) : (
         <>
-          <div
-            ref={messagesContainerRef}
-            onScroll={handleScroll}
-            className="flex-1 overflow-y-auto px-4 py-3"
-            style={{ overflowAnchor: "none" }}
-          >
-            <div className="flex flex-col gap-1">
-              {messages.map((message) => (
-                <MessageLine
-                  key={message.id}
-                  message={message}
-                  onAddToCanvas={onAddToCanvas}
-                />
-              ))}
-              {(isLoading || progress) && <LoadingIndicator />}
+          <div className="relative flex-1 overflow-hidden">
+            <Button
+              variant="ghost"
+              size="iconSm"
+              onClick={handleClear}
+              className="absolute right-4 top-2 z-10 text-muted-foreground hover:bg-muted hover:text-foreground"
+              title="Clear chat"
+            >
+              <ForwardedIconComponent name="Trash2" className="h-3.5 w-3.5" />
+            </Button>
+            <div
+              ref={messagesContainerRef}
+              onScroll={handleScroll}
+              className="h-full overflow-y-auto px-4 py-3"
+              style={{ overflowAnchor: "none" }}
+            >
+              <div className="flex flex-col gap-1">
+                {messages.map((message) => (
+                  <MessageLine
+                    key={message.id}
+                    message={message}
+                    onAddToCanvas={onAddToCanvas}
+                  />
+                ))}
+                {(isLoading || progress) && <LoadingIndicator />}
+              </div>
             </div>
           </div>
 

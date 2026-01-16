@@ -12,9 +12,16 @@ import {
 } from "@/components/ui/select";
 import type { AssistantConfigResponse, ModelOption } from "../assistant.types";
 
+const PROVIDER_ICONS: Record<string, string> = {
+  Anthropic: "Anthropic",
+  OpenAI: "OpenAI",
+  "Google Generative AI": "GoogleGenerativeAI",
+  Groq: "Groq",
+  Ollama: "Ollama",
+};
+
 type TerminalHeaderProps = {
   onClose: () => void;
-  onClear: () => void;
   configData?: AssistantConfigResponse;
   selectedModel: string | null;
   onModelChange: (value: string) => void;
@@ -22,7 +29,6 @@ type TerminalHeaderProps = {
 
 export const TerminalHeader = ({
   onClose,
-  onClear,
   configData,
   selectedModel,
   onModelChange,
@@ -71,7 +77,7 @@ export const TerminalHeader = ({
           <SelectTrigger className="h-7 w-auto min-w-[140px] border-border bg-muted text-xs text-foreground hover:bg-accent focus:ring-0 focus:ring-offset-0 disabled:opacity-50">
             <div className="flex items-center gap-1.5">
               <ForwardedIconComponent
-                name="Bot"
+                name={selectedOption ? (PROVIDER_ICONS[selectedOption.provider] || "Bot") : "Bot"}
                 className="h-3 w-3 text-muted-foreground"
               />
               <SelectValue placeholder="Select model">
@@ -96,7 +102,11 @@ export const TerminalHeader = ({
             {configData?.providers && configData.providers.length > 0 ? (
               configData.providers.map((provider) => (
                 <SelectGroup key={provider.name}>
-                  <SelectLabel className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                  <SelectLabel className="flex items-center gap-1.5 px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                    <ForwardedIconComponent
+                      name={PROVIDER_ICONS[provider.name] || "Bot"}
+                      className="h-3 w-3"
+                    />
                     {provider.name}
                   </SelectLabel>
                   {provider.models.map((model) => (
@@ -117,14 +127,6 @@ export const TerminalHeader = ({
             )}
           </SelectContent>
         </Select>
-        <Button
-          variant="ghost"
-          size="iconSm"
-          onClick={onClear}
-          className="text-muted-foreground hover:bg-muted hover:text-foreground"
-        >
-          <ForwardedIconComponent name="Trash2" className="h-3.5 w-3.5" />
-        </Button>
         <Button
           variant="ghost"
           size="iconSm"

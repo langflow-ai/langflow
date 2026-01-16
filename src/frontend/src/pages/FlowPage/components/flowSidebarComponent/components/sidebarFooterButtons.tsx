@@ -76,7 +76,7 @@ const SidebarMenuButtons = ({
             className="h-4 w-4 text-muted-foreground"
           />
           <span className="group-data-[state=open]/collapsible:font-semibold">
-            Assistant
+            Assistant Console
           </span>
         </Button>
       </SidebarMenuButton>
@@ -97,7 +97,7 @@ const SidebarMenuButtons = ({
             className="h-4 w-4 text-muted-foreground"
           />
           <span className="group-data-[state=open]/collapsible:font-semibold">
-            New Custom Component
+            Custom Component
           </span>
         </Button>
       </SidebarMenuButton>
