@@ -491,7 +491,7 @@ export default function ModelInputComponent({
   );
 
   const renderManageProvidersButton = () => (
-    <div className="sticky bottom-0 bg-background">
+    <div className="bottom-0 bg-background">
       {/* {renderFooterButton(
         "Refresh List",
         "RefreshCw",
