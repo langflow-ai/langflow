@@ -54,27 +54,29 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
 ### Breaking changes
 
--   `langflow-base` dependency structure refactor
+-   `langflow-base` dependency structure refactored
 
-    The `langflow-base` package has been refactored to use granular optional dependency groups. Many dependencies that were previously included in the `langflow-base` installation have been moved to optional extras.
+    The `langflow-base` package now uses granular optional dependency groups. As a result, many dependencies that were previously included in the `langflow-base` installation were moved to optional extras.
 
-    If you installed Langflow with `uv pip install langflow`, this is not a breaking change. Installing `langflow` automatically installs `langflow-base[complete]`, which includes all optional dependencies and maintains the same functionality as before.
+    If you installed Langflow with `uv pip install langflow`, this isn't a breaking change. Installing `langflow` automatically installs `langflow-base[complete]`, which includes all optional dependencies and maintains the same functionality as before.
 
-    If you installed Langflow with `uv pip install langflow-base` without specifying extra dependencies, **this is a breaking change**.
-    Dependencies that were previously included by default are now available only through optional extras.
-    If you install `langflow-base` directly, you will now only install the [core base dependencies](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/pyproject.toml).
+    However, if you installed Langflow with `uv pip install langflow-base` without specifying extra dependencies, this _is_ a breaking change.
+    Some dependencies that were previously included by default are now available only through optional extras.
+    Therefore, installing `langflow-base` directly only installs the [core base dependencies](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/pyproject.toml).
 
-    **Migration**: If you use `langflow-base` directly and need the full set of dependencies, install it with the `complete` extra:
+    If you installed `langflow-base`, there are two ways to resolve dependency errors that result from this breaking change:
+    
+    * If you need the full set of dependencies, you must install `langflow-base` with the `complete` extra:
 
-    ```bash
-    uv pip install "langflow-base[complete]"
-    ```
+        ```bash
+        uv pip install "langflow-base[complete]"
+        ```
 
-    Alternatively, install only the specific optional dependency groups you need:
+    * If you need specific dependencies, you must install `langflow-base` with those optional dependency groups. For example:
 
-    ```bash
-    uv pip install "langflow-base[postgresql,openai,chroma]"
-    ```
+       ```bash
+       uv pip install "langflow-base[postgresql,openai,chroma]"
+       ```
 
     For more information about available optional dependency groups, see [Install optional dependency groups for `langflow-base`](/install-custom-dependencies#install-optional-dependency-groups-for-langflow-base).
 
