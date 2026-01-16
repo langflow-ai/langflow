@@ -47,6 +47,46 @@ To avoid the impact of potential breaking changes and test new versions, the Lan
 
     If you made changes to your flows in the isolated installation, you might want to export and import those flows back to your upgraded primary installation so you don't have to repeat the component upgrade process.
 
+## 1.8.x
+
+Highlights of this release include the following changes.
+For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases).
+
+### Breaking changes
+
+-   `langflow-base` dependency structure refactored
+
+    The `langflow-base` package now uses granular optional dependency groups. As a result, many dependencies that were previously included in the `langflow-base` installation were moved to optional extras.
+
+    If you installed Langflow with `uv pip install langflow`, this isn't a breaking change. Installing `langflow` automatically installs `langflow-base[complete]`, which includes all optional dependencies and maintains the same functionality as before.
+
+    However, if you installed Langflow with `uv pip install langflow-base` without specifying extra dependencies, this _is_ a breaking change.
+    Some dependencies that were previously included by default are now available only through optional extras.
+    Therefore, installing `langflow-base` directly only installs the [core base dependencies](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/pyproject.toml).
+
+    If you installed `langflow-base`, there are two ways to resolve dependency errors that result from this breaking change:
+    
+    * If you need the full set of dependencies, you must install `langflow-base` with the `complete` extra:
+
+        ```bash
+        uv pip install "langflow-base[complete]"
+        ```
+
+    * If you need specific dependencies, you must install `langflow-base` with those optional dependency groups. For example:
+
+       ```bash
+       uv pip install "langflow-base[postgresql,openai,chroma]"
+       ```
+
+    For more information about available optional dependency groups, see [Install optional dependency groups for `langflow-base`](/install-custom-dependencies#install-optional-dependency-groups-for-langflow-base).
+
+### New features and enhancements
+
+- Mustache templating support for Prompt Template component
+
+    The **Prompt Template** component now supports Mustache templating syntax.
+    Mustache templating eliminates the need to escape curly braces when including JSON structures in your prompts. For more information, see [Prompt Template](/components-prompts#use-mustache-templating-in-prompt-templates).
+
 ## 1.7.x
 
 :::warning Version yanked
