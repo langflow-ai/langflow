@@ -26,4 +26,3 @@ def require_user_id(
     """Raise a ValueError if user_id or flow_id is not provided."""
     if not user_id:
         raise ValueError(MISSING_USER_ID_MSG)
-
