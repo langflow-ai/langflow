@@ -1,4 +1,5 @@
 import math
+
 import httpx
 
 from lfx.custom.custom_component.component import Component
@@ -223,9 +224,9 @@ class TavilySearchComponent(Component):
         """
         if isinstance(obj, dict):
             return {k: self._replace_nan(v) for k, v in obj.items()}
-        elif isinstance(obj, list):
+        if isinstance(obj, list):
             return [self._replace_nan(v) for v in obj]
-        elif isinstance(obj, float):
+        if isinstance(obj, float):
             # Check for NaN (including math.nan which is a float)
             if math.isnan(obj):
                 return None
