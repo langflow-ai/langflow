@@ -53,7 +53,9 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       setIsComposing(true);
     };
 
-    const handleCompositionEnd = (e: React.CompositionEvent<HTMLInputElement>) => {
+    const handleCompositionEnd = (
+      e: React.CompositionEvent<HTMLInputElement>,
+    ) => {
       setIsComposing(false);
       // Normalize to NFC and trigger onChange after composition ends
       const normalizedValue = e.currentTarget.value.normalize("NFC");
