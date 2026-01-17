@@ -290,6 +290,7 @@ export default function AddMcpServerModal({
             <span className="text-mmd font-normal text-muted-foreground">
               Save MCP Servers. Manage added servers in{" "}
               <button
+                type="button"
                 className="underline cursor-pointer bg-transparent border-0 p-0 text-inherit"
                 onClick={() => {
                   setOpen(false);

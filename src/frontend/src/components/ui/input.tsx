@@ -28,20 +28,33 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     ref,
   ) => {
     const [isComposing, setIsComposing] = React.useState(false);
+    // Normalize non-string values to strings for display
+    const normalizeValue = (val: unknown): string => {
+      if (val == null) return "";
+      return typeof val === "string" ? val : String(val);
+    };
     const [internalValue, setInternalValue] = React.useState(
-      typeof value === "string" ? value : "",
+      normalizeValue(value),
     );
     const inputRef = React.useRef<HTMLInputElement>(null);
     const resolvedRef = (ref as React.RefObject<HTMLInputElement>) || inputRef;
+    // Ref to prevent duplicate onChange calls during IME composition
+    const skipNextOnChangeRef = React.useRef(false);
 
     // Update internal value when external value changes and not composing
     React.useEffect(() => {
-      if (!isComposing && typeof value === "string") {
-        setInternalValue(value);
+      if (!isComposing && value !== undefined) {
+        setInternalValue(normalizeValue(value));
       }
     }, [value, isComposing]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      // Skip this onChange if we just finished composition
+      if (skipNextOnChangeRef.current) {
+        skipNextOnChangeRef.current = false;
+        setInternalValue(e.target.value);
+        return;
+      }
       setInternalValue(e.target.value);
       // Only call onChange if not composing (IME input in progress)
       if (!isComposing && onChange) {
@@ -61,6 +74,8 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       const normalizedValue = e.currentTarget.value.normalize("NFC");
       setInternalValue(normalizedValue);
       if (onChange) {
+        // Set flag to skip the next onChange from the input's native change event
+        skipNextOnChangeRef.current = true;
         // Create a synthetic event with the normalized value
         const syntheticEvent = {
           ...e,
