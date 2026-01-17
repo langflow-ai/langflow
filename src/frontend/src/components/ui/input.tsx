@@ -21,10 +21,60 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       endIconClassName = "",
       type,
       placeholder,
+      value,
+      onChange,
       ...props
     },
     ref,
   ) => {
+    const [isComposing, setIsComposing] = React.useState(false);
+    const [internalValue, setInternalValue] = React.useState(
+      typeof value === "string" ? value : "",
+    );
+    const inputRef = React.useRef<HTMLInputElement>(null);
+    const resolvedRef = (ref as React.RefObject<HTMLInputElement>) || inputRef;
+
+    // Update internal value when external value changes and not composing
+    React.useEffect(() => {
+      if (!isComposing && typeof value === "string") {
+        setInternalValue(value);
+      }
+    }, [value, isComposing]);
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      setInternalValue(e.target.value);
+      // Only call onChange if not composing (IME input in progress)
+      if (!isComposing && onChange) {
+        onChange(e);
+      }
+    };
+
+    const handleCompositionStart = () => {
+      setIsComposing(true);
+    };
+
+    const handleCompositionEnd = (e: React.CompositionEvent<HTMLInputElement>) => {
+      setIsComposing(false);
+      // Normalize to NFC and trigger onChange after composition ends
+      const normalizedValue = e.currentTarget.value.normalize("NFC");
+      setInternalValue(normalizedValue);
+      if (onChange) {
+        // Create a synthetic event with the normalized value
+        const syntheticEvent = {
+          ...e,
+          target: {
+            ...e.target,
+            value: normalizedValue,
+          },
+          currentTarget: {
+            ...e.currentTarget,
+            value: normalizedValue,
+          },
+        } as unknown as React.ChangeEvent<HTMLInputElement>;
+        onChange(syntheticEvent);
+      }
+    };
+
     return (
       <label
         className={cn(
@@ -48,14 +98,18 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             endIcon && "pr-9",
             icon ? inputClassName : className,
           )}
-          ref={ref}
+          ref={resolvedRef}
+          value={value !== undefined ? internalValue : undefined}
+          onChange={handleChange}
+          onCompositionStart={handleCompositionStart}
+          onCompositionEnd={handleCompositionEnd}
           {...props}
         />
         <span
           className={cn(
             "pointer-events-none absolute top-1/2 -translate-y-1/2 pl-px text-placeholder-foreground",
             icon ? "left-9" : "left-3",
-            props.value && "hidden",
+            (value !== undefined ? internalValue : value) && "hidden",
           )}
         >
           {placeholder}
