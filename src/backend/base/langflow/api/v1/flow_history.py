@@ -79,6 +79,7 @@ async def delete_flow_history_checkpoint(
         raise HTTPException(status_code=500, detail=str(e)) from e
     return {"message": f"Flow history checkpoint {version_id} deleted successfully"}
 
+
 @router.post("/{flow_id}/history", response_model=Flow, status_code=201)
 async def create_flow_checkpoint(
     flow_id: UUID,
