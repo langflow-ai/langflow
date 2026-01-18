@@ -12,6 +12,7 @@ class FlowHistory(SQLModel, table=True):
 
     id: UUID = Field(default_factory=uuid4, primary_key=True, unique=True)
     user_id: UUID | None = Field(default=None, foreign_key="user.id")
+    # must make nullable True for migration compatibility - fix this
     flow_id: UUID = Field(sa_column=Column(ForeignKey("flow.id", ondelete="CASCADE"), nullable=False))
     flow_data: dict | None = Field(default=None, sa_column=Column(JSON))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

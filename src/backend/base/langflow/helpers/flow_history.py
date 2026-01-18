@@ -4,15 +4,16 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
+from sqlalchemy.exc import NoResultFound
 from sqlmodel import select
 
+from langflow.helpers.utils import get_uuid, require_all_ids
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.flow_history.model import FlowHistory
-from langflow.services.database.models.flow_history.schema import CHECKPOINT_KEYS, IDType
-from langflow.services.database.models.flow_history.utils import (
-    _get_uuid,
-    require_user_and_flow_ids,
-    require_user_version_ids,
+from langflow.services.database.models.flow_history.schema import (
+    DATA_LEVEL_CHECKPOINT_KEYS,
+    TOP_LEVEL_CHECKPOINT_KEYS,
+    IDType,
 )
 from langflow.services.deps import session_scope
 
@@ -22,11 +23,10 @@ if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
 
 
-
 ########################################################
 # querying
 ########################################################
-# (constants to use for matching error messages upstream)
+# (constants to use for error messages upstream)
 FLOW_NOT_FOUND_ERROR_MSG = "Flow not found."
 FLOW_HISTORY_CHECKPOINT_NOT_FOUND_ERROR_MSG = "Flow history checkpoint not found."
 
@@ -54,24 +54,24 @@ async def save_flow_checkpoint(
     Returns:
         Flow | None: The updated flow if successful, otherwise None.
     """
-    require_user_and_flow_ids(user_id, flow_id)
+    require_all_ids(user_id=user_id, item_id=flow_id, item_type="flow")
 
-    uuid_user_id = _get_uuid(user_id)
-    uuid_flow_id = _get_uuid(flow_id)
+    user_uuid = get_uuid(user_id)
+    flow_uuid = get_uuid(flow_id)
 
     if session:
         return await _save_flow_checkpoint(
             session=session,
-            user_id=uuid_user_id,
-            flow_id=uuid_flow_id,
+            user_id=user_uuid,
+            flow_id=flow_uuid,
             update_data=update_data,
         )
 
     async with session_scope() as _session:
         return await _save_flow_checkpoint(
             session=_session,
-            user_id=uuid_user_id,
-            flow_id=uuid_flow_id,
+            user_id=user_uuid,
+            flow_id=flow_uuid,
             update_data=update_data,
         )
 
@@ -90,34 +90,41 @@ async def _save_flow_checkpoint(
                 .where(Flow.user_id == user_id)
                 .where(Flow.id == flow_id)
                 # .with_for_update()
-            )
-        ).first()
-    except Exception as e:
-        msg = f"Failed to fetch flow {e}"
-        raise ValueError(msg) from e
+                )
+            ).one()
 
-    if not db_flow:
-        msg = f"Failed to checkpoint flow: {FLOW_NOT_FOUND_ERROR_MSG}"
-        raise ValueError(msg)
+        db_flow_graph: dict = db_flow.data or {} # existing graph data
+        update_graph: dict = update_data.get("data") or {} # updated graph data
 
-    old_flow_data  = {k: getattr(db_flow, k) for k in CHECKPOINT_KEYS}
-    new_flow_data = old_flow_data | {k: v for k, v in update_data.items() if k in CHECKPOINT_KEYS}
-    if old_flow_data != new_flow_data:
+        old_data  = {k: db_flow_graph.get(k) for k in DATA_LEVEL_CHECKPOINT_KEYS} | {
+            k: getattr(db_flow, k) for k in TOP_LEVEL_CHECKPOINT_KEYS
+            }
+        new_data = old_data | {
+            k: update_graph.get(k) for k in update_graph.keys() & DATA_LEVEL_CHECKPOINT_KEYS
+            } | {k: update_data.get(k) for k in update_data.keys() & TOP_LEVEL_CHECKPOINT_KEYS}
+
         session.add(
             FlowHistory(
                 user_id=user_id,
                 flow_id=flow_id,
-                flow_data=new_flow_data,
+                flow_data=new_data,
                 )
             )
-        logger.debug("Created new checkpoint for flow %s", flow_id)
 
-    # let any other updates to the flow be saved
-    for key, val in update_data.items():
-        setattr(db_flow, key, val)
+        await logger.adebug("Created new checkpoint for flow %s", flow_id)
 
-    db_flow.updated_at = datetime.now(timezone.utc)
-    session.add(db_flow)
+        # let any other updates to the flow be saved
+        for key, val in update_data.items():
+            setattr(db_flow, key, val)
+
+        db_flow.updated_at = datetime.now(timezone.utc)
+
+        session.add(db_flow)
+    except NoResultFound:
+        raise
+    except Exception as e:
+        msg = f"Failed to fetch flow {e}"
+        raise ValueError(msg) from e
 
     return db_flow
 
@@ -126,26 +133,31 @@ async def list_flow_history(
     *,
     user_id: IDType,
     flow_id: IDType,
-) -> list[dict] | None:
+    ) -> dict:
     """List the versions of the flow."""
-    require_user_and_flow_ids(user_id, flow_id)
+    require_all_ids(user_id=user_id, item_id=flow_id, item_type="flow")
 
-    uuid_user_id = _get_uuid(user_id)
-    uuid_flow_id = _get_uuid(flow_id)
+    user_uuid = get_uuid(user_id)
+    flow_uuid = get_uuid(flow_id)
 
     try:
         async with session_scope() as session:
             flow_history = (
                 await session.exec(
                     select(FlowHistory.id, FlowHistory.created_at)
-                    .where(FlowHistory.user_id == uuid_user_id)
-                    .where(FlowHistory.flow_id == uuid_flow_id)
-                )
-            ).all()
+                    .where(FlowHistory.user_id == user_uuid)
+                    .where(FlowHistory.flow_id == flow_uuid)
+                    .order_by(FlowHistory.created_at.desc())
+                    )
+                ).all()
+
         return {
-            "flow_id": uuid_user_id,
-            "flow_history": [checkpoint._mapping for checkpoint in flow_history],  # noqa: SLF001
-        }
+            "flow_id": flow_uuid,
+            "flow_history": [
+                dict(checkpoint._mapping) # noqa: SLF001
+                for checkpoint in flow_history
+                ],
+            }
     except Exception as e:
         msg = f"Error getting flow history: {e}"
         raise ValueError(msg) from e
@@ -156,10 +168,10 @@ async def get_flow_checkpoint(
     user_id: IDType,
     version_id: IDType,
 ) -> FlowHistory:
-    require_user_version_ids(user_id, version_id)
+    require_all_ids(user_id=user_id, item_id=version_id, item_type="version")
 
-    user_uuid = _get_uuid(user_id)
-    version_uuid = _get_uuid(version_id)
+    user_uuid = get_uuid(user_id)
+    version_uuid = get_uuid(version_id)
 
     try:
         async with session_scope() as session:
@@ -168,13 +180,41 @@ async def get_flow_checkpoint(
                     select(FlowHistory)
                     .where(FlowHistory.user_id == user_uuid)
                     .where(FlowHistory.id == version_uuid)
-                )
-            ).one()
+                    )
+                ).one()
+    except NoResultFound:
+        raise
     except Exception as e:
         msg = f"Failed to fetch flow version: {e!s}"
         raise ValueError(msg) from e
 
-    if not db_flow:
-        raise ValueError(FLOW_HISTORY_CHECKPOINT_NOT_FOUND_ERROR_MSG)
-
     return db_flow
+
+
+async def delete_flow_checkpoint(
+    *,
+    user_id: IDType,
+    version_id: IDType,
+) -> UUID:
+    require_all_ids(user_id=user_id, item_id=version_id, item_type="version")
+
+    user_uuid = get_uuid(user_id)
+    version_uuid = get_uuid(version_id)
+
+    try:
+        async with session_scope() as session:
+            db_flow = (
+                await session.exec(
+                    select(FlowHistory)
+                    .where(FlowHistory.user_id == user_uuid)
+                    .where(FlowHistory.id == version_uuid)
+                    )
+                ).one()
+            await session.delete(db_flow)
+    except NoResultFound:
+        raise
+    except Exception as e:
+        msg = f"Failed to fetch flow version: {e!s}"
+        raise ValueError(msg) from e
+
+    return db_flow.id # return the version id
