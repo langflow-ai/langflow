@@ -31,9 +31,7 @@ import { createNewFlow, downloadFlow } from "@/utils/reactflowUtils";
 
 export default function FlowHistoryComponent() {
   const [open, setOpen] = useState(false);
-  const [rangeFilter, setRangeFilter] = useState<"all" | "day" | "week">(
-    "all",
-  );
+  const [rangeFilter, setRangeFilter] = useState<"all" | "day" | "week">("all");
   const currentFlow = useFlowStore((state) => state.currentFlow);
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
@@ -132,8 +130,7 @@ export default function FlowHistoryComponent() {
 
       if (!versionData?.flow_data) return;
 
-      const viewport =
-        versionData.flow_data.viewport ??
+      const viewport = versionData.flow_data.viewport ??
         currentFlow.data?.viewport ?? { x: 0, y: 0, zoom: 1 };
       const flowData = {
         nodes: versionData.flow_data.nodes,
@@ -174,8 +171,7 @@ export default function FlowHistoryComponent() {
 
       const nodes = versionData.flow_data.nodes ?? [];
       const edges = versionData.flow_data.edges ?? [];
-      const viewport =
-        versionData.flow_data.viewport ??
+      const viewport = versionData.flow_data.viewport ??
         currentFlow.data?.viewport ?? { x: 0, y: 0, zoom: 1 };
       const flowForDownload = {
         ...currentFlow,
@@ -209,8 +205,7 @@ export default function FlowHistoryComponent() {
     () =>
       [...historyItems].sort(
         (a, b) =>
-          new Date(b.created_at).getTime() -
-          new Date(a.created_at).getTime(),
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
       ),
     [historyItems],
   );
@@ -218,9 +213,7 @@ export default function FlowHistoryComponent() {
     if (rangeFilter === "all") return sortedHistory;
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - (rangeFilter === "day" ? 1 : 7));
-    return sortedHistory.filter(
-      (item) => new Date(item.created_at) >= cutoff,
-    );
+    return sortedHistory.filter((item) => new Date(item.created_at) >= cutoff);
   }, [rangeFilter, sortedHistory]);
 
   const hasHistory = historyItems.length > 0;
