@@ -1,3 +1,4 @@
+from functools import lru_cache
 from uuid import UUID
 
 from langflow.services.database.models.flow_history.schema import IDType
@@ -23,4 +24,9 @@ def require_all_ids(user_id: IDType, item_id: IDType, item_type: str):
 
 def get_uuid(value: str | UUID) -> UUID:
     """Get a UUID from a string or UUID."""
-    return UUID(value) if isinstance(value, str) else value
+    return _uuid_from_str(value) if isinstance(value, str) else value
+
+
+@lru_cache(maxsize=1024)
+def _uuid_from_str(value: str) -> UUID:
+    return UUID(value)
