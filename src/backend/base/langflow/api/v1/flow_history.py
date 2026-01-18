@@ -33,6 +33,8 @@ async def get_flow_history(
             user_id=current_user.id,
             flow_id=flow_id,
             )
+    except MissingIdError as e:
+        raise HTTPException(status_code=400, detail="Missing user or flow.") from e
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
     return flow_history
