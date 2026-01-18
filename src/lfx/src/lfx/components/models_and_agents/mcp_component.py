@@ -10,12 +10,13 @@ from lfx.base.agents.utils import maybe_unflatten_dict, safe_cache_get, safe_cac
 from lfx.base.mcp.util import (
     MCPStdioClient,
     MCPStreamableHttpClient,
+    MCPToolTimeoutConfig,
     create_input_schema_from_json_schema,
     update_tools,
 )
 from lfx.custom.custom_component.component_with_cache import ComponentWithCache
 from lfx.inputs.inputs import InputTypes  # noqa: TC001
-from lfx.io import BoolInput, DictInput, DropdownInput, McpInput, MessageTextInput, Output
+from lfx.io import BoolInput, DictInput, DropdownInput, FloatInput, McpInput, MessageTextInput, Output
 from lfx.io.schema import flatten_schema, schema_to_langflow_inputs
 from lfx.log.logger import logger
 from lfx.schema.dataframe import DataFrame
@@ -88,6 +89,9 @@ class MCPToolsComponent(ComponentWithCache):
         "use_cache",
         "verify_ssl",
         "headers",
+        "mcp_refresh_timeout_on_progress",
+        "mcp_inactivity_timeout_seconds",
+        "mcp_max_total_timeout_seconds",
     ]
 
     display_name = "MCP Tools"
@@ -133,6 +137,27 @@ class MCPToolsComponent(ComponentWithCache):
             ),
             advanced=True,
             is_list=True,
+        ),
+        BoolInput(
+            name="mcp_refresh_timeout_on_progress",
+            display_name="Refresh timeout on progress",
+            info="Refresh the inactivity timeout when MCP progress notifications are received.",
+            value=False,
+            advanced=True,
+        ),
+        FloatInput(
+            name="mcp_inactivity_timeout_seconds",
+            display_name="Inactivity timeout (seconds)",
+            info="Timeout window that resets on progress updates when enabled. Must be <= max total timeout.",
+            value=30.0,
+            advanced=True,
+        ),
+        FloatInput(
+            name="mcp_max_total_timeout_seconds",
+            display_name="Max total timeout (seconds)",
+            info="Absolute maximum time a tool call can run, even with progress. Must be >= inactivity timeout.",
+            value=90.0,
+            advanced=True,
         ),
         DropdownInput(
             name="tool",
@@ -602,6 +627,15 @@ class MCPToolsComponent(ComponentWithCache):
             await logger.aexception(msg)
             raise ValueError(msg) from e
 
+    def _apply_timeout_config(self) -> None:
+        config = MCPToolTimeoutConfig(
+            refresh_timeout_on_progress=getattr(self, "mcp_refresh_timeout_on_progress", False),
+            inactivity_timeout_seconds=getattr(self, "mcp_inactivity_timeout_seconds", None),
+            max_total_timeout_seconds=getattr(self, "mcp_max_total_timeout_seconds", None),
+        ).normalized()
+        self.stdio_client.set_tool_timeout_config(config)
+        self.streamable_http_client.set_tool_timeout_config(config)
+
     async def build_output(self) -> DataFrame:
         """Build output with improved error handling and validation."""
         try:
@@ -625,6 +659,7 @@ class MCPToolsComponent(ComponentWithCache):
 
                 unflattened_kwargs = maybe_unflatten_dict(kwargs)
 
+                self._apply_timeout_config()
                 output = await exec_tool.coroutine(**unflattened_kwargs)
                 tool_content = []
                 for item in output.content:

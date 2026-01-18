@@ -6,11 +6,13 @@ import os
 import platform
 import re
 import shutil
+import time
 import unicodedata
 from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
 from typing import Any
 from urllib.parse import urlparse
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import httpx
 from anyio import ClosedResourceError
@@ -84,6 +86,345 @@ ALLOWED_HEADERS = {
     "x-mcp-client",
     "x-requested-with",
 }
+
+_MCP_PROGRESS_DEBUG = os.getenv("LANGFLOW_MCP_PROGRESS_DEBUG", "").lower() in {"1", "true", "yes"}
+_MCP_TIMEOUT_ADJUST_WARNED = False
+
+
+def _progress_debug(message: str) -> None:
+    if _MCP_PROGRESS_DEBUG:
+        logger.debug(message)
+
+
+def _supports_param(sig: inspect.Signature | None, name: str) -> bool:
+    if sig is None:
+        return False
+    if name in sig.parameters:
+        return True
+    return any(param.kind == inspect.Parameter.VAR_KEYWORD for param in sig.parameters.values())
+
+
+def _safe_signature(callable_obj: Any) -> inspect.Signature | None:
+    try:
+        return inspect.signature(callable_obj)
+    except (TypeError, ValueError):
+        return None
+
+
+def _normalize_timeout(value: float | None, default: float) -> float:
+    if value is None:
+        return default
+    try:
+        value = float(value)
+    except (TypeError, ValueError):
+        return default
+    if value <= 0:
+        return default
+    return value
+
+
+@dataclass(frozen=True)
+class MCPToolTimeoutConfig:
+    refresh_timeout_on_progress: bool = False
+    inactivity_timeout_seconds: float = 30.0
+    max_total_timeout_seconds: float = 90.0
+    progress_refresh_interval_seconds: float = 0.1
+
+    def normalized(self) -> "MCPToolTimeoutConfig":
+        global _MCP_TIMEOUT_ADJUST_WARNED  # noqa: PLW0603
+
+        inactivity = _normalize_timeout(self.inactivity_timeout_seconds, 30.0)
+        max_total = _normalize_timeout(self.max_total_timeout_seconds, 90.0)
+        if max_total < inactivity:
+            if not _MCP_TIMEOUT_ADJUST_WARNED:
+                logger.warning(
+                    f"Adjusting MCP max total timeout to match inactivity timeout: {max_total} < {inactivity}"
+                )
+                _MCP_TIMEOUT_ADJUST_WARNED = True
+            max_total = inactivity
+        refresh_interval = _normalize_timeout(self.progress_refresh_interval_seconds, 0.1)
+        refresh_interval = min(refresh_interval, max(inactivity / 2, 0.01))
+        return MCPToolTimeoutConfig(
+            refresh_timeout_on_progress=bool(self.refresh_timeout_on_progress),
+            inactivity_timeout_seconds=inactivity,
+            max_total_timeout_seconds=max_total,
+            progress_refresh_interval_seconds=refresh_interval,
+        )
+
+
+def _extract_progress_fields(*args, **kwargs) -> tuple[str | None, float | None]:
+    token = kwargs.get("progressToken") or kwargs.get("progress_token") or kwargs.get("token")
+    progress = kwargs.get("progress")
+    if args:
+        candidate = args[0]
+        if isinstance(candidate, int | float):
+            progress = progress if progress is not None else candidate
+        elif isinstance(candidate, dict):
+            params = candidate.get("params", candidate)
+            if isinstance(params, dict):
+                token = token or params.get("progressToken") or params.get("progress_token") or params.get("token")
+                progress = progress if progress is not None else params.get("progress")
+        else:
+            params = getattr(candidate, "params", None)
+            if params is not None:
+                if isinstance(params, dict):
+                    token = token or params.get("progressToken") or params.get("progress_token") or params.get("token")
+                    progress = progress if progress is not None else params.get("progress")
+                else:
+                    token = token or getattr(params, "progressToken", None) or getattr(params, "progress_token", None)
+                    if progress is None:
+                        progress = getattr(params, "progress", None)
+            else:
+                token = token or getattr(candidate, "progressToken", None) or getattr(candidate, "progress_token", None)
+                if progress is None:
+                    progress = getattr(candidate, "progress", None)
+
+    progress_value = None if progress is None or not isinstance(progress, int | float) else float(progress)
+
+    return token, progress_value
+
+
+class MCPProgressTimeoutController:
+    def __init__(self, config: MCPToolTimeoutConfig) -> None:
+        normalized = config.normalized()
+        self._refresh_on_progress = normalized.refresh_timeout_on_progress
+        self._inactivity_timeout_seconds = normalized.inactivity_timeout_seconds
+        self._max_total_timeout_seconds = normalized.max_total_timeout_seconds
+        self._progress_refresh_interval_seconds = normalized.progress_refresh_interval_seconds
+
+        self._start_time = time.monotonic()
+        self._last_progress_time = self._start_time
+        self._last_refresh_time = self._start_time
+        self._last_progress_value: float | None = None
+        self._active = True
+        self._warned_non_monotonic = False
+        self._accept_tokenless = False
+
+        self._progress_token = uuid4().hex if self._refresh_on_progress else None
+        self._absolute_deadline = self._start_time + self._max_total_timeout_seconds
+        self._deadline = min(self._absolute_deadline, self._start_time + self._inactivity_timeout_seconds)
+
+    @property
+    def progress_token(self) -> str | None:
+        return self._progress_token
+
+    def mark_complete(self) -> None:
+        self._active = False
+
+    def disable_refresh(self) -> None:
+        self._refresh_on_progress = False
+        self._progress_token = None
+
+    def allow_tokenless_progress(self) -> None:
+        self._accept_tokenless = True
+
+    def timeout_reason(self) -> str | None:
+        now = time.monotonic()
+        if now >= self._absolute_deadline:
+            return "max_total"
+        if now >= self._deadline:
+            return "inactivity"
+        return None
+
+    def time_until_deadline(self) -> float:
+        return max(0.0, self._deadline - time.monotonic())
+
+    def timeout_message(self, tool_name: str) -> str:
+        reason = self.timeout_reason() or "timeout"
+        if reason == "max_total":
+            return f"Max total timeout ({self._max_total_timeout_seconds}s) exceeded for '{tool_name}'"
+        if reason == "inactivity":
+            return (
+                f"Inactivity timeout (no progress within {self._inactivity_timeout_seconds}s, "
+                f"total cap {self._max_total_timeout_seconds}s) for '{tool_name}'"
+            )
+        return f"Timeout exceeded for '{tool_name}'"
+
+    async def handle_progress(self, *args, **kwargs) -> bool:
+        if not self._refresh_on_progress or not self._active:
+            return False
+
+        token, progress = _extract_progress_fields(*args, **kwargs)
+        if _MCP_PROGRESS_DEBUG:
+            summary = _summarize_progress_payload(args, kwargs)
+            _progress_debug(f"MCP progress callback received: token={token} progress={progress} payload={summary}")
+        if progress is None:
+            return False
+        if token is None:
+            if self._progress_token is not None and not self._accept_tokenless:
+                return False
+        elif self._progress_token is not None and token != self._progress_token:
+            return False
+
+        if self._last_progress_value is not None and progress < self._last_progress_value:
+            if not self._warned_non_monotonic:
+                await logger.awarning(
+                    f"Ignoring non-monotonic MCP progress value: {progress} < {self._last_progress_value}"
+                )
+                self._warned_non_monotonic = True
+            return False
+
+        now = time.monotonic()
+        if now - self._last_refresh_time < self._progress_refresh_interval_seconds:
+            return False
+
+        self._last_progress_time = now
+        self._last_refresh_time = now
+        self._last_progress_value = progress
+        self._deadline = min(self._absolute_deadline, now + self._inactivity_timeout_seconds)
+        return True
+
+    async def progress_callback(self, *args, **kwargs) -> None:
+        await self.handle_progress(*args, **kwargs)
+
+
+def _summarize_progress_payload(args: tuple[Any, ...], kwargs: dict[str, Any]) -> str:
+    parts = []
+    if args:
+        candidate = args[0]
+        if isinstance(candidate, dict):
+            parts.append(f"args[0].keys={list(candidate.keys())}")
+        else:
+            parts.append(f"args[0].type={type(candidate).__name__}")
+    if kwargs:
+        parts.append(f"kwargs.keys={list(kwargs.keys())}")
+    return " ".join(parts) if parts else "empty"
+
+
+def _inject_progress_token_into_arguments(
+    arguments: dict[str, Any],
+    token: str,
+) -> tuple[dict[str, Any], bool, str]:
+    if not isinstance(arguments, dict):
+        return arguments, False, "arguments_not_dict"
+
+    if "_meta" in arguments:
+        existing_meta = arguments.get("_meta")
+        if not isinstance(existing_meta, dict):
+            return arguments, False, "meta_not_dict"
+
+        merged_meta = dict(existing_meta)
+        merged_meta.setdefault("progressToken", token)
+        new_arguments = dict(arguments)
+        new_arguments["_meta"] = merged_meta
+        return new_arguments, True, "meta_merged"
+
+    new_arguments = dict(arguments)
+    new_arguments["_meta"] = {"progressToken": token}
+    return new_arguments, True, "meta_injected"
+
+
+def _build_call_tool_kwargs(
+    session: ClientSession,
+    controller: MCPProgressTimeoutController | None,
+) -> tuple[dict[str, Any], bool, str | None, str | None]:
+    sig = _safe_signature(session.call_tool)
+    call_kwargs: dict[str, Any] = {}
+    meta_set = False
+    meta_key = None
+    callback_param = None
+
+    if controller is not None and controller.progress_token is not None:
+        meta = {"progressToken": controller.progress_token}
+        if _supports_param(sig, "_meta"):
+            call_kwargs["_meta"] = meta
+            meta_set = True
+            meta_key = "_meta"
+        elif _supports_param(sig, "meta"):
+            call_kwargs["meta"] = meta
+            meta_set = True
+            meta_key = "meta"
+        elif _supports_param(sig, "metadata"):
+            call_kwargs["metadata"] = meta
+            meta_set = True
+            meta_key = "metadata"
+        elif _supports_param(sig, "request_meta"):
+            call_kwargs["request_meta"] = meta
+            meta_set = True
+            meta_key = "request_meta"
+        elif _supports_param(sig, "progress_token"):
+            call_kwargs["progress_token"] = controller.progress_token
+            meta_set = True
+            meta_key = "progress_token"
+
+    if controller is not None and _supports_param(sig, "progress_callback"):
+        call_kwargs["progress_callback"] = controller.progress_callback
+        callback_param = "progress_callback"
+    elif controller is not None and _supports_param(sig, "progress_handler"):
+        call_kwargs["progress_handler"] = controller.progress_callback
+        callback_param = "progress_handler"
+    elif controller is not None and _supports_param(sig, "on_progress"):
+        call_kwargs["on_progress"] = controller.progress_callback
+        callback_param = "on_progress"
+
+    if _supports_param(sig, "read_timeout_seconds"):
+        call_kwargs["read_timeout_seconds"] = None
+
+    if _MCP_PROGRESS_DEBUG:
+        _progress_debug(
+            f"MCP progress token send attempt: meta_set={meta_set} meta_key={meta_key} callback_param={callback_param}"
+        )
+
+    return call_kwargs, meta_set, meta_key, callback_param
+
+
+async def call_tool_with_timeouts(
+    session: ClientSession,
+    tool_name: str,
+    arguments: dict[str, Any],
+    timeout_config: MCPToolTimeoutConfig | None = None,
+) -> Any:
+    config = (timeout_config or MCPToolTimeoutConfig()).normalized()
+    if not config.refresh_timeout_on_progress:
+        timeout_seconds = min(config.inactivity_timeout_seconds, config.max_total_timeout_seconds)
+        return await asyncio.wait_for(session.call_tool(tool_name, arguments=arguments), timeout=timeout_seconds)
+
+    controller = MCPProgressTimeoutController(config)
+    call_kwargs, meta_set, meta_key, callback_param = _build_call_tool_kwargs(session, controller)
+    call_arguments = arguments
+
+    if callback_param:
+        controller.allow_tokenless_progress()
+        _progress_debug("MCP progress callback is request-scoped; token checks disabled.")
+
+    if controller.progress_token is not None and not meta_set:
+        call_arguments, injected, reason = _inject_progress_token_into_arguments(arguments, controller.progress_token)
+        if injected:
+            _progress_debug(
+                f"MCP progress token injected into arguments: reason={reason} token={controller.progress_token}"
+            )
+        else:
+            _progress_debug(
+                f"Unable to inject MCP progress token into arguments; refresh-on-progress disabled (reason={reason})."
+            )
+            controller.disable_refresh()
+            if callback_param:
+                call_kwargs.pop(callback_param, None)
+
+    if _MCP_PROGRESS_DEBUG:
+        _progress_debug(
+            f"MCP call_tool configured: meta_key={meta_key} callback_param={callback_param} "
+            f"arguments_meta={'_meta' in call_arguments}"
+        )
+
+    task = asyncio.create_task(session.call_tool(tool_name, arguments=call_arguments, **call_kwargs))
+    try:
+        while True:
+            timeout = min(0.5, controller.time_until_deadline())
+            done, _ = await asyncio.wait({task}, timeout=timeout)
+            if task in done:
+                controller.mark_complete()
+                return task.result()
+
+            reason = controller.timeout_reason()
+            if reason is not None:
+                if not task.done():
+                    task.cancel()
+                    with contextlib.suppress(asyncio.CancelledError):
+                        await task
+                raise asyncio.TimeoutError(controller.timeout_message(tool_name))
+    finally:
+        controller.mark_complete()
 
 
 def create_mcp_http_client_with_ssl_option(
@@ -1025,6 +1366,10 @@ class MCPStdioClient:
         self._connected = False
         self._session_context: str | None = None
         self._component_cache = component_cache
+        self._tool_timeout_config = MCPToolTimeoutConfig()
+
+    def set_tool_timeout_config(self, config: MCPToolTimeoutConfig | None) -> None:
+        self._tool_timeout_config = config or MCPToolTimeoutConfig()
 
     async def _connect_to_server(self, command_str: str, env: dict[str, str] | None = None) -> list[StructuredTool]:
         """Connect to MCP server using stdio transport (SDK style)."""
@@ -1136,9 +1481,11 @@ class MCPStdioClient:
                 # Get or create persistent session
                 session = await self._get_or_create_session()
 
-                result = await asyncio.wait_for(
-                    session.call_tool(tool_name, arguments=arguments),
-                    timeout=30.0,  # 30 second timeout
+                result = await call_tool_with_timeouts(
+                    session,
+                    tool_name,
+                    arguments,
+                    timeout_config=self._tool_timeout_config,
                 )
             except Exception as e:
                 current_error_type = type(e).__name__
@@ -1238,6 +1585,10 @@ class MCPStreamableHttpClient:
         self._connected = False
         self._session_context: str | None = None
         self._component_cache = component_cache
+        self._tool_timeout_config = MCPToolTimeoutConfig()
+
+    def set_tool_timeout_config(self, config: MCPToolTimeoutConfig | None) -> None:
+        self._tool_timeout_config = config or MCPToolTimeoutConfig()
 
     def _get_session_manager(self) -> MCPSessionManager:
         """Get or create session manager from component cache."""
@@ -1408,9 +1759,11 @@ class MCPStreamableHttpClient:
                 # Get or create persistent session
                 session = await self._get_or_create_session()
 
-                result = await asyncio.wait_for(
-                    session.call_tool(tool_name, arguments=arguments),
-                    timeout=30.0,  # 30 second timeout
+                result = await call_tool_with_timeouts(
+                    session,
+                    tool_name,
+                    arguments,
+                    timeout_config=self._tool_timeout_config,
                 )
             except Exception as e:
                 current_error_type = type(e).__name__
