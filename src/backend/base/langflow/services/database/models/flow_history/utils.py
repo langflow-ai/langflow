@@ -1,6 +1,7 @@
 import hashlib
 from copy import deepcopy
 
+import orjson
 from lfx.log.logger import logger
 
 from langflow.services.database.models.base import orjson_dumps
@@ -77,5 +78,7 @@ def compute_flow_hash(graph_data: dict) -> str:
 
 def compute_project_hash(project_data: dict) -> str:
     """Returns the SHA256 of the normalized, key-ordered project json."""
-    cleaned_graph_json = orjson_dumps(project_data, sort_keys=True)
-    return hashlib.sha256(cleaned_graph_json.encode("utf-8")).hexdigest()
+    # Use orjson.dumps bytes directly to avoid decode/encode round-trip in hashing.
+    option = orjson.OPT_SORT_KEYS | orjson.OPT_INDENT_2
+    serialized_bytes = orjson.dumps(project_data, option=option)
+    return hashlib.sha256(serialized_bytes).hexdigest()
