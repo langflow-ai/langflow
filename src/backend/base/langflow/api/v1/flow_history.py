@@ -32,7 +32,7 @@ async def get_flow_history(
         flow_history = await list_flow_history(
             user_id=current_user.id,
             flow_id=flow_id,
-            )
+        )
     except MissingIdError as e:
         raise HTTPException(status_code=400, detail="Missing user or flow.") from e
     except Exception as e:
@@ -44,13 +44,13 @@ async def get_flow_history(
 async def get_flow_history_checkpoint(
     current_user: Annotated[User, Depends(get_current_active_user)],
     version_id: UUID,
-    ):
+):
     """Get a specific version of the flow."""
     try:
         flow_checkpoint = await get_flow_checkpoint(
             user_id=current_user.id,
             version_id=version_id,
-            )
+        )
     except MissingIdError as e:
         raise HTTPException(status_code=400, detail="Missing user or version.") from e
     except NoResultFound as e:
@@ -64,13 +64,13 @@ async def get_flow_history_checkpoint(
 async def delete_flow_history_checkpoint(
     current_user: Annotated[User, Depends(get_current_active_user)],
     version_id: UUID,
-    ):
+):
     """Delete a specific version of the flow."""
     try:
         version_id = await delete_flow_checkpoint(
             user_id=current_user.id,
             version_id=version_id,
-            )
+        )
     except MissingIdError as e:
         raise HTTPException(status_code=400, detail="Missing user or version.") from e
     except NoResultFound as e:
@@ -95,7 +95,7 @@ async def create_flow_checkpoint(
             user_id=current_user.id,
             flow_id=flow_id,
             update_data=flow.model_dump(exclude_unset=True),
-            )
+        )
     except MissingIdError as e:
         raise HTTPException(status_code=400, detail="Missing user or flow.") from e
     except NoResultFound as e:

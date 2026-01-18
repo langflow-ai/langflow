@@ -30,6 +30,7 @@ if TYPE_CHECKING:
 FLOW_NOT_FOUND_ERROR_MSG = "Flow not found."
 FLOW_HISTORY_CHECKPOINT_NOT_FOUND_ERROR_MSG = "Flow history checkpoint not found."
 
+
 async def save_flow_checkpoint(
     *,
     session: AsyncSession | None = None,
@@ -86,30 +87,30 @@ async def _save_flow_checkpoint(
     try:
         db_flow = (
             await session.exec(
-                select(Flow)
-                .where(Flow.user_id == user_id)
-                .where(Flow.id == flow_id)
+                select(Flow).where(Flow.user_id == user_id).where(Flow.id == flow_id)
                 # .with_for_update()
-                )
-            ).one()
+            )
+        ).one()
 
-        db_flow_graph: dict = db_flow.data or {} # existing graph data
-        update_graph: dict = update_data.get("data") or {} # updated graph data
+        db_flow_graph: dict = db_flow.data or {}  # existing graph data
+        update_graph: dict = update_data.get("data") or {}  # updated graph data
 
-        old_data  = {k: db_flow_graph.get(k) for k in DATA_LEVEL_CHECKPOINT_KEYS} | {
+        old_data = {k: db_flow_graph.get(k) for k in DATA_LEVEL_CHECKPOINT_KEYS} | {
             k: getattr(db_flow, k) for k in TOP_LEVEL_CHECKPOINT_KEYS
-            }
-        new_data = old_data | {
-            k: update_graph.get(k) for k in update_graph.keys() & DATA_LEVEL_CHECKPOINT_KEYS
-            } | {k: update_data.get(k) for k in update_data.keys() & TOP_LEVEL_CHECKPOINT_KEYS}
+        }
+        new_data = (
+            old_data
+            | {k: update_graph.get(k) for k in update_graph.keys() & DATA_LEVEL_CHECKPOINT_KEYS}
+            | {k: update_data.get(k) for k in update_data.keys() & TOP_LEVEL_CHECKPOINT_KEYS}
+        )
 
         session.add(
             FlowHistory(
                 user_id=user_id,
                 flow_id=flow_id,
                 flow_data=new_data,
-                )
             )
+        )
 
         await logger.adebug("Created new checkpoint for flow %s", flow_id)
 
@@ -133,7 +134,7 @@ async def list_flow_history(
     *,
     user_id: IDType,
     flow_id: IDType,
-    ) -> dict:
+) -> dict:
     """List the versions of the flow."""
     require_all_ids(user_id=user_id, item_id=flow_id, item_type="flow")
 
@@ -148,16 +149,16 @@ async def list_flow_history(
                     .where(FlowHistory.user_id == user_uuid)
                     .where(FlowHistory.flow_id == flow_uuid)
                     .order_by(FlowHistory.created_at.desc())
-                    )
-                ).all()
+                )
+            ).all()
 
         return {
             "flow_id": flow_uuid,
             "flow_history": [
-                dict(checkpoint._mapping) # noqa: SLF001
+                dict(checkpoint._mapping)  # noqa: SLF001
                 for checkpoint in flow_history
-                ],
-            }
+            ],
+        }
     except Exception as e:
         msg = f"Error getting flow history: {e}"
         raise ValueError(msg) from e
@@ -177,11 +178,9 @@ async def get_flow_checkpoint(
         async with session_scope() as session:
             db_flow = (
                 await session.exec(
-                    select(FlowHistory)
-                    .where(FlowHistory.user_id == user_uuid)
-                    .where(FlowHistory.id == version_uuid)
-                    )
-                ).one()
+                    select(FlowHistory).where(FlowHistory.user_id == user_uuid).where(FlowHistory.id == version_uuid)
+                )
+            ).one()
     except NoResultFound:
         raise
     except Exception as e:
@@ -205,11 +204,9 @@ async def delete_flow_checkpoint(
         async with session_scope() as session:
             db_flow = (
                 await session.exec(
-                    select(FlowHistory)
-                    .where(FlowHistory.user_id == user_uuid)
-                    .where(FlowHistory.id == version_uuid)
-                    )
-                ).one()
+                    select(FlowHistory).where(FlowHistory.user_id == user_uuid).where(FlowHistory.id == version_uuid)
+                )
+            ).one()
             await session.delete(db_flow)
     except NoResultFound:
         raise
@@ -217,4 +214,4 @@ async def delete_flow_checkpoint(
         msg = f"Failed to fetch flow version: {e!s}"
         raise ValueError(msg) from e
 
-    return db_flow.id # return the version id
+    return db_flow.id  # return the version id
