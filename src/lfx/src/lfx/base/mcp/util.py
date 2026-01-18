@@ -87,6 +87,14 @@ ALLOWED_HEADERS = {
     "x-requested-with",
 }
 
+_MCP_PROGRESS_DEBUG = os.getenv("LANGFLOW_MCP_PROGRESS_DEBUG", "").lower() in {"1", "true", "yes"}
+_MCP_TIMEOUT_ADJUST_WARNED = False
+
+
+def _progress_debug(message: str) -> None:
+    if _MCP_PROGRESS_DEBUG:
+        logger.debug(message)
+
 
 def _supports_param(sig: inspect.Signature | None, name: str) -> bool:
     if sig is None:
@@ -123,8 +131,17 @@ class MCPToolTimeoutConfig:
     progress_refresh_interval_seconds: float = 0.1
 
     def normalized(self) -> "MCPToolTimeoutConfig":
+        global _MCP_TIMEOUT_ADJUST_WARNED  # noqa: PLW0603
+
         inactivity = _normalize_timeout(self.inactivity_timeout_seconds, 30.0)
         max_total = _normalize_timeout(self.max_total_timeout_seconds, 90.0)
+        if max_total < inactivity:
+            if not _MCP_TIMEOUT_ADJUST_WARNED:
+                logger.warning(
+                    f"Adjusting MCP max total timeout to match inactivity timeout: {max_total} < {inactivity}"
+                )
+                _MCP_TIMEOUT_ADJUST_WARNED = True
+            max_total = inactivity
         refresh_interval = _normalize_timeout(self.progress_refresh_interval_seconds, 0.1)
         refresh_interval = min(refresh_interval, max(inactivity / 2, 0.01))
         return MCPToolTimeoutConfig(
@@ -140,7 +157,9 @@ def _extract_progress_fields(*args, **kwargs) -> tuple[str | None, float | None]
     progress = kwargs.get("progress")
     if args:
         candidate = args[0]
-        if isinstance(candidate, dict):
+        if isinstance(candidate, int | float):
+            progress = progress if progress is not None else candidate
+        elif isinstance(candidate, dict):
             params = candidate.get("params", candidate)
             if isinstance(params, dict):
                 token = token or params.get("progressToken") or params.get("progress_token") or params.get("token")
@@ -179,6 +198,7 @@ class MCPProgressTimeoutController:
         self._last_progress_value: float | None = None
         self._active = True
         self._warned_non_monotonic = False
+        self._accept_tokenless = False
 
         self._progress_token = uuid4().hex if self._refresh_on_progress else None
         self._absolute_deadline = self._start_time + self._max_total_timeout_seconds
@@ -190,6 +210,13 @@ class MCPProgressTimeoutController:
 
     def mark_complete(self) -> None:
         self._active = False
+
+    def disable_refresh(self) -> None:
+        self._refresh_on_progress = False
+        self._progress_token = None
+
+    def allow_tokenless_progress(self) -> None:
+        self._accept_tokenless = True
 
     def timeout_reason(self) -> str | None:
         now = time.monotonic()
@@ -218,7 +245,15 @@ class MCPProgressTimeoutController:
             return False
 
         token, progress = _extract_progress_fields(*args, **kwargs)
-        if token is None or token != self._progress_token or progress is None:
+        if _MCP_PROGRESS_DEBUG:
+            summary = _summarize_progress_payload(args, kwargs)
+            _progress_debug(f"MCP progress callback received: token={token} progress={progress} payload={summary}")
+        if progress is None:
+            return False
+        if token is None:
+            if self._progress_token is not None and not self._accept_tokenless:
+                return False
+        elif self._progress_token is not None and token != self._progress_token:
             return False
 
         if self._last_progress_value is not None and progress < self._last_progress_value:
@@ -243,41 +278,94 @@ class MCPProgressTimeoutController:
         await self.handle_progress(*args, **kwargs)
 
 
+def _summarize_progress_payload(args: tuple[Any, ...], kwargs: dict[str, Any]) -> str:
+    parts = []
+    if args:
+        candidate = args[0]
+        if isinstance(candidate, dict):
+            parts.append(f"args[0].keys={list(candidate.keys())}")
+        else:
+            parts.append(f"args[0].type={type(candidate).__name__}")
+    if kwargs:
+        parts.append(f"kwargs.keys={list(kwargs.keys())}")
+    return " ".join(parts) if parts else "empty"
+
+
+def _inject_progress_token_into_arguments(
+    arguments: dict[str, Any],
+    token: str,
+) -> tuple[dict[str, Any], bool, str]:
+    if not isinstance(arguments, dict):
+        return arguments, False, "arguments_not_dict"
+
+    if "_meta" in arguments:
+        existing_meta = arguments.get("_meta")
+        if not isinstance(existing_meta, dict):
+            return arguments, False, "meta_not_dict"
+
+        merged_meta = dict(existing_meta)
+        merged_meta.setdefault("progressToken", token)
+        new_arguments = dict(arguments)
+        new_arguments["_meta"] = merged_meta
+        return new_arguments, True, "meta_merged"
+
+    new_arguments = dict(arguments)
+    new_arguments["_meta"] = {"progressToken": token}
+    return new_arguments, True, "meta_injected"
+
+
 def _build_call_tool_kwargs(
     session: ClientSession,
     controller: MCPProgressTimeoutController | None,
-) -> dict[str, Any]:
+) -> tuple[dict[str, Any], bool, str | None, str | None]:
     sig = _safe_signature(session.call_tool)
     call_kwargs: dict[str, Any] = {}
+    meta_set = False
+    meta_key = None
+    callback_param = None
 
     if controller is not None and controller.progress_token is not None:
         meta = {"progressToken": controller.progress_token}
-        meta_set = False
         if _supports_param(sig, "_meta"):
             call_kwargs["_meta"] = meta
             meta_set = True
+            meta_key = "_meta"
         elif _supports_param(sig, "meta"):
             call_kwargs["meta"] = meta
             meta_set = True
+            meta_key = "meta"
         elif _supports_param(sig, "metadata"):
             call_kwargs["metadata"] = meta
             meta_set = True
+            meta_key = "metadata"
         elif _supports_param(sig, "request_meta"):
             call_kwargs["request_meta"] = meta
             meta_set = True
+            meta_key = "request_meta"
         elif _supports_param(sig, "progress_token"):
             call_kwargs["progress_token"] = controller.progress_token
             meta_set = True
-        if not meta_set:
-            logger.debug("Unable to pass MCP progress token; refresh-on-progress may be disabled.")
+            meta_key = "progress_token"
 
     if controller is not None and _supports_param(sig, "progress_callback"):
         call_kwargs["progress_callback"] = controller.progress_callback
+        callback_param = "progress_callback"
+    elif controller is not None and _supports_param(sig, "progress_handler"):
+        call_kwargs["progress_handler"] = controller.progress_callback
+        callback_param = "progress_handler"
+    elif controller is not None and _supports_param(sig, "on_progress"):
+        call_kwargs["on_progress"] = controller.progress_callback
+        callback_param = "on_progress"
 
     if _supports_param(sig, "read_timeout_seconds"):
         call_kwargs["read_timeout_seconds"] = None
 
-    return call_kwargs
+    if _MCP_PROGRESS_DEBUG:
+        _progress_debug(
+            f"MCP progress token send attempt: meta_set={meta_set} meta_key={meta_key} callback_param={callback_param}"
+        )
+
+    return call_kwargs, meta_set, meta_key, callback_param
 
 
 async def call_tool_with_timeouts(
@@ -292,8 +380,34 @@ async def call_tool_with_timeouts(
         return await asyncio.wait_for(session.call_tool(tool_name, arguments=arguments), timeout=timeout_seconds)
 
     controller = MCPProgressTimeoutController(config)
-    call_kwargs = _build_call_tool_kwargs(session, controller)
-    task = asyncio.create_task(session.call_tool(tool_name, arguments=arguments, **call_kwargs))
+    call_kwargs, meta_set, meta_key, callback_param = _build_call_tool_kwargs(session, controller)
+    call_arguments = arguments
+
+    if callback_param:
+        controller.allow_tokenless_progress()
+        _progress_debug("MCP progress callback is request-scoped; token checks disabled.")
+
+    if controller.progress_token is not None and not meta_set:
+        call_arguments, injected, reason = _inject_progress_token_into_arguments(arguments, controller.progress_token)
+        if injected:
+            _progress_debug(
+                f"MCP progress token injected into arguments: reason={reason} token={controller.progress_token}"
+            )
+        else:
+            _progress_debug(
+                f"Unable to inject MCP progress token into arguments; refresh-on-progress disabled (reason={reason})."
+            )
+            controller.disable_refresh()
+            if callback_param:
+                call_kwargs.pop(callback_param, None)
+
+    if _MCP_PROGRESS_DEBUG:
+        _progress_debug(
+            f"MCP call_tool configured: meta_key={meta_key} callback_param={callback_param} "
+            f"arguments_meta={'_meta' in call_arguments}"
+        )
+
+    task = asyncio.create_task(session.call_tool(tool_name, arguments=call_arguments, **call_kwargs))
     try:
         while True:
             timeout = min(0.5, controller.time_until_deadline())

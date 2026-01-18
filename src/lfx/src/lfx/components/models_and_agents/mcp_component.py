@@ -148,14 +148,14 @@ class MCPToolsComponent(ComponentWithCache):
         FloatInput(
             name="mcp_inactivity_timeout_seconds",
             display_name="Inactivity timeout (seconds)",
-            info="Timeout window that resets on progress updates when enabled.",
+            info="Timeout window that resets on progress updates when enabled. Must be <= max total timeout.",
             value=30.0,
             advanced=True,
         ),
         FloatInput(
             name="mcp_max_total_timeout_seconds",
             display_name="Max total timeout (seconds)",
-            info="Absolute maximum time a tool call can run, even with progress.",
+            info="Absolute maximum time a tool call can run, even with progress. Must be >= inactivity timeout.",
             value=90.0,
             advanced=True,
         ),
