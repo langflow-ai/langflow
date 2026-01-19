@@ -813,7 +813,7 @@
                 "dependencies": [
                   {
                     "name": "langchain_text_splitters",
-                    "version": "0.3.11"
+                    "version": "1.1.0"
                   },
                   {
                     "name": "lfx",
@@ -1402,7 +1402,7 @@
                 "dependencies": [
                   {
                     "name": "langchain_openai",
-                    "version": "0.3.23"
+                    "version": "1.1.7"
                   },
                   {
                     "name": "lfx",
@@ -1949,7 +1949,7 @@
                 "dependencies": [
                   {
                     "name": "langchain_openai",
-                    "version": "0.3.23"
+                    "version": "1.1.7"
                   },
                   {
                     "name": "lfx",
@@ -2723,7 +2723,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "0.3.81"
+                    "version": "1.2.7"
                   },
                   {
                     "name": "pydantic",
@@ -2731,7 +2731,7 @@
                   },
                   {
                     "name": "googleapiclient",
-                    "version": "2.154.0"
+                    "version": "2.188.0"
                   }
                 ],
                 "total_dependencies": 4
@@ -3786,7 +3786,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "0.3.81"
+                    "version": "1.2.7"
                   },
                   {
                     "name": "lfx",
@@ -3794,7 +3794,7 @@
                   },
                   {
                     "name": "langchain_astradb",
-                    "version": "0.6.1"
+                    "version": "1.0.0"
                   }
                 ],
                 "total_dependencies": 4
@@ -4599,7 +4599,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "0.3.81"
+                    "version": "1.2.7"
                   },
                   {
                     "name": "lfx",
@@ -4607,7 +4607,7 @@
                   },
                   {
                     "name": "langchain_astradb",
-                    "version": "0.6.1"
+                    "version": "1.0.0"
                   }
                 ],
                 "total_dependencies": 4

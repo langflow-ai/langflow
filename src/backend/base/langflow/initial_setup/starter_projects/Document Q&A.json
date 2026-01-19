@@ -1316,7 +1316,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "0.3.81"
+                    "version": "1.2.7"
                   },
                   {
                     "name": "pydantic",
@@ -1324,7 +1324,7 @@
                   },
                   {
                     "name": "googleapiclient",
-                    "version": "2.154.0"
+                    "version": "2.188.0"
                   }
                 ],
                 "total_dependencies": 4
