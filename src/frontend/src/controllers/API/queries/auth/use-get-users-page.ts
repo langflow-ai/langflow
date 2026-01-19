@@ -28,7 +28,7 @@ export const useGetUsers: useMutationFunctionType<
   }: getUsersQueryParams): Promise<getUsersResponse> {
     const res = await api.get(
       `${getURL("USERS")}/?skip=${skip}&limit=${limit}${
-        username ? `&username=${username}` : ""
+        username ? `&username=${encodeURIComponent(username)}` : ""
       }`,
     );
     if (res.status === 200) {
