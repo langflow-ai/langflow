@@ -5,6 +5,7 @@ import {
 } from "@tanstack/react-query";
 import { nanoid } from "nanoid";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import InputListComponent from "@/components/core/parameterRenderComponent/components/inputListComponent";
@@ -21,7 +22,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { MAX_MCP_SERVER_NAME_LENGTH } from "@/constants/constants";
 import { useAddMCPServer } from "@/controllers/API/queries/mcp/use-add-mcp-server";
 import { usePatchMCPServer } from "@/controllers/API/queries/mcp/use-patch-mcp-server";
-import { CustomLink } from "@/customization/components/custom-link";
 import BaseModal from "@/modals/baseModal";
 import IOKeyPairInput, {
   KeyPairRow,
@@ -89,6 +89,7 @@ export default function AddMcpServerModal({
     usePatchMCPServer();
 
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const modifyMCPServer = initialData ? patchMCPServer : addMCPServer;
   const isPending = isAddPending || isPatchPending;
@@ -288,9 +289,15 @@ export default function AddMcpServerModal({
             </div>
             <span className="text-mmd font-normal text-muted-foreground">
               Save MCP Servers. Manage added servers in{" "}
-              <CustomLink className="underline" to="/settings/mcp-servers">
+              <button
+                className="underline cursor-pointer bg-transparent border-0 p-0 text-inherit"
+                onClick={() => {
+                  setOpen(false);
+                  navigate("/settings/mcp-servers");
+                }}
+              >
                 settings
-              </CustomLink>
+              </button>
               .
             </span>
           </div>
