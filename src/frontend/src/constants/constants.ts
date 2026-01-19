@@ -897,6 +897,7 @@ export const DRAG_EVENTS_CUSTOM_TYPESS = {
 export const NOTE_NODE_MIN_WIDTH = 260;
 export const NOTE_NODE_MIN_HEIGHT = 100;
 export const DEFAULT_NOTE_SIZE = 324;
+export const CHAT_INPUT_MIN_HEIGHT = 16;
 
 export const COLOR_OPTIONS = {
   amber: "hsl(var(--note-amber))",
