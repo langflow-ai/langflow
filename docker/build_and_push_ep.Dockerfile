@@ -70,7 +70,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # RUNTIME
 # Setup user, utilities and copy the virtual environment only
 ################################
-FROM python:3.12.3-slim AS runtime
+FROM python:3.12.12-slim AS runtime
 
 RUN apt-get update \
     && apt-get upgrade -y \
