@@ -87,6 +87,7 @@ class MCPToolsComponent(ComponentWithCache):
         "tool",
         "use_cache",
         "verify_ssl",
+        "use_oauth",
         "headers",
     ]
 
@@ -121,6 +122,17 @@ class MCPToolsComponent(ComponentWithCache):
                 "Disable only for development/testing with self-signed certificates."
             ),
             value=True,
+            advanced=True,
+        ),
+        BoolInput(
+            name="use_oauth",
+            display_name="Use OAuth Authentication",
+            info=(
+                "Enable OAuth 2.1 authentication for this MCP server. "
+                "When enabled, a browser window will open for authentication on first connection. "
+                "Tokens are cached in ~/.langflow/oauth/ for subsequent requests."
+            ),
+            value=False,
             advanced=True,
         ),
         DictInput(
@@ -317,13 +329,36 @@ class MCPToolsComponent(ComponentWithCache):
                 except Exception as e:  # noqa: BLE001
                     await logger.awarning(f"Failed to load global variables for MCP component: {e}")
 
-            _, tool_list, tool_cache = await update_tools(
-                server_name=server_name,
-                server_config=server_config,
-                mcp_stdio_client=self.stdio_client,
-                mcp_streamable_http_client=self.streamable_http_client,
-                request_variables=request_variables,
-            )
+            # Create OAuth provider if OAuth is enabled
+            oauth_auth = None
+            oauth_cleanup = None
+            use_oauth = getattr(self, "use_oauth", False)
+            if use_oauth and server_config.get("url"):
+                try:
+                    from lfx.base.mcp.oauth import create_mcp_oauth_provider
+
+                    oauth_auth, _, oauth_cleanup = await create_mcp_oauth_provider(
+                        server_url=server_config["url"],
+                        client_name="langflow",
+                    )
+                except Exception as e:
+                    msg = f"Failed to create OAuth provider: {e!s}"
+                    await logger.awarning(msg)
+                    # Continue without OAuth if it fails
+
+            try:
+                _, tool_list, tool_cache = await update_tools(
+                    server_name=server_name,
+                    server_config=server_config,
+                    mcp_stdio_client=self.stdio_client,
+                    mcp_streamable_http_client=self.streamable_http_client,
+                    request_variables=request_variables,
+                    oauth_auth=oauth_auth,
+                )
+            finally:
+                # Clean up OAuth resources
+                if oauth_cleanup:
+                    oauth_cleanup()
 
             self.tool_names = [tool.name for tool in tool_list if hasattr(tool, "name")]
             self._tool_cache = tool_cache
