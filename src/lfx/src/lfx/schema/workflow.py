@@ -147,8 +147,8 @@ WORKFLOW_EXECUTION_RESPONSES = {
                         "mapping": {
                             "response": "#/components/schemas/WorkflowExecutionResponse",
                             "job": "#/components/schemas/WorkflowJobResponse",
-                        }
-                    }
+                        },
+                    },
                 }
             },
             "text/event-stream": {
