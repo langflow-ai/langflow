@@ -531,39 +531,46 @@ const NodeToolbarComponent = memo(
               side="top"
             >
               <Button
+                asChild
                 className={cn(
                   "node-toolbar-buttons h-[2rem]",
                   toolMode && "text-primary",
                 )}
                 variant="ghost"
-                onClick={(event) => {
-                  event.preventDefault();
-                  takeSnapshot();
-                  handleSelectChange("toolMode");
-                }}
                 size="node-toolbar"
                 data-testid="tool-mode-button"
               >
-                <IconComponent
-                  name="Hammer"
-                  className={cn(
-                    "h-4 w-4 transition-all",
-                    toolMode ? "text-primary" : "",
-                  )}
-                />
-                <span className="text-mmd font-medium">Tool Mode</span>
-                <ToggleShadComponent
-                  value={toolMode}
-                  editNode={false}
-                  handleOnNewValue={() => {
+                <div
+                  className="flex items-center gap-2"
+                  role="button"
+                  tabIndex={0}
+                  onClick={(event) => {
+                    event.preventDefault();
                     takeSnapshot();
                     handleSelectChange("toolMode");
                   }}
-                  disabled={false}
-                  size="medium"
-                  showToogle={false}
-                  id="tool-mode-toggle"
-                />
+                >
+                  <IconComponent
+                    name="Hammer"
+                    className={cn(
+                      "h-4 w-4 transition-all",
+                      toolMode ? "text-primary" : "",
+                    )}
+                  />
+                  <span className="text-mmd font-medium">Tool Mode</span>
+                  <ToggleShadComponent
+                    value={toolMode}
+                    editNode={false}
+                    handleOnNewValue={() => {
+                      takeSnapshot();
+                      handleSelectChange("toolMode");
+                    }}
+                    disabled={false}
+                    size="medium"
+                    showToogle={false}
+                    id="tool-mode-toggle"
+                  />
+                </div>
               </Button>
             </ShadTooltip>
           )}
