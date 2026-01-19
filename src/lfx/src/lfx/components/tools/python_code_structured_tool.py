@@ -2,7 +2,7 @@ import ast
 import json
 from typing import Any
 
-from langchain.agents import Tool
+from langchain_classic.agents import Tool
 from langchain_core.tools import StructuredTool
 from pydantic.v1 import Field, create_model
 from pydantic.v1.fields import Undefined

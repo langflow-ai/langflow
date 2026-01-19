@@ -1,12 +1,8 @@
-from langchain.agents import create_xml_agent
+from langchain_classic.agents import create_xml_agent
 from langchain_core.prompts import ChatPromptTemplate, HumanMessagePromptTemplate, PromptTemplate
 
 from lfx.base.agents.agent import LCToolsAgentComponent
-from lfx.inputs.inputs import (
-    DataInput,
-    HandleInput,
-    MultilineInput,
-)
+from lfx.inputs.inputs import DataInput, HandleInput, MultilineInput
 from lfx.schema.data import Data
 
 
