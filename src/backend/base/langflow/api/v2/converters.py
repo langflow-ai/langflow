@@ -224,12 +224,16 @@ def _get_raw_content(vertex_output_data: Any) -> Any:
     Returns:
         Raw content or None
     """
-    if hasattr(vertex_output_data, "outputs") and vertex_output_data.outputs is not None:
-        return vertex_output_data.outputs
-    if hasattr(vertex_output_data, "results") and vertex_output_data.results is not None:
-        return vertex_output_data.results
-    if hasattr(vertex_output_data, "messages") and vertex_output_data.messages is not None:
-        return vertex_output_data.messages
+    outputs = getattr(vertex_output_data, "outputs", None)
+    if outputs is not None:
+        return outputs
+    results = getattr(vertex_output_data, "results", None)
+    if results is not None:
+        return results
+    messages = getattr(vertex_output_data, "messages", None)
+    if messages is not None:
+        return messages
+
     if isinstance(vertex_output_data, dict):
         # Check for 'results' first, then 'content' if results is None
         if "results" in vertex_output_data:
@@ -257,6 +261,30 @@ def _simplify_output_content(content: Any, output_type: str) -> Any:
         return content
 
     if output_type in {"message", "text"}:
+        # Fast-path for common message structures to avoid heavier _extract_text_from_message
+        msg = content.get("message")
+        if isinstance(msg, dict):
+            nested_msg = msg.get("message")
+            if isinstance(nested_msg, str):
+                return nested_msg
+        txt = content.get("text")
+        if isinstance(txt, dict):
+            nested_txt = txt.get("message")
+            if isinstance(nested_txt, str):
+                return nested_txt
+        if isinstance(msg, dict):
+            msg_txt = msg.get("text")
+            if isinstance(msg_txt, str):
+                return msg_txt
+        if isinstance(msg, str):
+            return msg
+        if isinstance(txt, dict):
+            txt_txt = txt.get("text")
+            if isinstance(txt_txt, str):
+                return txt_txt
+        if isinstance(txt, str):
+            return txt
+        # Fallback for complex structures
         text = _extract_text_from_message(content)
         return text if text is not None else content
 
@@ -366,6 +394,9 @@ def run_response_to_workflow_response(
         # Fallback: manually check successor_map
         terminal_node_ids = [vertex.id for vertex in graph.vertices if not graph.successor_map.get(vertex.id, [])]
 
+    # Convert to set for faster membership tests when filtering vertices
+    terminal_node_ids_set = set(terminal_node_ids)
+
     # Build output data map from run_response using component_id as key
     # This ensures unique keys even when components have duplicate display_names
     output_data_map: dict[str, Any] = {}
@@ -381,7 +412,7 @@ def run_response_to_workflow_response(
                         output_data_map[component_id] = result_data
 
     # First pass: collect all terminal vertices and check for duplicate display_names
-    terminal_vertices = [v for v in graph.vertices if v.id in terminal_node_ids]
+    terminal_vertices = [v for v in graph.vertices if v.id in terminal_node_ids_set]
     display_name_counts: dict[str, int] = {}
     for vertex in terminal_vertices:
         display_name = vertex.display_name or vertex.id
