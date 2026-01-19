@@ -132,8 +132,17 @@ class SQLComponent(ComponentWithCache):
                     "add_error",
                 }
 
-                query = build_config.get("query", {}).get("value", "")
-                query_fallback = build_config.get("query_fallback", {}).get("value", "")
+                # Get query and query_fallback from build_config
+                # If the query or query_fallback is a dict, get the value, otherwise get the string
+
+                def get_query_value(build_config: dict, key: str) -> str:
+                    if isinstance(build_config.get(key), dict):
+                        return build_config.get(key, {}).get("value", "")
+                    return build_config.get(key, "")
+
+                query = get_query_value(build_config, "query")
+                query_fallback = get_query_value(build_config, "query_fallback")
+
                 # Extract parameters from query
                 unique_fields = self._extract_parameters_from_query(query, query_fallback)
                 # Find all current dynamic fields in build_config (not in default_keys)
@@ -212,7 +221,6 @@ class SQLComponent(ComponentWithCache):
 
                 # Filter out None values (parameters that weren't set)
                 parameters = {k: v for k, v in parameters.items() if v is not None}
-
             cursor: Result[Any] = self.db.run(query, fetch="cursor", parameters=parameters)
             if isinstance(cursor, list):
                 return cursor
