@@ -215,9 +215,14 @@ jobs:
             echo "Main: $MAIN_FILE"
             exit 1
           fi
+          mkdir -p ./local-packages
+          cp "$BASE_FILE" ./local-packages/
+          cp "$MAIN_FILE" ./local-packages/
 
           uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$BASE_FILE"
-          uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe --reinstall-package langflow "$MAIN_FILE"
+          uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe \
+            --find-links ./local-packages \
+            "$MAIN_FILE"
         shell: bash
 
       - name: Install LFX package from wheel (Unix)
@@ -253,8 +258,12 @@ jobs:
             exit 1
           fi
 
+          mkdir -p ./local-packages
+          cp "$BASE_FILE" ./local-packages/
+          cp "$MAIN_FILE" ./local-packages/
+
           uv pip install --prerelease=allow --python ./test-env/bin/python "$BASE_FILE"
-          uv pip install --prerelease=allow --python ./test-env/bin/python --reinstall-package langflow "$MAIN_FILE"
+          uv pip install --prerelease=allow --python ./test-env/bin/python --find-links ./local-packages "$MAIN_FILE"
         shell: bash
 
       # PyPI installation steps
