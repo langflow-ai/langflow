@@ -7726,7 +7726,7 @@ wheels = [
 
 [[package]]
 name = "nv-ingest-api"
-version = "26.1.0"
+version = "26.1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "backoff", marker = "python_full_version >= '3.12'" },
@@ -7740,14 +7740,14 @@ dependencies = [
     { name = "tritonclient", marker = "python_full_version >= '3.12'" },
     { name = "universal-pathlib", marker = "python_full_version >= '3.12'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/1a/65/b2aabfb26cd4d796283016a258c1dc9bb1b9d413286720fdc4e476247aec/nv_ingest_api-26.1.0.tar.gz", hash = "sha256:4855a1a176bc35b3f39e563b381bd588bc38e3590309c4758e2736f9cbc28f4e", size = 259570, upload-time = "2026-01-09T18:55:55.387Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/41/eb/e0469e918d617175e1d3bcf952f0ca8e9b7756fce7817d5386ac4ddca154/nv_ingest_api-26.1.1.tar.gz", hash = "sha256:063d51f1d560bf03d7a595ff3ecebac1bffae45607cf6bd01e4fa8ca2265a884", size = 259532, upload-time = "2026-01-13T23:44:11.112Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/51/39/8fb324a3d346d229950aae4d172a0182a52b13dd6d31943892abd676dfe2/nv_ingest_api-26.1.0-py3-none-any.whl", hash = "sha256:bf0e941670fe918ef0110821a1f68cd6a555b84c3306fe5cb33fa852e8fcf921", size = 357483, upload-time = "2026-01-09T18:55:52.607Z" },
+    { url = "https://files.pythonhosted.org/packages/42/51/cd93750a1c5797d8d12e843bb13645b0930e4490f96ca49f458aeb641018/nv_ingest_api-26.1.1-py3-none-any.whl", hash = "sha256:e4f8b860765cedba72622782692e2ffc69a100fd61956e8b8a81a47e6c852d66", size = 357481, upload-time = "2026-01-13T23:44:07.943Z" },
 ]
 
 [[package]]
 name = "nv-ingest-client"
-version = "26.1.0"
+version = "26.1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "build", marker = "python_full_version >= '3.12'" },
@@ -7762,9 +7762,9 @@ dependencies = [
     { name = "setuptools", marker = "python_full_version >= '3.12'" },
     { name = "tqdm", marker = "python_full_version >= '3.12'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/3e/a5/c187cb472bd59c128cc0eed3e61742f3d8fead02958dbcf3d00e5f4b3e30/nv_ingest_client-26.1.0.tar.gz", hash = "sha256:4a903ff37174f986bb17cca4d054de3bd6acc030ea8f9057b67cbbe0767cb840", size = 126896, upload-time = "2026-01-09T18:56:02.134Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/cb/c4/ae5e2b00a8ffdfc1a3cf660ded68c188140ca433b22446adbb72ccfc455d/nv_ingest_client-26.1.1.tar.gz", hash = "sha256:26d6844eac946b4fdb8da2f5f1e77feb22b52ac21e6d772cf6b1c8c21cef4bb8", size = 126865, upload-time = "2026-01-13T23:44:15.615Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/90/c8/da9f4baba712240b0bc6bffa32499a398360765affdc158b59d06cf8a454/nv_ingest_client-26.1.0-py3-none-any.whl", hash = "sha256:b5c2a54adc2e043cbb4a0193b693ddddcefc822a1a725129e0aa38b5832e2ea8", size = 147193, upload-time = "2026-01-09T18:55:57.228Z" },
+    { url = "https://files.pythonhosted.org/packages/64/ea/042ad6d8ddfa887667159af8b473835bfcc5b9f51ba6e82ff14078e59a3e/nv_ingest_client-26.1.1-py3-none-any.whl", hash = "sha256:df9906c7021e6a1ae64140fbe7a345679b1cfad7dfa486442e38ca75d64f2b39", size = 147197, upload-time = "2026-01-13T23:44:12.761Z" },
 ]
 
 [[package]]
