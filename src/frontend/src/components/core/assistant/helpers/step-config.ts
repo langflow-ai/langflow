@@ -12,6 +12,49 @@ export type StepConfig = {
   spin?: boolean;
 };
 
+// Text variations for dynamic UI feedback
+const GENERATING_VARIANTS = [
+  "Generating code...",
+  "Writing code...",
+  "Crafting code...",
+  "Building code...",
+  "Creating code...",
+  "Composing code...",
+  "Coding away...",
+  "Conjuring code...",
+  "Assembling code...",
+  "Forging code...",
+];
+
+const VALIDATING_VARIANTS = [
+  "Validating component code...",
+  "Checking component code...",
+  "Verifying component code...",
+  "Testing component code...",
+  "Analyzing component code...",
+  "Inspecting component code...",
+  "Reviewing component code...",
+  "Evaluating component code...",
+  "Examining component code...",
+  "Scanning component code...",
+];
+
+const PROCESSING_VARIANTS = [
+  "Processing...",
+  "Thinking...",
+  "Analyzing...",
+  "Working...",
+  "Computing...",
+  "Calculating...",
+  "Pondering...",
+  "Figuring out...",
+  "Running...",
+  "Crunching...",
+];
+
+const getRandomVariant = (variants: string[]): string =>
+  variants[Math.floor(Math.random() * variants.length)];
+
 export const getStepConfig = (
   step: ProgressStep,
   attempt: number,
@@ -22,7 +65,7 @@ export const getStepConfig = (
     case "generating":
       return {
         icon: "Sparkles",
-        text: "Generating code...",
+        text: getRandomVariant(GENERATING_VARIANTS),
         color: "text-muted-foreground",
         spin: false,
       };
@@ -44,7 +87,7 @@ export const getStepConfig = (
     case "validating":
       return {
         icon: "Shield",
-        text: "Validating component code...",
+        text: getRandomVariant(VALIDATING_VARIANTS),
         color: "text-muted-foreground",
         spin: true,
       };
@@ -75,7 +118,7 @@ export const getStepConfig = (
     default:
       return {
         icon: "Loader2",
-        text: "Processing...",
+        text: getRandomVariant(PROCESSING_VARIANTS),
         color: "text-muted-foreground",
         spin: true,
       };
