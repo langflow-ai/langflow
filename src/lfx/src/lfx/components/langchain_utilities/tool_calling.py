@@ -1,4 +1,4 @@
-from langchain.agents import create_tool_calling_agent
+from langchain_classic.agents import create_tool_calling_agent
 from langchain_core.prompts import ChatPromptTemplate
 
 from lfx.base.agents.agent import LCToolsAgentComponent
@@ -9,11 +9,7 @@ from lfx.components.langchain_utilities.ibm_granite_handler import (
     get_enhanced_system_prompt,
     is_granite_model,
 )
-from lfx.inputs.inputs import (
-    DataInput,
-    HandleInput,
-    MessageTextInput,
-)
+from lfx.inputs.inputs import DataInput, HandleInput, MessageTextInput
 from lfx.schema.data import Data
 
 

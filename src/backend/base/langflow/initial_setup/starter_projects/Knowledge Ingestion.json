@@ -94,7 +94,7 @@
                 "dependencies": [
                   {
                     "name": "langchain_text_splitters",
-                    "version": "0.3.11"
+                    "version": "1.1.0"
                   },
                   {
                     "name": "lfx",
@@ -366,7 +366,7 @@
                   },
                   {
                     "name": "langchain_community",
-                    "version": "0.3.21"
+                    "version": "0.4.1"
                   },
                   {
                     "name": "markitdown",
@@ -767,15 +767,15 @@
                   },
                   {
                     "name": "langchain_openai",
-                    "version": "0.3.23"
+                    "version": "1.1.7"
                   },
                   {
                     "name": "langchain_huggingface",
-                    "version": "0.3.1"
+                    "version": "1.2.0"
                   },
                   {
                     "name": "langchain_cohere",
-                    "version": "0.4.6"
+                    "version": "0.5.0"
                   }
                 ],
                 "total_dependencies": 8

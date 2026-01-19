@@ -8,7 +8,7 @@ authors = [
 ]
 requires-python = ">=3.10,<3.14"
 dependencies = [
-    "langchain-core>=0.3.66,<1.0.0",
+    "langchain-core~=1.2.3",
     "pandas>=2.0.0,<3.0.0",
     "pydantic>=2.0.0,<3.0.0",
     "pillow>=10.0.0,<13.0.0",
@@ -37,7 +37,8 @@ dependencies = [
     "asyncer>=0.0.8,<1.0.0",
     "structlog>=25.4.0,<26.0.0",
     "loguru>=0.7.3,<1.0.0",
-    "langchain~=0.3.23",
+    "langchain~=1.2.0",
+    "langchain-classic~=1.0.0",
     "validators>=0.34.0,<1.0.0",
     "filelock>=3.20.0",
     "pypdf>=5.1.0",
@@ -83,8 +84,8 @@ dev = [
 ]
 integration = [
     # Dependencies for running Simple Agent and other integration tests
-    "langchain-openai>=0.3.0,<1.0.0",
-    "langchain-community>=0.3.0,<1.0.0",
+    "langchain-openai>=1.1.6,<2.0.0",
+    "langchain-community>=0.4.1,<1.0.0",
     "beautifulsoup4>=4.12.0",
     "lxml>=5.0.0",
 ]

@@ -15,6 +15,13 @@ from langflow.services.deps import get_settings_service
 router = APIRouter(tags=["Knowledge Bases"], prefix="/knowledge_bases")
 
 
+def _to_int(value) -> int:
+    """Convert a pandas/numpy scalar to int, handling different Python version behaviors."""
+    if hasattr(value, "item"):
+        return int(value.item())
+    return int(value)
+
+
 _KNOWLEDGE_BASES_DIR: Path | None = None
 
 
@@ -203,8 +210,8 @@ def calculate_text_metrics(df: pd.DataFrame, text_columns: list[str]) -> tuple[i
             continue
 
         text_series = df[col].astype(str).fillna("")
-        total_characters += int(text_series.str.len().sum().item())
-        total_words += int(text_series.str.split().str.len().sum().item())
+        total_characters += _to_int(text_series.str.len().sum())
+        total_words += _to_int(text_series.str.split().str.len().sum())
 
     return total_words, total_characters
 
