@@ -53,7 +53,7 @@ import { HCDIcon } from "@/icons/HCD";
 import { HomeAssistantIcon } from "@/icons/HomeAssistant";
 import { HuggingFaceIcon } from "@/icons/HuggingFace";
 import { HackerNewsIcon } from "@/icons/hackerNews";
-import { WatsonxAiIcon } from "@/icons/IBMWatsonx";
+import { IBMIcon, WatsonxAiIcon } from "@/icons/IBM";
 import { IcosaIcon } from "@/icons/Icosa";
 import { IFixIcon } from "@/icons/IFixIt";
 import { JSIcon } from "@/icons/JSicon";
@@ -174,6 +174,7 @@ export const eagerIconsMapping = {
   HCD: HCDIcon,
   HomeAssistant: HomeAssistantIcon,
   HuggingFace: HuggingFaceIcon,
+  IBM: IBMIcon,
   Icosa: IcosaIcon,
   IFixIt: IFixIcon,
   javascript: JSIcon,
