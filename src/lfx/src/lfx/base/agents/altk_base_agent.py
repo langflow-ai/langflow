@@ -11,8 +11,8 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, cast
 
 from altk.core.llm import get_llm
-from langchain_classic.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent
 from langchain_anthropic.chat_models import ChatAnthropic
+from langchain_classic.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_core.runnables import Runnable, RunnableBinding
@@ -378,9 +378,11 @@ class ALTKBaseAgentComponent(AgentComponent):
                 cast("SendMessageFunctionType", self.send_message),
             )
         except ExceptionWithMessageError as e:
-            if hasattr(e, "agent_message") and hasattr(e.agent_message, "id"):
-                msg_id = e.agent_message.id
-                await delete_message(id_=msg_id)
+            # Only delete message from database if it has an ID (was stored)
+            if hasattr(e, "agent_message"):
+                msg_id = e.agent_message.get_id()
+                if msg_id:
+                    await delete_message(id_=msg_id)
             await self._send_message_event(e.agent_message, category="remove_message")
             logger.error(f"ExceptionWithMessageError: {e}")
             raise

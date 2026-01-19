@@ -385,7 +385,7 @@ jobs:
 
   build-lfx:
     name: Build LFX
-    needs: [ci]
+    needs: [build-base]
     if: ${{ inputs.release_lfx }}
     runs-on: ubuntu-latest
     outputs:
@@ -494,7 +494,7 @@ jobs:
   publish-lfx:
     name: Publish LFX to PyPI
     if: ${{ inputs.release_lfx }}
-    needs: [build-lfx]
+    needs: [build-lfx, test-cross-platform]
     runs-on: ubuntu-latest
     steps:
       - name: Download LFX artifact

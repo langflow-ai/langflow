@@ -47,10 +47,40 @@ To avoid the impact of potential breaking changes and test new versions, the Lan
 
     If you made changes to your flows in the isolated installation, you might want to export and import those flows back to your upgraded primary installation so you don't have to repeat the component upgrade process.
 
-## 1.7.0
+## 1.7.x
+
+:::warning Version yanked
+Version 1.7.0 was yanked due to a critical bug. Version 1.7.0 has been replaced with version 1.7.1, which includes a fix for this issue.
+:::
 
 Highlights of this release include the following changes.
 For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases).
+
+### Known issue: Data not accessible when upgrading to version 1.7.0 {#v170-data-path}
+
+A critical issue was identified during the upgrade process to version 1.7.0.
+
+Flows, projects, and global variables are **not** deleted or corrupted. The data still exists, but version 1.7.0 cannot find it due to a path change in how flows are located.
+All Langflow versions upgrading to 1.7.0 are affected.
+
+Don't upgrade to Langflow version 1.7.0.
+Instead, upgrade directly to version 1.7.1, which includes a fix for this bug.
+
+If you installed version 1.7.0 before the fix was released, follow these steps to recover your flows:
+
+1. Revert Langflow to version 1.6.9:
+
+   ```bash
+   uv pip install langflow==1.6.9
+   ```
+
+2. Verify that your flows, projects, and global variables are accessible.
+
+3. Upgrade directly to version 1.7.1, which includes the fix for this issue:
+
+   ```bash
+   uv pip install langflow==1.7.1
+   ```
 
 ### New features and enhancements
 

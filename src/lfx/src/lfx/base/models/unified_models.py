@@ -62,22 +62,27 @@ def get_model_provider_metadata():
         "OpenAI": {
             "icon": "OpenAI",
             "variable_name": "OPENAI_API_KEY",
+            "api_docs_url": "https://platform.openai.com/docs/overview",
         },
         "Anthropic": {
             "icon": "Anthropic",
             "variable_name": "ANTHROPIC_API_KEY",
+            "api_docs_url": "https://console.anthropic.com/docs",
         },
         "Google Generative AI": {
             "icon": "GoogleGenerativeAI",
             "variable_name": "GOOGLE_API_KEY",
+            "api_docs_url": "https://aistudio.google.com/app/apikey",
         },
         "Ollama": {
             "icon": "Ollama",
-            "variable_name": "OLLAMA_BASE_URL",  # Ollama is local but can have custom URL
+            "variable_name": "OLLAMA_BASE_URL",
+            "api_docs_url": "https://ollama.com/",
         },
-        "IBM Watsonx": {
-            "icon": "WatsonxAI",
+        "IBM WatsonX": {
+            "icon": "IBM",
             "variable_name": "WATSONX_APIKEY",
+            "api_docs_url": "https://www.ibm.com/products/watsonx",
         },
     }
 
@@ -138,8 +143,9 @@ def get_unified_models_detailed(
         When False (default) models whose metadata contains ``deprecated=True``
         are filtered out.
     only_defaults : bool
-        When True, only models marked as default (default=True) are returned.
-        Defaults to False to maintain backward compatibility.
+        When True, only models marked as default are returned.
+        The first 5 models from each provider (in list order) are automatically
+        marked as default. Defaults to False to maintain backward compatibility.
     **metadata_filters
         Arbitrary key/value pairs to match against the model's metadata.
         Example: ``get_unified_models_detailed(size="4k", context_window=8192)``
@@ -170,10 +176,6 @@ def get_unified_models_detailed(
         if (not include_deprecated) and md.get("deprecated", False):
             continue
 
-        # Skip models not marked as default if only_defaults is True
-        if only_defaults and not md.get("default", False):
-            continue
-
         if providers and md.get("provider") not in providers:
             continue
         if model_name and md.get("name") != model_name:
@@ -196,6 +198,21 @@ def get_unified_models_detailed(
                 "metadata": {k: v for k, v in metadata.items() if k not in ("provider", "name")},
             }
         )
+
+    # Mark the first 5 models in each provider as default (based on list order)
+    # and optionally filter to only defaults
+    default_model_count = 5  # Number of default models per provider
+
+    for prov, models in provider_map.items():
+        for i, model in enumerate(models):
+            if i < default_model_count:
+                model["metadata"]["default"] = True
+            else:
+                model["metadata"]["default"] = False
+
+        # If only_defaults is True, filter to only default models
+        if only_defaults:
+            provider_map[prov] = [m for m in models if m["metadata"].get("default", False)]
 
     # Format as requested
     return [
@@ -307,9 +324,18 @@ def validate_model_provider_key(variable_name: str, api_key: str) -> None:
             llm = ChatGoogleGenerativeAI(google_api_key=api_key, model=first_model, max_tokens=1)
             llm.invoke("test")
         elif provider == "IBM WatsonX":
-            # WatsonX validation would require additional parameters
-            # Skip for now as it needs project_id, url, etc.
-            return
+            from langchain_ibm import ChatWatsonx
+
+            default_url = "https://us-south.ml.cloud.ibm.com"
+            llm = ChatWatsonx(
+                apikey=api_key,
+                url=default_url,
+                model_id=first_model,
+                project_id="dummy_project_for_validation",  # Dummy project_id for validation
+                params={"max_new_tokens": 1},
+            )
+            llm.invoke("test")
+
         elif provider == "Ollama":
             # Ollama is local, just verify the URL is accessible
             import requests
@@ -834,7 +860,17 @@ def normalize_model_names_to_dicts(model_names: list[str] | str) -> list[dict[st
     return result
 
 
-def get_llm(model, user_id: UUID | str | None, api_key=None, temperature=None, *, stream=False) -> Any:
+def get_llm(
+    model,
+    user_id: UUID | str | None,
+    api_key=None,
+    temperature=None,
+    *,
+    stream=False,
+    watsonx_url=None,
+    watsonx_project_id=None,
+    ollama_base_url=None,
+) -> Any:
     # Check if model is already a BaseLanguageModel instance (from a connection)
     try:
         from langchain_core.language_models import BaseLanguageModel
@@ -866,10 +902,12 @@ def get_llm(model, user_id: UUID | str | None, api_key=None, temperature=None, *
 
     # Validate API key (Ollama doesn't require one)
     if not api_key and provider != "Ollama":
+        # Get the correct variable name from the provider variable mapping
+        provider_variable_map = get_model_provider_variable_mapping()
+        variable_name = provider_variable_map.get(provider, f"{provider.upper().replace(' ', '_')}_API_KEY")
         msg = (
             f"{provider} API key is required when using {provider} provider. "
-            f"Please provide it in the component or configure it globally as "
-            f"{provider.upper().replace(' ', '_')}_API_KEY."
+            f"Please provide it in the component or configure it globally as {variable_name}."
         )
         raise ValueError(msg)
 
@@ -895,7 +933,54 @@ def get_llm(model, user_id: UUID | str | None, api_key=None, temperature=None, *
     if temperature is not None:
         kwargs["temperature"] = temperature
 
-    return model_class(**kwargs)
+    # Add provider-specific parameters
+    if provider == "IBM WatsonX":
+        # For watsonx, url and project_id are required parameters
+        # Only add them if both are provided by the component
+        # If neither are provided, let ChatWatsonx handle it with its native error
+        # This allows components without WatsonX-specific fields to fail gracefully
+
+        url_param = metadata.get("url_param", "url")
+        project_id_param = metadata.get("project_id_param", "project_id")
+
+        has_url = watsonx_url is not None
+        has_project_id = watsonx_project_id is not None
+
+        if has_url and has_project_id:
+            # Both provided - add them to kwargs
+            kwargs[url_param] = watsonx_url
+            kwargs[project_id_param] = watsonx_project_id
+        elif has_url or has_project_id:
+            # Only one provided - this is a misconfiguration in the component
+            missing = "project ID" if has_url else "URL"
+            provided = "URL" if has_url else "project ID"
+            msg = (
+                f"IBM WatsonX requires both a URL and project ID. "
+                f"You provided a watsonx {provided} but no {missing}. "
+                f"Please add a 'watsonx {missing.title()}' field to your component or use the Language Model component "
+                f"which fully supports IBM WatsonX configuration."
+            )
+            raise ValueError(msg)
+        # else: neither provided - let ChatWatsonx handle it (will fail with its own error)
+    elif provider == "Ollama" and ollama_base_url:
+        # For Ollama, handle custom base_url
+        base_url_param = metadata.get("base_url_param", "base_url")
+        kwargs[base_url_param] = ollama_base_url
+
+    try:
+        return model_class(**kwargs)
+    except Exception as e:
+        # If instantiation fails and it's WatsonX, provide additional context
+        if provider == "IBM WatsonX" and ("url" in str(e).lower() or "project" in str(e).lower()):
+            msg = (
+                f"Failed to initialize IBM WatsonX model: {e}\n\n"
+                "IBM WatsonX requires additional configuration parameters (API endpoint URL and project ID). "
+                "This component may not support these parameters. "
+                "Consider using the 'Language Model' component instead, which fully supports IBM WatsonX."
+            )
+            raise ValueError(msg) from e
+        # Re-raise the original exception for other cases
+        raise
 
 
 def update_model_options_in_build_config(
@@ -939,6 +1024,9 @@ def update_model_options_in_build_config(
         time_since_cache = time.time() - component.cache[cache_timestamp_key]
         cache_expired = time_since_cache > cache_ttl
 
+    # Check if is_refresh flag is set in build_config (from frontend refresh request)
+    is_refresh_request = build_config.get("is_refresh", False)
+
     # Check if we need to refresh
     should_refresh = (
         field_name == "api_key"  # API key changed
@@ -946,6 +1034,7 @@ def update_model_options_in_build_config(
         or field_name == "model"  # Model field refresh button clicked
         or cache_key not in component.cache  # Cache miss
         or cache_expired  # Cache expired
+        or is_refresh_request  # Frontend requested a refresh
     )
 
     if should_refresh:
@@ -965,9 +1054,13 @@ def update_model_options_in_build_config(
     cached = component.cache.get(cache_key, {"options": []})
     build_config["model"]["options"] = cached["options"]
 
-    # Set default value on initial load when field is empty
-    # Fetch from user's default model setting in the database
-    if not field_value or field_value == "":
+    # Set default value on initial load when model field is empty
+    # Only set default when: initial load (field_name is None) or model field is being set and is empty
+    # Get the current model value to check if it's empty
+    current_model_value = build_config.get("model", {}).get("value")
+    model_is_empty = not current_model_value
+    should_set_default = field_name is None or (field_name == "model" and model_is_empty)
+    if should_set_default:
         options = cached.get("options", [])
         if options:
             # Determine model type based on cache_key_prefix
@@ -1036,20 +1129,17 @@ def update_model_options_in_build_config(
             if default_model:
                 build_config["model"]["value"] = [default_model]
 
-    # Simple logic: ONLY hide the handle when we're explicitly setting a model value
-    # Check if field_value is a model selection (list with model dict)
-    if (
-        isinstance(field_value, list)
-        and len(field_value) > 0
-        and isinstance(field_value[0], dict)
-        and "name" in field_value[0]
-    ):
-        # User is selecting a model, hide the handle
-        build_config["model"]["input_types"] = []
-    # Otherwise (including when field_value is "connect_other_models" or anything else), restore default input_types
-    elif cache_key_prefix == "embedding_model_options":
-        build_config["model"]["input_types"] = ["Embeddings"]
+    # Handle visibility logic:
+    # - Show handle ONLY when field_value is "connect_other_models"
+    # - Hide handle in all other cases (default, model selection, etc.)
+    if field_value == "connect_other_models":
+        # User explicitly selected "Connect other models", show the handle
+        if cache_key_prefix == "embedding_model_options":
+            build_config["model"]["input_types"] = ["Embeddings"]
+        else:
+            build_config["model"]["input_types"] = ["LanguageModel"]
     else:
-        build_config["model"]["input_types"] = ["LanguageModel"]
+        # Default case or model selection: hide the handle
+        build_config["model"]["input_types"] = []
 
     return build_config

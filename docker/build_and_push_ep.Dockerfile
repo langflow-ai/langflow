@@ -74,7 +74,7 @@ FROM python:3.12.3-slim AS runtime
 
 RUN apt-get update \
     && apt-get upgrade -y \
-    && apt-get install -y \
+    && apt-get install --no-install-recommends -y \
         curl \
         git \
         # Add PostgreSQL client libraries
@@ -84,13 +84,14 @@ RUN apt-get update \
     && apt-get install -y nodejs \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
-    && useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data \
+    && useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data -s /usr/bin/false \
     && mkdir /data && chown -R 1000:0 /data
 
 COPY --from=builder --chown=1000 /app/.venv /app/.venv
 
-# curl is required for langflow health checks
-RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+# Remove shell binaries to completely disable shell access
+RUN rm -f /bin/sh /bin/bash /bin/dash /usr/bin/sh /usr/bin/bash /usr/bin/dash \
+    /bin/ash /bin/zsh /bin/csh /bin/tcsh /bin/ksh 2>/dev/null || true
 
 # Place executables in the environment at the front of the path
 ENV PATH="/app/.venv/bin:$PATH"
