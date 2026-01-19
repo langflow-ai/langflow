@@ -10,8 +10,13 @@ interface getUsersQueryParams {
   username?: string;
 }
 
+interface getUsersResponse {
+  users: Users[];
+  total_count: number;
+}
+
 export const useGetUsers: useMutationFunctionType<
-  Array<Users>,
+  getUsersResponse,
   getUsersQueryParams
 > = (options?) => {
   const { mutate } = UseRequestProcessor();
@@ -20,7 +25,7 @@ export const useGetUsers: useMutationFunctionType<
     skip,
     limit,
     username,
-  }: getUsersQueryParams): Promise<Array<Users>> {
+  }: getUsersQueryParams): Promise<getUsersResponse> {
     const res = await api.get(
       `${getURL("USERS")}/?skip=${skip}&limit=${limit}${
         username ? `&username=${username}` : ""
@@ -29,11 +34,11 @@ export const useGetUsers: useMutationFunctionType<
     if (res.status === 200) {
       return res.data;
     }
-    return [];
+    return { total_count: 0, users: [] };
   }
 
   const mutation: UseMutationResult<
-    Array<Users>,
+    getUsersResponse,
     Error,
     getUsersQueryParams
   > = mutate(["useGetUsers"], getUsers, options);
