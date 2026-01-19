@@ -50,7 +50,7 @@ async def test_get_api_keys_decrypts_and_falls_back(monkeypatch):
     # Patch decrypt_api_key to:
     # - return 'sk-decrypted' for 'enc-1'
     # - raise InvalidToken for 'bad-enc' to trigger fallback
-    def fake_decrypt(val, settings_service=None):
+    def fake_decrypt(val):
         if val == "enc-1":
             return "sk-decrypted"
         if val == "bad-enc":
@@ -60,7 +60,7 @@ async def test_get_api_keys_decrypts_and_falls_back(monkeypatch):
     monkeypatch.setattr(crud_module.auth_utils, "decrypt_api_key", fake_decrypt)
 
     # Patch ApiKeyRead.model_validate to just return the provided dict for easy assertions
-    monkeypatch.setattr(crud_module.ApiKeyRead, "model_validate", staticmethod(lambda data, *args, **kwargs: data))
+    monkeypatch.setattr(crud_module.ApiKeyRead, "model_validate", staticmethod(lambda data: data))
 
     result = await crud_module.get_api_keys(session, user_id)
 
