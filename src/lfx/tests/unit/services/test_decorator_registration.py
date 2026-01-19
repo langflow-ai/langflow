@@ -1,5 +1,7 @@
 """Tests for decorator-based service registration."""
 
+from unittest.mock import MagicMock
+
 import pytest
 from lfx.services.base import Service
 from lfx.services.manager import ServiceManager
@@ -8,15 +10,17 @@ from lfx.services.storage.local import LocalStorageService
 from lfx.services.telemetry.service import TelemetryService
 from lfx.services.tracing.service import TracingService
 
+from .conftest import MockSessionService
+
 
 @pytest.fixture
 def clean_manager():
     """Create a fresh ServiceManager for testing decorators."""
-    manager = ServiceManager()
-    yield manager
-    # Cleanup
     import asyncio
 
+    manager = ServiceManager()
+    manager.register_service_class(ServiceType.SESSION_SERVICE, MockSessionService, override=True)
+    yield manager
     asyncio.run(manager.teardown())
 
 
@@ -111,7 +115,11 @@ class TestDecoratorRegistration:
         clean_manager.register_service_class(ServiceType.VARIABLE_SERVICE, LocalStorageService, override=True)
 
         # Class should still be usable directly (not just through manager)
-        direct_instance = LocalStorageService()
+        # Create mock dependencies for direct instantiation
+        mock_session = MagicMock()
+        mock_settings = MagicMock()
+        mock_settings.settings.config_dir = "/tmp/test"
+        direct_instance = LocalStorageService(mock_session, mock_settings)
         assert direct_instance.ready is True
         assert direct_instance.name == "storage_service"
 
@@ -121,8 +129,8 @@ class TestDecoratorRegistration:
         clean_manager.register_service_class(ServiceType.TELEMETRY_SERVICE, TelemetryService, override=True)
         clean_manager.register_service_class(ServiceType.TRACING_SERVICE, TracingService, override=True)
 
-        # All should be registered
-        assert len(clean_manager.service_classes) == 3
+        # All should be registered (plus SESSION_SERVICE from fixture)
+        assert len(clean_manager.service_classes) >= 3
         assert ServiceType.STORAGE_SERVICE in clean_manager.service_classes
         assert ServiceType.TELEMETRY_SERVICE in clean_manager.service_classes
         assert ServiceType.TRACING_SERVICE in clean_manager.service_classes
