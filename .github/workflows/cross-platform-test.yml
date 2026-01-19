@@ -217,7 +217,8 @@ jobs:
           fi
 
           uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$BASE_FILE"
-          uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$MAIN_FILE"
+          uv pip install --no-deps --python ./test-env/Scripts/python.exe "$MAIN_FILE"
+          uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$MAIN_FILE" --no-reinstall
         shell: bash
 
       - name: Install LFX package from wheel (Unix)
@@ -253,8 +254,9 @@ jobs:
             exit 1
           fi
 
-          uv pip install --prerelease=allow --python ./test-env/bin/python.exe "$BASE_FILE"
-          uv pip install --prerelease=allow --python ./test-env/bin/python.exe "$MAIN_FILE"
+          uv pip install --prerelease=allow --python ./test-env/bin/python "$BASE_FILE"
+          uv pip install --no-deps --python ./test-env/bin/python "$MAIN_FILE"
+          uv pip install --prerelease=allow --python ./test-env/bin/python "$MAIN_FILE" --no-reinstall
         shell: bash
 
       # PyPI installation steps
