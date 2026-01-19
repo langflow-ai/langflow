@@ -56,13 +56,13 @@ repos:
         files: "^src/frontend/.*\\.(jsx?|tsx?|c(js|ts)|m(js|ts)|d\\.(ts|cts|mts)|jsonc?)$"
         exclude: (^docs/|src/lfx/src/lfx/_assets/component_index\.json$)
         pass_filenames: true
-#      - id: biome-lint-no-any-staged
-#        name: biome no-any check (staged only)
-#        entry: bash -c 'cd src/frontend && npx @biomejs/biome lint --staged --diagnostic-level=error --no-errors-on-unmatched'
-#        language: system
-#        files: "^src/frontend/.*\\.(tsx?|ts)$"
-#        exclude: (^docs/)
-#        pass_filenames: false
+      - id: biome-lint-no-any-staged
+        name: biome no-any check (staged only)
+        entry: bash -c 'cd src/frontend && npx @biomejs/biome lint --staged --diagnostic-level=error --no-errors-on-unmatched'
+        language: system
+        files: "^src/frontend/.*\\.(tsx?|ts)$"
+        exclude: (^docs/)
+        pass_filenames: false
       - id: validate-starter-projects
         name: Validate Starter Project Templates
         entry: uv run python src/backend/tests/unit/template/test_starter_projects.py
