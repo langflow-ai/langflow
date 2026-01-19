@@ -7,6 +7,8 @@ from lfx.services.base import Service
 from lfx.services.manager import ServiceManager
 from lfx.services.schema import ServiceType
 
+from .conftest import MockSessionService
+
 
 class TestStandaloneLFX:
     """Test LFX running standalone without langflow."""
@@ -15,6 +17,8 @@ class TestStandaloneLFX:
     def clean_manager(self):
         """Create a clean ServiceManager instance."""
         manager = ServiceManager()
+        # Register mock session service as dependency for LocalStorageService
+        manager.register_service_class(ServiceType.SESSION_SERVICE, MockSessionService, override=True)
         yield manager
         # Cleanup
         import asyncio
@@ -92,6 +96,8 @@ cache_service = "lfx.services.cache.service:ThreadingInMemoryCache"
     def clean_manager(self):
         """Create a clean ServiceManager instance."""
         manager = ServiceManager()
+        # Register mock session service as dependency for LocalStorageService
+        manager.register_service_class(ServiceType.SESSION_SERVICE, MockSessionService, override=True)
         yield manager
         # Cleanup
         import asyncio
@@ -126,6 +132,8 @@ class TestServiceOverrideScenarios:
     def clean_manager(self):
         """Create a clean ServiceManager instance."""
         manager = ServiceManager()
+        # Register mock session service as dependency for LocalStorageService
+        manager.register_service_class(ServiceType.SESSION_SERVICE, MockSessionService, override=True)
         yield manager
         # Cleanup
         import asyncio
@@ -194,6 +202,8 @@ class TestErrorConditions:
     def clean_manager(self):
         """Create a clean ServiceManager instance."""
         manager = ServiceManager()
+        # Register mock session service as dependency for LocalStorageService
+        manager.register_service_class(ServiceType.SESSION_SERVICE, MockSessionService, override=True)
         yield manager
         # Cleanup
         import asyncio
@@ -233,8 +243,9 @@ invalid_service_type = "some.module:SomeClass"
         # Should not raise, just log warning
         clean_manager.discover_plugins(config_dir)
 
-        # No services should be registered (invalid key)
-        assert len(clean_manager.service_classes) == 0
+        # No services should be registered from config (only SESSION_SERVICE from fixture)
+        assert len(clean_manager.service_classes) == 1
+        assert ServiceType.SESSION_SERVICE in clean_manager.service_classes
 
     def test_malformed_toml_in_config(self, clean_manager, tmp_path):
         """Test handling of malformed TOML."""
@@ -251,8 +262,9 @@ storage_service = "lfx.services.storage.local:LocalStorageService"
         # Should not raise, just log warning
         clean_manager.discover_plugins(config_dir)
 
-        # No services should be registered
-        assert len(clean_manager.service_classes) == 0
+        # No services should be registered from config (only SESSION_SERVICE from fixture)
+        assert len(clean_manager.service_classes) == 1
+        assert ServiceType.SESSION_SERVICE in clean_manager.service_classes
 
     def test_service_without_name_attribute(self, clean_manager):
         """Test registering a service without name attribute."""
@@ -295,6 +307,8 @@ class TestDependencyResolution:
     def clean_manager(self):
         """Create a clean ServiceManager instance."""
         manager = ServiceManager()
+        # Register mock session service as dependency for LocalStorageService
+        manager.register_service_class(ServiceType.SESSION_SERVICE, MockSessionService, override=True)
         yield manager
         # Cleanup
         import asyncio
@@ -390,6 +404,8 @@ class TestConfigFileDiscovery:
     def clean_manager(self):
         """Create a clean ServiceManager instance."""
         manager = ServiceManager()
+        # Register mock session service as dependency for LocalStorageService
+        manager.register_service_class(ServiceType.SESSION_SERVICE, MockSessionService, override=True)
         yield manager
         # Cleanup
         import asyncio
@@ -446,7 +462,9 @@ cache_service = "lfx.services.cache.service:ThreadingInMemoryCache"
         # Should not raise
         clean_manager.discover_plugins(config_dir)
 
-        assert len(clean_manager.service_classes) == 0
+        # No services should be registered from config (only SESSION_SERVICE from fixture)
+        assert len(clean_manager.service_classes) == 1
+        assert ServiceType.SESSION_SERVICE in clean_manager.service_classes
 
 
 class TestEnvironmentVariableIntegration:
@@ -456,6 +474,8 @@ class TestEnvironmentVariableIntegration:
     def clean_manager(self):
         """Create a clean ServiceManager instance."""
         manager = ServiceManager()
+        # Register mock session service as dependency for LocalStorageService
+        manager.register_service_class(ServiceType.SESSION_SERVICE, MockSessionService, override=True)
         yield manager
         # Cleanup
         import asyncio

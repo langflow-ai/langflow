@@ -11,15 +11,17 @@ from lfx.services.telemetry.service import TelemetryService
 from lfx.services.tracing.service import TracingService
 from lfx.services.variable.service import VariableService
 
+from .conftest import MockSessionService
+
 
 @pytest.fixture
 def service_manager():
     """Create a fresh ServiceManager for each test."""
-    manager = ServiceManager()
-    yield manager
-    # Cleanup
     import asyncio
 
+    manager = ServiceManager()
+    manager.register_service_class(ServiceType.SESSION_SERVICE, MockSessionService, override=True)
+    yield manager
     asyncio.run(manager.teardown())
 
 
@@ -48,7 +50,8 @@ class TestServiceRegistration:
         service_manager.register_service_class(ServiceType.TRACING_SERVICE, TracingService, override=True)
         service_manager.register_service_class(ServiceType.VARIABLE_SERVICE, VariableService, override=True)
 
-        assert len(service_manager.service_classes) == 4
+        # 4 services + SESSION_SERVICE from fixture = 5
+        assert len(service_manager.service_classes) == 5
         assert service_manager.service_classes[ServiceType.STORAGE_SERVICE] == LocalStorageService
         assert service_manager.service_classes[ServiceType.TELEMETRY_SERVICE] == TelemetryService
         assert service_manager.service_classes[ServiceType.TRACING_SERVICE] == TracingService
@@ -464,8 +467,8 @@ variable_service = "lfx.services.variable.service:VariableService"
 
         service_manager.discover_plugins(temp_config_dir)
 
-        # All services should be registered
-        assert len(service_manager.service_classes) == 4
+        # All services should be registered (4 from config + SESSION_SERVICE from fixture = 5)
+        assert len(service_manager.service_classes) == 5
 
         # Create and verify each service
         storage = service_manager.get(ServiceType.STORAGE_SERVICE)
