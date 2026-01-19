@@ -602,20 +602,22 @@ function GenericNode({
               getValidationStatus={getValidationStatus}
             />
           </div>
-          {showNode && !ENABLE_INSPECTION_PANEL &&  (hasDescription || editNameDescription) && (
-            <div className="px-4 pb-3">
-              <MemoizedNodeDescription
-                description={data.node?.description}
-                charLimit={1000}
-                mdClassName={"dark:prose-invert"}
-                nodeId={data.id}
-                selected={selected}
-                editNameDescription={editNameDescription}
-                setEditNameDescription={set}
-                setHasChangedNodeDescription={setHasChangedNodeDescription}
-              />
-            </div>
-          )}
+          {showNode &&
+            !ENABLE_INSPECTION_PANEL &&
+            (hasDescription || editNameDescription) && (
+              <div className="px-4 pb-3">
+                <MemoizedNodeDescription
+                  description={data.node?.description}
+                  charLimit={1000}
+                  mdClassName={"dark:prose-invert"}
+                  nodeId={data.id}
+                  selected={selected}
+                  editNameDescription={editNameDescription}
+                  setEditNameDescription={set}
+                  setHasChangedNodeDescription={setHasChangedNodeDescription}
+                />
+              </div>
+            )}
         </div>
         {showNode && (
           <div className="nopan nodelete nodrag noflow relative cursor-auto">

@@ -17,7 +17,6 @@ const InspectionPanel = memo(function InspectionPanel({
   isVisible,
   onClose,
 }: InspectionPanelProps) {
-
   return (
     <AnimatePresence mode="wait">
       {isVisible && selectedNode && selectedNode.type === "genericNode" && (

@@ -60,9 +60,9 @@ export default function InspectionPanelHeader({
     <div className="flex flex-col gap-1.5 pt-2 pb-1 px-3 pl-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-            <span className="font-semibold text-sm">
-              {data.node?.display_name ?? data.type}
-            </span>
+          <span className="font-semibold text-sm">
+            {data.node?.display_name ?? data.type}
+          </span>
         </div>
         <div className="flex items-center gap-1.5">
           {hasCode && (
