@@ -65,8 +65,9 @@ def inject_model_into_flow(
             template = node_data.get("node", {}).get("template", {})
             if "model" in template:
                 template["model"]["value"] = model_value
-            if "api_key" in template:
-                template["api_key"]["value"] = api_key_var
+            # Note: Do NOT set api_key here. The Agent component will automatically
+            # look up the API key from the user's global variables using get_api_key_for_provider()
+            # when the api_key field is empty/falsy.
 
     return flow_data
 

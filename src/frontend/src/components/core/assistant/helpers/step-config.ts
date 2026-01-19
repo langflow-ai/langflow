@@ -14,16 +14,16 @@ export type StepConfig = {
 
 // Text variations for dynamic UI feedback
 const GENERATING_VARIANTS = [
-  "Generating code...",
-  "Writing code...",
-  "Crafting code...",
-  "Building code...",
-  "Creating code...",
-  "Composing code...",
-  "Coding away...",
-  "Conjuring code...",
-  "Assembling code...",
-  "Forging code...",
+  "Thinking...",
+  "Processing...",
+  "Generating response...",
+  "Working on it...",
+  "Analyzing...",
+  "Preparing response...",
+  "On it...",
+  "Let me think...",
+  "Working...",
+  "Crafting response...",
 ];
 
 const VALIDATING_VARIANTS = [
@@ -72,7 +72,7 @@ export const getStepConfig = (
     case "generation_complete":
       return {
         icon: "Check",
-        text: "Code generation complete",
+        text: "Response ready",
         color: "text-accent-emerald-foreground",
         spin: false,
       };

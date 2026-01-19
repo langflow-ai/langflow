@@ -118,13 +118,16 @@ async def execute_flow_with_validation_streaming(
     """Execute flow with validation, yielding SSE progress events.
 
     SSE Event Flow:
-        1. generating (attempt X/Y) - LLM is generating code
+        1. generating (attempt X/Y) - LLM is generating response
         2. generation_complete - LLM finished generating
-        3. extracting_code - Extracting Python code from response
+        3. extracting_code - Extracting Python code from response (if any)
         4. validating - Validating component code with create_class()
         5a. validated - Validation succeeded → complete event
         5b. validation_failed - Validation failed
         6. retrying - About to retry with error context → back to step 1
+
+    Note: Steps 3-6 only occur if the response contains Python code.
+    For Q&A responses without code, only steps 1-2 are shown.
     """
     current_input = input_value
     total_attempts = max_retries + 1
@@ -135,7 +138,7 @@ async def execute_flow_with_validation_streaming(
             "generating",
             attempt,
             total_attempts,
-            message=f"Generating component code (attempt {attempt}/{total_attempts})...",
+            message=f"Generating response (attempt {attempt}/{total_attempts})...",
         )
 
         try:
@@ -166,7 +169,7 @@ async def execute_flow_with_validation_streaming(
             "generation_complete",
             attempt,
             total_attempts,
-            message="Code generation complete",
+            message="Response ready",
         )
 
         # Step 3: Extracting code
