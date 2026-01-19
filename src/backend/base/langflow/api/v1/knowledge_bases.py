@@ -198,13 +198,13 @@ def calculate_text_metrics(df: pd.DataFrame, text_columns: list[str]) -> tuple[i
     total_words = 0
     total_characters = 0
 
-    for col in text_columns:
-        if col not in df.columns:
-            continue
+    valid_cols = [col for col in text_columns if col in df.columns]
+    if not valid_cols:
+        return total_words, total_characters
 
-        text_series = df[col].astype(str).fillna("")
-        total_characters += int(text_series.str.len().sum())
-        total_words += int(text_series.str.split().str.len().sum())
+    combined = df.loc[:, valid_cols].astype(str).fillna("").stack()
+    total_characters = int(combined.str.len().sum())
+    total_words = int(combined.str.count(r"\S+").sum())
 
     return total_words, total_characters
 
