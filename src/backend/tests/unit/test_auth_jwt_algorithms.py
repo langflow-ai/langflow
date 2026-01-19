@@ -13,9 +13,10 @@ from datetime import timedelta
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import jwt
 import pytest
 from fastapi import HTTPException
-from jose import JWTError, jwt
+from jwt import InvalidTokenError
 from pydantic import SecretStr
 
 
@@ -276,7 +277,7 @@ class TestTokenCreation:
                 )
 
                 # Decode without verification to check claims
-                claims = jwt.get_unverified_claims(token)
+                claims = jwt.decode(token, options={"verify_signature": False})
                 assert "exp" in claims
 
 
@@ -492,7 +493,7 @@ class TestAuthenticationFailures:
                     await get_current_user_by_jwt(token, mock_db)
 
                 assert exc_info.value.status_code == 401
-                # jose library raises JWTError for expired tokens before our custom check
+                # PyJWT library raises InvalidTokenError for expired tokens before our custom check
                 assert (
                     "expired" in exc_info.value.detail.lower() or "could not validate" in exc_info.value.detail.lower()
                 )
@@ -685,7 +686,7 @@ class TestAlgorithmMismatch:
             # Try to verify with RS256
             rs256_settings = AuthSettings(CONFIG_DIR=tmpdir2, ALGORITHM="RS256")
 
-            with pytest.raises(JWTError):
+            with pytest.raises(InvalidTokenError):
                 jwt.decode(token, rs256_settings.PUBLIC_KEY, algorithms=["RS256"])
 
     def test_rs256_token_fails_with_hs256_verification(self):
@@ -705,7 +706,7 @@ class TestAlgorithmMismatch:
             # Try to verify with HS256
             hs256_settings = AuthSettings(CONFIG_DIR=tmpdir2, ALGORITHM="HS256")
 
-            with pytest.raises(JWTError):
+            with pytest.raises(InvalidTokenError):
                 jwt.decode(
                     token,
                     hs256_settings.SECRET_KEY.get_secret_value(),
@@ -827,7 +828,7 @@ class TestEdgeCases:
                     expires_delta=timedelta(hours=1),
                 )
 
-                claims = jwt.get_unverified_claims(token)
+                claims = jwt.decode(token, options={"verify_signature": False})
                 assert claims["sub"] == long_user_id
 
 

@@ -23,7 +23,7 @@ export function ChatHeaderActions({
     "h-8 w-8 p-2 text-muted-foreground hover:text-foreground hover:bg-accent rounded transition-colors overflow-hidden no-focus-visible";
 
   return (
-    <div className="relative flex items-center gap-2 w-120 justify-end">
+    <div className="relative flex items-center gap-2 w-32 justify-end">
       {renderPrefix && <div className="shrink-0">{renderPrefix()}</div>}
       <Button
         onClick={onToggleFullscreen}

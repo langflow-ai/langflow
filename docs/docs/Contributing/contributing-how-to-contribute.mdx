@@ -239,7 +239,7 @@ For more information, see the [VSCode documentation](https://code.visualstudio.c
 The documentation is built using [Docusaurus](https://docusaurus.io/) and written in [Markdown](https://docusaurus.io/docs/markdown-features).
 For style guidance, see the [Google Developer Documentation Style Guide](https://developers.google.com/style).
 
-1. Install [Node.js](https://nodejs.org/en/download/package-manager) and [Yarn](https://yarnpkg.com/)
+1. Install [Node.js](https://nodejs.org/en/download/package-manager).
 
 2. Fork the [Langflow GitHub repository](https://github.com/langflow-ai/langflow).
 
@@ -266,8 +266,8 @@ For style guidance, see the [Google Developer Documentation Style Guide](https:/
 5. Install dependencies and start a local Docusaurus static site with hot reload:
 
     ```bash
-    yarn install
-    yarn start
+    npm install
+    npm run start
     ```
 
     The documentation is served at `http://localhost:3000`.
@@ -281,7 +281,7 @@ For style guidance, see the [Google Developer Documentation Style Guide](https:/
     Most pages use a `slug` for shorthand cross-referencing, rather than supplying the full or relative directory path.
     For example, if a page has a `slug` of `/cool-page`, you can link to it with `[Cool page](/cool-page)` from any other `/docs` page.
 
-7. Recommended: After making some changes, run `yarn build` to build the site locally with more robust logging.
+7. Recommended: After making some changes, run `npm run build` to build the site locally with more robust logging.
 This can help you find broken links before creating a PR.
 
 ## Open a pull request
