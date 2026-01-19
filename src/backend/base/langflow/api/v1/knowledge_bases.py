@@ -195,16 +195,15 @@ def get_text_columns(df: pd.DataFrame, schema_data: list | None = None) -> list[
 
 def calculate_text_metrics(df: pd.DataFrame, text_columns: list[str]) -> tuple[int, int]:
     """Calculate total words and characters from text columns."""
-    total_words = 0
-    total_characters = 0
+    valid_columns = [col for col in text_columns if col in df.columns]
 
-    for col in text_columns:
-        if col not in df.columns:
-            continue
+    if not valid_columns:
+        return 0, 0
 
-        text_series = df[col].astype(str).fillna("")
-        total_characters += int(text_series.str.len().sum())
-        total_words += int(text_series.str.split().str.len().sum())
+    all_text = pd.concat([df[col].astype(str).fillna("") for col in valid_columns], ignore_index=True)
+
+    total_characters = int(all_text.str.len().sum())
+    total_words = int(all_text.str.split().str.len().sum())
 
     return total_words, total_characters
 
