@@ -1,5 +1,3 @@
-import pytest
-
 from lfx.base.io.chat import _extract_model_name
 
 
