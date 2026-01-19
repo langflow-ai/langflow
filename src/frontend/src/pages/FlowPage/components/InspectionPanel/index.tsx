@@ -33,11 +33,11 @@ const InspectionPanel = memo(function InspectionPanel({
             initial={{ x: "100%", opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: "100%", opacity: 0 }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
+            transition={{ duration: 0, ease: "easeInOut" }}
             className={cn(
-              "h-full w-full",
+              "max-h-full w-full",
               "rounded-xl border bg-background shadow-lg",
-              "overflow-hidden flex flex-col",
+              "overflow-y-auto flex flex-col",
             )}
           >
             <InspectionPanelHeader data={selectedNode.data} onClose={onClose} />
