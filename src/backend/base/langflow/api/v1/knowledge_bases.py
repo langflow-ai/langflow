@@ -1,4 +1,5 @@
 import json
+import re
 import shutil
 from http import HTTPStatus
 from pathlib import Path
@@ -11,6 +12,8 @@ from pydantic import BaseModel
 
 from langflow.api.utils import CurrentActiveUser
 from langflow.services.deps import get_settings_service
+
+_WORD_RE = re.compile(r"\S+")
 
 router = APIRouter(tags=["Knowledge Bases"], prefix="/knowledge_bases")
 
@@ -211,7 +214,7 @@ def calculate_text_metrics(df: pd.DataFrame, text_columns: list[str]) -> tuple[i
 
         text_series = df[col].astype(str).fillna("")
         total_characters += _to_int(text_series.str.len().sum())
-        total_words += _to_int(text_series.str.split().str.len().sum())
+        total_words += _to_int(text_series.str.count(_WORD_RE).sum())
 
     return total_words, total_characters
 
