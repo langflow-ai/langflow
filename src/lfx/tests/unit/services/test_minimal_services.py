@@ -1,27 +1,12 @@
 """Tests for minimal service implementations in LFX."""
 
 import os
-from unittest.mock import MagicMock
 
 import pytest
 from lfx.services.storage.local import LocalStorageService
 from lfx.services.telemetry.service import TelemetryService
 from lfx.services.tracing.service import TracingService
 from lfx.services.variable.service import VariableService
-
-
-@pytest.fixture
-def mock_session_service():
-    """Create a mock session service."""
-    return MagicMock()
-
-
-@pytest.fixture
-def mock_settings_service(tmp_path):
-    """Create a mock settings service with config_dir."""
-    settings_service = MagicMock()
-    settings_service.settings.config_dir = tmp_path
-    return settings_service
 
 
 class TestLocalStorageService:
@@ -76,10 +61,11 @@ class TestLocalStorageService:
         with pytest.raises(FileNotFoundError):
             await storage.get_file("flow_123", "nonexistent.txt")
 
-    def test_build_full_path(self, storage, tmp_path):
+    def test_build_full_path(self, storage, mock_settings_service):
         """Test building full file path."""
         path = storage.build_full_path("flow_123", "test.txt")
-        expected = str(tmp_path / "flow_123" / "test.txt")
+        config_dir = mock_settings_service.settings.config_dir
+        expected = f"{config_dir}/flow_123/test.txt"
         assert path == expected
 
     @pytest.mark.asyncio

@@ -63,6 +63,16 @@ class TestCircularDependencyDetection:
 class TestServiceLifecycle:
     """Test service lifecycle management."""
 
+    @pytest.fixture
+    def clean_manager(self):
+        """Create a clean ServiceManager instance."""
+        manager = ServiceManager()
+        yield manager
+        # Cleanup
+        import asyncio
+
+        asyncio.run(manager.teardown())
+
     def test_service_ready_state(self, clean_manager):
         """Test service ready state tracking."""
 
@@ -142,6 +152,16 @@ class TestServiceLifecycle:
 
 class TestConfigParsingEdgeCases:
     """Test edge cases in configuration parsing."""
+
+    @pytest.fixture
+    def clean_manager(self):
+        """Create a clean ServiceManager instance."""
+        manager = ServiceManager()
+        yield manager
+        # Cleanup
+        import asyncio
+
+        asyncio.run(manager.teardown())
 
     def test_empty_config_file(self, clean_manager, tmp_path):
         """Test empty configuration file."""
@@ -226,6 +246,16 @@ storage_service = "module:submodule:class:extra"
 class TestServiceRegistrationEdgeCases:
     """Test edge cases in service registration."""
 
+    @pytest.fixture
+    def clean_manager(self):
+        """Create a clean ServiceManager instance."""
+        manager = ServiceManager()
+        yield manager
+        # Cleanup
+        import asyncio
+
+        asyncio.run(manager.teardown())
+
     def test_register_non_service_class(self, clean_manager):
         """Test registering a class that doesn't inherit from Service."""
 
@@ -302,6 +332,16 @@ class TestServiceRegistrationEdgeCases:
 class TestDependencyInjectionEdgeCases:
     """Test edge cases in dependency injection."""
 
+    @pytest.fixture
+    def clean_manager(self):
+        """Create a clean ServiceManager instance."""
+        manager = ServiceManager()
+        yield manager
+        # Cleanup
+        import asyncio
+
+        asyncio.run(manager.teardown())
+
     def test_service_with_optional_dependencies(self, clean_manager):
         """Test service with optional parameters."""
 
@@ -368,6 +408,16 @@ class TestDependencyInjectionEdgeCases:
 class TestConcurrentAccess:
     """Test concurrent access to service manager."""
 
+    @pytest.fixture
+    def clean_manager(self):
+        """Create a clean ServiceManager instance."""
+        manager = ServiceManager()
+        yield manager
+        # Cleanup
+        import asyncio
+
+        asyncio.run(manager.teardown())
+
     def test_multiple_gets_return_same_instance(self, clean_manager):
         """Test that multiple get calls return same instance."""
 
@@ -395,6 +445,16 @@ class TestConcurrentAccess:
 
 class TestSettingsServiceProtection:
     """Test settings service protection mechanisms."""
+
+    @pytest.fixture
+    def clean_manager(self):
+        """Create a clean ServiceManager instance."""
+        manager = ServiceManager()
+        yield manager
+        # Cleanup
+        import asyncio
+
+        asyncio.run(manager.teardown())
 
     def test_cannot_register_settings_via_class(self, clean_manager):
         """Test that settings service cannot be registered via class."""
