@@ -1,13 +1,10 @@
 import { Panel } from "@xyflow/react";
 import { motion, AnimatePresence } from "framer-motion";
-import { memo, useState } from "react";
+import { memo } from "react";
 import type { AllNodeType } from "@/types/flow";
 import { cn } from "@/utils/utils";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import InspectionPanelFields from "./components/InspectionPanelFields";
 import InspectionPanelHeader from "./components/InspectionPanelHeader";
-import InspectionPanelOutputs from "./components/InspectionPanelOutputs";
-import InspectionPanelLogs from "./components/InspectionPanelLogs";
 
 interface InspectionPanelProps {
   selectedNode: AllNodeType | null;
@@ -20,9 +17,6 @@ const InspectionPanel = memo(function InspectionPanel({
   isVisible,
   onClose,
 }: InspectionPanelProps) {
-  const [activeTab, setActiveTab] = useState<"controls" | "outputs" | "logs">(
-    "controls",
-  );
 
   return (
     <AnimatePresence mode="wait">
@@ -47,40 +41,7 @@ const InspectionPanel = memo(function InspectionPanel({
             )}
           >
             <InspectionPanelHeader data={selectedNode.data} onClose={onClose} />
-            <Tabs
-              value={activeTab}
-              onValueChange={(value) =>
-                setActiveTab(value as "controls" | "outputs" | "logs")
-              }
-              className="flex flex-col flex-1 overflow-hidden"
-            >
-              <TabsList className="w-full rounded-none !h-8">
-                <TabsTrigger value="controls" className="flex-1 text-xs">
-                  Controls
-                </TabsTrigger>
-                <TabsTrigger value="outputs" className="flex-1 text-xs">
-                  Outputs
-                </TabsTrigger>
-                <TabsTrigger value="logs" className="flex-1 text-xs">
-                  Logs
-                </TabsTrigger>
-              </TabsList>
-              <TabsContent
-                value="controls"
-                className="overflow-y-auto flex-1 m-0"
-              >
-                <InspectionPanelFields data={selectedNode.data} />
-              </TabsContent>
-              <TabsContent
-                value="outputs"
-                className="overflow-y-auto flex-1 m-0"
-              >
-                <InspectionPanelOutputs data={selectedNode.data} />
-              </TabsContent>
-              <TabsContent value="logs" className="overflow-y-auto flex-1 m-0">
-                <InspectionPanelLogs data={selectedNode.data} />
-              </TabsContent>
-            </Tabs>
+            <InspectionPanelFields data={selectedNode.data} />
           </motion.div>
         </Panel>
       )}
