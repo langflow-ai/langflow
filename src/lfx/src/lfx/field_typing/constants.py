@@ -7,6 +7,7 @@ from typing import Text, TypeAlias, TypeVar
 # Safe imports that don't create circular dependencies
 try:
     from langchain_classic.agents import AgentExecutor
+    from langchain_classic.base_memory import BaseMemory
     from langchain_classic.chains.base import Chain
     from langchain_classic.memory.chat_memory import BaseChatMemory
     from langchain_core.chat_history import BaseChatMessageHistory
@@ -16,7 +17,6 @@ try:
     from langchain_core.embeddings import Embeddings
     from langchain_core.language_models import BaseLanguageModel, BaseLLM
     from langchain_core.language_models.chat_models import BaseChatModel
-    from langchain_core.memory import BaseMemory
     from langchain_core.output_parsers import BaseLLMOutputParser, BaseOutputParser
     from langchain_core.prompts import BasePromptTemplate, ChatPromptTemplate, PromptTemplate
     from langchain_core.retrievers import BaseRetriever
@@ -163,6 +163,7 @@ CUSTOM_COMPONENT_SUPPORTED_TYPES = {
 
 # Default import string for component code generation
 LANGCHAIN_IMPORT_STRING = """from langchain_classic.agents import AgentExecutor
+from langchain_classic.base_memory import BaseMemory
 from langchain_classic.chains.base import Chain
 from langchain_classic.memory.chat_memory import BaseChatMemory
 from langchain_core.chat_history import BaseChatMessageHistory
@@ -171,7 +172,6 @@ from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_core.language_models import BaseLanguageModel, BaseLLM
 from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.memory import BaseMemory
 from langchain_core.output_parsers import BaseLLMOutputParser, BaseOutputParser
 from langchain_core.prompts import BasePromptTemplate, ChatPromptTemplate, PromptTemplate
 from langchain_core.retrievers import BaseRetriever
