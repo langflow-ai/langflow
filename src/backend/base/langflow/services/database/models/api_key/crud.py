@@ -1,3 +1,4 @@
+import binascii
 import datetime
 import os
 import secrets
@@ -5,8 +6,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 from cryptography.fernet import InvalidToken
-from sqlalchemy.orm import selectinload
-from sqlmodel import select
+from sqlmodel import select, update
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.auth import utils as auth_utils
@@ -19,9 +19,29 @@ if TYPE_CHECKING:
 
 
 async def get_api_keys(session: AsyncSession, user_id: UUID) -> list[ApiKeyRead]:
+    """Get all API keys for a user with decrypted values."""
+    settings_service = get_settings_service()
     query: SelectOfScalar = select(ApiKey).where(ApiKey.user_id == user_id)
-    api_keys = (await session.exec(query)).all()
-    return [ApiKeyRead.model_validate(api_key) for api_key in api_keys]
+    api_key_objects = (await session.exec(query)).all()
+
+    api_keys = []
+    for api_key_obj in api_key_objects:
+        data = api_key_obj.model_dump()
+
+        api_key = data.get("api_key")
+        if api_key:
+            try:
+                actual_key = auth_utils.decrypt_api_key(api_key, settings_service=settings_service)
+            except (ValueError, TypeError, InvalidToken, UnicodeDecodeError, AttributeError, binascii.Error):
+                # Fallback to stored value for legacy entries
+                actual_key = api_key
+        else:
+            actual_key = api_key
+
+        data["api_key"] = actual_key
+        api_keys.append(ApiKeyRead.model_validate(data))
+
+    return api_keys
 
 
 async def create_api_key(session: AsyncSession, api_key_create: ApiKeyCreate, user_id: UUID) -> UnmaskedApiKeyRead:
@@ -79,30 +99,37 @@ async def check_key(session: AsyncSession, api_key: str) -> User | None:
 
 async def _check_key_from_db(session: AsyncSession, api_key: str, settings_service) -> User | None:
     """Validate API key against the database."""
-    # Load all API keys and compare by decrypting stored values first.
-    # This supports storing encrypted API keys while allowing incoming
-    # plain-text keys to be validated.
-    query: SelectOfScalar = select(ApiKey).options(selectinload(ApiKey.user))
-    api_key_objects: ApiKey | None = (await session.exec(query)).all()
+    query = select(ApiKey.id, ApiKey.api_key, ApiKey.user_id)
+    rows = (await session.exec(query)).all()  # list of tuples (id, api_key, user_id)
 
-    if api_key_objects is None:
+    if not rows:
         return None
 
-    for api_key_object in api_key_objects:
-        stored_value = api_key_object.api_key
-        if stored_value is not None:
+    for api_key_id, stored_value, user_id in rows:
+        if stored_value is None:
+            continue
+
+        if stored_value == api_key:
+            matched = True
+        else:
             try:
                 candidate = auth_utils.decrypt_api_key(stored_value, settings_service=settings_service)
             except (ValueError, TypeError, InvalidToken):
-                # Fallback to plain-text comparison for legacy entries or invalid values
                 candidate = stored_value
-            if candidate == api_key:
-                if settings_service.settings.disable_track_apikey_usage is not True:
-                    api_key_object.total_uses += 1
-                    api_key_object.last_used_at = datetime.datetime.now(datetime.timezone.utc)
-                    session.add(api_key_object)
-                    await session.flush()
-                return api_key_object.user
+            matched = candidate == api_key
+
+        if matched:
+            if settings_service.settings.disable_track_apikey_usage is not True:
+                await session.exec(
+                    update(ApiKey)
+                    .where(ApiKey.id == api_key_id)
+                    .values(
+                        total_uses=ApiKey.total_uses + 1,
+                        last_used_at=datetime.datetime.now(datetime.timezone.utc),
+                    )
+                )
+            return await session.get(User, user_id)
+
     return None
 
 
