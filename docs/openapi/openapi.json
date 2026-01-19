@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Langflow",
-    "version": "1.7.1"
+    "version": "1.7.2"
   },
   "paths": {
     "/api/v1/build/{flow_id}/vertices": {
@@ -3575,28 +3575,9 @@
           "Files"
         ],
         "summary": "Download Image",
+        "description": "Download image from storage for browser rendering.",
         "operationId": "download_image_api_v1_files_images__flow_id___file_name__get",
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          },
-          {
-            "API key query": []
-          },
-          {
-            "API key header": []
-          }
-        ],
         "parameters": [
-          {
-            "name": "file_name",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "File Name"
-            }
-          },
           {
             "name": "flow_id",
             "in": "path",
@@ -3605,6 +3586,15 @@
               "type": "string",
               "format": "uuid",
               "title": "Flow Id"
+            }
+          },
+          {
+            "name": "file_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Name"
             }
           }
         ],
@@ -11288,7 +11278,7 @@
             "default": false
           },
           "properties": {
-            "$ref": "#/components/schemas/langflow__schema__properties__Properties"
+            "$ref": "#/components/schemas/lfx__schema__properties__Properties"
           },
           "category": {
             "type": "string",
@@ -11418,7 +11408,7 @@
           "properties": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/langflow__schema__properties__Properties"
+                "$ref": "#/components/schemas/lfx__schema__properties__Properties"
               },
               {
                 "type": "null"
@@ -11557,7 +11547,7 @@
           "properties": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/langflow__schema__properties__Properties"
+                "$ref": "#/components/schemas/lfx__schema__properties__Properties"
               },
               {
                 "type": "null"
@@ -11953,7 +11943,7 @@
           "properties": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/langflow__schema__properties__Properties"
+                "$ref": "#/components/schemas/lfx__schema__properties__Properties"
               },
               {
                 "type": "null"
@@ -13621,11 +13611,73 @@
         "title": "ContentBlock",
         "description": "A block of content that can contain different types of content."
       },
+      "langflow__schema__content_types__CodeContent": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "langflow__schema__content_types__ErrorContent": {
+        "additionalProperties": true,
+        "type": "object"
+      },
       "langflow__schema__content_types__MediaContent": {
         "additionalProperties": true,
         "type": "object"
       },
-      "langflow__schema__properties__Properties": {
+      "langflow__schema__content_types__TextContent": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "langflow__schema__content_types__ToolContent": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "langflow__schema__properties__Source": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id",
+            "description": "The id of the source component."
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name",
+            "description": "The display name of the source component."
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source",
+            "description": "The source of the message. Normally used to display the model name (e.g. 'gpt-4o')"
+          }
+        },
+        "type": "object",
+        "title": "Source"
+      },
+      "lfx__schema__content_types__JSONContent": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "lfx__schema__properties__Properties": {
         "properties": {
           "text_color": {
             "anyOf": [
@@ -13702,68 +13754,6 @@
         },
         "type": "object",
         "title": "Properties"
-      },
-      "langflow__schema__properties__Source": {
-        "properties": {
-          "id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Id",
-            "description": "The id of the source component."
-          },
-          "display_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Display Name",
-            "description": "The display name of the source component."
-          },
-          "source": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Source",
-            "description": "The source of the message. Normally used to display the model name (e.g. 'gpt-4o')"
-          }
-        },
-        "type": "object",
-        "title": "Source"
-      },
-      "lfx__schema__content_types__CodeContent": {
-        "additionalProperties": true,
-        "type": "object"
-      },
-      "lfx__schema__content_types__ErrorContent": {
-        "additionalProperties": true,
-        "type": "object"
-      },
-      "lfx__schema__content_types__JSONContent": {
-        "additionalProperties": true,
-        "type": "object"
-      },
-      "lfx__schema__content_types__TextContent": {
-        "additionalProperties": true,
-        "type": "object"
-      },
-      "lfx__schema__content_types__ToolContent": {
-        "additionalProperties": true,
-        "type": "object"
       },
       "lfx__utils__schemas__File": {
         "properties": {
