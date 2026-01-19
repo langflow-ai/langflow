@@ -30,7 +30,7 @@ export const AssistantNudges: React.FC<AssistantNudgesProps> = ({
   const projectId = folderId ?? myCollectionId ?? "";
   const [selectedMode, setSelectedMode] = useState("PROMPT");
   const [userInput, setUserInput] = useState("");
-  const [promptOutput, setPromptOutput] = useState("Generate a Prompt");
+  const [promptOutput, setPromptOutput] = useState("");
   const [nudegsLoading, setNudgesLoading] = useState(true);
   const [componentNudges, setComponentNudges] = useState(null);
   const { selectedCompData } = useAssistantManagerStore();
@@ -131,23 +131,21 @@ export const AssistantNudges: React.FC<AssistantNudgesProps> = ({
         <div className="overflow-hidden rounded-lg border border-border">
           <TabsContent value="PROMPT">
             <div className="flex flex-col gap-2">
-              <Label className="!text-mmd">TODO USER INPUT HELPER TEXT</Label>
+              <Label className="!text-mmd">What do you need help with?</Label>
               <Textarea
                 value={userInput}
                 data-testid="prompt-user-input"
                 onChange={(e) => setUserInput(e.target.value)}
                 className="min-h-[50px] font-mono text-mmd"
-                placeholder="Prompt Mode"
+                placeholder="What should I generate?"
               />
-              <Label className="!text-mmd">
-                TODO PROMPT OUTPUT HELPER TEXT
-              </Label>
+              <Label className="!text-mmd">Generated prompt</Label>
               <Textarea
                 value={promptOutput}
                 data-testid="prompt-user-input"
                 onChange={(e) => setPromptOutput(e.target.value)}
                 className="min-h-[50px] font-mono text-mmd"
-                placeholder="Prompt Mode"
+                placeholder="Generated prompt will display here"
               />
               <div>
                 <Button
