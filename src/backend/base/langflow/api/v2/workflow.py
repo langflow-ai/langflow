@@ -22,10 +22,11 @@ Configuration:
 from __future__ import annotations
 
 import asyncio
+from copy import deepcopy
 from typing import Annotated
 from uuid import uuid4
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
 from fastapi.responses import StreamingResponse
 from lfx.graph.graph.base import Graph
 from lfx.schema.workflow import (
@@ -41,6 +42,7 @@ from lfx.services.deps import get_settings_service
 from pydantic_core import ValidationError as PydanticValidationError
 from sqlalchemy.exc import OperationalError
 
+from langflow.api.utils import extract_global_variables_from_headers
 from langflow.api.v1.schemas import RunResponse
 from langflow.api.v2.converters import (
     create_error_response,
@@ -96,6 +98,7 @@ router = APIRouter(prefix="/workflow", tags=["Workflow"], dependencies=[Depends(
 async def execute_workflow(
     workflow_request: WorkflowExecutionRequest,
     background_tasks: BackgroundTasks,
+    http_request: Request,
     api_key_user: Annotated[UserRead, Depends(api_key_security)],
 ) -> WorkflowExecutionResponse | WorkflowJobResponse | StreamingResponse:
     """Execute a workflow with support for multiple execution modes.
@@ -112,6 +115,7 @@ async def execute_workflow(
     Args:
         workflow_request: The workflow execution request containing flow_id, inputs, and mode flags
         background_tasks: FastAPI background tasks for async operations
+        http_request: The HTTP request object for extracting headers
         api_key_user: Authenticated user from API key
 
     Returns:
@@ -202,10 +206,11 @@ async def execute_workflow(
     try:
         return await execute_sync_workflow_with_timeout(
             workflow_request=workflow_request,
-            flow=flow,  # type: ignore[arg-type]
+            flow=flow,
             job_id=job_id,
             api_key_user=api_key_user,
             background_tasks=background_tasks,
+            http_request=http_request,
         )
     except WorkflowTimeoutError:
         raise HTTPException(
@@ -238,6 +243,7 @@ async def execute_sync_workflow_with_timeout(
     job_id: str,
     api_key_user: UserRead,
     background_tasks: BackgroundTasks,
+    http_request: Request,
 ) -> WorkflowExecutionResponse:
     """Execute workflow with timeout protection.
 
@@ -247,6 +253,7 @@ async def execute_sync_workflow_with_timeout(
         job_id: Generated job ID for tracking
         api_key_user: Authenticated user
         background_tasks: FastAPI background tasks
+        http_request: The HTTP request object for extracting headers
 
     Returns:
         WorkflowExecutionResponse with complete results
@@ -263,6 +270,7 @@ async def execute_sync_workflow_with_timeout(
                 job_id=job_id,
                 api_key_user=api_key_user,
                 background_tasks=background_tasks,
+                http_request=http_request,
             ),
             timeout=EXECUTION_TIMEOUT,
         )
@@ -277,6 +285,7 @@ async def execute_sync_workflow(
     job_id: str,
     api_key_user: UserRead,
     background_tasks: BackgroundTasks,  # noqa: ARG001
+    http_request: Request,
 ) -> WorkflowExecutionResponse:
     """Execute workflow synchronously and return complete results.
 
@@ -290,10 +299,11 @@ async def execute_sync_workflow(
     Execution Flow:
         1. Parse flat inputs into tweaks and session_id
         2. Validate flow data exists
-        3. Build graph from flow data with tweaks applied
-        4. Identify terminal nodes for execution
-        5. Execute graph and collect results
-        6. Convert V1 RunResponse to V2 WorkflowExecutionResponse
+        3. Extract context from HTTP headers
+        4. Build graph from flow data with tweaks applied
+        5. Identify terminal nodes for execution
+        6. Execute graph and collect results
+        7. Convert V1 RunResponse to V2 WorkflowExecutionResponse
 
     Args:
         workflow_request: The workflow execution request with inputs and configuration
@@ -301,6 +311,7 @@ async def execute_sync_workflow(
         job_id: Generated job ID for tracking this execution
         api_key_user: Authenticated user for permission checks
         background_tasks: FastAPI background tasks (unused in sync mode)
+        http_request: The HTTP request object for extracting headers
 
     Returns:
         WorkflowExecutionResponse: Complete execution results with outputs and metadata
@@ -316,13 +327,28 @@ async def execute_sync_workflow(
         msg = f"Flow {flow.id} has no data. The flow may be corrupted."
         raise WorkflowValidationError(msg)
 
+    # Extract request-level variables from headers (similar to V1)
+    # Headers with prefix X-LANGFLOW-GLOBAL-VAR-* are extracted and made available to components
+    request_variables = extract_global_variables_from_headers(http_request.headers)
+
+    # Build context from request variables (similar to V1's _run_flow_internal)
+    context = {"request_variables": request_variables} if request_variables else None
+
     # Build graph - system error if this fails
     try:
         flow_id_str = str(flow.id)
         user_id = str(api_key_user.id)
-        graph_data = flow.data.copy()
+        # Use deepcopy to prevent mutation of the original flow.data
+        # process_tweaks modifies nested dictionaries in-place
+        graph_data = deepcopy(flow.data)
         graph_data = process_tweaks(graph_data, tweaks, stream=False)
-        graph = Graph.from_payload(graph_data, flow_id=flow_id_str, user_id=user_id, flow_name=flow.name)
+        # Pass context to graph (similar to V1's simple_run_flow)
+        # This allows components to access request metadata via graph.context
+        graph = Graph.from_payload(
+            graph_data, flow_id=flow_id_str, user_id=user_id, flow_name=flow.name, context=context
+        )
+        # Set run_id for tracing/logging (similar to V1's simple_run_flow)
+        graph.set_run_id(job_id)
     except Exception as e:
         msg = f"Failed to build graph from flow data: {e!s}"
         raise WorkflowValidationError(msg) from e

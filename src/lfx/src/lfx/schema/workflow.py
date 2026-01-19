@@ -88,7 +88,7 @@ class WorkflowExecutionResponse(BaseModel):
 
     flow_id: str
     job_id: str
-    object: Literal["response"] = "response"
+    object: Literal["response"] = Field(default="response")
     created_timestamp: str
     status: JobStatus
     errors: list[ErrorDetail] = []
@@ -101,6 +101,7 @@ class WorkflowJobResponse(BaseModel):
     """Background job response."""
 
     job_id: str
+    object: Literal["job"] = Field(default="job")
     created_timestamp: str
     status: JobStatus
     errors: list[ErrorDetail] = []
@@ -140,7 +141,14 @@ WORKFLOW_EXECUTION_RESPONSES = {
                     "oneOf": [
                         WorkflowExecutionResponse.model_json_schema(),
                         WorkflowJobResponse.model_json_schema(),
-                    ]
+                    ],
+                    "discriminator": {
+                        "propertyName": "object",
+                        "mapping": {
+                            "response": "#/components/schemas/WorkflowExecutionResponse",
+                            "job": "#/components/schemas/WorkflowJobResponse",
+                        }
+                    }
                 }
             },
             "text/event-stream": {

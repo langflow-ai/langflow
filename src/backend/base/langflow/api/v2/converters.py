@@ -131,9 +131,12 @@ def _extract_nested_value(data: Any, *keys: str) -> Any:
 def _extract_text_from_message(content: dict) -> str | None:
     """Extract plain text from nested message structures.
 
-    Handles various message formats:
+    Handles various message formats by trying common paths in order:
     - {'message': {'message': 'text', 'type': 'text'}}
+    - {'text': {'message': 'text'}}
+    - {'message': {'text': 'text'}}
     - {'message': 'text'}
+    - {'text': {'text': 'text'}}
     - {'text': 'text'}
 
     Args:
@@ -142,36 +145,18 @@ def _extract_text_from_message(content: dict) -> str | None:
     Returns:
         Extracted text string or None
     """
-    # Try message.message (nested structure)
-    text = _extract_nested_value(content, "message", "message")
-    if isinstance(text, str):
-        return text
-
-    # Try message.text
-    text = _extract_nested_value(content, "text", "message")
-    if isinstance(text, str):
-        return text
-
-    # Try message.text
-    text = _extract_nested_value(content, "message", "text")
-    if isinstance(text, str):
-        return text
-
-    # Try direct message
-    text = content.get("message")
-    if isinstance(text, str):
-        return text
-
-    # Try text.text
-    text = _extract_nested_value(content, "text", "text")
-    if isinstance(text, str):
-        return text
-
-    # Try direct text
-    text = content.get("text")
-    if isinstance(text, str):
-        return text
-
+    paths = [
+        ("message", "message"),
+        ("text", "message"),
+        ("message", "text"),
+        ("message",),
+        ("text", "text"),
+        ("text",),
+    ]
+    for path in paths:
+        text = _extract_nested_value(content, *path)
+        if isinstance(text, str):
+            return text
     return None
 
 
@@ -205,8 +190,10 @@ def _extract_file_path(raw_content: dict, vertex_type: str) -> str | None:
     if vertex_type != "SaveToFile":
         return None
 
+    # Extract the message from SaveToFile component
+    # Return the whole message instead of filtering by specific wording
     file_msg = _extract_nested_value(raw_content, "message", "message")
-    if isinstance(file_msg, str) and "saved successfully" in file_msg.lower():
+    if isinstance(file_msg, str):
         return file_msg
 
     return None
@@ -261,23 +248,29 @@ def _simplify_output_content(content: Any, output_type: str) -> Any:
         return text if text is not None else content
 
     if output_type == "data":
-        # For data types, extract from result.message structure (singular)
-        # Example: {'result': {'message': {'result': '4'}, 'type': 'object'}}
-        result_data = _extract_nested_value(content, "result", "message")
-        if result_data is not None:
-            return result_data
+        # For data types, try multiple path combinations in order
+        # This allows flexibility for different component output structures
+        data_paths = [
+            ("result", "message"),  # Standard: {'result': {'message': {...}}}
+            ("results", "message"),  # Plural variant: {'results': {'message': {...}}}
+        ]
+        for path in data_paths:
+            result_data = _extract_nested_value(content, *path)
+            if result_data is not None:
+                return result_data
     # TODO: Future scope - Add dataframe-specific extraction logic
     # The following code is commented out pending further requirements analysis:
-    # if output_type == "dataframe":
-    #     # For dataframe types, try results.message structure first (plural)
-    #     results_data = _extract_nested_value(content, "results", "message")
-    #     if results_data is not None:
-    #         return results_data
-    #
-    #     # SQL component specific fallback: Try run_sql_query.message
-    #     sql_result = _extract_nested_value(content, "run_sql_query", "message")
-    #     if sql_result is not None:
-    #         return sql_result
+    if output_type == "dataframe":
+        # For dataframe types, try multiple path combinations in order
+        dataframe_paths = [
+            ("results", "message"),  # Plural: {'results': {'message': {...}}}
+            ("result", "message"),  # Singular fallback: {'result': {'message': {...}}}
+            ("run_sql_query", "message"),  # SQL component specific
+        ]
+        for path in dataframe_paths:
+            dataframe_data = _extract_nested_value(content, *path)
+            if dataframe_data is not None:
+                return dataframe_data
 
     return content
 
@@ -317,6 +310,95 @@ def _build_metadata_for_non_output(
         metadata["file_path"] = file_path
 
     return metadata
+
+
+def _process_terminal_vertex(
+    vertex: Any,
+    output_data_map: dict[str, Any],
+    display_name_counts: dict[str, int],
+) -> tuple[str, ComponentOutput]:
+    """Process a single terminal vertex and return (output_key, component_output).
+
+    Args:
+        vertex: The vertex to process
+        output_data_map: Map of component_id to output data
+        display_name_counts: Count of each display_name for duplicate detection
+
+    Returns:
+        Tuple of (output_key, ComponentOutput)
+    """
+    # Get output data by vertex.id (component_id)
+    vertex_output_data = output_data_map.get(vertex.id)
+
+    # Determine output type from vertex
+    output_type = "unknown"
+    if vertex.outputs and len(vertex.outputs) > 0:
+        types = vertex.outputs[0].get("types", [])
+        if types:
+            output_type = types[0].lower()
+    if output_type == "unknown" and vertex.vertex_type:
+        output_type = vertex.vertex_type.lower()
+
+    # Initialize metadata with component_type
+    metadata: dict[str, Any] = {"component_type": vertex.vertex_type}
+
+    # Extract content
+    content = None
+    if vertex_output_data:
+        raw_content = _get_raw_content(vertex_output_data)
+
+        if vertex.is_output and raw_content is not None:
+            # Output nodes: simplify content
+            content = _simplify_output_content(raw_content, output_type)
+        elif not vertex.is_output and raw_content is not None:
+            # Non-output nodes:
+            # - For data types: extract and show content
+            # - For message types: extract metadata only (source, file_path)
+            # TODO: Future scope - Add support for "dataframe" output type
+            if output_type in ["data", "dataframe"]:
+                # Show data content for non-output data nodes
+                content = _simplify_output_content(raw_content, output_type)
+            else:
+                # For message types, extract metadata only
+                extra_metadata = _build_metadata_for_non_output(
+                    raw_content,
+                    vertex.id,
+                    vertex.display_name or vertex.vertex_type,
+                    vertex.vertex_type,
+                    output_type,
+                )
+                metadata.update(extra_metadata)
+
+        # Add any additional metadata from result data
+        if hasattr(vertex_output_data, "metadata") and vertex_output_data.metadata:
+            metadata.update(vertex_output_data.metadata)
+        elif isinstance(vertex_output_data, dict) and "metadata" in vertex_output_data:
+            result_metadata = vertex_output_data.get("metadata")
+            if isinstance(result_metadata, dict):
+                metadata.update(result_metadata)
+
+    # Build ComponentOutput
+    component_output = ComponentOutput(
+        type=output_type,
+        component_id=vertex.id,
+        status=JobStatus.COMPLETED,
+        content=content,
+        metadata=metadata,
+    )
+
+    # Determine output key: use display_name if unique, otherwise use id
+    display_name = vertex.display_name or vertex.id
+    if display_name_counts.get(display_name, 0) > 1:
+        # Duplicate display_name detected, use id instead
+        output_key = vertex.id
+        # Store the display_name in metadata for reference
+        if vertex.display_name and vertex.display_name != vertex.id:
+            metadata["display_name"] = vertex.display_name
+    else:
+        # Unique display_name, use it as key
+        output_key = display_name
+
+    return output_key, component_output
 
 
 def run_response_to_workflow_response(
@@ -381,7 +463,7 @@ def run_response_to_workflow_response(
                         output_data_map[component_id] = result_data
 
     # First pass: collect all terminal vertices and check for duplicate display_names
-    terminal_vertices = [v for v in graph.vertices if v.id in terminal_node_ids]
+    terminal_vertices = [graph.get_vertex(vertex_id) for vertex_id in terminal_node_ids]
     display_name_counts: dict[str, int] = {}
     for vertex in terminal_vertices:
         display_name = vertex.display_name or vertex.id
@@ -390,77 +472,7 @@ def run_response_to_workflow_response(
     # Process each terminal vertex
     outputs: dict[str, ComponentOutput] = {}
     for vertex in terminal_vertices:
-        # Get output data by vertex.id (component_id)
-        vertex_output_data = output_data_map.get(vertex.id)
-
-        # Determine output type from vertex
-        output_type = "unknown"
-        if vertex.outputs and len(vertex.outputs) > 0:
-            types = vertex.outputs[0].get("types", [])
-            if types:
-                output_type = types[0].lower()
-        if output_type == "unknown" and vertex.vertex_type:
-            output_type = vertex.vertex_type.lower()
-
-        # Initialize metadata with component_type
-        metadata: dict[str, Any] = {"component_type": vertex.vertex_type}
-
-        # Extract content
-        content = None
-        if vertex_output_data:
-            raw_content = _get_raw_content(vertex_output_data)
-
-            if vertex.is_output and raw_content is not None:
-                # Output nodes: simplify content
-                content = _simplify_output_content(raw_content, output_type)
-            elif not vertex.is_output and raw_content is not None:
-                # Non-output nodes:
-                # - For data types: extract and show content
-                # - For message types: extract metadata only (source, file_path)
-                # TODO: Future scope - Add support for "dataframe" output type
-                if output_type in ["data"]:
-                    # Show data content for non-output data nodes
-                    content = _simplify_output_content(raw_content, output_type)
-                else:
-                    # For message types, extract metadata only
-                    extra_metadata = _build_metadata_for_non_output(
-                        raw_content,
-                        vertex.id,
-                        vertex.display_name or vertex.vertex_type,
-                        vertex.vertex_type,
-                        output_type,
-                    )
-                    metadata.update(extra_metadata)
-
-            # Add any additional metadata from result data
-            if hasattr(vertex_output_data, "metadata") and vertex_output_data.metadata:
-                metadata.update(vertex_output_data.metadata)
-            elif isinstance(vertex_output_data, dict) and "metadata" in vertex_output_data:
-                result_metadata = vertex_output_data.get("metadata")
-                if isinstance(result_metadata, dict):
-                    metadata.update(result_metadata)
-
-        # Build ComponentOutput
-        component_output = ComponentOutput(
-            type=output_type,
-            component_id=vertex.id,
-            status=JobStatus.COMPLETED,
-            content=content,
-            metadata=metadata,
-        )
-
-        # Determine output key: use display_name if unique, otherwise use id
-        display_name = vertex.display_name or vertex.id
-        if display_name_counts.get(display_name, 0) > 1:
-            # Duplicate display_name detected, use id instead
-            output_key = vertex.id
-            # Store the display_name in metadata for reference
-            if vertex.display_name and vertex.display_name != vertex.id:
-                metadata["display_name"] = vertex.display_name
-        else:
-            # Unique display_name, use it as key
-            output_key = display_name
-
+        output_key, component_output = _process_terminal_vertex(vertex, output_data_map, display_name_counts)
         outputs[output_key] = component_output
 
     return WorkflowExecutionResponse(

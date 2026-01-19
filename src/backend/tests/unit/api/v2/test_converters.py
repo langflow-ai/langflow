@@ -48,6 +48,17 @@ from lfx.schema.workflow import (
 )
 
 
+def _setup_graph_get_vertex(graph: Mock, vertices: list[Mock]) -> None:
+    """Helper to setup graph.get_vertex() mock for tests.
+
+    Args:
+        graph: The mock graph object
+        vertices: List of mock vertex objects
+    """
+    vertex_map = {v.id: v for v in vertices}
+    graph.get_vertex = Mock(side_effect=lambda vid: vertex_map.get(vid))
+
+
 class TestParseFlatInputs:
     """Test suite for parse_flat_inputs function."""
 
@@ -621,16 +632,17 @@ class TestExtractFilePath:
         assert result is None
 
     def test_extract_file_path_missing_message(self):
-        """Test when message structure is missing or success keyword is absent."""
+        """Test when message structure is missing."""
         # Missing message structure
         raw_content = {"output": "some output"}
         result = _extract_file_path(raw_content, "SaveToFile")
         assert result is None
 
-        # No success keyword
+        # Message present - should return it regardless of content
+        # (Changed behavior: no longer filters by "saved successfully" keyword)
         raw_content = {"message": {"message": "File processing failed"}}
         result = _extract_file_path(raw_content, "SaveToFile")
-        assert result is None
+        assert result == "File processing failed"
 
 
 class TestGetRawContent:
@@ -897,6 +909,7 @@ class TestRunResponseToWorkflowResponse:
 
         graph.vertices = [vertex]
         graph.get_terminal_nodes = Mock(return_value=["output-123"])
+        _setup_graph_get_vertex(graph, [vertex])
 
         # Create mock run response
         run_response = Mock()
@@ -935,6 +948,7 @@ class TestRunResponseToWorkflowResponse:
 
         graph.vertices = [vertex]
         graph.get_terminal_nodes = Mock(return_value=["llm-123"])
+        _setup_graph_get_vertex(graph, [vertex])
 
         # Create mock run response with model info
         run_response = Mock()
@@ -977,6 +991,7 @@ class TestRunResponseToWorkflowResponse:
 
         graph.vertices = [vertex1, vertex2]
         graph.get_terminal_nodes = Mock(return_value=["output-1", "output-2"])
+        _setup_graph_get_vertex(graph, [vertex1, vertex2])
 
         run_response = Mock()
         run_response.outputs = []
@@ -1005,6 +1020,7 @@ class TestRunResponseToWorkflowResponse:
 
         graph.vertices = [vertex]
         graph.get_terminal_nodes = Mock(return_value=["data-123"])
+        _setup_graph_get_vertex(graph, [vertex])
 
         run_response = Mock()
         result_data = Mock()
@@ -1037,6 +1053,7 @@ class TestRunResponseToWorkflowResponse:
         # Simulate AttributeError
         graph.get_terminal_nodes = Mock(side_effect=AttributeError)
         graph.successor_map = {"output-123": []}  # No successors = terminal
+        _setup_graph_get_vertex(graph, [vertex])
 
         run_response = Mock()
         run_response.outputs = []
@@ -1052,6 +1069,7 @@ class TestRunResponseToWorkflowResponse:
         graph = Mock()
         graph.vertices = []
         graph.get_terminal_nodes = Mock(return_value=[])
+        _setup_graph_get_vertex(graph, [])
 
         run_response = Mock()
         run_response.outputs = []
@@ -1074,6 +1092,7 @@ class TestRunResponseToWorkflowResponse:
 
         graph.vertices = [vertex]
         graph.get_terminal_nodes = Mock(return_value=["pinecone-123"])
+        _setup_graph_get_vertex(graph, [vertex])
 
         run_response = Mock()
         result_data = Mock()
@@ -1106,6 +1125,7 @@ class TestRunResponseToWorkflowResponse:
 
         graph.vertices = [vertex]
         graph.get_terminal_nodes = Mock(return_value=["retriever-456"])
+        _setup_graph_get_vertex(graph, [vertex])
 
         run_response = Mock()
         result_data = Mock()
@@ -1138,6 +1158,7 @@ class TestRunResponseToWorkflowResponse:
         graph = Mock()
         graph.vertices = []
         graph.get_terminal_nodes = Mock(return_value=[])
+        _setup_graph_get_vertex(graph, [])
 
         run_response = Mock()
         run_response.outputs = None
@@ -1163,6 +1184,7 @@ class TestRunResponseToWorkflowResponse:
 
         graph.vertices = [vertex]
         graph.get_terminal_nodes = Mock(return_value=["corrupted-123"])
+        _setup_graph_get_vertex(graph, [vertex])
 
         run_response = Mock()
         run_response.outputs = []
@@ -1188,6 +1210,7 @@ class TestRunResponseToWorkflowResponse:
 
         graph.vertices = [vertex]
         graph.get_terminal_nodes = Mock(return_value=["output-123"])
+        _setup_graph_get_vertex(graph, [vertex])
 
         # Create result_data without component_id
         run_response = Mock()
