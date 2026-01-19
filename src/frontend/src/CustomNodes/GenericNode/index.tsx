@@ -32,6 +32,7 @@ import NodeUpdateComponent from "./components/NodeUpdateComponent";
 import { NodeIcon } from "./components/nodeIcon";
 import RenderInputParameters from "./components/RenderInputParameters";
 import { useBuildStatus } from "./hooks/use-get-build-status";
+import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 
 const MemoizedRenderInputParameters = memo(RenderInputParameters);
 const MemoizedNodeIcon = memo(NodeIcon);
@@ -601,7 +602,7 @@ function GenericNode({
               getValidationStatus={getValidationStatus}
             />
           </div>
-          {showNode && (hasDescription || editNameDescription) && (
+          {showNode && !ENABLE_INSPECTION_PANEL &&  (hasDescription || editNameDescription) && (
             <div className="px-4 pb-3">
               <MemoizedNodeDescription
                 description={data.node?.description}

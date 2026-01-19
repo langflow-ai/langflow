@@ -57,19 +57,12 @@ export default function InspectionPanelHeader({
   }, [data.type, data.node]);
 
   return (
-    <>
-      <div className="flex items-center justify-between pt-2 pb-1 px-3 pl-4">
+    <div className="flex flex-col gap-1.5 pt-2 pb-1 px-3 pl-4">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <NodeIcon
-            dataType={data.type}
-            icon={data.node?.icon}
-            isGroup={!!data.node?.flow}
-          />
-          <div className="flex flex-col">
             <span className="font-semibold text-sm">
               {data.node?.display_name ?? data.type}
             </span>
-          </div>
         </div>
         <div className="flex items-center gap-1.5">
           {hasCode && (
@@ -118,7 +111,8 @@ export default function InspectionPanelHeader({
           </CodeAreaModal>
         </div>
       )}
-    </>
+      <p className="text-mmd text-muted-foreground">{data.node?.description}</p>
+    </div>
   );
 }
 
