@@ -11,17 +11,54 @@ jobs:
       pull-requests: write
     steps:
       - name: Add community label
-        if: github.event.pull_request.author_association != 'MEMBER' && github.event.pull_request.author_association != 'OWNER' && github.event.pull_request.author_association != 'COLLABORATOR'
         uses: actions/github-script@v7
         with:
           script: |
-            const pullRequestNumber = context.payload.pull_request.number;
-            const repoDetails = {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: pullRequestNumber
-            };
-            await github.rest.issues.addLabels({
-              ...repoDetails,
-              labels: ['community']
-            });
+            const author = context.payload.pull_request.user.login;
+            const org = context.repo.owner;
+            const authorAssociation = context.payload.pull_request.author_association;
+
+            // First check author_association from payload (no API call needed)
+            // OWNER, MEMBER, COLLABORATOR indicate org/repo membership
+            const orgAssociations = ['OWNER', 'MEMBER', 'COLLABORATOR'];
+
+            if (orgAssociations.includes(authorAssociation)) {
+              console.log(`${author} has author_association '${authorAssociation}', skipping community label`);
+              return;
+            }
+
+            // author_association can be CONTRIBUTOR for org members who have committed before,
+            // so we need to verify with an API call
+            // null = unable to determine, true = member, false = confirmed non-member
+            let isOrgMember = null;
+            try {
+              await github.rest.orgs.checkMembershipForUser({
+                org: org,
+                username: author
+              });
+              isOrgMember = true;
+              console.log(`${author} confirmed as org member via API, skipping community label`);
+            } catch (error) {
+              const status = error.status || error.response?.status;
+              if (status === 404) {
+                // 404 means user is confirmed not a member
+                isOrgMember = false;
+                console.log(`${author} confirmed as non-member (404), adding community label`);
+              } else {
+                // For other errors (network, 403, 429, 5xx), we cannot determine membership
+                // Skip labeling to avoid false positives on org members
+                console.log(`Unable to determine org membership for ${author}: ${error.message} (status: ${status}), skipping label`);
+                isOrgMember = null;
+              }
+            }
+
+            // Only add community label if we confirmed the user is NOT an org member
+            if (isOrgMember === false) {
+              const pullRequestNumber = context.payload.pull_request.number;
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pullRequestNumber,
+                labels: ['community']
+              });
+            }
