@@ -33,6 +33,7 @@ import { ExaIcon } from "@/icons/Exa";
 import { FBIcon } from "@/icons/FacebookMessenger";
 import { FirecrawlIcon } from "@/icons/Firecrawl";
 import { freezeAllIcon } from "@/icons/freezeAll";
+import { GigaChatIcon } from "@/icons/GigaChat";
 import { GitBookIcon } from "@/icons/GitBook";
 import { GitLoaderIcon } from "@/icons/GitLoader";
 import { GleanIcon } from "@/icons/Glean";
@@ -155,6 +156,7 @@ export const eagerIconsMapping = {
   FacebookMessenger: FBIcon,
   Firecrawl: FirecrawlIcon,
   FreezeAll: freezeAllIcon,
+  GigaChat: GigaChatIcon,
   GitBook: GitBookIcon,
   GitLoader: GitLoaderIcon,
   Glean: GleanIcon,
