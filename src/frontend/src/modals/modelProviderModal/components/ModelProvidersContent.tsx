@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -9,6 +10,7 @@ import {
 } from "@/constants/providerConstants";
 import { useUpdateEnabledModels } from "@/controllers/API/queries/models/use-update-enabled-models";
 import {
+  useDeleteGlobalVariables,
   useGetGlobalVariables,
   usePatchGlobalVariables,
   usePostGlobalVariables,
@@ -19,6 +21,14 @@ import { Provider } from "@/modals/modelProviderModal/components/types";
 import useAlertStore from "@/stores/alertStore";
 import { cn } from "@/utils/utils";
 import ModelSelection from "./ModelSelection";
+
+// API key placeholder examples by provider
+const API_KEY_PLACEHOLDERS: Record<string, string> = {
+  OpenAI: "sk-**************",
+  Anthropic: "sk-ant-**************",
+  "Google Generative AI": "AIza**************",
+  "IBM WatsonX": "**************",
+};
 
 interface ModelProvidersContentProps {
   modelType: "llm" | "embeddings" | "all";
@@ -34,6 +44,7 @@ const ModelProvidersContent = ({
   );
   const [apiKey, setApiKey] = useState("");
   const [validationFailed, setValidationFailed] = useState(false);
+  const [showReplaceWarning, setShowReplaceWarning] = useState(false);
   // Track if API key change came from user typing (vs programmatic reset)
   // Used to prevent auto-save from triggering when we clear the input after success
   const isUserInputRef = useRef(false);
@@ -48,8 +59,10 @@ const ModelProvidersContent = ({
     usePatchGlobalVariables();
   const { data: globalVariables = [] } = useGetGlobalVariables();
   const { mutate: updateEnabledModels } = useUpdateEnabledModels();
+  const { mutate: deleteGlobalVariable, isPending: isDeleting } =
+    useDeleteGlobalVariables();
 
-  const isPending = isCreating || isUpdating;
+  const isPending = isCreating || isUpdating || isDeleting;
 
   // Invalidate all provider-related caches after successful create/update
   // This ensures the UI reflects the latest state across all components
@@ -64,7 +77,53 @@ const ModelProvidersContent = ({
   useEffect(() => {
     setApiKey("");
     setValidationFailed(false);
+    setShowReplaceWarning(false);
   }, [selectedProvider?.provider]);
+
+  const handleApiKey = () => {
+    setShowReplaceWarning(true);
+  };
+
+  const handleDisconnect = () => {
+    setShowReplaceWarning(true);
+  };
+
+  const handleConfirmDisconnect = () => {
+    if (!selectedProvider) return;
+
+    const variableName = PROVIDER_VARIABLE_MAPPING[selectedProvider.provider];
+    if (!variableName) return;
+
+    const existingVariable = globalVariables.find(
+      (v) => v.name === variableName,
+    );
+    if (!existingVariable) return;
+
+    deleteGlobalVariable(
+      { id: existingVariable.id },
+      {
+        onSuccess: () => {
+          setSuccessData({
+            title: `${selectedProvider.provider} Disconnected`,
+          });
+          invalidateProviderQueries();
+          setShowReplaceWarning(false);
+          setSelectedProvider((prev) =>
+            prev ? { ...prev, is_enabled: false } : null,
+          );
+        },
+        onError: (error: any) => {
+          setErrorData({
+            title: "Error Disconnecting Provider",
+            list: [
+              error?.response?.data?.detail ||
+                "An unexpected error occurred. Please try again.",
+            ],
+          });
+        },
+      },
+    );
+  };
 
   // Auto-save API key after user stops typing for 800ms
   // The debounce prevents API calls on every keystroke
@@ -77,10 +136,14 @@ const ModelProvidersContent = ({
 
   // Trigger debounced save when apiKey changes from user input
   useEffect(() => {
-    if (apiKey.trim() && isUserInputRef.current) {
+    if (
+      apiKey.trim() &&
+      isUserInputRef.current &&
+      !selectedProvider?.is_enabled
+    ) {
       debouncedConfigureProvider();
     }
-  }, [apiKey, debouncedConfigureProvider]);
+  }, [apiKey, debouncedConfigureProvider, selectedProvider?.is_enabled]);
 
   // Update enabled models when toggled
   const handleModelToggle = (modelName: string, enabled: boolean) => {
@@ -296,34 +359,103 @@ const ModelProvidersContent = ({
             )}
           </span>
           {requiresApiKey ? (
-            <Input
-              placeholder="Add API key"
-              value={apiKey}
-              type="password"
-              onChange={(e) => {
-                isUserInputRef.current = true;
-                setValidationFailed(false);
-                setApiKey(e.target.value);
-              }}
-              // Show loading spinner while saving, X on error, checkmark when configured
-              endIcon={
-                isPending
-                  ? "LoaderCircle"
-                  : validationFailed
-                    ? "X"
-                    : selectedProvider?.is_enabled
-                      ? "Check"
-                      : undefined
-              }
-              endIconClassName={cn(
-                isPending && "animate-spin text-muted-foreground top-2.5",
-                validationFailed && "text-red-500",
-                !isPending &&
-                  !validationFailed &&
-                  selectedProvider?.is_enabled &&
-                  "text-green-500",
+            <>
+              <Input
+                placeholder={
+                  selectedProvider?.is_enabled
+                    ? API_KEY_PLACEHOLDERS[selectedProvider?.provider ?? ""] ||
+                      "Enter API key"
+                    : "Enter API key"
+                }
+                value={apiKey}
+                type="password"
+                onChange={(e) => {
+                  isUserInputRef.current = true;
+                  setValidationFailed(false);
+                  setApiKey(e.target.value);
+                }}
+                // Show loading spinner while saving, X on error, checkmark when configured
+                endIcon={
+                  isPending
+                    ? "LoaderCircle"
+                    : validationFailed
+                      ? "X"
+                      : selectedProvider?.is_enabled
+                        ? "Check"
+                        : undefined
+                }
+                endIconClassName={cn(
+                  isPending && "animate-spin text-muted-foreground top-2.5",
+                  validationFailed && "text-red-500",
+                  !isPending &&
+                    !validationFailed &&
+                    selectedProvider?.is_enabled &&
+                    "text-green-500",
+                )}
+              />
+              {selectedProvider?.is_enabled && (
+                <div
+                  className={cn(
+                    "justify-end flex gap-2 mt-2 transition-all duration-300 ease-in-out",
+                    showReplaceWarning
+                      ? "opacity-0 max-h-0 overflow-hidden"
+                      : "opacity-100 max-h-20",
+                  )}
+                >
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-destructive"
+                    onClick={() => {
+                      handleDisconnect();
+                    }}
+                  >
+                    Disconnect
+                  </Button>
+
+                  <Button size="sm" onClick={handleConfigureProvider}>
+                    <span>Replace API Key</span>
+                  </Button>
+                </div>
               )}
-            />
+              <div
+                className={cn(
+                  "border border-border rounded-md border-destructive transition-all duration-300 ease-in-out origin-top",
+                  showReplaceWarning
+                    ? "opacity-100 max-h-40 scale-y-100 translate-y-0 mb-3 p-3"
+                    : "opacity-0 max-h-0 scale-y-0 -translate-y-2 overflow-hidden",
+                )}
+              >
+                <div className="text-destructive flex items-center gap-1 pb-3 text-sm">
+                  <ForwardedIconComponent
+                    name="Circle"
+                    className="text-destructive w-2 h-2 fill-destructive mr-1"
+                  />
+                  Warning
+                  <div className="flex gap-2 ml-auto">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setShowReplaceWarning(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="text-destructive"
+                      onClick={handleConfirmDisconnect}
+                      loading={isDeleting}
+                    >
+                      Confirm
+                    </Button>
+                  </div>
+                </div>
+                <p className="text-sm">
+                  Disconnecting an API key will disable all of the providers
+                  models being used in a flow.
+                </p>
+              </div>
+            </>
           ) : (
             <Button
               onClick={handleActivateNoApiKeyProvider}
