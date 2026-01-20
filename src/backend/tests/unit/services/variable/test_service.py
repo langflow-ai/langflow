@@ -300,11 +300,7 @@ async def test_create_generic_variable_with_fernet_signature_fails(service, sess
 
     with pytest.raises(ValueError, match="cannot start with 'gAAAAA'"):
         await service.create_variable(
-            user_id,
-            "TEST_VAR",
-            "gAAAAABthis-looks-like-encrypted-but-is-generic",
-            type_="Generic",
-            session=session
+            user_id, "TEST_VAR", "gAAAAABthis-looks-like-encrypted-but-is-generic", type_="Generic", session=session
         )
 
 
@@ -317,12 +313,7 @@ async def test_update_generic_variable_with_fernet_signature_fails(service, sess
 
     # Try to update it to a value starting with gAAAAA
     with pytest.raises(ValueError, match="cannot start with 'gAAAAA'"):
-        await service.update_variable(
-            user_id,
-            "TEST_VAR",
-            "gAAAAABthis-looks-like-encrypted",
-            session=session
-        )
+        await service.update_variable(user_id, "TEST_VAR", "gAAAAABthis-looks-like-encrypted", session=session)
 
 
 async def test_create_credential_variable_with_fernet_signature_succeeds(service, session: AsyncSession):
@@ -335,7 +326,7 @@ async def test_create_credential_variable_with_fernet_signature_succeeds(service
         "TEST_CRED",
         "gAAAAABsome-value",  # This will be encrypted, so it's fine
         type_="Credential",
-        session=session
+        session=session,
     )
 
     assert variable is not None

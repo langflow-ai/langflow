@@ -660,8 +660,7 @@ def decrypt_api_key(encrypted_api_key: str, settings_service: SettingsService):
                     return ""
                 # Assume the value is plain text and return it as-is
                 logger.debug(
-                    "Value does not appear to be encrypted (no Fernet token signature). "
-                    "Returning value as plain text."
+                    "Value does not appear to be encrypted (no Fernet token signature). Returning value as plain text."
                 )
                 return encrypted_api_key
 

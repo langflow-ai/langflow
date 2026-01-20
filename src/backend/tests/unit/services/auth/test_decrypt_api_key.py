@@ -146,6 +146,7 @@ class TestDecryptApiKey:
         assert result == ""
         assert result != encrypted_value
 
+
 # Made with Bob
 
 
