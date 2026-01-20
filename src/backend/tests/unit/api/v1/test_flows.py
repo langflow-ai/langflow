@@ -545,8 +545,8 @@ async def test_upsert_flow_updates_existing_flow(client: AsyncClient, logged_in_
     assert result["description"] == "updated description"
 
 
-async def test_upsert_flow_returns_403_for_other_users_flow(client: AsyncClient, logged_in_headers):
-    """Test that PUT returns 403 when trying to upsert another user's flow."""
+async def test_upsert_flow_returns_404_for_other_users_flow(client: AsyncClient, logged_in_headers):
+    """Test that PUT returns 404 when trying to upsert another user's flow (avoids leaking existence)."""
     from langflow.services.auth.utils import get_password_hash
     from langflow.services.database.models.user.model import User
     from langflow.services.deps import session_scope
@@ -578,8 +578,8 @@ async def test_upsert_flow_returns_403_for_other_users_flow(client: AsyncClient,
     update_data = {"name": "trying_to_steal", "data": {}}
     response = await client.put(f"api/v1/flows/{other_user_flow_id}", json=update_data, headers=logged_in_headers)
 
-    assert response.status_code == status.HTTP_403_FORBIDDEN
-    assert "another user" in response.json()["detail"].lower()
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert "not found" in response.json()["detail"].lower()
 
     # Cleanup
     async with session_scope() as session:

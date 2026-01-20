@@ -165,7 +165,7 @@ async def _new_flow(
     fail_on_endpoint_conflict: bool = False,
     validate_folder: bool = False,
 ):
-    """Create a new flow.
+    """Create or upsert a flow.
 
     Args:
         session: Database session.
@@ -174,7 +174,7 @@ async def _new_flow(
         storage_service: Service for filesystem operations.
         flow_id: Allows PUT upsert to create flows with a specific ID for syncing between instances.
         fail_on_endpoint_conflict: PUT should fail predictably on conflicts rather than silently renaming.
-        validate_folder: PUT receives folder_id from external sources that may not exist locally.
+        validate_folder: Validates folder_id exists and belongs to user when upserting from external sources.
     """
     try:
         # Validate fs_path if provided (will raise HTTPException if invalid)
@@ -541,22 +541,23 @@ async def upsert_flow(
     from fastapi.responses import JSONResponse
 
     try:
-        # Check if flow exists (without user filter to distinguish 403 vs CREATE)
+        # Check if flow exists (without user filter to distinguish ownership vs CREATE)
         existing_flow = (await session.exec(select(Flow).where(Flow.id == flow_id))).first()
 
         if existing_flow is not None:
-            # Flow exists - check ownership
+            # Flow exists - check ownership (return 404 to avoid leaking resource existence)
             if existing_flow.user_id != current_user.id:
-                raise HTTPException(status_code=403, detail="Flow belongs to another user")
+                raise HTTPException(status_code=404, detail="Flow not found")
 
             # UPDATE path
-            return await _update_existing_flow(
+            flow_read = await _update_existing_flow(
                 session=session,
                 existing_flow=existing_flow,
                 flow=flow,
                 current_user=current_user,
                 storage_service=storage_service,
             )
+            return JSONResponse(status_code=200, content=jsonable_encoder(flow_read))
 
         # CREATE path - flow doesn't exist
         db_flow = await _new_flow(
@@ -574,10 +575,7 @@ async def upsert_flow(
         await _save_flow_to_fs(db_flow, current_user.id, storage_service)
 
         flow_read = FlowRead.model_validate(db_flow, from_attributes=True)
-        return JSONResponse(
-            status_code=201,
-            content=jsonable_encoder(flow_read),
-        )
+        return JSONResponse(status_code=201, content=jsonable_encoder(flow_read))
 
     except HTTPException:
         raise
