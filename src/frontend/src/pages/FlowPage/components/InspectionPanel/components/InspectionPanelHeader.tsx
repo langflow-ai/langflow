@@ -81,16 +81,16 @@ export default function InspectionPanelHeader({
         </div>
         <div className="flex items-center gap-0.5">
           {hasDocs && (
-          <ShadTooltip content="Documentation" side="left">
-            <ToolbarButton
-              icon="FileText"
-              onClick={openDocs}
-              shortcut={shortcuts.find((s) =>
-                s.name.toLowerCase().startsWith("docs"),
-              )}
-              dataTestId="docs-button-modal"
-            />
-          </ShadTooltip>
+            <ShadTooltip content="Documentation" side="left">
+              <ToolbarButton
+                icon="FileText"
+                onClick={openDocs}
+                shortcut={shortcuts.find((s) =>
+                  s.name.toLowerCase().startsWith("docs"),
+                )}
+                dataTestId="docs-button-modal"
+              />
+            </ShadTooltip>
           )}
           {hasCode && (
             <ShadTooltip content="View Code" side="left">
@@ -107,11 +107,7 @@ export default function InspectionPanelHeader({
           )}
           {onClose && (
             <ShadTooltip content="Close" side="top">
-              <Button
-                variant="ghost"
-                size="node-toolbar"
-                onClick={onClose}
-              >
+              <Button variant="ghost" size="node-toolbar" onClick={onClose}>
                 <IconComponent name="X" className="h-4 w-4" />
               </Button>
             </ShadTooltip>
