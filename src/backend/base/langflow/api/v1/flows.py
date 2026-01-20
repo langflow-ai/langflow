@@ -651,6 +651,10 @@ async def _update_existing_flow(
     # Build update data
     update_data = flow.model_dump(exclude_unset=True, exclude_none=True)
 
+    # Handle endpoint_name explicitly set to null or empty string (allow clearing)
+    if flow.endpoint_name is None or flow.endpoint_name == "":
+        update_data["endpoint_name"] = None
+
     # Remove id and user_id from update data (security)
     update_data.pop("id", None)
     update_data.pop("user_id", None)
