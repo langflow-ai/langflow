@@ -292,3 +292,53 @@ async def test_get_all_decrypted_variables__decryption_failure(service, session:
         # Should still return the variable with the encrypted value as fallback
         assert "TEST_VAR" in result
         assert result["TEST_VAR"] is not None  # Falls back to encrypted value
+
+
+async def test_create_generic_variable_with_fernet_signature_fails(service, session: AsyncSession):
+    """Test that creating a GENERIC variable starting with gAAAAA fails."""
+    user_id = uuid4()
+    
+    with pytest.raises(ValueError, match="cannot start with 'gAAAAA'"):
+        await service.create_variable(
+            user_id, 
+            "TEST_VAR", 
+            "gAAAAABthis-looks-like-encrypted-but-is-generic",
+            type_="Generic",
+            session=session
+        )
+
+
+async def test_update_generic_variable_with_fernet_signature_fails(service, session: AsyncSession):
+    """Test that updating a GENERIC variable to start with gAAAAA fails."""
+    user_id = uuid4()
+    
+    # Create a normal generic variable
+    await service.create_variable(user_id, "TEST_VAR", "normal_value", type_="Generic", session=session)
+    
+    # Try to update it to a value starting with gAAAAA
+    with pytest.raises(ValueError, match="cannot start with 'gAAAAA'"):
+        await service.update_variable(
+            user_id,
+            "TEST_VAR",
+            "gAAAAABthis-looks-like-encrypted",
+            session=session
+        )
+
+
+async def test_create_credential_variable_with_fernet_signature_succeeds(service, session: AsyncSession):
+    """Test that CREDENTIAL variables can have values that look like Fernet tokens (they get encrypted anyway)."""
+    user_id = uuid4()
+    
+    # This should succeed because CREDENTIAL types are encrypted
+    variable = await service.create_variable(
+        user_id,
+        "TEST_CRED",
+        "gAAAAABsome-value",  # This will be encrypted, so it's fine
+        type_="Credential",
+        session=session
+    )
+    
+    assert variable is not None
+    assert variable.name == "TEST_CRED"
+    # The value should be encrypted (different from input)
+    assert variable.value != "gAAAAABsome-value"

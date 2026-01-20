@@ -174,21 +174,18 @@ async def get_servers(
                 # Decrypt variables based on type (following the pattern from get_all_decrypted_variables)
                 for variable in variables:
                     if variable.name and variable.value:
-                        # Only decrypt CREDENTIAL type variables; GENERIC variables are stored as plain text
-                        if variable.type == "Credential":
-                            try:
-                                decrypted_value = auth_utils.decrypt_api_key(
-                                    variable.value, settings_service=settings_service
-                                )
-                                request_variables[variable.name] = decrypted_value
-                            except Exception as e:  # noqa: BLE001
-                                await logger.aerror(
-                                    f"Failed to decrypt credential variable '{variable.name}': {e}. "
-                                    "This credential will not be available for MCP server."
-                                )
-                        else:
-                            # GENERIC type - use as-is (stored as plaintext)
-                            request_variables[variable.name] = variable.value
+                        # Prior to v1.8, both Generic and Credential variables were encrypted. 
+                        # As such, must attempt to decrypt both types to ensure backwards-compatibility.
+                        try:
+                            decrypted_value = auth_utils.decrypt_api_key(
+                                variable.value, settings_service=settings_service
+                            )
+                            request_variables[variable.name] = decrypted_value
+                        except Exception as e:  # noqa: BLE001
+                            await logger.aerror(
+                                f"Failed to decrypt credential variable '{variable.name}': {e}. "
+                                "This credential will not be available for MCP server."
+                            )
             except Exception as e:  # noqa: BLE001
                 await logger.awarning(f"Failed to load global variables for MCP server test: {e}")
 

@@ -12,7 +12,7 @@ from langflow.services.auth import utils as auth_utils
 from langflow.services.base import Service
 from langflow.services.database.models.variable.model import Variable, VariableCreate, VariableRead, VariableUpdate
 from langflow.services.variable.base import VariableService
-from langflow.services.variable.constants import CREDENTIAL_TYPE
+from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -185,11 +185,20 @@ class DatabaseVariableService(VariableService, Service):
     async def get_all(self, user_id: UUID | str, session: AsyncSession) -> list[VariableRead]:
         stmt = select(Variable).where(Variable.user_id == user_id)
         variables = list((await session.exec(stmt)).all())
-        # VariableRead model validator will automatically redact CREDENTIAL_TYPE values to None
-        # GENERIC type values will be returned as-is (plaintext)
         variables_read = []
         for variable in variables:
+            value = None
+            if variable.type == GENERIC_TYPE:
+                value = auth_utils.decrypt_api_key(variable.value, settings_service=self.settings_service)
+                if not value:
+                    # If decryption fails (likely due to encryption by different key), skip this variable
+                    continue
+
+            # Model validate will set value to None if credential type
             variable_read = VariableRead.model_validate(variable, from_attributes=True)
+            if variable.type == GENERIC_TYPE:
+                variable_read.value = value
+
             variables_read.append(variable_read)
         return variables_read
 
@@ -215,17 +224,19 @@ class DatabaseVariableService(VariableService, Service):
         result = {}
         for var in variables:
             if var.name and var.value:
-                # Only decrypt CREDENTIAL type variables; GENERIC variables are stored as plain text
-                if var.type == CREDENTIAL_TYPE:
-                    try:
-                        decrypted_value = auth_utils.decrypt_api_key(var.value, settings_service=self.settings_service)
-                        result[var.name] = decrypted_value
-                    except Exception as e:  # noqa: BLE001
-                        await logger.adebug(f"Decryption failed for variable '{var.name}': {e}. Using value as-is.")
-                        result[var.name] = var.value
-                else:
-                    # GENERIC type - return as-is
+                try:
+                    decrypted_value = auth_utils.decrypt_api_key(var.value, settings_service=self.settings_service)
+                except Exception as e:  # noqa: BLE001
+                    await logger.adebug(f"Decryption failed for variable '{var.name}': {e}. Using encrypted value as fallback.")
                     result[var.name] = var.value
+                    continue
+
+                if not decrypted_value:
+                    await logger.adebug(f"Decryption returned empty for variable '{var.name}'. Using encrypted value as fallback.")
+                    result[var.name] = var.value
+                    continue
+
+                result[var.name] = decrypted_value
 
         return result
 
@@ -258,6 +269,15 @@ class DatabaseVariableService(VariableService, Service):
         if not variable:
             msg = f"{name} variable not found."
             raise ValueError(msg)
+        
+        # Validate that GENERIC variables don't start with Fernet signature
+        if variable.type == GENERIC_TYPE and value.startswith("gAAAAA"):
+            msg = (
+                f"Generic variable '{name}' cannot start with 'gAAAAA' as this is reserved "
+                "for encrypted values. Please use a different value."
+            )
+            raise ValueError(msg)
+        
         # Only encrypt CREDENTIAL_TYPE variables
         if variable.type == CREDENTIAL_TYPE:
             variable.value = auth_utils.encrypt_api_key(value, settings_service=self.settings_service)
@@ -331,6 +351,14 @@ class DatabaseVariableService(VariableService, Service):
         type_: str = CREDENTIAL_TYPE,
         session: AsyncSession,
     ):
+        # Validate that GENERIC variables don't start with Fernet signature
+        if type_ == GENERIC_TYPE and value.startswith("gAAAAA"):
+            msg = (
+                f"Generic variable '{name}' cannot start with 'gAAAAA' as this is reserved "
+                "for encrypted values. Please use a different value."
+            )
+            raise ValueError(msg)
+        
         # Only encrypt CREDENTIAL_TYPE variables
         encrypted_value = (
             auth_utils.encrypt_api_key(value, settings_service=self.settings_service)

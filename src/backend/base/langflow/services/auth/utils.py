@@ -622,17 +622,20 @@ def encrypt_api_key(api_key: str, settings_service: SettingsService):
 def decrypt_api_key(encrypted_api_key: str, settings_service: SettingsService):
     """Decrypt the provided encrypted API key using Fernet decryption.
 
-    This function first attempts to decrypt the API key by encoding it,
-    assuming it is a properly encoded string. If that fails, it logs a detailed
-    debug message including the exception information and retries decryption
-    using the original string input.
+    This function supports both encrypted and plain text values. It first attempts
+    to decrypt the API key by encoding it, assuming it is a properly encrypted string.
+    If that fails, it retries decryption using the original string input. If both
+    decryption attempts fail, it checks if the value looks like a Fernet token
+    (starts with "gAAAAA"). If it does, it's likely encrypted with a different key
+    and returns empty string. Otherwise, it assumes plain text and returns as-is.
 
     Args:
-        encrypted_api_key (str): The encrypted API key.
+        encrypted_api_key (str): The encrypted API key or plain text value.
         settings_service (SettingsService): Service providing authentication settings.
 
     Returns:
-        str: The decrypted API key, or an empty string if decryption cannot be performed.
+        str: The decrypted API key, the original value if plain text, or empty string
+             if it's encrypted with a different key.
     """
     fernet = get_fernet(settings_service)
     if isinstance(encrypted_api_key, str):
@@ -647,14 +650,22 @@ def decrypt_api_key(encrypted_api_key: str, settings_service: SettingsService):
             try:
                 return fernet.decrypt(encrypted_api_key).decode()
             except Exception as secondary_exception:  # noqa: BLE001
-                # Log at warning level since returning empty string could cause silent failures
-                logger.warning(
-                    "Failed to decrypt stored value (likely encrypted with different key). "
-                    "Error: %s. Returning empty string.",
-                    secondary_exception,
+                # Check if this looks like a Fernet token (base64 encoded, starts with gAAAAA)
+                if encrypted_api_key.startswith("gAAAAA"):
+                    logger.warning(
+                        "Failed to decrypt stored value (likely encrypted with different key). "
+                        "Error: %s. Returning empty string.",
+                        secondary_exception,
+                    )
+                    return ""
+                # Assume the value is plain text and return it as-is
+                logger.debug(
+                    "Value does not appear to be encrypted (no Fernet token signature). "
+                    "Returning value as plain text."
                 )
-                return ""
-    return ""
+                return encrypted_api_key
+
+    raise ValueError(f"Unexpected variable type. Expected string") 
 
 
 # MCP-specific authentication functions that always behave as if skip_auth_auto_login is True
