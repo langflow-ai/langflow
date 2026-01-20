@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 
 import pytest
 from fastapi import HTTPException, status
-from jose import jwt
+import jwt
 from langflow.services.auth.service import AuthService
 from langflow.services.database.models.user.model import User
 from lfx.services.settings.auth import AuthSettings
@@ -134,7 +134,7 @@ def test_create_token_contains_expected_claims(auth_service: AuthService):
     )
 
     # Decode without verification to check claims
-    claims = jwt.get_unverified_claims(token)
+    claims = jwt.decode(token, options={"verify_signature": False})
     assert claims["sub"] == str(user_id)
     assert claims["type"] == "access"
     assert claims["custom"] == "value"
@@ -163,7 +163,7 @@ def test_create_user_api_key(auth_service: AuthService):
 
     assert "api_key" in result
     # Verify the token contains expected claims
-    claims = jwt.get_unverified_claims(result["api_key"])
+    claims = jwt.decode(result["api_key"], options={"verify_signature": False})
     assert claims["sub"] == str(user_id)
     assert claims["type"] == "api_key"
 
@@ -181,12 +181,12 @@ async def test_create_user_tokens(auth_service: AuthService):
     assert result["token_type"] == "bearer"  # noqa: S105 - not a password
 
     # Verify access token claims
-    access_claims = jwt.get_unverified_claims(result["access_token"])
+    access_claims = jwt.decode(result["access_token"], options={"verify_signature": False})
     assert access_claims["sub"] == str(user_id)
     assert access_claims["type"] == "access"
 
     # Verify refresh token claims
-    refresh_claims = jwt.get_unverified_claims(result["refresh_token"])
+    refresh_claims = jwt.decode(result["refresh_token"], options={"verify_signature": False})
     assert refresh_claims["sub"] == str(user_id)
     assert refresh_claims["type"] == "refresh"
 

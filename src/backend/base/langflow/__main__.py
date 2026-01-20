@@ -27,6 +27,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from sqlmodel import select
+from jwt import InvalidTokenError
 
 from langflow.cli.progress import create_langflow_progress
 from langflow.initial_setup.setup import get_or_create_default_folder
@@ -736,7 +737,7 @@ async def _create_superuser(username: str, password: str, auth_token: str | None
                 user = None
                 try:
                     user = await get_current_user_from_access_token(auth_token, session)
-                except (JWTError, HTTPException):
+                except (InvalidTokenError, HTTPException):
                     # Try API key
                     api_key_result = await check_key(session, auth_token)
                     if api_key_result and hasattr(api_key_result, "is_superuser"):

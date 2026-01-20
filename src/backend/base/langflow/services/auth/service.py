@@ -10,7 +10,8 @@ from uuid import UUID
 
 from cryptography.fernet import Fernet
 from fastapi import HTTPException, Request, WebSocketException, status
-from jose import JWTError, jwt
+import jwt
+from jwt import InvalidTokenError
 from lfx.log.logger import logger
 from sqlalchemy.exc import IntegrityError
 
@@ -240,7 +241,7 @@ class AuthService(AuthServiceBase):
                     detail="Invalid token details.",
                     headers={"WWW-Authenticate": "Bearer"},
                 )
-        except JWTError as e:
+        except InvalidTokenError as e:
             logger.debug("JWT validation failed: Invalid token format or signature")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -433,10 +434,30 @@ class AuthService(AuthServiceBase):
         return {"api_key": access_token}
 
     def get_user_id_from_token(self, token: str) -> UUID:
+        """Extract user ID from a JWT token without verifying the signature.
+        
+        This is a utility function for non-security contexts (e.g., logging, debugging).
+        It does NOT verify the token signature and should NOT be used for authentication.
+        
+        For actual authentication, use get_current_user_from_access_token() which properly verifies
+        the token signature.
+        
+        Args:
+            token: JWT token string (may be invalid or expired)
+            
+        Returns:
+            UUID: User ID extracted from token, or UUID(int=0) if extraction fails
+            
+        Note:
+            This function uses verify_signature=False to match the behavior of
+            python-jose's jwt.get_unverified_claims(). The signature is intentionally
+            not verified as this is a utility function, not an authentication function.
+        """
         try:
-            user_id = jwt.get_unverified_claims(token)["sub"]
+            claims = jwt.decode(token, options={"verify_signature": False})
+            user_id = claims["sub"]
             return UUID(user_id)
-        except (KeyError, JWTError, ValueError):
+        except (KeyError, InvalidTokenError, ValueError):
             return UUID(int=0)
 
     async def create_user_tokens(self, user_id: UUID, db: AsyncSession, *, update_last_login: bool = False) -> dict:
@@ -490,7 +511,7 @@ class AuthService(AuthServiceBase):
 
             return await self.create_user_tokens(user_id, db)
 
-        except JWTError as e:
+        except InvalidTokenError as e:
             logger.exception("JWT decoding error")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
