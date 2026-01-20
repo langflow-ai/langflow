@@ -735,7 +735,7 @@ class MCPSessionManager:
 
         Args:
             session_id: Unique identifier for this session
-            connection_params: Connection parameters including URL, headers, timeouts, verify_ssl
+            connection_params: Connection parameters including URL, headers, timeouts, verify_ssl, oauth_auth
             preferred_transport: If set to "sse", skip Streamable HTTP and go directly to SSE
 
         Returns:
@@ -754,14 +754,19 @@ class MCPSessionManager:
         # Get verify_ssl option from connection params, default to True
         verify_ssl = connection_params.get("verify_ssl", True)
 
-        # Create custom httpx client factory with SSL verification option
+        # Get OAuth auth provider if configured (implements httpx.Auth)
+        oauth_auth = connection_params.get("oauth_auth")
+
+        # Create custom httpx client factory with SSL verification and OAuth support
         def custom_httpx_factory(
             headers: dict[str, str] | None = None,
             timeout: httpx.Timeout | None = None,
             auth: httpx.Auth | None = None,
         ) -> httpx.AsyncClient:
+            # Use OAuth auth if provided and no other auth is specified
+            effective_auth = auth if auth is not None else oauth_auth
             return create_mcp_http_client_with_ssl_option(
-                headers=headers, timeout=timeout, auth=auth, verify_ssl=verify_ssl
+                headers=headers, timeout=timeout, auth=effective_auth, verify_ssl=verify_ssl
             )
 
         async def session_task():
@@ -1273,8 +1278,22 @@ class MCPStreamableHttpClient:
         sse_read_timeout_seconds: int = 30,
         *,
         verify_ssl: bool = True,
+        oauth_auth: httpx.Auth | None = None,
     ) -> list[StructuredTool]:
-        """Connect to MCP server using Streamable HTTP transport with SSE fallback (SDK style)."""
+        """Connect to MCP server using Streamable HTTP transport with SSE fallback (SDK style).
+
+        Args:
+            url: The MCP server URL to connect to.
+            headers: Optional HTTP headers to include with requests.
+            timeout_seconds: Connection timeout in seconds.
+            sse_read_timeout_seconds: SSE read timeout in seconds.
+            verify_ssl: Whether to verify SSL certificates.
+            oauth_auth: Optional OAuth authentication provider (implements httpx.Auth).
+                This can be an OAuthClientProvider from the MCP SDK.
+
+        Returns:
+            List of available tools from the MCP server.
+        """
         # Validate and sanitize headers early
         validated_headers = _process_headers(headers)
 
@@ -1290,16 +1309,21 @@ class MCPStreamableHttpClient:
                 msg = f"Invalid Streamable HTTP or SSE URL ({url}): {error_msg}"
                 raise ValueError(msg)
             # Store connection parameters for later use in run_tool
-            # Include SSE read timeout for fallback and SSL verification option
+            # Include SSE read timeout for fallback, SSL verification, and OAuth
             self._connection_params = {
                 "url": url,
                 "headers": validated_headers,
                 "timeout_seconds": timeout_seconds,
                 "sse_read_timeout_seconds": sse_read_timeout_seconds,
                 "verify_ssl": verify_ssl,
+                "oauth_auth": oauth_auth,
             }
         elif headers:
             self._connection_params["headers"] = validated_headers
+
+        # Update OAuth auth if provided (allows refreshing OAuth provider)
+        if oauth_auth is not None:
+            self._connection_params["oauth_auth"] = oauth_auth
 
         # If no session context is set, create a default one
         if not self._session_context:
@@ -1322,11 +1346,28 @@ class MCPStreamableHttpClient:
         sse_read_timeout_seconds: int = 30,
         *,
         verify_ssl: bool = True,
+        oauth_auth: httpx.Auth | None = None,
     ) -> list[StructuredTool]:
-        """Connect to MCP server using Streamable HTTP with SSE fallback transport (SDK style)."""
+        """Connect to MCP server using Streamable HTTP with SSE fallback transport (SDK style).
+
+        Args:
+            url: The MCP server URL to connect to.
+            headers: Optional HTTP headers to include with requests.
+            sse_read_timeout_seconds: SSE read timeout in seconds.
+            verify_ssl: Whether to verify SSL certificates.
+            oauth_auth: Optional OAuth authentication provider (implements httpx.Auth).
+                Use create_mcp_oauth_provider() from lfx.base.mcp.oauth to create one.
+
+        Returns:
+            List of available tools from the MCP server.
+        """
         return await asyncio.wait_for(
             self._connect_to_server(
-                url, headers, sse_read_timeout_seconds=sse_read_timeout_seconds, verify_ssl=verify_ssl
+                url,
+                headers,
+                sse_read_timeout_seconds=sse_read_timeout_seconds,
+                verify_ssl=verify_ssl,
+                oauth_auth=oauth_auth,
             ),
             timeout=get_settings_service().settings.mcp_server_timeout,
         )
@@ -1517,8 +1558,22 @@ async def update_tools(
     mcp_stdio_client: MCPStdioClient | None = None,
     mcp_streamable_http_client: MCPStreamableHttpClient | None = None,
     mcp_sse_client: MCPStreamableHttpClient | None = None,  # Backward compatibility
+    oauth_auth: httpx.Auth | None = None,  # OAuth authentication provider
 ) -> tuple[str, list[StructuredTool], dict[str, StructuredTool]]:
-    """Fetch server config and update available tools."""
+    """Fetch server config and update available tools.
+
+    Args:
+        server_name: Name of the MCP server.
+        server_config: Server configuration dictionary containing connection parameters.
+        mcp_stdio_client: Optional stdio client instance.
+        mcp_streamable_http_client: Optional HTTP client instance.
+        mcp_sse_client: Deprecated, use mcp_streamable_http_client instead.
+        oauth_auth: Optional OAuth authentication provider (implements httpx.Auth).
+            Use create_mcp_oauth_provider() from lfx.base.mcp.oauth to create one.
+
+    Returns:
+        Tuple of (mode, tool_list, tool_cache).
+    """
     if server_config is None:
         server_config = {}
     if not server_name:
@@ -1559,7 +1614,11 @@ async def update_tools(
     elif mode in ["Streamable_HTTP", "SSE"]:
         # Streamable HTTP connection with SSE fallback
         verify_ssl = server_config.get("verify_ssl", True)
-        tools = await mcp_streamable_http_client.connect_to_server(url, headers=headers, verify_ssl=verify_ssl)
+        # Use OAuth auth from parameter or from server config
+        effective_oauth = oauth_auth or server_config.get("oauth_auth")
+        tools = await mcp_streamable_http_client.connect_to_server(
+            url, headers=headers, verify_ssl=verify_ssl, oauth_auth=effective_oauth
+        )
         client = mcp_streamable_http_client
     else:
         logger.error(f"Invalid MCP server mode for '{server_name}': {mode}")
