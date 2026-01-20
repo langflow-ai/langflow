@@ -735,7 +735,7 @@ class MCPSessionManager:
 
         Args:
             session_id: Unique identifier for this session
-            connection_params: Connection parameters including URL, headers, timeouts, verify_ssl
+            connection_params: Connection parameters including URL, headers, timeouts, verify_ssl, oauth_config
             preferred_transport: If set to "sse", skip Streamable HTTP and go directly to SSE
 
         Returns:
@@ -753,6 +753,36 @@ class MCPSessionManager:
 
         # Get verify_ssl option from connection params, default to True
         verify_ssl = connection_params.get("verify_ssl", True)
+        
+        # Get OAuth configuration if present
+        oauth_config = connection_params.get("oauth_config")
+        oauth_auth = None
+        
+        # Create OAuth2ClientAuth if OAuth is configured
+        if oauth_config:
+            try:
+                from mcp.client.auth.oauth2 import OAuth2ClientAuth
+                
+                oauth_auth = OAuth2ClientAuth(
+                    client_id=oauth_config["client_id"],
+                    client_secret=oauth_config["client_secret"],
+                    authorization_endpoint=oauth_config["authorization_endpoint"],
+                    token_endpoint=oauth_config["token_endpoint"],
+                    scopes=oauth_config.get("scopes", []),
+                    redirect_uri=oauth_config.get("redirect_uri", "http://localhost:8080/callback"),
+                )
+                await logger.ainfo(
+                    f"OAuth2 authentication configured for session {session_id}: "
+                    f"client_id={oauth_config['client_id']}, "
+                    f"auth_endpoint={oauth_config['authorization_endpoint']}, "
+                    f"scopes={oauth_config.get('scopes', [])}"
+                )
+            except ImportError:
+                await logger.aerror("OAuth2ClientAuth not available in MCP SDK. Please upgrade to mcp>=1.17.0")
+                raise
+            except KeyError as e:
+                await logger.aerror(f"Missing required OAuth configuration: {e}")
+                raise ValueError(f"Invalid OAuth configuration: missing {e}") from e
 
         # Create custom httpx client factory with SSL verification option
         def custom_httpx_factory(
@@ -774,12 +804,18 @@ class MCPSessionManager:
                 try:
                     await logger.adebug(f"Attempting Streamable HTTP connection for session {session_id}")
                     # Use a shorter timeout for the initial connection attempt (2 seconds)
-                    async with streamablehttp_client(
-                        url=connection_params["url"],
-                        headers=connection_params["headers"],
-                        timeout=connection_params["timeout_seconds"],
-                        httpx_client_factory=custom_httpx_factory,
-                    ) as (read, write, _):
+                    client_kwargs = {
+                        "url": connection_params["url"],
+                        "headers": connection_params["headers"],
+                        "timeout": connection_params["timeout_seconds"],
+                        "httpx_client_factory": custom_httpx_factory,
+                    }
+                    # Add OAuth auth if configured
+                    if oauth_auth:
+                        client_kwargs["auth"] = oauth_auth
+                        await logger.ainfo(f"Passing OAuth2ClientAuth to streamablehttp_client for session {session_id}")
+                    
+                    async with streamablehttp_client(**client_kwargs) as (read, write, _):
                         session = ClientSession(read, write)
                         async with session:
                             # Initialize with a timeout to fail fast
@@ -814,13 +850,19 @@ class MCPSessionManager:
                     # Extract SSE read timeout from connection params, default to 30s if not present
                     sse_read_timeout = connection_params.get("sse_read_timeout_seconds", 30)
 
-                    async with sse_client(
-                        connection_params["url"],
-                        connection_params["headers"],
-                        connection_params["timeout_seconds"],
-                        sse_read_timeout,
-                        httpx_client_factory=custom_httpx_factory,
-                    ) as (read, write):
+                    sse_kwargs = {
+                        "url": connection_params["url"],
+                        "headers": connection_params["headers"],
+                        "timeout": connection_params["timeout_seconds"],
+                        "sse_read_timeout": sse_read_timeout,
+                        "httpx_client_factory": custom_httpx_factory,
+                    }
+                    # Add OAuth auth if configured
+                    if oauth_auth:
+                        sse_kwargs["auth"] = oauth_auth
+                        await logger.ainfo(f"Passing OAuth2ClientAuth to sse_client for session {session_id}")
+                    
+                    async with sse_client(**sse_kwargs) as (read, write):
                         session = ClientSession(read, write)
                         async with session:
                             await session.initialize()
@@ -1273,8 +1315,24 @@ class MCPStreamableHttpClient:
         sse_read_timeout_seconds: int = 30,
         *,
         verify_ssl: bool = True,
+        oauth_config: dict | None = None,
     ) -> list[StructuredTool]:
-        """Connect to MCP server using Streamable HTTP transport with SSE fallback (SDK style)."""
+        """Connect to MCP server using Streamable HTTP transport with SSE fallback (SDK style).
+        
+        Args:
+            url: MCP server URL
+            headers: HTTP headers for the connection
+            timeout_seconds: Connection timeout
+            sse_read_timeout_seconds: SSE read timeout for fallback
+            verify_ssl: Whether to verify SSL certificates
+            oauth_config: OAuth2 configuration dict with keys:
+                - client_id: OAuth client ID
+                - client_secret: OAuth client secret
+                - authorization_endpoint: OAuth authorization URL
+                - token_endpoint: OAuth token URL
+                - scopes: List of OAuth scopes (optional)
+                - redirect_uri: OAuth callback URL (optional)
+        """
         # Validate and sanitize headers early
         validated_headers = _process_headers(headers)
 
@@ -1290,7 +1348,7 @@ class MCPStreamableHttpClient:
                 msg = f"Invalid Streamable HTTP or SSE URL ({url}): {error_msg}"
                 raise ValueError(msg)
             # Store connection parameters for later use in run_tool
-            # Include SSE read timeout for fallback and SSL verification option
+            # Include SSE read timeout for fallback, SSL verification option, and OAuth config
             self._connection_params = {
                 "url": url,
                 "headers": validated_headers,
@@ -1298,8 +1356,14 @@ class MCPStreamableHttpClient:
                 "sse_read_timeout_seconds": sse_read_timeout_seconds,
                 "verify_ssl": verify_ssl,
             }
+            # Add OAuth config if provided
+            if oauth_config:
+                self._connection_params["oauth_config"] = oauth_config
         elif headers:
             self._connection_params["headers"] = validated_headers
+            # Update OAuth config if provided
+            if oauth_config:
+                self._connection_params["oauth_config"] = oauth_config
 
         # If no session context is set, create a default one
         if not self._session_context:
@@ -1322,11 +1386,24 @@ class MCPStreamableHttpClient:
         sse_read_timeout_seconds: int = 30,
         *,
         verify_ssl: bool = True,
+        oauth_config: dict | None = None,
     ) -> list[StructuredTool]:
-        """Connect to MCP server using Streamable HTTP with SSE fallback transport (SDK style)."""
+        """Connect to MCP server using Streamable HTTP with SSE fallback transport (SDK style).
+        
+        Args:
+            url: MCP server URL
+            headers: HTTP headers for the connection
+            sse_read_timeout_seconds: SSE read timeout for fallback
+            verify_ssl: Whether to verify SSL certificates
+            oauth_config: OAuth2 configuration dict (optional)
+        """
         return await asyncio.wait_for(
             self._connect_to_server(
-                url, headers, sse_read_timeout_seconds=sse_read_timeout_seconds, verify_ssl=verify_ssl
+                url,
+                headers,
+                sse_read_timeout_seconds=sse_read_timeout_seconds,
+                verify_ssl=verify_ssl,
+                oauth_config=oauth_config,
             ),
             timeout=get_settings_service().settings.mcp_server_timeout,
         )
@@ -1559,7 +1636,10 @@ async def update_tools(
     elif mode in ["Streamable_HTTP", "SSE"]:
         # Streamable HTTP connection with SSE fallback
         verify_ssl = server_config.get("verify_ssl", True)
-        tools = await mcp_streamable_http_client.connect_to_server(url, headers=headers, verify_ssl=verify_ssl)
+        oauth_config = server_config.get("oauth_config")
+        tools = await mcp_streamable_http_client.connect_to_server(
+            url, headers=headers, verify_ssl=verify_ssl, oauth_config=oauth_config
+        )
         client = mcp_streamable_http_client
     else:
         logger.error(f"Invalid MCP server mode for '{server_name}': {mode}")

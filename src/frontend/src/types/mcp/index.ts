@@ -44,6 +44,14 @@ export type MCPServerType = {
   args?: string[];
   env?: Record<string, string>;
   headers?: Record<string, string>;
+  oauth_config?: {
+    client_id: string;
+    client_secret: string;
+    authorization_endpoint: string;
+    token_endpoint: string;
+    scopes?: string[];
+    redirect_uri?: string;
+  };
 };
 
 export type ComposerUrlResponseType = {

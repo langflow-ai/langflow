@@ -9,6 +9,7 @@ import { ForwardedIconComponent } from "@/components/common/genericIconComponent
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import InputListComponent from "@/components/core/parameterRenderComponent/components/inputListComponent";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -105,6 +106,13 @@ export default function AddMcpServerModal({
     setHttpUrl("");
     setHttpEnv([{ key: "", value: "", id: nanoid(), error: false }]);
     setHttpHeaders([{ key: "", value: "", id: nanoid(), error: false }]);
+    setOAuthEnabled(false);
+    setOAuthClientId("");
+    setOAuthClientSecret("");
+    setOAuthAuthorizationEndpoint("");
+    setOAuthTokenEndpoint("");
+    setOAuthScopes("");
+    setOAuthRedirectUri("http://localhost:8080/callback");
   };
 
   // STDIO state
@@ -127,6 +135,30 @@ export default function AddMcpServerModal({
     objectToKeyPairRow(initialData?.headers) || [],
   );
 
+  // OAuth state (for HTTP connections)
+  const [oauthEnabled, setOAuthEnabled] = useState(
+    !!(initialData as any)?.oauth_config,
+  );
+  const [oauthClientId, setOAuthClientId] = useState(
+    (initialData as any)?.oauth_config?.client_id || "",
+  );
+  const [oauthClientSecret, setOAuthClientSecret] = useState(
+    (initialData as any)?.oauth_config?.client_secret || "",
+  );
+  const [oauthAuthorizationEndpoint, setOAuthAuthorizationEndpoint] = useState(
+    (initialData as any)?.oauth_config?.authorization_endpoint || "",
+  );
+  const [oauthTokenEndpoint, setOAuthTokenEndpoint] = useState(
+    (initialData as any)?.oauth_config?.token_endpoint || "",
+  );
+  const [oauthScopes, setOAuthScopes] = useState(
+    (initialData as any)?.oauth_config?.scopes?.join(" ") || "",
+  );
+  const [oauthRedirectUri, setOAuthRedirectUri] = useState(
+    (initialData as any)?.oauth_config?.redirect_uri ||
+      "http://localhost:8080/callback",
+  );
+
   useEffect(() => {
     if (open) {
       setType(initialData ? (initialData.command ? "STDIO" : "HTTP") : "JSON");
@@ -140,6 +172,24 @@ export default function AddMcpServerModal({
       setHttpUrl(initialData?.url || "");
       setHttpEnv(objectToKeyPairRow(initialData?.env) || []);
       setHttpHeaders(objectToKeyPairRow(initialData?.headers) || []);
+      setOAuthEnabled(!!(initialData as any)?.oauth_config);
+      setOAuthClientId((initialData as any)?.oauth_config?.client_id || "");
+      setOAuthClientSecret(
+        (initialData as any)?.oauth_config?.client_secret || "",
+      );
+      setOAuthAuthorizationEndpoint(
+        (initialData as any)?.oauth_config?.authorization_endpoint || "",
+      );
+      setOAuthTokenEndpoint(
+        (initialData as any)?.oauth_config?.token_endpoint || "",
+      );
+      setOAuthScopes(
+        (initialData as any)?.oauth_config?.scopes?.join(" ") || "",
+      );
+      setOAuthRedirectUri(
+        (initialData as any)?.oauth_config?.redirect_uri ||
+          "http://localhost:8080/callback",
+      );
     }
   }, [open]);
 
@@ -196,18 +246,49 @@ export default function AddMcpServerModal({
         setError("Duplicate keys found in headers.");
         return;
       }
+      // Validate OAuth fields if OAuth is enabled
+      if (oauthEnabled) {
+        if (
+          !oauthClientId.trim() ||
+          !oauthClientSecret.trim() ||
+          !oauthAuthorizationEndpoint.trim() ||
+          !oauthTokenEndpoint.trim()
+        ) {
+          setError(
+            "OAuth is enabled but required fields are missing (Client ID, Client Secret, Authorization Endpoint, Token Endpoint).",
+          );
+          return;
+        }
+      }
       const name = parseString(httpName, [
         "mcp_name_case",
         "no_blank",
         "lowercase",
       ]).slice(0, MAX_MCP_SERVER_NAME_LENGTH);
+      
+      // Build OAuth config if enabled
+      const oauthConfig = oauthEnabled
+        ? {
+            client_id: oauthClientId,
+            client_secret: oauthClientSecret,
+            authorization_endpoint: oauthAuthorizationEndpoint,
+            token_endpoint: oauthTokenEndpoint,
+            scopes: oauthScopes
+              .split(" ")
+              .map((s) => s.trim())
+              .filter((s) => s),
+            redirect_uri: oauthRedirectUri,
+          }
+        : undefined;
+      
       try {
         await modifyMCPServer({
           name,
           env: keyPairRowToObject(httpEnv),
           url: httpUrl,
           headers: keyPairRowToObject(httpHeaders),
-        });
+          ...(oauthConfig && { oauth_config: oauthConfig }),
+        } as any);
         if (!initialData) {
           await queryClient.setQueryData(["useGetMCPServers"], (old: any) => {
             return [...old, { name, toolsCount: 0 }];
@@ -219,6 +300,13 @@ export default function AddMcpServerModal({
         setHttpUrl("");
         setHttpEnv([{ key: "", value: "", id: nanoid(), error: false }]);
         setHttpHeaders([{ key: "", value: "", id: nanoid(), error: false }]);
+        setOAuthEnabled(false);
+        setOAuthClientId("");
+        setOAuthClientSecret("");
+        setOAuthAuthorizationEndpoint("");
+        setOAuthTokenEndpoint("");
+        setOAuthScopes("");
+        setOAuthRedirectUri("http://localhost:8080/callback");
         setError(null);
       } catch (err: any) {
         setError(err?.message || "Failed to add MCP server.");
@@ -454,6 +542,112 @@ export default function AddMcpServerModal({
                         isInputField={true}
                         testId="http-env"
                       />
+                    </div>
+                    <div className="flex flex-col gap-4 rounded-md border border-border p-4">
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="oauth-enabled"
+                          checked={oauthEnabled}
+                          onCheckedChange={(checked) =>
+                            setOAuthEnabled(checked === true)
+                          }
+                          data-testid="oauth-enabled-checkbox"
+                          disabled={isPending}
+                        />
+                        <Label
+                          htmlFor="oauth-enabled"
+                          className="!text-mmd font-semibold"
+                        >
+                          Enable OAuth Authentication
+                        </Label>
+                      </div>
+                      {oauthEnabled && (
+                        <div className="flex flex-col gap-4">
+                          <div className="flex flex-col gap-2">
+                            <Label className="flex items-start gap-1 !text-mmd">
+                              Client ID
+                              <span className="text-red-500">*</span>
+                            </Label>
+                            <Input
+                              value={oauthClientId}
+                              onChange={(e) => setOAuthClientId(e.target.value)}
+                              placeholder="OAuth Client ID"
+                              data-testid="oauth-client-id-input"
+                              disabled={isPending}
+                            />
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <Label className="flex items-start gap-1 !text-mmd">
+                              Client Secret
+                              <span className="text-red-500">*</span>
+                            </Label>
+                            <Input
+                              type="password"
+                              value={oauthClientSecret}
+                              onChange={(e) =>
+                                setOAuthClientSecret(e.target.value)
+                              }
+                              placeholder="OAuth Client Secret"
+                              data-testid="oauth-client-secret-input"
+                              disabled={isPending}
+                            />
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <Label className="flex items-start gap-1 !text-mmd">
+                              Authorization Endpoint
+                              <span className="text-red-500">*</span>
+                            </Label>
+                            <Input
+                              value={oauthAuthorizationEndpoint}
+                              onChange={(e) =>
+                                setOAuthAuthorizationEndpoint(e.target.value)
+                              }
+                              placeholder="https://provider.com/oauth/authorize"
+                              data-testid="oauth-authorization-endpoint-input"
+                              disabled={isPending}
+                            />
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <Label className="flex items-start gap-1 !text-mmd">
+                              Token Endpoint
+                              <span className="text-red-500">*</span>
+                            </Label>
+                            <Input
+                              value={oauthTokenEndpoint}
+                              onChange={(e) =>
+                                setOAuthTokenEndpoint(e.target.value)
+                              }
+                              placeholder="https://provider.com/oauth/token"
+                              data-testid="oauth-token-endpoint-input"
+                              disabled={isPending}
+                            />
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <Label className="!text-mmd">
+                              Scopes (space-separated)
+                            </Label>
+                            <Input
+                              value={oauthScopes}
+                              onChange={(e) => setOAuthScopes(e.target.value)}
+                              placeholder="read write admin"
+                              data-testid="oauth-scopes-input"
+                              disabled={isPending}
+                            />
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <Label className="!text-mmd">Redirect URI</Label>
+                            <Input
+                              value={oauthRedirectUri}
+                              onChange={(e) =>
+                                setOAuthRedirectUri(e.target.value)
+                              }
+                              placeholder="http://localhost:8080/callback"
+                              data-testid="oauth-redirect-uri-input"
+                              disabled={isPending}
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </TabsContent>

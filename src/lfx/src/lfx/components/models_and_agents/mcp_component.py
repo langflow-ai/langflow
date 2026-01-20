@@ -295,6 +295,9 @@ class MCPToolsComponent(ComponentWithCache):
                     merged_headers = {**existing_headers, **component_headers_dict}
                     server_config["headers"] = merged_headers
 
+            # OAuth config now comes from server_config (set at server level)
+            # No need to build it here - it's already in server_config from database
+
             _, tool_list, tool_cache = await update_tools(
                 server_name=server_name,
                 server_config=server_config,
