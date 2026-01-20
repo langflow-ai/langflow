@@ -13,13 +13,13 @@ import contextlib
 import webbrowser
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from threading import Thread
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from urllib.parse import parse_qs, urlparse
 
 from lfx.log.logger import logger
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Coroutine
 
 
 class OAuthCallbackHandler:
@@ -233,7 +233,7 @@ class OAuthCallbackHandler:
             self._server = None
 
 
-async def create_redirect_handler() -> Callable[[str], None]:
+async def create_redirect_handler() -> Callable[[str], Coroutine[Any, Any, None]]:
     """Create a redirect handler that opens the authorization URL in a browser.
 
     Returns:
@@ -256,7 +256,7 @@ async def create_callback_handler(
     port: int = 18085,
     timeout: float = 300.0,
     host: str = "localhost",
-) -> tuple[Callable[[], tuple[str, str | None]], str, Callable[[], None]]:
+) -> tuple[Callable[[], Coroutine[Any, Any, tuple[str, str | None]]], str, Callable[[], None]]:
     """Create a callback handler with a local HTTP server.
 
     This is a convenience function that sets up the callback infrastructure

@@ -77,6 +77,7 @@ async def create_mcp_oauth_provider(
     server_key = f"mcp_{parsed.netloc}_{parsed.path.replace('/', '_')}"
 
     # Set up storage
+    storage: FileTokenStorage | InMemoryTokenStorage
     if use_file_storage:
         if storage_dir is None:
             storage_dir = Path.home() / ".langflow" / "oauth"
