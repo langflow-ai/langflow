@@ -48,6 +48,11 @@ on:
         required: false
         type: boolean
         default: true
+      overwrite_previous_image:
+        description: "Allow release to overwrite the previously released image - If this is set to true and the image already exists, it will be overwritten"
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   echo-inputs:
@@ -108,9 +113,90 @@ jobs:
 
           echo "✅ Release dependencies validated successfully."
 
+  prevent-image-overwrite:
+    name: Prevent Image Overwrite
+    runs-on: ubuntu-latest
+    if: ${{ !inputs.overwrite_previous_image }}
+    needs: [validate-tag, validate-dependencies]
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.release_tag }}
+
+      - name: Setup Environment
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.13"
+          prune-cache: false
+
+      - name: Get version
+        id: version
+        run: |
+          echo "Extracting main version from pyproject.toml"
+          version=$(uv tree 2>/dev/null | grep '^langflow' | grep -v '^langflow-base' | cut -d' ' -f2 | sed 's/^v//')
+          echo "Using version: $version"
+          echo version=$version >> $GITHUB_OUTPUT
+
+      - name: Check if release_tag matches a version in pyproject.toml
+        if: ${{ !contains(inputs.release_tag, steps.version.outputs.version) }}
+        run: |
+          echo "❌ release_tag '${{ inputs.release_tag }}' does not match pyproject.toml version '${{ steps.version.outputs.version }}'"
+          exit 1
+
+      - name: Check if package version already exists on pypi
+        run: |
+          if pip index versions langflow | grep -q '${{ steps.version.outputs.version }}'; then
+            echo "❌ Package version '${{ steps.version.outputs.version }}' already exists in pypi."
+            exit 1
+          fi
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.TEMP_GHCR_TOKEN}}
+
+      - name: Check if image tag exists in ghcr.io
+        id: check-ghcr
+        uses: tyriis/docker-image-tag-exists@v2.1.0
+        with:
+          registry: ghcr.io
+          repository: langflow-ai/langflow
+          tag: ${{ steps.version.outputs.version }}
+
+      - name: Fail if image exists in ghcr.io
+        if: steps.check-ghcr.outputs.tag == 'found'
+        run: |
+          echo "❌ Image tag '${{ steps.version.outputs.version }}' already exists in ghcr.io"
+          exit 1
+
+      - name: Check if image tag exists in docker.io
+        id: check-dockerhub
+        uses: tyriis/docker-image-tag-exists@v2.1.0
+        with:
+          registry: docker.io
+          repository: langflowai/langflow
+          tag: ${{ steps.version.outputs.version }}
+
+      - name: Fail if image exists in docker.io
+        if: steps.check-dockerhub.outputs.tag == 'found'
+        run: |
+          echo "❌ Image tag '${{ steps.version.outputs.version }}' already exists in docker.io"
+          exit 1
+
   ci:
     name: CI
-    needs: [validate-tag, validate-dependencies]
+    needs: [validate-tag, validate-dependencies, prevent-image-overwrite]
     uses: ./.github/workflows/ci.yml
     with:
       ref: ${{ inputs.release_tag }}
