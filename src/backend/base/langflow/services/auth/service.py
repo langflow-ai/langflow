@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import base64
+import binascii
+import json
 import random
 import warnings
 from collections.abc import Coroutine
@@ -453,11 +455,34 @@ class AuthService(AuthServiceBase):
             python-jose's jwt.get_unverified_claims(). The signature is intentionally
             not verified as this is a utility function, not an authentication function.
         """
+        # Fast-path manual decode for expected string tokens to avoid the overhead of jwt.decode.
+        # Preserve behavior for non-str inputs by falling back to jwt.decode so original
+        # exception types and semantics remain.
+        if not isinstance(token, str):
+            try:
+                claims = jwt.decode(token, options={"verify_signature": False})
+                user_id = claims["sub"]
+                return UUID(user_id)
+            except (KeyError, InvalidTokenError, ValueError):
+                return UUID(int=0)
+
         try:
-            claims = jwt.decode(token, options={"verify_signature": False})
+            parts = token.split(".")
+            if len(parts) < 2:
+                # Malformed token: mimic jwt.decode failure
+                raise InvalidTokenError("Not enough segments")
+
+            payload_b64 = parts[1]
+            # Add padding for base64url decoding if necessary
+            padding = (-len(payload_b64)) % 4
+            if padding:
+                payload_b64 += "=" * padding
+
+            raw = base64.urlsafe_b64decode(payload_b64.encode("ascii"))
+            claims = json.loads(raw)
             user_id = claims["sub"]
             return UUID(user_id)
-        except (KeyError, InvalidTokenError, ValueError):
+        except (KeyError, InvalidTokenError, ValueError, binascii.Error):
             return UUID(int=0)
 
     async def create_user_tokens(self, user_id: UUID, db: AsyncSession, *, update_last_login: bool = False) -> dict:
