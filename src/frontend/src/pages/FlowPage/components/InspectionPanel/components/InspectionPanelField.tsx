@@ -116,6 +116,7 @@ export default function InspectionPanelField({
                     nodeId: data.id,
                     isFlexView,
                     required,
+                    inspectionPanel: true,
                   })}
                 </span>
               </ShadTooltip>
@@ -127,6 +128,7 @@ export default function InspectionPanelField({
                     nodeId: data.id,
                     isFlexView,
                     required,
+                    inspectionPanel: true,
                   })}
                 </span>
               </div>

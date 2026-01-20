@@ -68,17 +68,19 @@ export function getCustomParameterTitle({
   nodeId,
   isFlexView,
   required,
+  inspectionPanel,
 }: {
   title: string;
   nodeId: string;
   isFlexView: boolean;
   required?: boolean;
+  inspectionPanel?: boolean;
 }) {
   return (
     <div className={cn(isFlexView && "max-w-56 truncate")}>
       <span
         data-testid={`title-${title.toLocaleLowerCase()}`}
-        className="text-sm text-secondary-foreground"
+        className={cn(inspectionPanel ? "text-mmd" : "text-sm text-secondary-foreground")}
       >
         {title}
       </span>
