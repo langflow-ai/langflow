@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Annotated, Final
 from fastapi import Depends, HTTPException, Request, Security, WebSocket, status
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
 from lfx.log.logger import logger
+from lfx.services.deps import injectable_session_scope
 
 from langflow.services.auth.service import (
     AUTO_LOGIN_ERROR as SERVICE_AUTO_LOGIN_ERROR,
@@ -12,7 +13,7 @@ from langflow.services.auth.service import (
 from langflow.services.auth.service import (
     AUTO_LOGIN_WARNING as SERVICE_AUTO_LOGIN_WARNING,
 )
-from langflow.services.deps import get_auth_service, get_session
+from langflow.services.deps import get_auth_service
 
 if TYPE_CHECKING:
     from collections.abc import Coroutine
@@ -112,7 +113,7 @@ async def get_current_user(
     token: Annotated[str | None, Security(oauth2_login)],
     query_param: Annotated[str | None, Security(api_key_query)],
     header_param: Annotated[str | None, Security(api_key_header)],
-    db: Annotated[AsyncSession, Depends(get_session)],
+    db: AsyncSession = Depends(injectable_session_scope),
 ) -> User:
     return await _auth_service().get_current_user(token, query_param, header_param, db)
 
@@ -138,8 +139,8 @@ async def get_current_user_for_websocket(
     return await _auth_service().get_current_user_for_websocket(token, api_key, db)
 
 
-async def get_current_active_user(current_user: Annotated[User, Depends(get_current_user)]) -> User:
-    return await _auth_service().get_current_active_user(current_user)
+async def get_current_active_user(user: User = Depends(get_current_user)) -> User:
+    return await _auth_service().get_current_active_user(user)
 
 
 async def get_current_active_superuser(current_user: Annotated[User, Depends(get_current_user)]) -> User:
@@ -206,10 +207,10 @@ async def get_current_user_mcp(
     token: Annotated[str | None, Security(oauth2_login)],
     query_param: Annotated[str | None, Security(api_key_query)],
     header_param: Annotated[str | None, Security(api_key_header)],
-    db: Annotated[AsyncSession, Depends(get_session)],
+    db: AsyncSession = Depends(injectable_session_scope),
 ) -> User:
     return await _auth_service().get_current_user_mcp(token, query_param, header_param, db)
 
 
-async def get_current_active_user_mcp(current_user: Annotated[User, Depends(get_current_user_mcp)]) -> User:
-    return await _auth_service().get_current_active_user_mcp(current_user)
+async def get_current_active_user_mcp(user: User = Depends(get_current_user_mcp)) -> User:
+    return await _auth_service().get_current_active_user_mcp(user)

@@ -3,7 +3,7 @@ import json
 from io import BytesIO
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile
+from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile
 from lfx.base.agents.utils import safe_cache_get, safe_cache_set
 from lfx.base.mcp.util import update_tools
 from pydantic import BaseModel
@@ -304,7 +304,8 @@ async def update_server(
 @router.post("/servers/{server_name}")
 async def add_server(
     server_name: str,
-    server_config: MCPServerConfig,
+    *,
+    server_config: Annotated[MCPServerConfig, Body()],
     current_user: CurrentActiveUser,
     session: DbSession,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
@@ -324,7 +325,8 @@ async def add_server(
 @router.patch("/servers/{server_name}")
 async def update_server_endpoint(
     server_name: str,
-    server_config: MCPServerConfig,
+    *,
+    server_config: Annotated[MCPServerConfig, Body()],
     current_user: CurrentActiveUser,
     session: DbSession,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
