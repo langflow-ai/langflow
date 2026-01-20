@@ -289,9 +289,9 @@ async def test_get_all_decrypted_variables__decryption_failure(service, session:
 
         result = await service.get_all_decrypted_variables(user_id, session=session)
 
-        # Should still return the variable with the encrypted value as fallback
-        assert "TEST_VAR" in result
-        assert result["TEST_VAR"] is not None  # Falls back to encrypted value
+        # Should skip variables that fail decryption
+        assert "TEST_VAR" not in result
+        assert result == {}
 
 
 async def test_create_generic_variable_with_fernet_signature_fails(service, session: AsyncSession):
