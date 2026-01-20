@@ -50,21 +50,24 @@ def format_token_event(chunk: str) -> str:
 
 
 def _build_event_string(step, attempt, max_attempts, message, error, class_name, component_code) -> str:
-    data: dict = {
-        "event": "progress",
-        "step": step,
-        "attempt": attempt,
-        "max_attempts": max_attempts,
-    }
+    parts = [
+        '{"event": "progress", "step": ',
+        str(step),
+        ', "attempt": ',
+        str(attempt),
+        ', "max_attempts": ',
+        str(max_attempts),
+    ]
     if message:
-        data["message"] = message
+        parts.extend([', "message": ', json.dumps(message)])
     if error:
-        data["error"] = error
+        parts.extend([', "error": ', json.dumps(error)])
     if class_name:
-        data["class_name"] = class_name
+        parts.extend([', "class_name": ', json.dumps(class_name)])
     if component_code:
-        data["component_code"] = component_code
-    return f"data: {json.dumps(data)}\n\n"
+        parts.extend([', "component_code": ', json.dumps(component_code)])
+    parts.append("}")
+    return f"data: {''.join(parts)}\n\n"
 
 
 @lru_cache(maxsize=2048)
