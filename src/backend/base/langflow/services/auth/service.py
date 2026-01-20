@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import json
 import random
 import warnings
 from collections.abc import Coroutine
@@ -453,6 +454,24 @@ class AuthService(AuthServiceBase):
             python-jose's jwt.get_unverified_claims(). The signature is intentionally
             not verified as this is a utility function, not an authentication function.
         """
+        # Fast-path manual extraction for common str/bytes tokens to avoid full jwt.decode
+        # which performs heavyweight verification/algorithm logic even when verify_signature=False.
+        if isinstance(token, (str, bytes, bytearray)):
+            try:
+                # Split without decoding when bytes to avoid unnecessary conversions
+                parts = token.split(b".") if isinstance(token, (bytes, bytearray)) else token.split(".")
+                # Require at least header and payload
+                if len(parts) < 2:
+                    raise ValueError("Invalid token format")
+                payload_b64 = parts[1]
+                # Use PyJWT's utility to handle base64url padding and decoding
+                payload_bytes = jwt.utils.base64url_decode(payload_b64)
+                claims = json.loads(payload_bytes)
+                user_id = claims["sub"]
+                return UUID(user_id)
+            except (KeyError, InvalidTokenError, ValueError):
+                return UUID(int=0)
+        # Fallback to original behavior for other types to preserve exception behavior exactly
         try:
             claims = jwt.decode(token, options={"verify_signature": False})
             user_id = claims["sub"]
