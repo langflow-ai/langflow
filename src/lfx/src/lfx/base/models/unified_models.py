@@ -58,31 +58,45 @@ def get_embedding_classes():
 
 @lru_cache(maxsize=1)
 def get_model_provider_metadata():
+    """Get complete provider metadata including model class, API key param, and extra params."""
     return {
         "OpenAI": {
             "icon": "OpenAI",
             "variable_name": "OPENAI_API_KEY",
-            "api_docs_url": "https://platform.openai.com/docs/overview",
+            "model_class": "ChatOpenAI",
+            "api_key_param": "api_key",
+            "model_name_param": "model",
         },
         "Anthropic": {
             "icon": "Anthropic",
             "variable_name": "ANTHROPIC_API_KEY",
-            "api_docs_url": "https://console.anthropic.com/docs",
+            "model_class": "ChatAnthropic",
+            "api_key_param": "api_key",
+            "model_name_param": "model",
         },
         "Google Generative AI": {
             "icon": "GoogleGenerativeAI",
             "variable_name": "GOOGLE_API_KEY",
-            "api_docs_url": "https://aistudio.google.com/app/apikey",
+            "model_class": "ChatGoogleGenerativeAIFixed",
+            "api_key_param": "google_api_key",
+            "model_name_param": "model",
         },
         "Ollama": {
             "icon": "Ollama",
             "variable_name": "OLLAMA_BASE_URL",
-            "api_docs_url": "https://ollama.com/",
+            "model_class": "ChatOllama",
+            "api_key_param": "base_url",
+            "model_name_param": "model",
+            "base_url_param": "base_url",
         },
         "IBM WatsonX": {
-            "icon": "IBM",
+            "icon": "WatsonxAI",
             "variable_name": "WATSONX_APIKEY",
-            "api_docs_url": "https://www.ibm.com/products/watsonx",
+            "model_class": "ChatWatsonx",
+            "api_key_param": "apikey",
+            "model_name_param": "model_id",
+            "url_param": "url",
+            "project_id_param": "project_id",
         },
     }
 
@@ -109,6 +123,25 @@ MODELS_DETAILED = get_models_detailed()
 @lru_cache(maxsize=1)
 def get_model_provider_variable_mapping() -> dict[str, str]:
     return {provider: meta["variable_name"] for provider, meta in model_provider_metadata.items()}
+
+
+def get_provider_config(provider: str) -> dict:
+    """Get complete provider configuration.
+
+    Args:
+        provider: Provider name (e.g., "OpenAI", "Anthropic")
+
+    Returns:
+        Dict with model_class, api_key_param, icon, variable_name, model_name_param, and extra params
+
+    Raises:
+        ValueError: If provider is unknown
+    """
+    if provider not in model_provider_metadata:
+        msg = f"Unknown provider: {provider}"
+        raise ValueError(msg)
+
+    return model_provider_metadata[provider].copy()
 
 
 def get_model_providers() -> list[str]:
@@ -1024,9 +1057,6 @@ def update_model_options_in_build_config(
         time_since_cache = time.time() - component.cache[cache_timestamp_key]
         cache_expired = time_since_cache > cache_ttl
 
-    # Check if is_refresh flag is set in build_config (from frontend refresh request)
-    is_refresh_request = build_config.get("is_refresh", False)
-
     # Check if we need to refresh
     should_refresh = (
         field_name == "api_key"  # API key changed
@@ -1034,7 +1064,6 @@ def update_model_options_in_build_config(
         or field_name == "model"  # Model field refresh button clicked
         or cache_key not in component.cache  # Cache miss
         or cache_expired  # Cache expired
-        or is_refresh_request  # Frontend requested a refresh
     )
 
     if should_refresh:
@@ -1054,13 +1083,9 @@ def update_model_options_in_build_config(
     cached = component.cache.get(cache_key, {"options": []})
     build_config["model"]["options"] = cached["options"]
 
-    # Set default value on initial load when model field is empty
-    # Only set default when: initial load (field_name is None) or model field is being set and is empty
-    # Get the current model value to check if it's empty
-    current_model_value = build_config.get("model", {}).get("value")
-    model_is_empty = not current_model_value
-    should_set_default = field_name is None or (field_name == "model" and model_is_empty)
-    if should_set_default:
+    # Set default value on initial load when field is empty
+    # Fetch from user's default model setting in the database
+    if not field_value or field_value == "":
         options = cached.get("options", [])
         if options:
             # Determine model type based on cache_key_prefix
