@@ -227,13 +227,11 @@ class DatabaseVariableService(VariableService, Service):
                 try:
                     decrypted_value = auth_utils.decrypt_api_key(var.value, settings_service=self.settings_service)
                 except Exception as e:  # noqa: BLE001
-                    await logger.adebug(f"Decryption failed for variable '{var.name}': {e}. Using encrypted value as fallback.")
-                    result[var.name] = var.value
+                    await logger.awarning(f"Decryption failed for variable '{var.name}': {e}. Skipping")
                     continue
 
                 if not decrypted_value:
-                    await logger.adebug(f"Decryption returned empty for variable '{var.name}'. Using encrypted value as fallback.")
-                    result[var.name] = var.value
+                    await logger.awarning(f"Decryption returned empty for variable '{var.name}'. Skipping")
                     continue
 
                 result[var.name] = decrypted_value
