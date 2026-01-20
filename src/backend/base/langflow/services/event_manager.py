@@ -7,11 +7,15 @@ When a UI is connected via SSE, it receives real-time build events.
 from __future__ import annotations
 
 import asyncio
+import json
 import time
 from collections import defaultdict
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from loguru import logger
+
+if TYPE_CHECKING:
+    from lfx.events.event_manager import EventManager
 
 # Constants
 SSE_QUEUE_MAX_SIZE = 100
@@ -166,3 +170,81 @@ def get_webhook_event_manager() -> WebhookEventManager:
 
 # Backwards compatibility alias
 webhook_event_manager = get_webhook_event_manager()
+
+
+class WebhookForwardingQueue:
+    """Queue adapter that forwards events to the webhook SSE.
+
+    This class implements the queue interface expected by EventManager,
+    forwarding events to connected SSE clients instead of storing them.
+    """
+
+    def __init__(self, flow_id: str, run_id: str | None = None):
+        self.flow_id = flow_id
+        self.run_id = run_id
+        self._manager = get_webhook_event_manager()
+
+    def put_nowait(self, item: tuple[str, bytes, float]) -> None:
+        """Forward event to webhook SSE.
+
+        Args:
+            item: Tuple of (event_id, data_bytes, timestamp) from EventManager
+        """
+        _event_id, data_bytes, _timestamp = item
+        try:
+            data_str = data_bytes.decode("utf-8").strip()
+            if not data_str:
+                return
+
+            event_data = json.loads(data_str)
+            event_type = event_data.get("event")
+            event_payload = event_data.get("data", {})
+
+            if self.run_id and isinstance(event_payload, dict):
+                event_payload["run_id"] = self.run_id
+
+            self._emit_async(event_type, event_payload)
+        except Exception as exc:  # noqa: BLE001
+            logger.debug(f"Failed to forward event to webhook SSE: flow_id={self.flow_id}, error={exc}")
+
+    def _emit_async(self, event_type: str, event_payload: Any) -> None:
+        """Emit event asynchronously (fire and forget)."""
+        try:
+            loop = asyncio.get_running_loop()
+            task = loop.create_task(self._manager.emit(self.flow_id, event_type, event_payload))
+            # Suppress exceptions from fire-and-forget task
+            task.add_done_callback(lambda t: t.exception() if not t.cancelled() else None)
+        except RuntimeError:
+            pass  # No running loop
+
+
+def create_webhook_event_manager(flow_id: str, run_id: str | None = None) -> EventManager:
+    """Create an EventManager that forwards events to the webhook SSE.
+
+    This allows webhook execution to emit real-time build events
+    (end_vertex with build_data, build_start, etc.) to connected UI clients.
+
+    Args:
+        flow_id: The flow ID to emit events for
+        run_id: Optional run ID to include in events
+
+    Returns:
+        EventManager configured to forward events to webhook SSE
+    """
+    from lfx.events.event_manager import EventManager
+
+    queue = WebhookForwardingQueue(flow_id, run_id)
+    manager = EventManager(queue)
+
+    # Register all standard events
+    manager.register_event("on_token", "token")
+    manager.register_event("on_vertices_sorted", "vertices_sorted")
+    manager.register_event("on_error", "error")
+    manager.register_event("on_end", "end")
+    manager.register_event("on_message", "add_message")
+    manager.register_event("on_remove_message", "remove_message")
+    manager.register_event("on_end_vertex", "end_vertex")
+    manager.register_event("on_build_start", "build_start")
+    manager.register_event("on_build_end", "build_end")
+
+    return manager

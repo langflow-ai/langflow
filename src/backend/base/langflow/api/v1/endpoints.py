@@ -45,13 +45,18 @@ from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
 from langflow.interface.initialize.loading import update_params_with_load_from_db_fields
 from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.schema.graph import Tweaks
-from langflow.services.auth.utils import api_key_security, get_current_active_user, get_webhook_user
+from langflow.services.auth.utils import (
+    api_key_security,
+    get_current_active_user,
+    get_current_user_for_sse,
+    get_webhook_user,
+)
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import get_session_service, get_settings_service, get_telemetry_service
-from langflow.services.event_manager import webhook_event_manager
+from langflow.services.event_manager import create_webhook_event_manager, webhook_event_manager
 from langflow.services.telemetry.schema import RunPayload
 from langflow.utils.compression import compress_response
 from langflow.utils.version import get_version_info
@@ -236,6 +241,14 @@ async def simple_run_flow_task(
     """
     should_emit = emit_events and flow_id
 
+    # Create an EventManager that forwards events to webhook SSE if we should emit
+    webhook_em = None
+    if should_emit and event_manager is None:
+        webhook_em = create_webhook_event_manager(flow_id, run_id)
+
+    # Use provided event_manager or the webhook one
+    effective_event_manager = event_manager or webhook_em
+
     try:
         if should_emit:
             vertex_ids = _get_vertex_ids_from_flow(flow)
@@ -250,7 +263,7 @@ async def simple_run_flow_task(
             input_request=input_request,
             stream=stream,
             api_key_user=api_key_user,
-            event_manager=event_manager,
+            event_manager=effective_event_manager,
             run_id=run_id,
         )
 
@@ -655,7 +668,7 @@ async def simplified_run_flow_session(
 
 @router.get("/webhook-events/{flow_id_or_name}")
 async def webhook_events_stream(
-    flow_id_or_name: str,
+    flow_id_or_name: str,  # noqa: ARG001 - Used by get_flow_by_id_or_endpoint_name dependency
     flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
     request: Request,
 ):
@@ -664,9 +677,18 @@ async def webhook_events_stream(
     When a flow is open in the UI, this endpoint provides live feedback
     of webhook execution progress, similar to clicking "Play" in the UI.
 
-    Note: Authentication is handled by get_flow_by_id_or_endpoint_name which
-    validates the user has access to the flow.
+    Authentication: Requires user to be logged in (via cookie) or provide API key.
+    The user must own the flow to subscribe to its events.
     """
+    # Authenticate user via cookie or API key
+    user = await get_current_user_for_sse(request)
+
+    # Verify user owns the flow
+    if str(flow.user_id) != str(user.id):
+        raise HTTPException(
+            status_code=HTTPStatus.FORBIDDEN,
+            detail="Access denied: You can only subscribe to events for flows you own",
+        )
 
     async def event_generator() -> AsyncGenerator[str, None]:
         """Generate SSE events from the webhook event manager."""

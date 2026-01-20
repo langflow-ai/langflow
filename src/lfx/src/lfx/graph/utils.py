@@ -158,10 +158,18 @@ async def emit_vertex_build_event(
 
         duration = webhook_event_manager.get_build_duration(flow_id_str, vertex_id)
 
-        results = serialize_for_json(data_dict.get("results")) if isinstance(data_dict, dict) else {}
-        outputs = serialize_for_json(data_dict.get("outputs")) if isinstance(data_dict, dict) else {}
-        logs = serialize_for_json(data_dict.get("logs")) if isinstance(data_dict, dict) else {}
-        messages = serialize_for_json(data_dict.get("messages")) if isinstance(data_dict, dict) else []
+        # Convert Pydantic model to dict if necessary
+        if hasattr(data_dict, "model_dump"):
+            data_as_dict = data_dict.model_dump()
+        elif isinstance(data_dict, dict):
+            data_as_dict = data_dict
+        else:
+            data_as_dict = {}
+
+        results = serialize_for_json(data_as_dict.get("results", {}))
+        outputs = serialize_for_json(data_as_dict.get("outputs", {}))
+        logs = serialize_for_json(data_as_dict.get("logs", {}))
+        messages = serialize_for_json(data_as_dict.get("messages", []))
 
         vertex_data = {
             "results": results,

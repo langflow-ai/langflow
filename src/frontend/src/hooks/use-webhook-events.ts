@@ -131,8 +131,12 @@ export function useWebhookEvents() {
       sseUrl += `?x-api-key=${encodeURIComponent(apiKey)}`;
     }
 
-    const eventSource = new EventSource(sseUrl);
+    const eventSource = new EventSource(sseUrl, { withCredentials: true });
     eventSourceRef.current = eventSource;
+
+    eventSource.onerror = () => {
+      // SSE connection error - handled silently
+    };
 
     eventSource.addEventListener(SSE_EVENTS.VERTICES_SORTED, handleVerticesSorted);
     eventSource.addEventListener(SSE_EVENTS.BUILD_START, handleBuildStart);
