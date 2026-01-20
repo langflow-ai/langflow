@@ -665,7 +665,7 @@ async def _update_existing_flow(
     for key, value in update_data.items():
         setattr(existing_flow, key, value)
 
-    webhook_component = get_webhook_component_in_flow(existing_flow.data)
+    webhook_component = get_webhook_component_in_flow(existing_flow.data or {})
     existing_flow.webhook = webhook_component is not None
     existing_flow.updated_at = datetime.now(timezone.utc)
 
