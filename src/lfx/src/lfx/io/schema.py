@@ -17,7 +17,7 @@ from lfx.schema.dotdict import dotdict
 
 # Maximum number of options to include as enum in tool schemas.
 # Dropdowns with more options will use string type with default value instead,
-# avoiding token waste when sending tool schemas to LLMs (see issue #8226).
+# avoiding token waste when sending tool schemas to LLMs.
 MAX_OPTIONS_FOR_TOOL_ENUM = 50
 
 _convert_field_type_to_type: dict[FieldTypes, type] = {
