@@ -193,14 +193,6 @@ def get_text_columns(df: pd.DataFrame, schema_data: list | None = None) -> list[
     return [col for col in df.columns if df[col].dtype == "object"]
 
 
-def _to_int(value) -> int:
-    """Convert a pandas/numpy scalar to int, handling both old and new pandas versions."""
-    # Newer pandas returns native Python types, older versions return numpy scalars with .item()
-    if hasattr(value, "item"):
-        return int(value.item())
-    return int(value)
-
-
 def calculate_text_metrics(df: pd.DataFrame, text_columns: list[str]) -> tuple[int, int]:
     """Calculate total words and characters from text columns."""
     total_words = 0
@@ -211,8 +203,8 @@ def calculate_text_metrics(df: pd.DataFrame, text_columns: list[str]) -> tuple[i
             continue
 
         text_series = df[col].astype(str).fillna("")
-        total_characters += _to_int(text_series.str.len().sum())
-        total_words += _to_int(text_series.str.split().str.len().sum())
+        total_characters += int(text_series.str.len().sum())
+        total_words += int(text_series.str.split().str.len().sum())
 
     return total_words, total_characters
 
