@@ -6,6 +6,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from lfx.base.agents.utils import safe_cache_get, safe_cache_set
 from lfx.base.mcp.util import update_tools
+from pydantic import BaseModel
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v2.files import (
@@ -23,6 +24,19 @@ from langflow.services.settings.service import SettingsService
 from langflow.services.storage.service import StorageService
 
 router = APIRouter(tags=["MCP"], prefix="/mcp")
+
+
+class MCPServerConfig(BaseModel):
+    """Pydantic model for MCP server configuration."""
+
+    command: str | None = None
+    args: list[str] | None = None
+    env: dict[str, str] | None = None
+    headers: dict[str, str] | None = None
+    url: str | None = None
+
+    class Config:
+        extra = "allow"  # Allow additional fields for flexibility
 
 
 async def upload_server_config(
@@ -290,7 +304,7 @@ async def update_server(
 @router.post("/servers/{server_name}")
 async def add_server(
     server_name: str,
-    server_config: dict,
+    server_config: MCPServerConfig,
     current_user: CurrentActiveUser,
     session: DbSession,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
@@ -298,7 +312,7 @@ async def add_server(
 ):
     return await update_server(
         server_name,
-        server_config,
+        server_config.model_dump(exclude_none=True),
         current_user,
         session,
         storage_service,
@@ -310,7 +324,7 @@ async def add_server(
 @router.patch("/servers/{server_name}")
 async def update_server_endpoint(
     server_name: str,
-    server_config: dict,
+    server_config: MCPServerConfig,
     current_user: CurrentActiveUser,
     session: DbSession,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
@@ -318,7 +332,7 @@ async def update_server_endpoint(
 ):
     return await update_server(
         server_name,
-        server_config,
+        server_config.model_dump(exclude_none=True),
         current_user,
         session,
         storage_service,
