@@ -270,6 +270,14 @@ async def _new_flow(
                 db_flow.folder_id = default_folder.id
 
         session.add(db_flow)
+
+        # Persist and refresh
+        await session.flush()
+        await session.refresh(db_flow)
+        await _save_flow_to_fs(db_flow, user_id, storage_service)
+
+        # Convert to FlowRead while session is still active
+        return FlowRead.model_validate(db_flow, from_attributes=True)
     except Exception as e:
         # If it is a validation error, return the error message
         if hasattr(e, "errors"):
@@ -277,8 +285,6 @@ async def _new_flow(
         if isinstance(e, HTTPException):
             raise
         raise HTTPException(status_code=500, detail=str(e)) from e
-
-    return db_flow
 
 
 @router.post("/", response_model=FlowRead, status_code=201)
@@ -290,13 +296,7 @@ async def create_flow(
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     try:
-        db_flow = await _new_flow(session=session, flow=flow, user_id=current_user.id, storage_service=storage_service)
-        await session.flush()
-        await session.refresh(db_flow)
-        await _save_flow_to_fs(db_flow, current_user.id, storage_service)
-
-        # Convert to FlowRead while session is still active to avoid detached instance errors
-        flow_read = FlowRead.model_validate(db_flow, from_attributes=True)
+        return await _new_flow(session=session, flow=flow, user_id=current_user.id, storage_service=storage_service)
     except Exception as e:
         if "UNIQUE constraint failed" in str(e):
             # Get the name of the column that failed
@@ -312,7 +312,6 @@ async def create_flow(
         if isinstance(e, HTTPException):
             raise
         raise HTTPException(status_code=500, detail=str(e)) from e
-    return flow_read
 
 
 @router.get("/", response_model=list[FlowRead] | Page[FlowRead] | list[FlowHeader], status_code=200)
@@ -534,7 +533,7 @@ async def upsert_flow(
 
     - If the flow doesn't exist: creates it with the specified ID
     - If the flow exists and belongs to the current user: updates it
-    - If the flow exists but belongs to another user: returns 403
+    - If the flow exists but belongs to another user: returns 404
 
     Returns 201 for creation, 200 for update.
     """
@@ -557,25 +556,21 @@ async def upsert_flow(
                 current_user=current_user,
                 storage_service=storage_service,
             )
-            return JSONResponse(status_code=200, content=jsonable_encoder(flow_read))
+            status_code = 200
+        else:
+            # CREATE path - flow doesn't exist
+            flow_read = await _new_flow(
+                session=session,
+                flow=flow,
+                user_id=current_user.id,
+                storage_service=storage_service,
+                flow_id=flow_id,
+                fail_on_endpoint_conflict=True,
+                validate_folder=True,
+            )
+            status_code = 201
 
-        # CREATE path - flow doesn't exist
-        db_flow = await _new_flow(
-            session=session,
-            flow=flow,
-            user_id=current_user.id,
-            storage_service=storage_service,
-            flow_id=flow_id,
-            fail_on_endpoint_conflict=True,
-            validate_folder=True,
-        )
-
-        await session.flush()
-        await session.refresh(db_flow)
-        await _save_flow_to_fs(db_flow, current_user.id, storage_service)
-
-        flow_read = FlowRead.model_validate(db_flow, from_attributes=True)
-        return JSONResponse(status_code=201, content=jsonable_encoder(flow_read))
+        return JSONResponse(status_code=status_code, content=jsonable_encoder(flow_read))
 
     except HTTPException:
         raise
