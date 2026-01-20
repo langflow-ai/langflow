@@ -75,13 +75,15 @@ def inject_model_into_flow(
         if extra_param in provider_config:
             metadata[extra_param] = provider_config[extra_param]
 
-    model_value = [{
-        "category": provider,
-        "icon": provider_config["icon"],
-        "metadata": metadata,
-        "name": model_name,
-        "provider": provider,
-    }]
+    model_value = [
+        {
+            "category": provider,
+            "icon": provider_config["icon"],
+            "metadata": metadata,
+            "name": model_name,
+            "provider": provider,
+        }
+    ]
 
     # Inject into all Agent nodes
     for node in flow_data.get("data", {}).get("nodes", []):
@@ -258,9 +260,7 @@ async def execute_flow_file_streaming(
         logger.error(f"Flow preparation error: {e}")
         raise HTTPException(status_code=500, detail=f"Error preparing flow: {e}") from e
 
-    event_queue: asyncio.Queue[tuple[str, bytes, float] | None] = asyncio.Queue(
-        maxsize=STREAMING_QUEUE_MAX_SIZE
-    )
+    event_queue: asyncio.Queue[tuple[str, bytes, float] | None] = asyncio.Queue(maxsize=STREAMING_QUEUE_MAX_SIZE)
     event_manager = create_default_event_manager(event_queue)
     execution_result = FlowExecutionResult()
 
@@ -290,8 +290,7 @@ async def execute_flow_file_streaming(
 
     if execution_result.has_error:
         raise HTTPException(
-            status_code=500,
-            detail=f"Error executing flow: {execution_result.error}"
+            status_code=500, detail=f"Error executing flow: {execution_result.error}"
         ) from execution_result.error
 
     yield ("end", execution_result.result if execution_result.has_result else {})
@@ -303,10 +302,7 @@ async def _consume_streaming_events(
     """Consume events from queue and yield parsed token events."""
     while True:
         try:
-            event = await asyncio.wait_for(
-                event_queue.get(),
-                timeout=STREAMING_EVENT_TIMEOUT_SECONDS
-            )
+            event = await asyncio.wait_for(event_queue.get(), timeout=STREAMING_EVENT_TIMEOUT_SECONDS)
         except asyncio.TimeoutError:
             logger.warning("Event queue timeout - flow may be stuck")
             break

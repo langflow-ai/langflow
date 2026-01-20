@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = ">=3.10, <3.14"
 resolution-markers = [
     "python_full_version >= '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
@@ -5636,6 +5636,7 @@ dependencies = [
     { name = "lark" },
     { name = "litellm" },
     { name = "markdown" },
+    { name = "markitdown" },
     { name = "markupsafe" },
     { name = "mcp" },
     { name = "mem0ai" },
@@ -5852,6 +5853,7 @@ requires-dist = [
     { name = "litellm", specifier = ">=1.60.2,<2.0.0" },
     { name = "llama-cpp-python", marker = "extra == 'local'", specifier = "~=0.2.0" },
     { name = "markdown", specifier = "==3.7" },
+    { name = "markitdown", specifier = ">=0.1.4" },
     { name = "markupsafe", specifier = "==3.0.2" },
     { name = "mcp", specifier = ">=1.17.0,<2.0.0" },
     { name = "mem0ai", specifier = "==0.1.34" },

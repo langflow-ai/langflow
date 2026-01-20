@@ -123,22 +123,26 @@ async def check_assistant_config(
                 is_not_supported = metadata.get("not_supported", False)
 
                 if not is_deprecated and not is_not_supported:
-                    model_list.append({
-                        "name": model_name,
-                        "display_name": display_name,
-                    })
+                    model_list.append(
+                        {
+                            "name": model_name,
+                            "display_name": display_name,
+                        }
+                    )
 
             default_model = DEFAULT_MODELS.get(provider_name)
             if not default_model and model_list:
                 default_model = model_list[0]["name"]
 
             if model_list:
-                all_providers.append({
-                    "name": provider_name,
-                    "configured": True,
-                    "default_model": default_model,
-                    "models": model_list,
-                })
+                all_providers.append(
+                    {
+                        "name": provider_name,
+                        "configured": True,
+                        "default_model": default_model,
+                        "models": model_list,
+                    }
+                )
 
     default_provider = None
     default_model = None

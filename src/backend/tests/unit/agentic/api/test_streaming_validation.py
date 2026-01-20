@@ -149,9 +149,7 @@ class TestStreamingValidationFlow:
     @pytest.mark.asyncio
     async def test_valid_code_first_try_returns_validated(self):
         """When code is valid on first try, should return validated=True."""
-        mock_flow_result = {
-            "result": f"Here is your component:\n\n```python\n{VALID_COMPONENT_CODE}\n```"
-        }
+        mock_flow_result = {"result": f"Here is your component:\n\n```python\n{VALID_COMPONENT_CODE}\n```"}
 
         with patch(
             "langflow.agentic.services.assistant_service.execute_flow_file",
@@ -193,12 +191,8 @@ class TestStreamingValidationFlow:
     @pytest.mark.asyncio
     async def test_invalid_code_retries_until_success(self):
         """When code is invalid, should retry with error context until valid."""
-        invalid_response = {
-            "result": f"```python\n{INVALID_COMPONENT_CODE}\n```"
-        }
-        valid_response = {
-            "result": f"```python\n{VALID_COMPONENT_CODE}\n```"
-        }
+        invalid_response = {"result": f"```python\n{INVALID_COMPONENT_CODE}\n```"}
+        valid_response = {"result": f"```python\n{VALID_COMPONENT_CODE}\n```"}
 
         # First call returns invalid, second returns valid
         call_count = 0
@@ -243,9 +237,7 @@ class TestStreamingValidationFlow:
     @pytest.mark.asyncio
     async def test_all_retries_fail_returns_validation_error(self):
         """When all retries fail, should return validated=False with error."""
-        invalid_response = {
-            "result": f"```python\n{INVALID_COMPONENT_CODE}\n```"
-        }
+        invalid_response = {"result": f"```python\n{INVALID_COMPONENT_CODE}\n```"}
 
         with patch(
             "langflow.agentic.services.assistant_service.execute_flow_file",
@@ -277,9 +269,7 @@ class TestStreamingValidationFlow:
     @pytest.mark.asyncio
     async def test_no_code_in_response_returns_as_is(self):
         """When response has no code, should return without validation."""
-        text_only_response = {
-            "result": "Langflow is a visual flow builder for LLM applications."
-        }
+        text_only_response = {"result": "Langflow is a visual flow builder for LLM applications."}
 
         with patch(
             "langflow.agentic.services.assistant_service.execute_flow_file",
@@ -342,21 +332,12 @@ class TestValidationRetryBehavior:
     @pytest.mark.asyncio
     async def test_retry_includes_previous_error_in_prompt(self):
         """When retrying, should include the validation error in the new prompt."""
-        invalid_response = {
-            "result": f"```python\n{INVALID_COMPONENT_CODE}\n```"
-        }
-        valid_response = {
-            "result": f"```python\n{VALID_COMPONENT_CODE}\n```"
-        }
+        invalid_response = {"result": f"```python\n{INVALID_COMPONENT_CODE}\n```"}
+        valid_response = {"result": f"```python\n{VALID_COMPONENT_CODE}\n```"}
 
         captured_inputs = []
 
-        async def mock_execute_flow(
-            flow_filename,
-            input_value,
-            global_variables,
-            **kwargs
-        ):
+        async def mock_execute_flow(flow_filename, input_value, global_variables, **kwargs):
             captured_inputs.append(input_value)
             if len(captured_inputs) == 1:
                 return invalid_response
@@ -394,9 +375,7 @@ class TestNonStreamingValidation:
     @pytest.mark.asyncio
     async def test_non_streaming_valid_code_returns_validated(self):
         """Non-streaming validation should work the same as streaming."""
-        mock_flow_result = {
-            "result": f"```python\n{VALID_COMPONENT_CODE}\n```"
-        }
+        mock_flow_result = {"result": f"```python\n{VALID_COMPONENT_CODE}\n```"}
 
         with patch(
             "langflow.agentic.services.assistant_service.execute_flow_file",
@@ -417,12 +396,8 @@ class TestNonStreamingValidation:
     @pytest.mark.asyncio
     async def test_non_streaming_retries_on_failure(self):
         """Non-streaming should retry until valid code is generated."""
-        invalid_response = {
-            "result": f"```python\n{INVALID_COMPONENT_CODE}\n```"
-        }
-        valid_response = {
-            "result": f"```python\n{VALID_COMPONENT_CODE}\n```"
-        }
+        invalid_response = {"result": f"```python\n{INVALID_COMPONENT_CODE}\n```"}
+        valid_response = {"result": f"```python\n{VALID_COMPONENT_CODE}\n```"}
 
         call_count = 0
 
@@ -450,9 +425,7 @@ class TestNonStreamingValidation:
     @pytest.mark.asyncio
     async def test_non_streaming_max_retries_returns_error(self):
         """After max retries, should return validation error."""
-        invalid_response = {
-            "result": f"```python\n{INVALID_COMPONENT_CODE}\n```"
-        }
+        invalid_response = {"result": f"```python\n{INVALID_COMPONENT_CODE}\n```"}
 
         with patch(
             "langflow.agentic.services.assistant_service.execute_flow_file",
@@ -551,9 +524,7 @@ This component will process your input."""
     @pytest.mark.asyncio
     async def test_complete_event_includes_component_code(self):
         """Complete event should include the extracted component_code field."""
-        mock_flow_result = {
-            "result": f"```python\n{VALID_COMPONENT_CODE}\n```"
-        }
+        mock_flow_result = {"result": f"```python\n{VALID_COMPONENT_CODE}\n```"}
 
         with patch(
             "langflow.agentic.services.assistant_service.execute_flow_file",
@@ -581,9 +552,7 @@ This component will process your input."""
     @pytest.mark.asyncio
     async def test_validation_failure_includes_component_code(self):
         """When validation fails, should still include the attempted code."""
-        invalid_response = {
-            "result": f"```python\n{INVALID_COMPONENT_CODE}\n```"
-        }
+        invalid_response = {"result": f"```python\n{INVALID_COMPONENT_CODE}\n```"}
 
         with patch(
             "langflow.agentic.services.assistant_service.execute_flow_file",
@@ -715,9 +684,7 @@ Here's the implementation:
 ```python
 {CUTOFF_COMPONENT_CODE}"""
         }
-        valid_response = {
-            "result": f"```python\n{VALID_COMPONENT_CODE}\n```"
-        }
+        valid_response = {"result": f"```python\n{VALID_COMPONENT_CODE}\n```"}
 
         call_count = 0
 
