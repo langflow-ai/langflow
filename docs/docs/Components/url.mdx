@@ -43,7 +43,7 @@ There are two settings that control the output of the **URL** component at diffe
 * **Output data type**: In the component's output field (near the output port) you can select the structure of the outgoing data when it is passed to other components:
 
     * **Extracted Pages**: Outputs a [`DataFrame`](/data-types#dataframe) that breaks the crawled pages into columns for the entire page content (`text`) and metadata like `url` and `title`.
-    * **Raw Content**: Outputs a [`Message`](/data-types#message) containing the entire text, markdown, or HTML from the crawled pages, including metadata, in a single block of text.
+    * **Raw Content**: Outputs a [`Message`](/data-types#message) containing the entire text, Markdown, or HTML from the crawled pages, including metadata, in a single block of text.
 
 When used as a standard component in a flow, the **URL** component must be connected to a component that accepts the selected output data type (`DataFrame` or `Message`).
 You can connect the **URL** component directly to a compatible component, or you can use a [**Type Convert** component](/type-convert) to convert the output to another type before passing the data to other components if the data types aren't directly compatible.
