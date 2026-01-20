@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
+import LangflowLogo from "@/assets/LangflowLogoColor.svg?react";
 import {
   Select,
   SelectContent,
@@ -59,12 +60,9 @@ export const TerminalHeader = ({
     <div className="flex items-center justify-between border-b border-border bg-background px-4 py-2">
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
-          <ForwardedIconComponent
-            name="Sparkles"
-            className="h-4 w-4 text-accent-emerald-foreground"
-          />
+          <LangflowLogo className="h-4 w-4" />
           <span className="font-mono text-sm font-medium text-foreground">
-            Assistant
+            AI Console
           </span>
         </div>
       </div>

@@ -20,6 +20,7 @@ import {
   RESIZE_HANDLE_HEIGHT,
   TEXTAREA_MAX_HEIGHT,
   SCROLL_BOTTOM_THRESHOLD,
+  STOPPED_VARIANTS,
 } from "./assistant.constants";
 import type {
   AssistantTerminalProps,
@@ -30,6 +31,7 @@ import { getHistory, saveToHistory } from "./helpers/history";
 import { categorizeError } from "./helpers/error-categorizer";
 import { parseCommand } from "./helpers/command-parser";
 import { getStepConfig } from "./helpers/step-config";
+import { getLoadingText } from "./helpers/loading-text";
 import { TerminalHeader } from "./components/terminal-header";
 import { MessageLine } from "./components/message-line";
 import { LoadingIndicator } from "./components/loading-indicator";
@@ -39,6 +41,7 @@ const AssistantTerminal = ({
   isOpen,
   onClose,
   onSubmit,
+  onStop,
   onAddToCanvas,
   isLoading = false,
   maxRetries,
@@ -61,6 +64,7 @@ const AssistantTerminal = ({
   const [height, setHeight] = useState(TERMINAL_DEFAULT_HEIGHT);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [progress, setProgress] = useState<ProgressInfo>(null);
+  const [loadingText, setLoadingText] = useState<string | null>(null);
 
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -73,7 +77,7 @@ const AssistantTerminal = ({
         id: nanoid(),
         type: "system",
         content:
-          "Welcome to Assistant. Ask about Langflow documentation or describe a custom component to generate. Type HELP for commands.",
+          "Welcome to AI Console. Ask about Langflow documentation or describe a custom component to generate.\n# Type HELP for commands.",
         timestamp: new Date(),
       },
     ],
@@ -251,6 +255,9 @@ const AssistantTerminal = ({
     try {
       const { provider, modelName } = getProviderAndModel();
 
+      // Set initial loading text (persists until validating/retrying)
+      setLoadingText(getLoadingText(null));
+
       const handleProgress = (p: {
         step: "generating" | "validating" | "generation_complete" | "extracting_code" | "validated" | "validation_failed" | "retrying";
         attempt: number;
@@ -262,8 +269,14 @@ const AssistantTerminal = ({
       }) => {
         setProgress(p);
 
-        // Skip extracting_code step - not shown in UI
-        if (p.step === "extracting_code") return;
+        // Update loading text only for validating/retrying steps
+        if (p.step === "validating" || p.step === "retrying") {
+          setLoadingText(getLoadingText(p));
+        }
+
+        // Only validated and validation_failed are added to history
+        // All other steps (generating, generation_complete, extracting_code, validating, retrying) are transient
+        if (p.step !== "validated" && p.step !== "validation_failed") return;
 
         // Add progress message to chat history
         const config = getStepConfig(p.step, p.attempt, p.maxAttempts, p.error);
@@ -272,7 +285,7 @@ const AssistantTerminal = ({
             step: p.step,
             icon: config.icon,
             color: config.color,
-            spin: false, // Don't spin for persisted messages
+            spin: config.spin, // Keep spin for retrying step
             attempt: p.attempt,
             maxAttempts: p.maxAttempts,
             error: p.error,
@@ -289,6 +302,7 @@ const AssistantTerminal = ({
         handleProgress,
       );
       setProgress(null);
+      setLoadingText(null);
 
       if (response.validated === true) {
         addMessageWithMetadata("validated", response.content, {
@@ -305,6 +319,15 @@ const AssistantTerminal = ({
       }
     } catch (error: unknown) {
       setProgress(null);
+      setLoadingText(null);
+
+      // Check if the error is an abort error (user clicked stop)
+      if (error instanceof DOMException && error.name === "AbortError") {
+        const stoppedMessage = STOPPED_VARIANTS[Math.floor(Math.random() * STOPPED_VARIANTS.length)];
+        addMessage("system", stoppedMessage);
+        return;
+      }
+
       let errorMessage = "An error occurred";
 
       const axiosError = error as {
@@ -480,7 +503,7 @@ const AssistantTerminal = ({
               className="h-full overflow-y-auto px-4 py-3"
               style={{ overflowAnchor: "none" }}
             >
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-2">
                 {messages.map((message) => (
                   <MessageLine
                     key={message.id}
@@ -488,7 +511,7 @@ const AssistantTerminal = ({
                     onAddToCanvas={onAddToCanvas}
                   />
                 ))}
-                {(isLoading || progress) && <LoadingIndicator />}
+                {isLoading && progress?.step !== "validated" && progress?.step !== "validation_failed" && loadingText && <LoadingIndicator text={loadingText} />}
               </div>
             </div>
           </div>
@@ -512,18 +535,30 @@ const AssistantTerminal = ({
                   "disabled:cursor-not-allowed disabled:opacity-50",
                 )}
               />
-              <Button
-                variant="ghost"
-                size="iconSm"
-                onClick={handleSubmit}
-                disabled={!inputValue.trim() || isLoading}
-                className="text-accent-emerald-foreground hover:bg-muted hover:text-accent-emerald-hover disabled:opacity-30"
-              >
-                <ForwardedIconComponent
-                  name={isLoading ? "Loader2" : "Send"}
-                  className={cn("h-4 w-4", isLoading && "animate-spin")}
-                />
-              </Button>
+              {isLoading ? (
+                <Button
+                  variant="ghost"
+                  size="iconSm"
+                  onClick={onStop}
+                  className="text-muted-foreground hover:bg-muted hover:text-destructive"
+                  title="Stop generation"
+                >
+                  <ForwardedIconComponent
+                    name="Square"
+                    className="h-3.5 w-3.5 fill-current"
+                  />
+                </Button>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="iconSm"
+                  onClick={handleSubmit}
+                  disabled={!inputValue.trim()}
+                  className="text-accent-emerald-foreground hover:bg-muted hover:text-accent-emerald-hover disabled:opacity-30"
+                >
+                  <ForwardedIconComponent name="Send" className="h-4 w-4" />
+                </Button>
+              )}
             </div>
           </div>
         </>

@@ -25,14 +25,25 @@ def _safe_extract_class_name(code: str) -> str | None:
 
 
 def validate_component_code(code: str) -> ValidationResult:
-    """Validate component code by attempting to create the class."""
+    """Validate component code by attempting to create and instantiate the class.
+
+    This instantiates the class to trigger __init__ validation checks,
+    such as overlapping input/output names.
+    """
     class_name = _safe_extract_class_name(code)
 
     try:
         if class_name is None:
             msg = "Could not extract class name from code"
             raise ValueError(msg)
-        create_class(code, class_name)
+
+        # create_class returns the class (not an instance)
+        component_class = create_class(code, class_name)
+
+        # Instantiate the class to trigger __init__ validation
+        # This catches errors like overlapping input/output names
+        component_class()
+
         return ValidationResult(is_valid=True, code=code, class_name=class_name)
     except (
         ValueError,

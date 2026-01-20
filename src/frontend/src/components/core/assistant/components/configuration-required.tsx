@@ -1,5 +1,6 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
+import LangflowLogo from "@/assets/LangflowLogoColor.svg?react";
 
 type ConfigurationRequiredProps = {
   onConfigureClick?: () => void;
@@ -24,12 +25,9 @@ export const ConfigurationRequired = ({
 }: ConfigurationRequiredProps) => (
   <div className="flex h-full flex-col items-center justify-center">
     <div className="flex flex-col items-center gap-2 text-center">
-      <ForwardedIconComponent
-        name="Bot"
-        className="h-6 w-6 text-accent-amber-foreground"
-      />
+      <LangflowLogo className="h-6 w-6" />
       <p className="text-sm text-foreground">
-        Configure a model provider to use the Assistant
+        Configure a model provider to use AI Console
       </p>
       {onConfigureClick && (
         <Button

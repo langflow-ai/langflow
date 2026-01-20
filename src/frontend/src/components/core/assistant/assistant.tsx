@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { postAssistantPromptStream } from "@/controllers/API/queries/assistant";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
@@ -55,6 +55,7 @@ const Assistant = memo(function Assistant() {
 
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const [isLoading, setIsLoading] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const { mutateAsync: validateComponentCode } = usePostValidateComponentCode();
   const navigate = useCustomNavigate();
   const addComponent = useAddComponent();
@@ -159,6 +160,9 @@ const Assistant = memo(function Assistant() {
         throw new Error("No flow selected. Please open a flow first.");
       }
 
+      // Create new AbortController for this request
+      abortControllerRef.current = new AbortController();
+
       setIsLoading(true);
       try {
         const response = await postAssistantPromptStream({
@@ -169,15 +173,25 @@ const Assistant = memo(function Assistant() {
           modelName,
           sessionId,
           onProgress,
+          abortSignal: abortControllerRef.current.signal,
         });
 
         return extractSubmitResult(response as AssistantPromptResponse);
       } finally {
         setIsLoading(false);
+        abortControllerRef.current = null;
       }
     },
     [currentFlowId, maxRetries, sessionId],
   );
+
+  const handleStop = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+      setIsLoading(false);
+    }
+  }, []);
 
   const handleAddToCanvas = useCallback(
     async (code: string) => {
@@ -196,6 +210,7 @@ const Assistant = memo(function Assistant() {
       isOpen={isTerminalOpen}
       onClose={handleCloseTerminal}
       onSubmit={handleSubmit}
+      onStop={handleStop}
       onAddToCanvas={handleAddToCanvas}
       isLoading={isLoading}
       maxRetries={maxRetries}

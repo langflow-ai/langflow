@@ -101,6 +101,7 @@ export type AssistantTerminalProps = {
     modelName?: string,
     onProgress?: (progress: ProgressState) => void,
   ) => Promise<SubmitResult>;
+  onStop: () => void;
   onAddToCanvas: (code: string) => Promise<void>;
   isLoading?: boolean;
   maxRetries: number;

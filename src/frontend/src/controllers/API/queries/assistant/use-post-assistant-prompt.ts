@@ -19,6 +19,7 @@ type AssistantPromptRequest = {
 
 type StreamingRequest = AssistantPromptRequest & {
   onProgress?: (progress: ProgressState) => void;
+  abortSignal?: AbortSignal;
 };
 
 type SSEEvent = {
@@ -67,17 +68,21 @@ export async function postAssistantPromptStream({
   modelName,
   sessionId,
   onProgress,
+  abortSignal,
 }: StreamingRequest): Promise<AssistantPromptResponse> {
-  const response = await fetchStreamingResponse({
-    flowId,
-    inputValue,
-    componentId,
-    fieldName,
-    maxRetries,
-    provider,
-    modelName,
-    sessionId,
-  });
+  const response = await fetchStreamingResponse(
+    {
+      flowId,
+      inputValue,
+      componentId,
+      fieldName,
+      maxRetries,
+      provider,
+      modelName,
+      sessionId,
+    },
+    abortSignal,
+  );
 
   const reader = response.body?.getReader();
   if (!reader) {
@@ -89,22 +94,24 @@ export async function postAssistantPromptStream({
 
 async function fetchStreamingResponse(
   request: AssistantPromptRequest,
+  abortSignal?: AbortSignal,
 ): Promise<Response> {
   const baseUrl = api.defaults.baseURL || "";
   const url = `${baseUrl}${getURL("ASSISTANT_PROMPT_STREAM")}`;
 
   const axiosHeaders = api.defaults.headers.common as Record<string, string>;
-  const authHeader = axiosHeaders?.Authorization
-    ? { Authorization: axiosHeaders.Authorization }
-    : {};
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (axiosHeaders?.Authorization) {
+    headers.Authorization = axiosHeaders.Authorization;
+  }
 
   const response = await fetch(url, {
     method: "POST",
-    headers: {
-      ...authHeader,
-      "Content-Type": "application/json",
-    },
+    headers,
     credentials: "include",
+    signal: abortSignal,
     body: JSON.stringify({
       flow_id: request.flowId,
       input_value: request.inputValue,
@@ -178,11 +185,11 @@ function processSSEEvent(
       throw new Error(event.message || "Unknown error");
     }
 
-    if (event.event === "progress" && onProgress && event.step && event.attempt && event.max_attempts) {
+    if (event.event === "progress" && onProgress && event.step) {
       onProgress({
         step: event.step,
-        attempt: event.attempt,
-        maxAttempts: event.max_attempts,
+        attempt: event.attempt ?? 1,
+        maxAttempts: event.max_attempts ?? 1,
         message: event.message,
         error: event.error,
         componentName: event.class_name,

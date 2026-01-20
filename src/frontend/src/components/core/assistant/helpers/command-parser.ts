@@ -21,7 +21,7 @@ export const parseCommand = (
   const upper = trimmed.toUpperCase();
 
   if (upper === "HELP" || upper === "?") {
-    return { handled: true, message: HELP_TEXT, type: "system" };
+    return { handled: true, message: HELP_TEXT, type: "output" };
   }
 
   if (upper === "CLEAR") {

@@ -6,6 +6,7 @@ import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { useAssistantStore } from "@/stores/assistantStore";
 import AddMcpServerModal from "@/modals/addMcpServerModal";
+import LangflowLogo from "@/assets/LangflowLogoColor.svg?react";
 
 const SidebarMenuButtons = ({
   customComponent,
@@ -71,12 +72,9 @@ const SidebarMenuButtons = ({
           data-testid="sidebar-assistant-button"
           className="flex items-center w-full h-full gap-3 hover:bg-muted"
         >
-          <ForwardedIconComponent
-            name="Sparkles"
-            className="h-4 w-4 text-muted-foreground"
-          />
+          <LangflowLogo className="h-4 w-4" />
           <span className="group-data-[state=open]/collapsible:font-semibold">
-            Assistant Console
+            AI Console
           </span>
         </Button>
       </SidebarMenuButton>

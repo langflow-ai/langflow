@@ -29,9 +29,49 @@ export const PROVIDER_ERROR_PATTERNS = [
 
 export const QUOTA_ERROR_PATTERNS = ["quota", "billing", "insufficient"];
 
-export const HELP_TEXT = `Available commands:
-  MAX_RETRIES=<0-5>  Set component validation retry attempts (only applies when generating components)
-  HELP or ?          Show this help message
-  CLEAR              Clear terminal history
+export const HELP_TEXT = `**Available commands:**
+
+**MAX_RETRIES=<0-5>** - Set component validation retry attempts (only applies when generating components)
+
+**HELP** or **?** - Show this help message
+
+**CLEAR** - Clear terminal history
 
 Ask questions about Langflow or describe a component to generate.`;
+
+export const LOADING_VARIANTS = [
+  "Thinking...",
+  "Processing...",
+  "Generating response...",
+  "Working on it...",
+  "Analyzing...",
+  "Preparing response...",
+  "On it...",
+  "Let me think...",
+  "Working...",
+  "Crafting response...",
+  "Computing...",
+  "Calculating...",
+  "Pondering...",
+  "Figuring out...",
+  "Running...",
+  "Crunching...",
+];
+
+export const VALIDATING_VARIANTS = [
+  "Validating component...",
+  "Checking component...",
+  "Analyzing code...",
+  "Verifying code...",
+  "Testing component...",
+  "Reviewing code...",
+];
+
+export const STOPPED_VARIANTS = [
+  "Generation stopped.",
+  "Stopped by user.",
+  "Cancelled.",
+  "Interrupted.",
+  "Aborted.",
+  "Stopped.",
+];

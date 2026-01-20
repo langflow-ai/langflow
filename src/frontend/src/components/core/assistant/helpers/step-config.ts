@@ -26,6 +26,17 @@ const GENERATING_VARIANTS = [
   "Crafting response...",
 ];
 
+const GENERATION_COMPLETE_VARIANTS = [
+  "Response ready",
+  "Done!",
+  "Here you go!",
+  "All set!",
+  "Ready!",
+  "Got it!",
+  "Complete!",
+  "Finished!",
+];
+
 const VALIDATING_VARIANTS = [
   "Validating component code...",
   "Checking component code...",
@@ -64,15 +75,15 @@ export const getStepConfig = (
   switch (step) {
     case "generating":
       return {
-        icon: "Sparkles",
+        icon: "Loader2",
         text: getRandomVariant(GENERATING_VARIANTS),
         color: "text-muted-foreground",
-        spin: false,
+        spin: true,
       };
     case "generation_complete":
       return {
         icon: "Check",
-        text: "Response ready",
+        text: getRandomVariant(GENERATION_COMPLETE_VARIANTS),
         color: "text-accent-emerald-foreground",
         spin: false,
       };
