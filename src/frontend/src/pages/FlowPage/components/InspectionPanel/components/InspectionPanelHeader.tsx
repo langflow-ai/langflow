@@ -61,6 +61,8 @@ export default function InspectionPanelHeader({
 
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
 
+  const hasDocs = (data.node?.documentation ?? "") !== "";
+
   const isCustomComponent = useMemo(() => {
     const isCustom = data.type === "CustomComponent" && !data.node?.edited;
     if (isCustom) {
@@ -78,6 +80,7 @@ export default function InspectionPanelHeader({
           </span>
         </div>
         <div className="flex items-center gap-0.5">
+          {hasDocs && (
           <ShadTooltip content="Documentation" side="left">
             <ToolbarButton
               icon="FileText"
@@ -88,6 +91,7 @@ export default function InspectionPanelHeader({
               dataTestId="docs-button-modal"
             />
           </ShadTooltip>
+          )}
           {hasCode && (
             <ShadTooltip content="View Code" side="left">
               <ToolbarButton
