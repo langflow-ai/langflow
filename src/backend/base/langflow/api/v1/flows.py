@@ -727,24 +727,18 @@ async def upload_file(
     """Upload flows from a file."""
     contents = await file.read()
     data = orjson.loads(contents)
-    response_list = []
     flow_list = FlowListCreate(**data) if "flows" in data else FlowListCreate(flows=[FlowCreate(**data)])
-    # Now we set the user_id for all flows
-    for flow in flow_list.flows:
-        flow.user_id = current_user.id
-        if folder_id:
-            flow.folder_id = folder_id
-        response = await _new_flow(session=session, flow=flow, user_id=current_user.id, storage_service=storage_service)
-        response_list.append(response)
 
     try:
-        await session.flush()
-        for db_flow in response_list:
-            await session.refresh(db_flow)
-            await _save_flow_to_fs(db_flow, current_user.id, storage_service)
-
-        # Convert to FlowRead while session is still active to avoid detached instance errors
-        flow_reads = [FlowRead.model_validate(db_flow, from_attributes=True) for db_flow in response_list]
+        flow_reads = []
+        for flow in flow_list.flows:
+            flow.user_id = current_user.id
+            if folder_id:
+                flow.folder_id = folder_id
+            flow_read = await _new_flow(
+                session=session, flow=flow, user_id=current_user.id, storage_service=storage_service
+            )
+            flow_reads.append(flow_read)
     except Exception as e:
         if "UNIQUE constraint failed" in str(e):
             # Get the name of the column that failed
