@@ -502,7 +502,7 @@ const NodeToolbarComponent = memo(
               dataTestId="edit-button-modal"
             />
           )}
-          {!hasToolMode && (
+          {(!hasToolMode || ENABLE_INSPECTION_PANEL) && (
             <ToolbarButton
               icon="FreezeAll"
               label="Freeze"
@@ -727,7 +727,7 @@ const NodeToolbarComponent = memo(
                     />
                   </SelectItem>
                 )}
-                {hasToolMode && (
+                {(hasToolMode && !ENABLE_INSPECTION_PANEL) && (
                   <SelectItem
                     value="freezeAll"
                     data-testid="freeze-all-button-modal"
