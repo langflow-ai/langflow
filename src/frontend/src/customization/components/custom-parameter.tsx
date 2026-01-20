@@ -78,7 +78,7 @@ export function getCustomParameterTitle({
     <div className={cn(isFlexView && "max-w-56 truncate")}>
       <span
         data-testid={`title-${title.toLocaleLowerCase()}`}
-        className="text-mmd"
+        className="text-sm text-secondary-foreground"
       >
         {title}
       </span>
