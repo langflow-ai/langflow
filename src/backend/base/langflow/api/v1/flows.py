@@ -608,8 +608,8 @@ async def _update_existing_flow(
     settings_service = get_settings_service()
     user_id = current_user.id
 
-    # Validate fs_path if provided
-    if flow.fs_path:
+    # Validate fs_path if provided (use `is not None` to catch empty strings)
+    if flow.fs_path is not None:
         await _verify_fs_path(flow.fs_path, user_id, storage_service)
 
     # Validate folder_id if provided

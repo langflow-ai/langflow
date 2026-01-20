@@ -567,6 +567,7 @@ async def test_upsert_flow_returns_403_for_other_users_flow(client: AsyncClient,
     # Login as other user and create a flow
     login_data = {"username": "other_user_for_upsert_test", "password": "testpassword"}  # pragma: allowlist secret
     login_response = await client.post("api/v1/login", data=login_data)
+    assert login_response.status_code == status.HTTP_200_OK, f"Login failed: {login_response.text}"
     other_user_headers = {"Authorization": f"Bearer {login_response.json()['access_token']}"}
 
     flow_data = {"name": "other_user_flow", "data": {}}
