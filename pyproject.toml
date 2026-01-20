@@ -73,6 +73,7 @@ dependencies = [
     "jq==1.8.0",
     "pydantic-settings>=2.2.0,<3.0.0",
     "duckduckgo_search==7.2.1",
+    "ddgs>=9.0.0",
     "opensearch-py==2.8.0",
     "langchain-google-genai==2.0.6",
     "langchain-cohere>=0.3.3,<1.0.0",
