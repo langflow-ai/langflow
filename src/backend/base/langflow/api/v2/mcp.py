@@ -171,17 +171,23 @@ async def get_servers(
                 stmt = select(Variable).where(Variable.user_id == current_user.id)
                 variables = list((await session.exec(stmt)).all())
 
-                # Decrypt all variables (both GENERIC and CREDENTIAL types)
+                # Decrypt variables based on type (following the pattern from get_all_decrypted_variables)
                 for variable in variables:
                     if variable.name and variable.value:
-                        try:
-                            decrypted_value = auth_utils.decrypt_api_key(
-                                variable.value, settings_service=settings_service
-                            )
-                            request_variables[variable.name] = decrypted_value
-                        except Exception as e:  # noqa: BLE001
-                            # If decryption fails, try using the value as-is (might be plaintext)
-                            await logger.adebug(f"Decryption failed for variable '{variable.name}': {e}. Using as-is.")
+                        # Only decrypt CREDENTIAL type variables; GENERIC variables are stored as plain text
+                        if variable.type == "Credential":
+                            try:
+                                decrypted_value = auth_utils.decrypt_api_key(
+                                    variable.value, settings_service=settings_service
+                                )
+                                request_variables[variable.name] = decrypted_value
+                            except Exception as e:  # noqa: BLE001
+                                await logger.aerror(
+                                    f"Failed to decrypt credential variable '{variable.name}': {e}. "
+                                    "This credential will not be available for MCP server."
+                                )
+                        else:
+                            # GENERIC type - use as-is (stored as plaintext)
                             request_variables[variable.name] = variable.value
             except Exception as e:  # noqa: BLE001
                 await logger.awarning(f"Failed to load global variables for MCP server test: {e}")

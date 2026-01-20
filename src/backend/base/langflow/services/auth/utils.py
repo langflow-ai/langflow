@@ -647,8 +647,8 @@ def decrypt_api_key(encrypted_api_key: str, settings_service: SettingsService):
             try:
                 return fernet.decrypt(encrypted_api_key).decode()
             except Exception as secondary_exception:  # noqa: BLE001
-                # Log at debug level since calling code often has fallback handling
-                logger.debug(
+                # Log at warning level since returning empty string could cause silent failures
+                logger.warning(
                     "Failed to decrypt stored value (likely encrypted with different key). "
                     "Error: %s. Returning empty string.",
                     secondary_exception,
