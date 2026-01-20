@@ -267,7 +267,7 @@ class DatabaseVariableService(VariableService, Service):
         if not variable:
             msg = f"{name} variable not found."
             raise ValueError(msg)
-        
+
         # Validate that GENERIC variables don't start with Fernet signature
         if variable.type == GENERIC_TYPE and value.startswith("gAAAAA"):
             msg = (
@@ -275,7 +275,7 @@ class DatabaseVariableService(VariableService, Service):
                 "for encrypted values. Please use a different value."
             )
             raise ValueError(msg)
-        
+
         # Only encrypt CREDENTIAL_TYPE variables
         if variable.type == CREDENTIAL_TYPE:
             variable.value = auth_utils.encrypt_api_key(value, settings_service=self.settings_service)
@@ -356,7 +356,7 @@ class DatabaseVariableService(VariableService, Service):
                 "for encrypted values. Please use a different value."
             )
             raise ValueError(msg)
-        
+
         # Only encrypt CREDENTIAL_TYPE variables
         encrypted_value = (
             auth_utils.encrypt_api_key(value, settings_service=self.settings_service)

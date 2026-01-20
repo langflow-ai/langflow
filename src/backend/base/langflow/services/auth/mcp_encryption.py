@@ -108,9 +108,11 @@ def is_encrypted(value: str) -> bool:
         # Try to decrypt - if it succeeds and returns a different value, it's encrypted
         decrypted = auth_utils.decrypt_api_key(value, settings_service)
         # If decryption returns empty string, it's encrypted with wrong key
+        if not decrypted:
+            return True
         # If it returns a different value, it's successfully decrypted (was encrypted)
         # If it returns the same value, something unexpected happened
-        return decrypted != value
+        return decrypted != value  # noqa: TRY300
     except (ValueError, TypeError, KeyError, InvalidToken):
         # If decryption fails with exception, assume it's encrypted but can't be decrypted
         return True

@@ -665,7 +665,8 @@ def decrypt_api_key(encrypted_api_key: str, settings_service: SettingsService):
                 )
                 return encrypted_api_key
 
-    raise ValueError(f"Unexpected variable type. Expected string") 
+    msg = "Unexpected variable type. Expected string"
+    raise ValueError(msg)
 
 
 # MCP-specific authentication functions that always behave as if skip_auth_auto_login is True
