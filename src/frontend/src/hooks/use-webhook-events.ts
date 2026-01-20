@@ -61,7 +61,10 @@ function handleEndVertex(event: MessageEvent): void {
     buildData.inactivated_vertices.length > 0
   ) {
     store.removeFromVerticesBuild(buildData.inactivated_vertices);
-    store.updateBuildStatus(buildData.inactivated_vertices, BuildStatus.INACTIVE);
+    store.updateBuildStatus(
+      buildData.inactivated_vertices,
+      BuildStatus.INACTIVE,
+    );
   }
 
   store.addDataToFlowPool(
