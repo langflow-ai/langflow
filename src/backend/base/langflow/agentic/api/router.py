@@ -14,11 +14,6 @@ from lfx.base.models.unified_models import (
 )
 from lfx.log.logger import logger
 
-from langflow.api.utils.core import CurrentActiveUser, DbSession
-from langflow.services.deps import get_variable_service
-from langflow.services.variable.constants import CREDENTIAL_TYPE
-from langflow.services.variable.service import DatabaseVariableService
-
 from langflow.agentic.api.schemas import AssistantRequest
 from langflow.agentic.services.assistant_service import (
     LANGFLOW_ASSISTANT_FLOW,
@@ -33,6 +28,10 @@ from langflow.agentic.services.provider_service import (
     check_api_key,
     get_enabled_providers_for_user,
 )
+from langflow.api.utils.core import CurrentActiveUser, DbSession
+from langflow.services.deps import get_variable_service
+from langflow.services.variable.constants import CREDENTIAL_TYPE
+from langflow.services.variable.service import DatabaseVariableService
 
 router = APIRouter(prefix="/agentic", tags=["Agentic"])
 
@@ -124,22 +123,26 @@ async def check_assistant_config(
                 is_not_supported = metadata.get("not_supported", False)
 
                 if not is_deprecated and not is_not_supported:
-                    model_list.append({
-                        "name": model_name,
-                        "display_name": display_name,
-                    })
+                    model_list.append(
+                        {
+                            "name": model_name,
+                            "display_name": display_name,
+                        }
+                    )
 
             default_model = DEFAULT_MODELS.get(provider_name)
             if not default_model and model_list:
                 default_model = model_list[0]["name"]
 
             if model_list:
-                all_providers.append({
-                    "name": provider_name,
-                    "configured": True,
-                    "default_model": default_model,
-                    "models": model_list,
-                })
+                all_providers.append(
+                    {
+                        "name": provider_name,
+                        "configured": True,
+                        "default_model": default_model,
+                        "models": model_list,
+                    }
+                )
 
     default_provider = None
     default_model = None

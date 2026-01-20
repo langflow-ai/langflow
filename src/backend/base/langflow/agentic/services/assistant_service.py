@@ -8,9 +8,18 @@ from lfx.log.logger import logger
 
 from langflow.agentic.helpers.code_extraction import extract_python_code
 from langflow.agentic.helpers.error_handling import extract_friendly_error
-from langflow.agentic.helpers.sse import format_complete_event, format_error_event, format_progress_event, format_token_event
+from langflow.agentic.helpers.sse import (
+    format_complete_event,
+    format_error_event,
+    format_progress_event,
+    format_token_event,
+)
 from langflow.agentic.helpers.validation import validate_component_code
-from langflow.agentic.services.flow_executor import execute_flow_file, execute_flow_file_streaming, extract_response_text
+from langflow.agentic.services.flow_executor import (
+    execute_flow_file,
+    execute_flow_file_streaming,
+    extract_response_text,
+)
 
 MAX_VALIDATION_RETRIES = 3
 VALIDATION_UI_DELAY_SECONDS = 0.3
@@ -225,13 +234,15 @@ async def execute_flow_with_validation_streaming(
             )
             await asyncio.sleep(VALIDATION_UI_DELAY_SECONDS)
 
-            yield format_complete_event({
-                **result,
-                "validated": True,
-                "class_name": validation.class_name,
-                "component_code": code,
-                "validation_attempts": attempt,
-            })
+            yield format_complete_event(
+                {
+                    **result,
+                    "validated": True,
+                    "class_name": validation.class_name,
+                    "component_code": code,
+                    "validation_attempts": attempt,
+                }
+            )
             return
 
         # Step 5b: Validation failed
@@ -249,13 +260,15 @@ async def execute_flow_with_validation_streaming(
 
         if attempt >= total_attempts:
             # Max attempts reached, return with error
-            yield format_complete_event({
-                **result,
-                "validated": False,
-                "validation_error": validation.error,
-                "validation_attempts": attempt,
-                "component_code": code,
-            })
+            yield format_complete_event(
+                {
+                    **result,
+                    "validated": False,
+                    "validation_error": validation.error,
+                    "validation_attempts": attempt,
+                    "component_code": code,
+                }
+            )
             return
 
         # Step 6: Retrying
