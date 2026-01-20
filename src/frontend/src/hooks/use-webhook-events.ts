@@ -141,7 +141,10 @@ export function useWebhookEvents() {
       // SSE connection error - handled silently
     };
 
-    eventSource.addEventListener(SSE_EVENTS.VERTICES_SORTED, handleVerticesSorted);
+    eventSource.addEventListener(
+      SSE_EVENTS.VERTICES_SORTED,
+      handleVerticesSorted,
+    );
     eventSource.addEventListener(SSE_EVENTS.BUILD_START, handleBuildStart);
     eventSource.addEventListener(SSE_EVENTS.END_VERTEX, handleEndVertex);
     eventSource.addEventListener(SSE_EVENTS.END, handleEnd);
