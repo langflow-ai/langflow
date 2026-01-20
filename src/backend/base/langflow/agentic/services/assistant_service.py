@@ -234,13 +234,15 @@ async def execute_flow_with_validation_streaming(
             )
             await asyncio.sleep(VALIDATION_UI_DELAY_SECONDS)
 
-            yield format_complete_event({
-                **result,
-                "validated": True,
-                "class_name": validation.class_name,
-                "component_code": code,
-                "validation_attempts": attempt,
-            })
+            yield format_complete_event(
+                {
+                    **result,
+                    "validated": True,
+                    "class_name": validation.class_name,
+                    "component_code": code,
+                    "validation_attempts": attempt,
+                }
+            )
             return
 
         # Step 5b: Validation failed
@@ -258,13 +260,15 @@ async def execute_flow_with_validation_streaming(
 
         if attempt >= total_attempts:
             # Max attempts reached, return with error
-            yield format_complete_event({
-                **result,
-                "validated": False,
-                "validation_error": validation.error,
-                "validation_attempts": attempt,
-                "component_code": code,
-            })
+            yield format_complete_event(
+                {
+                    **result,
+                    "validated": False,
+                    "validation_error": validation.error,
+                    "validation_attempts": attempt,
+                    "component_code": code,
+                }
+            )
             return
 
         # Step 6: Retrying

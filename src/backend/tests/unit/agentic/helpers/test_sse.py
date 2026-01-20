@@ -34,9 +34,7 @@ class TestFormatProgressEvent:
 
     def test_should_include_optional_message(self):
         """Should include optional message when provided."""
-        result = format_progress_event(
-            "validating", 2, 3, message="Validating component..."
-        )
+        result = format_progress_event("validating", 2, 3, message="Validating component...")
 
         data = json.loads(result[6:-2])
 
@@ -44,9 +42,7 @@ class TestFormatProgressEvent:
 
     def test_should_include_optional_error(self):
         """Should include optional error when provided."""
-        result = format_progress_event(
-            "validation_failed", 1, 3, error="SyntaxError: invalid syntax"
-        )
+        result = format_progress_event("validation_failed", 1, 3, error="SyntaxError: invalid syntax")
 
         data = json.loads(result[6:-2])
 
@@ -54,9 +50,7 @@ class TestFormatProgressEvent:
 
     def test_should_include_optional_class_name(self):
         """Should include optional class_name when provided."""
-        result = format_progress_event(
-            "validated", 1, 3, class_name="MyComponent"
-        )
+        result = format_progress_event("validated", 1, 3, class_name="MyComponent")
 
         data = json.loads(result[6:-2])
 
@@ -65,9 +59,7 @@ class TestFormatProgressEvent:
     def test_should_include_optional_component_code(self):
         """Should include optional component_code when provided."""
         code = "class Test(Component): pass"
-        result = format_progress_event(
-            "validation_failed", 1, 3, component_code=code
-        )
+        result = format_progress_event("validation_failed", 1, 3, component_code=code)
 
         data = json.loads(result[6:-2])
 

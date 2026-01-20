@@ -6,13 +6,13 @@ from pydantic import BaseModel
 
 # All possible step types for SSE progress events
 StepType = Literal[
-    "generating",           # LLM is generating response
+    "generating",  # LLM is generating response
     "generation_complete",  # LLM finished generating
-    "extracting_code",      # Extracting Python code from response
-    "validating",           # Validating component code
-    "validated",            # Validation succeeded
-    "validation_failed",    # Validation failed
-    "retrying",             # About to retry with error context
+    "extracting_code",  # Extracting Python code from response
+    "validating",  # Validating component code
+    "validated",  # Validation succeeded
+    "validation_failed",  # Validation failed
+    "retrying",  # About to retry with error context
 ]
 
 

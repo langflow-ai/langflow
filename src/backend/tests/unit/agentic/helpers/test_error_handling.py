@@ -3,7 +3,6 @@
 Tests the error categorization and user-friendly message generation.
 """
 
-
 from langflow.agentic.helpers.error_handling import (
     ERROR_PATTERNS,
     MAX_ERROR_MESSAGE_LENGTH,
@@ -217,9 +216,7 @@ class TestErrorPatterns:
             all_patterns.extend(patterns)
 
         for expected in expected_patterns:
-            assert any(
-                expected in pattern for pattern in all_patterns
-            ), f"Missing pattern category: {expected}"
+            assert any(expected in pattern for pattern in all_patterns), f"Missing pattern category: {expected}"
 
     def test_each_pattern_should_have_friendly_message(self):
         """Each pattern list should have an associated friendly message."""

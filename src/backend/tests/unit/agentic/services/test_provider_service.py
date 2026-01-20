@@ -131,14 +131,10 @@ class TestCheckApiKey:
         mock_session = MagicMock()
         user_id = UUID("12345678-1234-5678-1234-567812345678")
 
-        result = await check_api_key(
-            mock_service, user_id, "OPENAI_API_KEY", mock_session
-        )
+        result = await check_api_key(mock_service, user_id, "OPENAI_API_KEY", mock_session)
 
         assert result == "test-api-key"
-        mock_service.get_variable.assert_called_once_with(
-            user_id, "OPENAI_API_KEY", "", mock_session
-        )
+        mock_service.get_variable.assert_called_once_with(user_id, "OPENAI_API_KEY", "", mock_session)
 
     @pytest.mark.asyncio
     async def test_should_fallback_to_env_when_not_in_service(self):
@@ -149,9 +145,7 @@ class TestCheckApiKey:
         user_id = "test-user"
 
         with patch.dict(os.environ, {"OPENAI_API_KEY": "env-api-key"}):
-            result = await check_api_key(
-                mock_service, user_id, "OPENAI_API_KEY", mock_session
-            )
+            result = await check_api_key(mock_service, user_id, "OPENAI_API_KEY", mock_session)
 
         assert result == "env-api-key"
 
@@ -167,9 +161,7 @@ class TestCheckApiKey:
         with patch.dict(os.environ, {}, clear=True):
             # Remove the key if it exists
             os.environ.pop("TEST_API_KEY", None)
-            result = await check_api_key(
-                mock_service, user_id, "TEST_API_KEY", mock_session
-            )
+            result = await check_api_key(mock_service, user_id, "TEST_API_KEY", mock_session)
 
         assert result is None
 
@@ -182,9 +174,7 @@ class TestCheckApiKey:
         user_id = "test-user"
 
         with patch.dict(os.environ, {"TEST_KEY": "env-value"}):
-            result = await check_api_key(
-                mock_service, user_id, "TEST_KEY", mock_session
-            )
+            result = await check_api_key(mock_service, user_id, "TEST_KEY", mock_session)
 
         assert result == "env-value"
 
@@ -195,9 +185,7 @@ class TestCheckApiKey:
         mock_service.get_variable = AsyncMock(return_value="key")
         mock_session = MagicMock()
 
-        result = await check_api_key(
-            mock_service, "string-user-id", "API_KEY", mock_session
-        )
+        result = await check_api_key(mock_service, "string-user-id", "API_KEY", mock_session)
 
         assert result == "key"
 
@@ -223,9 +211,7 @@ class TestGetEnabledProvidersForUser:
         mock_session = MagicMock()
         user_id = "test-user"
 
-        with patch(
-            "langflow.agentic.services.provider_service.get_variable_service"
-        ) as mock_get_service:
+        with patch("langflow.agentic.services.provider_service.get_variable_service") as mock_get_service:
             mock_get_service.return_value = MagicMock()  # Not DatabaseVariableService
 
             result = await get_enabled_providers_for_user(user_id, mock_session)

@@ -52,9 +52,7 @@ class TestFlowExecutionResult:
 
     def test_should_allow_both_result_and_error(self):
         """Should allow both result and error to be set."""
-        result = FlowExecutionResult(
-            result={"partial": "data"}, error=ValueError("partial failure")
-        )
+        result = FlowExecutionResult(result={"partial": "data"}, error=ValueError("partial failure"))
 
         assert result.has_result is True
         assert result.has_error is True
@@ -78,9 +76,7 @@ class TestInjectModelIntoFlow:
             }
         }
 
-        with patch(
-            "langflow.agentic.services.flow_executor.get_provider_config"
-        ) as mock_config:
+        with patch("langflow.agentic.services.flow_executor.get_provider_config") as mock_config:
             mock_config.return_value = {
                 "variable_name": "OPENAI_API_KEY",
                 "api_key_param": "api_key",
@@ -113,9 +109,7 @@ class TestInjectModelIntoFlow:
             }
         }
 
-        with patch(
-            "langflow.agentic.services.flow_executor.get_provider_config"
-        ) as mock_config:
+        with patch("langflow.agentic.services.flow_executor.get_provider_config") as mock_config:
             mock_config.return_value = {
                 "variable_name": "TEST_KEY",
                 "api_key_param": "api_key",
@@ -133,9 +127,7 @@ class TestInjectModelIntoFlow:
         """Should use provided api_key_var instead of default."""
         flow_data = {"data": {"nodes": []}}
 
-        with patch(
-            "langflow.agentic.services.flow_executor.get_provider_config"
-        ) as mock_config:
+        with patch("langflow.agentic.services.flow_executor.get_provider_config") as mock_config:
             mock_config.return_value = {
                 "variable_name": "DEFAULT_KEY",
                 "api_key_param": "api_key",
@@ -145,9 +137,7 @@ class TestInjectModelIntoFlow:
             }
 
             # Should not raise even with empty nodes
-            result = inject_model_into_flow(
-                flow_data, "Test", "test-model", api_key_var="CUSTOM_KEY"
-            )
+            result = inject_model_into_flow(flow_data, "Test", "test-model", api_key_var="CUSTOM_KEY")
 
         assert result is not None
 
@@ -366,9 +356,7 @@ class TestExecuteFlowFileStreaming:
                 new_callable=AsyncMock,
                 return_value={"result": "complete"},
             ),
-            patch(
-                "langflow.agentic.services.flow_executor.create_default_event_manager"
-            ),
+            patch("langflow.agentic.services.flow_executor.create_default_event_manager"),
         ):
             # The streaming function is complex; for unit tests we verify setup
             pass
