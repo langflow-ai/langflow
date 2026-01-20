@@ -115,8 +115,6 @@ class WebhookEventManager:
             # No one listening, skip emission (performance optimization)
             return
 
-        logger.debug(f"Emitting {event_type} to {len(listeners)} listeners for flow {flow_id}")
-
         # Prepare event
         event = {
             "event": event_type,
