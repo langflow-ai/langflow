@@ -523,10 +523,7 @@ function GenericNode({
 
         <div
           data-testid={`${data.id}-main-node`}
-          className={cn(
-            "grid text-wrap leading-5",
-            showNode ? "" : "relative",
-          )}
+          className={cn("grid text-wrap leading-5", showNode ? "" : "relative")}
         >
           <div
             data-testid={"div-generic-node"}
