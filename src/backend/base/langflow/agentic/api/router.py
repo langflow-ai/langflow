@@ -216,9 +216,7 @@ async def assist(
             detail=f"Unknown provider: {provider}",
         )
 
-    model_name = request.model_name
-    if not model_name:
-        model_name = DEFAULT_MODELS.get(provider)
+    model_name = request.model_name or DEFAULT_MODELS.get(provider) or ""
 
     api_key = await check_api_key(variable_service, user_id, api_key_name, session)
 
@@ -231,7 +229,7 @@ async def assist(
             ),
         )
 
-    global_vars = {
+    global_vars: dict[str, str] = {
         "USER_ID": str(user_id),
         "FLOW_ID": request.flow_id,
         api_key_name: api_key,
@@ -304,9 +302,7 @@ async def assist_stream(
             detail=f"Unknown provider: {provider}",
         )
 
-    model_name = request.model_name
-    if not model_name:
-        model_name = DEFAULT_MODELS.get(provider)
+    model_name = request.model_name or DEFAULT_MODELS.get(provider) or ""
 
     api_key = await check_api_key(variable_service, user_id, api_key_name, session)
 
@@ -319,7 +315,7 @@ async def assist_stream(
             ),
         )
 
-    global_vars = {
+    global_vars: dict[str, str] = {
         "USER_ID": str(user_id),
         "FLOW_ID": request.flow_id,
         api_key_name: api_key,
