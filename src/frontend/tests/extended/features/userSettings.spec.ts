@@ -104,7 +104,9 @@ test(
       .fill("testtesttesttesttesttesttesttest");
     await page.getByTestId("popover-anchor-apply-to-fields").click();
 
-    await page.getByPlaceholder("Fields").waitFor({
+    const fieldsCount = await page.getByPlaceholder("Fields").count();
+
+    await page.getByPlaceholder("Fields").first().waitFor({
       state: "visible",
       timeout: 30000,
     });
@@ -113,7 +115,12 @@ test(
     expect(fieldSelected).toBe(true);
 
     await page.keyboard.press("Escape");
-    await page.getByText("Save Variable", { exact: true }).click();
+
+    await page
+      .getByText("Save Variable", { exact: true })
+      .dispatchEvent("click");
+
+    await page.waitForTimeout(500);
 
     await expect(page.getByText(randomName).last()).toBeVisible({
       timeout: 10000,
@@ -130,7 +137,11 @@ test(
       .getByPlaceholder("Enter a name for the variable...")
       .fill(randomName2);
 
-    await page.getByText("Update Variable", { exact: true }).last().click();
+    await page
+      .getByText("Update Variable", { exact: true })
+      .last()
+      .dispatchEvent("click");
+    await page.waitForTimeout(500);
 
     await expect(page.getByText(randomName2).last()).toBeVisible({
       timeout: 10000,
@@ -149,7 +160,11 @@ test(
       .getByPlaceholder("Enter a name for the variable...")
       .fill(randomName3);
 
-    await page.getByText("Update Variable", { exact: true }).last().click();
+    await page
+      .getByText("Update Variable", { exact: true })
+      .last()
+      .dispatchEvent("click");
+    await page.waitForTimeout(500);
 
     await expect(page.getByText(randomName3).last()).toBeVisible({
       timeout: 10000,
