@@ -243,14 +243,14 @@ async def simple_run_flow_task(
 
     # Create an EventManager that forwards events to webhook SSE if we should emit
     webhook_em = None
-    if should_emit and event_manager is None:
+    if should_emit and event_manager is None and flow_id is not None:
         webhook_em = create_webhook_event_manager(flow_id, run_id)
 
     # Use provided event_manager or the webhook one
     effective_event_manager = event_manager or webhook_em
 
     try:
-        if should_emit:
+        if should_emit and flow_id is not None:
             vertex_ids = _get_vertex_ids_from_flow(flow)
             await webhook_event_manager.emit(
                 flow_id,
@@ -267,7 +267,7 @@ async def simple_run_flow_task(
             run_id=run_id,
         )
 
-        if should_emit:
+        if should_emit and flow_id is not None:
             await webhook_event_manager.emit(flow_id, "end", {"run_id": run_id, "success": True})
 
         if telemetry_service and start_time is not None:
@@ -285,7 +285,7 @@ async def simple_run_flow_task(
     except Exception as exc:  # noqa: BLE001
         await logger.aexception(f"Error running flow {flow.id} task")
 
-        if should_emit:
+        if should_emit and flow_id is not None:
             await webhook_event_manager.emit(flow_id, "end", {"run_id": run_id, "success": False, "error": str(exc)})
 
         if telemetry_service and start_time is not None:
