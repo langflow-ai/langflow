@@ -22,8 +22,8 @@ class TestOAuthCallbackHandler:
 
     @pytest.fixture
     def handler(self) -> OAuthCallbackHandler:
-        """Create an OAuthCallbackHandler instance."""
-        return OAuthCallbackHandler()
+        """Create an OAuthCallbackHandler instance with auto-assigned port."""
+        return OAuthCallbackHandler(port=0)  # Use port=0 for auto-assignment to avoid conflicts
 
     @pytest.fixture
     def handler_with_port(self) -> OAuthCallbackHandler:
@@ -36,7 +36,7 @@ class TestOAuthCallbackHandler:
         try:
             redirect_uri = await handler.start()
 
-            assert redirect_uri.startswith("http://127.0.0.1:")
+            assert redirect_uri.startswith(("http://localhost:", "http://127.0.0.1:"))
             assert "/callback" in redirect_uri
         finally:
             handler.shutdown()
@@ -97,7 +97,7 @@ class TestCallbackHandlerWithSimulatedCallback:
     @pytest.mark.asyncio
     async def test_callback_with_auth_code(self) -> None:
         """Test handling a successful OAuth callback with authorization code."""
-        handler = OAuthCallbackHandler()
+        handler = OAuthCallbackHandler(port=0)
 
         try:
             await handler.start()
@@ -117,7 +117,7 @@ class TestCallbackHandlerWithSimulatedCallback:
     @pytest.mark.asyncio
     async def test_callback_with_error(self) -> None:
         """Test handling an OAuth error callback."""
-        handler = OAuthCallbackHandler()
+        handler = OAuthCallbackHandler(port=0)
 
         try:
             await handler.start()
@@ -135,7 +135,7 @@ class TestCallbackHandlerWithSimulatedCallback:
     @pytest.mark.asyncio
     async def test_callback_without_code(self) -> None:
         """Test handling a callback without authorization code."""
-        handler = OAuthCallbackHandler()
+        handler = OAuthCallbackHandler(port=0)
 
         try:
             await handler.start()
@@ -177,12 +177,12 @@ class TestCreateCallbackHandler:
     @pytest.mark.asyncio
     async def test_creates_callback_infrastructure(self) -> None:
         """Test that create_callback_handler sets up callback infrastructure."""
-        callback_fn, redirect_uri, cleanup = await create_callback_handler()
+        callback_fn, redirect_uri, cleanup = await create_callback_handler(port=0)
 
         try:
             assert callable(callback_fn)
             assert callable(cleanup)
-            assert redirect_uri.startswith("http://127.0.0.1:")
+            assert redirect_uri.startswith(("http://localhost:", "http://127.0.0.1:"))
             assert "/callback" in redirect_uri
         finally:
             cleanup()
@@ -190,7 +190,7 @@ class TestCreateCallbackHandler:
     @pytest.mark.asyncio
     async def test_cleanup_function_works(self) -> None:
         """Test that cleanup function properly cleans up resources."""
-        _, _, cleanup = await create_callback_handler()
+        _, _, cleanup = await create_callback_handler(port=0)
 
         # Should not raise
         cleanup()
@@ -205,6 +205,6 @@ class TestCreateCallbackHandler:
         )
 
         try:
-            assert redirect_uri.startswith("http://127.0.0.1:")
+            assert redirect_uri.startswith(("http://localhost:", "http://127.0.0.1:"))
         finally:
             cleanup()

@@ -28,11 +28,12 @@ class TestCreateMcpOAuthProvider:
         provider, redirect_uri, cleanup = await create_mcp_oauth_provider(
             server_url="https://mcp.example.com",
             storage_dir=storage_dir,
+            redirect_port=0,
         )
 
         try:
             assert provider is not None
-            assert redirect_uri.startswith("http://127.0.0.1:")
+            assert redirect_uri.startswith(("http://localhost:", "http://127.0.0.1:"))
             assert callable(cleanup)
         finally:
             cleanup()
@@ -44,6 +45,7 @@ class TestCreateMcpOAuthProvider:
             server_url="https://mcp.example.com",
             client_name="my-custom-client",
             storage_dir=storage_dir,
+            redirect_port=0,
         )
 
         try:
@@ -59,6 +61,7 @@ class TestCreateMcpOAuthProvider:
             server_url="https://mcp.example.com",
             storage_dir=storage_dir,
             use_file_storage=True,
+            redirect_port=0,
         )
 
         try:
@@ -76,6 +79,7 @@ class TestCreateMcpOAuthProvider:
             server_url="https://mcp.example.com",
             storage_dir=storage_dir,
             use_file_storage=False,
+            redirect_port=0,
         )
 
         try:
@@ -90,6 +94,7 @@ class TestCreateMcpOAuthProvider:
         _provider, _, cleanup = await create_mcp_oauth_provider(
             server_url="https://mcp.example.com",
             storage_dir=storage_dir,
+            redirect_port=0,
         )
 
         # Call cleanup multiple times - should be idempotent
@@ -102,6 +107,7 @@ class TestCreateMcpOAuthProvider:
         _, redirect_uri, cleanup = await create_mcp_oauth_provider(
             server_url="https://mcp.example.com",
             storage_dir=storage_dir,
+            redirect_port=0,
         )
 
         try:
@@ -117,6 +123,7 @@ class TestCreateMcpOAuthProvider:
         provider, _, cleanup = await create_mcp_oauth_provider(
             server_url="https://mcp.example.com",
             storage_dir=storage_dir,
+            redirect_port=0,
         )
 
         try:
@@ -130,6 +137,7 @@ class TestCreateMcpOAuthProvider:
         """Test that default storage directory is used when not specified."""
         provider, _, cleanup = await create_mcp_oauth_provider(
             server_url="https://mcp.example.com",
+            redirect_port=0,
             # No storage_dir specified
         )
 
@@ -146,10 +154,12 @@ class TestCreateMcpOAuthProvider:
         provider1, redirect_uri1, cleanup1 = await create_mcp_oauth_provider(
             server_url="https://server1.example.com",
             storage_dir=storage_dir,
+            redirect_port=0,
         )
         provider2, redirect_uri2, cleanup2 = await create_mcp_oauth_provider(
             server_url="https://server2.example.com",
             storage_dir=storage_dir,
+            redirect_port=0,
         )
 
         try:
@@ -167,6 +177,7 @@ class TestCreateMcpOAuthProvider:
         provider, redirect_uri, cleanup = await create_mcp_oauth_provider(
             server_url="https://mcp.example.com",
             storage_dir=storage_dir,
+            redirect_port=0,
         )
 
         try:
@@ -174,7 +185,7 @@ class TestCreateMcpOAuthProvider:
             assert provider is not None
             assert redirect_uri is not None
             # The redirect URI should be a valid local callback URL
-            assert redirect_uri.startswith("http://127.0.0.1:")
+            assert redirect_uri.startswith(("http://localhost:", "http://127.0.0.1:"))
             assert "/callback" in redirect_uri
         finally:
             cleanup()
@@ -192,6 +203,7 @@ class TestOAuthIntegration:
         provider, _, cleanup = await create_mcp_oauth_provider(
             server_url="https://mcp.example.com",
             storage_dir=tmp_path / "oauth",
+            redirect_port=0,
         )
 
         try:
@@ -220,6 +232,7 @@ class TestOAuthIntegration:
         provider, _, cleanup = await create_mcp_oauth_provider(
             server_url="https://mcp.example.com",
             storage_dir=tmp_path / "oauth",
+            redirect_port=0,
         )
 
         try:
