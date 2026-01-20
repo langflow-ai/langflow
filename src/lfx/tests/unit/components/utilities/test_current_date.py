@@ -1,4 +1,4 @@
-"""Tests for CurrentDateComponent tool schema optimization (issue #8226)."""
+"""Tests for CurrentDateComponent tool schema optimization."""
 
 import json
 

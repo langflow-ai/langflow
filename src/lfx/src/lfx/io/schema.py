@@ -17,7 +17,7 @@ from lfx.schema.dotdict import dotdict
 
 # Maximum number of options to include as enum in tool schemas.
 # Dropdowns with more options will use string type with default value instead,
-# avoiding token waste when sending tool schemas to LLMs (see issue #8226).
+# avoiding token waste when sending tool schemas to LLMs.
 MAX_OPTIONS_FOR_TOOL_ENUM = 50
 
 _convert_field_type_to_type: dict[FieldTypes, type] = {
@@ -222,11 +222,15 @@ def create_input_schema(inputs: list["InputTypes"]) -> type[BaseModel]:
         else:
             msg = f"Invalid field type: {field_type}"
             raise TypeError(msg)
-        if hasattr(input_model, "options") and isinstance(input_model.options, list) and input_model.options:
-            # Skip enum for large option lists to avoid token waste (issue #8226)
-            if len(input_model.options) <= MAX_OPTIONS_FOR_TOOL_ENUM:
-                literal_string = f"Literal{input_model.options}"
-                field_type = eval(literal_string, {"Literal": Literal})  # noqa: S307
+        # Skip enum for large option lists to avoid token waste
+        if (
+            hasattr(input_model, "options")
+            and isinstance(input_model.options, list)
+            and input_model.options
+            and len(input_model.options) <= MAX_OPTIONS_FOR_TOOL_ENUM
+        ):
+            literal_string = f"Literal{input_model.options}"
+            field_type = eval(literal_string, {"Literal": Literal})  # noqa: S307
         if hasattr(input_model, "is_list") and input_model.is_list:
             field_type = list[field_type]  # type: ignore[valid-type]
         if input_model.name:
@@ -260,11 +264,15 @@ def create_input_schema_from_dict(inputs: list[dotdict], param_key: str | None =
     for input_model in inputs:
         # Create a Pydantic Field for each input field
         field_type = input_model.type
-        if hasattr(input_model, "options") and isinstance(input_model.options, list) and input_model.options:
-            # Skip enum for large option lists to avoid token waste (issue #8226)
-            if len(input_model.options) <= MAX_OPTIONS_FOR_TOOL_ENUM:
-                literal_string = f"Literal{input_model.options}"
-                field_type = eval(literal_string, {"Literal": Literal})  # noqa: S307
+        # Skip enum for large option lists to avoid token waste
+        if (
+            hasattr(input_model, "options")
+            and isinstance(input_model.options, list)
+            and input_model.options
+            and len(input_model.options) <= MAX_OPTIONS_FOR_TOOL_ENUM
+        ):
+            literal_string = f"Literal{input_model.options}"
+            field_type = eval(literal_string, {"Literal": Literal})  # noqa: S307
         if hasattr(input_model, "is_list") and input_model.is_list:
             field_type = list[field_type]  # type: ignore[valid-type]
         if input_model.name:
