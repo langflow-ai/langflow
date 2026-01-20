@@ -2,6 +2,7 @@
 
 import json
 from functools import lru_cache
+from json.encoder import encode_basestring_ascii
 
 from langflow.agentic.api.schemas import StepType
 
@@ -50,21 +51,20 @@ def format_token_event(chunk: str) -> str:
 
 
 def _build_event_string(step, attempt, max_attempts, message, error, class_name, component_code) -> str:
-    data: dict = {
-        "event": "progress",
-        "step": step,
-        "attempt": attempt,
-        "max_attempts": max_attempts,
-    }
+    parts = ['data: {"event": "progress", "step": ', str(step), ', "attempt": ', str(attempt), 
+             ', "max_attempts": ', str(max_attempts)]
+    
     if message:
-        data["message"] = message
+        parts.extend([', "message": ', encode_basestring_ascii(message) if isinstance(message, str) else json.dumps(message)])
     if error:
-        data["error"] = error
+        parts.extend([', "error": ', encode_basestring_ascii(error) if isinstance(error, str) else json.dumps(error)])
     if class_name:
-        data["class_name"] = class_name
+        parts.extend([', "class_name": ', encode_basestring_ascii(class_name) if isinstance(class_name, str) else json.dumps(class_name)])
     if component_code:
-        data["component_code"] = component_code
-    return f"data: {json.dumps(data)}\n\n"
+        parts.extend([', "component_code": ', encode_basestring_ascii(component_code) if isinstance(component_code, str) else json.dumps(component_code)])
+    
+    parts.append('}\n\n')
+    return ''.join(parts)
 
 
 @lru_cache(maxsize=2048)
