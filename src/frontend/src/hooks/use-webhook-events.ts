@@ -61,7 +61,10 @@ function handleEndVertex(event: MessageEvent): void {
     buildData.inactivated_vertices.length > 0
   ) {
     store.removeFromVerticesBuild(buildData.inactivated_vertices);
-    store.updateBuildStatus(buildData.inactivated_vertices, BuildStatus.INACTIVE);
+    store.updateBuildStatus(
+      buildData.inactivated_vertices,
+      BuildStatus.INACTIVE,
+    );
   }
 
   store.addDataToFlowPool(
@@ -134,7 +137,10 @@ export function useWebhookEvents() {
     const eventSource = new EventSource(sseUrl);
     eventSourceRef.current = eventSource;
 
-    eventSource.addEventListener(SSE_EVENTS.VERTICES_SORTED, handleVerticesSorted);
+    eventSource.addEventListener(
+      SSE_EVENTS.VERTICES_SORTED,
+      handleVerticesSorted,
+    );
     eventSource.addEventListener(SSE_EVENTS.BUILD_START, handleBuildStart);
     eventSource.addEventListener(SSE_EVENTS.END_VERTEX, handleEndVertex);
     eventSource.addEventListener(SSE_EVENTS.END, handleEnd);
