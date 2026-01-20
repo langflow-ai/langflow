@@ -153,6 +153,11 @@ const config = {
             spec: "openapi/openapi.json",
             route: "/api",
           },
+          {
+            id: "workflow",
+            spec: "openapi/openapi-workflow.json",
+            route: "/api/workflow",
+          },
         ],
         theme: {
           primaryColor: "#7528FC",

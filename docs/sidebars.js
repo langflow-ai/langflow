@@ -457,6 +457,11 @@ module.exports = {
               id: "API-Reference/workflow-api-asynchronous",
               label: "Asynchronous Workflow API endpoints",
             },
+            {
+              type: "link",
+              label: "Workflow API specification",
+              href: "/api/workflow",
+            },
           ],
         },
         {
