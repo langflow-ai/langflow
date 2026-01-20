@@ -90,6 +90,8 @@ async def run_flow(
         verbose_full: Show full debugging output including component logs
         timing: Include detailed timing information in output
         global_variables: Dict of global variables to inject into the graph context
+        user_id: Optional user ID for tracking purposes
+        session_id: Optional session ID for memory isolation
         event_manager: Optional EventManager for streaming token events
 
     Returns:

@@ -187,12 +187,13 @@ async def _create_flow_runner(
     flow_json: str,
     input_value: str | None,
     global_variables: dict[str, str] | None,
-    verbose: bool,
     user_id: str | None,
     session_id: str | None,
     event_manager: EventManager,
     event_queue: asyncio.Queue,
     execution_result: FlowExecutionResult,
+    *,
+    verbose: bool = False,
 ) -> None:
     """Execute flow and store result, signaling completion via queue."""
     try:
@@ -207,7 +208,7 @@ async def _create_flow_runner(
             event_manager=event_manager,
         )
         execution_result.result = result
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         execution_result.error = e
         logger.error(f"Flow execution error: {e}")
     finally:

@@ -156,14 +156,15 @@ class TestStreamingValidationFlow:
             new_callable=AsyncMock,
             return_value=mock_flow_result,
         ):
-            events = []
-            async for event in execute_flow_with_validation_streaming(
-                flow_filename="test.json",
-                input_value="create a hello world component",
-                global_variables={},
-                max_retries=3,
-            ):
-                events.append(event)
+            events = [
+                event
+                async for event in execute_flow_with_validation_streaming(
+                    flow_filename="test.json",
+                    input_value="create a hello world component",
+                    global_variables={},
+                    max_retries=3,
+                )
+            ]
 
         # Should have progress events + complete event
         assert len(events) >= 2
@@ -197,7 +198,7 @@ class TestStreamingValidationFlow:
         # First call returns invalid, second returns valid
         call_count = 0
 
-        async def mock_execute_flow(*args, **kwargs):
+        async def mock_execute_flow(*_args, **_kwargs):
             nonlocal call_count
             call_count += 1
             if call_count == 1:
@@ -208,14 +209,15 @@ class TestStreamingValidationFlow:
             "langflow.agentic.services.assistant_service.execute_flow_file",
             side_effect=mock_execute_flow,
         ):
-            events = []
-            async for event in execute_flow_with_validation_streaming(
-                flow_filename="test.json",
-                input_value="create a component",
-                global_variables={},
-                max_retries=3,
-            ):
-                events.append(event)
+            events = [
+                event
+                async for event in execute_flow_with_validation_streaming(
+                    flow_filename="test.json",
+                    input_value="create a component",
+                    global_variables={},
+                    max_retries=3,
+                )
+            ]
 
         # Parse events
         parsed_events = [json.loads(e[6:-2]) for e in events]
@@ -244,14 +246,15 @@ class TestStreamingValidationFlow:
             new_callable=AsyncMock,
             return_value=invalid_response,
         ):
-            events = []
-            async for event in execute_flow_with_validation_streaming(
-                flow_filename="test.json",
-                input_value="create a component",
-                global_variables={},
-                max_retries=2,  # Will try 3 times total (1 + 2 retries)
-            ):
-                events.append(event)
+            events = [
+                event
+                async for event in execute_flow_with_validation_streaming(
+                    flow_filename="test.json",
+                    input_value="create a component",
+                    global_variables={},
+                    max_retries=2,  # Will try 3 times total (1 + 2 retries)
+                )
+            ]
 
         parsed_events = [json.loads(e[6:-2]) for e in events]
 
@@ -276,14 +279,15 @@ class TestStreamingValidationFlow:
             new_callable=AsyncMock,
             return_value=text_only_response,
         ):
-            events = []
-            async for event in execute_flow_with_validation_streaming(
-                flow_filename="test.json",
-                input_value="what is langflow?",
-                global_variables={},
-                max_retries=3,
-            ):
-                events.append(event)
+            events = [
+                event
+                async for event in execute_flow_with_validation_streaming(
+                    flow_filename="test.json",
+                    input_value="what is langflow?",
+                    global_variables={},
+                    max_retries=3,
+                )
+            ]
 
         parsed_events = [json.loads(e[6:-2]) for e in events]
 
@@ -309,14 +313,15 @@ class TestStreamingValidationFlow:
             "langflow.agentic.services.assistant_service.execute_flow_file",
             side_effect=HTTPException(status_code=429, detail="Rate limit exceeded"),
         ):
-            events = []
-            async for event in execute_flow_with_validation_streaming(
-                flow_filename="test.json",
-                input_value="create a component",
-                global_variables={},
-                max_retries=3,
-            ):
-                events.append(event)
+            events = [
+                event
+                async for event in execute_flow_with_validation_streaming(
+                    flow_filename="test.json",
+                    input_value="create a component",
+                    global_variables={},
+                    max_retries=3,
+                )
+            ]
 
         parsed_events = [json.loads(e[6:-2]) for e in events]
 
@@ -337,7 +342,7 @@ class TestValidationRetryBehavior:
 
         captured_inputs = []
 
-        async def mock_execute_flow(flow_filename, input_value, global_variables, **kwargs):
+        async def mock_execute_flow(_flow_filename, input_value, _global_variables, **_kwargs):
             captured_inputs.append(input_value)
             if len(captured_inputs) == 1:
                 return invalid_response
@@ -347,14 +352,16 @@ class TestValidationRetryBehavior:
             "langflow.agentic.services.assistant_service.execute_flow_file",
             side_effect=mock_execute_flow,
         ):
-            events = []
-            async for event in execute_flow_with_validation_streaming(
-                flow_filename="test.json",
-                input_value="create a component",
-                global_variables={},
-                max_retries=3,
-            ):
-                events.append(event)
+            # Consume the generator to trigger the mock calls
+            _ = [
+                event
+                async for event in execute_flow_with_validation_streaming(
+                    flow_filename="test.json",
+                    input_value="create a component",
+                    global_variables={},
+                    max_retries=3,
+                )
+            ]
 
         # Should have captured 2 inputs
         assert len(captured_inputs) == 2
@@ -401,7 +408,7 @@ class TestNonStreamingValidation:
 
         call_count = 0
 
-        async def mock_execute_flow(*args, **kwargs):
+        async def mock_execute_flow(*_args, **_kwargs):
             nonlocal call_count
             call_count += 1
             if call_count == 1:
@@ -470,14 +477,15 @@ This component will process your input."""
             new_callable=AsyncMock,
             return_value=response_with_text,
         ):
-            events = []
-            async for event in execute_flow_with_validation_streaming(
-                flow_filename="test.json",
-                input_value="create a component",
-                global_variables={},
-                max_retries=3,
-            ):
-                events.append(event)
+            events = [
+                event
+                async for event in execute_flow_with_validation_streaming(
+                    flow_filename="test.json",
+                    input_value="create a component",
+                    global_variables={},
+                    max_retries=3,
+                )
+            ]
 
         parsed_events = [json.loads(e[6:-2]) for e in events]
 
@@ -505,14 +513,15 @@ This component will process your input."""
             new_callable=AsyncMock,
             return_value=response_with_unclosed,
         ):
-            events = []
-            async for event in execute_flow_with_validation_streaming(
-                flow_filename="test.json",
-                input_value="create a component",
-                global_variables={},
-                max_retries=3,
-            ):
-                events.append(event)
+            events = [
+                event
+                async for event in execute_flow_with_validation_streaming(
+                    flow_filename="test.json",
+                    input_value="create a component",
+                    global_variables={},
+                    max_retries=3,
+                )
+            ]
 
         parsed_events = [json.loads(e[6:-2]) for e in events]
 
@@ -531,14 +540,15 @@ This component will process your input."""
             new_callable=AsyncMock,
             return_value=mock_flow_result,
         ):
-            events = []
-            async for event in execute_flow_with_validation_streaming(
-                flow_filename="test.json",
-                input_value="create a component",
-                global_variables={},
-                max_retries=3,
-            ):
-                events.append(event)
+            events = [
+                event
+                async for event in execute_flow_with_validation_streaming(
+                    flow_filename="test.json",
+                    input_value="create a component",
+                    global_variables={},
+                    max_retries=3,
+                )
+            ]
 
         parsed_events = [json.loads(e[6:-2]) for e in events]
 
@@ -559,14 +569,15 @@ This component will process your input."""
             new_callable=AsyncMock,
             return_value=invalid_response,
         ):
-            events = []
-            async for event in execute_flow_with_validation_streaming(
-                flow_filename="test.json",
-                input_value="create a component",
-                global_variables={},
-                max_retries=0,  # No retries - fail immediately
-            ):
-                events.append(event)
+            events = [
+                event
+                async for event in execute_flow_with_validation_streaming(
+                    flow_filename="test.json",
+                    input_value="create a component",
+                    global_variables={},
+                    max_retries=0,  # No retries - fail immediately
+                )
+            ]
 
         parsed_events = [json.loads(e[6:-2]) for e in events]
 
@@ -603,14 +614,15 @@ Here's the implementation:
             new_callable=AsyncMock,
             return_value=response_with_apology,
         ):
-            events = []
-            async for event in execute_flow_with_validation_streaming(
-                flow_filename="test.json",
-                input_value="create a sentiment analyzer",
-                global_variables={},
-                max_retries=0,  # Test with no retries to see immediate behavior
-            ):
-                events.append(event)
+            events = [
+                event
+                async for event in execute_flow_with_validation_streaming(
+                    flow_filename="test.json",
+                    input_value="create a sentiment analyzer",
+                    global_variables={},
+                    max_retries=0,  # Test with no retries to see immediate behavior
+                )
+            ]
 
         parsed_events = [json.loads(e[6:-2]) for e in events]
 
@@ -649,14 +661,15 @@ Here's the implementation:
             new_callable=AsyncMock,
             return_value=cutoff_response,
         ):
-            events = []
-            async for event in execute_flow_with_validation_streaming(
-                flow_filename="test.json",
-                input_value="create a component",
-                global_variables={},
-                max_retries=2,  # Will try 3 times
-            ):
-                events.append(event)
+            events = [
+                event
+                async for event in execute_flow_with_validation_streaming(
+                    flow_filename="test.json",
+                    input_value="create a component",
+                    global_variables={},
+                    max_retries=2,  # Will try 3 times
+                )
+            ]
 
         parsed_events = [json.loads(e[6:-2]) for e in events]
 
@@ -688,7 +701,7 @@ Here's the implementation:
 
         call_count = 0
 
-        async def mock_execute_flow(*args, **kwargs):
+        async def mock_execute_flow(*_args, **_kwargs):
             nonlocal call_count
             call_count += 1
             if call_count <= 2:  # First 2 calls return cutoff
@@ -699,14 +712,15 @@ Here's the implementation:
             "langflow.agentic.services.assistant_service.execute_flow_file",
             side_effect=mock_execute_flow,
         ):
-            events = []
-            async for event in execute_flow_with_validation_streaming(
-                flow_filename="test.json",
-                input_value="create a component",
-                global_variables={},
-                max_retries=3,
-            ):
-                events.append(event)
+            events = [
+                event
+                async for event in execute_flow_with_validation_streaming(
+                    flow_filename="test.json",
+                    input_value="create a component",
+                    global_variables={},
+                    max_retries=3,
+                )
+            ]
 
         parsed_events = [json.loads(e[6:-2]) for e in events]
 
