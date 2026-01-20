@@ -100,6 +100,7 @@ export type AssistantTerminalProps = {
     provider?: string,
     modelName?: string,
     onProgress?: (progress: ProgressState) => void,
+    onToken?: (chunk: string) => void,
   ) => Promise<SubmitResult>;
   onStop: () => void;
   onAddToCanvas: (code: string) => Promise<void>;

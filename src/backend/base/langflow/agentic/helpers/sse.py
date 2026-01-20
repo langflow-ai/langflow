@@ -51,3 +51,8 @@ def format_complete_event(data: dict) -> str:
 def format_error_event(message: str) -> str:
     """Format SSE error event."""
     return f"data: {json.dumps({'event': 'error', 'message': message})}\n\n"
+
+
+def format_token_event(chunk: str) -> str:
+    """Format SSE token event for streaming LLM output."""
+    return f"data: {json.dumps({'event': 'token', 'chunk': chunk})}\n\n"

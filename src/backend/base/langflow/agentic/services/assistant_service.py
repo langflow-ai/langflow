@@ -8,9 +8,9 @@ from lfx.log.logger import logger
 
 from langflow.agentic.helpers.code_extraction import extract_python_code
 from langflow.agentic.helpers.error_handling import extract_friendly_error
-from langflow.agentic.helpers.sse import format_complete_event, format_error_event, format_progress_event
+from langflow.agentic.helpers.sse import format_complete_event, format_error_event, format_progress_event, format_token_event
 from langflow.agentic.helpers.validation import validate_component_code
-from langflow.agentic.services.flow_executor import execute_flow_file, extract_response_text
+from langflow.agentic.services.flow_executor import execute_flow_file, execute_flow_file_streaming, extract_response_text
 
 MAX_VALIDATION_RETRIES = 3
 VALIDATION_UI_DELAY_SECONDS = 0.3
@@ -115,10 +115,11 @@ async def execute_flow_with_validation_streaming(
     model_name: str | None = None,
     api_key_var: str | None = None,
 ) -> AsyncGenerator[str, None]:
-    """Execute flow with validation, yielding SSE progress events.
+    """Execute flow with validation, yielding SSE progress and token events.
 
     SSE Event Flow:
         1. generating (attempt X/Y) - LLM is generating response
+        1a. token events - Real-time token streaming from LLM
         2. generation_complete - LLM finished generating
         3. extracting_code - Extracting Python code from response (if any)
         4. validating - Validating component code with create_class()
@@ -141,8 +142,10 @@ async def execute_flow_with_validation_streaming(
             message=f"Generating response (attempt {attempt}/{total_attempts})...",
         )
 
+        result = None
         try:
-            result = await execute_flow_file(
+            # Use streaming executor to get token events
+            async for event_type, event_data in execute_flow_file_streaming(
                 flow_filename=flow_filename,
                 input_value=current_input,
                 global_variables=global_variables,
@@ -152,7 +155,13 @@ async def execute_flow_with_validation_streaming(
                 provider=provider,
                 model_name=model_name,
                 api_key_var=api_key_var,
-            )
+            ):
+                if event_type == "token":
+                    # Yield token events for real-time streaming
+                    yield format_token_event(event_data)
+                elif event_type == "end":
+                    # Flow completed, store result
+                    result = event_data
         except HTTPException as e:
             friendly_msg = extract_friendly_error(str(e.detail))
             logger.error(f"Flow execution failed: {friendly_msg}")
@@ -162,6 +171,11 @@ async def execute_flow_with_validation_streaming(
             friendly_msg = extract_friendly_error(str(e))
             logger.error(f"Flow execution failed: {friendly_msg}")
             yield format_error_event(friendly_msg)
+            return
+
+        if result is None:
+            logger.error("Flow execution returned no result")
+            yield format_error_event("Flow execution returned no result")
             return
 
         # Step 2: Generation complete

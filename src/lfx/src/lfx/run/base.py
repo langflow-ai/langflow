@@ -7,6 +7,8 @@ import time
 from io import StringIO
 from pathlib import Path
 
+from typing import TYPE_CHECKING
+
 from lfx.cli.script_loader import (
     extract_structured_result,
     extract_text_from_result,
@@ -16,6 +18,9 @@ from lfx.cli.script_loader import (
 from lfx.cli.validation import validate_global_variables_for_env
 from lfx.log.logger import logger
 from lfx.schema.schema import InputValueRequest
+
+if TYPE_CHECKING:
+    from lfx.events.event_manager import EventManager
 
 # Verbosity level constants
 VERBOSITY_DETAILED = 2
@@ -66,6 +71,7 @@ async def run_flow(
     global_variables: dict[str, str] | None = None,
     user_id: str | None = None,
     session_id: str | None = None,
+    event_manager: "EventManager | None" = None,
 ) -> dict:
     """Execute a Langflow graph script or JSON flow and return the result.
 
@@ -85,6 +91,7 @@ async def run_flow(
         verbose_full: Show full debugging output including component logs
         timing: Include detailed timing information in output
         global_variables: Dict of global variables to inject into the graph context
+        event_manager: Optional EventManager for streaming token events
 
     Returns:
         dict: Result data containing the execution results, logs, and optionally timing info
@@ -340,7 +347,7 @@ async def run_flow(
 
         logger.info("Starting graph execution...", level="DEBUG")
 
-        async for result in graph.async_start(inputs):
+        async for result in graph.async_start(inputs, event_manager=event_manager):
             result_count += 1
             if verbosity > 0:
                 logger.debug(f"Processing result #{result_count}")

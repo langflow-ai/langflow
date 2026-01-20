@@ -32,10 +32,12 @@ import { categorizeError } from "./helpers/error-categorizer";
 import { parseCommand } from "./helpers/command-parser";
 import { getStepConfig } from "./helpers/step-config";
 import { getLoadingText } from "./helpers/loading-text";
+import { extractPreCodeText } from "./helpers/streaming-parser";
 import { TerminalHeader } from "./components/terminal-header";
 import { MessageLine } from "./components/message-line";
 import { LoadingIndicator } from "./components/loading-indicator";
 import { ConfigLoading, ConfigurationRequired } from "./components/configuration-required";
+import { StreamingMessage } from "./components/streaming-message";
 
 const AssistantTerminal = ({
   isOpen,
@@ -65,11 +67,14 @@ const AssistantTerminal = ({
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [progress, setProgress] = useState<ProgressInfo>(null);
   const [loadingText, setLoadingText] = useState<string | null>(null);
+  const [streamingText, setStreamingText] = useState("");
+  const [isStreamingCodeExpanded, setIsStreamingCodeExpanded] = useState(true);
 
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const terminalRef = useRef<HTMLDivElement>(null);
   const prevIsOpenRef = useRef<boolean>(false);
+  const streamingTextRef = useRef<string>("");
 
   const getWelcomeMessages = useCallback(
     (): AssistantMessageData[] => [
@@ -165,7 +170,7 @@ const AssistantTerminal = ({
     if (scrollPosition === -1 && isOpen) {
       scrollToBottom();
     }
-  }, [messages.length, isLoading, scrollPosition, scrollToBottom, isOpen]);
+  }, [messages.length, isLoading, streamingText, scrollPosition, scrollToBottom, isOpen]);
 
   useEffect(() => {
     if (isOpen) {
@@ -257,6 +262,16 @@ const AssistantTerminal = ({
 
       // Set initial loading text (persists until validating/retrying)
       setLoadingText(getLoadingText(null));
+      // Clear any previous streaming text and reset code expansion
+      setStreamingText("");
+      streamingTextRef.current = "";
+      setIsStreamingCodeExpanded(true);
+
+      // Handle token streaming for real-time response display
+      const handleToken = (chunk: string) => {
+        streamingTextRef.current += chunk;
+        setStreamingText(prev => prev + chunk);
+      };
 
       const handleProgress = (p: {
         step: "generating" | "validating" | "generation_complete" | "extracting_code" | "validated" | "validation_failed" | "retrying";
@@ -300,11 +315,22 @@ const AssistantTerminal = ({
         provider,
         modelName,
         handleProgress,
+        handleToken,
       );
+
+      // Extract pre-code explanation text before clearing streaming
+      const preCodeText = extractPreCodeText(streamingTextRef.current);
+
       setProgress(null);
       setLoadingText(null);
+      setStreamingText("");
+      streamingTextRef.current = "";
 
       if (response.validated === true) {
+        // Add pre-code explanation as output message if exists
+        if (preCodeText) {
+          addMessage("output", preCodeText);
+        }
         addMessageWithMetadata("validated", response.content, {
           validated: true,
           className: response.className,
@@ -312,14 +338,19 @@ const AssistantTerminal = ({
           componentCode: response.componentCode,
         });
       } else if (response.validated === false) {
+        // Add pre-code explanation as output message if exists
+        if (preCodeText) {
+          addMessage("output", preCodeText);
+        }
         // Error already shown via progress steps (validation_failed)
-        // No additional message needed
       } else {
         addMessage("output", response.content);
       }
     } catch (error: unknown) {
       setProgress(null);
       setLoadingText(null);
+      setStreamingText("");
+      streamingTextRef.current = "";
 
       // Check if the error is an abort error (user clicked stop)
       if (error instanceof DOMException && error.name === "AbortError") {
@@ -511,7 +542,14 @@ const AssistantTerminal = ({
                     onAddToCanvas={onAddToCanvas}
                   />
                 ))}
-                {isLoading && progress?.step !== "validated" && progress?.step !== "validation_failed" && loadingText && <LoadingIndicator text={loadingText} />}
+                {isLoading && streamingText && (
+                  <StreamingMessage
+                    text={streamingText}
+                    isCodeExpanded={isStreamingCodeExpanded}
+                    onToggleCode={() => setIsStreamingCodeExpanded(!isStreamingCodeExpanded)}
+                  />
+                )}
+                {isLoading && !streamingText && progress?.step !== "validated" && progress?.step !== "validation_failed" && loadingText && <LoadingIndicator text={loadingText} />}
               </div>
             </div>
           </div>

@@ -155,6 +155,7 @@ const Assistant = memo(function Assistant() {
       provider?: string,
       modelName?: string,
       onProgress?: (progress: ProgressState) => void,
+      onToken?: (chunk: string) => void,
     ): Promise<SubmitResult> => {
       if (!currentFlowId) {
         throw new Error("No flow selected. Please open a flow first.");
@@ -173,6 +174,7 @@ const Assistant = memo(function Assistant() {
           modelName,
           sessionId,
           onProgress,
+          onToken,
           abortSignal: abortControllerRef.current.signal,
         });
 

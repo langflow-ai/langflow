@@ -19,11 +19,12 @@ type AssistantPromptRequest = {
 
 type StreamingRequest = AssistantPromptRequest & {
   onProgress?: (progress: ProgressState) => void;
+  onToken?: (chunk: string) => void;
   abortSignal?: AbortSignal;
 };
 
 type SSEEvent = {
-  event: "progress" | "complete" | "error";
+  event: "progress" | "complete" | "error" | "token";
   step?: ProgressStep;
   attempt?: number;
   max_attempts?: number;
@@ -31,6 +32,7 @@ type SSEEvent = {
   error?: string;          // Error message (for validation_failed/retrying)
   class_name?: string;     // Class name (for validation_failed)
   component_code?: string; // Component code (for validation_failed)
+  chunk?: string;          // Token chunk (for token events)
   data?: AssistantPromptResponse;
 };
 
@@ -68,6 +70,7 @@ export async function postAssistantPromptStream({
   modelName,
   sessionId,
   onProgress,
+  onToken,
   abortSignal,
 }: StreamingRequest): Promise<AssistantPromptResponse> {
   const response = await fetchStreamingResponse(
@@ -89,7 +92,7 @@ export async function postAssistantPromptStream({
     throw new Error("No response body");
   }
 
-  return processSSEStream(reader, onProgress);
+  return processSSEStream(reader, onProgress, onToken);
 }
 
 async function fetchStreamingResponse(
@@ -135,6 +138,7 @@ async function fetchStreamingResponse(
 async function processSSEStream(
   reader: ReadableStreamDefaultReader<Uint8Array>,
   onProgress?: (progress: ProgressState) => void,
+  onToken?: (chunk: string) => void,
 ): Promise<AssistantPromptResponse> {
   const decoder = new TextDecoder();
   let result: AssistantPromptResponse | null = null;
@@ -149,12 +153,12 @@ async function processSSEStream(
     buffer = remaining;
 
     for (const eventBlock of events) {
-      result = processSSEEvent(eventBlock, onProgress) ?? result;
+      result = processSSEEvent(eventBlock, onProgress, onToken) ?? result;
     }
   }
 
   if (buffer.trim()) {
-    result = processSSEEvent(buffer, onProgress) ?? result;
+    result = processSSEEvent(buffer, onProgress, onToken) ?? result;
   }
 
   if (!result) {
@@ -173,6 +177,7 @@ function splitSSEEvents(buffer: string): { events: string[]; remaining: string }
 function processSSEEvent(
   eventBlock: string,
   onProgress?: (progress: ProgressState) => void,
+  onToken?: (chunk: string) => void,
 ): AssistantPromptResponse | null {
   for (const line of eventBlock.split("\n")) {
     if (!line.startsWith(SSE_DATA_PREFIX)) continue;
@@ -183,6 +188,11 @@ function processSSEEvent(
 
     if (event.event === "error") {
       throw new Error(event.message || "Unknown error");
+    }
+
+    if (event.event === "token" && onToken && event.chunk) {
+      onToken(event.chunk);
+      continue;
     }
 
     if (event.event === "progress" && onProgress && event.step) {

@@ -8,11 +8,11 @@ type OutputMessageProps = {
 
 export const OutputMessage = ({ content }: OutputMessageProps) => {
   return (
-    <div className="flex items-center gap-2">
-      <LangflowLogo className="h-4 w-4 flex-shrink-0" />
+    <div className="flex items-start gap-2">
+      <LangflowLogo className="mt-1 h-4 w-4 flex-shrink-0" />
       <Markdown
         remarkPlugins={[remarkGfm]}
-        className="markdown prose prose-sm max-w-full font-mono dark:prose-invert prose-p:my-0 prose-pre:my-0 prose-ul:my-0 prose-ol:my-0 [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
+        className="markdown prose prose-sm max-w-full font-mono dark:prose-invert prose-p:my-0 prose-pre:my-0 prose-ul:my-0 prose-ol:my-0 prose-li:my-0 [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_ul]:mt-0 [&_ol]:mt-0 [&_ul]:pl-4 [&_ol]:pl-4"
         components={{
           a: ({ node, ...props }) => (
             <a
