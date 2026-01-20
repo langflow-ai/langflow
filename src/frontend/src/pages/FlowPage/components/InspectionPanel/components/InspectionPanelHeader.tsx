@@ -9,6 +9,8 @@ import useHandleOnNewValue from "@/CustomNodes/hooks/use-handle-new-value";
 import type { NodeDataType } from "@/types/flow";
 import { ToolbarButton } from "../../nodeToolbarComponent/components/toolbar-button";
 import { useShortcutsStore } from "@/stores/shortcuts";
+import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
+import useAlertStore from "@/stores/alertStore";
 
 interface InspectionPanelHeaderProps {
   data: NodeDataType;
@@ -32,11 +34,22 @@ export default function InspectionPanelHeader({
     [data.node],
   );
 
+  const setNoticeData = useAlertStore((state) => state.setNoticeData);
+
   const handleOpenCode = useCallback(() => {
     if (hasCode) {
       setOpenCodeModal(true);
     }
   }, [hasCode]);
+
+  const openDocs = useCallback(() => {
+    if (data.node?.documentation) {
+      return customOpenNewTab(data.node.documentation);
+    }
+    setNoticeData({
+      title: `${data.id} docs is not available at the moment.`,
+    });
+  }, [data.id, data.node?.documentation, setNoticeData]);
 
   // Wrapper to match CodeAreaModal's expected signature
   const handleSetValue = useCallback(
@@ -65,6 +78,16 @@ export default function InspectionPanelHeader({
           </span>
         </div>
         <div className="flex items-center gap-0.5">
+          <ShadTooltip content="Documentation" side="left">
+            <ToolbarButton
+              icon="FileText"
+              onClick={openDocs}
+              shortcut={shortcuts.find((s) =>
+                s.name.toLowerCase().startsWith("docs"),
+              )}
+              dataTestId="docs-button-modal"
+            />
+          </ShadTooltip>
           {hasCode && (
             <ShadTooltip content="View Code" side="left">
               <ToolbarButton
@@ -82,8 +105,7 @@ export default function InspectionPanelHeader({
             <ShadTooltip content="Close" side="top">
               <Button
                 variant="ghost"
-                size="icon"
-                className="h-8 w-8"
+                size="node-toolbar"
                 onClick={onClose}
               >
                 <IconComponent name="X" className="h-4 w-4" />

@@ -682,19 +682,22 @@ const NodeToolbarComponent = memo(
                   </SelectItem>
                 )}
 
-                <SelectItem
-                  value={"documentation"}
-                  disabled={data.node?.documentation === ""}
-                >
-                  <ToolbarSelectItem
-                    shortcut={
-                      shortcuts.find((obj) => obj.name === "Docs")?.shortcut!
-                    }
-                    value={"Docs"}
-                    icon={"FileText"}
-                    dataTestId="docs-button-modal"
-                  />
-                </SelectItem>
+                {!ENABLE_INSPECTION_PANEL && (
+                  <SelectItem
+                    value={"documentation"}
+                    disabled={data.node?.documentation === ""}
+                  >
+                    <ToolbarSelectItem
+                      shortcut={
+                        shortcuts.find((obj) => obj.name === "Docs")?.shortcut!
+                      }
+                      value={"Docs"}
+                      icon={"FileText"}
+                      dataTestId="docs-button-modal"
+                    />
+                  </SelectItem>
+                )}
+
                 {(isMinimal || !showNode) && (
                   <SelectItem
                     value={"show"}
