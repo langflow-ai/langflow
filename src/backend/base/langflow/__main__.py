@@ -17,6 +17,7 @@ import typer
 from dotenv import load_dotenv
 from fastapi import HTTPException
 from httpx import HTTPError
+from jwt import InvalidTokenError
 from lfx.log.logger import configure, logger
 from lfx.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
 from multiprocess import cpu_count
@@ -27,7 +28,6 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from sqlmodel import select
-from jwt import InvalidTokenError
 
 from langflow.cli.progress import create_langflow_progress
 from langflow.initial_setup.setup import get_or_create_default_folder

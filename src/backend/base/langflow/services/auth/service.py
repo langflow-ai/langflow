@@ -8,9 +8,9 @@ from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 from uuid import UUID
 
+import jwt
 from cryptography.fernet import Fernet
 from fastapi import HTTPException, Request, WebSocketException, status
-import jwt
 from jwt import InvalidTokenError
 from lfx.log.logger import logger
 from sqlalchemy.exc import IntegrityError
@@ -435,19 +435,19 @@ class AuthService(AuthServiceBase):
 
     def get_user_id_from_token(self, token: str) -> UUID:
         """Extract user ID from a JWT token without verifying the signature.
-        
+
         This is a utility function for non-security contexts (e.g., logging, debugging).
         It does NOT verify the token signature and should NOT be used for authentication.
-        
+
         For actual authentication, use get_current_user_from_access_token() which properly verifies
         the token signature.
-        
+
         Args:
             token: JWT token string (may be invalid or expired)
-            
+
         Returns:
             UUID: User ID extracted from token, or UUID(int=0) if extraction fails
-            
+
         Note:
             This function uses verify_signature=False to match the behavior of
             python-jose's jwt.get_unverified_claims(). The signature is intentionally

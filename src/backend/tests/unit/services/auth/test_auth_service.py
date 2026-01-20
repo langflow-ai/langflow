@@ -5,9 +5,9 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 from uuid import UUID, uuid4
 
+import jwt
 import pytest
 from fastapi import HTTPException, status
-import jwt
 from langflow.services.auth.service import AuthService
 from langflow.services.database.models.user.model import User
 from lfx.services.settings.auth import AuthSettings
