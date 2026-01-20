@@ -132,6 +132,7 @@ async def run_flow_for_openai_responses(
                 tool_call_counter = 0
                 processed_tools = set()  # Track processed tool calls to avoid duplicates
                 previous_content = ""  # Track content already sent to calculate deltas
+                streamed_tokens = False  # Track if we've sent any token deltas
 
                 async for event_data in consume_and_yield(asyncio_queue, asyncio_queue_client_consumed):
                     if event_data is None:
@@ -161,6 +162,7 @@ async def run_flow_for_openai_responses(
                                 # Handle add_message events
                                 if event_type == "token":
                                     token_data = data.get("chunk", "")
+                                    streamed_tokens = streamed_tokens or bool(token_data)
                                     await logger.adebug(
                                         "[OpenAIResponses][stream] token: token_data=%s",
                                         token_data,
@@ -197,7 +199,7 @@ async def run_flow_for_openai_responses(
 
                                     # Skip processing text content if state is "complete"
                                     # All content has already been streamed via token events
-                                    if message_state == "complete":
+                                    if message_state == "complete" and streamed_tokens:
                                         await logger.adebug(
                                             "[OpenAIResponses][stream] skipping add_message with state=complete"
                                         )
