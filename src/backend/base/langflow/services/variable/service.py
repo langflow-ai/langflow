@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
+from uuid import UUID
 
 from lfx.log.logger import logger
 from sqlmodel import select
@@ -15,7 +16,6 @@ from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-    from uuid import UUID
 
     from lfx.services.settings.service import SettingsService
     from sqlmodel.ext.asyncio.session import AsyncSession
@@ -176,29 +176,67 @@ class DatabaseVariableService(VariableService, Service):
             )
             raise TypeError(msg)
 
-        # we decrypt the value
-        return auth_utils.decrypt_api_key(variable.value, settings_service=self.settings_service)
+        # Only decrypt CREDENTIAL type variables; GENERIC variables are stored as plain text
+        if variable.type == CREDENTIAL_TYPE:
+            return auth_utils.decrypt_api_key(variable.value, settings_service=self.settings_service)
+        # GENERIC type - return as-is
+        return variable.value
 
     async def get_all(self, user_id: UUID | str, session: AsyncSession) -> list[VariableRead]:
         stmt = select(Variable).where(Variable.user_id == user_id)
         variables = list((await session.exec(stmt)).all())
-        # For variables of type 'Generic', attempt to decrypt the value.
-        # If decryption fails, assume the value is already plaintext.
         variables_read = []
         for variable in variables:
             value = None
             if variable.type == GENERIC_TYPE:
-                try:
-                    value = auth_utils.decrypt_api_key(variable.value, settings_service=self.settings_service)
-                except Exception as e:  # noqa: BLE001
-                    await logger.adebug(
-                        f"Decryption of {variable.type} failed for variable '{variable.name}': {e}. Assuming plaintext."
-                    )
-                    value = variable.value
+                value = auth_utils.decrypt_api_key(variable.value, settings_service=self.settings_service)
+                if not value:
+                    # If decryption fails (likely due to encryption by different key), skip this variable
+                    continue
+
+            # Model validate will set value to None if credential type
             variable_read = VariableRead.model_validate(variable, from_attributes=True)
-            variable_read.value = value
+            if variable.type == GENERIC_TYPE:
+                variable_read.value = value
+
             variables_read.append(variable_read)
         return variables_read
+
+    async def get_all_decrypted_variables(
+        self,
+        user_id: UUID | str,
+        session: AsyncSession,
+    ) -> dict[str, str]:
+        """Get all variables for a user with decrypted values.
+
+        Args:
+            user_id: The user ID to get variables for
+            session: Database session
+
+        Returns:
+            Dictionary mapping variable names to decrypted values
+        """
+        # Convert string to UUID if needed for SQLAlchemy query
+        user_id_uuid = UUID(user_id) if isinstance(user_id, str) else user_id
+        stmt = select(Variable).where(Variable.user_id == user_id_uuid)
+        variables = (await session.exec(stmt)).all()
+
+        result = {}
+        for var in variables:
+            if var.name and var.value:
+                try:
+                    decrypted_value = auth_utils.decrypt_api_key(var.value, settings_service=self.settings_service)
+                except Exception as e:  # noqa: BLE001
+                    await logger.awarning(f"Decryption failed for variable '{var.name}': {e}. Skipping")
+                    continue
+
+                if not decrypted_value:
+                    await logger.awarning(f"Decryption returned empty for variable '{var.name}'. Skipping")
+                    continue
+
+                result[var.name] = decrypted_value
+
+        return result
 
     async def get_variable_by_id(
         self,
@@ -229,6 +267,15 @@ class DatabaseVariableService(VariableService, Service):
         if not variable:
             msg = f"{name} variable not found."
             raise ValueError(msg)
+
+        # Validate that GENERIC variables don't start with Fernet signature
+        if variable.type == GENERIC_TYPE and value.startswith("gAAAAA"):
+            msg = (
+                f"Generic variable '{name}' cannot start with 'gAAAAA' as this is reserved "
+                "for encrypted values. Please use a different value."
+            )
+            raise ValueError(msg)
+
         # Only encrypt CREDENTIAL_TYPE variables
         if variable.type == CREDENTIAL_TYPE:
             variable.value = auth_utils.encrypt_api_key(value, settings_service=self.settings_service)
@@ -302,6 +349,14 @@ class DatabaseVariableService(VariableService, Service):
         type_: str = CREDENTIAL_TYPE,
         session: AsyncSession,
     ):
+        # Validate that GENERIC variables don't start with Fernet signature
+        if type_ == GENERIC_TYPE and value.startswith("gAAAAA"):
+            msg = (
+                f"Generic variable '{name}' cannot start with 'gAAAAA' as this is reserved "
+                "for encrypted values. Please use a different value."
+            )
+            raise ValueError(msg)
+
         # Only encrypt CREDENTIAL_TYPE variables
         encrypted_value = (
             auth_utils.encrypt_api_key(value, settings_service=self.settings_service)
