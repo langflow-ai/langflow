@@ -174,7 +174,7 @@ async def get_servers(
                 # Decrypt variables based on type (following the pattern from get_all_decrypted_variables)
                 for variable in variables:
                     if variable.name and variable.value:
-                        # Prior to v1.8, both Generic and Credential variables were encrypted. 
+                        # Prior to v1.8, both Generic and Credential variables were encrypted.
                         # As such, must attempt to decrypt both types to ensure backwards-compatibility.
                         try:
                             decrypted_value = auth_utils.decrypt_api_key(
