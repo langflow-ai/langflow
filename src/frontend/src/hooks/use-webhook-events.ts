@@ -3,7 +3,7 @@
  * Provides live build feedback when webhooks are triggered externally.
  */
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { BuildStatus } from "@/constants/enums";
 import useAuthStore from "@/stores/authStore";
 import useFlowStore from "@/stores/flowStore";
@@ -117,13 +117,27 @@ function handleError(eventOrError: Event): void {
   }
 }
 
+function hasWebhookComponent(flow: { data?: { nodes?: Array<{ id: string }> } } | null): boolean {
+  if (!flow?.data?.nodes) {
+    return false;
+  }
+  return flow.data.nodes.some((node) => node.id.includes("Webhook"));
+}
+
 export function useWebhookEvents() {
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const apiKey = useAuthStore((state) => state.apiKey);
   const eventSourceRef = useRef<EventSource | null>(null);
 
+  // Memoize webhook check to avoid reconnecting on every render
+  const flowHasWebhook = useMemo(
+    () => hasWebhookComponent(currentFlow),
+    [currentFlow?.data?.nodes],
+  );
+
   useEffect(() => {
-    if (!currentFlow?.id) {
+    // Only connect if flow has a webhook component
+    if (!currentFlow?.id || !flowHasWebhook) {
       return;
     }
 
@@ -156,5 +170,5 @@ export function useWebhookEvents() {
         eventSourceRef.current = null;
       }
     };
-  }, [currentFlow?.id, currentFlow?.endpoint_name, apiKey]);
+  }, [currentFlow?.id, currentFlow?.endpoint_name, apiKey, flowHasWebhook]);
 }
