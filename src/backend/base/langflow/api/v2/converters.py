@@ -377,15 +377,6 @@ def _process_terminal_vertex(
             if isinstance(result_metadata, dict):
                 metadata.update(result_metadata)
 
-    # Build ComponentOutput
-    component_output = ComponentOutput(
-        type=output_type,
-        component_id=vertex.id,
-        status=JobStatus.COMPLETED,
-        content=content,
-        metadata=metadata,
-    )
-
     # Determine output key: use display_name if unique, otherwise use id
     display_name = vertex.display_name or vertex.id
     if display_name_counts.get(display_name, 0) > 1:
@@ -398,6 +389,14 @@ def _process_terminal_vertex(
         # Unique display_name, use it as key
         output_key = display_name
 
+    # Build ComponentOutput
+    component_output = ComponentOutput(
+        type=output_type,
+        component_id=vertex.id,
+        status=JobStatus.COMPLETED,
+        content=content,
+        metadata=metadata,
+    )
     return output_key, component_output
 
 
