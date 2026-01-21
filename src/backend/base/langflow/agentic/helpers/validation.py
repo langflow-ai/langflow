@@ -1,6 +1,7 @@
 """Component code validation."""
 
 import re
+from functools import lru_cache
 
 from lfx.custom.validate import create_class, extract_class_name
 
@@ -18,10 +19,7 @@ def _extract_class_name_regex(code: str) -> str | None:
 
 def _safe_extract_class_name(code: str) -> str | None:
     """Extract class name with fallback to regex for broken code."""
-    try:
-        return extract_class_name(code)
-    except (ValueError, SyntaxError):
-        return _extract_class_name_regex(code)
+    return _cached_extract(code)
 
 
 def validate_component_code(code: str) -> ValidationResult:
@@ -57,3 +55,11 @@ def validate_component_code(code: str) -> ValidationResult:
         KeyError,
     ) as e:
         return ValidationResult(is_valid=False, code=code, error=f"{type(e).__name__}: {e}", class_name=class_name)
+
+
+@lru_cache(maxsize=4096)
+def _cached_extract(code: str) -> str | None:
+    try:
+        return extract_class_name(code)
+    except (ValueError, SyntaxError):
+        return _extract_class_name_regex(code)
