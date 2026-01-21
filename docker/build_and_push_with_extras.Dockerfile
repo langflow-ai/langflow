@@ -72,29 +72,20 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 ################################
 FROM python:3.12.12-slim-trixie AS runtime
 
+
 RUN apt-get update \
     && apt-get upgrade -y \
-    && apt-get install -y curl git libpq5 gnupg xz-utils \
+    && apt-get install --no-install-recommends -y curl git libpq5 gnupg xz-utils \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
-
-RUN NODE_VERSION=$(curl -fsSL https://nodejs.org/dist/index.json \
-                    | grep '"version": "v22' \
-                    | head -n 1 \
-                    | cut -d'"' -f4) \
-    && echo "Installing Node.js $NODE_VERSION" \
-    && curl -fsSL "https://nodejs.org/dist/$NODE_VERSION/node-$NODE_VERSION-linux-x64.tar.xz" -o node.tar.xz \
-    && tar -xf node.tar.xz -C /usr/local --strip-components=1 \
-    && rm node.tar.xz \
+RUN curl -fsSL https://nodejs.org/dist/latest-v22.x/node-v22-linux-x64.tar.xz \
+    | tar -xJ -C /usr/local --strip-components=1 \
     && node --version \
     && npm --version
-
 RUN useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data
 
 COPY --from=builder --chown=1000 /app/.venv /app/.venv
-
 ENV PATH="/app/.venv/bin:$PATH"
-
 RUN /app/.venv/bin/pip install --upgrade playwright \
     && /app/.venv/bin/playwright install
 
