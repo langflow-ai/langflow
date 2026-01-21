@@ -234,11 +234,12 @@ class AuthService(AuthServiceBase):
                         headers={"WWW-Authenticate": "Bearer"},
                     )
 
-            if user_id is None or token_type is None:
-                logger.info(f"Invalid token payload. Token type: {token_type}")
+            # Validate token type - must be "access" for authentication
+            if user_id is None or token_type != "access":
+                logger.warning(f"Invalid token payload. Expected 'access' token, got: {token_type}")
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid token details.",
+                    detail="Invalid token type. Expected access token.",
                     headers={"WWW-Authenticate": "Bearer"},
                 )
         except InvalidTokenError as e:
@@ -555,7 +556,21 @@ class AuthService(AuthServiceBase):
         return encrypted_key.decode()
 
     def decrypt_api_key(self, encrypted_api_key: str) -> str:
+        """Decrypt an encrypted API key.
+        
+        Args:
+            encrypted_api_key: The encrypted API key string
+            
+        Returns:
+            Decrypted API key string, or empty string if decryption fails
+            
+        Note:
+            - Returns empty string for invalid input (None, empty string)
+            - Returns plaintext keys as-is (not starting with "gAAAAA")
+            - Logs warnings on decryption failures for security monitoring
+        """
         if not isinstance(encrypted_api_key, str) or not encrypted_api_key:
+            logger.debug("decrypt_api_key called with invalid input (empty or non-string)")
             return ""
 
         # Fernet tokens always start with "gAAAAA" - if not, return as-is (plain text)
@@ -573,8 +588,14 @@ class AuthService(AuthServiceBase):
             )
             try:
                 return fernet.decrypt(encrypted_api_key).decode()
-            except Exception:  # noqa: BLE001
-                # Decryption failed completely - return empty string
+            except Exception as secondary_exception:  # noqa: BLE001
+                # Decryption failed completely - log warning and return empty string
+                logger.warning(
+                    "API key decryption failed after retry. This may indicate a corrupted key or "
+                    "SECRET_KEY mismatch. Primary error: %s, Secondary error: %s",
+                    primary_exception,
+                    secondary_exception,
+                )
                 return ""
 
     async def get_current_user_mcp(
