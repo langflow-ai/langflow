@@ -6,7 +6,7 @@ from toolguard.buildtime import (
     ToolGuardsCodeGenerationResult,
     ToolGuardSpec,
     generate_guard_specs,
-    generate_guards_from_specs,
+    generate_guards_code,
 )
 
 from lfx.base.models import LCModelComponent
@@ -19,7 +19,7 @@ from lfx.components.policies.guarded_tool import GuardedTool
 from lfx.components.policies.llm_wrapper import LangchainModelWrapper
 from lfx.components.policies.models import BUILDTIME_MODELS
 from lfx.field_typing import LanguageModel, Tool
-from lfx.io import BoolInput, HandleInput, ModelInput, MultilineInput, Output, SecretStrInput, StrInput, TabInput
+from lfx.io import BoolInput, HandleInput, ModelInput, Output, SecretStrInput, StrInput, TabInput
 from lfx.log.logger import logger
 
 TOOLGUARD_WORK_DIR = Path("tmp_toolguard")
@@ -169,7 +169,7 @@ Powered by [ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         if out_dir.exists():
             shutil.rmtree(out_dir)
         llm = LangchainModelWrapper(self.build_model())
-        gen_result = await generate_guards_from_specs(
+        gen_result = await generate_guards_code(
             tools=self.in_tools, tool_specs=specs, work_dir=out_dir, llm=llm, app_name=to_snake_case(self.project)
         )
         logger.info("🔒️ToolGuard: Step 2 Done")
