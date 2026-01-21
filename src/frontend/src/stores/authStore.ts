@@ -9,14 +9,15 @@ import {
 import type { AuthStoreType } from "@/types/zustand/auth";
 import { cookieManager, getCookiesInstance } from "@/utils/cookie-manager";
 
-const cookies = getCookiesInstance();
 const useAuthStore = create<AuthStoreType>((set, get) => ({
   isAdmin: false,
-  isAuthenticated: !!cookies.get(LANGFLOW_ACCESS_TOKEN),
-  accessToken: cookies.get(LANGFLOW_ACCESS_TOKEN) ?? null,
+  // Authentication state is now determined by session validation, not cookie reads
+  // This allows HttpOnly cookies to work properly
+  isAuthenticated: false,
+  accessToken: null,
   userData: null,
   autoLogin: null,
-  apiKey: cookies.get(LANGFLOW_API_TOKEN),
+  apiKey: null,
   authenticationErrorCount: 0,
 
   setIsAdmin: (isAdmin) => set({ isAdmin }),
