@@ -128,7 +128,6 @@ jobs:
 
           uv lock
           cd src/backend/base && uv lock && cd ../../..
-          cd src/lfx && uv lock && cd ../..
 
           git add pyproject.toml src/backend/base/pyproject.toml src/lfx/pyproject.toml uv.lock src/backend/base/uv.lock
           git commit -m "Update version and project name"
@@ -215,13 +214,14 @@ jobs:
   #     ref: ${{ needs.create-nightly-tag.outputs.tag }}
 
   release-nightly-build:
-    if: github.repository == 'langflow-ai/langflow' && (needs.frontend-tests.result == 'success' || needs.frontend-tests.result == 'skipped') && (needs.backend-unit-tests.result == 'success' || needs.backend-unit-tests.result == 'skipped')
+    if: github.repository == 'langflow-ai/langflow' && always() && needs.frontend-tests.result != 'failure' && needs.backend-unit-tests.result != 'failure'
     name: Run Nightly Langflow Build
     needs: [create-nightly-tag, frontend-tests, backend-unit-tests]
     uses: ./.github/workflows/release_nightly.yml
     with:
       build_docker_base: true
       build_docker_main: true
+      build_docker_ep: true
       build_lfx: true
       nightly_tag_main: ${{ needs.create-nightly-tag.outputs.main_tag }}
       nightly_tag_base: ${{ needs.create-nightly-tag.outputs.base_tag }}

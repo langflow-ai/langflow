@@ -420,7 +420,10 @@ class TestProcessFilesEdgeCases:
         with pytest.raises(ValueError, match="No files to process"):
             component.process_files([])
 
-    def test_process_files_docling_only_extension_without_advanced_mode(self, tmp_path):
+    def test_process_files_docling_only_extension_without_advanced_mode(
+        self,
+        tmp_path,
+    ):
         """Test that Docling-only extensions require advanced mode."""
         test_image = tmp_path / "test.png"
         test_image.write_bytes(b"\x89PNG\r\n\x1a\n" + b"\x00" * 100)
@@ -491,3 +494,185 @@ class TestLoadFilesHelperValidation:
         with patch.object(component, "load_files", return_value=df_with_both):
             result = component.load_files_helper()
             assert not result.empty
+
+
+class TestImageContentTypeValidation:
+    """Tests for validating that image content matches file extension."""
+
+    def test_valid_png_file(self, tmp_path):
+        """Test that a valid PNG file passes validation."""
+        from lfx.base.data.storage_utils import validate_image_content_type
+
+        # Create a valid PNG file (minimal PNG header)
+        png_file = tmp_path / "valid.png"
+        png_file.write_bytes(b"\x89PNG\r\n\x1a\n" + b"\x00" * 100)
+
+        is_valid, error = validate_image_content_type(str(png_file))
+        assert is_valid is True
+        assert error is None
+
+    def test_valid_jpeg_file(self, tmp_path):
+        """Test that a valid JPEG file passes validation."""
+        from lfx.base.data.storage_utils import validate_image_content_type
+
+        # Create a valid JPEG file (JPEG magic bytes)
+        jpeg_file = tmp_path / "valid.jpg"
+        jpeg_file.write_bytes(b"\xff\xd8\xff\xe0" + b"\x00" * 100)
+
+        is_valid, error = validate_image_content_type(str(jpeg_file))
+        assert is_valid is True
+        assert error is None
+
+    def test_jpeg_saved_as_png_fails(self, tmp_path):
+        """Test that a JPEG file saved with .png extension is rejected."""
+        from lfx.base.data.storage_utils import validate_image_content_type
+
+        # Create a JPEG file but with .png extension
+        mismatched_file = tmp_path / "actually_jpeg.png"
+        mismatched_file.write_bytes(b"\xff\xd8\xff\xe0" + b"\x00" * 100)
+
+        is_valid, error = validate_image_content_type(str(mismatched_file))
+        assert is_valid is False
+        assert error is not None
+        assert "JPEG" in error
+        assert ".png" in error
+
+    def test_png_saved_as_jpg_fails(self, tmp_path):
+        """Test that a PNG file saved with .jpg extension is rejected."""
+        from lfx.base.data.storage_utils import validate_image_content_type
+
+        # Create a PNG file but with .jpg extension
+        mismatched_file = tmp_path / "actually_png.jpg"
+        mismatched_file.write_bytes(b"\x89PNG\r\n\x1a\n" + b"\x00" * 100)
+
+        is_valid, error = validate_image_content_type(str(mismatched_file))
+        assert is_valid is False
+        assert error is not None
+        assert "PNG" in error
+        assert ".jpg" in error
+
+    def test_non_image_file_passes(self, tmp_path):
+        """Test that non-image files skip validation."""
+        from lfx.base.data.storage_utils import validate_image_content_type
+
+        # Create a text file
+        text_file = tmp_path / "document.txt"
+        text_file.write_text("Hello, world!")
+
+        is_valid, error = validate_image_content_type(str(text_file))
+        assert is_valid is True
+        assert error is None
+
+    def test_unrecognized_content_fails(self, tmp_path):
+        """Test that a file with unrecognized content is rejected."""
+        from lfx.base.data.storage_utils import validate_image_content_type
+
+        # Create a file with .png extension but random content
+        # This should fail - it's not a valid image
+        unknown_file = tmp_path / "unknown.png"
+        unknown_file.write_bytes(b"this is not a real image at all")
+
+        is_valid, error = validate_image_content_type(str(unknown_file))
+        assert is_valid is False
+        assert error is not None
+        assert "not a valid image format" in error
+
+    def test_valid_gif_file(self, tmp_path):
+        """Test that a valid GIF file passes validation."""
+        from lfx.base.data.storage_utils import validate_image_content_type
+
+        # Create a valid GIF file
+        gif_file = tmp_path / "valid.gif"
+        gif_file.write_bytes(b"GIF89a" + b"\x00" * 100)
+
+        is_valid, error = validate_image_content_type(str(gif_file))
+        assert is_valid is True
+        assert error is None
+
+    def test_valid_webp_file(self, tmp_path):
+        """Test that a valid WebP file passes validation."""
+        from lfx.base.data.storage_utils import validate_image_content_type
+
+        # Create a valid WebP file (RIFF....WEBP header)
+        webp_file = tmp_path / "valid.webp"
+        webp_file.write_bytes(b"RIFF\x00\x00\x00\x00WEBP" + b"\x00" * 100)
+
+        is_valid, error = validate_image_content_type(str(webp_file))
+        assert is_valid is True
+        assert error is None
+
+    def test_valid_bmp_file(self, tmp_path):
+        """Test that a valid BMP file passes validation."""
+        from lfx.base.data.storage_utils import validate_image_content_type
+
+        # Create a valid BMP file
+        bmp_file = tmp_path / "valid.bmp"
+        bmp_file.write_bytes(b"BM" + b"\x00" * 100)
+
+        is_valid, error = validate_image_content_type(str(bmp_file))
+        assert is_valid is True
+        assert error is None
+
+    def test_process_files_rejects_mismatched_image(self, tmp_path):
+        """Test that process_files rejects images with content/extension mismatch."""
+        # Create a JPEG file but with .png extension
+        mismatched_file = tmp_path / "fake.png"
+        mismatched_file.write_bytes(b"\xff\xd8\xff\xe0" + b"\x00" * 100)
+
+        component = FileComponent()
+        component.advanced_mode = True
+        component.silent_errors = False
+
+        from lfx.base.data.base_file import BaseFileComponent
+
+        base_file = BaseFileComponent.BaseFile(
+            data=Data(data={"file_path": str(mismatched_file)}),
+            path=mismatched_file,
+            delete_after_processing=False,
+        )
+
+        with pytest.raises(ValueError, match=r"\.png.*JPEG"):
+            component.process_files([base_file])
+
+    @patch("subprocess.run")
+    def test_process_files_silent_mode_skips_mismatched_image(self, mock_subprocess, tmp_path):
+        """Test that process_files in silent mode logs but doesn't raise for mismatched images."""
+        # Create a JPEG file but with .png extension
+        mismatched_file = tmp_path / "fake.png"
+        mismatched_file.write_bytes(b"\xff\xd8\xff\xe0" + b"\x00" * 100)
+
+        component = FileComponent()
+        component.advanced_mode = True
+        component.silent_errors = True
+        component.markdown = False
+        component.md_image_placeholder = "<!-- image -->"
+        component.md_page_break_placeholder = ""
+        component.pipeline = "standard"
+        component.ocr_engine = "easyocr"
+        component.use_multithreading = False
+        component.concurrency_multithreading = 1
+
+        # Mock Docling to return success (won't be called if validation fails)
+        mock_result = {
+            "ok": True,
+            "mode": "structured",
+            "doc": [],
+            "meta": {"file_path": str(mismatched_file)},
+        }
+        mock_subprocess.return_value = MagicMock(
+            stdout=json.dumps(mock_result).encode("utf-8"),
+            stderr=b"",
+        )
+
+        from lfx.base.data.base_file import BaseFileComponent
+
+        base_file = BaseFileComponent.BaseFile(
+            data=Data(data={"file_path": str(mismatched_file)}),
+            path=mismatched_file,
+            delete_after_processing=False,
+        )
+
+        # Should not raise in silent mode
+        result = component.process_files([base_file])
+        # Result may be empty or contain data, but no exception should be raised
+        assert isinstance(result, list)

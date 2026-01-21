@@ -24,6 +24,7 @@ if TYPE_CHECKING:
         SettingsServiceProtocol,
         StorageServiceProtocol,
         TracingServiceProtocol,
+        TransactionServiceProtocol,
         VariableServiceProtocol,
     )
 
@@ -116,6 +117,17 @@ def get_tracing_service() -> TracingServiceProtocol | None:
     from lfx.services.schema import ServiceType
 
     return get_service(ServiceType.TRACING_SERVICE)
+
+
+def get_transaction_service() -> TransactionServiceProtocol | None:
+    """Retrieves the transaction service instance.
+
+    Returns the transaction service for logging component executions.
+    Returns None if no transaction service is registered.
+    """
+    from lfx.services.schema import ServiceType
+
+    return get_service(ServiceType.TRANSACTION_SERVICE)
 
 
 async def get_session():

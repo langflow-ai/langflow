@@ -62,8 +62,10 @@ jest.mock("@/customization/feature-flags", () => ({
   ENABLE_MCP_COMPOSER: false,
 }));
 
+const customGetMCPUrlMock = jest.fn(() => "http://test.com/api");
+
 jest.mock("@/customization/utils/custom-mcp-url", () => ({
-  customGetMCPUrl: () => "http://test.com/api",
+  customGetMCPUrl: (...args: unknown[]) => customGetMCPUrlMock(...args),
 }));
 
 const createWrapper = () => {
@@ -120,6 +122,27 @@ describe("useMcpServer hook", () => {
     expect(result.current.mcpJson).toBeDefined();
     expect(typeof result.current.mcpJson).toBe("string");
     expect(result.current.mcpJson).toContain("mcpServers");
+  });
+
+  it("passes selected transport into helpers", () => {
+    customGetMCPUrlMock.mockReturnValueOnce("http://test.com/api/streamable");
+    const { result } = renderHook(
+      () =>
+        useMcpServer({
+          projectId: "test-project",
+          folderName: "test-folder",
+          selectedPlatform: "macoslinux",
+          selectedTransport: "streamablehttp",
+        }),
+      { wrapper: createWrapper() },
+    );
+
+    expect(customGetMCPUrlMock).toHaveBeenCalledWith(
+      "test-project",
+      expect.any(Object),
+      "streamablehttp",
+    );
+    expect(result.current.mcpJson).toContain("--transport");
   });
 
   it("detects auth type correctly", () => {

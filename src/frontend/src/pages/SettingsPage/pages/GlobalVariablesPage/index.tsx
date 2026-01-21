@@ -2,6 +2,7 @@ import type {
   ColDef,
   RowClickedEvent,
   SelectionChangedEvent,
+  ValueFormatterParams,
 } from "ag-grid-community";
 import { useRef, useState } from "react";
 
@@ -62,6 +63,14 @@ export default function GlobalVariablesPage() {
     },
     {
       field: "value",
+      valueFormatter: (params: ValueFormatterParams<GlobalVariable>) => {
+        const isCreditential = params.data?.type === "Credential";
+
+        if (isCreditential) {
+          return "*****";
+        }
+        return params.value ?? "";
+      },
     },
     {
       headerName: "Apply To Fields",

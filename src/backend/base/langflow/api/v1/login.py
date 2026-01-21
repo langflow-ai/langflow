@@ -4,10 +4,11 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
+from pydantic import BaseModel
 
 from langflow.api.utils import DbSession
 from langflow.api.v1.schemas import Token
-from langflow.initial_setup.setup import create_or_update_agentic_flows, get_or_create_default_folder
+from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.auth.utils import (
     authenticate_user,
     create_refresh_token,
@@ -15,9 +16,18 @@ from langflow.services.auth.utils import (
     create_user_tokens,
 )
 from langflow.services.database.models.user.crud import get_user_by_id
+from langflow.services.database.models.user.model import UserRead
 from langflow.services.deps import get_settings_service, get_variable_service
 
 router = APIRouter(tags=["Login"])
+
+
+class SessionResponse(BaseModel):
+    """Session validation response."""
+
+    authenticated: bool
+    user: UserRead | None = None
+    store_api_key: str | None = None
 
 
 @router.post("/login", response_model=Token)
@@ -32,9 +42,13 @@ async def login_to_get_access_token(
     except Exception as exc:
         if isinstance(exc, HTTPException):
             raise
+        # Log the actual error server-side but don't expose it to clients
+        from loguru import logger
+
+        logger.error(f"Authentication error: {exc}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(exc),
+            detail="An error occurred during authentication",
         ) from exc
 
     if user:
@@ -70,12 +84,12 @@ async def login_to_get_access_token(
         # Initialize agentic variables if agentic experience is enabled
         from langflow.api.utils.mcp.agentic_mcp import initialize_agentic_user_variables
 
-        if get_settings_service().settings.agentic_experience:
-            await initialize_agentic_user_variables(user.id, db)
         # Create default project for user if it doesn't exist
         _ = await get_or_create_default_folder(db, user.id)
-        # Create or update Langflow Assistant folder with agentic flows
-        await create_or_update_agentic_flows(db, user.id)
+
+        if get_settings_service().settings.agentic_experience:
+            await initialize_agentic_user_variables(user.id, db)
+
         return tokens
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -116,8 +130,10 @@ async def auto_login(response: Response, db: DbSession):
                 domain=auth_settings.COOKIE_DOMAIN,
             )
 
-            # Create or update Langflow Assistant folder with agentic flows
-            await create_or_update_agentic_flows(db, user_id)
+            if get_settings_service().settings.agentic_experience:
+                from langflow.api.utils.mcp.agentic_mcp import initialize_agentic_user_variables
+
+                await initialize_agentic_user_variables(user.id, db)
 
         return tokens
 
@@ -166,6 +182,39 @@ async def refresh_token(
         detail="Invalid refresh token",
         headers={"WWW-Authenticate": "Bearer"},
     )
+
+
+@router.get("/session")
+async def get_session(
+    request: Request,
+    db: DbSession,
+) -> SessionResponse:
+    """Validate session and return user information.
+
+    This endpoint checks if the user is authenticated via cookie or Authorization header.
+    It does not raise an error if unauthenticated, allowing the frontend to gracefully
+    handle the session state.
+    """
+    from langflow.services.auth.utils import get_current_user_by_jwt, oauth2_login
+
+    # Try to get the token from the request (cookie or Authorization header)
+    try:
+        token = await oauth2_login(request)
+        if not token:
+            return SessionResponse(authenticated=False)
+
+        # Validate the token and get user
+        user = await get_current_user_by_jwt(token, db)
+        if not user or not user.is_active:
+            return SessionResponse(authenticated=False)
+
+        return SessionResponse(
+            authenticated=True,
+            user=UserRead.model_validate(user, from_attributes=True),
+        )
+    except (HTTPException, ValueError) as _:
+        # Any authentication error means not authenticated
+        return SessionResponse(authenticated=False)
 
 
 @router.post("/logout")

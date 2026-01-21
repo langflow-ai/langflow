@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from aiofile import async_open
@@ -10,6 +11,8 @@ from langflow.logging.logger import logger
 from langflow.services.storage.service import StorageService
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
     from langflow.services.session.service import SessionService
     from langflow.services.settings.service import SettingsService
 
@@ -55,6 +58,44 @@ class LocalStorageService(StorageService):
     def build_full_path(self, flow_id: str, file_name: str) -> str:
         """Build the full path of a file in the local storage."""
         return str(self.data_dir / flow_id / file_name)
+
+    def parse_file_path(self, full_path: str) -> tuple[str, str]:
+        r"""Parse a full local storage path to extract flow_id and file_name.
+
+        Uses pathlib.Path for robust cross-platform path handling, including
+        Windows paths with backslashes.
+
+        Args:
+            full_path: Filesystem path, may or may not include data_dir
+                e.g., "/data/user_123/image.png" or "user_123/image.png"
+                Also handles Windows paths like "C:\\data\\user_123\\image.png"
+
+        Returns:
+            tuple[str, str]: A tuple of (flow_id, file_name)
+
+        Examples:
+            >>> parse_file_path("/data/user_123/image.png")  # with data_dir
+            ("user_123", "image.png")
+            >>> parse_file_path("user_123/image.png")  # without data_dir
+            ("user_123", "image.png")
+        """
+        full_path_obj = Path(full_path)
+        data_dir_path = Path(self.data_dir)
+
+        # Remove data_dir prefix if present
+        try:
+            path_without_prefix = full_path_obj.relative_to(data_dir_path)
+        except ValueError:
+            path_without_prefix = full_path_obj
+
+        # Normalize to forward slashes for consistent handling
+        path_str = str(path_without_prefix).replace("\\", "/")
+
+        if "/" not in path_str:
+            return "", path_str
+
+        flow_id, file_name = path_str.rsplit("/", 1)
+        return flow_id, file_name
 
     async def save_file(self, flow_id: str, file_name: str, data: bytes, *, append: bool = False) -> None:
         """Save a file in the local storage.
@@ -109,7 +150,7 @@ class LocalStorageService(StorageService):
         logger.debug(f"File {file_name} retrieved successfully from flow {flow_id}.")
         return content
 
-    async def get_file_stream(self, flow_id: str, file_name: str, chunk_size: int = 8192):
+    async def get_file_stream(self, flow_id: str, file_name: str, chunk_size: int = 8192) -> AsyncIterator[bytes]:
         """Retrieve a file from storage as a stream."""
         file_path = self.data_dir / flow_id / file_name
         if not await file_path.exists():
