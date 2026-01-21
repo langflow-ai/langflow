@@ -199,26 +199,27 @@ class TestCheckKeyFromDb:
     @pytest.mark.asyncio
     async def test_valid_key_returns_user(self, mock_session, mock_user, mock_settings_service_db):
         """Valid API key should return the associated user."""
-        mock_api_key = MagicMock()
-        mock_api_key.user = mock_user
-        mock_api_key.total_uses = 0
-        mock_api_key.api_key = "sk-valid-key"
+        api_key_id = uuid4()
+        user_id = mock_user.id
 
         mock_result = MagicMock()
-        mock_result.first.return_value = mock_api_key
-        mock_session.exec.return_value = mock_result
+        mock_result.all.return_value = [(api_key_id, "sk-valid-key", user_id)]
+
+        mock_session.exec = AsyncMock(return_value=mock_result)
+
+        mock_session.get = AsyncMock(return_value=mock_user)
 
         result = await _check_key_from_db(mock_session, "sk-valid-key", mock_settings_service_db)
 
         assert result == mock_user
-        assert mock_api_key.total_uses == 1
+        mock_session.get.assert_called_once_with(User, user_id)
 
     @pytest.mark.asyncio
     async def test_invalid_key_returns_none(self, mock_session, mock_settings_service_db):
         """Invalid API key should return None."""
         mock_result = MagicMock()
-        mock_result.first.return_value = None
-        mock_session.exec.return_value = mock_result
+        mock_result.all.return_value = []  # No keys in DB
+        mock_session.exec = AsyncMock(return_value=mock_result)
 
         result = await _check_key_from_db(mock_session, "sk-invalid-key", mock_settings_service_db)
 
@@ -227,45 +228,43 @@ class TestCheckKeyFromDb:
     @pytest.mark.asyncio
     async def test_usage_tracking_increments(self, mock_session, mock_user, mock_settings_service_db):
         """API key usage should be tracked when not disabled."""
-        mock_api_key = MagicMock()
-        mock_api_key.user = mock_user
-        mock_api_key.total_uses = 5
-        mock_api_key.api_key = "sk-valid-key"
+        api_key_id = uuid4()
+        user_id = mock_user.id
 
         mock_result = MagicMock()
-        mock_result.first.return_value = mock_api_key
-        mock_session.exec.return_value = mock_result
+        mock_result.all.return_value = [(api_key_id, "sk-valid-key", user_id)]
+        mock_session.exec = AsyncMock(return_value=mock_result)
+        mock_session.get = AsyncMock(return_value=mock_user)
 
         await _check_key_from_db(mock_session, "sk-valid-key", mock_settings_service_db)
 
-        assert mock_api_key.total_uses == 6
-        mock_session.add.assert_called_once_with(mock_api_key)
-        mock_session.flush.assert_called_once()
+        # Verify exec was called twice (select + update)
+        assert mock_session.exec.call_count == 2
 
     @pytest.mark.asyncio
     async def test_usage_tracking_disabled(self, mock_session, mock_user, mock_settings_service_db):
         """API key usage should not be tracked when disabled."""
         mock_settings_service_db.settings.disable_track_apikey_usage = True
 
-        mock_api_key = MagicMock()
-        mock_api_key.user = mock_user
-        mock_api_key.total_uses = 5
+        api_key_id = uuid4()
+        user_id = mock_user.id
 
         mock_result = MagicMock()
-        mock_result.first.return_value = mock_api_key
-        mock_session.exec.return_value = mock_result
+        mock_result.all.return_value = [(api_key_id, "sk-valid-key", user_id)]
+        mock_session.exec = AsyncMock(return_value=mock_result)
+        mock_session.get = AsyncMock(return_value=mock_user)
 
         await _check_key_from_db(mock_session, "sk-valid-key", mock_settings_service_db)
 
-        assert mock_api_key.total_uses == 5  # Not incremented
-        mock_session.add.assert_not_called()
+        # Verify exec was called only once (select, no update)
+        assert mock_session.exec.call_count == 1
 
     @pytest.mark.asyncio
     async def test_empty_key_returns_none(self, mock_session, mock_settings_service_db):
         """Empty API key should return None."""
         mock_result = MagicMock()
-        mock_result.first.return_value = None
-        mock_session.exec.return_value = mock_result
+        mock_result.all.return_value = []  # No keys match
+        mock_session.exec = AsyncMock(return_value=mock_result)
 
         result = await _check_key_from_db(mock_session, "", mock_settings_service_db)
 
