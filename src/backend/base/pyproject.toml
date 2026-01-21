@@ -23,8 +23,8 @@ dependencies = [
     "aiofile>=3.9.0,<4.0.0",
     "uvicorn>=0.30.0,<1.0.0",
     "gunicorn>=22.0.0,<23.0.0",
-    "langchain~=0.3.21",
-    "langchain-community>=0.3.0,<1.0.0",
+    "langchain~=0.3.27",
+    "langchain-community>=0.3.28,<1.0.0",
     "langchain-core>=0.3.45,<1.0.0",
     "langchainhub~=0.1.15",
     "loguru>=0.7.1,<1.0.0",
@@ -260,8 +260,8 @@ beautifulsoup = ["beautifulsoup4==4.12.3"]
 serpapi = ["google-search-results>=2.4.1,<3.0.0"]
 google-api = ["google-api-python-client==2.154.0"]
 wikipedia = ["wikipedia==1.4.0"]
-fake-useragent = ["fake-useragent==1.5.1"]
-duckduckgo = ["duckduckgo-search>=7.0.0"]
+fake-useragent = ["fake-useragent>=2.0.0"]
+duckduckgo = ["ddgs>=9.0.0"]
 yfinance = ["yfinance==0.2.50"]
 wolframalpha = ["wolframalpha==5.1.3"]
 
