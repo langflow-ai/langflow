@@ -16,8 +16,9 @@ from langflow.services.factory import ServiceFactory
 from langflow.services.schema import ServiceType
 
 if TYPE_CHECKING:
+    from lfx.services.settings.service import SettingsService
+
     from langflow.services.auth.base import AuthServiceBase
-    from langflow.services.settings.service import SettingsService
 
 
 class AuthProvider(str, Enum):
@@ -38,8 +39,8 @@ class AuthServiceFactory(ServiceFactory):
 
     name = ServiceType.AUTH_SERVICE.value
 
-    def __init__(self):
-        # Import here to avoid circular dependencies
+    def __init__(self) -> None:
+        # Import here to avoid circular dependencies at module level
         from langflow.services.auth.service import AuthService
 
         super().__init__(AuthService)
