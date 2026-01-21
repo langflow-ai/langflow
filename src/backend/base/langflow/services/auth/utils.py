@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING, Annotated, Final
 
 from fastapi import Depends, HTTPException, Request, Security, WebSocket, status
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
+from fastapi.security.utils import get_authorization_scheme_param
+from jwt import InvalidTokenError
 from lfx.log.logger import logger
 from lfx.services.deps import injectable_session_scope
 
@@ -25,7 +27,33 @@ if TYPE_CHECKING:
 
     from langflow.services.database.models.user.model import User, UserRead
 
-oauth2_login = OAuth2PasswordBearer(tokenUrl="api/v1/login", auto_error=False)
+
+class OAuth2PasswordBearerCookie(OAuth2PasswordBearer):
+    """Custom OAuth2 scheme that checks Authorization header first, then cookies.
+
+    This allows the application to work with HttpOnly cookies while supporting
+    explicit Authorization headers for backward compatibility and testing scenarios.
+    If an explicit Authorization header is provided, it takes precedence over cookies.
+    """
+
+    async def __call__(self, request: Request) -> str | None:
+        # First, check for explicit Authorization header (for backward compatibility and testing)
+        authorization = request.headers.get("Authorization")
+        scheme, param = get_authorization_scheme_param(authorization)
+        if scheme.lower() == "bearer" and param:
+            return param
+
+        # Fall back to cookie (for HttpOnly cookie support in browser-based clients)
+        token = request.cookies.get("access_token_lf")
+        if token:
+            return token
+
+        # If auto_error is True, this would raise an exception
+        # Since we set auto_error=False, return None
+        return None
+
+
+oauth2_login = OAuth2PasswordBearerCookie(tokenUrl="api/v1/login", auto_error=False)
 
 API_KEY_NAME = "x-api-key"
 
