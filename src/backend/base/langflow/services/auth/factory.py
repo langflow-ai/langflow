@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
 
+from langflow.services.auth.service import AuthService
 from langflow.services.factory import ServiceFactory
 from langflow.services.schema import ServiceType
 
@@ -40,9 +41,13 @@ class AuthServiceFactory(ServiceFactory):
 
     def __init__(self):
         # Import here to avoid circular dependencies
-        from langflow.services.auth.service import AuthService
+        # Cache the AuthService class on the class to avoid repeated imports
+        if not hasattr(AuthServiceFactory, "_AuthService"):
+            from langflow.services.auth.service import AuthService
 
-        super().__init__(AuthService)
+            AuthServiceFactory._AuthService = AuthService
+
+        super().__init__(AuthServiceFactory._AuthService)
 
     def create(self, settings_service: SettingsService) -> AuthServiceBase:
         """Create authentication service based on configured provider.
@@ -59,7 +64,6 @@ class AuthServiceFactory(ServiceFactory):
         3. Configuration file if SSO_CONFIG_FILE is specified or database config exists
         """
         # Import here to avoid circular dependencies
-        from langflow.services.auth.service import AuthService
         from langflow.services.auth.sso_service import SSOConfigService
 
         # Check if SSO is enabled
@@ -114,17 +118,26 @@ class AuthServiceFactory(ServiceFactory):
         Raises:
             NotImplementedError: If the provider is not yet implemented
         """
-        from langflow.services.auth.service import AuthService
+        # Cache import on the function to avoid repeated imports across calls
+        if not hasattr(AuthServiceFactory.create_auth_service_from_provider, "_AuthService"):
+            from langflow.services.auth.service import AuthService
+
+            AuthServiceFactory.create_auth_service_from_provider._AuthService = AuthService
+
+        AuthService = AuthServiceFactory.create_auth_service_from_provider._AuthService
 
         if provider == AuthProvider.JWT:
             return AuthService(settings_service)
         if provider == AuthProvider.OIDC:
             # Will be implemented in Phase 2
+            # Will be implemented in Phase 2
             raise NotImplementedError("OIDC authentication not yet implemented")
         if provider == AuthProvider.SAML:
             # Will be implemented in Phase 7
+            # Will be implemented in Phase 7
             raise NotImplementedError("SAML authentication not yet implemented")
         if provider == AuthProvider.LDAP:
+            # Will be implemented in Phase 8
             # Will be implemented in Phase 8
             raise NotImplementedError("LDAP authentication not yet implemented")
         # Fallback to JWT
