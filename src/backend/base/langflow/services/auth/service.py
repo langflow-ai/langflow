@@ -555,18 +555,27 @@ class AuthService(AuthServiceBase):
         return encrypted_key.decode()
 
     def decrypt_api_key(self, encrypted_api_key: str) -> str:
+        if not isinstance(encrypted_api_key, str) or not encrypted_api_key:
+            return ""
+
+        # Fernet tokens always start with "gAAAAA" - if not, return as-is (plain text)
+        if not encrypted_api_key.startswith("gAAAAA"):
+            return encrypted_api_key
+
         fernet = self._get_fernet()
-        if isinstance(encrypted_api_key, str):
+        try:
+            return fernet.decrypt(encrypted_api_key.encode()).decode()
+        except Exception as primary_exception:  # noqa: BLE001
+            logger.debug(
+                "Decryption using UTF-8 encoded API key failed. Error: %s. "
+                "Retrying decryption using the raw string input.",
+                primary_exception,
+            )
             try:
-                return fernet.decrypt(encrypted_api_key.encode()).decode()
-            except Exception as primary_exception:  # noqa: BLE001
-                logger.debug(
-                    "Decryption using UTF-8 encoded API key failed. Error: %s. "
-                    "Retrying decryption using the raw string input.",
-                    primary_exception,
-                )
                 return fernet.decrypt(encrypted_api_key).decode()
-        return ""
+            except Exception:  # noqa: BLE001
+                # Decryption failed completely - return empty string
+                return ""
 
     async def get_current_user_mcp(
         self,

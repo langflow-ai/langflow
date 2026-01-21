@@ -1,41 +1,13 @@
 """Test decrypt_api_key function with encrypted, plain text, and wrong key scenarios."""
 
-from unittest.mock import Mock
-
-import pytest
-from cryptography.fernet import Fernet
 from langflow.services.auth.mcp_encryption import is_encrypted
 from langflow.services.auth.utils import decrypt_api_key, encrypt_api_key
-from pydantic import SecretStr
-
-
-@pytest.fixture
-def mock_settings_service():
-    """Mock settings service with a valid Fernet key."""
-    mock_service = Mock()
-    valid_key = Fernet.generate_key()
-    valid_key_str = valid_key.decode("utf-8")
-    secret_key_obj = SecretStr(valid_key_str)
-    mock_service.auth_settings.SECRET_KEY = secret_key_obj
-    return mock_service
-
-
-@pytest.fixture
-def different_settings_service():
-    """Mock settings service with a different Fernet key."""
-    mock_service = Mock()
-    # Generate a different key
-    different_key = Fernet.generate_key()
-    different_key_str = different_key.decode("utf-8")
-    secret_key_obj = SecretStr(different_key_str)
-    mock_service.auth_settings.SECRET_KEY = secret_key_obj
-    return mock_service
 
 
 class TestDecryptApiKey:
     """Test decrypt_api_key function behavior."""
 
-    def test_decrypt_encrypted_value_success(self, mock_settings_service):
+    def test_decrypt_encrypted_value_success(self):
         """Test successful decryption of an encrypted value."""
         original_value = "my-secret-api-key-12345"
 
@@ -50,7 +22,7 @@ class TestDecryptApiKey:
         decrypted_value = decrypt_api_key(encrypted_value)
         assert decrypted_value == original_value
 
-    def test_decrypt_plain_text_value(self, mock_settings_service):
+    def test_decrypt_plain_text_value(self):
         """Test that plain text values are returned as-is."""
         plain_text_value = "plain-text-api-key"
 
@@ -58,7 +30,7 @@ class TestDecryptApiKey:
         result = decrypt_api_key(plain_text_value)
         assert result == plain_text_value
 
-    def test_decrypt_with_wrong_key_returns_empty(self, mock_settings_service, different_settings_service):
+    def test_decrypt_with_wrong_key_returns_empty(self):
         """Test that encrypted values with wrong key return empty string."""
         original_value = "my-secret-api-key-12345"
 
@@ -74,33 +46,33 @@ class TestDecryptApiKey:
         result = decrypt_api_key(encrypted_value)
         assert result == original_value  # Changed expectation
 
-    def test_decrypt_empty_string(self, mock_settings_service):
+    def test_decrypt_empty_string(self):
         """Test decryption of empty string."""
         result = decrypt_api_key("")
         assert result == ""
 
-    def test_decrypt_special_characters_plain_text(self, mock_settings_service):
+    def test_decrypt_special_characters_plain_text(self):
         """Test plain text with special characters."""
         special_value = "api-key-with-special!@#$%^&*()"
 
         result = decrypt_api_key(special_value)
         assert result == special_value
 
-    def test_decrypt_numeric_string_plain_text(self, mock_settings_service):
+    def test_decrypt_numeric_string_plain_text(self):
         """Test plain text numeric string."""
         numeric_value = "1234567890"
 
         result = decrypt_api_key(numeric_value)
         assert result == numeric_value
 
-    def test_decrypt_url_plain_text(self, mock_settings_service):
+    def test_decrypt_url_plain_text(self):
         """Test plain text URL."""
         url_value = "https://api.example.com/v1/key"
 
         result = decrypt_api_key(url_value)
         assert result == url_value
 
-    def test_decrypt_base64_like_but_not_fernet(self, mock_settings_service):
+    def test_decrypt_base64_like_but_not_fernet(self):
         """Test base64-like string that's not a Fernet token."""
         # Base64 string that doesn't start with gAAAAA
         base64_value = "aGVsbG8gd29ybGQ="  # "hello world" in base64
@@ -108,7 +80,7 @@ class TestDecryptApiKey:
         result = decrypt_api_key(base64_value)
         assert result == base64_value
 
-    def test_decrypt_long_encrypted_value(self, mock_settings_service):
+    def test_decrypt_long_encrypted_value(self):
         """Test decryption of a long encrypted value."""
         long_value = "a" * 1000  # 1000 character string
 
@@ -117,14 +89,14 @@ class TestDecryptApiKey:
 
         assert decrypted_value == long_value
 
-    def test_decrypt_unicode_plain_text(self, mock_settings_service):
+    def test_decrypt_unicode_plain_text(self):
         """Test plain text with unicode characters."""
         unicode_value = "api-key-with-émojis-🔑-and-中文"
 
         result = decrypt_api_key(unicode_value)
         assert result == unicode_value
 
-    def test_decrypt_encrypted_unicode(self, mock_settings_service):
+    def test_decrypt_encrypted_unicode(self):
         """Test encryption and decryption of unicode characters."""
         unicode_value = "secret-🔐-key-密钥"
 
@@ -133,7 +105,7 @@ class TestDecryptApiKey:
 
         assert decrypted_value == unicode_value
 
-    def test_fernet_token_signature_detection(self, mock_settings_service, different_settings_service):
+    def test_fernet_token_signature_detection(self):
         """Test that Fernet token signature (gAAAAA) is properly detected."""
         original_value = "test-value"
 
@@ -155,7 +127,7 @@ class TestDecryptApiKey:
 class TestIsEncrypted:
     """Test is_encrypted helper function."""
 
-    def test_is_encrypted_with_encrypted_value(self, mock_settings_service):
+    def test_is_encrypted_with_encrypted_value(self):
         """Test that encrypted values are correctly identified."""
         original_value = "my-secret-key"
         encrypted_value = encrypt_api_key(original_value)
@@ -163,30 +135,30 @@ class TestIsEncrypted:
         # Should be identified as encrypted
         assert is_encrypted(encrypted_value)
 
-    def test_is_encrypted_with_plain_text(self, mock_settings_service):  # noqa: ARG002
+    def test_is_encrypted_with_plain_text(self):
         """Test that plain text values are not identified as encrypted."""
         plain_text = "plain-text-value"
 
         # Should not be identified as encrypted
         assert not is_encrypted(plain_text)
 
-    def test_is_encrypted_with_empty_string(self, mock_settings_service):  # noqa: ARG002
+    def test_is_encrypted_with_empty_string(self):
         """Test that empty string is not identified as encrypted."""
         assert not is_encrypted("")
 
-    def test_is_encrypted_with_none(self, mock_settings_service):  # noqa: ARG002
+    def test_is_encrypted_with_none(self):
         """Test that None is handled gracefully."""
         # is_encrypted expects a string, but let's test edge case
         assert not is_encrypted(None) if None else True  # Will short-circuit
 
-    def test_is_encrypted_with_base64_not_fernet(self, mock_settings_service):  # noqa: ARG002
+    def test_is_encrypted_with_base64_not_fernet(self):
         """Test that base64 strings without Fernet signature are not identified as encrypted."""
         base64_value = "aGVsbG8gd29ybGQ="  # "hello world" in base64
 
         # Should not be identified as encrypted (doesn't start with gAAAAA)
         assert not is_encrypted(base64_value)
 
-    def test_is_encrypted_with_wrong_key(self, mock_settings_service):
+    def test_is_encrypted_with_wrong_key(self):
         """Test that values encrypted with different key are still identified as encrypted."""
         original_value = "my-secret-key"
 
@@ -197,7 +169,7 @@ class TestIsEncrypted:
         # (because it has the Fernet signature)
         assert is_encrypted(encrypted_value)
 
-    def test_is_encrypted_with_fernet_signature_prefix(self, mock_settings_service):  # noqa: ARG002
+    def test_is_encrypted_with_fernet_signature_prefix(self):
         """Test that strings starting with gAAAAA are identified as encrypted."""
         # Create a fake Fernet-like string (won't decrypt but has signature)
         fake_encrypted = "gAAAAABfakeencryptedvalue123456789"
