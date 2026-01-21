@@ -674,9 +674,7 @@ class Operations(Component):
         if operation_name == "Word Count":
             frontend_node["outputs"].append(Output(display_name="Data", name="data_output", method="get_data"))
         elif operation_name == "Text to DataFrame":
-            frontend_node["outputs"].append(
-                Output(display_name="DataFrame", name="dataframe", method="get_dataframe")
-            )
+            frontend_node["outputs"].append(Output(display_name="DataFrame", name="dataframe", method="get_dataframe"))
         elif operation_name == "Text Join":
             frontend_node["outputs"].append(Output(display_name="Text", name="text", method="get_text"))
             frontend_node["outputs"].append(Output(display_name="Message", name="message", method="get_message"))
@@ -695,9 +693,7 @@ class Operations(Component):
             frontend_node["outputs"].append(Output(display_name="Data", name="data_output", method="get_data"))
         # DataFrame operations outputs
         elif operation_name in OPERATION_FIELDS and "df_input" in OPERATION_FIELDS.get(operation_name, []):
-            frontend_node["outputs"].append(
-                Output(display_name="DataFrame", name="dataframe", method="get_dataframe")
-            )
+            frontend_node["outputs"].append(Output(display_name="DataFrame", name="dataframe", method="get_dataframe"))
 
         return frontend_node
 
