@@ -2027,20 +2027,7 @@
                 "info": "Choose where to save the file.",
                 "limit": 1,
                 "name": "storage_location",
-                "options": [
-                  {
-                    "icon": "hard-drive",
-                    "name": "Local"
-                  },
-                  {
-                    "icon": "Amazon",
-                    "name": "AWS"
-                  },
-                  {
-                    "icon": "google",
-                    "name": "Google Drive"
-                  }
-                ],
+                "options": [],
                 "placeholder": "Select Location",
                 "real_time_refresh": true,
                 "required": false,

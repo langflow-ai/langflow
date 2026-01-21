@@ -557,10 +557,7 @@
                 "dynamic": false,
                 "info": "Convert into raw string instead of using a template.",
                 "name": "mode",
-                "options": [
-                  "Parser",
-                  "Stringify"
-                ],
+                "options": [],
                 "placeholder": "",
                 "real_time_refresh": true,
                 "required": false,
@@ -1025,10 +1022,7 @@
                 "dynamic": false,
                 "info": "Convert into raw string instead of using a template.",
                 "name": "mode",
-                "options": [
-                  "Parser",
-                  "Stringify"
-                ],
+                "options": [],
                 "placeholder": "",
                 "real_time_refresh": true,
                 "required": false,
@@ -1657,11 +1651,7 @@
                 "dynamic": false,
                 "info": "The environment for the Astra DB API Endpoint.",
                 "name": "environment",
-                "options": [
-                  "prod",
-                  "test",
-                  "dev"
-                ],
+                "options": [],
                 "options_metadata": [],
                 "placeholder": "",
                 "real_time_refresh": true,
@@ -1813,10 +1803,7 @@
                 "dynamic": false,
                 "info": "Determine how your content is matched: Vector finds semantic similarity, and Hybrid Search (suggested) combines both approaches with a reranker.",
                 "name": "search_method",
-                "options": [
-                  "Hybrid Search",
-                  "Vector Search"
-                ],
+                "options": [],
                 "options_metadata": [
                   {
                     "icon": "SearchHybrid"

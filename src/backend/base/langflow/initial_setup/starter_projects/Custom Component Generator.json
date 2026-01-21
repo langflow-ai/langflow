@@ -373,10 +373,7 @@
                 "dynamic": false,
                 "info": "Operation mode: Store messages or Retrieve messages.",
                 "name": "mode",
-                "options": [
-                  "Retrieve",
-                  "Store"
-                ],
+                "options": [],
                 "placeholder": "",
                 "real_time_refresh": true,
                 "required": false,
