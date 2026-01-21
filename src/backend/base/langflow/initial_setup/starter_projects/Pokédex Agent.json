@@ -1009,7 +1009,13 @@
                 "dynamic": false,
                 "info": "The HTTP method to use.",
                 "name": "method",
-                "options": [],
+                "options": [
+                  "GET",
+                  "POST",
+                  "PATCH",
+                  "PUT",
+                  "DELETE"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "real_time_refresh": true,
@@ -1028,7 +1034,10 @@
                 "dynamic": false,
                 "info": "Enable cURL mode to populate fields from a cURL command.",
                 "name": "mode",
-                "options": [],
+                "options": [
+                  "URL",
+                  "cURL"
+                ],
                 "placeholder": "",
                 "real_time_refresh": true,
                 "required": false,

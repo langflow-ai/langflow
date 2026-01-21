@@ -3125,7 +3125,10 @@
                 "external_options": {},
                 "info": "Docling pipeline to use",
                 "name": "pipeline",
-                "options": [],
+                "options": [
+                  "standard",
+                  "vlm"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "real_time_refresh": true,
@@ -3223,7 +3226,20 @@
                 "info": "Choose where to read the file from.",
                 "limit": 1,
                 "name": "storage_location",
-                "options": [],
+                "options": [
+                  {
+                    "icon": "hard-drive",
+                    "name": "Local"
+                  },
+                  {
+                    "icon": "Amazon",
+                    "name": "AWS"
+                  },
+                  {
+                    "icon": "google",
+                    "name": "Google Drive"
+                  }
+                ],
                 "override_skip": false,
                 "placeholder": "Select Location",
                 "real_time_refresh": true,

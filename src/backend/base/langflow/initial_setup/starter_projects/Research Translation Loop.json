@@ -1675,7 +1675,10 @@
                 "dynamic": false,
                 "info": "Convert into raw string instead of using a template.",
                 "name": "mode",
-                "options": [],
+                "options": [
+                  "Parser",
+                  "Stringify"
+                ],
                 "override_skip": false,
                 "placeholder": "",
                 "real_time_refresh": true,

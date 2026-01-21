@@ -1762,7 +1762,14 @@
                 "external_options": {},
                 "info": "The base URL of the API (IBM watsonx.ai only)",
                 "name": "base_url_ibm_watsonx",
-                "options": [],
+                "options": [
+                  "https://us-south.ml.cloud.ibm.com",
+                  "https://eu-de.ml.cloud.ibm.com",
+                  "https://eu-gb.ml.cloud.ibm.com",
+                  "https://au-syd.ml.cloud.ibm.com",
+                  "https://jp-tok.ml.cloud.ibm.com",
+                  "https://ca-tor.ml.cloud.ibm.com"
+                ],
                 "options_metadata": [],
                 "override_skip": false,
                 "placeholder": "",

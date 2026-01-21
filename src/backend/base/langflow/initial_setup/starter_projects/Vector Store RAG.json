@@ -3191,7 +3191,10 @@
                 "external_options": {},
                 "info": "Docling pipeline to use",
                 "name": "pipeline",
-                "options": [],
+                "options": [
+                  "standard",
+                  "vlm"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "real_time_refresh": true,
@@ -3289,7 +3292,20 @@
                 "info": "Choose where to read the file from.",
                 "limit": 1,
                 "name": "storage_location",
-                "options": [],
+                "options": [
+                  {
+                    "icon": "hard-drive",
+                    "name": "Local"
+                  },
+                  {
+                    "icon": "Amazon",
+                    "name": "AWS"
+                  },
+                  {
+                    "icon": "google",
+                    "name": "Google Drive"
+                  }
+                ],
                 "override_skip": false,
                 "placeholder": "Select Location",
                 "real_time_refresh": true,
@@ -4231,7 +4247,11 @@
                 "external_options": {},
                 "info": "The environment for the Astra DB API Endpoint.",
                 "name": "environment",
-                "options": [],
+                "options": [
+                  "prod",
+                  "test",
+                  "dev"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "real_time_refresh": true,
@@ -4380,7 +4400,10 @@
                 "external_options": {},
                 "info": "Determine how your content is matched: Vector finds semantic similarity, and Hybrid Search (suggested) combines both approaches with a reranker.",
                 "name": "search_method",
-                "options": [],
+                "options": [
+                  "Hybrid Search",
+                  "Vector Search"
+                ],
                 "options_metadata": [
                   {
                     "icon": "SearchHybrid"
@@ -5037,7 +5060,11 @@
                 "external_options": {},
                 "info": "The environment for the Astra DB API Endpoint.",
                 "name": "environment",
-                "options": [],
+                "options": [
+                  "prod",
+                  "test",
+                  "dev"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "real_time_refresh": true,
@@ -5186,7 +5213,10 @@
                 "external_options": {},
                 "info": "Determine how your content is matched: Vector finds semantic similarity, and Hybrid Search (suggested) combines both approaches with a reranker.",
                 "name": "search_method",
-                "options": [],
+                "options": [
+                  "Hybrid Search",
+                  "Vector Search"
+                ],
                 "options_metadata": [
                   {
                     "icon": "SearchHybrid"

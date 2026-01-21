@@ -1893,7 +1893,10 @@
                 "dynamic": false,
                 "info": "Operation mode: Store messages or Retrieve messages.",
                 "name": "mode",
-                "options": [],
+                "options": [
+                  "Retrieve",
+                  "Store"
+                ],
                 "placeholder": "",
                 "real_time_refresh": true,
                 "required": false,
