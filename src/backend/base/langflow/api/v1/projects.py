@@ -9,7 +9,7 @@ from uuid import UUID
 import orjson
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, Response, UploadFile, status
 from fastapi.encoders import jsonable_encoder
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi_pagination import Params
 from fastapi_pagination.ext.sqlmodel import apaginate
 from lfx.log.logger import logger
@@ -487,6 +487,111 @@ async def update_project(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
     return folder_read
+
+
+async def _check_name_uniqueness(
+    session: DbSession,
+    name: str,
+    user_id: UUID,
+    exclude_id: UUID | None = None,
+) -> None:
+    """Check if a project name is unique for a user, optionally excluding a specific project."""
+    query = select(Folder).where(Folder.name == name, Folder.user_id == user_id)
+    if exclude_id is not None:
+        query = query.where(Folder.id != exclude_id)
+
+    if (await session.exec(query)).first():
+        raise HTTPException(status_code=409, detail="Name must be unique")
+
+
+async def _update_existing_project(
+    session: DbSession,
+    existing_project: Folder,
+    project: FolderCreate,
+    user_id: UUID,
+) -> FolderRead:
+    """Update an existing project (PUT update path)."""
+    if project.name and project.name != existing_project.name:
+        await _check_name_uniqueness(session, project.name, user_id, exclude_id=existing_project.id)
+
+    if project.name:
+        existing_project.name = project.name
+    if project.description is not None:
+        existing_project.description = project.description
+    if project.parent_id is not None:
+        existing_project.parent_id = project.parent_id
+
+    session.add(existing_project)
+    await session.flush()
+    await session.refresh(existing_project)
+
+    return FolderRead.model_validate(existing_project, from_attributes=True)
+
+
+async def _create_new_project(
+    session: DbSession,
+    project: FolderCreate,
+    project_id: UUID,
+    user_id: UUID,
+) -> FolderRead:
+    """Create a new project with specified ID (PUT create path).
+
+    Unlike POST, this fails on name conflict instead of auto-renaming.
+    """
+    await _check_name_uniqueness(session, project.name, user_id)
+
+    new_project = Folder.model_validate(project, from_attributes=True)
+    new_project.id = project_id
+    new_project.user_id = user_id
+
+    session.add(new_project)
+    await session.flush()
+    await session.refresh(new_project)
+
+    # Associate flows with the new project
+    flow_ids = (project.flows_list or []) + (project.components_list or [])
+    if flow_ids:
+        await session.exec(
+            update(Flow).where(Flow.id.in_(flow_ids)).values(folder_id=new_project.id)  # type: ignore[attr-defined]
+        )
+
+    return FolderRead.model_validate(new_project, from_attributes=True)
+
+
+@router.put("/{project_id}", response_model=FolderRead)
+async def upsert_project(
+    *,
+    session: DbSession,
+    project_id: UUID,
+    project: FolderCreate,
+    current_user: CurrentActiveUser,
+):
+    """Create or update a project with a specific ID (upsert).
+
+    - If the project doesn't exist: creates it with the specified ID
+    - If the project exists and belongs to the current user: updates it
+    - If the project exists but belongs to another user: returns 404
+
+    Returns 201 for creation, 200 for update.
+    """
+    try:
+        existing_project = (await session.exec(select(Folder).where(Folder.id == project_id))).first()
+
+        if existing_project is not None:
+            if existing_project.user_id != current_user.id:
+                raise HTTPException(status_code=404, detail="Project not found")
+            folder_read = await _update_existing_project(session, existing_project, project, current_user.id)
+            return JSONResponse(status_code=200, content=jsonable_encoder(folder_read))
+
+        folder_read = await _create_new_project(session, project, project_id, current_user.id)
+        return JSONResponse(status_code=201, content=jsonable_encoder(folder_read))
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        if "UNIQUE constraint failed" in str(e):
+            raise HTTPException(status_code=409, detail="Name must be unique") from e
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.delete("/{project_id}", status_code=204)

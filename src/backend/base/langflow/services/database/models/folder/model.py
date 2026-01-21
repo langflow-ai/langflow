@@ -37,6 +37,7 @@ class Folder(FolderBase, table=True):  # type: ignore[call-arg]
 
 
 class FolderCreate(FolderBase):
+    parent_id: UUID | None = None
     components_list: list[UUID] | None = None
     flows_list: list[UUID] | None = None
 
