@@ -1,4 +1,3 @@
-
 from typing import Any
 
 from lfx.base.embeddings.embeddings_class import EmbeddingsWithModels
