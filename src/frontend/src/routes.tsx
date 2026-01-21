@@ -158,10 +158,7 @@ const router = createBrowserRouter(
                   />
                   <Route path="shortcuts" element={<ShortcutsPage />} />
                   <Route path="messages" element={<MessagesPage />} />
-                  <Route
-                    path="type-coercion"
-                    element={<TypeCoercionPage />}
-                  />
+                  <Route path="type-coercion" element={<TypeCoercionPage />} />
                   {CustomRoutesStore()}
                 </Route>
                 {CustomRoutesStorePages()}

@@ -62,8 +62,8 @@ export default function TypeCoercionPage() {
               />
               <span>
                 Coercible types (Data, Message, DataFrame) will now show{" "}
-                <span className="font-medium text-pink-500">pink</span>{" "}
-                colored handles and can connect to each other.
+                <span className="font-medium text-pink-500">pink</span> colored
+                handles and can connect to each other.
               </span>
             </div>
           )}
@@ -74,7 +74,10 @@ export default function TypeCoercionPage() {
           <div className="flex flex-col space-y-4 rounded-lg border border-border p-4">
             <div className="flex items-center justify-between">
               <div className="flex flex-col space-y-1">
-                <Label htmlFor="auto-parse-toggle" className="text-sm font-medium">
+                <Label
+                  htmlFor="auto-parse-toggle"
+                  className="text-sm font-medium"
+                >
                   Auto Parse
                 </Label>
                 <p className="text-sm text-muted-foreground">
