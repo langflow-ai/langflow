@@ -557,13 +557,13 @@ class AuthService(AuthServiceBase):
 
     def decrypt_api_key(self, encrypted_api_key: str) -> str:
         """Decrypt an encrypted API key.
-        
+
         Args:
             encrypted_api_key: The encrypted API key string
-            
+
         Returns:
             Decrypted API key string, or empty string if decryption fails
-            
+
         Note:
             - Returns empty string for invalid input (None, empty string)
             - Returns plaintext keys as-is (not starting with "gAAAAA")

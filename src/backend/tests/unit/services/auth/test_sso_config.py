@@ -4,7 +4,6 @@ import tempfile
 from pathlib import Path
 
 import pytest
-
 from langflow.services.auth.factory import AuthProvider
 from langflow.services.auth.sso_config import OIDCConfig, SSOConfig, SSOConfigLoader
 
@@ -18,7 +17,7 @@ def test_oidc_config_validation():
         discovery_url="https://w3id.sso.ibm.com/isam/oidc/endpoint/default/.well-known/openid-configuration",
         redirect_uri="https://langflow.example.com/api/v1/auth/callback",
     )
-    
+
     assert config.provider_name == "IBM W3ID"
     assert config.client_id == "test-client-id"
     assert config.scopes == ["openid", "email", "profile"]  # default scopes
@@ -57,21 +56,24 @@ oidc:
   username_claim: preferred_username
   user_id_claim: sub
 """
-    
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
         f.write(yaml_content)
         temp_path = f.name
-    
+
     try:
         config = SSOConfigLoader.load_from_file(temp_path)
-        
+
         assert config.provider == AuthProvider.OIDC
         assert config.enabled is True
         assert config.enforce_sso is False
         assert config.oidc is not None
         assert config.oidc.provider_name == "IBM W3ID"
         assert config.oidc.client_id == "test-client-id"
-        assert config.oidc.discovery_url == "https://w3id.sso.ibm.com/isam/oidc/endpoint/default/.well-known/openid-configuration"
+        assert (
+            config.oidc.discovery_url
+            == "https://w3id.sso.ibm.com/isam/oidc/endpoint/default/.well-known/openid-configuration"
+        )
     finally:
         Path(temp_path).unlink()
 
@@ -95,7 +97,7 @@ def test_sso_config_get_provider_config():
             redirect_uri="https://langflow.example.com/callback",
         ),
     )
-    
+
     provider_config = config.get_provider_config()
     assert isinstance(provider_config, OIDCConfig)
     assert provider_config.provider_name == "Test"
@@ -103,12 +105,12 @@ def test_sso_config_get_provider_config():
 
 def test_sso_config_create_example_oidc():
     """Test creating example OIDC configuration."""
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
         temp_path = f.name
-    
+
     try:
         SSOConfigLoader.create_example_config(AuthProvider.OIDC, temp_path)
-        
+
         # Verify the file was created and can be loaded
         config = SSOConfigLoader.load_from_file(temp_path)
         assert config.provider == AuthProvider.OIDC

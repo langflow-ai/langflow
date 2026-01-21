@@ -118,13 +118,13 @@ class AuthSettings(BaseSettings):
         description="Enable SSO authentication. Disabled by default. Set to true to enable SSO.",
     )
     """If True, SSO authentication is enabled. Configuration must be provided via SSO_CONFIG_FILE."""
-    
+
     SSO_PROVIDER: str = Field(
         default="jwt",
         description="SSO provider type: jwt (default), oidc, saml, ldap",
     )
     """The authentication provider to use. Default is 'jwt' for standard authentication."""
-    
+
     SSO_CONFIG_FILE: str | None = Field(
         default=None,
         description="Path to SSO configuration file (YAML format). Required when SSO_ENABLED=true.",
