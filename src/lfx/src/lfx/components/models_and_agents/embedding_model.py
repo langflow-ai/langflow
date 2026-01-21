@@ -1,4 +1,4 @@
-import logging
+
 from typing import Any
 
 from lfx.base.embeddings.embeddings_class import EmbeddingsWithModels
@@ -10,8 +10,6 @@ from lfx.base.models.unified_models import (
     get_unified_models_detailed,
     update_model_options_in_build_config,
 )
-
-logger = logging.getLogger(__name__)
 from lfx.base.models.watsonx_constants import IBM_WATSONX_URLS
 from lfx.field_typing import Embeddings
 from lfx.io import (
@@ -24,6 +22,7 @@ from lfx.io import (
     ModelInput,
     SecretStrInput,
 )
+from lfx.log.logger import logger
 
 
 class EmbeddingModelComponent(LCEmbeddingsModel):
