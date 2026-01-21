@@ -18,7 +18,7 @@ class MockSession:
     def __init__(self, items):
         self._items = items
 
-    async def exec(self):
+    async def exec(self, _query=None):
         # emulate SQLModel AsyncSession.exec returning a result with .all()
         await asyncio.sleep(0)  # ensure it's truly async
         return DummyResult(self._items)
