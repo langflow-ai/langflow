@@ -268,7 +268,7 @@ async def _get_disabled_models(session: DbSession, current_user: CurrentActiveUs
         var = await variable_service.get_variable_object(
             user_id=current_user.id, name=DISABLED_MODELS_VAR, session=session
         )
-        if var.value is not None:
+        if var.value:  # This checks for both None and empty string
             try:
                 parsed_value = json.loads(var.value)
                 # Validate it's a list of strings
@@ -299,7 +299,7 @@ async def _get_enabled_models(session: DbSession, current_user: CurrentActiveUse
         var = await variable_service.get_variable_object(
             user_id=current_user.id, name=ENABLED_MODELS_VAR, session=session
         )
-        if var.value is not None:
+        if var.value:  # This checks for both None and empty string
             try:
                 parsed_value = json.loads(var.value)
                 # Validate it's a list of strings
