@@ -22,7 +22,7 @@ dependencies = [
     "google-search-results>=2.4.1,<3.0.0",
     "google-api-python-client==2.154.0",
     "huggingface-hub[inference]>=0.23.2,<1.0.0",
-    "networkx==3.4.2",
+    "networkx>=3.1,<4.0.0",
     "fake-useragent==1.5.1",
     "pyarrow==19.0.0",
     "wikipedia==1.4.0",
@@ -124,6 +124,19 @@ dependencies = [
     "twelvelabs>=0.4.7,<1.0.0",
     "docling-core>=2.36.1,<3.0.0",
     "docling>=2.36.1,<3.0.0; sys_platform != 'darwin' or platform_machine != 'x86_64'",
+    # https://download.pytorch.org/whl/torch/
+    "torch @ https://download.pytorch.org/whl/cpu/torch-2.8.0%2Bcpu-cp310-cp310-manylinux_2_28_x86_64.whl ; sys_platform == 'linux' and platform_machine == 'x86_64' and python_version == '3.10'",
+    "torch @ https://download.pytorch.org/whl/cpu/torch-2.8.0%2Bcpu-cp311-cp311-manylinux_2_28_x86_64.whl ; sys_platform == 'linux' and platform_machine == 'x86_64' and python_version == '3.11'",
+    "torch @ https://download.pytorch.org/whl/cpu/torch-2.8.0%2Bcpu-cp312-cp312-manylinux_2_28_x86_64.whl ; sys_platform == 'linux' and platform_machine == 'x86_64' and python_version == '3.12'",
+    "torch @ https://download.pytorch.org/whl/cpu/torch-2.8.0%2Bcpu-cp313-cp313-manylinux_2_28_x86_64.whl ; sys_platform == 'linux' and platform_machine == 'x86_64' and python_version == '3.13'",
+    "torch @ https://download.pytorch.org/whl/cpu/torch-2.8.0%2Bcpu-cp310-cp310-manylinux_2_28_aarch64.whl ; sys_platform == 'linux' and platform_machine == 'aarch64' and python_version == '3.10'",
+    "torch @ https://download.pytorch.org/whl/cpu/torch-2.8.0%2Bcpu-cp311-cp311-manylinux_2_28_aarch64.whl ; sys_platform == 'linux' and platform_machine == 'aarch64' and python_version == '3.11'",
+    "torch @ https://download.pytorch.org/whl/cpu/torch-2.8.0%2Bcpu-cp312-cp312-manylinux_2_28_aarch64.whl ; sys_platform == 'linux' and platform_machine == 'aarch64' and python_version == '3.12'",
+    "torch @ https://download.pytorch.org/whl/cpu/torch-2.8.0%2Bcpu-cp313-cp313-manylinux_2_28_aarch64.whl ; sys_platform == 'linux' and platform_machine == 'aarch64' and python_version == '3.13'",
+    "torch @ https://download.pytorch.org/whl/cpu/torch-2.8.0%2Bcpu-cp310-cp310-win_amd64.whl ; sys_platform == 'win32' and python_version == '3.10'",
+    "torch @ https://download.pytorch.org/whl/cpu/torch-2.8.0%2Bcpu-cp311-cp311-win_amd64.whl ; sys_platform == 'win32' and python_version == '3.11'",
+    "torch @ https://download.pytorch.org/whl/cpu/torch-2.8.0%2Bcpu-cp312-cp312-win_amd64.whl ; sys_platform == 'win32' and python_version == '3.12'",
+    "torch @ https://download.pytorch.org/whl/cpu/torch-2.8.0%2Bcpu-cp313-cp313-win_amd64.whl ; sys_platform == 'win32' and python_version == '3.13'",
     "mlx>=0.29.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version >= '3.12'",
     "mlx-vlm==0.3.3; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version >= '3.12'",
     "easyocr>=1.7.2,<2.0.0; sys_platform != 'darwin' or platform_machine != 'x86_64'",
@@ -208,6 +221,9 @@ members = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/backend/langflow"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [project.urls]
 Repository = "https://github.com/langflow-ai/langflow"
