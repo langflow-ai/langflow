@@ -191,9 +191,7 @@ async def get_servers(
                         # Prior to v1.8, both Generic and Credential variables were encrypted.
                         # As such, must attempt to decrypt both types to ensure backwards-compatibility.
                         try:
-                            decrypted_value = auth_utils.decrypt_api_key(
-                                variable.value, settings_service=settings_service
-                            )
+                            decrypted_value = auth_utils.decrypt_api_key(variable.value)
                             request_variables[variable.name] = decrypted_value
                         except Exception as e:  # noqa: BLE001
                             await logger.aerror(

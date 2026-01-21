@@ -225,7 +225,7 @@ class DatabaseVariableService(VariableService, Service):
         for var in variables:
             if var.name and var.value:
                 try:
-                    decrypted_value = auth_utils.decrypt_api_key(var.value, settings_service=self.settings_service)
+                    decrypted_value = auth_utils.decrypt_api_key(var.value)
                 except Exception as e:  # noqa: BLE001
                     await logger.awarning(f"Decryption failed for variable '{var.name}': {e}. Skipping")
                     continue
