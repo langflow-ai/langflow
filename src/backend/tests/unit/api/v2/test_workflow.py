@@ -100,8 +100,8 @@ class TestWorkflowDeveloperAPIProtection:
 
         # Should return 404 because flow doesn't exist, NOT because endpoint is disabled
         assert response.status_code == 404
-        assert "Flow identifier" in response.text
-        assert "not found" in response.text
+        assert "flow" in response.text.lower()
+        assert "not found" in response.text.lower()
         assert "This endpoint is not available" not in response.text
 
     async def test_get_workflow_allowed_when_dev_api_enabled_job_not_found(
@@ -117,9 +117,9 @@ class TestWorkflowDeveloperAPIProtection:
             headers=headers,
         )
 
-        # Should return 501 because endpoint is not implemented yet, NOT 404 because endpoint is disabled
-        assert response.status_code == 501
-        assert "Not implemented" in response.text
+        # Should return 404 because job doesn't exist, NOT because endpoint is disabled
+        assert response.status_code == 404
+        assert "not found" in response.text.lower()
         assert "This endpoint is not available" not in response.text
 
     async def test_stop_workflow_allowed_when_dev_api_enabled_job_not_found(
@@ -140,9 +140,10 @@ class TestWorkflowDeveloperAPIProtection:
             headers=headers,
         )
 
-        # Should return 501 because endpoint is not implemented yet, NOT 404 because endpoint is disabled
-        assert response.status_code == 501
-        assert "Not implemented" in response.text
+        # Should return 200 with "not_found" status because endpoint is now implemented
+        assert response.status_code == 200
+        result = response.json()
+        assert result["status"] == "not_found"
         assert "This endpoint is not available" not in response.text
 
     async def test_get_workflow_blocked_when_dev_api_disabled(
@@ -194,9 +195,10 @@ class TestWorkflowDeveloperAPIProtection:
                 headers=headers,
             )
 
-            # Should return 501 because endpoint is not implemented yet
-            assert response.status_code == 501
-            assert "Not implemented" in response.text
+            # Endpoint is now implemented - should attempt to execute the workflow
+            # May return 200 (success) or 500 (execution error due to empty flow data)
+            # The key is it should NOT return 501 Not Implemented
+            assert response.status_code != 501
             assert "This endpoint is not available" not in response.text
 
         finally:
@@ -212,17 +214,17 @@ class TestWorkflowDeveloperAPIProtection:
         created_api_key,
         mock_settings_dev_api_enabled,  # noqa: ARG002
     ):
-        """Test GET /workflow allowed when dev API enabled - job exists (501 not implemented)."""
-        # Since job management isn't implemented, we'll test with any job_id
-        # The endpoint should return 501 regardless of whether the job exists
+        """Test GET /workflow allowed when dev API enabled - job doesn't exist returns 404."""
+        # Since job doesn't exist, it should return 404 (not found)
         headers = {"x-api-key": created_api_key.api_key}
         response = await client.get(
             "api/v2/workflow?job_id=550e8400-e29b-41d4-a716-446655440002",
             headers=headers,
         )
 
-        assert response.status_code == 501
-        assert "Not implemented" in response.text
+        # Endpoint is now implemented - should return 404 for non-existent job
+        assert response.status_code == 404
+        assert "not found" in response.text.lower()
         assert "This endpoint is not available" not in response.text
 
     async def test_stop_workflow_allowed_when_dev_api_enabled_job_exists(
@@ -231,9 +233,8 @@ class TestWorkflowDeveloperAPIProtection:
         created_api_key,
         mock_settings_dev_api_enabled,  # noqa: ARG002
     ):
-        """Test POST /workflow/stop allowed when dev API enabled - job exists (501 not implemented)."""
-        # Since job management isn't implemented, we'll test with any job_id
-        # The endpoint should return 501 regardless of whether the job exists
+        """Test POST /workflow/stop allowed when dev API enabled - job doesn't exist returns not_found status."""
+        # Since job doesn't exist, it should return 200 with status "not_found"
         request_data = {"job_id": "550e8400-e29b-41d4-a716-446655440002"}
 
         headers = {"x-api-key": created_api_key.api_key}
@@ -243,8 +244,10 @@ class TestWorkflowDeveloperAPIProtection:
             headers=headers,
         )
 
-        assert response.status_code == 501
-        assert "Not implemented" in response.text
+        # Endpoint is now implemented - should return 200 with not_found status
+        assert response.status_code == 200
+        result = response.json()
+        assert result["status"] == "not_found"
         assert "This endpoint is not available" not in response.text
 
     async def test_all_endpoints_require_api_key_authentication(
