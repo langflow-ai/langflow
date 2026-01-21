@@ -321,12 +321,12 @@ Alternatively, configure Langflow Desktop to accept connections from WSL at the 
 If you upgrade an existing flow that uses the [**MCP Tools** component](/mcp-tools) in **Tool Mode**, the component might lose its **Tool Mode** setting after upgrading the flow.
 This can break flows that rely on the component's **Tool Mode** to expose MCP tools to agents.
 
-If you're using a flow from an version of Langflow before v1.7.2 and the **MCP Tools** component loses its **Tool Mode** setting, do the following:
+If you experience this when upgrading a flow that you created in Langflow version 1.7.1 or earlier, do the following:
 
 1. Select the **MCP Tools** component in your flow.
 2. Click <Icon name="Code" aria-hidden="true"/> **Code** to open the component's code editor.
 3. In the component's template structure, locate the `tool_mode` field under `inputs`.
-   The field may be missing or set to `false`.
+   The field can be either missing or set to `false`.
 4. Add the `tool_mode` field if it's missing, and set it to `true`:
 
    ```python
