@@ -16,7 +16,7 @@ For other Google components, see the [**Google** bundle](/bundles-google).
 
 ## Vertex AI text generation
 
-The **Vertex AI** component generates text using Google Vertex AI models.
+The **Vertex AI** component generates text using Google Vertex AI models, including the Gemini 1.5, 2.0, 2.5, and 3.0 series. The latest Gemini 3.0 models (`gemini-3-pro-preview`, `gemini-3-flash-preview`, and `gemini-3-pro-image-preview`) offer advanced reasoning and multimodal capabilities.
 
 It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
 
@@ -31,7 +31,7 @@ For more information, see [Language model components](/components-models).
 | Name | Type | Description |
 |------|------|-------------|
 | credentials | File | Input parameter. JSON credentials file. Leave empty to fall back to environment variables. File type: JSON. For more information, see [Create a service account for Vertex AI authentication](#vertexai-credentials). |
-| model_name | String | Input parameter. The name of the Vertex AI model to use. Default: "gemini-1.5-pro". |
+| model_name | String | Input parameter. The name of the Vertex AI model to use, such as `"gemini-1.5-pro"` or `"gemini-3-pro-preview"`. Default: "gemini-1.5-pro". |
 | project | String | Input parameter. The project ID. |
 | location | String | Input parameter. The location for the Vertex AI API. Default: "us-central1". |
 | max_output_tokens | Integer | Input parameter. The maximum number of tokens to generate. |
