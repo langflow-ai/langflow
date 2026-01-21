@@ -38,8 +38,8 @@ export const updateMessage = (updatedMessage: Message) => {
   ) {
     const context = findMessageContext(updatedMessage.id);
     if (context) {
-      flowId = flowId || context.flow_id;
-      sessionId = sessionId || context.session_id;
+      flowId = flowId || context.flow_id || "";
+      sessionId = sessionId || context.session_id || "";
       updatedMessage.flow_id = flowId;
       updatedMessage.session_id = sessionId;
     }
@@ -197,19 +197,48 @@ export const removeMessages = (
 };
 
 export const clearSessionMessages = (sessionId: string, flowId: string) => {
-  // Clear session cache
+  const isDefaultSession = sessionId === flowId;
+
+  // Clear session-specific cache immediately
   queryClient.setQueryData(
     ["useGetMessagesQuery", { id: flowId, session_id: sessionId }],
     () => [],
   );
 
-  // Invalidate the main messages query to refetch from backend
-  queryClient.invalidateQueries({
-    queryKey: ["useGetMessagesQuery", { id: flowId }],
-  });
+  // For default session, also clear messages with null session_id (legacy)
+  if (isDefaultSession) {
+    // Get all messages from the main query cache and filter out default session messages
+    const mainQueryKey = ["useGetMessagesQuery", { id: flowId }];
+    const mainCache = queryClient.getQueryData<{ rows?: { data?: Message[] } }>(
+      mainQueryKey,
+    );
 
-  // Invalidate session cache watchers
-  queryClient.invalidateQueries({
+    if (mainCache?.rows?.data) {
+      // Filter out messages that belong to default session (including null session_id)
+      const filteredMessages = mainCache.rows.data.filter((msg) => {
+        // Keep messages that don't belong to this flow or have a different session_id
+        if (msg.flow_id !== flowId) return true;
+        // For default session, remove messages with null session_id or matching session_id
+        return msg.session_id !== null && msg.session_id !== sessionId;
+      });
+
+      // Update the main cache without invalidating (to prevent refetch)
+      queryClient.setQueryData(mainQueryKey, {
+        ...mainCache,
+        rows: {
+          ...mainCache.rows,
+          data: filteredMessages,
+        },
+      });
+    }
+  }
+
+  // Remove queries instead of invalidating to prevent refetch that brings messages back
+  // The cache is already cleared above, so we just need to remove the query entries
+  queryClient.removeQueries({
     queryKey: ["useGetMessagesQuery", { id: flowId, session_id: sessionId }],
   });
+
+  // For the main query, we keep it but with filtered data (already updated above)
+  // Only invalidate if we need to refetch (but not immediately to avoid race condition)
 };
