@@ -37,6 +37,7 @@ import MCPServersPage from "./pages/SettingsPage/pages/MCPServersPage";
 import ModelProvidersPage from "./pages/SettingsPage/pages/ModelProvidersPage";
 import MessagesPage from "./pages/SettingsPage/pages/messagesPage";
 import ShortcutsPage from "./pages/SettingsPage/pages/ShortcutsPage";
+import TypeCoercionPage from "./pages/SettingsPage/pages/TypeCoercionPage";
 import ViewPage from "./pages/ViewPage";
 
 const AdminPage = lazy(() => import("./pages/AdminPage"));
@@ -157,6 +158,10 @@ const router = createBrowserRouter(
                   />
                   <Route path="shortcuts" element={<ShortcutsPage />} />
                   <Route path="messages" element={<MessagesPage />} />
+                  <Route
+                    path="type-coercion"
+                    element={<TypeCoercionPage />}
+                  />
                   {CustomRoutesStore()}
                 </Route>
                 {CustomRoutesStorePages()}

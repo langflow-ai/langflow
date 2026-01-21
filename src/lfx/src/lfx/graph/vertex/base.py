@@ -12,6 +12,7 @@ from ag_ui.core import StepFinishedEvent, StepStartedEvent
 
 from lfx.events.observability.lifecycle_events import observable
 from lfx.exceptions.component import ComponentBuildError
+from lfx.graph.coercion import COERCIBLE_TYPES, auto_coerce_list, auto_coerce_value
 from lfx.graph.schema import INPUT_COMPONENTS, OUTPUT_COMPONENTS, InterfaceComponentTypes, ResultData
 from lfx.graph.utils import UnbuiltObject, UnbuiltResult, log_transaction
 from lfx.graph.vertex.param_handler import ParameterHandler
@@ -508,6 +509,10 @@ class Vertex:
                 self.params[key][sub_key] = value
             else:
                 result = await value.get_result(self, target_handle_name=key)
+
+                # AUTO-COERCION: Apply type coercion if enabled and applicable
+                result = self._apply_coercion_if_needed(key, result)
+
                 self.params[key][sub_key] = result
 
     @staticmethod
@@ -575,10 +580,47 @@ class Vertex:
     async def _build_vertex_and_update_params(self, key, vertex: Vertex) -> None:
         """Builds a given vertex and updates the params dictionary accordingly."""
         result = await vertex.get_result(self, target_handle_name=key)
+
+        # AUTO-COERCION: Apply type coercion if enabled and applicable
+        result = self._apply_coercion_if_needed(key, result)
+
         self._handle_func(key, result)
         if isinstance(result, list):
             self._extend_params_list_with_result(key, result)
         self.params[key] = result
+
+    def _get_expected_type_for_param(self, key: str) -> str | None:
+        """Get the expected type for a parameter from the template definition."""
+        template_dict = self.data.get("node", {}).get("template", {})
+        field_def = template_dict.get(key, {})
+
+        # Check input_types first (more specific)
+        input_types = field_def.get("input_types", [])
+        if input_types:
+            # Return the first coercible type if any, otherwise first type
+            for t in input_types:
+                if t in COERCIBLE_TYPES:
+                    return t
+            return input_types[0] if input_types else None
+
+        # Fall back to type field
+        return field_def.get("type")
+
+    def _apply_coercion_if_needed(self, key: str, result: Any) -> Any:
+        """Apply auto-coercion to the result if enabled and applicable."""
+        coercion_settings = getattr(self.graph, "coercion_settings", None)
+        if not coercion_settings or not coercion_settings.enabled:
+            return result
+
+        expected_type = self._get_expected_type_for_param(key)
+        if not expected_type:
+            return result
+
+        # Handle list of values
+        if isinstance(result, list):
+            return auto_coerce_list(result, expected_type, coercion_settings)
+
+        return auto_coerce_value(result, expected_type, coercion_settings)
 
     async def _build_list_of_vertices_and_update_params(
         self,
@@ -589,6 +631,10 @@ class Vertex:
         self.params[key] = []
         for vertex in vertices:
             result = await vertex.get_result(self, target_handle_name=key)
+
+            # AUTO-COERCION: Apply type coercion if enabled and applicable
+            result = self._apply_coercion_if_needed(key, result)
+
             # Weird check to see if the params[key] is a list
             # because sometimes it is a Data and breaks the code
             if not isinstance(self.params[key], list):
