@@ -72,7 +72,7 @@ class DatabaseVariableService(VariableService, Service):
                         # This prevents invalid keys from enabling providers during migration
                         try:
                             from lfx.base.models.unified_models import validate_model_provider_key
-                            
+
                             validate_model_provider_key(var_name, value)
                             # Only set default_fields if validation passes
                             default_fields = [provider_name, "api_key"]
