@@ -92,3 +92,20 @@ GOOGLE_GENERATIVE_AI_MODELS_DETAILED = [
 ]
 
 GOOGLE_GENERATIVE_AI_MODELS = [metadata["name"] for metadata in GOOGLE_GENERATIVE_AI_MODELS_DETAILED]
+
+# Google Generative AI Embedding Models
+GOOGLE_GENERATIVE_AI_EMBEDDING_MODELS = [
+    "models/text-embedding-004",
+    "models/embedding-001",
+]
+
+# Embedding models as detailed metadata
+GOOGLE_GENERATIVE_AI_EMBEDDING_MODELS_DETAILED = [
+    create_model_metadata(
+        provider="Google Generative AI",
+        name=name,
+        icon="GoogleGenerativeAI",
+        model_type="embeddings",
+    )
+    for name in GOOGLE_GENERATIVE_AI_EMBEDDING_MODELS
+]
