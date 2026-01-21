@@ -75,8 +75,8 @@ FROM python:3.12.12-slim-trixie AS runtime
 RUN apt-get update \
     && apt-get upgrade -y \
     && apt-get install -y curl git libpq5 gnupg \
-    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt list --all-versions nodejs \
+    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get install -y nodejs=22.22.0 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
