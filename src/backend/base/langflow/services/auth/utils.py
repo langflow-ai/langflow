@@ -10,6 +10,7 @@ import jwt
 from cryptography.fernet import Fernet
 from fastapi import Depends, HTTPException, Request, Security, WebSocketException, status
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
+from fastapi.security.utils import get_authorization_scheme_param
 from jwt import InvalidTokenError
 from lfx.log.logger import logger
 from lfx.services.deps import injectable_session_scope, session_scope
@@ -27,7 +28,33 @@ from langflow.services.deps import get_settings_service
 if TYPE_CHECKING:
     from langflow.services.database.models.api_key.model import ApiKey
 
-oauth2_login = OAuth2PasswordBearer(tokenUrl="api/v1/login", auto_error=False)
+
+class OAuth2PasswordBearerCookie(OAuth2PasswordBearer):
+    """Custom OAuth2 scheme that checks Authorization header first, then cookies.
+
+    This allows the application to work with HttpOnly cookies while supporting
+    explicit Authorization headers for backward compatibility and testing scenarios.
+    If an explicit Authorization header is provided, it takes precedence over cookies.
+    """
+
+    async def __call__(self, request: Request) -> str | None:
+        # First, check for explicit Authorization header (for backward compatibility and testing)
+        authorization = request.headers.get("Authorization")
+        scheme, param = get_authorization_scheme_param(authorization)
+        if scheme.lower() == "bearer" and param:
+            return param
+
+        # Fall back to cookie (for HttpOnly cookie support in browser-based clients)
+        token = request.cookies.get("access_token_lf")
+        if token:
+            return token
+
+        # If auto_error is True, this would raise an exception
+        # Since we set auto_error=False, return None
+        return None
+
+
+oauth2_login = OAuth2PasswordBearerCookie(tokenUrl="api/v1/login", auto_error=False)
 
 API_KEY_NAME = "x-api-key"
 
@@ -622,30 +649,43 @@ def encrypt_api_key(api_key: str, settings_service: SettingsService):
 def decrypt_api_key(encrypted_api_key: str, settings_service: SettingsService):
     """Decrypt the provided encrypted API key using Fernet decryption.
 
-    This function first attempts to decrypt the API key by encoding it,
-    assuming it is a properly encoded string. If that fails, it logs a detailed
-    debug message including the exception information and retries decryption
-    using the original string input.
+    This function supports both encrypted and plain text values. It first attempts
+    to decrypt the API key by encoding it, assuming it is a properly encrypted string.
+    If that fails, it retries decryption using the original string input. If both
+    decryption attempts fail, it checks if the value looks like a Fernet token
+    (starts with "gAAAAA"). If it does, it's likely encrypted with a different key
+    and returns empty string. Otherwise, it assumes plain text and returns as-is.
 
     Args:
-        encrypted_api_key (str): The encrypted API key.
+        encrypted_api_key (str): The encrypted API key or plain text value.
         settings_service (SettingsService): Service providing authentication settings.
 
     Returns:
-        str: The decrypted API key, or an empty string if decryption cannot be performed.
+        str: The decrypted API key, the original value if plain text, or empty string
+             if it's encrypted with a different key.
     """
     fernet = get_fernet(settings_service)
     if isinstance(encrypted_api_key, str):
         try:
             return fernet.decrypt(encrypted_api_key.encode()).decode()
-        except Exception as primary_exception:  # noqa: BLE001
-            logger.debug(
-                "Decryption using UTF-8 encoded API key failed. Error: %s. "
-                "Retrying decryption using the raw string input.",
-                primary_exception,
-            )
-            return fernet.decrypt(encrypted_api_key).decode()
-    return ""
+        except Exception:  # noqa: BLE001
+            try:
+                return fernet.decrypt(encrypted_api_key).decode()
+            except Exception as secondary_exception:  # noqa: BLE001
+                # Check if this looks like a Fernet token (base64 encoded, starts with gAAAAA)
+                if encrypted_api_key.startswith("gAAAAA"):
+                    logger.warning(
+                        "Failed to decrypt stored value (likely encrypted with different key). "
+                        "Error: %s. Returning empty string.",
+                        secondary_exception,
+                    )
+                    return ""
+
+                # Assume the value is plain text and return it as-is
+                return encrypted_api_key
+
+    msg = "Unexpected variable type. Expected string"
+    raise ValueError(msg)
 
 
 # MCP-specific authentication functions that always behave as if skip_auth_auto_login is True

@@ -35,17 +35,11 @@ def encrypt_auth_settings(auth_settings: dict[str, Any] | None) -> dict[str, Any
             try:
                 field_to_encrypt = encrypted_settings[field]
                 # Only encrypt if the value is not already encrypted
-                # Try to decrypt first - if it fails, it's not encrypted
-                try:
-                    result = auth_utils.decrypt_api_key(field_to_encrypt, settings_service)
-                    if not result:
-                        msg = f"Failed to decrypt field {field}"
-                        raise ValueError(msg)
-
-                    # If decrypt succeeds, it's already encrypted
+                # Check if it's already encrypted using is_encrypted helper
+                if is_encrypted(field_to_encrypt):
                     logger.debug(f"Field {field} is already encrypted")
-                except (ValueError, TypeError, KeyError, InvalidToken):
-                    # If decrypt fails, the value is plaintext and needs encryption
+                else:
+                    # Not encrypted, encrypt it
                     encrypted_value = auth_utils.encrypt_api_key(field_to_encrypt, settings_service)
                     encrypted_settings[field] = encrypted_value
             except (ValueError, TypeError, KeyError) as e:
@@ -111,10 +105,14 @@ def is_encrypted(value: str) -> bool:
 
     settings_service = get_settings_service()
     try:
-        # Try to decrypt - if it succeeds, it's encrypted
-        auth_utils.decrypt_api_key(value, settings_service)
+        # Try to decrypt - if it succeeds and returns a different value, it's encrypted
+        decrypted = auth_utils.decrypt_api_key(value, settings_service)
+        # If decryption returns empty string, it's encrypted with wrong key
+        if not decrypted:
+            return True
+        # If it returns a different value, it's successfully decrypted (was encrypted)
+        # If it returns the same value, something unexpected happened
+        return decrypted != value  # noqa: TRY300
     except (ValueError, TypeError, KeyError, InvalidToken):
-        # If decryption fails, it's not encrypted
-        return False
-    else:
+        # If decryption fails with exception, assume it's encrypted but can't be decrypted
         return True
