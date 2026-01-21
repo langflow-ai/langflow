@@ -68,7 +68,22 @@ class DatabaseVariableService(VariableService, Service):
                 try:
                     if is_api_key_variable:
                         provider_name = var_to_provider[var_name]
-                        default_fields = [provider_name, "api_key"]
+                        # Validate the API key before setting default_fields
+                        # This prevents invalid keys from enabling providers during migration
+                        try:
+                            from lfx.base.models.unified_models import validate_model_provider_key
+                            
+                            validate_model_provider_key(var_name, value)
+                            # Only set default_fields if validation passes
+                            default_fields = [provider_name, "api_key"]
+                            await logger.adebug(f"Validated {var_name} - provider will be enabled")
+                        except (ValueError, Exception) as validation_error:  # noqa: BLE001
+                            # Validation failed - don't set default_fields
+                            # This prevents the provider from appearing as "Enabled"
+                            default_fields = []
+                            await logger.adebug(
+                                f"Skipping default_fields for {var_name} - validation failed: {validation_error!s}"
+                            )
                     existing = (await session.exec(query)).first()
                 except Exception as e:  # noqa: BLE001
                     await logger.aexception(f"Error querying {var_name} variable: {e!s}")
