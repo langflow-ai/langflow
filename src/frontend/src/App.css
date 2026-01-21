@@ -114,6 +114,15 @@ body {
   background-color: transparent !important;
 }
 
+.sticky-note-scroll {
+	scrollbar-color: hsl(var(--muted-foreground) / 0.4) transparent;
+	scrollbar-width: thin;
+}
+
+.sticky-note-scroll:hover {
+  scrollbar-color: hsl(var(--muted-foreground) / 0.6) transparent;
+}
+
 .jv-indent::-webkit-scrollbar-track {
   background-color: hsl(var(--muted)) !important;
   border-radius: 10px;
