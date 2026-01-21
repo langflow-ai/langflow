@@ -78,18 +78,29 @@ FROM python:3.12.12-slim-trixie AS runtime
 
 RUN apt-get update \
     && apt-get upgrade -y \
-    && apt-get install -y git libpq5 curl gnupg \
-    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
-    && apt list --all-versions nodejs \
-    && apt-get install -y nodejs=22.22.0 \
+    && apt-get install -y curl git libpq5 gnupg xz-utils \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data
-# and we use the venv at the root because workspaces
+    && rm -rf /var/lib/apt/lists/*
+
+RUN NODE_VERSION=$(curl -fsSL https://nodejs.org/dist/index.json \
+                    | grep '"version": "v22' \
+                    | head -n 1 \
+                    | cut -d'"' -f4) \
+    && echo "Installing Node.js $NODE_VERSION" \
+    && curl -fsSL "https://nodejs.org/dist/$NODE_VERSION/node-$NODE_VERSION-linux-x64.tar.xz" -o node.tar.xz \
+    && tar -xf node.tar.xz -C /usr/local --strip-components=1 \
+    && rm node.tar.xz \
+    && node --version \
+    && npm --version
+
+RUN useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data
+
 COPY --from=builder --chown=1000 /app/.venv /app/.venv
 
-# Place executables in the environment at the front of the path
 ENV PATH="/app/.venv/bin:$PATH"
+
+RUN /app/.venv/bin/pip install --upgrade playwright \
+    && /app/.venv/bin/playwright install
 
 LABEL org.opencontainers.image.title=langflow
 LABEL org.opencontainers.image.authors=['Langflow']

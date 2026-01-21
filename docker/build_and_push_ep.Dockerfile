@@ -74,28 +74,29 @@ FROM python:3.12.12-slim-trixie AS runtime
 
 RUN apt-get update \
     && apt-get upgrade -y \
-    && apt-get install --no-install-recommends -y \
-        curl \
-        git \
-        # Add PostgreSQL client libraries
-        libpq5 \
-        gnupg \
-    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
-    && apt list --all-versions nodejs \
-    && apt-get install -y nodejs=22.22.0 \
+    && apt-get install --no-install-recommends -y curl git libpq5 gnupg xz-utils \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data -s /usr/bin/false \
-    && mkdir /data && chown -R 1000:0 /data
+    && rm -rf /var/lib/apt/lists/*
+
+RUN NODE_VERSION=$(curl -fsSL https://nodejs.org/dist/index.json \
+                    | grep '"version": "v22' \
+                    | head -n 1 \
+                    | cut -d'"' -f4) \
+    && echo "Installing Node.js $NODE_VERSION" \
+    && curl -fsSL "https://nodejs.org/dist/$NODE_VERSION/node-$NODE_VERSION-linux-x64.tar.xz" -o node.tar.xz \
+    && tar -xf node.tar.xz -C /usr/local --strip-components=1 \
+    && rm node.tar.xz \
+    && node --version \
+    && npm --version
+
+RUN useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data
 
 COPY --from=builder --chown=1000 /app/.venv /app/.venv
 
-# Remove shell binaries to completely disable shell access
-RUN rm -f /bin/sh /bin/bash /bin/dash /usr/bin/sh /usr/bin/bash /usr/bin/dash \
-    /bin/ash /bin/zsh /bin/csh /bin/tcsh /bin/ksh 2>/dev/null || true
-
-# Place executables in the environment at the front of the path
 ENV PATH="/app/.venv/bin:$PATH"
+
+RUN /app/.venv/bin/pip install --upgrade playwright \
+    && /app/.venv/bin/playwright install
 
 LABEL org.opencontainers.image.title=langflow
 LABEL org.opencontainers.image.authors=['Langflow']
