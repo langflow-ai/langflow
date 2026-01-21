@@ -10,6 +10,18 @@ class InvalidChatInputError(Exception):
     pass
 
 
+class WorkflowExecutionError(Exception):
+    """Base exception for workflow execution errors."""
+
+
+class WorkflowTimeoutError(WorkflowExecutionError):
+    """Workflow execution timeout."""
+
+
+class WorkflowValidationError(WorkflowExecutionError):
+    """Workflow validation error (e.g., invalid flow data, graph build failure)."""
+
+
 # create a pidantic documentation for this class
 class ExceptionBody(BaseModel):
     message: str | list[str]
