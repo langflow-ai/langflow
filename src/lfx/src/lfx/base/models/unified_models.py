@@ -306,9 +306,9 @@ def _validate_and_get_enabled_providers(
                 if api_key and api_key.strip():
                     validate_model_provider_key(var_name, api_key)
                     enabled.add(provider)
-            except (ValueError, Exception):  # noqa: BLE001
+            except (ValueError, Exception) as e:  # noqa: BLE001
                 # Key validation failed or decryption failed - don't enable provider
-                pass
+                logger.debug("Provider %s validation failed for variable %s: %s", provider, var_name, e)
 
     return enabled
 

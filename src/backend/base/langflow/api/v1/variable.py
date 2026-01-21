@@ -186,9 +186,8 @@ async def read_variables(
             str, tuple[bool, str | None, list[str] | None]
         ] = {}  # var_name -> (is_valid, error, default_fields)
 
-        for provider, var_name in provider_variable_map.items():
+        for var_name in provider_variable_map.values():
             if var_name in credential_variables:
-                credential_var = credential_variables[var_name]
                 is_valid = False
                 error_message = None
                 variable_obj = None
@@ -281,10 +280,10 @@ async def read_variables(
                 # Not a model provider credential, validation fields remain None
                 var.is_valid = None
                 var.validation_error = None
-
-        return filtered_variables
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
+    else:
+        return filtered_variables
 
 
 @router.patch("/{variable_id}", response_model=VariableRead, status_code=200)

@@ -245,8 +245,9 @@ async def get_enabled_providers(
                                 self.value = value
 
                         credential_variables[var_name] = VarWithValue(variable_obj.value)
-                except (ValueError, Exception):  # noqa: BLE001
+                except (ValueError, Exception) as e:  # noqa: BLE001
                     # Variable not found or error accessing it - skip
+                    logger.debug("Skipping variable %s due to error: %s", var_name, e)
                     continue
 
         # Use shared helper to validate and get enabled providers
@@ -256,7 +257,7 @@ async def get_enabled_providers(
         enabled_providers = list(enabled_providers_set)
 
         # Build provider_status dict for all providers
-        provider_status = {provider: provider in enabled_providers_set for provider in provider_variable_map.keys()}
+        provider_status = {provider: provider in enabled_providers_set for provider in provider_variable_map}
 
         result = {
             "enabled_providers": enabled_providers,
