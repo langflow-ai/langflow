@@ -143,8 +143,8 @@ async def get_current_active_user(user: User = Depends(get_current_user)) -> Use
     return await _auth_service().get_current_active_user(user)
 
 
-async def get_current_active_superuser(current_user: Annotated[User, Depends(get_current_user)]) -> User:
-    return await _auth_service().get_current_active_superuser(current_user)
+async def get_current_active_superuser(user: User = Depends(get_current_user)) -> User:
+    return await _auth_service().get_current_active_superuser(user)
 
 
 async def get_webhook_user(flow_id: str, request: Request) -> UserRead:
