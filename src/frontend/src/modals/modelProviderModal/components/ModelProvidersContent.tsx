@@ -14,7 +14,6 @@ import {
   usePostGlobalVariables,
 } from "@/controllers/API/queries/variables";
 import { useDebounce } from "@/hooks/use-debounce";
-import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
 import ProviderList from "@/modals/modelProviderModal/components/ProviderList";
 import { Provider } from "@/modals/modelProviderModal/components/types";
 import useAlertStore from "@/stores/alertStore";
@@ -49,7 +48,6 @@ const ModelProvidersContent = ({
     usePatchGlobalVariables();
   const { data: globalVariables = [] } = useGetGlobalVariables();
   const { mutate: updateEnabledModels } = useUpdateEnabledModels();
-  const { refreshAllModelInputs } = useRefreshModelInputs();
 
   const isPending = isCreating || isUpdating;
 
@@ -239,20 +237,15 @@ const ModelProvidersContent = ({
     }
   };
 
-  useEffect(() => {
-    return () => {
-      if (onClose) {
-        refreshAllModelInputs({ silent: true });
-      }
-    };
-  }, [onClose, refreshAllModelInputs]);
+  // Note: refreshAllModelInputs is now called in ModelProviderModal's handleClose
+  // to ensure reliable execution when the modal closes
 
   return (
-    <div className="flex flex-row w-full overflow-hidden">
+    <div className="flex flex-row w-full h-full overflow-hidden">
       <div
         className={cn(
-          "flex border-r p-2 flex-col transition-all duration-300 ease-in-out",
-          selectedProvider ? "w-1/3" : "w-full",
+          "flex p-2 flex-col transition-all duration-300 ease-in-out",
+          selectedProvider ? "w-1/3 border-r" : "w-full",
         )}
       >
         <ProviderList
@@ -282,7 +275,18 @@ const ModelProvidersContent = ({
             {requiresApiKey ? (
               <>
                 Add your{" "}
-                <span className="underline cursor-pointer hover:text-primary">
+                <span
+                  className="underline cursor-pointer hover:text-primary"
+                  onClick={() => {
+                    if (selectedProvider?.api_docs_url) {
+                      window.open(
+                        selectedProvider.api_docs_url,
+                        "_blank",
+                        "noopener,noreferrer",
+                      );
+                    }
+                  }}
+                >
                   {selectedProvider?.provider} API key
                 </span>{" "}
                 to enable these models
