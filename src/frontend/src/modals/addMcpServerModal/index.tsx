@@ -1,49 +1,49 @@
-import { useQueryClient } from '@tanstack/react-query';
-import { nanoid } from 'nanoid';
-import { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
-import { ForwardedIconComponent } from '@/components/common/genericIconComponent';
-import ShadTooltip from '@/components/common/shadTooltipComponent';
-import InputListComponent from '@/components/core/parameterRenderComponent/components/inputListComponent';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { useQueryClient } from "@tanstack/react-query";
+import { nanoid } from "nanoid";
+import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
+import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
+import InputListComponent from "@/components/core/parameterRenderComponent/components/inputListComponent";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-} from '@/components/ui/tabs-button';
-import { Textarea } from '@/components/ui/textarea';
-import { MAX_MCP_SERVER_NAME_LENGTH } from '@/constants/constants';
-import { useAddMCPServer } from '@/controllers/API/queries/mcp/use-add-mcp-server';
-import { usePatchMCPServer } from '@/controllers/API/queries/mcp/use-patch-mcp-server';
-import { CustomLink } from '@/customization/components/custom-link';
-import BaseModal from '@/modals/baseModal';
+} from "@/components/ui/tabs-button";
+import { Textarea } from "@/components/ui/textarea";
+import { MAX_MCP_SERVER_NAME_LENGTH } from "@/constants/constants";
+import { useAddMCPServer } from "@/controllers/API/queries/mcp/use-add-mcp-server";
+import { usePatchMCPServer } from "@/controllers/API/queries/mcp/use-patch-mcp-server";
+import { CustomLink } from "@/customization/components/custom-link";
+import BaseModal from "@/modals/baseModal";
 import IOKeyPairInput, {
   KeyPairRow,
-} from '@/modals/IOModal/components/IOFieldView/components/key-pair-input';
-import IOKeyPairInputWithVariables from '@/modals/IOModal/components/IOFieldView/components/key-pair-input-with-variables';
-import type { MCPServerType } from '@/types/mcp';
-import { extractMcpServersFromJson } from '@/utils/mcpUtils';
-import { parseString } from '@/utils/stringManipulation';
-import { cn } from '@/utils/utils';
+} from "@/modals/IOModal/components/IOFieldView/components/key-pair-input";
+import IOKeyPairInputWithVariables from "@/modals/IOModal/components/IOFieldView/components/key-pair-input-with-variables";
+import type { MCPServerType } from "@/types/mcp";
+import { extractMcpServersFromJson } from "@/utils/mcpUtils";
+import { parseString } from "@/utils/stringManipulation";
+import { cn } from "@/utils/utils";
 
-const MCP_SETTINGS_PAGE = '/settings/mcp-servers';
+const MCP_SETTINGS_PAGE = "/settings/mcp-servers";
 
 //TODO IMPLEMENT FORM LOGIC
 const objectToKeyPairRow = (
   obj?: Record<string, string>,
-  oldData: KeyPairRow[] = []
+  oldData: KeyPairRow[] = [],
 ) => {
   const keys = Object.keys(obj || {});
   if (!obj || keys.length === 0) {
-    return [{ key: '', value: '', id: nanoid(), error: false }];
+    return [{ key: "", value: "", id: nanoid(), error: false }];
   }
-  return keys.map(key => {
-    const oldItem = oldData.find(item => item.key === key);
+  return keys.map((key) => {
+    const oldItem = oldData.find((item) => item.key === key);
     return (
-      oldItem || { key, value: obj[key] || '', id: nanoid(), error: false }
+      oldItem || { key, value: obj[key] || "", id: nanoid(), error: false }
     );
   });
 };
@@ -79,11 +79,11 @@ export default function AddMcpServerModal({
   const isOnMcpSettingsPage = location.pathname === MCP_SETTINGS_PAGE;
 
   const [type, setType] = useState(
-    initialData ? (initialData.command ? 'STDIO' : 'HTTP') : 'JSON'
+    initialData ? (initialData.command ? "STDIO" : "HTTP") : "JSON",
   );
-  const [jsonValue, setJsonValue] = useState('');
+  const [jsonValue, setJsonValue] = useState("");
   const [error, setError] = useState<string | null>(
-    'Error downloading file: File _mcp_servers.json not found in flow 7e93e2c5-b979-49c0-b01b-4f4111d9230d'
+    "Error downloading file: File _mcp_servers.json not found in flow 7e93e2c5-b979-49c0-b01b-4f4111d9230d",
   );
   const { mutateAsync: addMCPServer, isPending: isAddPending } =
     useAddMCPServer();
@@ -98,48 +98,48 @@ export default function AddMcpServerModal({
   const changeType = (type: string) => {
     setType(type);
     setError(null);
-    setJsonValue('');
-    setStdioName('');
-    setStdioCommand('');
-    setStdioArgs(['']);
-    setStdioEnv([{ key: '', value: '', id: nanoid(), error: false }]);
-    setHttpName('');
-    setHttpUrl('');
-    setHttpEnv([{ key: '', value: '', id: nanoid(), error: false }]);
-    setHttpHeaders([{ key: '', value: '', id: nanoid(), error: false }]);
+    setJsonValue("");
+    setStdioName("");
+    setStdioCommand("");
+    setStdioArgs([""]);
+    setStdioEnv([{ key: "", value: "", id: nanoid(), error: false }]);
+    setHttpName("");
+    setHttpUrl("");
+    setHttpEnv([{ key: "", value: "", id: nanoid(), error: false }]);
+    setHttpHeaders([{ key: "", value: "", id: nanoid(), error: false }]);
   };
 
   // STDIO state
-  const [stdioName, setStdioName] = useState(initialData?.name || '');
-  const [stdioCommand, setStdioCommand] = useState(initialData?.command || '');
+  const [stdioName, setStdioName] = useState(initialData?.name || "");
+  const [stdioCommand, setStdioCommand] = useState(initialData?.command || "");
   const [stdioArgs, setStdioArgs] = useState<string[]>(
-    initialData?.args || ['']
+    initialData?.args || [""],
   );
   const [stdioEnv, setStdioEnv] = useState<KeyPairRow[]>(
-    objectToKeyPairRow(initialData?.env) || []
+    objectToKeyPairRow(initialData?.env) || [],
   );
 
   // HTTP state
-  const [httpName, setHttpName] = useState(initialData?.name || '');
-  const [httpUrl, setHttpUrl] = useState(initialData?.url || '');
+  const [httpName, setHttpName] = useState(initialData?.name || "");
+  const [httpUrl, setHttpUrl] = useState(initialData?.url || "");
   const [httpEnv, setHttpEnv] = useState<KeyPairRow[]>(
-    objectToKeyPairRow(initialData?.env) || []
+    objectToKeyPairRow(initialData?.env) || [],
   );
   const [httpHeaders, setHttpHeaders] = useState<KeyPairRow[]>(
-    objectToKeyPairRow(initialData?.headers) || []
+    objectToKeyPairRow(initialData?.headers) || [],
   );
 
   useEffect(() => {
     if (open) {
-      setType(initialData ? (initialData.command ? 'STDIO' : 'HTTP') : 'JSON');
+      setType(initialData ? (initialData.command ? "STDIO" : "HTTP") : "JSON");
       setError(null);
-      setJsonValue('');
-      setStdioName(initialData?.name || '');
-      setStdioCommand(initialData?.command || '');
-      setStdioArgs(initialData?.args || ['']);
+      setJsonValue("");
+      setStdioName(initialData?.name || "");
+      setStdioCommand(initialData?.command || "");
+      setStdioArgs(initialData?.args || [""]);
       setStdioEnv(objectToKeyPairRow(initialData?.env) || []);
-      setHttpName(initialData?.name || '');
-      setHttpUrl(initialData?.url || '');
+      setHttpName(initialData?.name || "");
+      setHttpUrl(initialData?.url || "");
       setHttpEnv(objectToKeyPairRow(initialData?.env) || []);
       setHttpHeaders(objectToKeyPairRow(initialData?.headers) || []);
     }
@@ -147,69 +147,69 @@ export default function AddMcpServerModal({
 
   async function submitForm() {
     setError(null);
-    if (type === 'STDIO') {
+    if (type === "STDIO") {
       if (!stdioName.trim() || !stdioCommand.trim()) {
-        setError('Name and command are required.');
+        setError("Name and command are required.");
         return;
       }
-      if (stdioEnv.some(item => item.error)) {
-        setError('Duplicate keys found in environment variables.');
+      if (stdioEnv.some((item) => item.error)) {
+        setError("Duplicate keys found in environment variables.");
         return;
       }
       const name = parseString(stdioName, [
-        'mcp_name_case',
-        'no_blank',
-        'lowercase',
+        "mcp_name_case",
+        "no_blank",
+        "lowercase",
       ]).slice(0, MAX_MCP_SERVER_NAME_LENGTH);
       try {
         await modifyMCPServer({
           name,
           command: stdioCommand,
-          args: stdioArgs.filter(a => a.trim() !== ''),
+          args: stdioArgs.filter((a) => a.trim() !== ""),
           env: keyPairRowToObject(stdioEnv),
         });
         if (!initialData) {
           await queryClient.setQueryData(
-            ['useGetMCPServers'],
+            ["useGetMCPServers"],
             (old: unknown) => {
               return [
                 ...(Array.isArray(old) ? old : []),
                 { name, toolsCount: 0 },
               ];
-            }
+            },
           );
         }
         onSuccess?.(name);
         setOpen(false);
-        setStdioName('');
-        setStdioCommand('');
-        setStdioArgs(['']);
-        setStdioEnv([{ key: '', value: '', id: nanoid(), error: false }]);
+        setStdioName("");
+        setStdioCommand("");
+        setStdioArgs([""]);
+        setStdioEnv([{ key: "", value: "", id: nanoid(), error: false }]);
         setError(null);
       } catch (err: unknown) {
         setError(
-          err instanceof Error ? err.message : 'Failed to add MCP server.'
+          err instanceof Error ? err.message : "Failed to add MCP server.",
         );
       }
       return;
     }
-    if (type === 'HTTP') {
+    if (type === "HTTP") {
       if (!httpName.trim() || !httpUrl.trim()) {
-        setError('Name and URL are required.');
+        setError("Name and URL are required.");
         return;
       }
-      if (httpEnv.some(item => item.error)) {
-        setError('Duplicate keys found in environment variables.');
+      if (httpEnv.some((item) => item.error)) {
+        setError("Duplicate keys found in environment variables.");
         return;
       }
-      if (httpHeaders.some(item => item.error)) {
-        setError('Duplicate keys found in headers.');
+      if (httpHeaders.some((item) => item.error)) {
+        setError("Duplicate keys found in headers.");
         return;
       }
       const name = parseString(httpName, [
-        'mcp_name_case',
-        'no_blank',
-        'lowercase',
+        "mcp_name_case",
+        "no_blank",
+        "lowercase",
       ]).slice(0, MAX_MCP_SERVER_NAME_LENGTH);
       try {
         await modifyMCPServer({
@@ -220,25 +220,25 @@ export default function AddMcpServerModal({
         });
         if (!initialData) {
           await queryClient.setQueryData(
-            ['useGetMCPServers'],
+            ["useGetMCPServers"],
             (old: unknown) => {
               return [
                 ...(Array.isArray(old) ? old : []),
                 { name, toolsCount: 0 },
               ];
-            }
+            },
           );
         }
         onSuccess?.(name);
         setOpen(false);
-        setHttpName('');
-        setHttpUrl('');
-        setHttpEnv([{ key: '', value: '', id: nanoid(), error: false }]);
-        setHttpHeaders([{ key: '', value: '', id: nanoid(), error: false }]);
+        setHttpName("");
+        setHttpUrl("");
+        setHttpEnv([{ key: "", value: "", id: nanoid(), error: false }]);
+        setHttpHeaders([{ key: "", value: "", id: nanoid(), error: false }]);
         setError(null);
       } catch (err: unknown) {
         setError(
-          err instanceof Error ? err.message : 'Failed to add MCP server.'
+          err instanceof Error ? err.message : "Failed to add MCP server.",
         );
       }
       return;
@@ -246,44 +246,44 @@ export default function AddMcpServerModal({
     // JSON mode (multi-server)
     let servers: MCPServerType[];
     try {
-      servers = extractMcpServersFromJson(jsonValue).map(server => ({
+      servers = extractMcpServersFromJson(jsonValue).map((server) => ({
         ...server,
         name: parseString(server.name, [
-          'mcp_name_case',
-          'no_blank',
-          'lowercase',
+          "mcp_name_case",
+          "no_blank",
+          "lowercase",
         ]).slice(0, MAX_MCP_SERVER_NAME_LENGTH),
       }));
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Invalid input');
+      setError(e instanceof Error ? e.message : "Invalid input");
       return;
     }
     if (servers.length === 0) {
-      setError('No valid MCP server found in the input.');
+      setError("No valid MCP server found in the input.");
       return;
     }
     try {
-      await Promise.all(servers.map(server => modifyMCPServer(server)));
+      await Promise.all(servers.map((server) => modifyMCPServer(server)));
       if (!initialData) {
-        await queryClient.setQueryData(['useGetMCPServers'], (old: unknown) => {
+        await queryClient.setQueryData(["useGetMCPServers"], (old: unknown) => {
           return [
             ...(Array.isArray(old) ? old : []),
-            ...servers.map(server => ({
+            ...servers.map((server) => ({
               name: server.name,
               toolsCount: 0,
             })),
           ];
         });
       }
-      onSuccess?.(servers.map(server => server.name)[0]);
+      onSuccess?.(servers.map((server) => server.name)[0]);
       setOpen(false);
-      setJsonValue('');
+      setJsonValue("");
       setError(null);
     } catch (err: unknown) {
       setError(
         err instanceof Error
           ? err.message
-          : 'Failed to add one or more MCP servers.'
+          : "Failed to add one or more MCP servers.",
       );
     }
   }
@@ -306,14 +306,14 @@ export default function AddMcpServerModal({
                 className="h-4 w-4 text-primary"
                 aria-hidden="true"
               />
-              {initialData ? 'Update MCP Server' : 'Add MCP Server'}
+              {initialData ? "Update MCP Server" : "Add MCP Server"}
             </div>
             <span className="text-mmd font-normal text-muted-foreground">
               {isOnMcpSettingsPage ? (
-                'Add and save MCP servers to use across your flows.'
+                "Add and save MCP servers to use across your flows."
               ) : (
                 <>
-                  Add and save MCP servers. Manage servers in{' '}
+                  Add and save MCP servers. Manage servers in{" "}
                   <CustomLink className="underline" to={MCP_SETTINGS_PAGE}>
                     settings
                   </CustomLink>
@@ -331,7 +331,7 @@ export default function AddMcpServerModal({
               <div className="px-4">
                 <TabsList className="mb-4 grid w-full grid-cols-3">
                   <TabsTrigger
-                    disabled={!!initialData && type !== 'JSON'}
+                    disabled={!!initialData && type !== "JSON"}
                     data-testid="json-tab"
                     value="JSON"
                   >
@@ -339,14 +339,14 @@ export default function AddMcpServerModal({
                   </TabsTrigger>
                   <TabsTrigger
                     data-testid="stdio-tab"
-                    disabled={!!initialData && type !== 'STDIO'}
+                    disabled={!!initialData && type !== "STDIO"}
                     value="STDIO"
                   >
                     STDIO
                   </TabsTrigger>
                   <TabsTrigger
                     data-testid="http-tab"
-                    disabled={!!initialData && type !== 'HTTP'}
+                    disabled={!!initialData && type !== "HTTP"}
                     value="HTTP"
                   >
                     Streamable HTTP/SSE
@@ -361,8 +361,8 @@ export default function AddMcpServerModal({
                   <ShadTooltip content={error}>
                     <div
                       className={cn(
-                        'absolute right-4 top-4 truncate text-xs font-medium text-red-500',
-                        type === 'JSON' ? 'w-3/5' : 'w-4/5'
+                        "absolute right-4 top-4 truncate text-xs font-medium text-red-500",
+                        type === "JSON" ? "w-3/5" : "w-4/5",
                       )}
                     >
                       {error}
@@ -375,7 +375,7 @@ export default function AddMcpServerModal({
                     <Textarea
                       value={jsonValue}
                       data-testid="json-input"
-                      onChange={e => setJsonValue(e.target.value)}
+                      onChange={(e) => setJsonValue(e.target.value)}
                       className="min-h-[225px] font-mono text-mmd"
                       placeholder="Paste in JSON config to add server"
                       disabled={isPending}
@@ -390,7 +390,7 @@ export default function AddMcpServerModal({
                       </Label>
                       <Input
                         value={stdioName}
-                        onChange={e => setStdioName(e.target.value)}
+                        onChange={(e) => setStdioName(e.target.value)}
                         placeholder="Type server name..."
                         data-testid="stdio-name-input"
                         disabled={isPending}
@@ -402,7 +402,7 @@ export default function AddMcpServerModal({
                       </Label>
                       <Input
                         value={stdioCommand}
-                        onChange={e => setStdioCommand(e.target.value)}
+                        onChange={(e) => setStdioCommand(e.target.value)}
                         placeholder="Type command..."
                         data-testid="stdio-command-input"
                         disabled={isPending}
@@ -442,7 +442,7 @@ export default function AddMcpServerModal({
                       </Label>
                       <Input
                         value={httpName}
-                        onChange={e => setHttpName(e.target.value)}
+                        onChange={(e) => setHttpName(e.target.value)}
                         placeholder="Name"
                         data-testid="http-name-input"
                         disabled={isPending}
@@ -455,7 +455,7 @@ export default function AddMcpServerModal({
                       </Label>
                       <Input
                         value={httpUrl}
-                        onChange={e => setHttpUrl(e.target.value)}
+                        onChange={(e) => setHttpUrl(e.target.value)}
                         placeholder="Streamable HTTP/SSE URL"
                         data-testid="http-url-input"
                         disabled={isPending}
@@ -501,7 +501,7 @@ export default function AddMcpServerModal({
             loading={isPending}
           >
             <span className="text-mmd">
-              {initialData ? 'Update Server' : 'Add Server'}
+              {initialData ? "Update Server" : "Add Server"}
             </span>
           </Button>
         </div>
