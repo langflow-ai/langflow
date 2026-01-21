@@ -405,18 +405,20 @@ def _is_valid_key_value_item(item: Any) -> bool:
     return isinstance(item, dict) and "key" in item and "value" in item
 
 
-def _process_headers(headers: Any) -> dict:
-    """Process the headers input into a valid dictionary.
+def _process_headers(headers: Any, request_variables: dict[str, str] | None = None) -> dict:
+    """Process the headers input into a valid dictionary and resolve global variables.
 
     Args:
         headers: The headers to process, can be dict, str, or list
+        request_variables: Optional dict of global variables to resolve header values
     Returns:
-        Processed and validated dictionary
+        Processed and validated dictionary with resolved global variable values
     """
     if headers is None:
         return {}
     if isinstance(headers, dict):
-        return validate_headers(headers)
+        resolved_headers = _resolve_global_variables_in_headers(headers, request_variables)
+        return validate_headers(resolved_headers)
     if isinstance(headers, list):
         processed_headers = {}
         try:
@@ -428,8 +430,32 @@ def _process_headers(headers: Any) -> dict:
                 processed_headers[key] = value
         except (KeyError, TypeError, ValueError):
             return {}  # Return empty dictionary instead of None
-        return validate_headers(processed_headers)
+        resolved_headers = _resolve_global_variables_in_headers(processed_headers, request_variables)
+        return validate_headers(resolved_headers)
     return {}
+
+
+def _resolve_global_variables_in_headers(headers: dict, request_variables: dict[str, str] | None) -> dict:
+    """Resolve global variable names in header values to their actual values.
+
+    Args:
+        headers: Dictionary of headers where values might be global variable names
+        request_variables: Dictionary of global variables from request context
+
+    Returns:
+        Dictionary with resolved header values
+    """
+    if not request_variables:
+        return headers
+
+    resolved = {}
+    for key, value in headers.items():
+        # If the value matches a global variable name, replace it with the actual value
+        if isinstance(value, str) and value in request_variables:
+            resolved[key] = request_variables[value]
+        else:
+            resolved[key] = value
+    return resolved
 
 
 def _validate_node_installation(command: str) -> str:
@@ -1517,8 +1543,18 @@ async def update_tools(
     mcp_stdio_client: MCPStdioClient | None = None,
     mcp_streamable_http_client: MCPStreamableHttpClient | None = None,
     mcp_sse_client: MCPStreamableHttpClient | None = None,  # Backward compatibility
+    request_variables: dict[str, str] | None = None,
 ) -> tuple[str, list[StructuredTool], dict[str, StructuredTool]]:
-    """Fetch server config and update available tools."""
+    """Fetch server config and update available tools.
+
+    Args:
+        server_name: Name of the MCP server
+        server_config: Server configuration dictionary
+        mcp_stdio_client: Optional stdio client instance
+        mcp_streamable_http_client: Optional streamable HTTP client instance
+        mcp_sse_client: Optional SSE client instance (backward compatibility)
+        request_variables: Optional dict of global variables to resolve in headers
+    """
     if server_config is None:
         server_config = {}
     if not server_name:
@@ -1539,7 +1575,7 @@ async def update_tools(
     command = server_config.get("command", "")
     url = server_config.get("url", "")
     tools = []
-    headers = _process_headers(server_config.get("headers", {}))
+    headers = _process_headers(server_config.get("headers", {}), request_variables)
 
     try:
         await _validate_connection_params(mode, command, url)

@@ -67,6 +67,17 @@ export type APIClassType = {
     | Array<{ types: Array<string>; selected?: string }>;
 };
 
+export type ModelOptionType = {
+  name: string;
+  id?: string;
+  icon?: string;
+  provider?: string;
+  metadata?: {
+    is_disabled_provider?: boolean;
+    [key: string]: unknown;
+  };
+};
+
 export type InputFieldType = {
   type: string;
   required: boolean;
@@ -350,4 +361,14 @@ export type TableOptionsTypeAPI = {
   >;
   field_parsers?: Array<FieldParserType | { [key: string]: FieldParserType }>;
   description?: string;
+};
+
+export type TransactionLogsRow = {
+  id: string;
+  timestamp: string;
+  vertex_id: string;
+  target_id: string | null;
+  inputs: Record<string, unknown> | null;
+  outputs: Record<string, unknown> | null;
+  status: string;
 };

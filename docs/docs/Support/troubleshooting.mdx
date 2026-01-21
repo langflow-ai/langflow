@@ -25,7 +25,7 @@ If you still cannot locate the component, see [Langflow GitHub Issues and Discus
 
 ## No input in the Playground
 
-If there is no message input field in the **Playground**, make sure your flow has a [**Chat Input** component](/components-io#chat-io) that is connected, directly or indirectly, to the **Input** port of a **Language Model** or **Agent** component.
+If there is no message input field in the **Playground**, make sure your flow has a [**Chat Input** component](/chat-input-and-output) that is connected, directly or indirectly, to the **Input** port of a **Language Model** or **Agent** component.
 
 Because the **Playground** is designed for flows that use an LLM in a query-and-response format, such as chatbots and agents, a flow must have **Chat Input**, **Language Model**/**Agent**, and **Chat Output** components to be fully supported by the **Playground** chat interface.
 
@@ -80,6 +80,16 @@ sudo apt-get install gcc
 ### Installation failure from `webrtcvad` package
 
 If you experience an error from the `webrtcvad` package, run `uv pip install webrtcvad-wheels` in your virtual environment, and then retry the Langflow installation.
+
+### Protocol buffers (protoc) required for Intel-based Macs
+
+If you're installing Langflow on an Intel-based Mac, you may encounter installation errors if Protocol Buffers Compiler (`protoc`) is not installed.
+
+This requirement doesn't apply to Apple Silicon Macs on ARM64.
+
+To resolve this issue, install `protoc` using `brew install protobuf`.
+
+For more information, including alternative installation methods, see the [Protocol buffers installation documentation](https://protobuf.dev/installation/).
 
 ### C++ build tools required for Langflow Desktop on Windows
 
@@ -146,6 +156,31 @@ To resolve this error, use separate browser instances or browser profiles to acc
 In Langflow OSS, you can follow the error message's instructions to install the missing dependency.
 
 To manage dependencies in Langflow Desktop, see [Install custom dependencies in Langflow Desktop](/install-custom-dependencies#langflow-desktop).
+
+### PostgreSQL asyncpg driver compatibility issue
+
+The following error can occur when initializing Langflow with a PostgreSQL database:
+
+```text
+sqlalchemy.exc.DBAPIError: (sqlalchemy.dialects.postgresql.asyncpg.Error) <class 'asyncpg.exceptions.DataError'>: invalid input for query argument $7: datetime.datetime(2025, 10, 31, 14, 8, 5... (can't subtract offset-naive and offset-aware datetimes)
+```
+
+This error occurs because `asyncpg` has stricter timezone handling than `psycopg2`, and is not fully compatible with Langflow's current database schema.
+
+To resolve this issue, remove `asyncpg` from your installation and use `psycopg2` instead.
+
+### An API key must be passed as query or header
+
+The following error can occur when attempting to sign up on the Langflow sign in page: `An API key must be passed as query or header`.
+
+This means that `LANGFLOW_AUTO_LOGIN` is set to `false`, and only superusers can create and activate non-superuser accounts.
+Therefore, you are locked out of this Langflow instance.
+
+If you aren't an administrator, then a superuser must create and activate a non-superuser account before you can sign in.
+
+If you are the administrator, sign in with a superuser account, or restart Langflow with `LANGFLOW_AUTO_LOGIN=true`.
+
+For more information, see [Start Langflow Server with authentication enabled](/api-keys-and-authentication#start-a-langflow-server-with-authentication-enabled).
 
 ## Langflow upgrade issues
 
@@ -231,7 +266,7 @@ If Claude for Desktop doesn't use your server's tools correctly, try explicitly 
           "command": "PATH_TO_UVX",
           "args": [
             "mcp-proxy",
-            "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/sse"
+            "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/streamable"
           ]
         }
       }
@@ -250,7 +285,7 @@ If Claude for Desktop doesn't use your server's tools correctly, try explicitly 
             "-y",
             "supergateway",
             "--sse",
-            "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/sse"
+            "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/streamable"
           ]
         }
       }
@@ -267,7 +302,8 @@ This is a known issue when using MCP Tools with browser navigation actions, such
 This issue occurs because the MCP server runs from a Python process, which prevents it from opening browser windows in WSL or Windows.
 
 To work around this issue, use the standalone MCP server approach documented in the [Playwright MCP repository](https://github.com/microsoft/playwright-mcp?tab=readme-ov-file#standalone-mcp-server).
-After the server is up and running, you can add it as an SSE server in Langflow.
+After the server is up and running, you can add it as an HTTP/SSE server in Langflow.
+
 For other browser navigation tools, see the provider's documentation for specific troubleshooting guidance.
 
 ### "No tools or prompts connected" on MCP servers in mixed Windows/WSL environments
@@ -283,7 +319,21 @@ Alternatively, configure Langflow Desktop to accept connections from WSL at the 
 ## Token length limit errors in Embedding Model components
 
 Token length errors can happen if your chunking strategy doesn't align with your embedding model's tokenization limits.
-For more information, see [Tokenization errors due to chunk size](/components-processing#chunk-size).
+For more information, see [Tokenization errors due to chunk size](/split-text#chunk-size).
+
+## Document processing errors in Docker containers
+
+If you're running Langflow in a Docker container, you might encounter errors when using components that handle files or images, such as the [**Read File** component](/read-file) or [**Docling** components](/bundles-docling). To resolve these errors, you might need to install additional system dependencies.
+
+When running Langflow in a Linux-based Docker container, Docling requires system libraries that aren't included in the base Docker image. If you see errors related to document or image processing, add the following to your Dockerfile:
+
+```dockerfile
+RUN apt-get update && apt-get install -y libgl1 libglib2.0-0
+```
+
+These dependencies are required by Docling for document processing operations.
+
+For more information about customizing Docker images, see [Customize the Langflow Docker image with your own code](/deployment-docker#customize-the-langflow-docker-image).
 
 ## Custom components and integrations issues
 

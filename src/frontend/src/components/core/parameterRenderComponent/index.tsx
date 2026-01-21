@@ -17,6 +17,7 @@ import IntComponent from "./components/intComponent";
 import KeypairListComponent from "./components/keypairListComponent";
 import McpComponent from "./components/mcpComponent";
 import MultiselectComponent from "./components/multiselectComponent";
+import MustachePromptAreaComponent from "./components/mustachePromptComponent";
 import PromptAreaComponent from "./components/promptComponent";
 import QueryComponent from "./components/queryComponent";
 import SortableListComponent from "./components/sortableListComponent";
@@ -190,6 +191,15 @@ export function ParameterRenderComponent({
             id={`promptarea_${id}`}
           />
         );
+      case "mustache":
+        return (
+          <MustachePromptAreaComponent
+            {...baseInputProps}
+            readonly={!!nodeClass.flow}
+            field_name={name}
+            id={`mustachepromptarea_${id}`}
+          />
+        );
       case "code":
         return <CodeAreaComponent {...baseInputProps} id={`codearea_${id}`} />;
       case "table":
@@ -242,6 +252,7 @@ export function ParameterRenderComponent({
             options={templateData?.options}
             searchCategory={templateData?.search_category}
             limit={templateData?.limit}
+            id={`sortablelist_${id}`}
           />
         );
       case "connect": {

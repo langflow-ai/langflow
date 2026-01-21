@@ -313,6 +313,10 @@ class Settings(BaseSettings):
     """If set to True, Langflow will start the agentic MCP server that provides tools for
     flow/component operations, template search, and graph visualization."""
 
+    # Developer API
+    developer_api_enabled: bool = False
+    """If set to True, Langflow will enable developer API endpoints for advanced debugging and introspection."""
+
     # Public Flow Settings
     public_flow_cleanup_interval: int = Field(default=3600, gt=600)
     """The interval in seconds at which public temporary flows will be cleaned up.
@@ -497,7 +501,13 @@ class Settings(BaseSettings):
             if info.data["save_db_in_config_dir"]:
                 database_dir = info.data["config_dir"]
             else:
-                database_dir = Path(__file__).parent.parent.parent.resolve()
+                # Use langflow package path, not lfx, for backwards compatibility
+                try:
+                    import langflow
+
+                    database_dir = Path(langflow.__file__).parent.resolve()
+                except ImportError:
+                    database_dir = Path(__file__).parent.parent.parent.resolve()
 
             pre_db_file_name = "langflow-pre.db"
             db_file_name = "langflow.db"
