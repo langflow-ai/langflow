@@ -50,7 +50,7 @@ async def test_get_api_keys_decrypts_and_falls_back(monkeypatch):
     # Patch decrypt_api_key to:
     # - return 'sk-decrypted' for 'enc-1'
     # - raise InvalidToken for 'bad-enc' to trigger fallback
-    def fake_decrypt(val, _settings_service=None):
+    def fake_decrypt(val, settings_service=None):
         if val == "enc-1":
             return "sk-decrypted"
         if val == "bad-enc":
