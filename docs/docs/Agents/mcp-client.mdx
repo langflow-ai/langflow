@@ -207,21 +207,16 @@ The component's ID is displayed in the **Controls** pane, such as `MCPTools-Bzah
     <TabItem value="curl" label="cURL">
 
     ```bash
-    LANGFLOW_SERVER_ADDRESS="http://localhost:7860"
-    FLOW_ID="your-flow-id"
-    LANGFLOW_API_KEY="${LANGFLOW_API_KEY}"
-    MCP_TOOLS_COMPONENT_ID="MCPTools-Bzahc"
-
     curl --request POST \
-      --url "${LANGFLOW_SERVER_ADDRESS}/api/v1/run/${FLOW_ID}?stream=false" \
+      --url "http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID?stream=false" \
       --header "Content-Type: application/json" \
-      --header "x-api-key: ${LANGFLOW_API_KEY}" \
+      --header "x-api-key: LANGFLOW_API_KEY" \
       --data '{
         "output_type": "chat",
         "input_type": "chat",
         "input_value": "What sales data is available to me?",
         "tweaks": {
-          "'"${MCP_TOOLS_COMPONENT_ID}"'": {
+          "MCP_TOOLS_COMPONENT_ID": {
             "mcp_server": {
               "env": {
                 "API_URL": "https://api.example.com",
@@ -233,6 +228,8 @@ The component's ID is displayed in the **Controls** pane, such as `MCPTools-Bzah
         }
       }'
     ```
+
+    Replace `MCP_TOOLS_COMPONENT_ID`, `LANGFLOW_API_KEY`, `LANGFLOW_SERVER_ADDRESS`, and `FLOW_ID` with the actual values from your Langflow deployment.
 
     </TabItem>
     </Tabs>
