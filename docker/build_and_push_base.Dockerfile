@@ -82,7 +82,10 @@ RUN apt-get update \
     && apt-get install --no-install-recommends -y curl git libpq5 gnupg xz-utils \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
-RUN curl -fsSL https://nodejs.org/dist/latest-v22.x/node-v22-linux-x64.tar.xz \
+RUN NODE_VERSION=$(curl -fsSL https://nodejs.org/dist/latest-v22.x/ \
+                    | grep -oP 'node-v\K[0-9]+\.[0-9]+\.[0-9]+(?=-linux-x64\.tar\.xz)' \
+                    | head -1) \
+    && curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz" \
     | tar -xJ -C /usr/local --strip-components=1 \
     && node --version \
     && npm --version
