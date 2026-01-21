@@ -6,11 +6,12 @@ from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Annotated, Final
 from uuid import UUID
 
+import jwt
 from cryptography.fernet import Fernet
 from fastapi import Depends, HTTPException, Request, Security, WebSocketException, status
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
 from fastapi.security.utils import get_authorization_scheme_param
-from jose import JWTError, jwt
+from jwt import InvalidTokenError
 from lfx.log.logger import logger
 from lfx.services.deps import injectable_session_scope, session_scope
 from lfx.services.settings.service import SettingsService
@@ -70,6 +71,60 @@ AUTO_LOGIN_ERROR = (
 
 REFRESH_TOKEN_TYPE: Final[str] = "refresh"  # noqa: S105
 ACCESS_TOKEN_TYPE: Final[str] = "access"  # noqa: S105
+
+# JWT key configuration error messages
+PUBLIC_KEY_NOT_CONFIGURED_ERROR: Final[str] = (
+    "Server configuration error: Public key not configured for asymmetric JWT algorithm."
+)
+SECRET_KEY_NOT_CONFIGURED_ERROR: Final[str] = "Server configuration error: Secret key not configured."  # noqa: S105
+
+
+class JWTKeyError(HTTPException):
+    """Raised when JWT key configuration is invalid."""
+
+    def __init__(self, detail: str, *, include_www_authenticate: bool = True):
+        headers = {"WWW-Authenticate": "Bearer"} if include_www_authenticate else None
+        super().__init__(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=detail,
+            headers=headers,
+        )
+
+
+def get_jwt_verification_key(settings_service: SettingsService) -> str:
+    """Get the appropriate key for JWT verification based on configured algorithm.
+
+    For asymmetric algorithms (RS256, RS512): returns public key
+    For symmetric algorithms (HS256): returns secret key
+    """
+    algorithm = settings_service.auth_settings.ALGORITHM
+
+    if algorithm.is_asymmetric():
+        verification_key = settings_service.auth_settings.PUBLIC_KEY
+        if not verification_key:
+            logger.error("Public key is not set in settings for RS256/RS512.")
+            raise JWTKeyError(PUBLIC_KEY_NOT_CONFIGURED_ERROR)
+        return verification_key
+
+    secret_key = settings_service.auth_settings.SECRET_KEY.get_secret_value()
+    if secret_key is None:
+        logger.error("Secret key is not set in settings.")
+        raise JWTKeyError(SECRET_KEY_NOT_CONFIGURED_ERROR)
+    return secret_key
+
+
+def get_jwt_signing_key(settings_service: SettingsService) -> str:
+    """Get the appropriate key for JWT signing based on configured algorithm.
+
+    For asymmetric algorithms (RS256, RS512): returns private key
+    For symmetric algorithms (HS256): returns secret key
+    """
+    algorithm = settings_service.auth_settings.ALGORITHM
+
+    if algorithm.is_asymmetric():
+        return settings_service.auth_settings.PRIVATE_KEY.get_secret_value()
+
+    return settings_service.auth_settings.SECRET_KEY.get_secret_value()
 
 
 # Source: https://github.com/mrtolkien/fastapi_simple_security/blob/master/fastapi_simple_security/security_api_key.py
@@ -199,20 +254,13 @@ async def get_current_user_by_jwt(
     if isinstance(token, Coroutine):
         token = await token
 
-    secret_key = settings_service.auth_settings.SECRET_KEY.get_secret_value()
-    if secret_key is None:
-        logger.error("Secret key is not set in settings.")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            # Careful not to leak sensitive information
-            detail="Authentication failure: Verify authentication settings.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    algorithm = settings_service.auth_settings.ALGORITHM
+    verification_key = get_jwt_verification_key(settings_service)
 
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            payload = jwt.decode(token, secret_key, algorithms=[settings_service.auth_settings.ALGORITHM])
+            payload = jwt.decode(token, verification_key, algorithms=[algorithm])
         user_id: UUID = payload.get("sub")  # type: ignore[assignment]
         token_type: str = payload.get("type")  # type: ignore[assignment]
 
@@ -240,7 +288,7 @@ async def get_current_user_by_jwt(
                 detail="Invalid token details.",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-    except JWTError as e:
+    except InvalidTokenError as e:
         logger.debug("JWT validation failed: Invalid token format or signature")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -391,10 +439,13 @@ def create_token(data: dict, expires_delta: timedelta):
     expire = datetime.now(timezone.utc) + expires_delta
     to_encode["exp"] = expire
 
+    algorithm = settings_service.auth_settings.ALGORITHM
+    signing_key = get_jwt_signing_key(settings_service)
+
     return jwt.encode(
         to_encode,
-        settings_service.auth_settings.SECRET_KEY.get_secret_value(),
-        algorithm=settings_service.auth_settings.ALGORITHM,
+        signing_key,
+        algorithm=algorithm,
     )
 
 
@@ -476,9 +527,10 @@ def create_user_api_key(user_id: UUID) -> dict:
 
 def get_user_id_from_token(token: str) -> UUID:
     try:
-        user_id = jwt.get_unverified_claims(token)["sub"]
+        claims = jwt.decode(token, options={"verify_signature": False})
+        user_id = claims["sub"]
         return UUID(user_id)
-    except (KeyError, JWTError, ValueError):
+    except (KeyError, InvalidTokenError, ValueError):
         return UUID(int=0)
 
 
@@ -511,14 +563,17 @@ async def create_user_tokens(user_id: UUID, db: AsyncSession, *, update_last_log
 async def create_refresh_token(refresh_token: str, db: AsyncSession):
     settings_service = get_settings_service()
 
+    algorithm = settings_service.auth_settings.ALGORITHM
+    verification_key = get_jwt_verification_key(settings_service)
+
     try:
         # Ignore warning about datetime.utcnow
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             payload = jwt.decode(
                 refresh_token,
-                settings_service.auth_settings.SECRET_KEY.get_secret_value(),
-                algorithms=[settings_service.auth_settings.ALGORITHM],
+                verification_key,
+                algorithms=[algorithm],
             )
         user_id: UUID = payload.get("sub")  # type: ignore[assignment]
         token_type: str = payload.get("type")  # type: ignore[assignment]
@@ -537,7 +592,7 @@ async def create_refresh_token(refresh_token: str, db: AsyncSession):
 
         return await create_user_tokens(user_id, db)
 
-    except JWTError as e:
+    except InvalidTokenError as e:
         logger.exception("JWT decoding error")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -594,17 +649,20 @@ def encrypt_api_key(api_key: str, settings_service: SettingsService):
 def decrypt_api_key(encrypted_api_key: str, settings_service: SettingsService):
     """Decrypt the provided encrypted API key using Fernet decryption.
 
-    This function first attempts to decrypt the API key by encoding it,
-    assuming it is a properly encoded string. If that fails, it logs a detailed
-    debug message including the exception information and retries decryption
-    using the original string input.
+    This function supports both encrypted and plain text values. It first attempts
+    to decrypt the API key by encoding it, assuming it is a properly encrypted string.
+    If that fails, it retries decryption using the original string input. If both
+    decryption attempts fail, it checks if the value looks like a Fernet token
+    (starts with "gAAAAA"). If it does, it's likely encrypted with a different key
+    and returns empty string. Otherwise, it assumes plain text and returns as-is.
 
     Args:
-        encrypted_api_key (str): The encrypted API key.
+        encrypted_api_key (str): The encrypted API key or plain text value.
         settings_service (SettingsService): Service providing authentication settings.
 
     Returns:
-        str: The decrypted API key, or an empty string if decryption cannot be performed.
+        str: The decrypted API key, the original value if plain text, or empty string
+             if it's encrypted with a different key.
     """
     fernet = get_fernet(settings_service)
     if isinstance(encrypted_api_key, str):
@@ -616,8 +674,25 @@ def decrypt_api_key(encrypted_api_key: str, settings_service: SettingsService):
                 "Retrying decryption using the raw string input.",
                 primary_exception,
             )
-            return fernet.decrypt(encrypted_api_key).decode()
-    return ""
+            try:
+                return fernet.decrypt(encrypted_api_key).decode()
+            except Exception as secondary_exception:  # noqa: BLE001
+                # Check if this looks like a Fernet token (base64 encoded, starts with gAAAAA)
+                if encrypted_api_key.startswith("gAAAAA"):
+                    logger.warning(
+                        "Failed to decrypt stored value (likely encrypted with different key). "
+                        "Error: %s. Returning empty string.",
+                        secondary_exception,
+                    )
+                    return ""
+                # Assume the value is plain text and return it as-is
+                logger.debug(
+                    "Value does not appear to be encrypted (no Fernet token signature). Returning value as plain text."
+                )
+                return encrypted_api_key
+
+    msg = "Unexpected variable type. Expected string"
+    raise ValueError(msg)
 
 
 # MCP-specific authentication functions that always behave as if skip_auth_auto_login is True
