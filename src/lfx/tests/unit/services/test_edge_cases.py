@@ -157,6 +157,10 @@ class TestConfigParsingEdgeCases:
     def clean_manager(self):
         """Create a clean ServiceManager instance."""
         manager = ServiceManager()
+        
+        # Register mock SESSION_SERVICE so services with dependencies can be created
+        manager.register_service_class(ServiceType.SESSION_SERVICE, MockSessionService, override=True)
+        
         yield manager
         # Cleanup
         import asyncio
