@@ -1,78 +1,47 @@
 import type { Page } from "@playwright/test";
 
-const MODEL_OPTION_TESTID = "gpt-4o-mini-option";
-const MODEL_TOGGLE_TESTID = "llm-toggle-gpt-4o-mini";
-const LISTBOX_TIMEOUT = 10000;
-const MODAL_TIMEOUT = 30000;
-const SHORT_DELAY = 500;
+export const selectGptModel = async (page: Page) => {
+  const gptModelDropdownCount = await page.getByTestId("model_model").count();
 
-async function configureOpenAIProvider(page: Page): Promise<boolean> {
-  await page.getByTestId("manage-model-providers").click();
-  await page.waitForSelector("text=Model providers", {
-    timeout: MODAL_TIMEOUT,
-  });
-  await page.getByTestId("provider-item-OpenAI").click();
-  await page.waitForTimeout(SHORT_DELAY);
+  for (let i = 0; i < gptModelDropdownCount; i++) {
+    await page.getByTestId("model_model").nth(i).click();
+    await page.waitForSelector('[role="listbox"]', { timeout: 10000 });
 
-  const hasExistingKey = (await page.getByTestId("input-end-icon").count()) > 0;
+    const gptOMiniOption = await page.getByTestId("gpt-4o-mini-option").count();
 
-  if (!hasExistingKey) {
-    await page
-      .getByPlaceholder("Add API key")
-      .fill(process.env.OPENAI_API_KEY!);
-    await page.waitForSelector("text=OpenAI Api Key Saved", {
-      timeout: MODAL_TIMEOUT,
-    });
-    await page.getByTestId(MODEL_TOGGLE_TESTID).click();
-    await page.getByText("Close").last().click();
-    return false;
-  }
+    await page.waitForTimeout(500);
 
-  await page.waitForTimeout(SHORT_DELAY);
-  const isModelEnabled = await page
-    .getByTestId(MODEL_TOGGLE_TESTID)
-    .isChecked();
-  if (!isModelEnabled) {
-    await page.getByTestId(MODEL_TOGGLE_TESTID).click();
-  }
-  await page.getByText("Close").last().click();
-  return true;
-}
+    if (gptOMiniOption === 0) {
+      await page.getByTestId("manage-model-providers").click();
+      await page.waitForSelector("text=Model providers", { timeout: 30000 });
 
-async function selectModelFromDropdown(
-  page: Page,
-  dropdownTestId: string,
-  index: number,
-): Promise<void> {
-  await page.getByTestId(dropdownTestId).nth(index).click();
-  await page.waitForSelector('[role="listbox"]', { timeout: LISTBOX_TIMEOUT });
+      await page.getByTestId("provider-item-OpenAI").click();
+      await page.waitForTimeout(500);
 
-  const hasModelOption =
-    (await page.getByTestId(MODEL_OPTION_TESTID).count()) > 0;
-  await page.waitForTimeout(SHORT_DELAY);
+      const checkExistingKey = await page.getByTestId("input-end-icon").count();
+      if (checkExistingKey === 0) {
+        await page
+          .getByPlaceholder("Add API key")
+          .fill(process.env.OPENAI_API_KEY!);
+        await page.waitForSelector("text=OpenAI Api Key Saved", {
+          timeout: 30000,
+        });
+        await page.getByTestId("llm-toggle-gpt-4o-mini").click();
+        await page.getByText("Close").last().click();
+      } else {
+        await page.waitForTimeout(500);
 
-  if (!hasModelOption) {
-    const needsReopen = await configureOpenAIProvider(page);
-    if (needsReopen) {
-      await page.getByTestId(dropdownTestId).nth(index).click();
+        const isChecked = await page
+          .getByTestId("llm-toggle-gpt-4o-mini")
+          .isChecked();
+        if (!isChecked) {
+          await page.getByTestId("llm-toggle-gpt-4o-mini").click();
+        }
+        await page.getByText("Close").last().click();
+        await page.getByTestId("model_model").nth(i).click();
+      }
     }
-  }
-
-  await page.waitForTimeout(SHORT_DELAY);
-  await page.getByTestId(MODEL_OPTION_TESTID).click();
-}
-
-export const selectGptModel = async (page: Page): Promise<void> => {
-  const modelDropdownCount = await page.getByTestId("model_model").count();
-  const modelNameDropdownCount = await page
-    .getByTestId("model_model_name")
-    .count();
-
-  for (let i = 0; i < modelDropdownCount; i++) {
-    await selectModelFromDropdown(page, "model_model", i);
-  }
-
-  for (let i = 0; i < modelNameDropdownCount; i++) {
-    await selectModelFromDropdown(page, "model_model_name", i);
+    await page.waitForTimeout(500);
+    await page.getByTestId("gpt-4o-mini-option").click();
   }
 };
