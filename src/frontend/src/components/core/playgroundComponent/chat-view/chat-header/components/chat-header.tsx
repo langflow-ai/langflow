@@ -3,8 +3,8 @@ import { AnimatedConditional } from "@/components/ui/animated-close";
 import { useDeleteSession } from "@/controllers/API/queries/messages/use-delete-sessions";
 import { useIsMobile } from "@/hooks/use-mobile";
 import useAlertStore from "@/stores/alertStore";
-import { useMessagesStore } from "@/stores/messagesStore";
 import { cn } from "@/utils/utils";
+import { clearSessionMessages } from "../../utils/message-utils";
 import { useEditSessionInfo } from "../hooks/use-edit-session-info";
 import { useRenameSession } from "../hooks/use-rename-session";
 import { useSessionMoreMenuHandlers } from "../hooks/use-session-more-menu-handlers";
@@ -55,28 +55,45 @@ export function ChatHeader({
   // Keep session actions (including logs) available in fullscreen
   const isSessionDropdownVisible = true;
   const isDefaultSession = currentSessionId === currentFlowId;
-  const deleteSessionMutation = useDeleteSession();
+  const deleteSessionMutation = useDeleteSession({});
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
-  const deleteSessionFromStore = useMessagesStore(
-    (state) => state.deleteSession,
-  );
 
   const handleDeleteSessionInternal = () => {
-    if (!currentSessionId) return;
-    handleDelete(currentSessionId);
-    onDeleteSession?.(currentSessionId);
-  };
-
-  const handleClearChat = () => {
-    if (!currentSessionId || !isDefaultSession) return;
+    if (!currentSessionId || isDefaultSession || !currentFlowId) return;
 
     deleteSessionMutation.mutate(
       { sessionId: currentSessionId },
       {
         onSuccess: () => {
-          // Remove messages from store
-          deleteSessionFromStore(currentSessionId);
+          // Clear messages from React Query cache
+          clearSessionMessages(currentSessionId, currentFlowId);
+          // Call the delete handler to update session list and selected session
+          handleDelete(currentSessionId);
+          // Call the parent callback
+          onDeleteSession?.(currentSessionId);
+          setSuccessData({
+            title: "Session deleted successfully.",
+          });
+        },
+        onError: () => {
+          setErrorData({
+            title: "Error deleting session.",
+          });
+        },
+      },
+    );
+  };
+
+  const handleClearChat = () => {
+    if (!currentSessionId || !isDefaultSession || !currentFlowId) return;
+
+    deleteSessionMutation.mutate(
+      { sessionId: currentSessionId },
+      {
+        onSuccess: () => {
+          // Clear messages from React Query cache
+          clearSessionMessages(currentSessionId, currentFlowId);
           setSuccessData({
             title: "Chat cleared successfully.",
           });

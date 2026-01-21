@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { StickToBottom } from "use-stick-to-bottom";
 import useFlowStore from "@/stores/flowStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
@@ -13,17 +13,6 @@ interface MessagesProps {
   updateChat?: (chat: ChatMessageType, message: string) => void;
   closeChat?: () => void;
 }
-
-const MemoizedChatMessage = memo(ChatMessage, (prevProps, nextProps) => {
-  return (
-    prevProps.chat.message === nextProps.chat.message &&
-    prevProps.chat.id === nextProps.chat.id &&
-    prevProps.chat.session === nextProps.chat.session &&
-    prevProps.chat.content_blocks === nextProps.chat.content_blocks &&
-    prevProps.chat.properties === nextProps.chat.properties &&
-    prevProps.lastMessage === nextProps.lastMessage
-  );
-});
 
 export const Messages = ({
   visibleSession,
@@ -46,9 +35,9 @@ export const Messages = ({
     <div className="flex flex-col flex-grow place-self-center w-full relative overflow-x-hidden">
       {chatHistory && (isBuilding || chatHistory.length > 0) && (
         <>
-          {chatHistory.map((chat, index) => {
+          {chatHistory.map((chat: ChatMessageType, index) => {
             return (
-              <MemoizedChatMessage
+              <ChatMessage
                 key={`${chat.id}-${index}`}
                 chat={chat}
                 lastMessage={chatHistory.length - 1 === index}

@@ -1,6 +1,7 @@
 import type { Edge, Node } from "@xyflow/react";
 import type { AxiosError } from "axios";
 import { flushSync } from "react-dom";
+import { handleMessageEvent } from "@/components/core/playgroundComponent/chat-view/utils/message-event-handler";
 import { MISSED_ERROR_ALERT } from "@/constants/alerts_constants";
 import {
   BUILD_POLLING_INTERVAL,
@@ -14,7 +15,6 @@ import {
 } from "@/customization/utils/custom-buildUtils";
 import { customPollBuildEvents } from "@/customization/utils/custom-poll-build-events";
 import { getFetchCredentials } from "@/customization/utils/get-fetch-credentials";
-import { useMessagesStore } from "@/stores/messagesStore";
 import { BuildStatus, EventDeliveryType } from "../constants/enums";
 import { getVerticesOrder, postBuildVertex } from "../controllers/API";
 import useAlertStore from "../stores/alertStore";
@@ -555,23 +555,14 @@ async function onEvent(
       }
       return true;
     }
-    case "add_message": {
-      // Add a message to the messages store.
-      useMessagesStore.getState().addMessage(data);
-      return true;
-    }
-    case "token": {
-      // Use flushSync with a timeout to avoid React batching issues.
-      setTimeout(() => {
-        flushSync(() => {
-          useMessagesStore.getState().updateMessageText(data.id, data.chunk);
-        });
-      }, 10);
-      return true;
-    }
+    case "add_message":
+    case "token":
     case "remove_message": {
-      useMessagesStore.getState().removeMessage(data);
-      return true;
+      // Handle message events through chat-view utilities
+      const handled = handleMessageEvent(type, data);
+      if (handled) return true;
+      // If not handled (shouldn't happen for these cases), fall through
+      break;
     }
     case "end": {
       const allNodesValid = buildResults.every((result) => result);
@@ -580,12 +571,11 @@ async function onEvent(
       return true;
     }
     case "error": {
-      if (data?.category === "error") {
-        useMessagesStore.getState().addMessage(data);
-        // Use a falsy check to correctly determine if the source ID is missing.
-        if (!data?.properties?.source?.id) {
-          onBuildError && onBuildError("Error Building Flow", [data.text]);
-        }
+      // Handle error message through chat-view utilities
+      handleMessageEvent(type, data);
+      // Use a falsy check to correctly determine if the source ID is missing.
+      if (data?.category === "error" && !data?.properties?.source?.id) {
+        onBuildError && onBuildError("Error Building Flow", [data.text]);
       }
       buildResults.push(false);
       return true;
