@@ -177,9 +177,6 @@ async def get_servers(
 
                 from langflow.services.auth import utils as auth_utils
                 from langflow.services.database.models.variable.model import Variable
-                from langflow.services.deps import get_settings_service
-
-                settings_service = get_settings_service()
 
                 # Load variables directly from database and decrypt ALL types (including CREDENTIAL)
                 stmt = select(Variable).where(Variable.user_id == current_user.id)
