@@ -5711,7 +5711,7 @@ dev = [
     { name = "pyyaml", specifier = ">=6.0.2" },
     { name = "requests", specifier = ">=2.32.0" },
     { name = "respx", specifier = ">=0.21.1" },
-    { name = "ruff", specifier = ">=0.12.7" },
+    { name = "ruff", specifier = "~=0.13.1" },
     { name = "scrapegraph-py", specifier = ">=1.10.2" },
     { name = "types-aiofiles", specifier = ">=24.1.0.20240626" },
     { name = "types-cachetools", specifier = ">=5.5.0.20240820" },

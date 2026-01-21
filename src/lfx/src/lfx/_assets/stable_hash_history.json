@@ -621,7 +621,7 @@
   },
   "Astra Assistant Agent": {
     "versions": {
-      "0.3.0": "60d7174c63a1"
+      "0.3.0": "4716d3b7c350"
     }
   },
   "AstraDBChatMemory": {
@@ -1231,7 +1231,7 @@
   },
   "EmbeddingModel": {
     "versions": {
-      "0.3.0": "277f5f28215b"
+      "0.3.0": "3e0b64afc9a2"
     }
   },
   "LanguageModelComponent": {
