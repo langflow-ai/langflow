@@ -668,12 +668,7 @@ def decrypt_api_key(encrypted_api_key: str, settings_service: SettingsService):
     if isinstance(encrypted_api_key, str):
         try:
             return fernet.decrypt(encrypted_api_key.encode()).decode()
-        except Exception as primary_exception:  # noqa: BLE001
-            logger.debug(
-                "Decryption using UTF-8 encoded API key failed. Error: %s. "
-                "Retrying decryption using the raw string input.",
-                primary_exception,
-            )
+        except Exception:  # noqa: BLE001
             try:
                 return fernet.decrypt(encrypted_api_key).decode()
             except Exception as secondary_exception:  # noqa: BLE001
@@ -685,10 +680,8 @@ def decrypt_api_key(encrypted_api_key: str, settings_service: SettingsService):
                         secondary_exception,
                     )
                     return ""
+
                 # Assume the value is plain text and return it as-is
-                logger.debug(
-                    "Value does not appear to be encrypted (no Fernet token signature). Returning value as plain text."
-                )
                 return encrypted_api_key
 
     msg = "Unexpected variable type. Expected string"
