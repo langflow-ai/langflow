@@ -147,10 +147,10 @@ def _read_component_index(custom_path: str | None = None) -> dict | None:
             )
             return None
 
-        # Version check: ensure index matches installed langflow version
+        # Version check: ensure index matches installed lfx version
         from importlib.metadata import version
 
-        installed_version = version("langflow")
+        installed_version = version("lfx")
         if blob.get("version") != installed_version:
             logger.debug(
                 f"Component index version mismatch: index={blob.get('version')}, installed={installed_version}"
