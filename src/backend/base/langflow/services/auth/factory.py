@@ -10,6 +10,8 @@ from __future__ import annotations
 from enum import Enum
 from typing import TYPE_CHECKING
 
+from lfx.log.logger import logger
+
 from langflow.services.factory import ServiceFactory
 from langflow.services.schema import ServiceType
 
@@ -54,16 +56,39 @@ class AuthServiceFactory(ServiceFactory):
         The provider is determined by:
         1. LANGFLOW_SSO_ENABLED environment variable (default: False)
         2. LANGFLOW_SSO_PROVIDER environment variable (default: jwt)
-        3. Configuration file if SSO_CONFIG_FILE is specified
+        3. Configuration file if SSO_CONFIG_FILE is specified or database config exists
         """
         # Import here to avoid circular dependencies
         from langflow.services.auth.service import AuthService
+        from langflow.services.auth.sso_service import SSOConfigService
 
         # Check if SSO is enabled
         auth_settings = settings_service.auth_settings
         
-        # For now, always return default JWT auth service
-        # SSO providers will be added in subsequent commits
+        if not auth_settings.SSO_ENABLED:
+            # SSO disabled, use default JWT auth
+            return AuthService(settings_service)
+        
+        # SSO enabled - try to load configuration
+        sso_service = SSOConfigService(settings_service)
+        
+        # Note: We can't use async here, so we'll need to handle this differently
+        # For now, if SSO is enabled but we can't load config synchronously,
+        # we'll return JWT auth and log a warning
+        
+        # Check if file-based config is available
+        if auth_settings.SSO_CONFIG_FILE:
+            try:
+                sso_config = sso_service._load_from_file(auth_settings.SSO_CONFIG_FILE)
+                if sso_config and sso_config.provider == AuthProvider.OIDC and sso_config.oidc:
+                    from langflow.services.auth.oidc_service import OIDCAuthService
+                    logger.info(f"Initializing OIDC authentication with {sso_config.oidc.provider_name}")
+                    return OIDCAuthService(settings_service, sso_config.oidc)
+            except Exception as e:
+                logger.error(f"Failed to load SSO config from file: {e}")
+        
+        # Fallback to JWT auth
+        logger.warning("SSO enabled but no valid configuration found, using JWT authentication")
         return AuthService(settings_service)
     
     @staticmethod
