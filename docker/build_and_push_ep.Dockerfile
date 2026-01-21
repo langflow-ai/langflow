@@ -81,7 +81,8 @@ RUN apt-get update \
         libpq5 \
         gnupg \
     && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
-    && apt-get install -y nodejs \
+    && apt list --all-versions nodejs \
+    && apt-get install -y nodejs=22.22.0 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data -s /usr/bin/false \
