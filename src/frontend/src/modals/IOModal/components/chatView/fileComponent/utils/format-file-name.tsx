@@ -2,7 +2,7 @@ export default function formatFileName(
   name: string,
   numberToTruncate: number = 25,
 ): string {
-  if (name[numberToTruncate] === undefined) {
+  if (!name || name[numberToTruncate] === undefined) {
     return name;
   }
   const fileExtension = name.split(".").pop(); // Get the file extension
