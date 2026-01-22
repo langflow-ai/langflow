@@ -93,7 +93,7 @@ dependencies = [
     "langchain-ibm>=0.3.8,<1.0.0",
     "trustcall>=0.0.38,<1.0.0",
     "langchain-chroma>=0.1.4,<1.0.0",
-    "jaraco.context>=6.1.0",
+    "jaraco-context>=6.1.0",
 ]
 
 [dependency-groups]
