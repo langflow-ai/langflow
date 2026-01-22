@@ -1,24 +1,29 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = ">=3.10, <3.14"
 resolution-markers = [
     "python_full_version >= '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
     "python_full_version >= '3.13' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64') or (python_full_version >= '3.13' and sys_platform != 'darwin')",
+    "python_full_version >= '3.13' and sys_platform == 'win32'",
+    "(python_full_version >= '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.13' and sys_platform != 'darwin' and sys_platform != 'win32')",
     "python_full_version >= '3.12.4' and python_full_version < '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
     "python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine == 'arm64' and sys_platform == 'darwin'",
     "python_full_version >= '3.12.4' and python_full_version < '3.13' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
     "python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.12.4' and python_full_version < '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64') or (python_full_version >= '3.12.4' and python_full_version < '3.13' and sys_platform != 'darwin')",
-    "(python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine != 'arm64' and platform_machine != 'x86_64') or (python_full_version >= '3.12' and python_full_version < '3.12.4' and sys_platform != 'darwin')",
+    "python_full_version >= '3.12.4' and python_full_version < '3.13' and sys_platform == 'win32'",
+    "(python_full_version >= '3.12.4' and python_full_version < '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.12.4' and python_full_version < '3.13' and sys_platform != 'darwin' and sys_platform != 'win32')",
+    "python_full_version >= '3.12' and python_full_version < '3.12.4' and sys_platform == 'win32'",
+    "(python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.12' and python_full_version < '3.12.4' and sys_platform != 'darwin' and sys_platform != 'win32')",
     "python_full_version == '3.11.*' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
     "python_full_version == '3.11.*' and platform_machine != 'x86_64' and sys_platform == 'darwin'",
     "python_full_version == '3.11.*' and platform_machine == 'aarch64' and sys_platform == 'linux'",
-    "(python_full_version == '3.11.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux')",
+    "python_full_version == '3.11.*' and sys_platform == 'win32'",
+    "(python_full_version == '3.11.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
     "python_full_version < '3.11' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
     "python_full_version < '3.11' and platform_machine != 'x86_64' and sys_platform == 'darwin'",
     "python_full_version < '3.11' and platform_machine == 'aarch64' and sys_platform == 'linux'",
-    "(python_full_version < '3.11' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.11' and sys_platform != 'darwin' and sys_platform != 'linux')",
+    "python_full_version < '3.11' and sys_platform == 'win32'",
+    "(python_full_version < '3.11' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.11' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
 ]
 
 [manifest]
@@ -56,6 +61,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/4a/8e/ac2a9566747a93f8be36ee08532eb0160558b07630a081a6056a9f89bf1d/accelerate-1.12.0.tar.gz", hash = "sha256:70988c352feb481887077d2ab845125024b2a137a5090d6d7a32b57d03a45df6", size = 398399, upload-time = "2025-11-21T11:27:46.973Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/9f/d2/c581486aa6c4fbd7394c23c47b83fa1a919d34194e16944241daf9e762dd/accelerate-1.12.0-py3-none-any.whl", hash = "sha256:3e2091cd341423207e2f084a6654b1efcd250dc326f2a37d6dde446e07cabb11", size = 380935, upload-time = "2025-11-21T11:27:44.522Z" },
+]
+
+[[package]]
+name = "ag-ui-protocol"
+version = "0.1.10"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pydantic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/67/bb/5a5ec893eea5805fb9a3db76a9888c3429710dfb6f24bbb37568f2cf7320/ag_ui_protocol-0.1.10.tar.gz", hash = "sha256:3213991c6b2eb24bb1a8c362ee270c16705a07a4c5962267a083d0959ed894f4", size = 6945, upload-time = "2025-11-06T15:17:17.068Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8f/78/eb55fabaab41abc53f52c0918a9a8c0f747807e5306273f51120fd695957/ag_ui_protocol-0.1.10-py3-none-any.whl", hash = "sha256:c81e6981f30aabdf97a7ee312bfd4df0cd38e718d9fc10019c7d438128b93ab5", size = 7889, upload-time = "2025-11-06T15:17:15.325Z" },
 ]
 
 [[package]]
@@ -1213,7 +1230,8 @@ dependencies = [
     { name = "mmh3" },
     { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
-    { name = "onnxruntime" },
+    { name = "onnxruntime", version = "1.20.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.12' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.12' and sys_platform == 'linux') or (platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'linux')" },
+    { name = "onnxruntime", version = "1.23.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.12' and platform_machine == 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.12' and sys_platform == 'darwin') or (platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'x86_64' and sys_platform == 'darwin')" },
     { name = "opentelemetry-api" },
     { name = "opentelemetry-exporter-otlp-proto-grpc" },
     { name = "opentelemetry-sdk" },
@@ -2449,18 +2467,6 @@ wheels = [
 ]
 
 [[package]]
-name = "ecdsa"
-version = "0.19.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "six" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/c0/1f/924e3caae75f471eae4b26bd13b698f6af2c44279f67af317439c2f4c46a/ecdsa-0.19.1.tar.gz", hash = "sha256:478cba7b62555866fcb3bb3fe985e06decbdb68ef55713c4e5ab98c57d508e61", size = 201793, upload-time = "2025-03-13T11:52:43.25Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/cb/a3/460c57f094a4a165c84a1341c373b0a4f5ec6ac244b998d5021aade89b77/ecdsa-0.19.1-py2.py3-none-any.whl", hash = "sha256:30638e27cf77b7e15c4c4cc1973720149e1033827cfd00661ca5c8cc0cdb24c3", size = 150607, upload-time = "2025-03-13T11:52:41.757Z" },
-]
-
-[[package]]
 name = "editor"
 version = "1.6.6"
 source = { registry = "https://pypi.org/simple" }
@@ -2514,8 +2520,10 @@ resolution-markers = [
     "python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine == 'arm64' and sys_platform == 'darwin'",
     "python_full_version >= '3.12.4' and python_full_version < '3.13' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
     "python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.12.4' and python_full_version < '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64') or (python_full_version >= '3.12.4' and python_full_version < '3.13' and sys_platform != 'darwin')",
-    "(python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine != 'arm64' and platform_machine != 'x86_64') or (python_full_version >= '3.12' and python_full_version < '3.12.4' and sys_platform != 'darwin')",
+    "python_full_version >= '3.12.4' and python_full_version < '3.13' and sys_platform == 'win32'",
+    "(python_full_version >= '3.12.4' and python_full_version < '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.12.4' and python_full_version < '3.13' and sys_platform != 'darwin' and sys_platform != 'win32')",
+    "python_full_version >= '3.12' and python_full_version < '3.12.4' and sys_platform == 'win32'",
+    "(python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.12' and python_full_version < '3.12.4' and sys_platform != 'darwin' and sys_platform != 'win32')",
 ]
 dependencies = [
     { name = "httpx", marker = "python_full_version == '3.12.*'" },
@@ -2537,15 +2545,18 @@ source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
     "python_full_version >= '3.13' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64') or (python_full_version >= '3.13' and sys_platform != 'darwin')",
+    "python_full_version >= '3.13' and sys_platform == 'win32'",
+    "(python_full_version >= '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.13' and sys_platform != 'darwin' and sys_platform != 'win32')",
     "python_full_version == '3.11.*' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
     "python_full_version == '3.11.*' and platform_machine != 'x86_64' and sys_platform == 'darwin'",
     "python_full_version == '3.11.*' and platform_machine == 'aarch64' and sys_platform == 'linux'",
-    "(python_full_version == '3.11.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux')",
+    "python_full_version == '3.11.*' and sys_platform == 'win32'",
+    "(python_full_version == '3.11.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
     "python_full_version < '3.11' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
     "python_full_version < '3.11' and platform_machine != 'x86_64' and sys_platform == 'darwin'",
     "python_full_version < '3.11' and platform_machine == 'aarch64' and sys_platform == 'linux'",
-    "(python_full_version < '3.11' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.11' and sys_platform != 'darwin' and sys_platform != 'linux')",
+    "python_full_version < '3.11' and sys_platform == 'win32'",
+    "(python_full_version < '3.11' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.11' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
 ]
 dependencies = [
     { name = "httpx", marker = "python_full_version != '3.12.*'" },
@@ -2879,16 +2890,20 @@ resolution-markers = [
     "python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine == 'arm64' and sys_platform == 'darwin'",
     "python_full_version >= '3.12.4' and python_full_version < '3.13' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
     "python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.12.4' and python_full_version < '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64') or (python_full_version >= '3.12.4' and python_full_version < '3.13' and sys_platform != 'darwin')",
-    "(python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine != 'arm64' and platform_machine != 'x86_64') or (python_full_version >= '3.12' and python_full_version < '3.12.4' and sys_platform != 'darwin')",
+    "python_full_version >= '3.12.4' and python_full_version < '3.13' and sys_platform == 'win32'",
+    "(python_full_version >= '3.12.4' and python_full_version < '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.12.4' and python_full_version < '3.13' and sys_platform != 'darwin' and sys_platform != 'win32')",
+    "python_full_version >= '3.12' and python_full_version < '3.12.4' and sys_platform == 'win32'",
+    "(python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.12' and python_full_version < '3.12.4' and sys_platform != 'darwin' and sys_platform != 'win32')",
     "python_full_version == '3.11.*' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
     "python_full_version == '3.11.*' and platform_machine != 'x86_64' and sys_platform == 'darwin'",
     "python_full_version == '3.11.*' and platform_machine == 'aarch64' and sys_platform == 'linux'",
-    "(python_full_version == '3.11.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux')",
+    "python_full_version == '3.11.*' and sys_platform == 'win32'",
+    "(python_full_version == '3.11.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
     "python_full_version < '3.11' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
     "python_full_version < '3.11' and platform_machine != 'x86_64' and sys_platform == 'darwin'",
     "python_full_version < '3.11' and platform_machine == 'aarch64' and sys_platform == 'linux'",
-    "(python_full_version < '3.11' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.11' and sys_platform != 'darwin' and sys_platform != 'linux')",
+    "python_full_version < '3.11' and sys_platform == 'win32'",
+    "(python_full_version < '3.11' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.11' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/11/56/72dc3fa6985c7f27b392cd3991c466eb61208f3c6cb7fc2f12e6bfc6f774/fastavro-1.9.7.tar.gz", hash = "sha256:13e11c6cb28626da85290933027cd419ce3f9ab8e45410ef24ce6b89d20a1f6c", size = 987818, upload-time = "2024-09-06T03:53:37.839Z" }
 wheels = [
@@ -2919,7 +2934,8 @@ source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
     "python_full_version >= '3.13' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64') or (python_full_version >= '3.13' and sys_platform != 'darwin')",
+    "python_full_version >= '3.13' and sys_platform == 'win32'",
+    "(python_full_version >= '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.13' and sys_platform != 'darwin' and sys_platform != 'win32')",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/65/8b/fa2d3287fd2267be6261d0177c6809a7fa12c5600ddb33490c8dc29e77b2/fastavro-1.12.1.tar.gz", hash = "sha256:2f285be49e45bc047ab2f6bed040bb349da85db3f3c87880e4b92595ea093b2b", size = 1025661, upload-time = "2025-10-10T15:40:55.41Z" }
 wheels = [
@@ -4289,7 +4305,8 @@ resolution-markers = [
     "python_full_version < '3.11' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
     "python_full_version < '3.11' and platform_machine != 'x86_64' and sys_platform == 'darwin'",
     "python_full_version < '3.11' and platform_machine == 'aarch64' and sys_platform == 'linux'",
-    "(python_full_version < '3.11' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.11' and sys_platform != 'darwin' and sys_platform != 'linux')",
+    "python_full_version < '3.11' and sys_platform == 'win32'",
+    "(python_full_version < '3.11' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.11' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
 ]
 dependencies = [
     { name = "cachetools", marker = "python_full_version < '3.11'" },
@@ -4315,17 +4332,21 @@ source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
     "python_full_version >= '3.13' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64') or (python_full_version >= '3.13' and sys_platform != 'darwin')",
+    "python_full_version >= '3.13' and sys_platform == 'win32'",
+    "(python_full_version >= '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.13' and sys_platform != 'darwin' and sys_platform != 'win32')",
     "python_full_version >= '3.12.4' and python_full_version < '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
     "python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine == 'arm64' and sys_platform == 'darwin'",
     "python_full_version >= '3.12.4' and python_full_version < '3.13' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
     "python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.12.4' and python_full_version < '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64') or (python_full_version >= '3.12.4' and python_full_version < '3.13' and sys_platform != 'darwin')",
-    "(python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine != 'arm64' and platform_machine != 'x86_64') or (python_full_version >= '3.12' and python_full_version < '3.12.4' and sys_platform != 'darwin')",
+    "python_full_version >= '3.12.4' and python_full_version < '3.13' and sys_platform == 'win32'",
+    "(python_full_version >= '3.12.4' and python_full_version < '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.12.4' and python_full_version < '3.13' and sys_platform != 'darwin' and sys_platform != 'win32')",
+    "python_full_version >= '3.12' and python_full_version < '3.12.4' and sys_platform == 'win32'",
+    "(python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.12' and python_full_version < '3.12.4' and sys_platform != 'darwin' and sys_platform != 'win32')",
     "python_full_version == '3.11.*' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
     "python_full_version == '3.11.*' and platform_machine != 'x86_64' and sys_platform == 'darwin'",
     "python_full_version == '3.11.*' and platform_machine == 'aarch64' and sys_platform == 'linux'",
-    "(python_full_version == '3.11.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux')",
+    "python_full_version == '3.11.*' and sys_platform == 'win32'",
+    "(python_full_version == '3.11.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
 ]
 dependencies = [
     { name = "cachetools", marker = "python_full_version >= '3.11'" },
@@ -4562,7 +4583,8 @@ resolution-markers = [
     "python_full_version < '3.11' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
     "python_full_version < '3.11' and platform_machine != 'x86_64' and sys_platform == 'darwin'",
     "python_full_version < '3.11' and platform_machine == 'aarch64' and sys_platform == 'linux'",
-    "(python_full_version < '3.11' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.11' and sys_platform != 'darwin' and sys_platform != 'linux')",
+    "python_full_version < '3.11' and sys_platform == 'win32'",
+    "(python_full_version < '3.11' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.11' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
 ]
 dependencies = [
     { name = "colorama", marker = "python_full_version < '3.11' and sys_platform == 'win32'" },
@@ -4589,17 +4611,21 @@ source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
     "python_full_version >= '3.13' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64') or (python_full_version >= '3.13' and sys_platform != 'darwin')",
+    "python_full_version >= '3.13' and sys_platform == 'win32'",
+    "(python_full_version >= '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.13' and sys_platform != 'darwin' and sys_platform != 'win32')",
     "python_full_version >= '3.12.4' and python_full_version < '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
     "python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine == 'arm64' and sys_platform == 'darwin'",
     "python_full_version >= '3.12.4' and python_full_version < '3.13' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
     "python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.12.4' and python_full_version < '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64') or (python_full_version >= '3.12.4' and python_full_version < '3.13' and sys_platform != 'darwin')",
-    "(python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine != 'arm64' and platform_machine != 'x86_64') or (python_full_version >= '3.12' and python_full_version < '3.12.4' and sys_platform != 'darwin')",
+    "python_full_version >= '3.12.4' and python_full_version < '3.13' and sys_platform == 'win32'",
+    "(python_full_version >= '3.12.4' and python_full_version < '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.12.4' and python_full_version < '3.13' and sys_platform != 'darwin' and sys_platform != 'win32')",
+    "python_full_version >= '3.12' and python_full_version < '3.12.4' and sys_platform == 'win32'",
+    "(python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.12' and python_full_version < '3.12.4' and sys_platform != 'darwin' and sys_platform != 'win32')",
     "python_full_version == '3.11.*' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
     "python_full_version == '3.11.*' and platform_machine != 'x86_64' and sys_platform == 'darwin'",
     "python_full_version == '3.11.*' and platform_machine == 'aarch64' and sys_platform == 'linux'",
-    "(python_full_version == '3.11.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux')",
+    "python_full_version == '3.11.*' and sys_platform == 'win32'",
+    "(python_full_version == '3.11.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
 ]
 dependencies = [
     { name = "colorama", marker = "python_full_version >= '3.11' and sys_platform == 'win32'" },
@@ -5571,9 +5597,10 @@ wheels = [
 
 [[package]]
 name = "langflow"
-version = "1.7.0"
+version = "1.8.0"
 source = { editable = "." }
 dependencies = [
+    { name = "ag-ui-protocol" },
     { name = "agent-lifecycle-toolkit" },
     { name = "aioboto3" },
     { name = "aiofile" },
@@ -5635,6 +5662,7 @@ dependencies = [
     { name = "langchain-groq" },
     { name = "langchain-huggingface" },
     { name = "langchain-ibm" },
+    { name = "langchain-mcp-adapters" },
     { name = "langchain-milvus" },
     { name = "langchain-mistralai" },
     { name = "langchain-mongodb" },
@@ -5784,6 +5812,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "ag-ui-protocol", specifier = ">=0.1.10" },
     { name = "agent-lifecycle-toolkit", specifier = "~=0.4.4" },
     { name = "aioboto3", specifier = ">=15.2.0,<16.0.0" },
     { name = "aiofile", specifier = ">=3.9.0,<4.0.0" },
@@ -5849,6 +5878,7 @@ requires-dist = [
     { name = "langchain-groq", specifier = "==0.2.1" },
     { name = "langchain-huggingface", specifier = "==0.3.1" },
     { name = "langchain-ibm", specifier = ">=0.3.8" },
+    { name = "langchain-mcp-adapters", specifier = ">=0.1.14,<0.2.0" },
     { name = "langchain-milvus", specifier = "==0.1.7" },
     { name = "langchain-mistralai", specifier = "==0.2.3" },
     { name = "langchain-mongodb", specifier = "==0.7.0" },
@@ -5907,7 +5937,7 @@ requires-dist = [
     { name = "structlog", specifier = ">=25.4.0,<26.0.0" },
     { name = "supabase", specifier = ">=2.6.0,<3.0.0" },
     { name = "tesserocr", marker = "extra == 'docling'", specifier = ">=2.8.0" },
-    { name = "toolguard", specifier = ">=0.1.21.dev2" },
+    { name = "toolguard", specifier = ">=0.2.0" },
     { name = "traceloop-sdk", specifier = ">=0.43.1,<1.0.0" },
     { name = "twelvelabs", specifier = ">=0.4.7,<1.0.0" },
     { name = "types-cachetools", specifier = ">=5.5.0.20240820,<6.0.0" },
@@ -5976,7 +6006,7 @@ dev = [
 
 [[package]]
 name = "langflow-base"
-version = "0.7.0"
+version = "0.8.0"
 source = { editable = "src/backend/base" }
 dependencies = [
     { name = "aiofile" },
@@ -6038,10 +6068,10 @@ dependencies = [
     { name = "prometheus-client" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
+    { name = "pyjwt" },
     { name = "pypdf" },
     { name = "pyperclip" },
     { name = "python-docx" },
-    { name = "python-jose" },
     { name = "python-multipart" },
     { name = "rich" },
     { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
@@ -6107,7 +6137,6 @@ dev = [
     { name = "types-markdown" },
     { name = "types-passlib" },
     { name = "types-pillow" },
-    { name = "types-python-jose" },
     { name = "types-pywin32" },
     { name = "types-pyyaml" },
     { name = "types-redis" },
@@ -6179,10 +6208,10 @@ requires-dist = [
     { name = "prometheus-client", specifier = ">=0.20.0,<1.0.0" },
     { name = "pydantic", specifier = "~=2.11.0" },
     { name = "pydantic-settings", specifier = ">=2.2.0,<3.0.0" },
+    { name = "pyjwt", specifier = ">=2.10.1" },
     { name = "pypdf", specifier = "~=5.1.0" },
     { name = "pyperclip", specifier = ">=1.8.2,<2.0.0" },
     { name = "python-docx", specifier = ">=1.1.0,<2.0.0" },
-    { name = "python-jose", specifier = ">=3.3.0,<4.0.0" },
     { name = "python-multipart", specifier = ">=0.0.12,<1.0.0" },
     { name = "rich", specifier = ">=13.7.0,<14.0.0" },
     { name = "scipy", specifier = ">=1.15.2,<2.0.0" },
@@ -6235,7 +6264,6 @@ dev = [
     { name = "types-markdown", specifier = ">=3.7.0.20240822" },
     { name = "types-passlib", specifier = ">=1.7.7.13" },
     { name = "types-pillow", specifier = ">=10.2.0.20240213" },
-    { name = "types-python-jose", specifier = ">=3.3.4.8" },
     { name = "types-pywin32", specifier = ">=306.0.0.4" },
     { name = "types-pyyaml", specifier = ">=6.0.12.8" },
     { name = "types-redis", specifier = ">=4.6.0.5" },
@@ -6448,14 +6476,16 @@ wheels = [
 
 [[package]]
 name = "lfx"
-version = "0.2.0"
+version = "0.3.0"
 source = { editable = "src/lfx" }
 dependencies = [
+    { name = "ag-ui-protocol" },
     { name = "aiofile" },
     { name = "aiofiles" },
     { name = "asyncer" },
     { name = "cachetools" },
     { name = "chardet" },
+    { name = "cryptography" },
     { name = "defusedxml" },
     { name = "docstring-parser" },
     { name = "emoji" },
@@ -6466,6 +6496,7 @@ dependencies = [
     { name = "langchain" },
     { name = "langchain-core" },
     { name = "loguru" },
+    { name = "markitdown" },
     { name = "nanoid" },
     { name = "networkx" },
     { name = "orjson" },
@@ -6497,14 +6528,22 @@ dev = [
     { name = "pytest-cov" },
     { name = "ruff" },
 ]
+integration = [
+    { name = "beautifulsoup4" },
+    { name = "langchain-community" },
+    { name = "langchain-openai" },
+    { name = "lxml" },
+]
 
 [package.metadata]
 requires-dist = [
+    { name = "ag-ui-protocol", specifier = ">=0.1.10" },
     { name = "aiofile", specifier = ">=3.8.0,<4.0.0" },
     { name = "aiofiles", specifier = ">=24.1.0,<25.0.0" },
     { name = "asyncer", specifier = ">=0.0.8,<1.0.0" },
     { name = "cachetools", specifier = ">=6.0.0" },
     { name = "chardet", specifier = ">=5.2.0,<6.0.0" },
+    { name = "cryptography", specifier = ">=43.0.0" },
     { name = "defusedxml", specifier = ">=0.7.1,<1.0.0" },
     { name = "docstring-parser", specifier = ">=0.16,<1.0.0" },
     { name = "emoji", specifier = ">=2.14.1,<3.0.0" },
@@ -6515,6 +6554,7 @@ requires-dist = [
     { name = "langchain", specifier = "~=0.3.23" },
     { name = "langchain-core", specifier = ">=0.3.66,<1.0.0" },
     { name = "loguru", specifier = ">=0.7.3,<1.0.0" },
+    { name = "markitdown", specifier = ">=0.1.4,<2.0.0" },
     { name = "nanoid", specifier = ">=2.0.0,<3.0.0" },
     { name = "networkx", specifier = ">=3.4.2,<4.0.0" },
     { name = "orjson", specifier = ">=3.10.15,<4.0.0" },
@@ -6545,6 +6585,12 @@ dev = [
     { name = "pytest-asyncio", specifier = ">=0.26.0" },
     { name = "pytest-cov", specifier = ">=7.0.0" },
     { name = "ruff", specifier = ">=0.9.10" },
+]
+integration = [
+    { name = "beautifulsoup4", specifier = ">=4.12.0" },
+    { name = "langchain-community", specifier = ">=0.3.0,<1.0.0" },
+    { name = "langchain-openai", specifier = ">=0.3.0,<1.0.0" },
+    { name = "lxml", specifier = ">=5.0.0" },
 ]
 
 [[package]]
@@ -7042,6 +7088,26 @@ wheels = [
 ]
 
 [[package]]
+name = "magika"
+version = "0.6.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "click" },
+    { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "onnxruntime", version = "1.20.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.12' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.12' and sys_platform == 'linux') or (platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'linux')" },
+    { name = "onnxruntime", version = "1.23.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.12' and platform_machine == 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.12' and sys_platform == 'darwin') or (platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'x86_64' and sys_platform == 'darwin')" },
+    { name = "python-dotenv" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a3/f3/3d1dcdd7b9c41d589f5cff252d32ed91cdf86ba84391cfc81d9d8773571d/magika-0.6.3.tar.gz", hash = "sha256:7cc52aa7359af861957043e2bf7265ed4741067251c104532765cd668c0c0cb1", size = 3042784, upload-time = "2025-10-30T15:22:34.499Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a2/e4/35c323beb3280482c94299d61626116856ac2d4ec16ecef50afc4fdd4291/magika-0.6.3-py3-none-any.whl", hash = "sha256:eda443d08006ee495e02083b32e51b98cb3696ab595a7d13900d8e2ef506ec9d", size = 2969474, upload-time = "2025-10-30T15:22:25.298Z" },
+    { url = "https://files.pythonhosted.org/packages/25/8f/132b0d7cd51c02c39fd52658a5896276c30c8cc2fd453270b19db8c40f7e/magika-0.6.3-py3-none-macosx_11_0_arm64.whl", hash = "sha256:86901e64b05dde5faff408c9b8245495b2e1fd4c226e3393d3d2a3fee65c504b", size = 13358841, upload-time = "2025-10-30T15:22:27.413Z" },
+    { url = "https://files.pythonhosted.org/packages/c4/03/5ed859be502903a68b7b393b17ae0283bf34195cfcca79ce2dc25b9290e7/magika-0.6.3-py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:3d9661eedbdf445ac9567e97e7ceefb93545d77a6a32858139ea966b5806fb64", size = 15367335, upload-time = "2025-10-30T15:22:29.907Z" },
+    { url = "https://files.pythonhosted.org/packages/7b/9e/f8ee7d644affa3b80efdd623a3d75865c8f058f3950cb87fb0c48e3559bc/magika-0.6.3-py3-none-win_amd64.whl", hash = "sha256:e57f75674447b20cab4db928ae58ab264d7d8582b55183a0b876711c2b2787f3", size = 12692831, upload-time = "2025-10-30T15:22:32.063Z" },
+]
+
+[[package]]
 name = "mako"
 version = "1.3.10"
 source = { registry = "https://pypi.org/simple" }
@@ -7072,6 +7138,37 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/5b/f5/4ec618ed16cc4f8fb3b701563655a69816155e79e24a17b651541804721d/markdown_it_py-4.0.0.tar.gz", hash = "sha256:cb0a2b4aa34f932c007117b194e945bd74e0ec24133ceb5bac59009cda1cb9f3", size = 73070, upload-time = "2025-08-11T12:57:52.854Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/94/54/e7d793b573f298e1c9013b8c4dade17d481164aa517d1d7148619c2cedbf/markdown_it_py-4.0.0-py3-none-any.whl", hash = "sha256:87327c59b172c5011896038353a81343b6754500a08cd7a4973bb48c6d578147", size = 87321, upload-time = "2025-08-11T12:57:51.923Z" },
+]
+
+[[package]]
+name = "markdownify"
+version = "1.2.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "beautifulsoup4" },
+    { name = "six" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/3f/bc/c8c8eea5335341306b0fa7e1cb33c5e1c8d24ef70ddd684da65f41c49c92/markdownify-1.2.2.tar.gz", hash = "sha256:b274f1b5943180b031b699b199cbaeb1e2ac938b75851849a31fd0c3d6603d09", size = 18816, upload-time = "2025-11-16T19:21:18.565Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/43/ce/f1e3e9d959db134cedf06825fae8d5b294bd368aacdd0831a3975b7c4d55/markdownify-1.2.2-py3-none-any.whl", hash = "sha256:3f02d3cc52714084d6e589f70397b6fc9f2f3a8531481bf35e8cc39f975e186a", size = 15724, upload-time = "2025-11-16T19:21:17.622Z" },
+]
+
+[[package]]
+name = "markitdown"
+version = "0.1.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "beautifulsoup4" },
+    { name = "charset-normalizer" },
+    { name = "defusedxml" },
+    { name = "magika" },
+    { name = "markdownify" },
+    { name = "onnxruntime", version = "1.20.1", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform == 'win32'" },
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f3/4d/06567465c1886c2ea47bac24eab0c96bb6b4ecea47224323409dc9cbb614/markitdown-0.1.4.tar.gz", hash = "sha256:e72a481d1a50c82ff744e85e3289f79a940c5d0ad5ffa2b37c33de814c195bb1", size = 39951, upload-time = "2025-12-01T18:20:30.937Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9f/b3/6138d2b23d5b534b0fa3736987a2e11bcef5419cbc9286c8afd229d21558/markitdown-0.1.4-py3-none-any.whl", hash = "sha256:d7f3805716b22545f693d355e28e89584226c0614b3b80b7c4a3f825f068492d", size = 58314, upload-time = "2025-12-01T18:20:32.345Z" },
 ]
 
 [[package]]
@@ -7880,11 +7977,13 @@ resolution-markers = [
     "python_full_version == '3.11.*' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
     "python_full_version == '3.11.*' and platform_machine != 'x86_64' and sys_platform == 'darwin'",
     "python_full_version == '3.11.*' and platform_machine == 'aarch64' and sys_platform == 'linux'",
-    "(python_full_version == '3.11.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux')",
+    "python_full_version == '3.11.*' and sys_platform == 'win32'",
+    "(python_full_version == '3.11.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
     "python_full_version < '3.11' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
     "python_full_version < '3.11' and platform_machine != 'x86_64' and sys_platform == 'darwin'",
     "python_full_version < '3.11' and platform_machine == 'aarch64' and sys_platform == 'linux'",
-    "(python_full_version < '3.11' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.11' and sys_platform != 'darwin' and sys_platform != 'linux')",
+    "python_full_version < '3.11' and sys_platform == 'win32'",
+    "(python_full_version < '3.11' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.11' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/65/6e/09db70a523a96d25e115e71cc56a6f9031e7b8cd166c1ac8438307c14058/numpy-1.26.4.tar.gz", hash = "sha256:2a02aba9ed12e4ac4eb3ea9421c420301a0c6460d9830d74a9df87efa4912010", size = 15786129, upload-time = "2024-02-06T00:26:44.495Z" }
 wheels = [
@@ -7921,13 +8020,16 @@ source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
     "python_full_version >= '3.13' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64') or (python_full_version >= '3.13' and sys_platform != 'darwin')",
+    "python_full_version >= '3.13' and sys_platform == 'win32'",
+    "(python_full_version >= '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.13' and sys_platform != 'darwin' and sys_platform != 'win32')",
     "python_full_version >= '3.12.4' and python_full_version < '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
     "python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine == 'arm64' and sys_platform == 'darwin'",
     "python_full_version >= '3.12.4' and python_full_version < '3.13' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
     "python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.12.4' and python_full_version < '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64') or (python_full_version >= '3.12.4' and python_full_version < '3.13' and sys_platform != 'darwin')",
-    "(python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine != 'arm64' and platform_machine != 'x86_64') or (python_full_version >= '3.12' and python_full_version < '3.12.4' and sys_platform != 'darwin')",
+    "python_full_version >= '3.12.4' and python_full_version < '3.13' and sys_platform == 'win32'",
+    "(python_full_version >= '3.12.4' and python_full_version < '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.12.4' and python_full_version < '3.13' and sys_platform != 'darwin' and sys_platform != 'win32')",
+    "python_full_version >= '3.12' and python_full_version < '3.12.4' and sys_platform == 'win32'",
+    "(python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.12' and python_full_version < '3.12.4' and sys_platform != 'darwin' and sys_platform != 'win32')",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/76/21/7d2a95e4bba9dc13d043ee156a356c0a8f0c6309dff6b21b4d71a073b8a8/numpy-2.2.6.tar.gz", hash = "sha256:e29554e2bef54a90aa5cc07da6ce955accb83f21ab5de01a62c8478897b264fd", size = 20276440, upload-time = "2025-05-17T22:38:04.611Z" }
 wheels = [
@@ -8217,38 +8319,97 @@ wheels = [
 
 [[package]]
 name = "onnxruntime"
+version = "1.20.1"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.13' and sys_platform == 'win32'",
+    "(python_full_version >= '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.13' and sys_platform != 'darwin' and sys_platform != 'win32')",
+    "python_full_version >= '3.12.4' and python_full_version < '3.13' and sys_platform == 'win32'",
+    "(python_full_version >= '3.12.4' and python_full_version < '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.12.4' and python_full_version < '3.13' and sys_platform != 'darwin' and sys_platform != 'win32')",
+    "python_full_version >= '3.12' and python_full_version < '3.12.4' and sys_platform == 'win32'",
+    "(python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.12' and python_full_version < '3.12.4' and sys_platform != 'darwin' and sys_platform != 'win32')",
+    "python_full_version == '3.11.*' and sys_platform == 'win32'",
+    "(python_full_version == '3.11.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
+    "python_full_version < '3.11' and sys_platform == 'win32'",
+    "(python_full_version < '3.11' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.11' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
+]
+dependencies = [
+    { name = "coloredlogs", marker = "(python_full_version >= '3.12' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.12' and sys_platform == 'linux') or (platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'linux')" },
+    { name = "flatbuffers", marker = "(python_full_version >= '3.12' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.12' and sys_platform == 'linux') or (platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'linux')" },
+    { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.12' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.12' and sys_platform != 'darwin' and sys_platform != 'linux')" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.12' and platform_machine != 'arm64' and platform_machine != 'x86_64') or (python_full_version >= '3.12' and sys_platform != 'darwin')" },
+    { name = "packaging", marker = "(python_full_version >= '3.12' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.12' and sys_platform == 'linux') or (platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'linux')" },
+    { name = "protobuf", marker = "(python_full_version >= '3.12' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.12' and sys_platform == 'linux') or (platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'linux')" },
+    { name = "sympy", marker = "(python_full_version >= '3.12' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.12' and sys_platform == 'linux') or (platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'linux')" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/4e/28/99f903b0eb1cd6f3faa0e343217d9fb9f47b84bca98bd9859884631336ee/onnxruntime-1.20.1-cp310-cp310-macosx_13_0_universal2.whl", hash = "sha256:e50ba5ff7fed4f7d9253a6baf801ca2883cc08491f9d32d78a80da57256a5439", size = 30996314, upload-time = "2024-11-21T00:48:31.43Z" },
+    { url = "https://files.pythonhosted.org/packages/6d/c6/c4c0860bee2fde6037bdd9dcd12d323f6e38cf00fcc9a5065b394337fc55/onnxruntime-1.20.1-cp310-cp310-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:7b2908b50101a19e99c4d4e97ebb9905561daf61829403061c1adc1b588bc0de", size = 11954010, upload-time = "2024-11-21T00:48:35.254Z" },
+    { url = "https://files.pythonhosted.org/packages/63/47/3dc0b075ab539f16b3d8b09df6b504f51836086ee709690a6278d791737d/onnxruntime-1.20.1-cp310-cp310-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:d82daaec24045a2e87598b8ac2b417b1cce623244e80e663882e9fe1aae86410", size = 13330452, upload-time = "2024-11-21T00:48:40.02Z" },
+    { url = "https://files.pythonhosted.org/packages/27/ef/80fab86289ecc01a734b7ddf115dfb93d8b2e004bd1e1977e12881c72b12/onnxruntime-1.20.1-cp310-cp310-win32.whl", hash = "sha256:4c4b251a725a3b8cf2aab284f7d940c26094ecd9d442f07dd81ab5470e99b83f", size = 9813849, upload-time = "2024-11-21T00:48:43.569Z" },
+    { url = "https://files.pythonhosted.org/packages/a9/e6/33ab10066c9875a29d55e66ae97c3bf91b9b9b987179455d67c32261a49c/onnxruntime-1.20.1-cp310-cp310-win_amd64.whl", hash = "sha256:d3b616bb53a77a9463707bb313637223380fc327f5064c9a782e8ec69c22e6a2", size = 11329702, upload-time = "2024-11-21T00:48:46.599Z" },
+    { url = "https://files.pythonhosted.org/packages/95/8d/2634e2959b34aa8a0037989f4229e9abcfa484e9c228f99633b3241768a6/onnxruntime-1.20.1-cp311-cp311-macosx_13_0_universal2.whl", hash = "sha256:06bfbf02ca9ab5f28946e0f912a562a5f005301d0c419283dc57b3ed7969bb7b", size = 30998725, upload-time = "2024-11-21T00:48:51.013Z" },
+    { url = "https://files.pythonhosted.org/packages/a5/da/c44bf9bd66cd6d9018a921f053f28d819445c4d84b4dd4777271b0fe52a2/onnxruntime-1.20.1-cp311-cp311-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:f6243e34d74423bdd1edf0ae9596dd61023b260f546ee17d701723915f06a9f7", size = 11955227, upload-time = "2024-11-21T00:48:54.556Z" },
+    { url = "https://files.pythonhosted.org/packages/11/ac/4120dfb74c8e45cce1c664fc7f7ce010edd587ba67ac41489f7432eb9381/onnxruntime-1.20.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:5eec64c0269dcdb8d9a9a53dc4d64f87b9e0c19801d9321246a53b7eb5a7d1bc", size = 13331703, upload-time = "2024-11-21T00:48:57.97Z" },
+    { url = "https://files.pythonhosted.org/packages/12/f1/cefacac137f7bb7bfba57c50c478150fcd3c54aca72762ac2c05ce0532c1/onnxruntime-1.20.1-cp311-cp311-win32.whl", hash = "sha256:a19bc6e8c70e2485a1725b3d517a2319603acc14c1f1a017dda0afe6d4665b41", size = 9813977, upload-time = "2024-11-21T00:49:00.519Z" },
+    { url = "https://files.pythonhosted.org/packages/2c/2d/2d4d202c0bcfb3a4cc2b171abb9328672d7f91d7af9ea52572722c6d8d96/onnxruntime-1.20.1-cp311-cp311-win_amd64.whl", hash = "sha256:8508887eb1c5f9537a4071768723ec7c30c28eb2518a00d0adcd32c89dea3221", size = 11329895, upload-time = "2024-11-21T00:49:03.845Z" },
+    { url = "https://files.pythonhosted.org/packages/e5/39/9335e0874f68f7d27103cbffc0e235e32e26759202df6085716375c078bb/onnxruntime-1.20.1-cp312-cp312-macosx_13_0_universal2.whl", hash = "sha256:22b0655e2bf4f2161d52706e31f517a0e54939dc393e92577df51808a7edc8c9", size = 31007580, upload-time = "2024-11-21T00:49:07.029Z" },
+    { url = "https://files.pythonhosted.org/packages/c5/9d/a42a84e10f1744dd27c6f2f9280cc3fb98f869dd19b7cd042e391ee2ab61/onnxruntime-1.20.1-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:f1f56e898815963d6dc4ee1c35fc6c36506466eff6d16f3cb9848cea4e8c8172", size = 11952833, upload-time = "2024-11-21T00:49:10.563Z" },
+    { url = "https://files.pythonhosted.org/packages/47/42/2f71f5680834688a9c81becbe5c5bb996fd33eaed5c66ae0606c3b1d6a02/onnxruntime-1.20.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:bb71a814f66517a65628c9e4a2bb530a6edd2cd5d87ffa0af0f6f773a027d99e", size = 13333903, upload-time = "2024-11-21T00:49:12.984Z" },
+    { url = "https://files.pythonhosted.org/packages/c8/f1/aabfdf91d013320aa2fc46cf43c88ca0182860ff15df872b4552254a9680/onnxruntime-1.20.1-cp312-cp312-win32.whl", hash = "sha256:bd386cc9ee5f686ee8a75ba74037750aca55183085bf1941da8efcfe12d5b120", size = 9814562, upload-time = "2024-11-21T00:49:15.453Z" },
+    { url = "https://files.pythonhosted.org/packages/dd/80/76979e0b744307d488c79e41051117634b956612cc731f1028eb17ee7294/onnxruntime-1.20.1-cp312-cp312-win_amd64.whl", hash = "sha256:19c2d843eb074f385e8bbb753a40df780511061a63f9def1b216bf53860223fb", size = 11331482, upload-time = "2024-11-21T00:49:19.412Z" },
+    { url = "https://files.pythonhosted.org/packages/f7/71/c5d980ac4189589267a06f758bd6c5667d07e55656bed6c6c0580733ad07/onnxruntime-1.20.1-cp313-cp313-macosx_13_0_universal2.whl", hash = "sha256:cc01437a32d0042b606f462245c8bbae269e5442797f6213e36ce61d5abdd8cc", size = 31007574, upload-time = "2024-11-21T00:49:23.225Z" },
+    { url = "https://files.pythonhosted.org/packages/81/0d/13bbd9489be2a6944f4a940084bfe388f1100472f38c07080a46fbd4ab96/onnxruntime-1.20.1-cp313-cp313-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:fb44b08e017a648924dbe91b82d89b0c105b1adcfe31e90d1dc06b8677ad37be", size = 11951459, upload-time = "2024-11-21T00:49:26.269Z" },
+    { url = "https://files.pythonhosted.org/packages/c0/ea/4454ae122874fd52bbb8a961262de81c5f932edeb1b72217f594c700d6ef/onnxruntime-1.20.1-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:bda6aebdf7917c1d811f21d41633df00c58aff2bef2f598f69289c1f1dabc4b3", size = 13331620, upload-time = "2024-11-21T00:49:28.875Z" },
+    { url = "https://files.pythonhosted.org/packages/d8/e0/50db43188ca1c945decaa8fc2a024c33446d31afed40149897d4f9de505f/onnxruntime-1.20.1-cp313-cp313-win_amd64.whl", hash = "sha256:d30367df7e70f1d9fc5a6a68106f5961686d39b54d3221f760085524e8d38e16", size = 11331758, upload-time = "2024-11-21T00:49:31.417Z" },
+    { url = "https://files.pythonhosted.org/packages/d8/55/3821c5fd60b52a6c82a00bba18531793c93c4addfe64fbf061e235c5617a/onnxruntime-1.20.1-cp313-cp313t-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:c9158465745423b2b5d97ed25aa7740c7d38d2993ee2e5c3bfacb0c4145c49d8", size = 11950342, upload-time = "2024-11-21T00:49:34.164Z" },
+    { url = "https://files.pythonhosted.org/packages/14/56/fd990ca222cef4f9f4a9400567b9a15b220dee2eafffb16b2adbc55c8281/onnxruntime-1.20.1-cp313-cp313t-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:0df6f2df83d61f46e842dbcde610ede27218947c33e994545a22333491e72a3b", size = 13337040, upload-time = "2024-11-21T00:49:37.271Z" },
+]
+
+[[package]]
+name = "onnxruntime"
 version = "1.23.2"
 source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
+    "python_full_version >= '3.13' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
+    "python_full_version >= '3.12.4' and python_full_version < '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
+    "python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine == 'arm64' and sys_platform == 'darwin'",
+    "python_full_version >= '3.12.4' and python_full_version < '3.13' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
+    "python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
+    "python_full_version == '3.11.*' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
+    "python_full_version == '3.11.*' and platform_machine != 'x86_64' and sys_platform == 'darwin'",
+    "python_full_version == '3.11.*' and platform_machine == 'aarch64' and sys_platform == 'linux'",
+    "python_full_version < '3.11' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
+    "python_full_version < '3.11' and platform_machine != 'x86_64' and sys_platform == 'darwin'",
+    "python_full_version < '3.11' and platform_machine == 'aarch64' and sys_platform == 'linux'",
+]
 dependencies = [
-    { name = "coloredlogs" },
-    { name = "flatbuffers" },
-    { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
-    { name = "packaging" },
-    { name = "protobuf" },
-    { name = "sympy" },
+    { name = "coloredlogs", marker = "(python_full_version < '3.12' and platform_machine == 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.12' and sys_platform == 'darwin') or (platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'x86_64' and sys_platform == 'darwin')" },
+    { name = "flatbuffers", marker = "(python_full_version < '3.12' and platform_machine == 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.12' and sys_platform == 'darwin') or (platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'x86_64' and sys_platform == 'darwin')" },
+    { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.12' and platform_machine == 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.12' and sys_platform == 'darwin')" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version >= '3.12' and platform_machine == 'x86_64' and sys_platform == 'darwin')" },
+    { name = "packaging", marker = "(python_full_version < '3.12' and platform_machine == 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.12' and sys_platform == 'darwin') or (platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'x86_64' and sys_platform == 'darwin')" },
+    { name = "protobuf", marker = "(python_full_version < '3.12' and platform_machine == 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.12' and sys_platform == 'darwin') or (platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'x86_64' and sys_platform == 'darwin')" },
+    { name = "sympy", marker = "(python_full_version < '3.12' and platform_machine == 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.12' and sys_platform == 'darwin') or (platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'x86_64' and sys_platform == 'darwin')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/35/d6/311b1afea060015b56c742f3531168c1644650767f27ef40062569960587/onnxruntime-1.23.2-cp310-cp310-macosx_13_0_arm64.whl", hash = "sha256:a7730122afe186a784660f6ec5807138bf9d792fa1df76556b27307ea9ebcbe3", size = 17195934, upload-time = "2025-10-27T23:06:14.143Z" },
     { url = "https://files.pythonhosted.org/packages/db/db/81bf3d7cecfbfed9092b6b4052e857a769d62ed90561b410014e0aae18db/onnxruntime-1.23.2-cp310-cp310-macosx_13_0_x86_64.whl", hash = "sha256:b28740f4ecef1738ea8f807461dd541b8287d5650b5be33bca7b474e3cbd1f36", size = 19153079, upload-time = "2025-10-27T23:05:57.686Z" },
     { url = "https://files.pythonhosted.org/packages/2e/4d/a382452b17cf70a2313153c520ea4c96ab670c996cb3a95cc5d5ac7bfdac/onnxruntime-1.23.2-cp310-cp310-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:8f7d1fe034090a1e371b7f3ca9d3ccae2fabae8c1d8844fb7371d1ea38e8e8d2", size = 15219883, upload-time = "2025-10-22T03:46:21.66Z" },
     { url = "https://files.pythonhosted.org/packages/fb/56/179bf90679984c85b417664c26aae4f427cba7514bd2d65c43b181b7b08b/onnxruntime-1.23.2-cp310-cp310-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:4ca88747e708e5c67337b0f65eed4b7d0dd70d22ac332038c9fc4635760018f7", size = 17370357, upload-time = "2025-10-22T03:46:57.968Z" },
-    { url = "https://files.pythonhosted.org/packages/cd/6d/738e50c47c2fd285b1e6c8083f15dac1a5f6199213378a5f14092497296d/onnxruntime-1.23.2-cp310-cp310-win_amd64.whl", hash = "sha256:0be6a37a45e6719db5120e9986fcd30ea205ac8103fd1fb74b6c33348327a0cc", size = 13467651, upload-time = "2025-10-27T23:06:11.904Z" },
     { url = "https://files.pythonhosted.org/packages/44/be/467b00f09061572f022ffd17e49e49e5a7a789056bad95b54dfd3bee73ff/onnxruntime-1.23.2-cp311-cp311-macosx_13_0_arm64.whl", hash = "sha256:6f91d2c9b0965e86827a5ba01531d5b669770b01775b23199565d6c1f136616c", size = 17196113, upload-time = "2025-10-22T03:47:33.526Z" },
     { url = "https://files.pythonhosted.org/packages/9f/a8/3c23a8f75f93122d2b3410bfb74d06d0f8da4ac663185f91866b03f7da1b/onnxruntime-1.23.2-cp311-cp311-macosx_13_0_x86_64.whl", hash = "sha256:87d8b6eaf0fbeb6835a60a4265fde7a3b60157cf1b2764773ac47237b4d48612", size = 19153857, upload-time = "2025-10-22T03:46:37.578Z" },
     { url = "https://files.pythonhosted.org/packages/3f/d8/506eed9af03d86f8db4880a4c47cd0dffee973ef7e4f4cff9f1d4bcf7d22/onnxruntime-1.23.2-cp311-cp311-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:bbfd2fca76c855317568c1b36a885ddea2272c13cb0e395002c402f2360429a6", size = 15220095, upload-time = "2025-10-22T03:46:24.769Z" },
     { url = "https://files.pythonhosted.org/packages/e9/80/113381ba832d5e777accedc6cb41d10f9eca82321ae31ebb6bcede530cea/onnxruntime-1.23.2-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:da44b99206e77734c5819aa2142c69e64f3b46edc3bd314f6a45a932defc0b3e", size = 17372080, upload-time = "2025-10-22T03:47:00.265Z" },
-    { url = "https://files.pythonhosted.org/packages/3a/db/1b4a62e23183a0c3fe441782462c0ede9a2a65c6bbffb9582fab7c7a0d38/onnxruntime-1.23.2-cp311-cp311-win_amd64.whl", hash = "sha256:902c756d8b633ce0dedd889b7c08459433fbcf35e9c38d1c03ddc020f0648c6e", size = 13468349, upload-time = "2025-10-22T03:47:25.783Z" },
     { url = "https://files.pythonhosted.org/packages/1b/9e/f748cd64161213adeef83d0cb16cb8ace1e62fa501033acdd9f9341fff57/onnxruntime-1.23.2-cp312-cp312-macosx_13_0_arm64.whl", hash = "sha256:b8f029a6b98d3cf5be564d52802bb50a8489ab73409fa9db0bf583eabb7c2321", size = 17195929, upload-time = "2025-10-22T03:47:36.24Z" },
     { url = "https://files.pythonhosted.org/packages/91/9d/a81aafd899b900101988ead7fb14974c8a58695338ab6a0f3d6b0100f30b/onnxruntime-1.23.2-cp312-cp312-macosx_13_0_x86_64.whl", hash = "sha256:218295a8acae83905f6f1aed8cacb8e3eb3bd7513a13fe4ba3b2664a19fc4a6b", size = 19157705, upload-time = "2025-10-22T03:46:40.415Z" },
     { url = "https://files.pythonhosted.org/packages/3c/35/4e40f2fba272a6698d62be2cd21ddc3675edfc1a4b9ddefcc4648f115315/onnxruntime-1.23.2-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:76ff670550dc23e58ea9bc53b5149b99a44e63b34b524f7b8547469aaa0dcb8c", size = 15226915, upload-time = "2025-10-22T03:46:27.773Z" },
     { url = "https://files.pythonhosted.org/packages/ef/88/9cc25d2bafe6bc0d4d3c1db3ade98196d5b355c0b273e6a5dc09c5d5d0d5/onnxruntime-1.23.2-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:0f9b4ae77f8e3c9bee50c27bc1beede83f786fe1d52e99ac85aa8d65a01e9b77", size = 17382649, upload-time = "2025-10-22T03:47:02.782Z" },
-    { url = "https://files.pythonhosted.org/packages/c0/b4/569d298f9fc4d286c11c45e85d9ffa9e877af12ace98af8cab52396e8f46/onnxruntime-1.23.2-cp312-cp312-win_amd64.whl", hash = "sha256:25de5214923ce941a3523739d34a520aac30f21e631de53bba9174dc9c004435", size = 13470528, upload-time = "2025-10-22T03:47:28.106Z" },
     { url = "https://files.pythonhosted.org/packages/3d/41/fba0cabccecefe4a1b5fc8020c44febb334637f133acefc7ec492029dd2c/onnxruntime-1.23.2-cp313-cp313-macosx_13_0_arm64.whl", hash = "sha256:2ff531ad8496281b4297f32b83b01cdd719617e2351ffe0dba5684fb283afa1f", size = 17196337, upload-time = "2025-10-22T03:46:35.168Z" },
     { url = "https://files.pythonhosted.org/packages/fe/f9/2d49ca491c6a986acce9f1d1d5fc2099108958cc1710c28e89a032c9cfe9/onnxruntime-1.23.2-cp313-cp313-macosx_13_0_x86_64.whl", hash = "sha256:162f4ca894ec3de1a6fd53589e511e06ecdc3ff646849b62a9da7489dee9ce95", size = 19157691, upload-time = "2025-10-22T03:46:43.518Z" },
     { url = "https://files.pythonhosted.org/packages/1c/a1/428ee29c6eaf09a6f6be56f836213f104618fb35ac6cc586ff0f477263eb/onnxruntime-1.23.2-cp313-cp313-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:45d127d6e1e9b99d1ebeae9bcd8f98617a812f53f46699eafeb976275744826b", size = 15226898, upload-time = "2025-10-22T03:46:30.039Z" },
     { url = "https://files.pythonhosted.org/packages/f2/2b/b57c8a2466a3126dbe0a792f56ad7290949b02f47b86216cd47d857e4b77/onnxruntime-1.23.2-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:8bace4e0d46480fbeeb7bbe1ffe1f080e6663a42d1086ff95c1551f2d39e7872", size = 17382518, upload-time = "2025-10-22T03:47:05.407Z" },
-    { url = "https://files.pythonhosted.org/packages/4a/93/aba75358133b3a941d736816dd392f687e7eab77215a6e429879080b76b6/onnxruntime-1.23.2-cp313-cp313-win_amd64.whl", hash = "sha256:1f9cc0a55349c584f083c1c076e611a7c35d5b867d5d6e6d6c823bf821978088", size = 13470276, upload-time = "2025-10-22T03:47:31.193Z" },
     { url = "https://files.pythonhosted.org/packages/7c/3d/6830fa61c69ca8e905f237001dbfc01689a4e4ab06147020a4518318881f/onnxruntime-1.23.2-cp313-cp313t-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:9d2385e774f46ac38f02b3a91a91e30263d41b2f1f4f26ae34805b2a9ddef466", size = 15229610, upload-time = "2025-10-22T03:46:32.239Z" },
     { url = "https://files.pythonhosted.org/packages/b6/ca/862b1e7a639460f0ca25fd5b6135fb42cf9deea86d398a92e44dfda2279d/onnxruntime-1.23.2-cp313-cp313t-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:e2b9233c4947907fd1818d0e581c049c41ccc39b2856cc942ff6d26317cee145", size = 17394184, upload-time = "2025-10-22T03:47:08.127Z" },
 ]
@@ -8341,11 +8502,13 @@ resolution-markers = [
     "python_full_version == '3.11.*' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
     "python_full_version == '3.11.*' and platform_machine != 'x86_64' and sys_platform == 'darwin'",
     "python_full_version == '3.11.*' and platform_machine == 'aarch64' and sys_platform == 'linux'",
-    "(python_full_version == '3.11.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux')",
+    "python_full_version == '3.11.*' and sys_platform == 'win32'",
+    "(python_full_version == '3.11.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
     "python_full_version < '3.11' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
     "python_full_version < '3.11' and platform_machine != 'x86_64' and sys_platform == 'darwin'",
     "python_full_version < '3.11' and platform_machine == 'aarch64' and sys_platform == 'linux'",
-    "(python_full_version < '3.11' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.11' and sys_platform != 'darwin' and sys_platform != 'linux')",
+    "python_full_version < '3.11' and sys_platform == 'win32'",
+    "(python_full_version < '3.11' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.11' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
 ]
 dependencies = [
     { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
@@ -8367,13 +8530,16 @@ source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
     "python_full_version >= '3.13' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64') or (python_full_version >= '3.13' and sys_platform != 'darwin')",
+    "python_full_version >= '3.13' and sys_platform == 'win32'",
+    "(python_full_version >= '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.13' and sys_platform != 'darwin' and sys_platform != 'win32')",
     "python_full_version >= '3.12.4' and python_full_version < '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
     "python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine == 'arm64' and sys_platform == 'darwin'",
     "python_full_version >= '3.12.4' and python_full_version < '3.13' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
     "python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.12.4' and python_full_version < '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64') or (python_full_version >= '3.12.4' and python_full_version < '3.13' and sys_platform != 'darwin')",
-    "(python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine != 'arm64' and platform_machine != 'x86_64') or (python_full_version >= '3.12' and python_full_version < '3.12.4' and sys_platform != 'darwin')",
+    "python_full_version >= '3.12.4' and python_full_version < '3.13' and sys_platform == 'win32'",
+    "(python_full_version >= '3.12.4' and python_full_version < '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.12.4' and python_full_version < '3.13' and sys_platform != 'darwin' and sys_platform != 'win32')",
+    "python_full_version >= '3.12' and python_full_version < '3.12.4' and sys_platform == 'win32'",
+    "(python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.12' and python_full_version < '3.12.4' and sys_platform != 'darwin' and sys_platform != 'win32')",
 ]
 dependencies = [
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
@@ -8395,10 +8561,12 @@ source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version == '3.11.*' and platform_machine != 'x86_64' and sys_platform == 'darwin'",
     "python_full_version == '3.11.*' and platform_machine == 'aarch64' and sys_platform == 'linux'",
-    "(python_full_version == '3.11.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux')",
+    "python_full_version == '3.11.*' and sys_platform == 'win32'",
+    "(python_full_version == '3.11.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
     "python_full_version < '3.11' and platform_machine != 'x86_64' and sys_platform == 'darwin'",
     "python_full_version < '3.11' and platform_machine == 'aarch64' and sys_platform == 'linux'",
-    "(python_full_version < '3.11' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.11' and sys_platform != 'darwin' and sys_platform != 'linux')",
+    "python_full_version < '3.11' and sys_platform == 'win32'",
+    "(python_full_version < '3.11' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.11' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
 ]
 dependencies = [
     { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.12' and platform_machine != 'x86_64') or (python_full_version < '3.12' and sys_platform != 'darwin')" },
@@ -8419,11 +8587,14 @@ version = "4.12.0.88"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64') or (python_full_version >= '3.13' and sys_platform != 'darwin')",
+    "python_full_version >= '3.13' and sys_platform == 'win32'",
+    "(python_full_version >= '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.13' and sys_platform != 'darwin' and sys_platform != 'win32')",
     "python_full_version >= '3.12.4' and python_full_version < '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
     "python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine == 'arm64' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.12.4' and python_full_version < '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64') or (python_full_version >= '3.12.4' and python_full_version < '3.13' and sys_platform != 'darwin')",
-    "(python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine != 'arm64' and platform_machine != 'x86_64') or (python_full_version >= '3.12' and python_full_version < '3.12.4' and sys_platform != 'darwin')",
+    "python_full_version >= '3.12.4' and python_full_version < '3.13' and sys_platform == 'win32'",
+    "(python_full_version >= '3.12.4' and python_full_version < '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.12.4' and python_full_version < '3.13' and sys_platform != 'darwin' and sys_platform != 'win32')",
+    "python_full_version >= '3.12' and python_full_version < '3.12.4' and sys_platform == 'win32'",
+    "(python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.12' and python_full_version < '3.12.4' and sys_platform != 'darwin' and sys_platform != 'win32')",
 ]
 dependencies = [
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.12' and platform_machine != 'x86_64') or (python_full_version >= '3.12' and sys_platform != 'darwin')" },
@@ -11271,20 +11442,6 @@ wheels = [
 ]
 
 [[package]]
-name = "python-jose"
-version = "3.5.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "ecdsa" },
-    { name = "pyasn1" },
-    { name = "rsa" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/c6/77/3a1c9039db7124eb039772b935f2244fbb73fc8ee65b9acf2375da1c07bf/python_jose-3.5.0.tar.gz", hash = "sha256:fb4eaa44dbeb1c26dcc69e4bd7ec54a1cb8dd64d3b4d81ef08d90ff453f2b01b", size = 92726, upload-time = "2025-05-28T17:31:54.288Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/d9/c3/0bd11992072e6a1c513b16500a5d07f91a24017c5909b02c72c62d7ad024/python_jose-3.5.0-py2.py3-none-any.whl", hash = "sha256:abd1202f23d34dfad2c3d28cb8617b90acf34132c7afd60abd0b0b7d3cb55771", size = 34624, upload-time = "2025-05-28T17:31:52.802Z" },
-]
-
-[[package]]
 name = "python-liquid"
 version = "2.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -11698,7 +11855,8 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
-    { name = "onnxruntime" },
+    { name = "onnxruntime", version = "1.20.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.12' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.12' and sys_platform == 'linux') or (platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'linux')" },
+    { name = "onnxruntime", version = "1.23.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.12' and platform_machine == 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.12' and sys_platform == 'darwin') or (platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'x86_64' and sys_platform == 'darwin')" },
     { name = "opencv-python", version = "4.11.0.86", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "opencv-python", version = "4.12.0.88", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "pillow" },
@@ -12420,7 +12578,8 @@ resolution-markers = [
     "python_full_version < '3.11' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
     "python_full_version < '3.11' and platform_machine != 'x86_64' and sys_platform == 'darwin'",
     "python_full_version < '3.11' and platform_machine == 'aarch64' and sys_platform == 'linux'",
-    "(python_full_version < '3.11' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.11' and sys_platform != 'darwin' and sys_platform != 'linux')",
+    "python_full_version < '3.11' and sys_platform == 'win32'",
+    "(python_full_version < '3.11' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.11' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
 ]
 dependencies = [
     { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
@@ -12481,17 +12640,21 @@ source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
     "python_full_version >= '3.13' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64') or (python_full_version >= '3.13' and sys_platform != 'darwin')",
+    "python_full_version >= '3.13' and sys_platform == 'win32'",
+    "(python_full_version >= '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.13' and sys_platform != 'darwin' and sys_platform != 'win32')",
     "python_full_version >= '3.12.4' and python_full_version < '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
     "python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine == 'arm64' and sys_platform == 'darwin'",
     "python_full_version >= '3.12.4' and python_full_version < '3.13' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
     "python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.12.4' and python_full_version < '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64') or (python_full_version >= '3.12.4' and python_full_version < '3.13' and sys_platform != 'darwin')",
-    "(python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine != 'arm64' and platform_machine != 'x86_64') or (python_full_version >= '3.12' and python_full_version < '3.12.4' and sys_platform != 'darwin')",
+    "python_full_version >= '3.12.4' and python_full_version < '3.13' and sys_platform == 'win32'",
+    "(python_full_version >= '3.12.4' and python_full_version < '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.12.4' and python_full_version < '3.13' and sys_platform != 'darwin' and sys_platform != 'win32')",
+    "python_full_version >= '3.12' and python_full_version < '3.12.4' and sys_platform == 'win32'",
+    "(python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.12' and python_full_version < '3.12.4' and sys_platform != 'darwin' and sys_platform != 'win32')",
     "python_full_version == '3.11.*' and platform_machine == 'x86_64' and sys_platform == 'darwin'",
     "python_full_version == '3.11.*' and platform_machine != 'x86_64' and sys_platform == 'darwin'",
     "python_full_version == '3.11.*' and platform_machine == 'aarch64' and sys_platform == 'linux'",
-    "(python_full_version == '3.11.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux')",
+    "python_full_version == '3.11.*' and sys_platform == 'win32'",
+    "(python_full_version == '3.11.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
 ]
 dependencies = [
     { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
@@ -12559,8 +12722,8 @@ name = "secretstorage"
 version = "3.5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cryptography", marker = "(python_full_version >= '3.12' and platform_machine != 'arm64' and platform_machine != 'x86_64') or sys_platform != 'darwin'" },
-    { name = "jeepney", marker = "(python_full_version >= '3.12' and platform_machine != 'arm64' and platform_machine != 'x86_64') or sys_platform != 'darwin'" },
+    { name = "cryptography", marker = "(python_full_version >= '3.12' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (sys_platform != 'darwin' and sys_platform != 'win32')" },
+    { name = "jeepney", marker = "(python_full_version >= '3.12' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (sys_platform != 'darwin' and sys_platform != 'win32')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/1c/03/e834bcd866f2f8a49a85eaff47340affa3bfa391ee9912a952a1faa68c7b/secretstorage-3.5.0.tar.gz", hash = "sha256:f04b8e4689cbce351744d5537bf6b1329c6fc68f91fa666f60a380edddcd11be", size = 19884, upload-time = "2025-11-23T19:02:53.191Z" }
 wheels = [
@@ -13165,7 +13328,8 @@ source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version < '3.11' and platform_machine != 'x86_64' and sys_platform == 'darwin'",
     "python_full_version < '3.11' and platform_machine == 'aarch64' and sys_platform == 'linux'",
-    "(python_full_version < '3.11' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.11' and sys_platform != 'darwin' and sys_platform != 'linux')",
+    "python_full_version < '3.11' and sys_platform == 'win32'",
+    "(python_full_version < '3.11' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.11' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
 ]
 dependencies = [
     { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and platform_machine != 'x86_64') or (python_full_version < '3.11' and sys_platform != 'darwin')" },
@@ -13181,14 +13345,18 @@ version = "2025.10.16"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64') or (python_full_version >= '3.13' and sys_platform != 'darwin')",
+    "python_full_version >= '3.13' and sys_platform == 'win32'",
+    "(python_full_version >= '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.13' and sys_platform != 'darwin' and sys_platform != 'win32')",
     "python_full_version >= '3.12.4' and python_full_version < '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
     "python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine == 'arm64' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.12.4' and python_full_version < '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64') or (python_full_version >= '3.12.4' and python_full_version < '3.13' and sys_platform != 'darwin')",
-    "(python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine != 'arm64' and platform_machine != 'x86_64') or (python_full_version >= '3.12' and python_full_version < '3.12.4' and sys_platform != 'darwin')",
+    "python_full_version >= '3.12.4' and python_full_version < '3.13' and sys_platform == 'win32'",
+    "(python_full_version >= '3.12.4' and python_full_version < '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.12.4' and python_full_version < '3.13' and sys_platform != 'darwin' and sys_platform != 'win32')",
+    "python_full_version >= '3.12' and python_full_version < '3.12.4' and sys_platform == 'win32'",
+    "(python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.12' and python_full_version < '3.12.4' and sys_platform != 'darwin' and sys_platform != 'win32')",
     "python_full_version == '3.11.*' and platform_machine != 'x86_64' and sys_platform == 'darwin'",
     "python_full_version == '3.11.*' and platform_machine == 'aarch64' and sys_platform == 'linux'",
-    "(python_full_version == '3.11.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux')",
+    "python_full_version == '3.11.*' and sys_platform == 'win32'",
+    "(python_full_version == '3.11.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
 ]
 dependencies = [
     { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version == '3.11.*' and platform_machine != 'x86_64') or (python_full_version == '3.11.*' and sys_platform != 'darwin')" },
@@ -13330,7 +13498,7 @@ wheels = [
 
 [[package]]
 name = "toolguard"
-version = "0.1.21.dev2"
+version = "0.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "datamodel-code-generator" },
@@ -13344,9 +13512,9 @@ dependencies = [
     { name = "pytest-json-report" },
     { name = "smolagents" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b0/db/dbed094e07f53122bf175ced329404fd8e710f1d4fe0aeabbc1e45e903c4/toolguard-0.1.21.dev2.tar.gz", hash = "sha256:4bb24992f80cfe90ba4cff8d3403f2e06a78ff2e3fbdf455bc493d42c317109c", size = 55478, upload-time = "2026-01-11T15:50:48.388Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/be/b6/04e7f4a22819f111fc35dff7e4a781d2f3fb14f50b77344246a70ef49eae/toolguard-0.2.0.tar.gz", hash = "sha256:e7fac5201410b7fdeba11adf73778dcb4a3f85f4360e2b961a85986a56ecf97a", size = 56345, upload-time = "2026-01-21T16:24:17.977Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ed/ae/48251dc135ee04b5bb05cb01ed1357b6c061d16a63efaba5f5571099c13b/toolguard-0.1.21.dev2-py3-none-any.whl", hash = "sha256:850a584e288d3a839e01a434d7ff57884e8c57fd1efbe7de510d36f553417d77", size = 86749, upload-time = "2026-01-11T15:50:47.189Z" },
+    { url = "https://files.pythonhosted.org/packages/6f/7c/2df4ae0007edfe6cd6e02ec52aa5c15a8ab19640c28465cc471e18e36550/toolguard-0.2.0-py3-none-any.whl", hash = "sha256:eea5720069bd0f6a9fea7c0a380aecbd00bbd6a018ad7577f81ac8ec825f8cc3", size = 86958, upload-time = "2026-01-21T16:24:16.574Z" },
 ]
 
 [[package]]
@@ -13392,17 +13560,22 @@ version = "2.9.1"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64') or (python_full_version >= '3.13' and sys_platform != 'darwin')",
+    "python_full_version >= '3.13' and sys_platform == 'win32'",
+    "(python_full_version >= '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.13' and sys_platform != 'darwin' and sys_platform != 'win32')",
     "python_full_version >= '3.12.4' and python_full_version < '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
     "python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine == 'arm64' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.12.4' and python_full_version < '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64') or (python_full_version >= '3.12.4' and python_full_version < '3.13' and sys_platform != 'darwin')",
-    "(python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine != 'arm64' and platform_machine != 'x86_64') or (python_full_version >= '3.12' and python_full_version < '3.12.4' and sys_platform != 'darwin')",
+    "python_full_version >= '3.12.4' and python_full_version < '3.13' and sys_platform == 'win32'",
+    "(python_full_version >= '3.12.4' and python_full_version < '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.12.4' and python_full_version < '3.13' and sys_platform != 'darwin' and sys_platform != 'win32')",
+    "python_full_version >= '3.12' and python_full_version < '3.12.4' and sys_platform == 'win32'",
+    "(python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.12' and python_full_version < '3.12.4' and sys_platform != 'darwin' and sys_platform != 'win32')",
     "python_full_version == '3.11.*' and platform_machine != 'x86_64' and sys_platform == 'darwin'",
     "python_full_version == '3.11.*' and platform_machine == 'aarch64' and sys_platform == 'linux'",
-    "(python_full_version == '3.11.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux')",
+    "python_full_version == '3.11.*' and sys_platform == 'win32'",
+    "(python_full_version == '3.11.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
     "python_full_version < '3.11' and platform_machine != 'x86_64' and sys_platform == 'darwin'",
     "python_full_version < '3.11' and platform_machine == 'aarch64' and sys_platform == 'linux'",
-    "(python_full_version < '3.11' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.11' and sys_platform != 'darwin' and sys_platform != 'linux')",
+    "python_full_version < '3.11' and sys_platform == 'win32'",
+    "(python_full_version < '3.11' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.11' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
 ]
 dependencies = [
     { name = "filelock", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
@@ -13481,17 +13654,22 @@ version = "0.24.1"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64') or (python_full_version >= '3.13' and sys_platform != 'darwin')",
+    "python_full_version >= '3.13' and sys_platform == 'win32'",
+    "(python_full_version >= '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.13' and sys_platform != 'darwin' and sys_platform != 'win32')",
     "python_full_version >= '3.12.4' and python_full_version < '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
     "python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine == 'arm64' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.12.4' and python_full_version < '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64') or (python_full_version >= '3.12.4' and python_full_version < '3.13' and sys_platform != 'darwin')",
-    "(python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine != 'arm64' and platform_machine != 'x86_64') or (python_full_version >= '3.12' and python_full_version < '3.12.4' and sys_platform != 'darwin')",
+    "python_full_version >= '3.12.4' and python_full_version < '3.13' and sys_platform == 'win32'",
+    "(python_full_version >= '3.12.4' and python_full_version < '3.13' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.12.4' and python_full_version < '3.13' and sys_platform != 'darwin' and sys_platform != 'win32')",
+    "python_full_version >= '3.12' and python_full_version < '3.12.4' and sys_platform == 'win32'",
+    "(python_full_version >= '3.12' and python_full_version < '3.12.4' and platform_machine != 'arm64' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.12' and python_full_version < '3.12.4' and sys_platform != 'darwin' and sys_platform != 'win32')",
     "python_full_version == '3.11.*' and platform_machine != 'x86_64' and sys_platform == 'darwin'",
     "python_full_version == '3.11.*' and platform_machine == 'aarch64' and sys_platform == 'linux'",
-    "(python_full_version == '3.11.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux')",
+    "python_full_version == '3.11.*' and sys_platform == 'win32'",
+    "(python_full_version == '3.11.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
     "python_full_version < '3.11' and platform_machine != 'x86_64' and sys_platform == 'darwin'",
     "python_full_version < '3.11' and platform_machine == 'aarch64' and sys_platform == 'linux'",
-    "(python_full_version < '3.11' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.11' and sys_platform != 'darwin' and sys_platform != 'linux')",
+    "python_full_version < '3.11' and sys_platform == 'win32'",
+    "(python_full_version < '3.11' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.11' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
 ]
 dependencies = [
     { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.12' and platform_machine != 'x86_64') or (python_full_version < '3.12' and sys_platform != 'darwin')" },
