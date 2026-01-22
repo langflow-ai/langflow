@@ -2,7 +2,7 @@ import * as Form from "@radix-ui/react-form";
 import { useQueryClient } from "@tanstack/react-query";
 import { useContext, useState } from "react";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
-import { useLoginUser } from "@/controllers/API/queries/auth";
+import { useLoginUser, useGetSSOConfig, useSSOLogin } from "@/controllers/API/queries/auth";
 import { CustomLink } from "@/customization/components/custom-link";
 import { useSanitizeRedirectUrl } from "@/hooks/use-sanitize-redirect-url";
 import InputComponent from "../../components/core/parameterRenderComponent/components/inputComponent";
@@ -29,6 +29,10 @@ export default function LoginPage(): JSX.Element {
   const { login, clearAuthSession } = useContext(AuthContext);
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
+  // SSO configuration
+  const { data: ssoConfig } = useGetSSOConfig();
+  const { mutate: initiateSSOLogin, isPending: isSSOLoading } = useSSOLogin();
+
   function handleInput({
     target: { name, value },
   }: inputHandlerEventType): void {
@@ -54,6 +58,21 @@ export default function LoginPage(): JSX.Element {
         setErrorData({
           title: SIGNIN_ERROR_ALERT,
           list: [error["response"]["data"]["detail"]],
+        });
+      },
+    });
+  }
+
+  function handleSSOLogin() {
+    initiateSSOLogin(undefined, {
+      onSuccess: (data) => {
+        // Redirect to the IdP authorization URL
+        window.location.href = data.authorization_url;
+      },
+      onError: (error) => {
+        setErrorData({
+          title: "SSO Login Error",
+          list: [error?.response?.data?.detail || "Failed to initiate SSO login"],
         });
       },
     });
@@ -135,7 +154,27 @@ export default function LoginPage(): JSX.Element {
               </Button>
             </Form.Submit>
           </div>
-          <div className="w-full">
+          {ssoConfig?.enabled && ssoConfig.providers.length > 0 && (
+            <>
+              <div className="my-4 flex w-full items-center">
+                <div className="flex-1 border-t border-border"></div>
+                <span className="px-4 text-sm text-muted-foreground">or</span>
+                <div className="flex-1 border-t border-border"></div>
+              </div>
+              <div className="w-full">
+                <Button
+                  className="w-full"
+                  variant="outline"
+                  type="button"
+                  onClick={handleSSOLogin}
+                  disabled={isSSOLoading}
+                >
+                  {isSSOLoading ? "Redirecting..." : `Sign in with ${ssoConfig.providers[0].name}`}
+                </Button>
+              </div>
+            </>
+          )}
+          <div className="mt-4 w-full">
             <CustomLink to="/signup">
               <Button className="w-full" variant="outline" type="button">
                 Don't have an account?&nbsp;<b>Sign Up</b>

@@ -129,9 +129,8 @@ async def sso_login_redirect(
     }
 
 
-@router.get("/callback", response_model=Token)
+@router.get("/callback")
 async def sso_callback(
-    response: Response,
     db: DbSession,
     code: str = Query(..., description="Authorization code from IdP"),
     state: str = Query(..., description="State parameter for CSRF protection"),
@@ -140,6 +139,8 @@ async def sso_callback(
 
     This endpoint receives the authorization code from the IdP, exchanges it for tokens,
     validates the ID token, and creates/updates the user in Langflow.
+    
+    After successful authentication, redirects to the frontend with authentication cookies set.
 
     Args:
         code: Authorization code from the identity provider
@@ -147,7 +148,7 @@ async def sso_callback(
         db: Database session
 
     Returns:
-        Access and refresh tokens for the authenticated user
+        RedirectResponse to frontend with authentication cookies
 
     Raises:
         HTTPException: If authentication fails
@@ -210,35 +211,6 @@ async def sso_callback(
         # Create Langflow tokens for the user
         tokens = await create_user_tokens(user_id=user.id, db=db, update_last_login=True)
 
-        # Set cookies (same as regular login)
-        response.set_cookie(
-            "refresh_token_lf",
-            tokens["refresh_token"],
-            httponly=auth_settings.REFRESH_HTTPONLY,
-            samesite=auth_settings.REFRESH_SAME_SITE,
-            secure=auth_settings.REFRESH_SECURE,
-            expires=auth_settings.REFRESH_TOKEN_EXPIRE_SECONDS,
-            domain=auth_settings.COOKIE_DOMAIN,
-        )
-        response.set_cookie(
-            "access_token_lf",
-            tokens["access_token"],
-            httponly=auth_settings.ACCESS_HTTPONLY,
-            samesite=auth_settings.ACCESS_SAME_SITE,
-            secure=auth_settings.ACCESS_SECURE,
-            expires=auth_settings.ACCESS_TOKEN_EXPIRE_SECONDS,
-            domain=auth_settings.COOKIE_DOMAIN,
-        )
-        response.set_cookie(
-            "apikey_tkn_lflw",
-            str(user.store_api_key) if user.store_api_key else "",
-            httponly=auth_settings.ACCESS_HTTPONLY,
-            samesite=auth_settings.ACCESS_SAME_SITE,
-            secure=auth_settings.ACCESS_SECURE,
-            expires=None,  # Session cookie
-            domain=auth_settings.COOKIE_DOMAIN,
-        )
-
         # Initialize user variables
         await get_variable_service().initialize_user_variables(user.id, db)
 
@@ -253,7 +225,43 @@ async def sso_callback(
 
         logger.info(f"SSO authentication successful for user: {user.username}")
 
-        return tokens
+        # Create redirect response and set cookies
+        from starlette.responses import RedirectResponse
+        
+        redirect_url = auth_settings.SSO_REDIRECT_URL
+        logger.info(f"Redirecting to frontend: {redirect_url}")
+        redirect_response = RedirectResponse(url=redirect_url, status_code=302)
+        
+        # Set cookies on the redirect response
+        redirect_response.set_cookie(
+            "refresh_token_lf",
+            tokens["refresh_token"],
+            httponly=auth_settings.REFRESH_HTTPONLY,
+            samesite=auth_settings.REFRESH_SAME_SITE,
+            secure=auth_settings.REFRESH_SECURE,
+            expires=auth_settings.REFRESH_TOKEN_EXPIRE_SECONDS,
+            domain=auth_settings.COOKIE_DOMAIN,
+        )
+        redirect_response.set_cookie(
+            "access_token_lf",
+            tokens["access_token"],
+            httponly=auth_settings.ACCESS_HTTPONLY,
+            samesite=auth_settings.ACCESS_SAME_SITE,
+            secure=auth_settings.ACCESS_SECURE,
+            expires=auth_settings.ACCESS_TOKEN_EXPIRE_SECONDS,
+            domain=auth_settings.COOKIE_DOMAIN,
+        )
+        redirect_response.set_cookie(
+            "apikey_tkn_lflw",
+            str(user.store_api_key) if user.store_api_key else "",
+            httponly=auth_settings.ACCESS_HTTPONLY,
+            samesite=auth_settings.ACCESS_SAME_SITE,
+            secure=auth_settings.ACCESS_SECURE,
+            expires=None,  # Session cookie
+            domain=auth_settings.COOKIE_DOMAIN,
+        )
+        
+        return redirect_response
 
     except HTTPException:
         raise

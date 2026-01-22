@@ -131,6 +131,12 @@ class AuthSettings(BaseSettings):
     )
     """Path to YAML configuration file for SSO settings. Contains provider-specific configuration."""
 
+    SSO_REDIRECT_URL: str = Field(
+        default="http://localhost:3000",
+        description="Frontend URL to redirect to after successful SSO authentication.",
+    )
+    """The frontend URL where users will be redirected after successful SSO login. Should match your frontend deployment URL."""
+
     pwd_context: CryptContext = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
     model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")

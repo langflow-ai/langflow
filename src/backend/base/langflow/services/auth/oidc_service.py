@@ -7,6 +7,7 @@ It supports any OIDC-compliant identity provider (W3ID, Okta, Azure AD, Google, 
 from __future__ import annotations
 
 import secrets
+from collections.abc import Coroutine
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 from uuid import UUID
@@ -24,8 +25,6 @@ from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.schema import ServiceType
 
 if TYPE_CHECKING:
-    from collections.abc import Coroutine
-
     from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.services.settings.service import SettingsService
@@ -340,7 +339,11 @@ class OIDCAuthService(AuthServiceBase):
         token: str | Coroutine | None,
         db: AsyncSession,
     ) -> User | UserRead:
-        """Get user from OIDC ID token."""
+        """Get user from JWT token (Langflow or OIDC ID token).
+        
+        First tries to validate as a regular Langflow JWT token.
+        If that fails, tries to validate as an OIDC ID token.
+        """
         if token is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -356,12 +359,25 @@ class OIDCAuthService(AuthServiceBase):
                 detail="Invalid token type",
             )
 
-        # Validate and decode ID token
-        claims = await self.validate_id_token(token)
+        # First, try to validate as a regular Langflow JWT token
+        try:
+            return await self._base_auth.get_current_user_from_access_token(token, db)
+        except HTTPException:
+            # If Langflow JWT validation fails, try OIDC ID token validation
+            pass
 
-        # Get or create user from claims (JIT provisioning)
-        user = await self.get_or_create_user_from_claims(claims, db)
-        return user
+        # Validate and decode as OIDC ID token
+        try:
+            claims = await self.validate_id_token(token)
+            # Get or create user from claims (JIT provisioning)
+            user = await self.get_or_create_user_from_claims(claims, db)
+            return user
+        except Exception as e:
+            logger.error(f"Token validation failed for both Langflow JWT and OIDC: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid authentication token",
+            )
 
     # Delegate remaining methods to base AuthService
     async def get_current_user_for_websocket(

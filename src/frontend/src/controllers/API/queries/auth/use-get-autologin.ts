@@ -13,6 +13,7 @@ import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 import { useLogout } from "./use-post-logout";
+import { useGetAuthSession } from "./use-get-auth-session";
 
 export interface AutoLoginResponse {
   frontend_timeout: number;
@@ -68,6 +69,19 @@ export const useGetAutoLogin: useQueryFunctionType<undefined, undefined> = (
   };
 
   const handleAutoLoginError = async () => {
+    // Check if there's a valid session before redirecting to login
+    // This prevents race condition where auto-login fails but session cookies exist (e.g., after SSO)
+    try {
+      const sessionResponse = await api.get(`${getURL("SESSION")}`);
+      if (sessionResponse.data?.authenticated) {
+        // Valid session exists, don't redirect to login
+        // The session data will be processed by AppInitPage
+        return;
+      }
+    } catch (sessionError) {
+      // Session check failed, continue with normal error handling
+    }
+
     const manualLoginNotAuthenticated =
       (!isAuthenticated && !IS_AUTO_LOGIN) ||
       (!isAuthenticated && autoLogin !== undefined && !autoLogin);

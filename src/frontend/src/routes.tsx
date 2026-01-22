@@ -25,6 +25,7 @@ import { AppInitPage } from "./pages/AppInitPage";
 import { AppWrapperPage } from "./pages/AppWrapperPage";
 import FlowPage from "./pages/FlowPage";
 import LoginPage from "./pages/LoginPage";
+import SSOCallbackPage from "./pages/SSOCallbackPage";
 import FilesPage from "./pages/MainPage/pages/filesPage";
 import HomePage from "./pages/MainPage/pages/homePage";
 import KnowledgePage from "./pages/MainPage/pages/knowledgePage";
@@ -196,6 +197,10 @@ const router = createBrowserRouter(
                 <SignUp />
               </ProtectedLoginRoute>
             }
+          />
+          <Route
+            path="sso/callback"
+            element={<SSOCallbackPage />}
           />
           <Route
             path="login/admin"
