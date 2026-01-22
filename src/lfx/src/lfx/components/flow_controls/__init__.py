@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from lfx.components.flow_controls.pass_message import PassMessageComponent
     from lfx.components.flow_controls.run_flow import RunFlowComponent
     from lfx.components.flow_controls.sub_flow import SubFlowComponent
+    from lfx.components.flow_controls.while_loop import WhileLoopComponent
 
 _dynamic_imports = {
     "ConditionalRouterComponent": "conditional_router",
@@ -25,6 +26,7 @@ _dynamic_imports = {
     "PassMessageComponent": "pass_message",
     "RunFlowComponent": "run_flow",
     "SubFlowComponent": "sub_flow",
+    "WhileLoopComponent": "while_loop",
 }
 
 __all__ = [
@@ -37,6 +39,7 @@ __all__ = [
     "PassMessageComponent",
     "RunFlowComponent",
     "SubFlowComponent",
+    "WhileLoopComponent",
 ]
 
 

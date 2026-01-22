@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.10, <3.14"
 resolution-markers = [
     "python_full_version >= '3.13' and platform_machine == 'arm64' and sys_platform == 'darwin'",
@@ -6503,7 +6503,7 @@ dev = [
 integration = [
     { name = "beautifulsoup4", specifier = ">=4.12.0" },
     { name = "langchain-community", specifier = ">=0.3.0,<1.0.0" },
-    { name = "langchain-openai", specifier = ">=0.3.0,<1.0.0" },
+    { name = "langchain-openai", specifier = ">=0.3.0" },
     { name = "lxml", specifier = ">=5.0.0" },
 ]
 
