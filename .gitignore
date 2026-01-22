@@ -290,3 +290,6 @@ member_servers.json
 # data files used for desktop registration
 data/user
 
+# SSO configuration files (contain secrets)
+sso-config.yaml
+

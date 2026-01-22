@@ -34,7 +34,7 @@ class User(SQLModel, table=True):  # type: ignore[call-arg]
     last_login_at: datetime | None = Field(default=None, nullable=True)
 
     # SSO fields - optional, only used when SSO is enabled
-    email: str | None = Field(default=None, nullable=True, index=True, unique=True)
+    email: str | None = Field(default=None, nullable=True, index=True)
     sso_provider: str | None = Field(default=None, nullable=True, index=True)
     sso_user_id: str | None = Field(default=None, nullable=True, index=True)
     sso_last_login_at: datetime | None = Field(default=None, nullable=True)
