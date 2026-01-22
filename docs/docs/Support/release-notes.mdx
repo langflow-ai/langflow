@@ -65,7 +65,7 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
     Therefore, installing `langflow-base` directly only installs the [core base dependencies](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/pyproject.toml).
 
     If you installed `langflow-base`, there are two ways to resolve dependency errors that result from this breaking change:
-    
+
     * If you need the full set of dependencies, you must install `langflow-base` with the `complete` extra:
 
         ```bash
@@ -86,6 +86,10 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
     The **Prompt Template** component now supports Mustache templating syntax.
     Mustache templating eliminates the need to escape curly braces when including JSON structures in your prompts. For more information, see [Prompt Template](/components-prompts#use-mustache-templating-in-prompt-templates).
+
+- Global variables in MCP server headers
+
+    You can now use [global variables](/configuration-global-variables) in MCP server header values to securely store and reference sensitive values. For more information, see [Use global variables in MCP server headers](/mcp-client#use-global-variables-in-mcp-server-headers).
 
 ## 1.7.x
 
