@@ -1970,7 +1970,7 @@
             },
             "tool_mode": false
           },
-          "selected_output": "messages_text",
+          "selected_output": "stored_messages",
           "showNode": true,
           "type": "Memory"
         },
